@@ -506,6 +506,10 @@ class GMatrixClient(MatrixClient):
             gevent.wait({response_queue, stop_event}, count=1)
 
             if stop_event.is_set():
+                log.debug(
+                    "Handling worker exiting, stop is set",
+                    node=node_address_from_userid(self.user_id),
+                )
                 return
 
             while response_queue:
