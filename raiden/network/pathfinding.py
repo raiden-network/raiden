@@ -114,10 +114,12 @@ class PFSError(IntEnum):
 
     # TODO: link to PFS spec as soon as the error codes are added there.
 
+    # 20xx - General
     INVALID_REQUEST = 2000
     INVALID_SIGNATURE = 2001
     REQUEST_OUTDATED = 2002
 
+    # 21xx - IOU errors
     BAD_IOU = 2100
     MISSING_IOU = 2101
     WRONG_IOU_RECIPIENT = 2102
@@ -126,11 +128,13 @@ class PFSError(IntEnum):
     IOU_ALREADY_CLAIMED = 2105
     USE_THIS_IOU = 2106
     DEPOSIT_TOO_LOW = 2107
+
+    # 22xx - Routing
     NO_ROUTE_FOUND = 2201
 
     @staticmethod
     def is_iou_rejected(error_code: int) -> bool:
-        return error_code >= 2100
+        return error_code >= 2100 and error_code < 2200
 
 
 MAX_PATHS_QUERY_ATTEMPTS = 2
@@ -508,16 +512,21 @@ def post_pfs_paths(
         try:
             response_json = get_response_json(response)
         except ValueError:
+            log.error(
+                "Pathfinding Service returned error code (malformed json in response)",
+                response=response,
+            )
             raise ServiceRequestFailed(
                 "Pathfinding Service returned error code (malformed json in response)", info
             )
-        else:
-            error = info["error"] = response_json.get("errors")
-            error_code = info["error_code"] = response_json.get("error_code", 0)
-            if PFSError.is_iou_rejected(error_code):
-                raise ServiceRequestIOURejected(error, error_code)
 
-        raise ServiceRequestFailed("Pathfinding Service returned error code", info)
+        error = info["error"] = response_json.get("errors")
+        error_code = info["error_code"] = response_json.get("error_code", 0)
+
+        if PFSError.is_iou_rejected(error_code):
+            raise ServiceRequestIOURejected(error, error_code)
+
+        raise ServiceRequestFailed(error, info)
 
     try:
         response_json = get_response_json(response)
