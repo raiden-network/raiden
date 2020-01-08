@@ -1,26 +1,9 @@
 from typing import Iterable, List, TypeVar
 
-from gevent.event import Event, _AbstractLinkable
+from gevent.event import Event
 from gevent.queue import Queue
 
 T = TypeVar("T")
-
-
-def event_first_of(*events: _AbstractLinkable) -> Event:
-    """ Waits until one of `events` is set.
-
-    The event returned is /not/ cleared with any of the `events`, this value
-    must not be reused if the clearing behavior is used.
-    """
-    first_finished = Event()
-
-    if not all(isinstance(e, _AbstractLinkable) for e in events):
-        raise ValueError("all events must be linkable")
-
-    for event in events:
-        event.rawlink(lambda _: first_finished.set())
-
-    return first_finished
 
 
 class NotifyingQueue(Event):
