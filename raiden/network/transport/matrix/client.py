@@ -328,6 +328,8 @@ class GMatrixClient(MatrixClient):
         """
         assert not self.should_listen and self.sync_worker is None, "Already running"
         self.should_listen = True
+        # Needs to be reset, otherwise we might run into problems when restarting
+        self.last_sync = float("inf")
 
         self.sync_worker = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
         self.sync_worker.name = f"GMatrixClient._sync_worker user_id:{self.user_id}"
@@ -337,6 +339,10 @@ class GMatrixClient(MatrixClient):
         )
         self.message_worker.name = f"GMatrixClient._message_worker user_id:{self.user_id}"
         self.message_worker.link_exception(lambda g: self.sync_worker.kill(g.exception))
+
+        # FIXME: This is just a temporary hack, this adds a race condition of the user pressing
+        #     Ctrl-C before this is run, and Raiden newer shutting down.
+        self.stop_event.clear()
 
     def stop_listener_thread(self) -> None:
         """ Kills sync_thread greenlet before joining it """
@@ -428,7 +434,6 @@ class GMatrixClient(MatrixClient):
         log.debug("Sync called", node=node_address_from_userid(self.user_id), user_id=self.user_id)
 
         time_before_sync = time.time()
-
         time_since_last_sync_in_seconds = time_before_sync - self.last_sync
 
         # If it takes longer than `timeout_ms` to call `_sync` again, we throw an exception.

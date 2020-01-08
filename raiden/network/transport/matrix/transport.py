@@ -653,6 +653,8 @@ class MatrixTransport(Runnable):
         # callbacks are not installed yet (this is done bellow). The sync limit
         # prevents fetching the messages.
         prev_sync_limit = self._client.set_sync_limit(0)
+        # Need to reset this here, otherwise we might run into problems after a restart
+        self._client.last_sync = float("inf")
         self._client._sync()
         self._client.set_sync_limit(prev_sync_limit)
         # Process the result from the sync executed above
