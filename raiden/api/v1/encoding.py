@@ -25,8 +25,8 @@ from raiden.constants import (
 )
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.storage.serialization.fields import IntegerToStringField
+from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
-from raiden.transfer.architecture import Event
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
 from raiden.transfer.views import get_token_network_by_address
 from raiden.utils.typing import AddressHex
@@ -383,11 +383,11 @@ class EventPaymentSchema(BaseSchema):
     log_time = TimeStampField()
     token_address = AddressField(missing=None)
 
-    def serialize(self, chain_state: ChainState, event: Event) -> Dict[str, Any]:
+    def serialize(self, chain_state: ChainState, event: TimestampedEvent) -> Dict[str, Any]:
         serialized_event = self.dump(event)
         token_network = get_token_network_by_address(
             chain_state=chain_state,
-            token_network_address=event.token_network_address,  # type: ignore
+            token_network_address=event.wrapped_event.token_network_address,
         )
         assert token_network, "Token network object should be registered if we got events with it"
         serialized_event["token_address"] = to_checksum_address(token_network.token_address)

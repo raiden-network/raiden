@@ -930,15 +930,15 @@ class RestAPI:  # pragma: no unittest
         for event in service_result:
             if isinstance(event.wrapped_event, EventPaymentSentSuccess):
                 serialized_event = self.sent_success_payment_schema.serialize(
-                    chain_state=chain_state, event=event.wrapped_event
+                    chain_state=chain_state, event=event
                 )
             elif isinstance(event.wrapped_event, EventPaymentSentFailed):
                 serialized_event = self.failed_payment_schema.serialize(
-                    chain_state=chain_state, event=event.wrapped_event
+                    chain_state=chain_state, event=event
                 )
             elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
                 serialized_event = self.received_success_payment_schema.serialize(
-                    chain_state=chain_state, event=event.wrapped_event
+                    chain_state=chain_state, event=event
                 )
             else:
                 log.warning(
