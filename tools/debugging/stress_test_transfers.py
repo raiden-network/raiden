@@ -505,7 +505,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--nodes-data-dir", default=os.getcwd())
-    parser.add_argument("interface", default="127.0.0.1")
+    parser.add_argument("--interface", default="127.0.0.1")
     parser.add_argument("config")
     args = parser.parse_args()
 
