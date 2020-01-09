@@ -33,7 +33,7 @@ class PartnersPerToken:
 
 
 def useless_function():
-    print("This is useless.")
-    print("But also not covered by any tests.")
-    print("So the PR introducing it ")
-    print("will have very low patch coverage.")
+    print(" This is useless.")
+    print(" But also not covered by any tests.")
+    print(" So the PR introducing it ")
+    print(" will have very low patch coverage.")
