@@ -218,3 +218,27 @@ def test_assumption_federation_works_after_original_server_goes_down(
     user_federated_2.stop_listener_thread()
 
     # TODO: restart matrix server 1, check that message 2 arrives
+
+
+@pytest.mark.parametrize("matrix_server_count", [1])
+def test_assumption_matrix_returns_same_id_for_same_filter_payload(chain_id, local_matrix_servers):
+    """
+    Test that for duplicate filter payload, the matrix server would just
+    return the existing filter ID rather than creating a new filter and returning
+    a new ID. This means that no cleanup for previously created filters
+    is required as filtes are re-used.
+    """
+    client, _ = create_logged_in_client(local_matrix_servers[0])
+
+    room_alias = make_room_alias(chain_id, "broadcast_test")
+
+    broadcast_room = client.create_room(room_alias, is_public=True)
+
+    assert client._sync_filter_id is None
+
+    client.create_sync_filter(broadcast_rooms={broadcast_room.name: broadcast_room})
+    current_sync_filter_id = client._sync_filter_id
+
+    # Try again and make sure the filter has the same ID
+    client.create_sync_filter(broadcast_rooms={broadcast_room.name: broadcast_room})
+    assert client._sync_filter_id == current_sync_filter_id
