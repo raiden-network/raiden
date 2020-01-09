@@ -3,14 +3,13 @@ from typing import List, Optional
 
 import gevent
 import pytest
-from gevent import Timeout
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, Environment
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
 from raiden.network.transport.matrix.client import Room
-from raiden.network.transport.matrix.transport import RETRY_QUEUE_IDLE_AFTER, _RetryQueue
+from raiden.network.transport.matrix.transport import _RetryQueue
 from raiden.network.transport.matrix.utils import UserAddressManager
 from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
@@ -258,50 +257,3 @@ def test_retry_queue_does_not_resend_removed_messages(
         retry_queue._check_and_send()
 
     assert len(mock_matrix.sent_messages) == 1
-
-
-@pytest.mark.parametrize("retry_interval", [0.05])
-def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval: int):
-    """ Ensure ``RetryQueue``s exit if they are idle for too long. """
-    retry_queue = mock_matrix._get_retrier(factories.HOP1)
-    idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval
-
-    with Timeout(idle_after + (retry_interval * 5)):
-        # Retry
-        while not gevent.wait([retry_queue.greenlet], idle_after / 2):
-            pass
-
-    assert retry_queue.greenlet.ready()
-    assert retry_queue._idle_since == RETRY_QUEUE_IDLE_AFTER
-    assert retry_queue.is_idle
-
-    retry_queue_2 = mock_matrix._get_retrier(factories.HOP1)
-
-    # Since the initial RetryQueue has exited `get_retrier()` must return a new instance
-    assert retry_queue_2 is not retry_queue
-
-
-@pytest.mark.parametrize("retry_interval", [0.05])
-def test_retryqueue_not_idle_with_messages(mock_matrix: MatrixTransport, retry_interval: int):
-    """ Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue. """
-    retry_queue = mock_matrix._get_retrier(factories.HOP1)
-    idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval
-
-    queue_identifier = QueueIdentifier(
-        recipient=factories.HOP1, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
-    )
-    retry_queue.enqueue(queue_identifier, make_message())
-
-    # Without the `all_peers_reachable` fixture, the default reachability will be `UNREACHABLE`
-    # therefore the message will remain in the internal queue indefinitely.
-
-    # Wait for the idle timeout to expire
-    gevent.sleep(idle_after + (retry_interval * 5))
-
-    assert not retry_queue.greenlet.ready()
-    assert retry_queue._idle_since == 0
-    assert not retry_queue.is_idle
-
-    retry_queue_2 = mock_matrix._get_retrier(factories.HOP1)
-    # The first queue has never become idle, therefore the same object must be returned
-    assert retry_queue is retry_queue_2
