@@ -1,5 +1,4 @@
-tools
------
+# tools
 
 - `parallel_tests.sh`: Tool to execute the test suite in parallel, useful to
   run multiple integration tests at the same time.
@@ -9,11 +8,11 @@ tools
 - `transfer_eth.py`: This is just a simple tool to send an eth transfer using
   the provided private key.
 
-debugging
----------
+# debugging
 
-- `mint.sh`: Tool to mint test tokens. Usage:
+## `mint.sh`: mint test tokens
 
+Usage:
 ```sh
 ./mint.sh 0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7 127.0.0.1:5001 127.0.0.1:5002 127.0.0.1:5000
 ```
@@ -23,9 +22,9 @@ are endpoints of running Raiden nodes.
 
 Note: Each of the running nodes must have test ETH on their accounts.
 
-- `channels_with_minimum_balance.py`: Tool to open multiple channels. It needs
-  a JSON file with the following format:
+## `channels_with_minimum_balance.py`: open multiple channels and ensure deposit minimum
 
+It needs a JSON file with the following format:
 
 ```json
 {
@@ -77,8 +76,8 @@ Note: Each of the running nodes must have test ETH on their accounts.
 Note: For the deposit to work properly the nodes must have some of the required
 tokens, for a test token one can use `mint.sh` to acquire some.
 
-- `stress_test_transfers.py`: Script to run nodes and do some transfers. The
-- script requires a configuration file, like so:
+## `stress_test_transfers.py`: run nodes and do some transfers
+The script requires a configuration file, like so:
 
 ```ini
 [DEFAULT]
@@ -101,11 +100,20 @@ address = 0x9df878E37C4B851bbe44841e72299F6f317C685C
 password-file = ./keys/pass-UTC--2019-11-22T13-50-19.904075843Z--9df878e37c4b851bbe44841e72299f6f317c685c
 ```
 
-This script does not take into account fees, therefore it must the no-fee PFS
+This script does not take into account fees, therefore it must use the no-fee PFS
 (as per the example configuration above).
 
-pylint
-------
+Before using the stress test for the first time, you need to prepare the three nodes given in the config file:
+1. Create three accounts (e.g. with `geth account new`).
+2. Create the config file.
+3. Uncomment the `input()` line in `stress_test_transfers.py` and start the script with the config file. Now the three nodes are running and you can use other scripts to interact with them.
+4. Use `mint.sh` to mint tokens for the nodes (see section above).
+5. Use `channel_with_minimum_balance.py` to create the channels and deposit tokens into the channels (see section above).
+6. Now you can press enter to proceed past the `input` and start the stress test (or remove the `input()` line and start the script, again).
+
+Going through these steps is cumbersome, but once you're done you can rerun the stress test any time without needing to repeat these steps. Only in case of failing stress tests, you might need to refill the channel balances with `channel_with_minimum_balance.py`.
+
+# pylint
 
 - `assert_checker.py`: Style tool that requires messages to all asserts.
 - `gevent_checker.py`: Enforces some rules regarding gevent that are necessary
