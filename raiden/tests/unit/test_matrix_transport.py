@@ -13,7 +13,6 @@ from raiden.exceptions import TransportError
 from raiden.network.transport.matrix.utils import (
     login,
     make_client,
-    make_message_batches,
     make_room_alias,
     my_place_or_yours,
     sort_servers_closest,
@@ -197,26 +196,3 @@ def test_invite_tiebreaker():
 
     assert my_place_or_yours(address, address1) == address
     assert my_place_or_yours(address1, address2) == address1
-
-
-@pytest.mark.parametrize("max_batch_size", [20])
-@pytest.mark.parametrize(
-    ["message_list", "expected_batch_count", "should_raise"],
-    [
-        (["a" * 10] * 4, 2, False),
-        (["a" * 10] * 5, 3, False),
-        (["a" * 15] * 5, 5, False),
-        (["a"] * 5, 1, False),
-        (["a" * 20], 1, False),
-        (["a" * 21], 0, True),
-    ],
-)
-def test_make_message_batches(message_list, expected_batch_count, should_raise, max_batch_size):
-    if should_raise:
-        with pytest.raises(TransportError):
-            list(make_message_batches(message_list, _max_batch_size=max_batch_size))
-    else:
-        batches = list(make_message_batches(message_list, _max_batch_size=max_batch_size))
-
-        assert len(batches) == expected_batch_count
-        assert sum(len(batch.split("\n")) for batch in batches) == len(message_list)
