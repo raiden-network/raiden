@@ -72,7 +72,7 @@ scenario:
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
       - serial:
-          name: "Make transfer in the direction with no deposit (should fail)"
+          name: "Make transfer in the direction with no deposit (should fail) - No IOU created"
           tasks:
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30, expected_http_status: 409}
       - parallel:
@@ -123,8 +123,8 @@ scenario:
           tasks:
             # Add a wait until all ious are processed correctly
             - wait: 100
-            - assert_pfs_history: {source: 3, target: 0, request_count: 11}
-            - assert_pfs_iou: {source: 3, amount: 1100}
+            - assert_pfs_history: {source: 3, target: 0, request_count: 10}
+            - assert_pfs_iou: {source: 3, amount: 1000}
             - assert_pfs_history: {source: 1, target: 4, request_count: 10}
             - assert_pfs_iou: {source: 1, amount: 1000}
             # Make sure that a mediating node has not used the PFS

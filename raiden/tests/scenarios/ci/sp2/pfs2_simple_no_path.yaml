@@ -48,7 +48,9 @@ scenario:
       - serial:
           name: "Test providing routes"
           tasks:
-            # Check that the transfer fails, when there is no path from 3 to 0 
+            # Check that the transfer fails, when there is no path from 3 to 0
+            # We need to deposit into the direct channel, to pass the first internal check of the node
+            - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000}
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 409}
 
             # Assert that correct amount was tranferred
