@@ -265,16 +265,6 @@ class GMatrixClient(MatrixClient):
                 "not_rooms": ignore_rooms,
                 # Ignore "message recipts" from all rooms
                 "ephemeral": {"not_types": ["m.receipt"]},
-                "state": {
-                    "not_types": [
-                        "m.room.power_levels",
-                        "m.room.join_rules",
-                        "m.room.member",
-                        "m.room.canonical_alias",
-                        "m.room.aliases",
-                        "m.room.history_visibility",
-                    ]
-                },
             },
             # Get all presence updates
             "presence": {"types": ["m.presence"]},
