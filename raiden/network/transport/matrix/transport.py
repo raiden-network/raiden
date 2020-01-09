@@ -183,15 +183,13 @@ class _RetryQueue(Runnable):
             self.log.warning("Can't retry", reason="Transport stopped")
             return
 
-        assert self._lock.locked(), "RetryQueue lock must be held while messages are being sent"
-
         # On startup protocol messages must be sent only after the monitoring
         # services are updated. For more details refer to the method
         # `RaidenService._initialize_monitoring_services_queue`
         if self.transport._prioritize_broadcast_messages:
             self.transport._broadcast_queue.join()
 
-        self.log.debug("Retrying message(s)", receiver=to_checksum_address(self.receiver))
+        self.log.debug("Retrying message", receiver=to_checksum_address(self.receiver))
         status = self.transport._address_mgr.get_address_reachability(self.receiver)
         if status is not AddressReachability.REACHABLE:
             # if partner is not reachable, return
@@ -202,47 +200,47 @@ class _RetryQueue(Runnable):
             )
             return
 
-        def message_is_in_queue(message_data: _RetryQueue._MessageData) -> bool:
-            if message_data.queue_identifier not in self.transport._queueids_to_queues:
-                # The Raiden queue for this queue identifier has been removed
-                return False
+        message_texts = [
+            data.text
+            for data in self._message_queue
+            # if expired_gen generator yields False, message was sent recently, so skip it
+            if next(data.expiration_generator)
+        ]
+
+        def message_is_in_queue(data: _RetryQueue._MessageData) -> bool:
             return any(
-                isinstance(message_data.message, RetrieableMessage)
-                and send_event.message_identifier == message_data.message.message_identifier
-                for send_event in self.transport._queueids_to_queues[message_data.queue_identifier]
+                isinstance(data.message, RetrieableMessage)
+                and send_event.message_identifier == data.message.message_identifier
+                for send_event in self.transport._queueids_to_queues[data.queue_identifier]
             )
 
-        message_texts: List[str] = list()
-        for message_data in self._message_queue[:]:
-            # Messages are sent on two conditions:
-            # - Non-retryable (e.g. Delivered)
-            #   - Those are immediately remove from the local queue since they are only sent once
-            # - Retryable
-            #   - Those are retried according to their retry generator as long as they haven't been
-            #     removed from the Raiden queue
+        # clean after composing, so any queued messages (e.g. Delivered) are sent at least once
+        for msg_data in self._message_queue[:]:
             remove = False
-            if isinstance(message_data.message, (Delivered, Ping, Pong)):
+            if isinstance(msg_data.message, (Delivered, Ping, Pong)):
                 # e.g. Delivered, send only once and then clear
                 # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
                 #       later `Processed` message?
                 remove = True
-                message_texts.append(message_data.text)
-            elif not message_is_in_queue(message_data):
+            elif msg_data.queue_identifier not in self.transport._queueids_to_queues:
                 remove = True
                 self.log.debug(
                     "Stopping message send retry",
-                    queue=message_data.queue_identifier,
-                    message=message_data.message,
-                    reason="Message was removed from queue or queue was removed",
+                    queue=msg_data.queue_identifier,
+                    message=msg_data.message,
+                    reason="Raiden queue is gone",
                 )
-            else:
-                # The message is still eligible for retry, consult the expiration generator if
-                # it should be retried now
-                if next(message_data.expiration_generator):
-                    message_texts.append(message_data.text)
+            elif not message_is_in_queue(msg_data):
+                remove = True
+                self.log.debug(
+                    "Stopping message send retry",
+                    queue=msg_data.queue_identifier,
+                    message=msg_data.message,
+                    reason="Message was removed from queue",
+                )
 
             if remove:
-                self._message_queue.remove(message_data)
+                self._message_queue.remove(msg_data)
 
         if message_texts:
             self.log.debug(

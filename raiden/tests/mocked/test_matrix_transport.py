@@ -1,27 +1,21 @@
 import random
 from typing import List, Optional
 
-import gevent
 import pytest
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, Environment
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix import AddressReachability
 from raiden.network.transport.matrix.client import Room
-from raiden.network.transport.matrix.transport import _RetryQueue
-from raiden.network.transport.matrix.utils import UserAddressManager
 from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
-USERID1 = f"@{to_checksum_address(factories.HOP1.hex())}:Wonderland"
+USERID1 = "@0x0987654321098765432109876543210987654321:Wonderland"
 
 
 @pytest.fixture()
@@ -105,53 +99,20 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     return transport
 
 
-@pytest.fixture
-def all_peers_reachable(monkeypatch):
-    def mock_get_address_reachability(self, address: Address) -> AddressReachability:
-        return AddressReachability.REACHABLE
-
-    monkeypatch.setattr(
-        UserAddressManager, "get_address_reachability", mock_get_address_reachability
-    )
-
-
-@pytest.fixture
-def record_sent_messages(mock_matrix):
-    original_send_raw = mock_matrix._send_raw
-
-    sent_messages = list()
-
-    def send_raw(receiver_address: Address, data: str) -> None:
-        for message in data.split("\n"):
-            sent_messages.append((receiver_address, message))
-
-    mock_matrix._send_raw = send_raw
-    mock_matrix.sent_messages = sent_messages
-
-    yield
-
-    mock_matrix._send_raw = original_send_raw
-    del mock_matrix.sent_messages
-
-
-def make_message(sign=True):
-    message = SecretRequest(
-        message_identifier=random.randint(0, UINT64_MAX),
-        payment_identifier=1,
-        secrethash=factories.UNIT_SECRETHASH,
-        amount=1,
-        expiration=10,
-        signature=EMPTY_SIGNATURE,
-    )
-    if sign:
-        message.sign(LocalSigner(factories.HOP1_KEY))
-    return message
-
-
-def make_message_text(sign=True, overwrite_data=None):
+def make_message(sign=True, overwrite_data=None):
     room = Room(None, "!roomID:server")
     if not overwrite_data:
-        data = MessageSerializer.serialize(make_message(sign=sign))
+        message = SecretRequest(
+            message_identifier=random.randint(0, UINT64_MAX),
+            payment_identifier=1,
+            secrethash=factories.UNIT_SECRETHASH,
+            amount=1,
+            expiration=10,
+            signature=EMPTY_SIGNATURE,
+        )
+        if sign:
+            message.sign(LocalSigner(factories.HOP1_KEY))
+        data = MessageSerializer.serialize(message)
     else:
         data = overwrite_data
 
@@ -164,7 +125,7 @@ def make_message_text(sign=True, overwrite_data=None):
 def test_normal_processing_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
-    room, event = make_message_text()
+    room, event = make_message()
     assert mock_matrix._handle_sync_messages([(room, [event])])
 
 
@@ -172,21 +133,21 @@ def test_processing_invalid_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     invalid_json = '{"foo": 1,'
-    room, event = make_message_text(overwrite_data=invalid_json)
+    room, event = make_message(overwrite_data=invalid_json)
     assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
 def test_non_signed_message_is_rejected(
     mock_matrix, skip_userid_validation
 ):  # pylint: disable=unused-argument
-    room, event = make_message_text(sign=False)
+    room, event = make_message(sign=False)
     assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
 def test_sending_nonstring_body(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
-    room, event = make_message_text(overwrite_data=b"somebinarydata")
+    room, event = make_message(overwrite_data=b"somebinarydata")
     assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
@@ -200,7 +161,7 @@ def test_sending_nonstring_body(  # pylint: disable=unused-argument
 def test_processing_invalid_message_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation, message_input
 ):
-    room, event = make_message_text(overwrite_data=message_input)
+    room, event = make_message(overwrite_data=message_input)
     assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
@@ -208,52 +169,5 @@ def test_processing_invalid_message_type_json(  # pylint: disable=unused-argumen
     mock_matrix, skip_userid_validation
 ):
     invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
-    room, event = make_message_text(overwrite_data=invalid_message)
+    room, event = make_message(overwrite_data=invalid_message)
     assert not mock_matrix._handle_sync_messages([(room, [event])])
-
-
-@pytest.mark.parametrize("retry_interval", [0.01])
-def test_retry_queue_does_not_resend_removed_messages(
-    mock_matrix, record_sent_messages, retry_interval, all_peers_reachable
-):
-    """
-    Ensure the ``RetryQueue`` doesn't unnecessarily re-send messages.
-
-    Messages should only be retried while they are present in the respective Raiden queue.
-    Once they have been removed they should not be sent again.
-
-    In the past they could have been sent twice.
-    See: https://github.com/raiden-network/raiden/issue/4111
-    """
-    # Pretend the Transport greenlet is running
-    mock_matrix.greenlet = True
-
-    # This is intentionally not using ``MatrixTransport._get_retrier()`` since we don't want the
-    # greenlet to run but instead manually call its `_check_and_send()` method.
-    retry_queue = _RetryQueue(transport=mock_matrix, receiver=factories.HOP1)
-
-    message = make_message()
-    serialized_message = MessageSerializer.serialize(message)
-    queue_identifier = QueueIdentifier(
-        recipient=factories.HOP1, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
-    )
-    retry_queue.enqueue(queue_identifier, message)
-
-    mock_matrix._queueids_to_queues[queue_identifier] = [message]
-
-    with retry_queue._lock:
-        retry_queue._check_and_send()
-
-    assert len(mock_matrix.sent_messages) == 1
-    assert (factories.HOP1, serialized_message) in mock_matrix.sent_messages
-
-    mock_matrix._queueids_to_queues[queue_identifier].clear()
-
-    # Make sure the retry interval has elapsed
-    gevent.sleep(retry_interval * 5)
-
-    with retry_queue._lock:
-        # The message has been removed from the raiden queue and should therefore not be sent again
-        retry_queue._check_and_send()
-
-    assert len(mock_matrix.sent_messages) == 1
