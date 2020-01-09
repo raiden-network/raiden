@@ -1184,12 +1184,12 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
     pfs_broadcast_room_t0.send_text(message_text)
 
     with Timeout(matrix_sync_timeout + 2):
-        sync_iteration = transport2._client._sync_iteration
-        while sync_iteration == transport2._client._sync_iteration:
+        sync_iteration = transport2._client.sync_iteration
+        while sync_iteration == transport2._client.sync_iteration:
             gevent.joinall({transport2.greenlet}, timeout=0.1, raise_error=True)
 
-        sync_iteration = transport1._client._sync_iteration
-        while sync_iteration == transport1._client._sync_iteration:
+        sync_iteration = transport1._client.sync_iteration
+        while sync_iteration == transport1._client.sync_iteration:
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
 
     # Transport2 should have received the message
