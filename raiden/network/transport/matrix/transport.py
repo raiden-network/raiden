@@ -37,7 +37,6 @@ from raiden.network.transport.matrix.utils import (
     join_broadcast_room,
     login,
     make_client,
-    make_message_batches,
     make_room_alias,
     my_place_or_yours,
     validate_and_parse_message,
@@ -252,8 +251,7 @@ class _RetryQueue(Runnable):
             self.log.debug(
                 "Send", receiver=to_checksum_address(self.receiver), messages=message_texts
             )
-            for message_batch in make_message_batches(message_texts):
-                self.transport._send_raw(self.receiver, message_batch)
+            self.transport._send_raw(self.receiver, "\n".join(message_texts))
 
     def _run(self) -> None:  # type: ignore
         msg = f"_RetryQueue started before transport._raiden_service is set"
@@ -628,11 +626,10 @@ class MatrixTransport(Runnable):
                 room_name, message = self._broadcast_queue.get()
                 messages[room_name].append(message)
             for room_name, messages_for_room in messages.items():
-                serialized_messages = (
+                message_text = "\n".join(
                     MessageSerializer.serialize(message) for message in messages_for_room
                 )
-                for message_batch in make_message_batches(serialized_messages):
-                    _broadcast(room_name, message_batch)
+                _broadcast(room_name, message_text)
                 for _ in messages_for_room:
                     # Every message needs to be marked as done.
                     # Unfortunately there's no way to do that in one call :(

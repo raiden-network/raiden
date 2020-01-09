@@ -4,7 +4,7 @@ from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
 from operator import attrgetter
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -50,9 +50,6 @@ USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
 DISPLAY_NAME_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{130}$")
 ROOM_NAME_SEPARATOR = "_"
 ROOM_NAME_PREFIX = "raiden"
-# The maximum matrix event size is 65 kB. Since events are larger than just the message
-# content we chose a conservative value
-MATRIX_MAX_BATCH_SIZE = 50_000
 
 
 class UserPresence(Enum):
@@ -794,26 +791,3 @@ def my_place_or_yours(our_address: Address, partner_address: Address) -> Address
         raise ValueError("Addresses to compare must differ")
     sorted_addresses = sorted([our_address, partner_address])
     return sorted_addresses[0]
-
-
-def make_message_batches(
-    message_texts: Iterable[str], _max_batch_size: int = MATRIX_MAX_BATCH_SIZE
-) -> Generator[str, None, None]:
-    """ Group messages into newline separated batches not exceeding ``_max_batch_size``. """
-    current_batch: List[str] = []
-    size = 0
-    for message_text in message_texts:
-        if size + len(message_text) > _max_batch_size:
-            if size == 0:
-                # A single message exceeds the maximum batch size. This should not happen.
-                raise TransportError(
-                    f"Message exceeds batch size. Size: {len(message_text)}, "
-                    f"Max: {MATRIX_MAX_BATCH_SIZE}, Message: {message_text}"
-                )
-            yield "\n".join(current_batch)
-            current_batch = []
-            size = 0
-        current_batch.append(message_text)
-        size += len(message_text)
-    if current_batch:
-        yield "\n".join(current_batch)
