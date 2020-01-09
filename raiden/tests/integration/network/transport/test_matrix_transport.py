@@ -31,15 +31,17 @@ from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, RaidenConf
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.detect_failure import expect_failure
+from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.factories import HOP1, make_privkeys_ordered
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
+from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, Dict, List, cast
+from raiden.waiting import wait_for_network_state
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 TIMEOUT_MESSAGE_RECEIVE = 15
@@ -1197,3 +1199,84 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
 
     # Transport1 used the filter so nothing was received
     assert not received_sync_events["t1"]
+
+
+@raise_on_failure
+@pytest.mark.parametrize("matrix_server_count", [3])
+@pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
+)
+def test_transport_presence_updates(raiden_network, retry_timeout):
+    """
+    Create transports and test that matrix delivers presence updates
+    in the presence of filters which ignore all event updates
+    from matrix for broadcast rooms except for the presence events.
+    """
+    app0, app1, app2 = raiden_network
+
+    app0.raiden.transport.start_health_check(app1.raiden.address)
+    app0.raiden.transport.start_health_check(app2.raiden.address)
+
+    app1.raiden.transport.start_health_check(app0.raiden.address)
+    app1.raiden.transport.start_health_check(app2.raiden.address)
+
+    app2.raiden.transport.start_health_check(app0.raiden.address)
+    app2.raiden.transport.start_health_check(app1.raiden.address)
+
+    wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app0.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
+
+    wait_for_network_state(app1.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app1.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
+
+    wait_for_network_state(app2.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
+
+    # Stop app0
+    app0.stop()
+    wait_for_network_state(
+        app1.raiden, app0.raiden.address, NetworkState.UNREACHABLE, retry_timeout
+    )
+    wait_for_network_state(
+        app2.raiden, app0.raiden.address, NetworkState.UNREACHABLE, retry_timeout
+    )
+
+    # Restart app0
+    app0.start()
+    app0.raiden.transport.start_health_check(app1.raiden.address)
+    app0.raiden.transport.start_health_check(app2.raiden.address)
+    wait_for_network_state(app1.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
+
+    # Stop app1
+    app1.stop()
+    wait_for_network_state(
+        app0.raiden, app1.raiden.address, NetworkState.UNREACHABLE, retry_timeout
+    )
+    wait_for_network_state(
+        app2.raiden, app1.raiden.address, NetworkState.UNREACHABLE, retry_timeout
+    )
+
+    # Restart app1
+    app1.start()
+    app1.raiden.transport.start_health_check(app0.raiden.address)
+    app1.raiden.transport.start_health_check(app2.raiden.address)
+    wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
+
+    # Stop app2
+    app2.stop()
+    wait_for_network_state(
+        app0.raiden, app2.raiden.address, NetworkState.UNREACHABLE, retry_timeout
+    )
+    wait_for_network_state(
+        app1.raiden, app2.raiden.address, NetworkState.UNREACHABLE, retry_timeout
+    )
+
+    # Restart app0
+    app2.start()
+    app2.raiden.transport.start_health_check(app0.raiden.address)
+    app2.raiden.transport.start_health_check(app1.raiden.address)
+    wait_for_network_state(app0.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app1.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
