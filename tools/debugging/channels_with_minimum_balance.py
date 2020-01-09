@@ -15,7 +15,6 @@ from urllib.parse import urlsplit
 import gevent
 import requests
 import structlog
-from gevent.queue import JoinableQueue
 
 NODE_SECTION_RE = re.compile("^node[0-9]+")
 API_VERSION = "v1"
@@ -32,12 +31,10 @@ class ChannelNew:
     """
 
     token_address: str
-    participant1: Address
-    participant2: Address
-    endpoint1: str
-    endpoint2: str
-    minimum_capacity1: int
-    minimum_capacity2: int
+    participant: Address
+    partner: Address
+    endpoint: str
+    minimum_capacity: int
 
 
 @dataclass
@@ -48,6 +45,10 @@ class ChannelDeposit:
     partner: Address
     endpoint: str
     minimum_capacity: int
+
+
+OpenQueue = Dict[str, List[ChannelNew]]
+DepositQueue = Dict[Tuple[str, str], List[ChannelDeposit]]
 
 
 def is_successful_reponse(response: requests.Response) -> bool:
@@ -75,80 +76,38 @@ def channel_details(endpoint: str, token_address: str, partner: str) -> Optional
     return None
 
 
-def channel_deposit_if_necessary(channel_details: Dict, deposit: ChannelDeposit) -> None:
-    url_channel = (
-        f"{deposit.endpoint}/api/{API_VERSION}/"
-        f"channels/{deposit.token_address}/{deposit.partner}"
-    )
-
+def necessary_deposit(channel_details: Dict, minimum_capacity: int) -> int:
     balance_current = int(channel_details["balance"])
-    balance_difference = deposit.minimum_capacity - balance_current
-    is_deposit_necessary = balance_difference > 0
-
-    if is_deposit_necessary:
-        deposit_current = int(channel_details["total_deposit"])
-        deposit_new = deposit_current + balance_difference
-        new_total_deposit = {"total_deposit": deposit_new}
-
-        log.info(f"Depositing to channel {deposit}")
-        response = requests.patch(url_channel, json=new_total_deposit)
-        if not is_successful_reponse(response):
-            raise RuntimeError(f"An error ocurrent while depositing to channel {deposit}")
-    else:
-        log.info(f"Channel exists and has enough capacity {deposit}")
+    return minimum_capacity - balance_current
 
 
-def channel_open_with_the_same_node(
-    channels_to_open: List[ChannelNew],
-    targetchannel_to_depositqueue: Dict[Tuple[str, str], JoinableQueue],
-) -> None:
+def channel_open(open_queue: List[ChannelNew]) -> None:
     """As of 0.100.5 channels cannot be opened in parallel, starting multiple
     opens at the same time can lead to the HTTP request timing out.  Therefore
     here channels are opened one after the other. (Issue #5446).
     """
-    for channel_open in channels_to_open:
+    for channel_open in open_queue:
         channel = channel_details(
-            channel_open.endpoint1, channel_open.token_address, channel_open.participant2
+            channel_open.endpoint, channel_open.token_address, channel_open.partner
         )
+        assert (
+            channel is None
+        ), "Channel already exists, the operation should not have been scheduled."
 
-        if channel is None:
-            channel_open_request = {
-                "token_address": channel_open.token_address,
-                "partner_address": channel_open.participant2,
-                "total_deposit": channel_open.minimum_capacity1,
-            }
+        channel_open_request = {
+            "token_address": channel_open.token_address,
+            "partner_address": channel_open.partner,
+            "total_deposit": channel_open.minimum_capacity,
+        }
 
-            log.info(f"Opening {channel_open}")
-            url_channel_open = f"{channel_open.endpoint1}/api/{API_VERSION}/channels"
-            response = requests.put(url_channel_open, json=channel_open_request)
+        log.info(f"Opening {channel_open}")
+        url_channel_open = f"{channel_open.endpoint}/api/{API_VERSION}/channels"
+        response = requests.put(url_channel_open, json=channel_open_request)
 
-            if not is_successful_reponse(response):
-                raise RuntimeError(f"An error ocurrent while opening channel {channel_open}")
-
-        else:
-            deposit = ChannelDeposit(
-                channel_open.token_address,
-                channel_open.participant2,
-                channel_open.endpoint1,
-                channel_open.minimum_capacity1,
-            )
-            channel_deposit_if_necessary(channel, deposit)
-
-        # A deposit only makes sense after the channel is opened.
-        deposit = ChannelDeposit(
-            channel_open.token_address,
-            channel_open.participant1,
-            channel_open.endpoint2,
-            channel_open.minimum_capacity2,
-        )
-
-        log.info(f"Queueing {deposit}")
-        targetchannel_to_depositqueue[(channel_open.token_address, channel_open.participant2)].put(
-            deposit
-        )
+        assert is_successful_reponse(response), response
 
 
-def channel_deposit_with_the_same_node_and_token_network(deposit_queue: JoinableQueue) -> None:
+def channel_deposit_with_the_same_token_network(deposit_queue: List[ChannelDeposit]) -> None:
     """Because of how the ERC20 standard is defined, two concurrent approve
     calls overwrite each other.
 
@@ -158,13 +117,156 @@ def channel_deposit_with_the_same_node_and_token_network(deposit_queue: Joinable
     more than the account's balance). This has the side effect of forbidding
     concurrent deposits on the same token network. (Issue #5447)
     """
-    while True:
-        deposit = deposit_queue.get()
+    while deposit_queue:
+        to_delete = list()
 
-        channel = channel_details(deposit.endpoint, deposit.token_address, deposit.partner)
-        if channel is None:
-            raise RuntimeError(f"Channel does not exist! {deposit}")
-        channel_deposit_if_necessary(channel, deposit)
+        for pos, channel_deposit in enumerate(deposit_queue):
+            channel = channel_details(
+                channel_deposit.endpoint, channel_deposit.token_address, channel_deposit.partner
+            )
+
+            # The channel doesn't exist yet, wait for the transaction to be
+            # mined and the local view of the channel created.
+            if channel is None:
+                continue
+
+            deposit = necessary_deposit(channel, channel_deposit.minimum_capacity)
+            to_delete.append(pos)
+
+            if deposit:
+                current_total_deposit = int(channel["total_deposit"])
+                new_total_deposit = current_total_deposit + deposit
+                deposit_json = {"total_deposit": new_total_deposit}
+
+                log.info(f"Depositing to channel {channel_deposit}")
+
+                url_channel = (
+                    f"{channel_deposit.endpoint}/api/{API_VERSION}/"
+                    f"channels/{channel_deposit.token_address}/{channel_deposit.partner}"
+                )
+                response = requests.patch(url_channel, json=deposit_json)
+
+                assert is_successful_reponse(response), response
+            else:
+                log.info(f"Channel exists and has enough capacity {channel_deposit}")
+
+        for pos in reversed(to_delete):
+            deposit_queue.pop(pos)
+
+
+def queue_channel_open(
+    nodeaddress_to_channelopenqueue: OpenQueue,
+    nodeaddress_to_channeldepositqueue: DepositQueue,
+    channel: Dict,
+    token_address: str,
+    node_to_address: Dict,
+    node_to_endpoint: Dict,
+) -> None:
+    node1 = channel["node1"]
+    node2 = channel["node2"]
+
+    participant1 = node_to_address[node1]
+    participant2 = node_to_address[node2]
+
+    minimum_capacity1 = channel["minimum_capacity1"]
+    minimum_capacity2 = channel["minimum_capacity2"]
+
+    is_node1_with_less_work = len(nodeaddress_to_channelopenqueue[participant1]) < len(
+        nodeaddress_to_channelopenqueue[participant2]
+    )
+
+    if is_node1_with_less_work:
+        channel_new = ChannelNew(
+            token_address=token_address,
+            participant=participant1,
+            partner=participant2,
+            endpoint=node_to_endpoint[node1],
+            minimum_capacity=minimum_capacity1,
+        )
+        nodeaddress_to_channelopenqueue[participant1].append(channel_new)
+
+        log.info(f"Queueing {channel_new}")
+
+        channel_deposit = ChannelDeposit(
+            token_address=token_address,
+            partner=participant1,
+            endpoint=node_to_endpoint[node2],
+            minimum_capacity=minimum_capacity1,
+        )
+        nodeaddress_to_channeldepositqueue[(token_address, participant2)].append(channel_deposit)
+
+        log.info(f"Queueing {channel_deposit}")
+    else:
+        channel_new = ChannelNew(
+            token_address=token_address,
+            participant=participant2,
+            partner=participant1,
+            endpoint=node_to_endpoint[node2],
+            minimum_capacity=minimum_capacity2,
+        )
+        nodeaddress_to_channelopenqueue[participant2].append(channel_new)
+
+        log.info(f"Queueing {channel_new}")
+
+        channel_deposit = ChannelDeposit(
+            token_address=token_address,
+            partner=participant2,
+            endpoint=node_to_endpoint[node1],
+            minimum_capacity=minimum_capacity1,
+        )
+        nodeaddress_to_channeldepositqueue[(token_address, participant1)].append(channel_deposit)
+
+        log.info(f"Queueing {channel_deposit}")
+
+
+def queue_channel_deposit(
+    nodeaddress_to_channeldepositqueue: DepositQueue,
+    channel: Dict,
+    current_channel1: Dict,
+    current_channel2: Dict,
+    token_address: str,
+    node_to_address: Dict,
+    node_to_endpoint: Dict,
+) -> None:
+    node1 = channel["node1"]
+    node2 = channel["node2"]
+
+    participant1 = node_to_address[node1]
+    participant2 = node_to_address[node2]
+
+    endpoint1 = node_to_endpoint[node1]
+    endpoint2 = node_to_endpoint[node2]
+
+    minimum_capacity1 = channel["minimum_capacity1"]
+    minimum_capacity2 = channel["minimum_capacity2"]
+
+    deposit1 = necessary_deposit(current_channel1, minimum_capacity1)
+    if deposit1 > 0:
+        channel_deposit = ChannelDeposit(
+            token_address=token_address,
+            partner=participant2,
+            endpoint=endpoint1,
+            minimum_capacity=minimum_capacity2,
+        )
+        nodeaddress_to_channeldepositqueue[(token_address, participant1)].append(channel_deposit)
+
+        log.info(f"Queueing {channel_deposit}")
+    else:
+        log.info(f"Channel already with enough capacity {current_channel1}")
+
+    deposit2 = necessary_deposit(current_channel2, minimum_capacity2)
+    if deposit2 > 0:
+        channel_deposit = ChannelDeposit(
+            token_address=token_address,
+            partner=participant1,
+            endpoint=endpoint2,
+            minimum_capacity=minimum_capacity1,
+        )
+        nodeaddress_to_channeldepositqueue[(token_address, participant2)].append(channel_deposit)
+
+        log.info(f"Queueing {channel_deposit}")
+    else:
+        log.info(f"Channel already with enough capacity {current_channel2}")
 
 
 def main() -> None:
@@ -195,8 +297,8 @@ def main() -> None:
         node_to_endpoint[node_name] = node_info["endpoint"]
         node_to_address[node_name] = node_info["address"]
 
-    nodeaddress_to_queue: Dict[str, List[ChannelNew]] = defaultdict(list)
-    targetchannel_to_depositqueue: Dict[Tuple[str, str], JoinableQueue] = dict()
+    nodeaddress_to_channelopenqueue: OpenQueue = defaultdict(list)
+    nodeaddress_to_channeldepositqueue: DepositQueue = defaultdict(list)
 
     # Schedule the requests to evenly distribute the load. This is important
     # because as of 0.100.5 channel cannot be opened concurrently, by dividing
@@ -209,66 +311,57 @@ def main() -> None:
             participant1 = node_to_address[node1]
             participant2 = node_to_address[node2]
 
-            is_node1_with_less_work = len(nodeaddress_to_queue[participant1]) < len(
-                nodeaddress_to_queue[participant2]
+            current_channel1 = channel_details(
+                node_to_endpoint[node1], token_address, participant2
+            )
+            current_channel2 = channel_details(
+                node_to_endpoint[node2], token_address, participant1
             )
 
-            if is_node1_with_less_work:
-                channel_new = ChannelNew(
-                    token_address=token_address,
-                    participant1=participant1,
-                    participant2=participant2,
-                    endpoint1=node_to_endpoint[node1],
-                    endpoint2=node_to_endpoint[node2],
-                    minimum_capacity1=channel["minimum_capacity1"],
-                    minimum_capacity2=channel["minimum_capacity2"],
-                )
-                nodeaddress_to_queue[participant1].append(channel_new)
-            else:
-                channel_new = ChannelNew(
-                    token_address=token_address,
-                    participant1=participant2,
-                    participant2=participant1,
-                    endpoint1=node_to_endpoint[node2],
-                    endpoint2=node_to_endpoint[node1],
-                    minimum_capacity1=channel["minimum_capacity2"],
-                    minimum_capacity2=channel["minimum_capacity1"],
-                )
-                nodeaddress_to_queue[participant2].append(channel_new)
+            nodes_are_synchronized = bool(current_channel1) == bool(current_channel2)
+            msg = (
+                f"The channel must exist in both or neither of the nodes.\n"
+                f"{current_channel1}\n"
+                f"{current_channel2}"
+            )
+            assert nodes_are_synchronized, msg
 
-            # queue used to order deposits
-            target = (token_address, channel_new.participant2)
-            if target not in targetchannel_to_depositqueue:
-                targetchannel_to_depositqueue[target] = JoinableQueue()
+            if current_channel1 is None:
+                queue_channel_open(
+                    nodeaddress_to_channelopenqueue,
+                    nodeaddress_to_channeldepositqueue,
+                    channel,
+                    token_address,
+                    node_to_address,
+                    node_to_endpoint,
+                )
+            else:
+                assert current_channel1 and current_channel2
+
+                queue_channel_deposit(
+                    nodeaddress_to_channeldepositqueue,
+                    channel,
+                    current_channel1,
+                    current_channel2,
+                    token_address,
+                    node_to_address,
+                    node_to_endpoint,
+                )
 
     open_greenlets = set(
-        gevent.spawn(
-            channel_open_with_the_same_node, channels_to_open, targetchannel_to_depositqueue
-        )
-        for channels_to_open in nodeaddress_to_queue.values()
+        gevent.spawn(channel_open, open_queue)
+        for open_queue in nodeaddress_to_channelopenqueue.values()
     )
-    deposit_greenlets = [
-        gevent.spawn(channel_deposit_with_the_same_node_and_token_network, deposit_queue)
-        for deposit_queue in targetchannel_to_depositqueue.values()
-    ]
+    deposit_greenlets = set(
+        gevent.spawn(channel_deposit_with_the_same_token_network, deposit_queue)
+        for deposit_queue in nodeaddress_to_channeldepositqueue.values()
+    )
 
-    gevent.joinall(open_greenlets, raise_error=True)
-    log.info("Opening the channels finished")
+    all_greenlets = set()
+    all_greenlets.update(open_greenlets)
+    all_greenlets.update(deposit_greenlets)
 
-    # Because all channels have been opened, there is no more deposits to do,
-    # so now one just has to wait for the queues to get empty.
-    for queue in targetchannel_to_depositqueue.values():
-        # Queue` and `JoinableQueue` don't have the method `rawlink`, so
-        # `joinall` cannot be used. At the same time calling `join` in the
-        # `JoinableQueue` was raising an exception `This operation would block
-        # forever` which seems to be a false positive. Using `empty` to
-        # circumvent it.
-        while not queue.empty():
-            gevent.sleep(1)
-
-    log.info("Depositing to the channels finished")
-    # The deposit greenlets are infinite loops.
-    gevent.killall(deposit_greenlets)
+    gevent.joinall(all_greenlets, raise_error=True)
 
 
 if __name__ == "__main__":
