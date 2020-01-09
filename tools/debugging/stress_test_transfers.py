@@ -615,7 +615,7 @@ def main() -> None:
             return
 
         # Uncomment this if you want to interact manually with the started nodes
-        # print("All nodes are ready")
+        # print("All nodes are ready! Press Enter to continue and perform the stress tests.")
         # input()
 
         nursery.spawn_under_watch(
