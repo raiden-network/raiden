@@ -21,8 +21,8 @@ from twisted.internet import defer
 
 from raiden.constants import Environment
 from raiden.messages.abstract import Message
-from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
+from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
@@ -432,7 +432,8 @@ class TestMatrixTransport(MatrixTransport):
 
         super().broadcast(room, message)
 
-    def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
-        self.send_messages[queue_identifier].append(message)
+    def send_async(self, message_queues: List[MessagesQueue]) -> None:
+        for queue in message_queues:
+            self.send_messages[queue.queue_identifier].extend(queue.messages)
 
-        super().send_async(queue_identifier, message)
+        super().send_async(message_queues)

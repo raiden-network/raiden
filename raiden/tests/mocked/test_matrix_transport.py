@@ -8,6 +8,7 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.constants import EMPTY_SIGNATURE, Environment
+from raiden.messages.abstract import Message
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
@@ -400,7 +401,7 @@ def record_sent_messages(mock_matrix):
     del mock_matrix.sent_messages
 
 
-def make_message(sign=True):
+def make_message(sign: bool = True) -> Message:
     message = SecretRequest(
         message_identifier=make_message_identifier(),
         payment_identifier=PaymentID(1),
@@ -480,7 +481,9 @@ def test_processing_invalid_message_type_json(  # pylint: disable=unused-argumen
 
 @pytest.mark.parametrize("retry_interval_initial", [0.01])
 @pytest.mark.usefixtures("record_sent_messages", "all_peers_reachable")
-def test_retry_queue_does_not_resend_removed_messages(mock_matrix, retry_interval_initial):
+def test_retry_queue_does_not_resend_removed_messages(
+    mock_matrix: MatrixTransport, retry_interval_initial: float
+) -> None:
     """
     Ensure the ``RetryQueue`` doesn't unnecessarily re-send messages.
 
@@ -503,15 +506,16 @@ def test_retry_queue_does_not_resend_removed_messages(mock_matrix, retry_interva
         recipient=Address(factories.HOP1),
         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
-    retry_queue.enqueue(queue_identifier, message)
+    retry_queue.enqueue(queue_identifier, [message])
 
-    mock_matrix._queueids_to_queues[queue_identifier] = [message]
+    # TODO: Fix the code bellow, the types are not matching.
+    mock_matrix._queueids_to_queues[queue_identifier] = [message]  # type: ignore
 
     with retry_queue._lock:
         retry_queue._check_and_send()
 
-    assert len(mock_matrix.sent_messages) == 1
-    assert (factories.HOP1, serialized_message) in mock_matrix.sent_messages
+    assert len(mock_matrix.sent_messages) == 1  # type: ignore
+    assert (factories.HOP1, serialized_message) in mock_matrix.sent_messages  # type: ignore
 
     mock_matrix._queueids_to_queues[queue_identifier].clear()
 
@@ -522,7 +526,7 @@ def test_retry_queue_does_not_resend_removed_messages(mock_matrix, retry_interva
         # The message has been removed from the raiden queue and should therefore not be sent again
         retry_queue._check_and_send()
 
-    assert len(mock_matrix.sent_messages) == 1
+    assert len(mock_matrix.sent_messages) == 1  # type: ignore
 
 
 @pytest.mark.parametrize("retry_interval_initial", [0.05])
@@ -549,7 +553,7 @@ def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_
 @pytest.mark.parametrize("retry_interval_initial", [0.05])
 def test_retryqueue_not_idle_with_messages(
     mock_matrix: MatrixTransport, retry_interval_initial: float
-):
+) -> None:
     """ Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue. """
     retry_queue = mock_matrix._get_retrier(Address(factories.HOP1))
     idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
@@ -558,7 +562,7 @@ def test_retryqueue_not_idle_with_messages(
         recipient=Address(factories.HOP1),
         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
-    retry_queue.enqueue(queue_identifier, make_message())
+    retry_queue.enqueue(queue_identifier, [make_message()])
 
     # Without the `all_peers_reachable` fixture, the default reachability will be `UNREACHABLE`
     # therefore the message will remain in the internal queue indefinitely.

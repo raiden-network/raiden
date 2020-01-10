@@ -23,9 +23,10 @@ from raiden.constants import (
 from raiden.exceptions import InsufficientEth
 from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
-from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
+from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue, _RetryQueue
 from raiden.network.transport.matrix.utils import (
+    AddressReachability,
     ReachabilityState,
     UserPresence,
     make_room_alias,
@@ -94,7 +95,7 @@ def ping_pong_message_success(transport0, transport1):
 
     transport0._raiden_service.sign(ping_message)
     transport1._raiden_service.sign(pong_message)
-    transport0.send_async(queueid1, ping_message)
+    transport0.send_async([MessagesQueue(queueid1, [ping_message])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE, exception=False):
         all_messages_received = False
@@ -111,7 +112,7 @@ def ping_pong_message_success(transport0, transport1):
 
     transport0._raiden_service.sign(pong_message)
     transport1._raiden_service.sign(ping_message)
-    transport1.send_async(queueid0, ping_message)
+    transport1.send_async([MessagesQueue(queueid0, [ping_message])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE, exception=False):
         all_messages_received = False
@@ -211,7 +212,7 @@ def test_matrix_message_sync(matrix_transports):
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
-        transport0.send_async(queue_identifier, message)
+        transport0.send_async([MessagesQueue(queue_identifier, [message])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while not len(transport0_messages) == 5:
@@ -240,7 +241,7 @@ def test_matrix_message_sync(matrix_transports):
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
-        transport0.send_async(queue_identifier, message)
+        transport0.send_async([MessagesQueue(queue_identifier, [message])])
 
     # Should fetch the 5 messages sent while transport1 was offline
     transport1.start(transport1._raiden_service, [], None)

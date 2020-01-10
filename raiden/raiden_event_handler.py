@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from collections import defaultdict
 
 import structlog
 from eth_utils import encode_hex, to_hex
@@ -11,11 +11,13 @@ from raiden.constants import (
     LOCKSROOT_OF_NO_LOCKS,
 )
 from raiden.exceptions import InsufficientEth, RaidenUnrecoverableError
+from raiden.messages.abstract import Message
 from raiden.messages.encode import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
+from raiden.network.transport.matrix.transport import MessagesQueue
 from raiden.storage.restore import (
     channel_state_until_state_change,
     get_event_with_balance_proof_by_balance_hash,
@@ -50,7 +52,7 @@ from raiden.transfer.events import (
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockClaimFailed,
@@ -68,7 +70,15 @@ from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
-from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
+from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    TYPE_CHECKING,
+    Address,
+    BlockSpecification,
+    Dict,
+    List,
+    Nonce,
+)
 from raiden_contracts.constants import MessageTypeId
 
 if TYPE_CHECKING:
@@ -114,176 +124,198 @@ def unlock(
 
 class EventHandler(ABC):
     @abstractmethod
-    def on_raiden_event(
-        self, raiden: "RaidenService", chain_state: ChainState, event: Event
+    def on_raiden_events(
+        self, raiden: "RaidenService", chain_state: ChainState, events: List[Event]
     ) -> None:
         pass
 
 
 class RaidenEventHandler(EventHandler):
-    def on_raiden_event(
-        self, raiden: "RaidenService", chain_state: ChainState, event: Event
+    def on_raiden_events(
+        self, raiden: "RaidenService", chain_state: ChainState, events: List[Event]
     ) -> None:  # pragma: no unittest
-        # pylint: disable=too-many-branches
-        if type(event) == SendLockExpired:
-            assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
-            self.handle_send_lockexpired(raiden, event)
-        elif type(event) == SendLockedTransfer:
-            assert isinstance(event, SendLockedTransfer), MYPY_ANNOTATION
-            self.handle_send_lockedtransfer(raiden, event)
-        elif type(event) == SendSecretReveal:
-            assert isinstance(event, SendSecretReveal), MYPY_ANNOTATION
-            self.handle_send_secretreveal(raiden, event)
-        elif type(event) == SendUnlock:
-            assert isinstance(event, SendUnlock), MYPY_ANNOTATION
-            self.handle_send_balanceproof(raiden, event)
-        elif type(event) == SendSecretRequest:
-            assert isinstance(event, SendSecretRequest), MYPY_ANNOTATION
-            self.handle_send_secretrequest(raiden, chain_state, event)
-        elif type(event) == SendRefundTransfer:
-            assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
-            self.handle_send_refundtransfer(raiden, event)
-        elif type(event) == SendWithdrawRequest:
-            assert isinstance(event, SendWithdrawRequest), MYPY_ANNOTATION
-            self.handle_send_withdrawrequest(raiden, event)
-        elif type(event) == SendWithdrawConfirmation:
-            assert isinstance(event, SendWithdrawConfirmation), MYPY_ANNOTATION
-            self.handle_send_withdraw(raiden, event)
-        elif type(event) == SendWithdrawExpired:
-            assert isinstance(event, SendWithdrawExpired), MYPY_ANNOTATION
-            self.handle_send_withdrawexpired(raiden, event)
-        elif type(event) == SendProcessed:
-            assert isinstance(event, SendProcessed), MYPY_ANNOTATION
-            self.handle_send_processed(raiden, event)
-        elif type(event) == EventPaymentSentSuccess:
-            assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
-            self.handle_paymentsentsuccess(raiden, event)
-        elif type(event) == EventPaymentSentFailed:
-            assert isinstance(event, EventPaymentSentFailed), MYPY_ANNOTATION
-            self.handle_paymentsentfailed(raiden, event)
-        elif type(event) == EventUnlockFailed:
-            assert isinstance(event, EventUnlockFailed), MYPY_ANNOTATION
-            self.handle_unlockfailed(raiden, event)
-        elif type(event) == EventInvalidSecretRequest:
-            assert isinstance(event, EventInvalidSecretRequest), MYPY_ANNOTATION
-            self.handle_invalidsecretrequest(raiden, event)
-        elif type(event) == ContractSendSecretReveal:
-            assert isinstance(event, ContractSendSecretReveal), MYPY_ANNOTATION
-            self.handle_contract_send_secretreveal(raiden, event)
-        elif type(event) == ContractSendChannelClose:
-            assert isinstance(event, ContractSendChannelClose), MYPY_ANNOTATION
-            self.handle_contract_send_channelclose(raiden, chain_state, event)
-        elif type(event) == ContractSendChannelUpdateTransfer:
-            assert isinstance(event, ContractSendChannelUpdateTransfer), MYPY_ANNOTATION
-            self.handle_contract_send_channelupdate(raiden, event)
-        elif type(event) == ContractSendChannelBatchUnlock:
-            assert isinstance(event, ContractSendChannelBatchUnlock), MYPY_ANNOTATION
-            self.handle_contract_send_channelunlock(raiden, chain_state, event)
-        elif type(event) == ContractSendChannelSettle:
-            assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
-            self.handle_contract_send_channelsettle(raiden, event)
-        elif type(event) == ContractSendChannelWithdraw:
-            assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
-            self.handle_contract_send_channelwithdraw(raiden, event)
-        elif type(event) in UNEVENTFUL_EVENTS:
-            pass
-        else:
-            log.error(
-                "Unknown event",
-                event_type=str(type(event)),
-                node=to_checksum_address(raiden.address),
-            )
+        message_queues: Dict[QueueIdentifier, List[Message]] = defaultdict(list)
+
+        for event in events:
+            # pylint: disable=too-many-branches
+            if type(event) == SendLockExpired:
+                assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
+                self.handle_send_lockexpired(raiden, event, message_queues)
+            elif type(event) == SendLockedTransfer:
+                assert isinstance(event, SendLockedTransfer), MYPY_ANNOTATION
+                self.handle_send_lockedtransfer(raiden, event, message_queues)
+            elif type(event) == SendSecretReveal:
+                assert isinstance(event, SendSecretReveal), MYPY_ANNOTATION
+                self.handle_send_secretreveal(raiden, event, message_queues)
+            elif type(event) == SendUnlock:
+                assert isinstance(event, SendUnlock), MYPY_ANNOTATION
+                self.handle_send_balanceproof(raiden, event, message_queues)
+            elif type(event) == SendSecretRequest:
+                assert isinstance(event, SendSecretRequest), MYPY_ANNOTATION
+                self.handle_send_secretrequest(raiden, chain_state, event, message_queues)
+            elif type(event) == SendRefundTransfer:
+                assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
+                self.handle_send_refundtransfer(raiden, event, message_queues)
+            elif type(event) == SendWithdrawRequest:
+                assert isinstance(event, SendWithdrawRequest), MYPY_ANNOTATION
+                self.handle_send_withdrawrequest(raiden, event, message_queues)
+            elif type(event) == SendWithdrawConfirmation:
+                assert isinstance(event, SendWithdrawConfirmation), MYPY_ANNOTATION
+                self.handle_send_withdraw(raiden, event, message_queues)
+            elif type(event) == SendWithdrawExpired:
+                assert isinstance(event, SendWithdrawExpired), MYPY_ANNOTATION
+                self.handle_send_withdrawexpired(raiden, event, message_queues)
+            elif type(event) == SendProcessed:
+                assert isinstance(event, SendProcessed), MYPY_ANNOTATION
+                self.handle_send_processed(raiden, event, message_queues)
+            elif type(event) == EventPaymentSentSuccess:
+                assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
+                self.handle_paymentsentsuccess(raiden, event)
+            elif type(event) == EventPaymentSentFailed:
+                assert isinstance(event, EventPaymentSentFailed), MYPY_ANNOTATION
+                self.handle_paymentsentfailed(raiden, event)
+            elif type(event) == EventUnlockFailed:
+                assert isinstance(event, EventUnlockFailed), MYPY_ANNOTATION
+                self.handle_unlockfailed(raiden, event)
+            elif type(event) == EventInvalidSecretRequest:
+                assert isinstance(event, EventInvalidSecretRequest), MYPY_ANNOTATION
+                self.handle_invalidsecretrequest(raiden, event)
+            elif type(event) == ContractSendSecretReveal:
+                assert isinstance(event, ContractSendSecretReveal), MYPY_ANNOTATION
+                self.handle_contract_send_secretreveal(raiden, event)
+            elif type(event) == ContractSendChannelClose:
+                assert isinstance(event, ContractSendChannelClose), MYPY_ANNOTATION
+                self.handle_contract_send_channelclose(raiden, chain_state, event)
+            elif type(event) == ContractSendChannelUpdateTransfer:
+                assert isinstance(event, ContractSendChannelUpdateTransfer), MYPY_ANNOTATION
+                self.handle_contract_send_channelupdate(raiden, event)
+            elif type(event) == ContractSendChannelBatchUnlock:
+                assert isinstance(event, ContractSendChannelBatchUnlock), MYPY_ANNOTATION
+                self.handle_contract_send_channelunlock(raiden, chain_state, event)
+            elif type(event) == ContractSendChannelSettle:
+                assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
+                self.handle_contract_send_channelsettle(raiden, event)
+            elif type(event) == ContractSendChannelWithdraw:
+                assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
+                self.handle_contract_send_channelwithdraw(raiden, event)
+            elif type(event) in UNEVENTFUL_EVENTS:
+                pass
+            else:
+                log.error(
+                    "Unknown event",
+                    event_type=str(type(event)),
+                    node=to_checksum_address(raiden.address),
+                )
+
+        all_messages: List[MessagesQueue] = [
+            MessagesQueue(queue_identifier, messages)
+            for queue_identifier, messages in message_queues.items()
+        ]
+        raiden.transport.send_async(all_messages)
 
     @staticmethod
     def handle_send_lockexpired(
-        raiden: "RaidenService", send_lock_expired: SendLockExpired
+        raiden: "RaidenService",
+        send_lock_expired: SendLockExpired,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
-        raiden.transport.send_async(send_lock_expired.queue_identifier, lock_expired_message)
+        message_queues[send_lock_expired.queue_identifier].append(lock_expired_message)
 
     @staticmethod
     def handle_send_lockedtransfer(
-        raiden: "RaidenService", send_locked_transfer: SendLockedTransfer
+        raiden: "RaidenService",
+        send_locked_transfer: SendLockedTransfer,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
-        raiden.transport.send_async(
-            send_locked_transfer.queue_identifier, mediated_transfer_message
-        )
+        message_queues[send_locked_transfer.queue_identifier].append(mediated_transfer_message)
 
     @staticmethod
     def handle_send_secretreveal(
-        raiden: "RaidenService", reveal_secret_event: SendSecretReveal
+        raiden: "RaidenService",
+        reveal_secret_event: SendSecretReveal,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
-        raiden.transport.send_async(reveal_secret_event.queue_identifier, reveal_secret_message)
+        message_queues[reveal_secret_event.queue_identifier].append(reveal_secret_message)
 
     @staticmethod
     def handle_send_balanceproof(
-        raiden: "RaidenService", balance_proof_event: SendUnlock
+        raiden: "RaidenService",
+        balance_proof_event: SendUnlock,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
-        raiden.transport.send_async(balance_proof_event.queue_identifier, unlock_message)
+        message_queues[balance_proof_event.queue_identifier].append(unlock_message)
 
     @staticmethod
     def handle_send_secretrequest(
-        raiden: "RaidenService", chain_state: ChainState, secret_request_event: SendSecretRequest
+        raiden: "RaidenService",
+        chain_state: ChainState,
+        secret_request_event: SendSecretRequest,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         if reveal_secret_with_resolver(raiden, chain_state, secret_request_event):
             return
 
         secret_request_message = message_from_sendevent(secret_request_event)
         raiden.sign(secret_request_message)
-        raiden.transport.send_async(secret_request_event.queue_identifier, secret_request_message)
+        message_queues[secret_request_event.queue_identifier].append(secret_request_message)
 
     @staticmethod
     def handle_send_refundtransfer(
-        raiden: "RaidenService", refund_transfer_event: SendRefundTransfer
+        raiden: "RaidenService",
+        refund_transfer_event: SendRefundTransfer,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
-        raiden.transport.send_async(
-            refund_transfer_event.queue_identifier, refund_transfer_message
-        )
+        message_queues[refund_transfer_event.queue_identifier].append(refund_transfer_message)
 
     @staticmethod
     def handle_send_withdrawrequest(
-        raiden: "RaidenService", withdraw_request_event: SendWithdrawRequest
+        raiden: "RaidenService",
+        withdraw_request_event: SendWithdrawRequest,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:
         withdraw_request_message = message_from_sendevent(withdraw_request_event)
         raiden.sign(withdraw_request_message)
-        raiden.transport.send_async(
-            withdraw_request_event.queue_identifier, withdraw_request_message
-        )
+        message_queues[withdraw_request_event.queue_identifier].append(withdraw_request_message)
 
     @staticmethod
     def handle_send_withdraw(
-        raiden: "RaidenService", withdraw_event: SendWithdrawConfirmation
+        raiden: "RaidenService",
+        withdraw_event: SendWithdrawConfirmation,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
-        raiden.transport.send_async(withdraw_event.queue_identifier, withdraw_message)
+        message_queues[withdraw_event.queue_identifier].append(withdraw_message)
 
     @staticmethod
     def handle_send_withdrawexpired(
-        raiden: "RaidenService", withdraw_expired_event: SendWithdrawExpired
+        raiden: "RaidenService",
+        withdraw_expired_event: SendWithdrawExpired,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:
         withdraw_expired_message = message_from_sendevent(withdraw_expired_event)
         raiden.sign(withdraw_expired_message)
-        raiden.transport.send_async(
-            withdraw_expired_event.queue_identifier, withdraw_expired_message
-        )
+        message_queues[withdraw_expired_event.queue_identifier].append(withdraw_expired_message)
 
     @staticmethod
     def handle_send_processed(
-        raiden: "RaidenService", processed_event: SendProcessed
+        raiden: "RaidenService",
+        processed_event: SendProcessed,
+        message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
-        raiden.transport.send_async(processed_event.queue_identifier, processed_message)
+        message_queues[processed_event.queue_identifier].append(processed_message)
 
     @staticmethod
     def handle_paymentsentsuccess(
@@ -738,18 +770,18 @@ class PFSFeedbackEventHandler(RaidenEventHandler):
     def __init__(self, wrapped_handler: EventHandler) -> None:
         self.wrapped = wrapped_handler
 
-    def on_raiden_event(
-        self, raiden: "RaidenService", chain_state: ChainState, event: Event
+    def on_raiden_events(
+        self, raiden: "RaidenService", chain_state: ChainState, events: List[Event]
     ) -> None:  # pragma: no unittest
-        if type(event) == EventRouteFailed:
-            assert isinstance(event, EventRouteFailed), MYPY_ANNOTATION
-            self.handle_routefailed(raiden, event)
-        elif type(event) == EventPaymentSentSuccess:
-            assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
-            self.handle_paymentsentsuccess(raiden, event)
+        for event in events:
+            if type(event) == EventRouteFailed:
+                assert isinstance(event, EventRouteFailed), MYPY_ANNOTATION
+                self.handle_routefailed(raiden, event)
+            elif type(event) == EventPaymentSentSuccess:
+                assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
+                self.handle_paymentsentsuccess(raiden, event)
 
-        # Call the decorated event handler
-        self.wrapped.on_raiden_event(raiden, chain_state, event)
+        self.wrapped.on_raiden_events(raiden, chain_state, events)
 
     @staticmethod
     def handle_routefailed(

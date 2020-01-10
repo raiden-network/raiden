@@ -3,7 +3,7 @@ import os
 import random
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, NamedTuple, Set, Tuple
+from typing import Any, Dict, List, NamedTuple, Set, Tuple, cast
 from uuid import UUID
 
 import filelock
@@ -57,7 +57,7 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.transport.matrix.transport import MatrixTransport
+from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.raiden_event_handler import EventHandler
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import RaidenConfig
@@ -66,7 +66,12 @@ from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.architecture import BalanceProofSignedState, Event as RaidenEvent, StateChange
+from raiden.transfer.architecture import (
+    BalanceProofSignedState,
+    ContractSendEvent,
+    Event as RaidenEvent,
+    StateChange,
+)
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -606,6 +611,7 @@ class RaidenService(Runnable):
                 "Synchronizing blockchain events",
                 blocks_to_sync=blocks_to_sync,
                 blocks_per_second=blocks_to_sync / elapsed,
+                to_block=to_block,
                 elapsed=elapsed,
             )
             self.last_log_time = now
@@ -822,19 +828,15 @@ class RaidenService(Runnable):
             ],
         )
 
-        greenlets: List[Greenlet] = list()
-        if self.ready_to_process_events:
-            for raiden_event in raiden_event_list:
-                greenlets.append(
-                    self.handle_event(chain_state=new_state, raiden_event=raiden_event)
-                )
-
         self.state_change_qty += len(state_changes)
 
         if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
             self.snapshot()
 
-        return greenlets
+        if self.ready_to_process_events:
+            return self.async_handle_events(chain_state=new_state, raiden_events=raiden_event_list)
+        else:
+            return list()
 
     def snapshot(self) -> None:
         assert self.wal, "WAL must be set."
@@ -843,7 +845,9 @@ class RaidenService(Runnable):
         self.wal.snapshot(self.state_change_qty)
         self.state_change_qty_snapshot = self.state_change_qty
 
-    def handle_event(self, chain_state: ChainState, raiden_event: RaidenEvent) -> Greenlet:
+    def async_handle_events(
+        self, chain_state: ChainState, raiden_events: List[RaidenEvent]
+    ) -> List[Greenlet]:
         """Spawn a new thread to handle a Raiden event.
 
         This will spawn a new greenlet to handle each event, which is
@@ -861,15 +865,32 @@ class RaidenService(Runnable):
             This is spawning a new greenlet for /each/ transaction. It's
             therefore /required/ that there is *NO* order among these.
         """
-        return spawn_named("rs-handle_event", self._handle_event, chain_state, raiden_event)
-
-    def _handle_event(self, chain_state: ChainState, raiden_event: RaidenEvent) -> None:
         assert isinstance(chain_state, ChainState)
-        assert isinstance(raiden_event, RaidenEvent)
 
+        non_transaction_events = list()
+        greenlets: List[Greenlet] = list()
+
+        for event in raiden_events:
+            if isinstance(event, ContractSendEvent):
+                greenlets.append(
+                    spawn_named("rs-handle_events", self._handle_events, chain_state, [event])
+                )
+            else:
+                non_transaction_events.append(event)
+
+        if non_transaction_events:
+            greenlets.append(
+                spawn_named(
+                    "rs-handle_events", self._handle_events, chain_state, non_transaction_events
+                )
+            )
+
+        return greenlets
+
+    def _handle_events(self, chain_state: ChainState, raiden_events: List[RaidenEvent]) -> None:
         try:
-            self.raiden_event_handler.on_raiden_event(
-                raiden=self, chain_state=chain_state, event=raiden_event
+            self.raiden_event_handler.on_raiden_events(
+                raiden=self, chain_state=chain_state, events=raiden_events
             )
         except RaidenRecoverableError as e:
             log.info(str(e))
@@ -1060,7 +1081,7 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events, msg
 
-        pending_transactions = views.get_pending_transactions(chain_state)
+        pending_transactions = cast(List[RaidenEvent], views.get_pending_transactions(chain_state))
 
         log.debug(
             "Initializing transaction queues",
@@ -1068,10 +1089,11 @@ class RaidenService(Runnable):
             node=to_checksum_address(self.address),
         )
 
-        for transaction in pending_transactions:
-            self.add_pending_greenlet(
-                self.handle_event(chain_state=chain_state, raiden_event=transaction)
-            )
+        transaction_greenlets = self.async_handle_events(
+            chain_state=chain_state, raiden_events=pending_transactions
+        )
+        for greeenlet in transaction_greenlets:
+            self.add_pending_greenlet(greeenlet)
 
     def _initialize_payment_statuses(self, chain_state: ChainState) -> None:
         """ Re-initialize targets_to_identifiers_to_statuses.
@@ -1139,11 +1161,18 @@ class RaidenService(Runnable):
             node=to_checksum_address(self.address),
         )
 
+        all_messages: List[MessagesQueue] = list()
         for queue_identifier, event_queue in events_queues.items():
+
+            queue_messages = list()
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)
-                self.transport.send_async(queue_identifier, message)
+                queue_messages.append(message)
+
+            all_messages.append(MessagesQueue(queue_identifier, queue_messages))
+
+        self.transport.send_async(all_messages)
 
     def _initialize_monitoring_services_queue(self, chain_state: ChainState) -> None:
         """Send the monitoring requests for all current balance proofs.

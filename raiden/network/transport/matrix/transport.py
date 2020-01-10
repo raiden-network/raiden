@@ -1,6 +1,7 @@
 import json
 import time
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Counter as CounterType
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -89,6 +90,12 @@ RETRY_INTERVAL_MULTIPLIER = 1.55
 RETRY_QUEUE_IDLE_AFTER = 10
 
 
+@dataclass
+class MessagesQueue:
+    queue_identifier: QueueIdentifier
+    messages: List[Message]
+
+
 class _RetryQueue(Runnable):
     """ A helper Runnable to send batched messages to receiver through transport """
 
@@ -133,36 +140,43 @@ class _RetryQueue(Runnable):
             while now() < _next:  # yield False while next is still in the future
                 yield False
 
-    def enqueue(self, queue_identifier: QueueIdentifier, message: Message) -> None:
+    def enqueue(self, queue_identifier: QueueIdentifier, messages: List[Message]) -> None:
         """ Enqueue a message to be sent, and notify main loop """
         assert queue_identifier.recipient == self.receiver
+
         with self._lock:
-            already_queued = any(
-                queue_identifier == data.queue_identifier and message == data.message
-                for data in self._message_queue
-            )
-            if already_queued:
-                self.log.warning(
-                    "Message already in queue - ignoring",
-                    receiver=to_checksum_address(self.receiver),
-                    queue=queue_identifier,
-                    message=redact_secret(DictSerializer.serialize(message)),
-                )
-                return
             timeout_generator = timeout_exponential_backoff(
                 self.transport._config.retries_before_backoff,
                 self.transport._config.retry_interval_initial,
                 self.transport._config.retry_interval_max,
             )
-            expiration_generator = self._expiration_generator(timeout_generator)
-            self._message_queue.append(
-                _RetryQueue._MessageData(
-                    queue_identifier=queue_identifier,
-                    message=message,
-                    text=MessageSerializer.serialize(message),
-                    expiration_generator=expiration_generator,
+
+            encoded_messages = list()
+            for message in messages:
+                already_queued = any(
+                    queue_identifier == data.queue_identifier and message == data.message
+                    for data in self._message_queue
                 )
-            )
+
+                if already_queued:
+                    self.log.warning(
+                        "Message already in queue - ignoring",
+                        receiver=to_checksum_address(self.receiver),
+                        queue=queue_identifier,
+                        message=redact_secret(DictSerializer.serialize(message)),
+                    )
+                else:
+                    expiration_generator = self._expiration_generator(timeout_generator)
+                    data = _RetryQueue._MessageData(
+                        queue_identifier=queue_identifier,
+                        message=message,
+                        text=MessageSerializer.serialize(message),
+                        expiration_generator=expiration_generator,
+                    )
+                    encoded_messages.append(data)
+
+            self._message_queue.extend(encoded_messages)
+
         self.notify()
 
     def enqueue_unordered(self, message: Message) -> None:
@@ -171,7 +185,7 @@ class _RetryQueue(Runnable):
             queue_identifier=QueueIdentifier(
                 recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
             ),
-            message=message,
+            messages=[message],
         )
 
     def notify(self) -> None:
@@ -200,7 +214,11 @@ class _RetryQueue(Runnable):
         if self.transport._prioritize_broadcast_messages:
             self.transport._broadcast_queue.join()
 
-        self.log.debug("Retrying message(s)", receiver=to_checksum_address(self.receiver))
+        self.log.debug(
+            "Retrying message(s)",
+            receiver=to_checksum_address(self.receiver),
+            queue_size=len(self._message_queue),
+        )
         status = self.transport._address_mgr.get_address_reachability(self.receiver)
         if status is not AddressReachability.REACHABLE:
             # if partner is not reachable, return
@@ -620,35 +638,48 @@ class MatrixTransport(Runnable):
 
             self.immediate_health_check_for(self._healthcheck_queue.get())
 
-    def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
-        """Queue the message for sending to recipient in the queue_identifier
+    def send_async(self, message_queues: List[MessagesQueue]) -> None:
+        """Queue messages to be sent.
 
         It may be called before transport is started, to initialize message queues
         The actual sending is started only when the transport is started
         """
-        # even if transport is not started, can run to enqueue messages to send when it starts
-        receiver_address = queue_identifier.recipient
-
-        if not is_binary_address(receiver_address):
-            raise ValueError("Invalid address {}".format(to_checksum_address(receiver_address)))
-
-        # These are not protocol messages, but transport specific messages
-        if isinstance(message, (Delivered, Ping, Pong)):
-            raise ValueError(f"Do not use send_async for {message.__class__.__name__} messages")
-
-        self.log.debug(
-            "Send async",
-            receiver_address=to_checksum_address(receiver_address),
-            message=redact_secret(DictSerializer.serialize(message)),
-            queue_identifier=queue_identifier,
-        )
-
-        if self._environment is Environment.DEVELOPMENT and isinstance(message, RetrieableMessage):
+        if self._environment is Environment.DEVELOPMENT:
             assert self._message_timing_keeper is not None, MYPY_ANNOTATION
-            self._counters["send"][(message.__class__.__name__, message.message_identifier)] += 1
-            self._message_timing_keeper.add_message(message)
 
-        self._send_with_retry(queue_identifier, message)
+        for queue in message_queues:
+            receiver_address = queue.queue_identifier.recipient
+
+            if not is_binary_address(receiver_address):
+                raise ValueError(
+                    "Invalid address {}".format(to_checksum_address(receiver_address))
+                )
+
+            # These are not protocol messages, but transport specific messages
+            for message in queue.messages:
+                if isinstance(message, (Delivered, Ping, Pong)):
+                    raise ValueError(
+                        f"Do not use send_async for {message.__class__.__name__} messages"
+                    )
+
+                is_development = self._environment is Environment.DEVELOPMENT
+                if is_development and isinstance(message, RetrieableMessage):
+                    assert self._message_timing_keeper is not None, MYPY_ANNOTATION
+                    self._counters["send"][
+                        (message.__class__.__name__, message.message_identifier)
+                    ] += 1
+                    self._message_timing_keeper.add_message(message)
+
+            self.log.debug(
+                "Send async",
+                receiver_address=to_checksum_address(receiver_address),
+                messages=[
+                    redact_secret(DictSerializer.serialize(message)) for message in queue.messages
+                ],
+                queue_identifier=queue.queue_identifier,
+            )
+
+            self._send_with_retry(queue)
 
     def broadcast(self, room: str, message: Message) -> None:
         """Broadcast a message to a public room.
@@ -1076,9 +1107,9 @@ class MatrixTransport(Runnable):
             retrier.greenlet.link_exception(self.on_error)
         return retrier
 
-    def _send_with_retry(self, queue_identifier: QueueIdentifier, message: Message) -> None:
-        retrier = self._get_retrier(queue_identifier.recipient)
-        retrier.enqueue(queue_identifier=queue_identifier, message=message)
+    def _send_with_retry(self, queue: MessagesQueue) -> None:
+        retrier = self._get_retrier(queue.queue_identifier.recipient)
+        retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
         room = self._get_room_for_address(receiver_address, require_online_peer=True)

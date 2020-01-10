@@ -471,8 +471,8 @@ def test_secret_revealed_on_chain(
         triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber("latest"),
     )
     current_state = app2.raiden.wal.state_manager.current_state
-    app2.raiden.raiden_event_handler.on_raiden_event(
-        raiden=app2.raiden, chain_state=current_state, event=channel_close_event
+    app2.raiden.raiden_event_handler.on_raiden_events(
+        raiden=app2.raiden, chain_state=current_state, events=[channel_close_event]
     )
 
     settle_expiration = (
