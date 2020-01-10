@@ -594,11 +594,8 @@ def run(ctx: Context, **kwargs: Any) -> None:
         ctx.obj = kwargs
         return
 
-    if kwargs["transport"] == "matrix":
-        runner = MatrixRunner(kwargs, ctx)
-    else:
-        # Shouldn't happen
-        raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
+    assert kwargs["transport"] == "matrix", "Invalid transport type. This should not happen."
+    runner = MatrixRunner(kwargs, ctx)
 
     click.secho(runner.welcome_string, fg="green")
     click.secho(
