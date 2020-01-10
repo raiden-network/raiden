@@ -21,9 +21,10 @@ from raiden.utils.typing import List, TokenAddress, TokenAmount, WithdrawAmount
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     raiden_network: List[App], token_addresses: List[TokenAddress]
 ) -> None:
-    # we need to test if CapacityUpdates are sent after a deposit and a withdraw
-    # therefore, we create two Raiden nodes app0 and app1
-    # the nodes open a channel but do not deposit
+    # We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
+    # sent after a deposit and withdraw.
+    # Therefore, we create two Raiden nodes app0 and app1.
+    # The nodes open a channel but do not deposit
     # a pfs matrix room is mocked to see what is sent to it
 
     app0, app1 = raiden_network
@@ -54,9 +55,9 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     )
 
     # now we expect the room to be called the 1st time with a PFSCapacityUpdate
-    # after the deposit
-    assert pfs_room.send_text.call_count == 1
+    # and a PFSFeeUpdate after the deposit
     assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[0])
+    assert "PFSFeeUpdate" in str(pfs_room.send_text.call_args_list[0])
 
     api0.set_total_channel_withdraw(
         token_address=token_addresses[0],
@@ -67,5 +68,5 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 
     # now we expect the room to be called the 2nd time with a PFSCapacityUpdate
     # after the withdraw
-    assert pfs_room.send_text.call_count == 2
     assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[1])
+    assert "PFSFeeUpdate" in str(pfs_room.send_text.call_args_list[1])

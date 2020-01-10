@@ -731,11 +731,25 @@ class RaidenService(Runnable):
                 )
 
             if isinstance(state_change, PATH_FINDING_SERVICE_UPDATE):
+                update_fee_schedule = isinstance(
+                    state_change,
+                    (
+                        ContractReceiveChannelDeposit,
+                        ReceiveWithdrawConfirmation,
+                        ReceiveWithdrawExpired,
+                    ),
+                )
+
                 if isinstance(state_change, BalanceProofStateChange):
                     canonical_identifier = state_change.balance_proof.canonical_identifier
                 else:
                     canonical_identifier = state_change.canonical_identifier
-                send_pfs_update(raiden=self, canonical_identifier=canonical_identifier)
+
+                send_pfs_update(
+                    raiden=self,
+                    canonical_identifier=canonical_identifier,
+                    update_fee_schedule=update_fee_schedule,
+                )
 
         for state_change in state_changes:
             after_blockchain_statechange(self, state_change)
