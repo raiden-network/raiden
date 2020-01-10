@@ -4,9 +4,20 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 
+from raiden.accounts import KeystoreAuthenticationError, KeystoreFileNotFound
 from raiden.constants import EthClient
-from raiden.ui.cli import run
+from raiden.exceptions import (
+    APIServerPortInUseError,
+    ConfigurationError,
+    EthereumNonceTooLow,
+    EthNodeInterfaceError,
+    RaidenUnrecoverableError,
+    ReplacementTransactionUnderpriced,
+)
+from raiden.ui.cli import ReturnCode, run
+from raiden.ui.runners import MatrixRunner
 from raiden.utils.ethereum_clients import is_supported_client
 
 
@@ -31,6 +42,50 @@ def test_cli_version(cli_runner):
     }
     assert result_expected_keys == result_json.keys()
     assert result.exit_code == 0
+
+    result = cli_runner(run, ["--version"])
+    assert "Hint: Use '" in result.output and "version' instead" in result.output
+    assert result.exit_code == 0
+
+
+def mock_raises(exception):
+    def f(*_, **__):
+        raise exception
+
+    return f
+
+
+def test_run_error_reporting(cli_runner, monkeypatch):
+    result = cli_runner(run, ["--transport", "udp"])
+    assert "Invalid value" in result.output and "--transport" in result.output
+    assert result.exit_code != 0
+
+    caught_exceptions = {
+        APIServerPortInUseError(): ReturnCode.PORT_ALREADY_IN_USE,
+        ConfigurationError(): ReturnCode.CONFIGURATION_ERROR,
+        ConnectTimeout(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
+        ConnectionError(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
+        EthereumNonceTooLow(): ReturnCode.ETH_ACCOUNT_ERROR,
+        EthNodeInterfaceError(): ReturnCode.ETH_INTERFACE_ERROR,
+        KeystoreAuthenticationError(): ReturnCode.ETH_ACCOUNT_ERROR,
+        KeystoreFileNotFound(): ReturnCode.ETH_ACCOUNT_ERROR,
+        RaidenUnrecoverableError(): ReturnCode.FATAL,
+        ReplacementTransactionUnderpriced(): ReturnCode.ETH_ACCOUNT_ERROR,
+        RequestsConnectionError(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
+        Exception(): ReturnCode.FATAL,
+    }
+
+    for exception, code in caught_exceptions.items():
+        monkeypatch.setattr(MatrixRunner, "run", mock_raises(exception))
+        result = cli_runner(run, "--accept-disclaimer")
+        assert result.exception.code == code
+
+
+def test_check_is_supported_unknown_client():
+    supported, client, version = is_supported_client("Aleth//v1.2.1")
+    assert not supported
+    assert not client
+    assert not version
 
 
 def run_test_check_json_rpc_geth():
@@ -66,13 +121,6 @@ def run_test_check_json_rpc_geth():
     assert v3 == "0.0.0"
 
     supported, client, version = is_supported_client("Geth/faultyversion")
-    assert not supported
-    assert not client
-    assert not version
-
-
-def test_check_is_supported_unknown_client():
-    supported, client, version = is_supported_client("Aleth//v1.2.1")
     assert not supported
     assert not client
     assert not version
