@@ -1,0 +1,32 @@
+{
+    "networks": {
+        "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7": [
+            {
+                "node1": "node0",
+                "minimum_capacity1": 1130220,
+                "node2": "node1",
+                "minimum_capacity2": 1130220
+            },
+            {
+                "node1": "node1",
+                "minimum_capacity1": 1130220,
+                "node2": "node2",
+                "minimum_capacity2": 1130220
+            }
+        ]
+    },
+    "nodes": {
+        "node0": {
+            "address": "0x5c11cc525590d9Ff8C7E4Af1704A39Df6c3884b5",
+            "endpoint": "http://127.0.0.1:5000"
+        },
+        "node1": {
+            "address": "0xa9FA88442c404716623155d150c526D8F1ae82E5",
+            "endpoint": "http://127.0.0.1:5001"
+        },
+        "node2": {
+            "address": "0x9df878E37C4B851bbe44841e72299F6f317C685C",
+            "endpoint": "http://127.0.0.1:5002"
+        }
+    }
+}
