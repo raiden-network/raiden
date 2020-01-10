@@ -67,7 +67,7 @@ from raiden.transfer.architecture import BalanceProofSignedState, Event as Raide
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendLockedTransfer
 from raiden.transfer.mediated_transfer.mediation_fee import (
     FeeScheduleState,
     calculate_imbalance_fees,
@@ -129,7 +129,7 @@ log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
 ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 
-PATH_FINDING_SERVICE_UPDATE = (
+PFS_UPDATE_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
@@ -145,6 +145,7 @@ PATH_FINDING_SERVICE_UPDATE = (
     # ActionInitInitiator | The update is done by the SendLockedTransfer event
     # ReceiveWithdrawRequest | Update done by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
+PFS_UPDATE_EVENTS = (SendBalanceProof,)
 
 
 def initiator_init(
@@ -730,7 +731,7 @@ class RaidenService(Runnable):
                     non_closing_participant=self.address,
                 )
 
-            if isinstance(state_change, PATH_FINDING_SERVICE_UPDATE):
+            if isinstance(state_change, PFS_UPDATE_STATE_CHANGES):
                 update_fee_schedule = isinstance(
                     state_change,
                     (
@@ -749,6 +750,12 @@ class RaidenService(Runnable):
                     raiden=self,
                     canonical_identifier=canonical_identifier,
                     update_fee_schedule=update_fee_schedule,
+                )
+
+        for event in raiden_event_list:
+            if isinstance(event, PFS_UPDATE_EVENTS):
+                send_pfs_update(
+                    raiden=self, canonical_identifier=event.balance_proof.canonical_identifier
                 )
 
         for state_change in state_changes:

@@ -8,7 +8,21 @@ from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_R
 from raiden.network.transport.matrix import make_room_alias
 from raiden.network.transport.matrix.client import Room
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.utils.typing import List, TokenAddress, TokenAmount, WithdrawAmount
+from raiden.tests.utils.transfer import (
+    assert_succeeding_transfer_invariants,
+    block_timeout_for_transfer_by_secrethash,
+    transfer,
+    wait_assert,
+)
+from raiden.transfer import views
+from raiden.utils.typing import (
+    List,
+    PaymentAmount,
+    PaymentID,
+    TokenAddress,
+    TokenAmount,
+    WithdrawAmount,
+)
 
 
 @raise_on_failure
@@ -70,3 +84,52 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     # after the withdraw
     assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[1])
     assert "PFSFeeUpdate" in str(pfs_room.send_text.call_args_list[1])
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
+@pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
+def test_mediated_transfer(
+    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
+):
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    token_network_registry_address = app0.raiden.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
+    )
+
+    # Mock send_text on the PFS room
+    transport0 = app0.raiden.transport
+    pfs_room_name = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_room = transport0._broadcast_rooms.get(pfs_room_name)
+    # need to assert for mypy that pfs_room is not None
+    assert isinstance(pfs_room, Room)
+    pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
+
+    amount = PaymentAmount(10)
+    secrethash = transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_address=token_address,
+        amount=amount,
+        identifier=PaymentID(1),
+        timeout=network_wait * number_of_nodes,
+    )
+
+    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
+        wait_assert(
+            assert_succeeding_transfer_invariants,
+            token_network_address,
+            app0,
+            deposit - amount,
+            [],
+            app1,
+            deposit + amount,
+            [],
+        )
+
+    assert pfs_room.send_text.call_count == 1
+    assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[0])
