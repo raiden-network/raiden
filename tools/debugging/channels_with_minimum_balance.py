@@ -34,7 +34,7 @@ class ChannelNew:
     participant: Address
     partner: Address
     endpoint: str
-    minimum_capacity: int
+    initial_deposit: int
 
 
 @dataclass
@@ -97,7 +97,7 @@ def channel_open(open_queue: List[ChannelNew]) -> None:
         channel_open_request = {
             "token_address": channel_open.token_address,
             "partner_address": channel_open.partner,
-            "total_deposit": channel_open.minimum_capacity,
+            "total_deposit": channel_open.initial_deposit,
         }
 
         log.info(f"Opening {channel_open}")
@@ -176,47 +176,45 @@ def queue_channel_open(
     )
 
     if is_node1_with_less_work:
-        channel_new = ChannelNew(
-            token_address=token_address,
-            participant=participant1,
-            partner=participant2,
-            endpoint=node_to_endpoint[node1],
-            minimum_capacity=minimum_capacity1,
-        )
-        nodeaddress_to_channelopenqueue[participant1].append(channel_new)
-
-        log.info(f"Queueing {channel_new}")
-
-        channel_deposit = ChannelDeposit(
-            token_address=token_address,
-            partner=participant1,
-            endpoint=node_to_endpoint[node2],
-            minimum_capacity=minimum_capacity1,
-        )
-        nodeaddress_to_channeldepositqueue[(token_address, participant2)].append(channel_deposit)
-
-        log.info(f"Queueing {channel_deposit}")
+        channelnew_participant = participant1
+        channelnew_partner = participant2
+        channelnew_endpoint = node_to_endpoint[node1]
+        channelnew_minimum_capacity = minimum_capacity1
+        channeldeposit_partner = participant1
+        channeldeposit_endpoint = node_to_endpoint[node2]
+        channeldeposit_minimum_capacity = minimum_capacity2
     else:
-        channel_new = ChannelNew(
-            token_address=token_address,
-            participant=participant2,
-            partner=participant1,
-            endpoint=node_to_endpoint[node2],
-            minimum_capacity=minimum_capacity2,
-        )
-        nodeaddress_to_channelopenqueue[participant2].append(channel_new)
+        channelnew_participant = participant2
+        channelnew_partner = participant1
+        channelnew_endpoint = node_to_endpoint[node2]
+        channelnew_minimum_capacity = minimum_capacity2
+        channeldeposit_participant = participant1
+        channeldeposit_partner = participant2
+        channeldeposit_endpoint = node_to_endpoint[node1]
+        channeldeposit_minimum_capacity = minimum_capacity1
 
-        log.info(f"Queueing {channel_new}")
+    channel_new = ChannelNew(
+        token_address=token_address,
+        participant=channelnew_participant,
+        partner=channelnew_partner,
+        endpoint=channelnew_endpoint,
+        initial_deposit=channelnew_minimum_capacity,
+    )
+    nodeaddress_to_channelopenqueue[channelnew_participant].append(channel_new)
 
-        channel_deposit = ChannelDeposit(
-            token_address=token_address,
-            partner=participant2,
-            endpoint=node_to_endpoint[node1],
-            minimum_capacity=minimum_capacity1,
-        )
-        nodeaddress_to_channeldepositqueue[(token_address, participant1)].append(channel_deposit)
+    log.info(f"Queueing {channel_new}")
 
-        log.info(f"Queueing {channel_deposit}")
+    channel_deposit = ChannelDeposit(
+        token_address=token_address,
+        partner=channeldeposit_partner,
+        endpoint=channeldeposit_endpoint,
+        minimum_capacity=channeldeposit_minimum_capacity,
+    )
+    nodeaddress_to_channeldepositqueue[(token_address, channeldeposit_participant)].append(
+        channel_deposit
+    )
+
+    log.info(f"Queueing {channel_deposit}")
 
 
 def queue_channel_deposit(
