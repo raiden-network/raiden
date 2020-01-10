@@ -21,6 +21,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     UnexpectedChannelState,
 )
+from raiden.network.transport.matrix.utils import AddressReachability
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.utils import typing
@@ -313,8 +314,15 @@ class ConnectionManager:  # pragma: no unittest
         )
 
         available_addresses = list(participants_addresses - known)
-        shuffle(available_addresses)
-        new_partners = available_addresses
+        available_and_online_addresses = available_addresses
+        available_and_online_addresses = [
+            address
+            for address in available_addresses
+            if self.raiden.transport.force_check_address_reachability(address)
+            == AddressReachability.REACHABLE
+        ]
+        shuffle(available_and_online_addresses)
+        new_partners = available_and_online_addresses
 
         log.debug(
             "Found partners",
