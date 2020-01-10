@@ -155,12 +155,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
 
 @pytest.mark.parametrize("blockchain_number_of_nodes", [2])
 def test_remote_transaction_with_zero_gasprice_is_not_mined(
-    web3: Web3,
-    deploy_key: PrivateKey,
-    blockchain_rpc_ports: List[Port],
-    blockchain_type: str,
-    # Skip on geth, see https://github.com/raiden-network/raiden/issues/5606
-    skip_if_not_parity,
+    web3: Web3, deploy_key: PrivateKey, blockchain_rpc_ports: List[Port], blockchain_type: str
 ) -> None:
     """ If the non-local transaction is sent with a gas price set to zero it is
     not mined.
