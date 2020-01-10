@@ -454,16 +454,16 @@ def test_different_view_of_last_bp_during_unlock(
         )
 
     count = 0
-    on_raiden_event_original = app1.raiden.raiden_event_handler.on_raiden_event
+    on_raiden_events_original = app1.raiden.raiden_event_handler.on_raiden_events
 
-    def patched_on_raiden_event(raiden, chain_state, event):
-        if type(event) == ContractSendChannelUpdateTransfer:
-            nonlocal count
-            count += 1
+    def patched_on_raiden_events(raiden, chain_state, events):
+        nonlocal count
 
-        on_raiden_event_original(raiden, chain_state, event)
+        count += sum(1 for event in events if type(event) == ContractSendChannelUpdateTransfer)
 
-    setattr(app1.raiden.raiden_event_handler, "on_raiden_event", patched_on_raiden_event)  # NOQA
+        on_raiden_events_original(raiden, chain_state, events)
+
+    setattr(app1.raiden.raiden_event_handler, "on_raiden_events", patched_on_raiden_events)  # NOQA
 
     # and now app1 comes back online
     restart_node(app1)

@@ -78,47 +78,55 @@ class HoldRaidenEventHandler(EventHandler):
         self.eventtype_to_holdings: Dict[type, List[Holding]] = defaultdict(list)
         self.pre_hooks: Set[Callable] = set()
 
-    def on_raiden_event(self, raiden: RaidenService, chain_state: ChainState, event: RaidenEvent):
-        for hook in self.pre_hooks:
-            hook(event)
+    def on_raiden_events(
+        self, raiden: RaidenService, chain_state: ChainState, events: List[RaidenEvent]
+    ):
+        events_to_dispatch = list()
 
-        event_type = type(event)
-        # First check that there are no overlapping holds, otherwise the test
-        # is likely flaky. It should either reuse the hold for the same event
-        # or different holds must match a unique event.
-        for hold in self.eventtype_to_holdings[event_type]:
-            if check_nested_attrs(event, hold.attributes):
-                msg = (
-                    f"Matching event of type {event.__class__.__name__} emitted "
-                    f"twice, this should not happen. Either there is a bug in the "
-                    f"state machine or the hold.attributes is too generic and "
-                    f"multiple different events are matching. Event: {event} "
-                    f"Attributes: {hold.attributes}"
-                )
-                raise RuntimeError(msg)
+        for event in events:
+            for hook in self.pre_hooks:
+                hook(event)
 
-        waitingholds = self.eventtype_to_waitingholds[event_type]
-        for pos, waiting_hold in enumerate(waitingholds):
+            event_type = type(event)
+            # First check that there are no overlapping holds, otherwise the test
+            # is likely flaky. It should either reuse the hold for the same event
+            # or different holds must match a unique event.
+            for hold in self.eventtype_to_holdings[event_type]:
+                if check_nested_attrs(event, hold.attributes):
+                    msg = (
+                        f"Matching event of type {event.__class__.__name__} emitted "
+                        f"twice, this should not happen. Either there is a bug in the "
+                        f"state machine or the hold.attributes is too generic and "
+                        f"multiple different events are matching. Event: {event} "
+                        f"Attributes: {hold.attributes}"
+                    )
+                    raise RuntimeError(msg)
 
-            # If it is a match:
-            # - Delete the waiting hold and add it to the holding
-            # - Do not dispatch the event
-            # - Notify the test by setting the async_result
-            if check_nested_attrs(event, waiting_hold.attributes):
-                holding = Holding(
-                    event=event,
-                    chain_state=chain_state,
-                    event_type=waiting_hold.event_type,
-                    async_result=waiting_hold.async_result,
-                    attributes=waiting_hold.attributes,
-                )
-                del self.eventtype_to_waitingholds[event_type][pos]
-                self.eventtype_to_holdings[event_type].append(holding)
-                waiting_hold.async_result.set(event)
-                break
-        else:
-            # Only dispatch the event if it didn't match any of the holds
-            self.wrapped.on_raiden_event(raiden, chain_state, event)
+            waitingholds = self.eventtype_to_waitingholds[event_type]
+            for pos, waiting_hold in enumerate(waitingholds):
+
+                # If it is a match:
+                # - Delete the waiting hold and add it to the holding
+                # - Do not dispatch the event
+                # - Notify the test by setting the async_result
+                if check_nested_attrs(event, waiting_hold.attributes):
+                    holding = Holding(
+                        event=event,
+                        chain_state=chain_state,
+                        event_type=waiting_hold.event_type,
+                        async_result=waiting_hold.async_result,
+                        attributes=waiting_hold.attributes,
+                    )
+                    del self.eventtype_to_waitingholds[event_type][pos]
+                    self.eventtype_to_holdings[event_type].append(holding)
+                    waiting_hold.async_result.set(event)
+                    break
+            else:
+                # Only dispatch the event if it didn't match any of the holds
+                events_to_dispatch.append(event)
+
+        if events_to_dispatch:
+            self.wrapped.on_raiden_events(raiden, chain_state, events_to_dispatch)
 
     def hold(self, event_type: type, attributes: Dict) -> AsyncResult:
         hold = HoldWait(event_type=event_type, async_result=AsyncResult(), attributes=attributes)
@@ -143,7 +151,7 @@ class HoldRaidenEventHandler(EventHandler):
         assert found is not None, msg
 
         hold = holds.pop(found[0])
-        self.wrapped.on_raiden_event(raiden, hold.chain_state, event)
+        self.wrapped.on_raiden_events(raiden, hold.chain_state, [event])
         log.debug(f"{event} released.", node=to_checksum_address(raiden.address))
 
     def hold_secretrequest_for(self, secrethash: SecretHash) -> AsyncResult:

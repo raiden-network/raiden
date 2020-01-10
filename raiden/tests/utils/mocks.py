@@ -209,6 +209,7 @@ class MockRaidenService:
         )
 
         self.wal.log_and_dispatch([state_change])
+        self.transport = Mock()
 
     def on_messages(self, messages):
         if self.message_handler:
