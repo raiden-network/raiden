@@ -258,3 +258,54 @@ def test_participant_selection(raiden_network, token_addresses):
             channel_ids=channel_identifiers,
             retry_timeout=0.1,
         )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("settle_timeout", [10])
+@pytest.mark.parametrize("reveal_timeout", [3])
+def test_connect_does_not_open_channels_with_offline_noes(raiden_network, token_addresses):
+    """
+    Test that using the connection manager to connect to a token network
+    does not open channels with offline nodes
+
+    Test for https://github.com/raiden-network/raiden/issues/5583
+    """
+    # pylint: disable=too-many-locals
+    registry_address = raiden_network[0].raiden.default_registry.address
+    token_address = token_addresses[0]
+    app0 = raiden_network[0]
+    app1 = raiden_network[1]
+    offline_node = raiden_network[0]
+    target_channels_num = 1
+
+    # connect the first node - this will register the token and open the first channel
+    # Since there is no other nodes available to connect to this call will do nothing more
+    RaidenAPI(app0.raiden).token_network_connect(
+        registry_address=registry_address,
+        token_address=token_address,
+        funds=TokenAmount(100),
+        initial_channel_target=target_channels_num,
+    )
+
+    # First node will now go offline
+    offline_node.raiden.stop()
+    offline_node.raiden.greenlet.get()
+    assert not offline_node.raiden
+
+    # Call the connect endpoint for app 1, the node which stayed online
+    RaidenAPI(app1.raiden).token_network_connect(
+        registry_address=registry_address,
+        token_address=token_address,
+        funds=TokenAmount(100),
+        initial_channel_target=target_channels_num,
+    )
+
+    # ensure that we did not open a channel with the offline node
+    node_state = views.state_from_raiden(app1.raiden)
+    network_state = views.get_token_network_by_token_address(
+        node_state, registry_address, token_address
+    )
+    assert network_state is not None
+    assert len(network_state.channelidentifiers_to_channels) == 0
