@@ -80,6 +80,8 @@ _RoomID = NewType("_RoomID", str)
 # Combined with 10 retries (``..utils.JOIN_RETRIES``) this will give a total wait time of ~15s
 ROOM_JOIN_RETRY_INTERVAL = 0.1
 ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER = 1.55
+# A RetryQueue is considered idle after this many iterations without a message
+RETRY_QUEUE_IDLE_AFTER = 10
 
 
 class _RetryQueue(Runnable):
@@ -100,6 +102,7 @@ class _RetryQueue(Runnable):
         self._message_queue: List[_RetryQueue._MessageData] = list()
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
+        self._idle_since: int = 0  # Counter of idle iterations
         super().__init__()
         self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
 
@@ -266,9 +269,22 @@ class _RetryQueue(Runnable):
             with self._lock:
                 self._notify_event.clear()
                 if self._message_queue:
+                    self._idle_since = 0
                     self._check_and_send()
+                else:
+                    self._idle_since += 1
+
+            if self.is_idle:
+                # There have been no messages to process for a while. Exit.
+                # A new instance will be created by `MatrixTransport._get_retrier()` if necessary
+                self.log.debug("Exiting idle RetryQueue", queue=self)
+                return
             # wait up to retry_interval (or to be notified) before checking again
             self._notify_event.wait(self.transport._config.retry_interval)
+
+    @property
+    def is_idle(self) -> bool:
+        return self._idle_since >= RETRY_QUEUE_IDLE_AFTER
 
     def __str__(self) -> str:
         return self.greenlet.name
@@ -918,7 +934,9 @@ class MatrixTransport(Runnable):
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
-        if receiver not in self._address_to_retrier:
+        retrier = self._address_to_retrier.get(receiver)
+        # The RetryQueue may have exited due to being idle
+        if retrier is None or retrier.greenlet.ready():
             retrier = _RetryQueue(transport=self, receiver=receiver)
             self._address_to_retrier[receiver] = retrier
             # Always start the _RetryQueue, otherwise `stop` will block forever
@@ -928,7 +946,7 @@ class MatrixTransport(Runnable):
             retrier.start()
             # ``Runnable.start()`` may re-create the internal greenlet
             retrier.greenlet.link_exception(self.on_error)
-        return self._address_to_retrier[receiver]
+        return retrier
 
     def _send_with_retry(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         retrier = self._get_retrier(queue_identifier.recipient)
