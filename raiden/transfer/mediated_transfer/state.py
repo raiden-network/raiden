@@ -175,7 +175,7 @@ class MediationPairState(State):
     #   valid from all but the `payee_expired` state.
     #
     # payee_balance_proof:
-    #   This node has sent a SendBalanceProof to the payee with the balance
+    #   This node has sent a SendUnlock to the payee with the balance
     #   updated.
     #
     # payee_expired:

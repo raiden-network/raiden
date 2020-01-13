@@ -169,10 +169,10 @@ def message_event_schema_deserialization(
         from raiden.transfer.mediated_transfer.events import SendSecretReveal
 
         return SchemaCache.get_or_create_schema(SendSecretReveal)
-    elif message_type.endswith("SendBalanceProof"):
-        from raiden.transfer.mediated_transfer.events import SendBalanceProof
+    elif message_type.endswith("SendUnlock"):
+        from raiden.transfer.mediated_transfer.events import SendUnlock
 
-        return SchemaCache.get_or_create_schema(SendBalanceProof)
+        return SchemaCache.get_or_create_schema(SendUnlock)
     elif message_type.endswith("SendSecretRequest"):
         from raiden.transfer.mediated_transfer.events import SendSecretRequest
 

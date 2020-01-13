@@ -23,10 +23,10 @@ from raiden.storage.sqlite import (
 )
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
+    SendUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -308,7 +308,7 @@ def test_get_event_with_balance_proof():
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
-    send_balance_proof = SendBalanceProof(
+    send_balance_proof = SendUnlock(
         recipient=partner_address,
         message_identifier=MessageID(next(counter)),
         payment_identifier=factories.make_payment_id(),

@@ -30,10 +30,10 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
+    SendUnlock,
     refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import (
@@ -125,7 +125,7 @@ if TYPE_CHECKING:
 PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
 BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
-SendUnlockAndPendingLocksState = Tuple[SendBalanceProof, PendingLocksState]
+SendUnlockAndPendingLocksState = Tuple[SendUnlock, PendingLocksState]
 
 
 class UnlockGain(NamedTuple):
@@ -1502,7 +1502,7 @@ def create_unlock(
         canonical_identifier=channel_state.canonical_identifier,
     )
 
-    unlock_lock = SendBalanceProof(
+    unlock_lock = SendUnlock(
         recipient=recipient,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
@@ -1595,7 +1595,7 @@ def send_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     secrethash: SecretHash,
-) -> SendBalanceProof:
+) -> SendUnlock:
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock, "caller must ensure the lock exists"
 

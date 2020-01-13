@@ -1294,7 +1294,7 @@ def handle_offchain_secretreveal(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> TransitionResult[MediatorTransferState]:
-    """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
+    """ Handles the secret reveal and sends SendUnlock/RevealSecret if necessary. """
     is_valid_reveal = is_valid_secret_reveal(
         state_change=mediator_state_change, transfer_secrethash=mediator_state.secrethash
     )
