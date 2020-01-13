@@ -21,6 +21,10 @@ function display_usage {
     echo -e "\tDESTINATION_URL is optional and is used to specify the path prefix for the downloaded files. Otherwise the current directory is used\n"
 }
 
+function print_bold {
+    echo -e "${BOLD}$1${RESET}"
+}
+
 # if less than two arguments supplied, display usage 
 if [[  $1 == "--help" ]]; then 
     display_usage
@@ -33,11 +37,11 @@ else
     DESTINATION_DIR=$(pwd)
 fi
 
-echo -e "${BOLD}Downloading PFS logs${RESET}"
+print_bold "Downloading PFS logs"
 
 ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli | gzip' > ${DESTINATION_DIR}/pfs.log.gz
 
-echo -e "${BOLD}Downloading scenarios list${RESET}"
+print_bold "Downloading scenarios list"
 
 function separator {
     printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
@@ -65,14 +69,14 @@ separator
 echo -e "${BOLD}Looking for failures${RESET}"
 scenarios_dir="${DESTINATION_DIR}/scenario-player/scenarios"
 for scenario in $scenarios; do
-    echo -e "${BOLD}${scenario}${RESET}"
+    print_bold ${scenario}
     separator
     scenario_dir=${scenarios_dir}/${scenario}
     for node in $(ls $scenario_dir); do
         node_dir="${scenario_dir}/${node}/"
         result=$(cat ${node_dir}*.log | jq --tab 'select (.error!=null)')
         if [[ $result != "" ]]; then
-            echo -e "- ${BOLD}Found error in ${node_dir}${RESET}"
+            print_bold "- Found error in ${node_dir}"
             echo -e "${result}"
         fi
     done
