@@ -194,13 +194,11 @@ We use the address of this token to deploy service contracts.
  (env) $ export SERVICE_TOKEN="0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
  (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256 --service-deposit-bump-numerator 5 --service-deposit-bump-denominator 4 --service-deposit-decay-constant 100000000 --initial-service-deposit-price 100000000000 --service-deposit-min-price 1000 --service-registration-duration 234000000 --contracts-version $VERSION --token-network-registry-address $TokenNetworkRegistry
 
-From the output, we remember the address of the ServiceRegistry and OneToN.
+From the output, we remember the address of the UserDeposit contract.
 
 .. code:: bash
 
- (env) $ export ServiceRegistry="0xeFcf15fcD4F4aDC67a2c2B6De5D1F18C361f0e88"
- (env) $ export OneToN="0x764962b404fB6cDf546cC11bCA67A3b4b07EdB98"
- (env) $ export MonitoringService="0xEB37af64251F36da45903Ea829D2C64B9D9Ae9C2"
+ (env) $ export UserDeposit="0x50E5f50b98a78615163E89A65fD60D551933CaE2"    
 
 
 We deploy another Token contract that's going to be transferred on Raiden network.
@@ -246,4 +244,4 @@ And you can start the Raiden client:
 
 .. code:: bash
 
- (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --tokennetwork-registry-contract-address $TokenNetworkRegistry --secret-registry-contract-address  $SecretRegistry --routing-mode local --one-to-n-contract-address $OneToN --monitoring-service-contract-address $MonitoringService --password-file passwd_file
+ (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --user-deposit-contract-address $UserDeposit --routing-mode local --password-file passwd_file
