@@ -553,7 +553,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
     enable_gevent_monitoring_signal()
 
-    if flamegraph:
+    if flamegraph:  # pragma: no cover
         os.makedirs(flamegraph, exist_ok=True)
 
         now = datetime.datetime.now().isoformat()
@@ -563,7 +563,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
         flame = FlameGraphCollector(stack_stream)
         profiler = TraceSampler(flame)
 
-    if switch_tracing is True:
+    if switch_tracing is True:  # pragma: no cover
         switch_monitor = SwitchMonitoring()
 
     if kwargs["environment_type"] == Environment.DEVELOPMENT:
@@ -571,7 +571,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
-    if log_memory_usage_interval > 0:
+    if log_memory_usage_interval > 0:  # pragma: no cover
         memory_logger = MemoryLogger(log_memory_usage_interval)
         memory_logger.start()
 
@@ -687,7 +687,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
     except Exception as ex:
         write_stack_trace(ex)
         sys.exit(ReturnCode.FATAL)
-    finally:
+    finally:  # pragma: no cover
         # teardown order is important because of side-effects, both the
         # switch_monitor and profiler could use the tracing api, for the
         # teardown code to work correctly the teardown has to be done in the
@@ -733,7 +733,7 @@ def version(short: bool) -> None:
 @click.pass_context
 def smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
-) -> None:
+) -> None:  # pragma: no cover
     """ Test, that the raiden installation is sane. """
     from raiden.tests.utils.smoketest import (
         setup_raiden,
