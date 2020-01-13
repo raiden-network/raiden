@@ -101,13 +101,18 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
         chain_state, token_network_registry_address, token_address
     )
 
+    chain_id = app0.raiden.rpc_client.chain_id
+    pfs_room_name = make_room_alias(chain_id, PATH_FINDING_BROADCASTING_ROOM)
+
     # Mock send_text on the PFS room
-    transport0 = app0.raiden.transport
-    pfs_room_name = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_room = transport0._broadcast_rooms.get(pfs_room_name)
-    # need to assert for mypy that pfs_room is not None
-    assert isinstance(pfs_room, Room)
-    pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
+    pfs_rooms: List[Room] = []
+    for app in [app0, app1]:
+        transport = app.raiden.transport
+        pfs_room = transport._broadcast_rooms.get(pfs_room_name)
+        # need to assert for mypy that pfs_room0 is not None
+        assert isinstance(pfs_room, Room)
+        pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
+        pfs_rooms.append(pfs_room)
 
     amount = PaymentAmount(10)
     secrethash = transfer(
@@ -131,6 +136,10 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
             [],
         )
 
-    # We expect one PFSCapacityUpdate when locking and one when unlocking
-    assert pfs_room.send_text.call_count == 2
-    assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[0])
+    # Initiator: we expect one PFSCapacityUpdate when locking and one when unlocking
+    assert pfs_rooms[0].send_text.call_count == 2
+    assert "PFSCapacityUpdate" in str(pfs_rooms[0].send_text.call_args_list[0])
+
+    # Target: we expect one PFSCapacityUpdate when funds are unlocked
+    assert pfs_rooms[1].send_text.call_count == 1
+    assert "PFSCapacityUpdate" in str(pfs_rooms[1].send_text.call_args_list[0])
