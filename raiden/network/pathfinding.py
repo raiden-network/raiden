@@ -6,6 +6,7 @@ from enum import IntEnum, unique
 from uuid import UUID
 
 import click
+import gevent
 import requests
 import structlog
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_hex
@@ -571,58 +572,67 @@ def query_paths(
     scrap_existing_iou = False
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
-        if offered_fee > 0:
-            new_iou = create_current_iou(
-                pfs_config=pfs_config,
-                token_network_address=token_network_address,
-                one_to_n_address=one_to_n_address,
-                our_address=our_address,
-                privkey=privkey,
-                chain_id=chain_id,
-                block_number=current_block_number,
-                offered_fee=offered_fee,
-                scrap_existing_iou=scrap_existing_iou,
-            )
-            payload["iou"] = new_iou.as_json()
+        # Since the IOU amount is monotonically increasing, only a single
+        # greenlet can be in charge of increasing it at the same time. Using a
+        # semaphore in this primitive way limits the speed at which we can do
+        # simultaneous transfers.
+        # See https://github.com/raiden-network/raiden/issues/5647
+        with gevent.lock.Semaphore():
+            if offered_fee > 0:
+                new_iou = create_current_iou(
+                    pfs_config=pfs_config,
+                    token_network_address=token_network_address,
+                    one_to_n_address=one_to_n_address,
+                    our_address=our_address,
+                    privkey=privkey,
+                    chain_id=chain_id,
+                    block_number=current_block_number,
+                    offered_fee=offered_fee,
+                    scrap_existing_iou=scrap_existing_iou,
+                )
+                payload["iou"] = new_iou.as_json()
 
-        log.info(
-            "Requesting paths from Pathfinding Service",
-            url=pfs_config.info.url,
-            token_network_address=to_checksum_address(token_network_address),
-            payload=payload,
-        )
-
-        try:
-            return post_pfs_paths(
+            log.info(
+                "Requesting paths from Pathfinding Service",
                 url=pfs_config.info.url,
-                token_network_address=token_network_address,
+                token_network_address=to_checksum_address(token_network_address),
                 payload=payload,
             )
-        except ServiceRequestIOURejected as error:
-            code = error.error_code
-            log.debug("Pathfinding Service rejected IOU", error=error)
 
-            if retries == 0 or code in (PFSError.WRONG_IOU_RECIPIENT, PFSError.DEPOSIT_TOO_LOW):
-                raise
-            elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
-                scrap_existing_iou = True
-            elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                try:
-                    new_info = get_pfs_info(pfs_config.info.url)
-                except ServiceRequestFailed:
-                    raise ServiceRequestFailed(
-                        "Could not get updated fee information from Pathfinding Service."
-                    )
-                if new_info.price > pfs_config.maximum_fee:
-                    raise ServiceRequestFailed("PFS fees too high.")
-                log.info(f"Pathfinding Service increased fees", new_price=new_info.price)
-                pfs_config.info = new_info
-            elif code == PFSError.NO_ROUTE_FOUND:
-                log.info(f"Pathfinding Service can not find a route: {error}.")
-                return list(), None
-            log.info(
-                f"Pathfinding Service rejected our payment. Reason: {error}. Attempting again."
-            )
+            try:
+                return post_pfs_paths(
+                    url=pfs_config.info.url,
+                    token_network_address=token_network_address,
+                    payload=payload,
+                )
+            except ServiceRequestIOURejected as error:
+                code = error.error_code
+                log.debug("Pathfinding Service rejected IOU", error=error)
+
+                if retries == 0 or code in (
+                    PFSError.WRONG_IOU_RECIPIENT,
+                    PFSError.DEPOSIT_TOO_LOW,
+                ):
+                    raise
+                elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
+                    scrap_existing_iou = True
+                elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
+                    try:
+                        new_info = get_pfs_info(pfs_config.info.url)
+                    except ServiceRequestFailed:
+                        raise ServiceRequestFailed(
+                            "Could not get updated fee information from Pathfinding Service."
+                        )
+                    if new_info.price > pfs_config.maximum_fee:
+                        raise ServiceRequestFailed("PFS fees too high.")
+                    log.info(f"Pathfinding Service increased fees", new_price=new_info.price)
+                    pfs_config.info = new_info
+                elif code == PFSError.NO_ROUTE_FOUND:
+                    log.info(f"Pathfinding Service can not find a route: {error}.")
+                    return list(), None
+                log.info(
+                    f"Pathfinding Service rejected our payment. Reason: {error}. Attempting again."
+                )
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
     return list(), None
