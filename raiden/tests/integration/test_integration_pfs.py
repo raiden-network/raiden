@@ -90,7 +90,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
-def test_mediated_transfer(
+def test_pfs_send_capacity_updates_during_mediated_transfer(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
     app0, app1 = raiden_network
@@ -131,5 +131,6 @@ def test_mediated_transfer(
             [],
         )
 
-    assert pfs_room.send_text.call_count == 1
+    # We expect one PFSCapacityUpdate when locking and one when unlocking
+    assert pfs_room.send_text.call_count == 2
     assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[0])
