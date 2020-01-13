@@ -185,7 +185,8 @@ def get_best_routes(
 
         log.warning(
             "Request to Pathfinding Service was not successful. "
-            "No routes to the target are found."
+            "No routes to the target are found.",
+            pfs_message=pfs_error_msg,
         )
         return (pfs_error_msg, list(), None)
 
