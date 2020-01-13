@@ -75,9 +75,6 @@ from raiden.transfer.mediated_transfer.mediation_fee import (
 from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
-    ActionInitMediator,
-    ActionInitTarget,
-    ActionTransferReroute,
     ReceiveLockExpired,
     ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
@@ -134,18 +131,18 @@ PFS_UPDATE_STATE_CHANGES = (
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
-    ActionInitMediator,
-    ActionInitTarget,
-    ActionTransferReroute,
     ReceiveTransferCancelRoute,
     ReceiveLockExpired,
     ReceiveTransferRefund,
     # State change | Reason why update is not needed
-    # ActionChannelWithdraw | Update done by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
-    # ActionInitInitiator | The update is done by the SendLockedTransfer event
-    # ReceiveWithdrawRequest | Update done by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
+    # ActionInitInitiator | Update triggered by SendLockedTransfer
+    # ActionInitMediator | Update triggered by SendLockedTransfer
+    # ActionInitTarget | Update triggered by SendLockedTransfer
+    # ActionTransferReroute | Update triggered by SendLockedTransfer
+    # ActionChannelWithdraw | Upd. triggered by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
+    # ReceiveWithdrawRequest | Upd. triggered by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
-PFS_UPDATE_EVENTS = (SendUnlock,)
+PFS_UPDATE_EVENTS = (SendUnlock, SendLockedTransfer)
 
 
 def initiator_init(
