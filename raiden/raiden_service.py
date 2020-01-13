@@ -67,7 +67,7 @@ from raiden.transfer.architecture import BalanceProofSignedState, Event as Raide
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendLockedTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendUnlock
 from raiden.transfer.mediated_transfer.mediation_fee import (
     FeeScheduleState,
     calculate_imbalance_fees,
@@ -145,7 +145,7 @@ PFS_UPDATE_STATE_CHANGES = (
     # ActionInitInitiator | The update is done by the SendLockedTransfer event
     # ReceiveWithdrawRequest | Update done by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
-PFS_UPDATE_EVENTS = (SendBalanceProof,)
+PFS_UPDATE_EVENTS = (SendUnlock,)
 
 
 def initiator_init(

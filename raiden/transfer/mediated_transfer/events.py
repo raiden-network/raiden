@@ -91,7 +91,7 @@ class SendSecretReveal(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendBalanceProof(SendMessageEvent):
+class SendUnlock(SendMessageEvent):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to claim it.
 

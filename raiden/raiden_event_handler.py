@@ -58,12 +58,12 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
+    SendUnlock,
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
@@ -135,8 +135,8 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == SendSecretReveal:
             assert isinstance(event, SendSecretReveal), MYPY_ANNOTATION
             self.handle_send_secretreveal(raiden, event)
-        elif type(event) == SendBalanceProof:
-            assert isinstance(event, SendBalanceProof), MYPY_ANNOTATION
+        elif type(event) == SendUnlock:
+            assert isinstance(event, SendUnlock), MYPY_ANNOTATION
             self.handle_send_balanceproof(raiden, event)
         elif type(event) == SendSecretRequest:
             assert isinstance(event, SendSecretRequest), MYPY_ANNOTATION
@@ -223,7 +223,7 @@ class RaidenEventHandler(EventHandler):
 
     @staticmethod
     def handle_send_balanceproof(
-        raiden: "RaidenService", balance_proof_event: SendBalanceProof
+        raiden: "RaidenService", balance_proof_event: SendUnlock
     ) -> None:  # pragma: no unittest
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)

@@ -25,9 +25,9 @@ from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.events import EventPaymentSentFailed, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
-    SendBalanceProof,
     SendLockedTransfer,
     SendSecretReveal,
+    SendUnlock,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -649,7 +649,7 @@ class MediatorMixin:
             and self.channel_opened(recipient, our_address)
         ):
             assert event_types_match(
-                result.events, SendSecretReveal, SendBalanceProof, EventUnlockSuccess
+                result.events, SendSecretReveal, SendUnlock, EventUnlockSuccess
             )
             self.event("Unlock successful.")
             self.waiting_for_unlock[secret] = recipient

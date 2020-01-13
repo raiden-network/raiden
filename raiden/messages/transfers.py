@@ -8,12 +8,12 @@ from raiden.messages.cmdid import CmdId
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
+    SendUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.packing import pack_balance_proof
@@ -280,7 +280,7 @@ class Unlock(EnvelopeMessage):
         return sha256(self.secret).digest()
 
     @classmethod
-    def from_event(cls, event: SendBalanceProof) -> "Unlock":
+    def from_event(cls, event: SendUnlock) -> "Unlock":
         balance_proof = event.balance_proof
         # pylint: disable=unexpected-keyword-arg
         return cls(
