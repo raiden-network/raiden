@@ -1,0 +1,23 @@
+# When changing this file, please use
+# curl --data-binary @codecov.yml https://codecov.io/validate
+# to check it for validity.
+
+codecov:
+  notify:
+    require_ci_to_pass: yes   # delay sending notifications until all CI is finished
+
+coverage:
+  status:
+    project:
+      default:
+        target: 75%
+        flags:
+            - unit
+            - integration
+        threshold: 1  # check is successful is coverage decreased by less than 1%
+      unit:
+        target: 55%
+        flags:
+            - unit
+        threshold: 1
+    patch: off # no github status notice for coverage of the PR diff.
