@@ -200,7 +200,6 @@ scenario:
             - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "opened"}
-            - assert: {from: 0, to: 1, total_deposit: 100_000_000_000_000_000, balance: 40_000_000_000_000_000, state: "opened"}
       - parallel:
           name: "Check edge cases again"
           tasks:
