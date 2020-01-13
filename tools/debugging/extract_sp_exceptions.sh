@@ -33,6 +33,10 @@ else
     DESTINATION_DIR=$(pwd)
 fi
 
+echo -e "${BOLD}Downloading PFS logs${RESET}"
+
+ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli | gzip' > ${DESTINATION_DIR}/pfs.log.gz
+
 echo -e "${BOLD}Downloading scenarios list${RESET}"
 
 function separator {
