@@ -31,6 +31,7 @@ log = structlog.get_logger(__name__)
 
 SHUTDOWN_TIMEOUT = 35
 SYNC_TIMEOUT_MS = 20_000
+SYNC_MAX_LATENCY_MS = 2_000
 
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
@@ -449,7 +450,9 @@ class GMatrixClient(MatrixClient):
     def get_user_presence(self, user_id: str) -> Optional[str]:
         return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
 
-    def _sync(self, timeout_ms: int = SYNC_TIMEOUT_MS) -> None:
+    def _sync(
+        self, timeout_ms: int = SYNC_TIMEOUT_MS, max_latency_ms: int = SYNC_MAX_LATENCY_MS
+    ) -> None:
         """ Reimplements MatrixClient._sync """
         log.debug(
             "Sync called",
@@ -462,24 +465,25 @@ class GMatrixClient(MatrixClient):
         time_before_sync = time.time()
         time_since_last_sync_in_seconds = time_before_sync - self.last_sync
 
-        # If it takes longer than `timeout_ms` to call `_sync` again, we throw an exception.
-        # The exception is only thrown when in development mode.
-        timeout_in_seconds = timeout_ms // 1_000
+        # If it takes longer than `timeout_ms + max_latency_ms` to call `_sync`
+        # again, we throw an exception.  The exception is only thrown when in
+        # development mode.
+        timeout_in_seconds = (timeout_ms + max_latency_ms) // 1_000
         timeout_reached = (
             time_since_last_sync_in_seconds >= timeout_in_seconds
             and self.environment == Environment.DEVELOPMENT
         )
         if timeout_reached:
             raise MatrixSyncMaxTimeoutReached(
-                f"Processing Matrix response took {time_since_last_sync_in_seconds}s, "
-                f"poll timeout is {timeout_in_seconds}s."
+                f"Time between syncs exceeded timeout:  "
+                f"{time_since_last_sync_in_seconds}s > {timeout_in_seconds}s."
             )
 
+        self.last_sync = time_before_sync
         response = self.api.sync(
             since=self.sync_token, timeout_ms=timeout_ms, filter=self._sync_filter_id
         )
         time_after_sync = time.time()
-        self.last_sync = time_after_sync
 
         if response:
             token = uuid4()
