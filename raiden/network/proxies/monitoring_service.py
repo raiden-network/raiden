@@ -22,6 +22,7 @@ class MonitoringService:
         jsonrpc_client: JSONRPCClient,
         monitoring_service_address: MonitoringServiceAddress,
         contract_manager: ContractManager,
+        block_identifier: BlockSpecification,
     ):
         if not is_binary_address(monitoring_service_address):
             raise ValueError("Expected binary address for monitoring service")
@@ -34,6 +35,7 @@ class MonitoringService:
             expected_code=decode_hex(
                 contract_manager.get_runtime_hexcode(CONTRACT_MONITORING_SERVICE)
             ),
+            given_block_identifier=block_identifier,
         )
 
         proxy = jsonrpc_client.new_contract_proxy(

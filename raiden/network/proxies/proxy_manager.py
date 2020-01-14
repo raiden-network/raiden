@@ -188,7 +188,9 @@ class ProxyManager:
 
         return self.address_to_token_network[address]
 
-    def secret_registry(self, address: SecretRegistryAddress) -> SecretRegistry:
+    def secret_registry(
+        self, address: SecretRegistryAddress, block_identifier: BlockSpecification
+    ) -> SecretRegistry:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -198,17 +200,21 @@ class ProxyManager:
                     jsonrpc_client=self.client,
                     secret_registry_address=address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_secret_registry[address]
 
-    def service_registry(self, address: ServiceRegistryAddress) -> ServiceRegistry:
+    def service_registry(
+        self, address: ServiceRegistryAddress, block_identifier: BlockSpecification
+    ) -> ServiceRegistry:
         with self._service_registry_creation_lock:
             if address not in self.address_to_service_registry:
                 self.address_to_service_registry[address] = ServiceRegistry(
                     jsonrpc_client=self.client,
                     service_registry_address=address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_service_registry[address]
@@ -240,7 +246,9 @@ class ProxyManager:
 
         return self.identifier_to_payment_channel[dict_key]
 
-    def user_deposit(self, address: UserDepositAddress) -> UserDeposit:
+    def user_deposit(
+        self, address: UserDepositAddress, block_identifier: BlockSpecification
+    ) -> UserDeposit:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -251,11 +259,14 @@ class ProxyManager:
                     user_deposit_address=address,
                     contract_manager=self.contract_manager,
                     proxy_manager=self,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_user_deposit[address]
 
-    def monitoring_service(self, address: MonitoringServiceAddress) -> MonitoringService:
+    def monitoring_service(
+        self, address: MonitoringServiceAddress, block_identifier: BlockSpecification
+    ) -> MonitoringService:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -265,11 +276,12 @@ class ProxyManager:
                     jsonrpc_client=self.client,
                     monitoring_service_address=address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_monitoring_service[address]
 
-    def one_to_n(self, address: OneToNAddress) -> OneToN:
+    def one_to_n(self, address: OneToNAddress, block_identifier: BlockSpecification) -> OneToN:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -279,6 +291,7 @@ class ProxyManager:
                     jsonrpc_client=self.client,
                     one_to_n_address=address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_one_to_n[address]

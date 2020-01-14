@@ -40,6 +40,7 @@ class SecretRegistry:
         jsonrpc_client: JSONRPCClient,
         secret_registry_address: SecretRegistryAddress,
         contract_manager: ContractManager,
+        block_identifier: BlockSpecification,
     ) -> None:
         if not is_binary_address(secret_registry_address):
             raise ValueError("Expected binary address format for secret registry")
@@ -52,6 +53,7 @@ class SecretRegistry:
             expected_code=decode_hex(
                 contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
             ),
+            given_block_identifier=block_identifier,
         )
 
         proxy = jsonrpc_client.new_contract_proxy(

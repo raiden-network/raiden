@@ -212,12 +212,15 @@ def load_deployment_addresses_from_udc(
     """
     block_identifier = "latest"
     user_deposit = proxy_manager.user_deposit(
-        UserDepositAddress(to_canonical_address(user_deposit_address))
+        UserDepositAddress(to_canonical_address(user_deposit_address)),
+        block_identifier=block_identifier,
     )
     monitoring_service_address = user_deposit.monitoring_service_address(block_identifier)
-    one_to_n_address = user_deposit.one_to_n_address(block_identifier)
+    one_to_n_address = user_deposit.one_to_n_address(block_identifier=block_identifier)
 
-    monitoring_service_proxy = proxy_manager.monitoring_service(monitoring_service_address)
+    monitoring_service_proxy = proxy_manager.monitoring_service(
+        address=monitoring_service_address, block_identifier=block_identifier
+    )
 
     token_network_registry_address = monitoring_service_proxy.token_network_registry_address(
         block_identifier=block_identifier
@@ -227,9 +230,11 @@ def load_deployment_addresses_from_udc(
         token_network_registry_address, block_identifier=block_identifier
     )
     secret_registry_address = token_network_registry_proxy.get_secret_registry_address(
-        block_identifier
+        block_identifier=block_identifier
     )
-    service_registry_address = monitoring_service_proxy.service_registry_address(block_identifier)
+    service_registry_address = monitoring_service_proxy.service_registry_address(
+        block_identifier=block_identifier
+    )
 
     return DeploymentAddresses(
         token_network_registry_address=token_network_registry_address,
@@ -269,7 +274,7 @@ def raiden_bundle_from_contracts_deployment(
 
     for contractname, address, constructor in contractname_address:
         try:
-            proxy = constructor(address)  # type: ignore
+            proxy = constructor(address, block_identifier="latest")  # type: ignore
         except ContractCodeMismatch as e:
             handle_contract_code_mismatch(e)
         except AddressWithoutCode:
@@ -339,7 +344,7 @@ def services_bundle_from_contracts_deployment(
 
     for contractname, address, constructor in contractname_address:
         try:
-            proxy = constructor(address)
+            proxy = constructor(address, block_identifier="latest")
         except ContractCodeMismatch as e:
             handle_contract_code_mismatch(e)
         except AddressWithoutCode:
