@@ -558,17 +558,18 @@ class MatrixTransport(Runnable):
         # the node that has to create the room.
         self._maybe_create_room_for_address(address)
 
-    def get_user_ids_for_address(self, address: Address) -> Tuple[Set[str], List[User]]:
+    def get_user_ids_for_address(self, address: Address) -> Set[str]:
         address_hex = to_normalized_address(address)
         candidates = self._client.search_user_directory(address_hex)
+        self._displayname_cache.warm_users(candidates)
         user_ids = {
             user.user_id for user in candidates if validate_userid_signature(user) == address
         }
-        return user_ids, candidates
+        return user_ids
 
     def force_check_address_reachability(self, address: Address) -> AddressReachability:
         """Force checks an address's reachability bypassing the whitelisting"""
-        user_ids, _ = self.get_user_ids_for_address(address)
+        user_ids = self.get_user_ids_for_address(address)
         self._address_mgr.track_address_presence(address, user_ids)
         return self._address_mgr.get_address_reachability(address)
 
@@ -580,8 +581,7 @@ class MatrixTransport(Runnable):
         self.whitelist(node_address)
         with self._health_lock:
             self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
-            user_ids, candidates = self.get_user_ids_for_address(node_address)
-            self._displayname_cache.warm_users(candidates)
+            user_ids = self.get_user_ids_for_address(node_address)
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             self._address_mgr.track_address_presence(node_address, user_ids)
