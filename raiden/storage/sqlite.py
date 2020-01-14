@@ -7,9 +7,7 @@ from types import TracebackType
 from typing import Generator
 
 import gevent
-from eth_utils import to_checksum_address, to_hex
 
-import raiden.storage.serialization.fields as fields
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.serialization import SerializationBase
@@ -789,12 +787,7 @@ class SerializedSQLiteStorage:
     def write_state_snapshot(
         self, snapshot: State, statechange_id: StateChangeID, statechange_qty: int
     ) -> SnapshotID:
-        # `to_checksum_address` is slow and is not necessary for our internal serialization.
-        # FIXME: We should be able to adapt the serialization without this evil
-        #        monkey patching, but right now there is no simple way to do it.
-        fields.to_checksum_address = to_hex
         serialized_data = self.serializer.serialize(snapshot)
-        fields.to_checksum_address = to_checksum_address  # type: ignore
 
         return self.database.write_state_snapshot(serialized_data, statechange_id, statechange_qty)
 
