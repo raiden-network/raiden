@@ -131,9 +131,9 @@ def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce
 def check_address_has_code(
     client: "JSONRPCClient",
     address: Address,
-    contract_name: str = "",
+    contract_name: str,
+    given_block_identifier: BlockSpecification,
     expected_code: bytes = None,
-    given_block_identifier: BlockSpecification = "latest",
 ) -> None:
     """ Checks that the given address contains code. """
     if is_bytes(given_block_identifier):
