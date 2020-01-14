@@ -91,12 +91,15 @@ def deploy_all_tokens_register_and_return_their_addresses(
 
     if register_tokens:
         for token in token_addresses:
-            registry = proxy_manager.token_network_registry(token_network_registry_address)
+            block_identifier = proxy_manager.client.blockhash_from_blocknumber("latest")
+            registry = proxy_manager.token_network_registry(
+                token_network_registry_address, block_identifier=block_identifier
+            )
             registry.add_token(
                 token_address=token,
                 channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
                 token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-                block_identifier=proxy_manager.client.blockhash_from_blocknumber("latest"),
+                block_identifier=block_identifier,
             )
 
     return token_addresses
@@ -267,14 +270,15 @@ def register_token_and_return_the_network_proxy(
         ),
     )
 
+    block_identifier = deploy_client.get_confirmed_blockhash()
     token_network_registry_proxy = blockchain_service.token_network_registry(
-        token_network_registry_address
+        token_network_registry_address, block_identifier=block_identifier
     )
     token_network_address = token_network_registry_proxy.add_token(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-        block_identifier=deploy_client.get_confirmed_blockhash(),
+        block_identifier=block_identifier,
     )
 
     blockchain_service = ProxyManager(

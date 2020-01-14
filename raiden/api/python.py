@@ -267,7 +267,9 @@ class RaidenAPI:  # pragma: no unittest
 
         chainstate = views.state_from_raiden(self.raiden)
 
-        registry = self.raiden.proxy_manager.token_network_registry(registry_address)
+        registry = self.raiden.proxy_manager.token_network_registry(
+            registry_address, block_identifier=chainstate.block_hash
+        )
 
         token_network_address = registry.add_token(
             token_address=token_address,
@@ -434,7 +436,9 @@ class RaidenAPI:  # pragma: no unittest
             )
 
         confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
-        registry = self.raiden.proxy_manager.token_network_registry(registry_address)
+        registry = self.raiden.proxy_manager.token_network_registry(
+            registry_address, block_identifier=confirmed_block_identifier
+        )
 
         settlement_timeout_min = registry.settlement_timeout_min(
             block_identifier=confirmed_block_identifier
@@ -691,7 +695,9 @@ class RaidenAPI:  # pragma: no unittest
         token = self.raiden.proxy_manager.token(
             token_address, block_identifier=confirmed_block_identifier
         )
-        token_network_registry = self.raiden.proxy_manager.token_network_registry(registry_address)
+        token_network_registry = self.raiden.proxy_manager.token_network_registry(
+            registry_address, block_identifier=confirmed_block_identifier
+        )
         token_network_address = token_network_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )

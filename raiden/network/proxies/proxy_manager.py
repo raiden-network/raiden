@@ -125,7 +125,9 @@ class ProxyManager:
 
         return self.address_to_token[token_address]
 
-    def token_network_registry(self, address: TokenNetworkRegistryAddress) -> TokenNetworkRegistry:
+    def token_network_registry(
+        self, address: TokenNetworkRegistryAddress, block_identifier: BlockSpecification
+    ) -> TokenNetworkRegistry:
 
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
@@ -146,7 +148,10 @@ class ProxyManager:
                 )
 
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    rpc_client=self.client, metadata=metadata, proxy_manager=self
+                    rpc_client=self.client,
+                    metadata=metadata,
+                    proxy_manager=self,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_token_network_registry[address]

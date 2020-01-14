@@ -36,8 +36,10 @@ def test_token_network_registry(
         ),
     )
 
+    confirmed_block_identifier = deploy_client.get_confirmed_blockhash()
+
     token_network_registry_proxy = proxy_manager.token_network_registry(
-        token_network_registry_address
+        token_network_registry_address, block_identifier=confirmed_block_identifier
     )
 
     assert token_network_registry_proxy.settlement_timeout_min("latest") == TEST_SETTLE_TIMEOUT_MIN
@@ -52,7 +54,7 @@ def test_token_network_registry(
             token_address=bad_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier=deploy_client.get_confirmed_blockhash(),
+            block_identifier=confirmed_block_identifier,
         )
 
     test_token = deploy_token(
@@ -133,8 +135,10 @@ def test_token_network_registry_max_token_networks(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
+    confirmed_block_identifier = deploy_client.get_confirmed_blockhash()
     token_network_registry_proxy = proxy_manager.token_network_registry(
-        to_canonical_address(token_network_registry_address)
+        to_canonical_address(token_network_registry_address),
+        block_identifier=confirmed_block_identifier,
     )
     assert (
         token_network_registry_proxy.get_max_token_networks(block_identifier="latest")
@@ -154,8 +158,9 @@ def test_token_network_registry_with_zero_token_address(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
+    confirmed_block_identifier = deploy_client.get_confirmed_blockhash()
     token_network_registry_proxy = proxy_manager.token_network_registry(
-        token_network_registry_address
+        token_network_registry_address, block_identifier=confirmed_block_identifier
     )
     with pytest.raises(InvalidTokenAddress, match="0x00..00 will fail"):
         token_network_registry_proxy.add_token(
@@ -178,9 +183,10 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
+    confirmed_block_identifier = deploy_client.get_confirmed_blockhash()
 
     token_network_registry_proxy = proxy_manager.token_network_registry(
-        token_network_registry_address
+        token_network_registry_address, block_identifier=confirmed_block_identifier
     )
 
     assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 0

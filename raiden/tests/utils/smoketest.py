@@ -324,6 +324,8 @@ def setup_raiden(
         ),
     )
 
+    confirmed_block_identifier = client.get_confirmed_blockhash()
+
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
@@ -341,14 +343,15 @@ def setup_raiden(
         token_address=to_checksum_address(token.contract.address),
     )
     registry = proxy_manager.token_network_registry(
-        TokenNetworkRegistryAddress(contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
+        TokenNetworkRegistryAddress(contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]),
+        block_identifier=confirmed_block_identifier,
     )
 
     registry.add_token(
         token_address=TokenAddress(to_canonical_address(token.contract.address)),
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
-        block_identifier=client.get_confirmed_blockhash(),
+        block_identifier=confirmed_block_identifier,
     )
 
     print_step("Setting up Raiden")

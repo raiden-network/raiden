@@ -230,7 +230,7 @@ class ConsoleTools:
         registry_address = TokenNetworkRegistryAddress(to_canonical_address(registry_address_hex))
         token_address = TokenAddress(to_canonical_address(token_address_hex))
 
-        registry = self._raiden.proxy_manager.token_network_registry(registry_address)
+        registry = self._raiden.proxy_manager.token_network_registry(registry_address, "latest")
 
         token_network_address = registry.add_token(
             token_address=token_address,
