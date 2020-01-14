@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 from uuid import UUID
@@ -39,7 +39,7 @@ from raiden.network.transport.matrix.client import (
     User,
     node_address_from_userid,
 )
-from raiden.network.utils import return_after_retries
+from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, Signature
@@ -662,41 +662,57 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     return address
 
 
-def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
+def sort_servers_closest(
+    servers: Sequence[str],
+    max_timeout: float = 3.0,
+    samples_per_server: int = 3,
+    sample_delay: float = 0.125,
+) -> Dict[str, float]:
     """Sorts a list of servers by http round-trip time
 
     Params:
         servers: sequence of http server urls
     Returns:
-        sequence of pairs of url,rtt in seconds, sorted by rtt, excluding failed servers
-        (possibly empty)
+        sequence of pairs of url,rtt in seconds, sorted by rtt, excluding failed and excessively
+        slow servers (possibly empty)
+
+    The default timeout was chosen after measuring the long tail of the development matrix servers.
+    Under no stress, servers will have a very long tail of up to 2.5 seconds (measured 15/01/2020),
+    which can lead to failure during startup if the timeout is too low.
+    This increases the timeout so that the network hiccups won't cause Raiden startup failures.
     """
     if not {urlparse(url).scheme for url in servers}.issubset({"http", "https"}):
         raise TransportError("Invalid server urls")
 
-    # Timeout chosen after measuring the long tail of the development matrix
-    # servers. Under no stress, servers will have a very long tail of up to 2.5
-    # seconds (measured 15/01/2020), which can lead to failure during startup
-    # if the timeout is too low. This increases the timeout so that the network
-    # hiccups won't cause Raiden startup failures.
-    timeout = 3.0
-
     rtt_greenlets = set(
-        gevent.spawn(return_after_retries, server_url, timeout) for server_url in servers
+        gevent.spawn(
+            get_average_http_response_time,
+            url=server_url,
+            samples=samples_per_server,
+            sample_delay=sample_delay,
+        )
+        for server_url in servers
     )
 
-    result = gevent.wait(rtt_greenlets, count=1)[0].get()
+    total_timeout = samples_per_server * (max_timeout + sample_delay)
+
+    results = []
+    for greenlet in gevent.iwait(rtt_greenlets, timeout=total_timeout):
+        result = greenlet.get()
+        if result is not None:
+            results.append(result)
+
     gevent.killall(rtt_greenlets)
 
-    if result is None:
+    if not results:
         raise TransportError(
             f"No Matrix server available with good latency, requests takes more "
-            f"than {timeout} seconds."
+            f"than {max_timeout} seconds."
         )
 
-    fastest_url, rtt = result
-    log.debug("Fastest Matrix homeserver", fastest_url=fastest_url, rtt=rtt)
-    return {fastest_url: rtt}
+    server_url_to_rtt = dict(sorted(results, key=itemgetter(1)))
+    log.debug("Available Matrix homeservers", servers=server_url_to_rtt)
+    return server_url_to_rtt
 
 
 def make_client(
