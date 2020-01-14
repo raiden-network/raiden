@@ -68,7 +68,6 @@ from raiden.utils.typing import (
     NewType,
     Optional,
     Tuple,
-    cast,
 )
 
 if TYPE_CHECKING:
@@ -357,10 +356,11 @@ class MatrixTransport(Runnable):
             _log_context={"transport_uuid": str(self._uuid)},
         )
 
+        self._address_to_room_ids: Dict[Address, List[_RoomID]] = defaultdict(list)
+
         self._client.add_invite_listener(self._handle_invite)
 
         self._health_lock = Semaphore()
-        self._account_data_lock = Semaphore()
 
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
@@ -673,7 +673,7 @@ class MatrixTransport(Runnable):
 
         # Call sync to fetch the inventory rooms and new invites. At this point
         # the messages themselves should not be processed because the room
-        # callbacks are not installed yet (this is done bellow). The sync limit
+        # callbacks are not installed yet (this is done below). The sync limit
         # prevents fetching the messages.
         prev_sync_limit = self._client.set_sync_limit(0)
         # Need to reset this here, otherwise we might run into problems after a restart
@@ -699,6 +699,8 @@ class MatrixTransport(Runnable):
         assert self._client.message_worker is None, msg
 
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
+        rooms_to_leave = list()
+
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
             if room.canonical_alias:
@@ -707,10 +709,54 @@ class MatrixTransport(Runnable):
             for broadcast_alias in self._config.broadcast_rooms:
                 if broadcast_alias in room_aliases:
                     self._broadcast_rooms[broadcast_alias] = room
+                    break
+
+            if not self._is_broadcast_room(room):
+                partner_address = self._extract_partner_addresses(room.get_joined_members())
+                # should contain only one element which is the partner's address
+                if len(partner_address) == 1:
+                    self._set_room_id_for_address(partner_address[0], room.room_id)
+                elif len(partner_address) > 1:
+                    # multiple addresses are part of the room this should not happen
+                    # room is set to be leaved after loop ends
+                    rooms_to_leave.append(room)
 
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
+
+        self._leave_unexpected_rooms(
+            rooms_to_leave, "At least two different addresses in this room"
+        )
+
+    def _extract_partner_addresses(self, members: List[User]) -> List[Address]:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        joined_partner_addresses = set(validate_userid_signature(user) for user in members)
+
+        return [
+            address
+            for address in joined_partner_addresses
+            if address is not None and self._raiden_service.address != address
+        ]
+
+    def _leave_unexpected_rooms(
+        self, rooms_to_leave: List[Room], reason: str = "No reason given"
+    ) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
+
+        for room in rooms_to_leave:
+            self.log.warning(
+                "Leaving Room",
+                reason=reason,
+                room_aliases=room.aliases,
+                room_id=room.room_id,
+                partners=[user.user_id for user in room.get_joined_members()],
+            )
+            try:
+                room.leave()
+            except MatrixRequestError as ex:
+                # At a later stage this should be changed to proper error handling
+                raise TransportError("could not leave room due to request error.") from ex
 
     def _initialize_broadcast_rooms(self) -> None:
         msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
@@ -1126,12 +1172,7 @@ class MatrixTransport(Runnable):
             )
 
             if has_unexpected_user_ids:
-                self.log.warning(
-                    "Private room has unexpected participants, leaving...",
-                    room=room,
-                    participants=members,
-                )
-                room.leave()
+                self._leave_unexpected_rooms([room], "Private room has unexpected participants")
                 return None
 
             self._address_mgr.add_userids_for_address(
@@ -1247,78 +1288,24 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 
-    def _set_room_id_for_address(
-        self, address: Address, room_id: Optional[_RoomID] = None
-    ) -> None:
-        """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms
-
-        If room_id is falsy, clean list of rooms. Else, push room_id to front of the list """
+    def _set_room_id_for_address(self, address: Address, room_id: _RoomID) -> None:
 
         assert not room_id or room_id in self._client.rooms, "Invalid room_id"
-        address_hex: AddressHex = to_checksum_address(address)
+
         room_ids = self._get_room_ids_for_address(address)
 
-        with self._account_data_lock:
-            # no need to deepcopy, we don't modify lists in-place
-            # cast generic Dict[str, Any] to types we expect, to satisfy mypy, runtime no-op
-            _address_to_room_ids = cast(
-                Dict[AddressHex, List[_RoomID]],
-                self._client.account_data.get("network.raiden.rooms", {}).copy(),
-            )
-
-            changed = False
-            if not room_id:  # falsy room_id => clear list
-                changed = address_hex in _address_to_room_ids
-                _address_to_room_ids.pop(address_hex, None)
-            else:
-                # push to front
-                room_ids = [room_id] + [r for r in room_ids if r != room_id]
-                if room_ids != _address_to_room_ids.get(address_hex):
-                    _address_to_room_ids[address_hex] = room_ids
-                    changed = True
-
-            if changed:
-                # dict will be set at the end of _clean_unused_rooms
-                self._leave_unused_rooms(_address_to_room_ids)
+        # push to front
+        room_ids = [room_id] + [r for r in room_ids if r != room_id]
+        self._address_to_room_ids[address] = room_ids
 
     def _get_room_ids_for_address(self, address: Address) -> List[_RoomID]:
-        """ Uses GMatrixClient.get_account_data to get updated mapping of address->rooms
-        """
         address_hex: AddressHex = to_checksum_address(address)
-
-        with self._account_data_lock:
-            room_ids = self._client.account_data.get("network.raiden.rooms", {}).get(address_hex)
+        room_ids = self._address_to_room_ids[address]
 
         self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
-
-        if not room_ids:
-            return list()
-
-        # `account_data` should be private to the user. These values will only
-        # be invalid if there is a bug in Raiden to push invalid data or if the
-        # Matrix server is corrupted/malicous.
-        invalid_input = any(not isinstance(room_id, str) for room_id in room_ids)
-        if invalid_input:
-            log.error("Unexpected account data, ignoring.")
-            return list()
 
         return [
             room_id
             for room_id in room_ids
             if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
         ]
-
-    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]) -> None:
-        """
-        Checks for rooms we've joined and which partner isn't health-checked and leave.
-
-        **MUST** be called from a context that holds the `_account_data_lock`.
-        """
-        _msg = "_leave_unused_rooms called without account data lock"
-        assert self._account_data_lock.locked(), _msg
-
-        # TODO: To be implemented, see https://github.com/raiden-network/raiden/issues/3262
-        self._client.set_account_data(
-            "network.raiden.rooms",  # back from cast in _set_room_id_for_address
-            cast(Dict[str, Any], _address_to_room_ids),
-        )

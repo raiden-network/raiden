@@ -54,9 +54,6 @@ class Room(MatrixRoom):
         self.canonical_alias: str
         self.aliases: List[str]
 
-        # dict of 'type': 'content' key/value pairs
-        self.account_data: Dict[str, Dict[str, Any]] = dict()
-
     def get_joined_members(self, force_resync: bool = False) -> List[User]:
         """ Return a list of members of this room. """
         if force_resync:
@@ -69,6 +66,11 @@ class Room(MatrixRoom):
                             User(self.client.api, user_id, event["content"].get("displayname"))
                         )
         return list(self._members.values())
+
+    def leave(self) -> None:
+        """ Leave the room. Overriding Matrix method to always return error when request. """
+        self.client.api.leave_room(self.room_id)
+        del self.client.rooms[self.room_id]
 
     def _mkmembers(self, member: User) -> None:
         if member.user_id not in self._members:
@@ -109,12 +111,6 @@ class Room(MatrixRoom):
         if changed and self.aliases and not self.canonical_alias:
             self.canonical_alias = self.aliases[0]
         return changed
-
-    def set_account_data(self, type_: str, content: Dict[str, Any]) -> dict:
-        self.account_data[type_] = content
-        return self.client.api.set_room_account_data(
-            quote(self.client.user_id), quote(self.room_id), quote(type_), content
-        )
 
 
 class GMatrixHttpApi(MatrixHttpApi):
@@ -227,8 +223,7 @@ class GMatrixClient(MatrixClient):
         http_retry_delay: Callable[[], Iterable[float]] = lambda: repeat(1),
         environment: Environment = Environment.PRODUCTION,
     ) -> None:
-        # dict of 'type': 'content' key/value pairs
-        self.account_data: Dict[str, Dict[str, Any]] = dict()
+
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
@@ -455,8 +450,14 @@ class GMatrixClient(MatrixClient):
         return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
 
     def _sync(self, timeout_ms: int = SYNC_TIMEOUT_MS) -> None:
-        """ Reimplements MatrixClient._sync, add 'account_data' support to /sync """
-        log.debug("Sync called", node=node_address_from_userid(self.user_id), user_id=self.user_id)
+        """ Reimplements MatrixClient._sync """
+        log.debug(
+            "Sync called",
+            node=node_address_from_userid(self.user_id),
+            user_id=self.user_id,
+            sync_iteration=self.sync_iteration,
+            sync_filter=self.sync_filter,
+        )
 
         time_before_sync = time.time()
         time_since_last_sync_in_seconds = time_before_sync - self.last_sync
@@ -630,27 +631,11 @@ class GMatrixClient(MatrixClient):
                     if should_call:
                         listener["callback"](event)
 
-            for event in sync_room["account_data"]["events"]:
-                room.account_data[event["type"]] = event["content"]
-
         if len(all_messages) > 0:
             self.handle_messages_callback(all_messages)
 
-        if first_sync:
-            # Only update the local account data on first sync to avoid races.
-            # We don't support running multiple raiden nodes for the same eth account,
-            # therefore no situation where we would need to be updated from the server
-            # can happen.
-            for event in response["account_data"]["events"]:
-                self.account_data[event["type"]] = event["content"]
-
         self.synced.set()
         self.synced.clear()
-
-    def set_account_data(self, type_: str, content: Dict[str, Any]) -> Dict:
-        """ Use this to set a key: value pair in account_data to keep it synced on server """
-        self.account_data[type_] = content
-        return self.api.set_account_data(quote(self.user_id), quote(type_), content)
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id

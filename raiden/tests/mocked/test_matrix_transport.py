@@ -3,9 +3,13 @@ from typing import List, Optional
 
 import gevent
 import pytest
+from eth_utils import encode_hex
 from gevent import Timeout
+from matrix_client.errors import MatrixRequestError
+from matrix_client.user import User
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, Environment
+from raiden.exceptions import TransportError
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
@@ -15,6 +19,7 @@ from raiden.network.transport.matrix.utils import UserAddressManager
 from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import make_signer
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.utils.formatting import to_checksum_address
@@ -22,7 +27,7 @@ from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
-USERID1 = f"@{to_checksum_address(factories.HOP1.hex())}:Wonderland"
+USERID1 = f"@{to_checksum_address(factories.HOP1.hex())}:Wonderland"  # pylint: disable=no-member
 
 
 @pytest.fixture()
@@ -50,14 +55,21 @@ def skip_userid_validation(monkeypatch):
     )
 
 
-@pytest.fixture
-def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
+@pytest.fixture()
+def mock_raiden_service():
+    return MockRaidenService()
 
-    from raiden.network.transport.matrix.client import GMatrixClient, User
+
+@pytest.fixture()
+def mock_matrix(monkeypatch, mock_raiden_service, retry_interval, retries_before_backoff):
+
+    from raiden.network.transport.matrix.client import GMatrixClient
     from raiden.network.transport.matrix.utils import UserPresence
     from raiden.network.transport.matrix import transport as transport_module
 
-    def make_client_monkey(handle_messages_callback, servers, *args, **kwargs):
+    def make_client_monkey(
+        handle_messages_callback, servers, *args, **kwargs
+    ):  # pylint: disable=unused-argument
         return GMatrixClient(handle_messages_callback, servers[0])
 
     monkeypatch.setattr(User, "get_display_name", lambda _: "random_display_name")
@@ -91,7 +103,7 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     )
 
     transport = MatrixTransport(config=config, environment=Environment.DEVELOPMENT)
-    transport._raiden_service = MockRaidenService()
+    transport._raiden_service = mock_raiden_service
     transport._stop_event.clear()
     transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)
     transport._client.user_id = USERID0
@@ -103,7 +115,96 @@ def mock_matrix(monkeypatch, retry_interval, retries_before_backoff):
     monkeypatch.setattr(transport._raiden_service, "on_messages", mock_on_messages)
     monkeypatch.setattr(GMatrixClient, "get_user_presence", mock_get_user_presence)
 
+    monkeypatch.setattr(transport._client.api, "leave_room", lambda room_id: None)
+    monkeypatch.setattr(transport._client, "sync_token", "already_synced")
+
     return transport
+
+
+def create_new_users_for_address(signer=None, number_of_users=1):
+    users = list()
+    if signer is None:
+        signer = make_signer()
+
+    for i in range(number_of_users):
+        user_id = f"@{signer.address_hex.lower()}:server{i}"
+        signature_bytes = signer.sign(user_id.encode())
+        signature_hex = encode_hex(signature_bytes)
+        user = User(api=None, user_id=user_id, displayname=signature_hex)
+        users.append(user)
+    return users
+
+
+@pytest.fixture()
+def room_with_members(mock_raiden_service, partner_config_for_room):
+
+    number_of_partners = partner_config_for_room["number_of_partners"]
+    users_per_address = partner_config_for_room["users_per_address"]
+    number_of_base_users = partner_config_for_room["number_of_base_users"]
+    room_members = list()
+    base_users = create_new_users_for_address(mock_raiden_service.signer, number_of_base_users)
+    room_members.extend(base_users)
+
+    for _ in range(number_of_partners):
+        users = create_new_users_for_address(number_of_users=users_per_address)
+        room_members.extend(users)
+
+    room_id = "!roomofdoom:server"
+    room = Room(client=None, room_id=room_id)
+    for member in room_members:
+        room._mkmembers(member)
+
+    return room, number_of_partners > 1
+
+
+@pytest.mark.parametrize(
+    "partner_config_for_room",
+    [
+        pytest.param(
+            {"number_of_partners": 1, "users_per_address": 1, "number_of_base_users": 1},
+            id="should_not_leave_one_partner",
+        ),
+        pytest.param(
+            {"number_of_partners": 1, "users_per_address": 4, "number_of_base_users": 1},
+            id="should_not_leave_multiple_use_one_address",
+        ),
+        pytest.param(
+            {"number_of_partners": 0, "users_per_address": 0, "number_of_base_users": 2},
+            id="should_not_leave_no_partner",
+        ),
+        pytest.param(
+            {"number_of_partners": 2, "users_per_address": 1, "number_of_base_users": 1},
+            id="should_leave_multiple_partners",
+        ),
+        pytest.param(
+            {"number_of_partners": 3, "users_per_address": 2, "number_of_base_users": 2},
+            id="should_leave_multiple_partners_multiple_users",
+        ),
+    ],
+)
+@pytest.mark.parametrize("api_available", [True, False], ids=["API-available", "API-unavailable"])
+def test_leave_unexpected_rooms(mock_matrix: MatrixTransport, room_with_members, api_available):
+
+    room, should_leave = room_with_members
+    room.client = mock_matrix._client
+    mock_matrix._client.rooms[room.room_id] = room
+
+    if not api_available:
+
+        def raise_ex(room_id):
+            raise MatrixRequestError()
+
+        mock_matrix._client.api.leave_room = raise_ex
+
+    # if an api happens a MatrixRequestError should be propagated and raising a TransportError
+    # This should only happen when a room is to be left
+    if not api_available and should_leave:
+        with pytest.raises(TransportError):
+            mock_matrix._initialize_room_inventory()
+    else:
+        assert len(mock_matrix._client.rooms) == 1
+        mock_matrix._initialize_room_inventory()
+        assert not mock_matrix._client.rooms if should_leave else mock_matrix._client.rooms
 
 
 @pytest.fixture
