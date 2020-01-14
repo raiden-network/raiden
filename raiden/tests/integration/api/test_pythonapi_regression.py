@@ -25,7 +25,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     channel_list = api1.get_channel_list(registry_address, token_address, app1.raiden.address)
     channel12 = channel_list[0]
 
-    token_proxy = app0.raiden.proxy_manager.token(token_address)
+    token_proxy = app0.raiden.proxy_manager.token(token_address, "latest")
     node1_balance_before = token_proxy.balance_of(api1.address)
     node2_balance_before = token_proxy.balance_of(api2.address)
 

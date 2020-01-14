@@ -460,7 +460,7 @@ def test_channel_withdraw(
     )
     assert token_network_address
 
-    token_proxy = bob_app.raiden.proxy_manager.token(token_address)
+    token_proxy = bob_app.raiden.proxy_manager.token(token_address, "latest")
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
     message_handler = WaitForMessage()
@@ -623,7 +623,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     deposit0 = deposit
     deposit1 = deposit
 
-    token_proxy = app0.raiden.proxy_manager.token(token_address)
+    token_proxy = app0.raiden.proxy_manager.token(token_address, "latest")
     initial_balance0 = token_proxy.balance_of(address0)
     initial_balance1 = token_proxy.balance_of(address1)
     identifier = 1
@@ -864,7 +864,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     assert token_network_address
 
     channel0 = get_channelstate(app0, app1, token_network_address)
-    token_proxy = app0.raiden.proxy_manager.token(channel0.token_address)
+    token_proxy = app0.raiden.proxy_manager.token(channel0.token_address, "latest")
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 

@@ -252,7 +252,7 @@ def test_query_events(
     token_network_address = app0.raiden.default_registry.get_token_network(token_address, "latest")
 
     assert token_network_address
-    manager0 = app0.raiden.proxy_manager.token_network(token_network_address)
+    manager0 = app0.raiden.proxy_manager.token_network(token_network_address, "latest")
 
     channelcount0 = views.total_token_network_channels(
         views.state_from_app(app0), registry_address, token_address
