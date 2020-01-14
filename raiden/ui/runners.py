@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 import gevent
 import gevent.monkey
 import structlog
+from click import Context
 from gevent.event import AsyncResult
 
 from raiden import constants, settings
@@ -12,12 +13,11 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
-from raiden.utils import typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import Port
+from raiden.utils.typing import Port, TokenAddress
 
 from .app import run_app
 from .config import dump_cmd_options, dump_module
@@ -27,24 +27,24 @@ DOC_URL = "http://raiden-network.readthedocs.io/en/stable/rest_api.html"
 
 
 class NodeRunner:
-    def __init__(self, options: Dict[str, Any], ctx):
+    def __init__(self, options: Dict[str, Any], ctx: Context) -> None:
         self._options = options
         self._ctx = ctx
         self.raiden_api: Optional[RaidenAPI] = None
 
     @property
-    def welcome_string(self):
+    def welcome_string(self) -> str:
         return f"Welcome to Raiden, version {get_system_spec()['raiden']}!"
 
-    def _startup_hook(self):
+    def _startup_hook(self) -> None:
         """ Hook that is called after startup is finished. Intended for subclass usage. """
         pass
 
-    def _shutdown_hook(self):
+    def _shutdown_hook(self) -> None:
         """ Hook that is called just before shutdown. Intended for subclass usage. """
         pass
 
-    def run(self):
+    def run(self) -> None:
         configure_logging(
             self._options["log_config"],
             log_json=self._options["log_json"],
@@ -132,7 +132,7 @@ class NodeRunner:
 
         stop_event: AsyncResult[None] = AsyncResult()
 
-        def sig_set(sig=None, _frame=None):
+        def sig_set(sig: Any = None, _frame: Any = None) -> None:
             stop_event.set(sig)
 
         gevent.signal(signal.SIGQUIT, sig_set)
@@ -179,27 +179,29 @@ class NodeRunner:
 
 
 class MatrixRunner(NodeRunner):
-    def run(self):
+    def run(self) -> None:
         super().run()
-        return self._start_services()
+        self._start_services()
 
 
 class EchoNodeRunner(NodeRunner):
-    def __init__(self, options: Dict[str, Any], ctx, token_address: typing.TokenAddress):
+    def __init__(self, options: Dict[str, Any], ctx: Context, token_address: TokenAddress) -> None:
         super().__init__(options, ctx)
         self._token_address = token_address
-        self._echo_node = None
+        self._echo_node: Optional[EchoNode] = None
 
-    def run(self):
+    def run(self) -> None:
         super().run()
-        return self._start_services()
+        self._start_services()
 
     @property
-    def welcome_string(self):
+    def welcome_string(self) -> str:
         return "{} [ECHO NODE]".format(super().welcome_string)
 
-    def _startup_hook(self):
-        self._echo_node = EchoNode(self.raiden_api, self._token_address)
+    def _startup_hook(self) -> None:
+        if self.raiden_api is not None:
+            self._echo_node = EchoNode(self.raiden_api, self._token_address)
 
-    def _shutdown_hook(self):
-        self._echo_node.stop()
+    def _shutdown_hook(self) -> None:
+        if self._echo_node:
+            self._echo_node.stop()
