@@ -81,7 +81,7 @@ class MockProxyManager:
 
     def token_network_registry(
         self, address: Address, block_identifier: BlockSpecification
-    ):  # pylint: disable=no-self-use
+    ):  # pylint: disable=no-self-use,unused-argument
         registry = Mock(address=address)
         registry.get_secret_registry_address.return_value = self.mocked_addresses.get(
             "SecretRegistry", factories.make_address()
@@ -90,7 +90,7 @@ class MockProxyManager:
 
     def secret_registry(
         self, address: Address, block_identifier: BlockSpecification
-    ):  # pylint: disable=no-self-use
+    ):  # pylint: disable=no-self-use, unused-argument
         return Mock(address=address)
 
     def user_deposit(
