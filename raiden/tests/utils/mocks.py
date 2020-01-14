@@ -74,7 +74,9 @@ class MockProxyManager:
         self.token_network = MockTokenNetworkProxy(client=self.client)
         self.mocked_addresses = mocked_addresses or dict()
 
-    def payment_channel(self, canonical_identifier: CanonicalIdentifier):
+    def payment_channel(
+        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockSpecification
+    ):  # pylint: disable=unused-argument
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
     def token_network_registry(self, address: Address):  # pylint: disable=no-self-use
@@ -147,6 +149,7 @@ class MockTokenNetworkRegistry:
 
 class MockChainState:
     def __init__(self):
+        self.block_hash = factories.make_block_hash()
         self.identifiers_to_tokennetworkregistries: dict = {}
 
 

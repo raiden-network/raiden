@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gevent
 import structlog
-from eth_utils import encode_hex, is_checksum_address, to_canonical_address
+from eth_utils import encode_hex, is_bytes, is_checksum_address, to_canonical_address
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
@@ -136,6 +136,11 @@ def check_address_has_code(
     given_block_identifier: BlockSpecification = "latest",
 ) -> None:
     """ Checks that the given address contains code. """
+    if is_bytes(given_block_identifier):
+        assert isinstance(given_block_identifier, bytes)
+        block_hash = encode_hex(given_block_identifier)
+        given_block_identifier = client.web3.eth.getBlock(block_hash).number
+
     result = client.web3.eth.getCode(to_checksum_address(address), given_block_identifier)
 
     if not result:
