@@ -474,11 +474,18 @@ def jsonrpc_services(
     web3: Web3,
     contract_manager: ContractManager,
 ) -> BlockchainServices:
-    secret_registry = proxy_manager.secret_registry(secret_registry_address)
+    block_identifier = "latest"
+    secret_registry = proxy_manager.secret_registry(
+        secret_registry_address, block_identifier=block_identifier
+    )
     service_registry = None
     if service_registry_address:
-        service_registry = proxy_manager.service_registry(service_registry_address)
-    deploy_registry = proxy_manager.token_network_registry(token_network_registry_address)
+        service_registry = proxy_manager.service_registry(
+            service_registry_address, block_identifier=block_identifier
+        )
+    deploy_registry = proxy_manager.token_network_registry(
+        token_network_registry_address, block_identifier=block_identifier
+    )
 
     blockchain_services = list()
     for privkey in private_keys:

@@ -383,7 +383,9 @@ def test_batch_unlock(
     #
     # Alternatives would be to hold the unlock messages, or to stop and restart
     # the apps after the channel is closed.
-    secret_registry_proxy = alice_app.raiden.proxy_manager.secret_registry(secret_registry_address)
+    secret_registry_proxy = alice_app.raiden.proxy_manager.secret_registry(
+        secret_registry_address, block_identifier="latest"
+    )
     secret_registry_proxy.register_secret(secret=secret)
 
     msg = (

@@ -79,17 +79,23 @@ class MockProxyManager:
     ):  # pylint: disable=unused-argument
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
-    def token_network_registry(self, address: Address):  # pylint: disable=no-self-use
+    def token_network_registry(
+        self, address: Address, block_identifier: BlockSpecification
+    ):  # pylint: disable=no-self-use
         registry = Mock(address=address)
         registry.get_secret_registry_address.return_value = self.mocked_addresses.get(
             "SecretRegistry", factories.make_address()
         )
         return registry
 
-    def secret_registry(self, address: Address):  # pylint: disable=no-self-use
+    def secret_registry(
+        self, address: Address, block_identifier: BlockSpecification
+    ):  # pylint: disable=no-self-use
         return Mock(address=address)
 
-    def user_deposit(self, address: Address):  # pylint: disable=unused-argument, no-self-use
+    def user_deposit(
+        self, address: Address, block_identifier: BlockSpecification
+    ):  # pylint: disable=unused-argument, no-self-use
         user_deposit = Mock()
         user_deposit.monitoring_service_address.return_value = self.mocked_addresses.get(
             "MonitoringService", bytes(20)
@@ -101,19 +107,25 @@ class MockProxyManager:
         )
         return user_deposit
 
-    def service_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
+    def service_registry(
+        self, address: Address, block_identifier: BlockSpecification
+    ):  # pylint: disable=unused-argument, no-self-use
         service_registry = Mock()
         service_registry.address = self.mocked_addresses.get("ServiceRegistry", bytes(20))
         service_registry.token_address.return_value = self.mocked_addresses.get("Token", bytes(20))
         return service_registry
 
-    def one_to_n(self, address: Address):  # pylint: disable=unused-argument, no-self-use
+    def one_to_n(
+        self, address: Address, block_identifier: BlockSpecification
+    ):  # pylint: disable=unused-argument, no-self-use
         one_to_n = Mock()
         one_to_n.address = self.mocked_addresses.get("MonitoringService", bytes(20))
         one_to_n.token_address.return_value = self.mocked_addresses.get("Token", bytes(20))
         return one_to_n
 
-    def monitoring_service(self, address: Address):  # pylint: disable=unused-argument, no-self-use
+    def monitoring_service(
+        self, address: Address, block_identifier: BlockSpecification
+    ):  # pylint: disable=unused-argument, no-self-use
         monitoring_service = Mock()
         monitoring_service.address = self.mocked_addresses.get("MonitoringService", bytes(20))
         monitoring_service.token_network_registry_address.return_value = self.mocked_addresses.get(
