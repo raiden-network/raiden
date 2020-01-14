@@ -252,8 +252,8 @@ class GMatrixClient(MatrixClient):
 
         self._sync_filter_id: Optional[int] = None
 
-    def create_sync_filter(self, broadcast_rooms: Dict[str, Optional[Room]]) -> None:
-        ignore_rooms = [room.room_id for room in broadcast_rooms.values() if room is not None]
+    def create_sync_filter(self, broadcast_rooms: Dict[str, Room]) -> None:
+        ignore_rooms = [room.room_id for room in broadcast_rooms.values()]
         filter_params = {
             "room": {
                 # Filter out all room state events / messages from broadcast rooms
