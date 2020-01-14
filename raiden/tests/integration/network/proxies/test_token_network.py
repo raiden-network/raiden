@@ -55,7 +55,9 @@ def test_token_network_deposit_race(
         ),
     )
 
-    c1_token_network_proxy = proxy_manager.token_network(token_network_address)
+    c1_token_network_proxy = proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
     token_proxy.transfer(c1_client.address, 10)
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
@@ -107,8 +109,12 @@ def test_token_network_proxy(
         ),
     )
     c2_signer = LocalSigner(private_keys[2])
-    c1_token_network_proxy = c1_proxy_manager.token_network(token_network_address)
-    c2_token_network_proxy = c2_proxy_manager.token_network(token_network_address)
+    c1_token_network_proxy = c1_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
+    c2_token_network_proxy = c2_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
 
     initial_token_balance = 100
     token_proxy.transfer(c1_client.address, initial_token_balance)
@@ -517,8 +523,12 @@ def test_token_network_proxy_update_transfer(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
-    c1_token_network_proxy = c1_proxy_manager.token_network(token_network_address)
-    c2_token_network_proxy = c2_proxy_manager.token_network(token_network_address)
+    c1_token_network_proxy = c1_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
+    c2_token_network_proxy = c2_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier="latest"
@@ -726,7 +736,9 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         ),
     )
     c2_client = JSONRPCClient(web3, private_keys[2])
-    c1_token_network_proxy = c1_proxy_manager.token_network(token_network_address)
+    c1_token_network_proxy = c1_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
     # create a channel and query the state at the current block hash
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier="latest"
@@ -762,7 +774,9 @@ def test_token_network_actions_at_pruned_blocks(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
-    c1_token_network_proxy = c1_proxy_manager.token_network(token_network_address)
+    c1_token_network_proxy = c1_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
 
     c2_client = JSONRPCClient(web3, private_keys[2])
     c2_proxy_manager = ProxyManager(
@@ -774,7 +788,9 @@ def test_token_network_actions_at_pruned_blocks(
         ),
     )
 
-    c2_token_network_proxy = c2_proxy_manager.token_network(token_network_address)
+    c2_token_network_proxy = c2_proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
     initial_token_balance = 100
     token_proxy.transfer(c1_client.address, initial_token_balance)
     token_proxy.transfer(c2_client.address, initial_token_balance)

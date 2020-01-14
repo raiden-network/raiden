@@ -33,6 +33,7 @@ class Token:
         jsonrpc_client: JSONRPCClient,
         token_address: TokenAddress,
         contract_manager: ContractManager,
+        block_identifier: BlockSpecification,
     ) -> None:
         contract = jsonrpc_client.new_contract(
             contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN), Address(token_address)
@@ -42,7 +43,13 @@ class Token:
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
 
-        check_address_has_code(jsonrpc_client, Address(token_address), "Token", expected_code=None)
+        check_address_has_code(
+            jsonrpc_client,
+            Address(token_address),
+            "Token",
+            expected_code=None,
+            given_block_identifier=block_identifier,
+        )
 
         self.address = token_address
         self.client = jsonrpc_client

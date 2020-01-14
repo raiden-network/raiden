@@ -18,6 +18,7 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockNumber,
+    BlockSpecification,
     ChannelID,
     Dict,
     EVMBytecode,
@@ -108,7 +109,7 @@ class ProxyManager:
         self._monitoring_service_creation_lock = Semaphore()
         self._one_to_n_creation_lock = Semaphore()
 
-    def token(self, token_address: TokenAddress) -> Token:
+    def token(self, token_address: TokenAddress, block_identifier: BlockSpecification) -> Token:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
@@ -119,6 +120,7 @@ class ProxyManager:
                     jsonrpc_client=self.client,
                     token_address=token_address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_token[token_address]
@@ -149,7 +151,9 @@ class ProxyManager:
 
         return self.address_to_token_network_registry[address]
 
-    def token_network(self, address: TokenNetworkAddress) -> TokenNetwork:
+    def token_network(
+        self, address: TokenNetworkAddress, block_identifier: BlockSpecification
+    ) -> TokenNetwork:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -174,6 +178,7 @@ class ProxyManager:
                     contract_manager=self.contract_manager,
                     proxy_manager=self,
                     metadata=metadata,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_token_network[address]
@@ -203,7 +208,9 @@ class ProxyManager:
 
         return self.address_to_service_registry[address]
 
-    def payment_channel(self, canonical_identifier: CanonicalIdentifier) -> PaymentChannel:
+    def payment_channel(
+        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockSpecification
+    ) -> PaymentChannel:
 
         token_network_address = canonical_identifier.token_network_address
         channel_id = canonical_identifier.channel_identifier
@@ -216,7 +223,9 @@ class ProxyManager:
             dict_key = (token_network_address, channel_id)
 
             if dict_key not in self.identifier_to_payment_channel:
-                token_network = self.token_network(token_network_address)
+                token_network = self.token_network(
+                    token_network_address, block_identifier=block_identifier
+                )
 
                 self.identifier_to_payment_channel[dict_key] = PaymentChannel(
                     token_network=token_network,

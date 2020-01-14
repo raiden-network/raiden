@@ -139,7 +139,8 @@ class ConnectionManager:  # pragma: no unittest
             initial_channel_target: Target number of channels to open.
             joinable_funds_target: Amount of funds not initially assigned.
         """
-        token = self.raiden.proxy_manager.token(self.token_address)
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        token = self.raiden.proxy_manager.token(self.token_address, confirmed_block_identifier)
         token_balance = token.balance_of(self.raiden.address)
 
         if token_balance < funds:
@@ -231,7 +232,10 @@ class ConnectionManager:  # pragma: no unittest
         # To fix this race, first the node must wait for the pending operations
         # to finish, because in them could be a deposit, and then deposit must
         # be called only if the channel is still not funded.
-        token_network_proxy = self.raiden.proxy_manager.token_network(self.token_network_address)
+        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        token_network_proxy = self.raiden.proxy_manager.token_network(
+            self.token_network_address, block_identifier=confirmed_block_identifier
+        )
 
         # Wait for any pending operation in the channel to complete, before
         # deciding on the deposit
@@ -449,7 +453,8 @@ class ConnectionManager:  # pragma: no unittest
             - This attribute must be accessed with the lock held.
         """
         if self.funds > 0:
-            token = self.raiden.proxy_manager.token(self.token_address)
+            confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+            token = self.raiden.proxy_manager.token(self.token_address, confirmed_block_identifier)
             token_balance = token.balance_of(self.raiden.address)
             sum_deposits = views.get_our_deposits_for_token_network(
                 views.state_from_raiden(self.raiden), self.registry_address, self.token_address

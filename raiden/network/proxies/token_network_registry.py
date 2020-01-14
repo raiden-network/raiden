@@ -119,7 +119,7 @@ class TokenNetworkRegistry:
                 f"{channel_participant_deposit_limit} is invalid"
             )
 
-        token_proxy = self.proxy_manager.token(token_address)
+        token_proxy = self.proxy_manager.token(token_address, block_identifier)
         try:
             token_supply = token_proxy.total_supply(block_identifier=block_identifier)
             already_registered = self.get_token_network(

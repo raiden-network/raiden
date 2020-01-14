@@ -319,7 +319,7 @@ def test_batch_unlock(
     assert is_channel_registered(alice_app, bob_app, canonical_identifier)
     assert is_channel_registered(bob_app, alice_app, canonical_identifier)
 
-    token_proxy = alice_app.raiden.proxy_manager.token(token_address)
+    token_proxy = alice_app.raiden.proxy_manager.token(token_address, "latest")
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 

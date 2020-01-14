@@ -461,7 +461,9 @@ class RaidenAPI:  # pragma: no unittest
                 "Token network for token %s does not exist" % to_checksum_address(token_address)
             )
 
-        token_network = self.raiden.proxy_manager.token_network(token_network_address)
+        token_network = self.raiden.proxy_manager.token_network(
+            address=token_network_address, block_identifier=confirmed_block_identifier
+        )
 
         safety_deprecation_switch = token_network.safety_deprecation_switch(
             block_identifier=confirmed_block_identifier
@@ -685,9 +687,11 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        token = self.raiden.proxy_manager.token(token_address)
-        token_network_registry = self.raiden.proxy_manager.token_network_registry(registry_address)
         confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        token = self.raiden.proxy_manager.token(
+            token_address, block_identifier=confirmed_block_identifier
+        )
+        token_network_registry = self.raiden.proxy_manager.token_network_registry(registry_address)
         token_network_address = token_network_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
@@ -698,9 +702,12 @@ class RaidenAPI:  # pragma: no unittest
                 f"with the network {to_checksum_address(registry_address)}."
             )
 
-        token_network_proxy = self.raiden.proxy_manager.token_network(token_network_address)
+        token_network_proxy = self.raiden.proxy_manager.token_network(
+            address=token_network_address, block_identifier=confirmed_block_identifier
+        )
         channel_proxy = self.raiden.proxy_manager.payment_channel(
-            canonical_identifier=channel_state.canonical_identifier
+            canonical_identifier=channel_state.canonical_identifier,
+            block_identifier=confirmed_block_identifier,
         )
 
         blockhash = chain_state.block_hash

@@ -272,7 +272,9 @@ class UserDeposit:
         to the beneficiary's account. """
 
         token_address = self.token_address(given_block_identifier)
-        token = self.proxy_manager.token(token_address=token_address)
+        token = self.proxy_manager.token(
+            token_address=token_address, block_identifier=given_block_identifier
+        )
 
         log_details = {
             "beneficiary": to_checksum_address(beneficiary),

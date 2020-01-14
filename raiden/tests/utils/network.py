@@ -87,10 +87,10 @@ def check_channel(
         channel_identifier=channel_identifier,
     )
     netcontract1 = app1.raiden.proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier
+        canonical_identifier=canonical_identifier, block_identifier="latest"
     )
     netcontract2 = app2.raiden.proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier
+        canonical_identifier=canonical_identifier, block_identifier="latest"
     )
 
     # Check a valid settle timeout was used, the netting contract has an
@@ -150,7 +150,9 @@ def payment_channel_open_and_deposit(
         token_address=token_address, block_identifier=block_identifier
     )
     assert token_network_address, "request a channel for an unregistered token"
-    token_network_proxy = app0.raiden.proxy_manager.token_network(token_network_address)
+    token_network_proxy = app0.raiden.proxy_manager.token_network(
+        token_network_address, block_identifier="latest"
+    )
 
     channel_identifier = token_network_proxy.new_netting_channel(
         partner=app1.raiden.address,
@@ -167,9 +169,9 @@ def payment_channel_open_and_deposit(
         )
         for app in [app0, app1]:
             # Use each app's own chain because of the private key / local signing
-            token = app.raiden.proxy_manager.token(token_address)
+            token = app.raiden.proxy_manager.token(token_address, "latest")
             payment_channel_proxy = app.raiden.proxy_manager.payment_channel(
-                canonical_identifier=canonical_identifier
+                canonical_identifier=canonical_identifier, block_identifier="latest"
             )
 
             # This check can succeed and the deposit still fail, if channels are

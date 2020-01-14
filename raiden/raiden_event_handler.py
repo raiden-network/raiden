@@ -65,7 +65,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendUnlock,
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
-from raiden.transfer.views import get_channelstate_by_token_network_and_partner
+from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
 from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
@@ -361,8 +361,10 @@ class RaidenEventHandler(EventHandler):
         )
         our_signature = raiden.signer.sign(data=withdraw_confirmation_data)
 
+        confirmed_block_identifier = state_from_raiden(raiden).block_hash
         channel_proxy = raiden.proxy_manager.payment_channel(
-            canonical_identifier=channel_withdraw_event.canonical_identifier
+            canonical_identifier=channel_withdraw_event.canonical_identifier,
+            block_identifier=confirmed_block_identifier,
         )
 
         try:
@@ -409,12 +411,14 @@ class RaidenEventHandler(EventHandler):
 
         our_signature = raiden.signer.sign(data=closing_data)
 
+        confirmed_block_identifier = state_from_raiden(raiden).block_hash
         channel_proxy = raiden.proxy_manager.payment_channel(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
                 token_network_address=channel_close_event.token_network_address,
                 channel_identifier=channel_close_event.channel_identifier,
-            )
+            ),
+            block_identifier=confirmed_block_identifier,
         )
 
         channel_proxy.close(
@@ -434,8 +438,10 @@ class RaidenEventHandler(EventHandler):
 
         if balance_proof:
             canonical_identifier = balance_proof.canonical_identifier
+            confirmed_block_identifier = state_from_raiden(raiden).block_hash
             channel = raiden.proxy_manager.payment_channel(
-                canonical_identifier=canonical_identifier
+                canonical_identifier=canonical_identifier,
+                block_identifier=confirmed_block_identifier,
             )
 
             non_closing_data = pack_signed_balance_proof(
@@ -478,8 +484,9 @@ class RaidenEventHandler(EventHandler):
         channel_identifier = canonical_identifier.channel_identifier
         participant = channel_unlock_event.sender
 
+        confirmed_block_identifier = state_from_raiden(raiden).block_hash
         payment_channel: PaymentChannel = raiden.proxy_manager.payment_channel(
-            canonical_identifier=canonical_identifier
+            canonical_identifier=canonical_identifier, block_identifier=confirmed_block_identifier
         )
 
         channel_state = get_channelstate_by_token_network_and_partner(
@@ -619,8 +626,9 @@ class RaidenEventHandler(EventHandler):
         )
         triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
 
+        confirmed_block_identifier = state_from_raiden(raiden).block_hash
         payment_channel: PaymentChannel = raiden.proxy_manager.payment_channel(
-            canonical_identifier=canonical_identifier
+            canonical_identifier=canonical_identifier, block_identifier=confirmed_block_identifier
         )
         token_network_proxy: TokenNetwork = payment_channel.token_network
 

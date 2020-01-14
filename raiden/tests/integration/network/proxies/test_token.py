@@ -15,6 +15,7 @@ def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager)
         jsonrpc_client=other_client,
         token_address=to_canonical_address(token_proxy.proxy.contract.address),
         contract_manager=contract_manager,
+        block_identifier="latest",
     )
 
     # send some funds from deployer to generated address
