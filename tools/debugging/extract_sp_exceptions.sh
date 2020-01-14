@@ -13,10 +13,10 @@ BOLD="\e[1m"
 
 function display_usage {
     echo "This script does the following:"
-    echo "1. Figure out the run number of each of the existing scenarios"
-    echo "2. Download the logs for each of the nodes involved in the latest scenario run"
+    echo "1. Figures out the run number of each of the existing scenarios"
+    echo "2. Downloads the logs for each of the nodes involved in the latest scenario run"
     echo "3. Looks through the logs and searches for errors / exceptions and reports them"
-    echo -e "\n\nUSAGE: extrach_sp_exceptions.sh [DESTINATION_DIR]\n"
+    echo -e "\n\nUSAGE: extract_sp_exceptions.sh [DESTINATION_DIR]\n"
     echo -e "Where\n"
     echo -e "\tDESTINATION_URL is optional and is used to specify the path prefix for the downloaded files. Otherwise the current directory is used\n"
 }
@@ -25,7 +25,6 @@ function print_bold {
     echo -e "${BOLD}$1${RESET}"
 }
 
-# if less than two arguments supplied, display usage 
 if [[  $1 == "--help" ]]; then 
     display_usage
     exit 1
@@ -40,6 +39,10 @@ fi
 print_bold "Downloading PFS logs"
 
 ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli | gzip' > ${DESTINATION_DIR}/pfs.log.gz
+if [[ $? -ne 0 ]]; then
+    echo "Error: failed to download PFS logs"
+    exit 1
+fi
 
 print_bold "Downloading scenarios list"
 
