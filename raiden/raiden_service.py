@@ -93,6 +93,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
+    ReceiveWithdrawRequest,
 )
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.logging import redact_secret
@@ -129,6 +130,7 @@ ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 PFS_UPDATE_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
     ReceiveUnlock,
+    ReceiveWithdrawRequest,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveTransferCancelRoute,
@@ -140,7 +142,6 @@ PFS_UPDATE_STATE_CHANGES = (
     # ActionInitTarget | Update triggered by SendLockedTransfer
     # ActionTransferReroute | Update triggered by SendLockedTransfer
     # ActionChannelWithdraw | Upd. triggered by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
-    # ReceiveWithdrawRequest | Upd. triggered by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
 PFS_UPDATE_EVENTS = (SendUnlock, SendLockedTransfer)
 
@@ -733,6 +734,7 @@ class RaidenService(Runnable):
                     state_change,
                     (
                         ContractReceiveChannelDeposit,
+                        ReceiveWithdrawRequest,
                         ReceiveWithdrawConfirmation,
                         ReceiveWithdrawExpired,
                     ),

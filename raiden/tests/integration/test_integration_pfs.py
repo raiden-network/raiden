@@ -27,7 +27,7 @@ from raiden.utils.typing import (
 
 
 @raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
@@ -36,20 +36,27 @@ from raiden.utils.typing import (
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     raiden_network: List[App], token_addresses: List[TokenAddress]
 ) -> None:
-    # We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
-    # sent after a deposit and withdraw.
-    # Therefore, we create two Raiden nodes app0 and app1.
-    # The nodes open a channel but do not deposit
-    # a pfs matrix room is mocked to see what is sent to it
-
-    app0, app1 = raiden_network
+    """
+    We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
+    sent after a deposit and withdraw.
+    Therefore, we create two Raiden nodes app0 and app1.
+    The nodes open a channel but do not deposit
+    a pfs matrix room is mocked to see what is sent to it
+    """
+    app0, app1, app2 = raiden_network
     transport0 = app0.raiden.transport
 
     pfs_room_name = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_room = transport0._broadcast_rooms.get(pfs_room_name)
-    # need to assert for mypy that pfs_room is not None
-    assert isinstance(pfs_room, Room)
-    pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
+
+    # Mock send_text on the PFS room
+    pfs_rooms: List[Room] = []
+    for app in [app0, app1, app2]:
+        transport = app.raiden.transport
+        pfs_room = transport._broadcast_rooms.get(pfs_room_name)
+        # need to assert for mypy that pfs_room is not None
+        assert isinstance(pfs_room, Room)
+        pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
+        pfs_rooms.append(pfs_room)
 
     api0 = RaidenAPI(app0.raiden)
 
@@ -60,7 +67,9 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     )
 
     # the room should not have been called at channel opening
-    assert pfs_room.send_text.call_count == 0
+    assert pfs_rooms[0].send_text.call_count == 0
+    assert pfs_rooms[1].send_text.call_count == 0
+    assert pfs_rooms[2].send_text.call_count == 0
 
     api0.set_total_channel_deposit(
         token_address=token_addresses[0],
@@ -71,8 +80,17 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 
     # now we expect the room to be called the 1st time with a PFSCapacityUpdate
     # and a PFSFeeUpdate after the deposit
-    assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[0])
-    assert "PFSFeeUpdate" in str(pfs_room.send_text.call_args_list[0])
+    assert pfs_rooms[0].send_text.call_count == 1
+    assert "PFSCapacityUpdate" in str(pfs_rooms[0].send_text.call_args_list[0])
+    assert "PFSFeeUpdate" in str(pfs_rooms[0].send_text.call_args_list[0])
+
+    # we expect the same in the pfs room of app1
+    assert pfs_rooms[1].send_text.call_count == 1
+    assert "PFSCapacityUpdate" in str(pfs_rooms[1].send_text.call_args_list[0])
+    assert "PFSFeeUpdate" in str(pfs_rooms[1].send_text.call_args_list[0])
+
+    # Unrelated node should not send updates
+    assert pfs_rooms[2].send_text.call_count == 0
 
     api0.set_total_channel_withdraw(
         token_address=token_addresses[0],
@@ -83,9 +101,17 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 
     # now we expect the room to be called the 2nd time with a PFSCapacityUpdate
     # after the withdraw
-    assert "PFSCapacityUpdate" in str(pfs_room.send_text.call_args_list[1])
-    assert "PFSFeeUpdate" in str(pfs_room.send_text.call_args_list[1])
+    assert pfs_rooms[0].send_text.call_count == 2
+    assert "PFSCapacityUpdate" in str(pfs_rooms[0].send_text.call_args_list[1])
+    assert "PFSFeeUpdate" in str(pfs_rooms[0].send_text.call_args_list[1])
 
+    # we expect the same in the pfs room of app1
+    assert pfs_rooms[1].send_text.call_count == 2
+    assert "PFSCapacityUpdate" in str(pfs_rooms[1].send_text.call_args_list[1])
+    assert "PFSFeeUpdate" in str(pfs_rooms[1].send_text.call_args_list[1])
+
+    # Unrelated node should not send updates
+    assert pfs_rooms[2].send_text.call_count == 0
 
 
 @raise_on_failure

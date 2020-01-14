@@ -38,14 +38,24 @@ def send_pfs_update(
     capacity_msg = PFSCapacityUpdate.from_channel_state(channel_state)
     capacity_msg.sign(raiden.signer)
     raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, capacity_msg)
-    log.debug("Sent a PFS Capacity Update", message=capacity_msg, channel_state=channel_state)
+    log.debug(
+        "Sent a PFS Capacity Update",
+        node=to_checksum_address(raiden.address),
+        message=capacity_msg,
+        channel_state=channel_state,
+    )
 
     if update_fee_schedule:
         fee_msg = PFSFeeUpdate.from_channel_state(channel_state)
         fee_msg.sign(raiden.signer)
 
         raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, fee_msg)
-        log.debug("Sent a PFS Fee Update", message=fee_msg, channel_state=channel_state)
+        log.debug(
+            "Sent a PFS Fee Update",
+            node=to_checksum_address(raiden.address),
+            message=fee_msg,
+            channel_state=channel_state,
+        )
 
 
 def update_monitoring_service_from_balance_proof(
@@ -85,6 +95,7 @@ def update_monitoring_service_from_balance_proof(
 
     log.info(
         "Received new balance proof, creating message for Monitoring Service.",
+        node=to_checksum_address(raiden.address),
         balance_proof=new_balance_proof,
     )
 
