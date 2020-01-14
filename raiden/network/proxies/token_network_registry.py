@@ -48,6 +48,7 @@ class TokenNetworkRegistry:
         rpc_client: JSONRPCClient,
         metadata: SmartContractMetadata,
         proxy_manager: "ProxyManager",
+        block_identifier: BlockSpecification,
     ) -> None:
 
         check_address_has_code(
@@ -55,6 +56,7 @@ class TokenNetworkRegistry:
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
             expected_code=metadata.runtime_bytecode,
+            given_block_identifier=block_identifier,
         )
 
         proxy = rpc_client.new_contract_proxy(

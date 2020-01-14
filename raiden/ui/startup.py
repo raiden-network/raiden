@@ -220,11 +220,11 @@ def load_deployment_addresses_from_udc(
     monitoring_service_proxy = proxy_manager.monitoring_service(monitoring_service_address)
 
     token_network_registry_address = monitoring_service_proxy.token_network_registry_address(
-        block_identifier
+        block_identifier=block_identifier
     )
 
     token_network_registry_proxy = proxy_manager.token_network_registry(
-        token_network_registry_address
+        token_network_registry_address, block_identifier=block_identifier
     )
     secret_registry_address = token_network_registry_proxy.get_secret_registry_address(
         block_identifier
