@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 SCENARIO_REMOTE_URL="http://68.183.70.168:8000/scenario-player/scenarios/"
-CURL_COMMAND="curl --no-progress-meter"
+CURL_COMMAND="curl --silent"
 WGET_DIR="wget --no-parent --no-clobber --continue -nH -r"
 
 COLUMNS=$(/usr/bin/tput cols)
