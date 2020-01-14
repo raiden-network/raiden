@@ -1979,7 +1979,7 @@ def test_api_deposit_limit(
 ):
     token_address = token_addresses[0]
 
-    registry = proxy_manager.token_network_registry(token_network_registry_address)
+    registry = proxy_manager.token_network_registry(token_network_registry_address, "latest")
     token_network_address = registry.get_token_network(token_address, "latest")
     token_network = proxy_manager.token_network(token_network_address, "latest")
     deposit_limit = token_network.channel_participant_deposit_limit("latest")

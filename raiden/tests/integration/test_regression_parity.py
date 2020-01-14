@@ -71,7 +71,9 @@ def test_locksroot_loading_during_channel_settle_handling(
         app0=app0, app1=app1, token_network_address=token_network_address
     )
 
-    channel = app0.raiden.proxy_manager.payment_channel(channel_state.canonical_identifier)
+    channel = app0.raiden.proxy_manager.payment_channel(
+        channel_state.canonical_identifier, block_identifier="latest"
+    )
     balance_proof = channel_state.partner_state.balance_proof
     assert balance_proof
     balance_proof = cast(BalanceProofSignedState, balance_proof)
@@ -129,7 +131,9 @@ def test_locksroot_loading_during_channel_settle_handling(
         raiden=app1.raiden, block_number=close_block + pruned_after_blocks, retry_timeout=1
     )
 
-    channel = app0.raiden.proxy_manager.payment_channel(channel_state.canonical_identifier)
+    channel = app0.raiden.proxy_manager.payment_channel(
+        channel_state.canonical_identifier, "latest"
+    )
 
     # make sure the block was pruned
     with pytest.raises(ValueError):
