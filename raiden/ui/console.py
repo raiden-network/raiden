@@ -242,7 +242,7 @@ class ConsoleTools:
             self._raiden, registry.address, token_address, retry_timeout
         )
 
-        return self._raiden.proxy_manager.token_network(token_network_address)
+        return self._raiden.proxy_manager.token_network(token_network_address, "latest")
 
     def open_channel_with_funding(
         self,

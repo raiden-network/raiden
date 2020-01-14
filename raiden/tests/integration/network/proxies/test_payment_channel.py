@@ -48,7 +48,9 @@ def test_payment_channel_proxy_basics(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
-    token_network_proxy = proxy_manager.token_network(address=token_network_address)
+    token_network_proxy = proxy_manager.token_network(
+        address=token_network_address, block_identifier="latest"
+    )
     start_block = web3.eth.blockNumber
 
     channel_identifier = token_network_proxy.new_netting_channel(
@@ -61,7 +63,8 @@ def test_payment_channel_proxy_basics(
             chain_identifier=chain_id,
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
-        )
+        ),
+        block_identifier="latest",
     )
 
     assert channel_proxy_1.channel_identifier == channel_identifier
@@ -159,7 +162,8 @@ def test_payment_channel_proxy_basics(
             chain_identifier=chain_id,
             token_network_address=token_network_address,
             channel_identifier=new_channel_identifier,
-        )
+        ),
+        block_identifier="latest",
     )
 
     assert channel_proxy_2.channel_identifier == new_channel_identifier

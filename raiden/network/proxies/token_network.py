@@ -140,6 +140,7 @@ class TokenNetwork:
         contract_manager: ContractManager,
         proxy_manager: "ProxyManager",
         metadata: TokenNetworkMetadata,
+        block_identifier: BlockSpecification,
     ) -> None:
         if not is_binary_address(metadata.address):
             raise ValueError("Expected binary address format for token nework")
@@ -149,6 +150,7 @@ class TokenNetwork:
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK,
             expected_code=metadata.runtime_bytecode,
+            given_block_identifier=block_identifier,
         )
 
         self.contract_manager = contract_manager
@@ -168,7 +170,9 @@ class TokenNetwork:
         self.node_address = self.client.address
         self.metadata = metadata
 
-        self.token: Token = proxy_manager.token(token_address=self.token_address())
+        self.token: Token = proxy_manager.token(
+            token_address=self.token_address(), block_identifier=block_identifier
+        )
 
         # Forbids concurrent operations on the same channel. This is important
         # because some operations conflict with each other. E.g. deposit and

@@ -95,7 +95,9 @@ def get_onchain_locksroots(
     - When channel is settled A must query the blockchain to figure out which
       locksroot was used.
     """
-    payment_channel = proxy_manager.payment_channel(canonical_identifier=canonical_identifier)
+    payment_channel = proxy_manager.payment_channel(
+        canonical_identifier=canonical_identifier, block_identifier=block_identifier
+    )
     token_network = payment_channel.token_network
 
     participants_details = token_network.detail_participants(

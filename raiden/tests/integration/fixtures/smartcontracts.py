@@ -285,7 +285,7 @@ def register_token_and_return_the_network_proxy(
             filters_start_at=GENESIS_BLOCK_NUMBER,
         ),
     )
-    return blockchain_service.token_network(token_network_address)
+    return blockchain_service.token_network(token_network_address, block_identifier="latest")
 
 
 @pytest.fixture(name="token_proxy")
@@ -306,4 +306,5 @@ def deploy_token_and_return_proxy(
         jsonrpc_client=deploy_client,
         token_address=TokenAddress(token_contract.contract_address),
         contract_manager=contract_manager,
+        block_identifier="latest",
     )

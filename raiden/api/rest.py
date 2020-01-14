@@ -638,8 +638,11 @@ class RestAPI:  # pragma: no unittest
             reveal_timeout=reveal_timeout,
         )
 
+        confirmed_block_identifier = views.state_from_raiden(self.raiden_api.raiden).block_hash
         try:
-            token = self.raiden_api.raiden.proxy_manager.token(token_address)
+            token = self.raiden_api.raiden.proxy_manager.token(
+                token_address, block_identifier=confirmed_block_identifier
+            )
         except AddressWithoutCode as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 

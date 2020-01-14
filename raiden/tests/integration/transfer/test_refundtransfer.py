@@ -330,7 +330,7 @@ def test_different_view_of_last_bp_during_unlock(
         views.state_from_app(app0), token_network_registry_address, token_address
     )
     assert token_network_address
-    token_proxy = app0.raiden.proxy_manager.token(token_address)
+    token_proxy = app0.raiden.proxy_manager.token(token_address, "latest")
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 

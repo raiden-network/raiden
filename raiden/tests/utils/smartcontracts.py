@@ -68,7 +68,8 @@ def deploy_tokens_and_fund_accounts(
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
         for transfer_to in participants:
-            proxy_manager.token(token_address).transfer(
+            token_proxy = proxy_manager.token(token_address, "latest")
+            token_proxy.transfer(
                 to_address=transfer_to, amount=TokenAmount(token_amount // len(participants))
             )
 
@@ -87,7 +88,10 @@ def deploy_service_registry_and_set_urls(
     )
     token_address = c1_service_proxy.token_address(block_identifier="latest")
     c1_token_proxy = Token(
-        jsonrpc_client=c1_client, token_address=token_address, contract_manager=contract_manager
+        jsonrpc_client=c1_client,
+        token_address=token_address,
+        contract_manager=contract_manager,
+        block_identifier="latest",
     )
     c2_client = JSONRPCClient(web3, private_keys[1])
     c2_service_proxy = ServiceRegistry(
@@ -96,7 +100,10 @@ def deploy_service_registry_and_set_urls(
         contract_manager=contract_manager,
     )
     c2_token_proxy = Token(
-        jsonrpc_client=c2_client, token_address=token_address, contract_manager=contract_manager
+        jsonrpc_client=c2_client,
+        token_address=token_address,
+        contract_manager=contract_manager,
+        block_identifier="latest",
     )
     c3_client = JSONRPCClient(web3, private_keys[2])
     c3_service_proxy = ServiceRegistry(
@@ -105,7 +112,10 @@ def deploy_service_registry_and_set_urls(
         contract_manager=contract_manager,
     )
     c3_token_proxy = Token(
-        jsonrpc_client=c3_client, token_address=token_address, contract_manager=contract_manager
+        jsonrpc_client=c3_client,
+        token_address=token_address,
+        contract_manager=contract_manager,
+        block_identifier="latest",
     )
 
     # Test that getting a random service for an empty registry returns None

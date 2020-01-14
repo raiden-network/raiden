@@ -13,7 +13,7 @@ from gevent.timeout import Timeout
 
 from raiden.api.python import RaidenAPI
 from raiden.tasks import REMOVE_CALLBACK
-from raiden.transfer import channel
+from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import ChannelState
 from raiden.utils.formatting import to_checksum_address
@@ -52,7 +52,10 @@ class EchoNode:  # pragma: no unittest
         ]
 
         if len(open_channels) == 0:
-            token_proxy = self.api.raiden.proxy_manager.token(self.token_address)
+            confirmed_block_identifier = views.state_from_raiden(api.raiden).block_hash
+            token_proxy = self.api.raiden.proxy_manager.token(
+                self.token_address, confirmed_block_identifier
+            )
             if not token_proxy.balance_of(self.api.raiden.address) > 0:
                 raise ValueError(
                     f"Not enough funds for echo node "
