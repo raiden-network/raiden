@@ -80,7 +80,7 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
             "Leaving the room failed. This is done otherwise there would be "
             "a ghost user in the broadcast room"
         )
-        assert room.leave(), msg
+        assert room.leave() is None, msg
 
 
 class ParsedURL(str):
