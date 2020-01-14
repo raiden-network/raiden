@@ -12,7 +12,6 @@ from raiden.app import App
 from raiden.constants import GENESIS_BLOCK_NUMBER, Environment, RoutingMode
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -27,7 +26,7 @@ from raiden.settings import (
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
-from raiden.tests.utils.transport import ParsedURL
+from raiden.tests.utils.transport import ParsedURL, TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
@@ -419,7 +418,8 @@ def create_apps(
         if user_deposit_address:
             user_deposit = proxy_manager.user_deposit(user_deposit_address)
 
-        transport = MatrixTransport(config=config.transport, environment=environment_type)
+        # Use `TestMatrixTransport` that saves sent messages for assertions in tests
+        transport = TestMatrixTransport(config=config.transport, environment=environment_type)
 
         raiden_event_handler = RaidenEventHandler()
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)

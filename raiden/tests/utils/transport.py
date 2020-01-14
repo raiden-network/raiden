@@ -3,13 +3,14 @@ import os
 import re
 import sys
 from binascii import unhexlify
+from collections import defaultdict
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from itertools import chain
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
-from typing import Any, Callable, Dict, Iterator, List, Tuple
+from typing import Any, Callable, DefaultDict, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
@@ -18,8 +19,13 @@ from gevent import subprocess
 from synapse.handlers.auth import AuthHandler
 from twisted.internet import defer
 
+from raiden.constants import Environment
+from raiden.messages.abstract import Message
+from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
+from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Iterable, Port, Signature
@@ -340,3 +346,21 @@ def matrix_server_starter(
             setup_broadcast_room([url for url, _ in servers], broadcast_room_alias)
 
         yield servers
+
+
+class TestMatrixTransport(MatrixTransport):
+    def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
+        super().__init__(config, environment)
+
+        self.broadcast_messages: DefaultDict[str, List[Message]] = defaultdict(list)
+        self.send_messages: DefaultDict[QueueIdentifier, List[Message]] = defaultdict(list)
+
+    def broadcast(self, room: str, message: Message) -> None:
+        self.broadcast_messages[room].append(message)
+
+        super().broadcast(room, message)
+
+    def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
+        self.send_messages[queue_identifier].append(message)
+
+        super().send_async(queue_identifier, message)
