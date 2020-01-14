@@ -143,10 +143,9 @@ class NetworkXGraphField(marshmallow.fields.Field):
     """ Converts networkx.Graph objects to a string """
 
     def _serialize(self, value: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
-        # We use bytes.hex it's fast (33x as fast as eth_utils.to_hex and 500x
-        # as fast as to_checksum_address) and works just as well as input for
-        # to_canonical_address.
-        return json.dumps([(edge[0].hex(), edge[1].hex()) for edge in value.edges])
+        return json.dumps(
+            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in value.edges]
+        )
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:
         try:
