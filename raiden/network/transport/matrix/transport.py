@@ -334,7 +334,7 @@ class MatrixTransport(Runnable):
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
         self._displayname_cache = DisplayNameCache()
 
-        self._broadcast_rooms: Dict[str, Optional[Room]] = dict()
+        self._broadcast_rooms: Dict[str, Room] = dict()
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
