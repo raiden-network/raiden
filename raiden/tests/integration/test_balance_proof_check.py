@@ -58,7 +58,9 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
-    token_network_contract = app1.raiden.proxy_manager.token_network(token_network_address)
+    token_network_contract = app1.raiden.proxy_manager.token_network(
+        token_network_address, "latest"
+    )
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
         token_network_address=TokenNetworkAddress(token_network_contract.address),
