@@ -265,7 +265,7 @@ def test_participant_selection(raiden_network, token_addresses):
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
 @pytest.mark.parametrize("reveal_timeout", [3])
-def test_connect_does_not_open_channels_with_offline_noes(raiden_network, token_addresses):
+def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token_addresses):
     """
     Test that using the connection manager to connect to a token network
     does not open channels with offline nodes

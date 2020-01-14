@@ -314,15 +314,8 @@ class ConnectionManager:  # pragma: no unittest
         )
 
         available_addresses = list(participants_addresses - known)
-        available_and_online_addresses = available_addresses
-        available_and_online_addresses = [
-            address
-            for address in available_addresses
-            if self.raiden.transport.force_check_address_reachability(address)
-            == AddressReachability.REACHABLE
-        ]
-        shuffle(available_and_online_addresses)
-        new_partners = available_and_online_addresses
+        shuffle(available_addresses)
+        new_partners = available_addresses
 
         log.debug(
             "Found partners",
@@ -426,7 +419,16 @@ class ConnectionManager:  # pragma: no unittest
         ]
         # first, fund nonfunded channels, then open and fund with possible_new_partners,
         # until initial_channel_target of funded channels is met
-        join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
+        possible_partners = nonfunded_partners + possible_new_partners
+        join_partners: List[Address] = []
+        # Also filter the possible partners by excluding offline addresses
+        for possible_partner in possible_partners:
+            if len(join_partners) == n_to_join:
+                break
+
+            reachability = self.raiden.transport.force_check_address_reachability(possible_partner)
+            if reachability == AddressReachability.REACHABLE:
+                join_partners.append(possible_partner)
 
         log.debug(
             "Spawning greenlets to join partners",
