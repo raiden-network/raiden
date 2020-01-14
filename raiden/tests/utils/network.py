@@ -409,16 +409,24 @@ def create_apps(
         if resolver_port is not None:
             config.resolver_endpoint = f"http://localhost:{resolver_port}"
 
-        registry = proxy_manager.token_network_registry(token_network_registry_address)
-        secret_registry = proxy_manager.secret_registry(secret_registry_address)
+        registry = proxy_manager.token_network_registry(
+            token_network_registry_address, block_identifier="latest"
+        )
+        secret_registry = proxy_manager.secret_registry(
+            secret_registry_address, block_identifier="latest"
+        )
 
         service_registry = None
         if service_registry_address:
-            service_registry = proxy_manager.service_registry(service_registry_address)
+            service_registry = proxy_manager.service_registry(
+                service_registry_address, block_identifier="latest"
+            )
 
         user_deposit = None
         if user_deposit_address:
-            user_deposit = proxy_manager.user_deposit(user_deposit_address)
+            user_deposit = proxy_manager.user_deposit(
+                user_deposit_address, block_identifier="latest"
+            )
 
         # Use `TestMatrixTransport` that saves sent messages for assertions in tests
         transport = TestMatrixTransport(config=config.transport, environment=environment_type)

@@ -116,7 +116,9 @@ def test_locked_transfer_secret_registered_onchain(
     identifier = PaymentID(1)
     transfer_secret = make_secret()
 
-    secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(secret_registry_address)
+    secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(
+        secret_registry_address, block_identifier=chain_state.block_hash
+    )
     secret_registry_proxy.register_secret(secret=transfer_secret)
 
     # Wait until our node has processed the block that the secret registration was mined at

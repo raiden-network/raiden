@@ -672,7 +672,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     current_block = app0.raiden.rpc_client.block_number()
 
     netting_channel = app1.raiden.proxy_manager.payment_channel(
-        canonical_identifier=channelstate_0_1.canonical_identifier
+        canonical_identifier=channelstate_0_1.canonical_identifier, block_identifier="latest"
     )
 
     # The transfer locksroot must not contain the unlocked lock, the

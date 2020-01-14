@@ -155,7 +155,9 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PFS,  # not private mode, otherwise no PFS updates are queued
-        user_deposit=app0.raiden.proxy_manager.user_deposit(user_deposit_address),
+        user_deposit=app0.raiden.proxy_manager.user_deposit(
+            user_deposit_address, block_identifier="latest"
+        ),
     )
     app0_restart.start()
 

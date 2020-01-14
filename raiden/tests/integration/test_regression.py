@@ -222,7 +222,7 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
     """Register secret transaction must not be sent if the secret is already registered"""
     # pylint: disable=protected-access
 
-    secret_registry = proxy_manager.secret_registry(secret_registry_address)
+    secret_registry = proxy_manager.secret_registry(secret_registry_address, "latest")
 
     secret = sha3(b"test_regression_register_secret_once")
     secret_registry.register_secret(secret=secret)
