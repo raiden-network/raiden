@@ -80,42 +80,46 @@ def deploy_service_registry_and_set_urls(
     private_keys, web3, contract_manager, service_registry_address
 ) -> Tuple[ServiceRegistry, List[str]]:
     urls = ["http://foo", "http://boo", "http://coo"]
+    block_identifier = "latest"
     c1_client = JSONRPCClient(web3, private_keys[0])
     c1_service_proxy = ServiceRegistry(
         jsonrpc_client=c1_client,
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
+        block_identifier=block_identifier,
     )
-    token_address = c1_service_proxy.token_address(block_identifier="latest")
+    token_address = c1_service_proxy.token_address(block_identifier=block_identifier)
     c1_token_proxy = Token(
         jsonrpc_client=c1_client,
         token_address=token_address,
         contract_manager=contract_manager,
-        block_identifier="latest",
+        block_identifier=block_identifier,
     )
     c2_client = JSONRPCClient(web3, private_keys[1])
     c2_service_proxy = ServiceRegistry(
         jsonrpc_client=c2_client,
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
+        block_identifier=block_identifier,
     )
     c2_token_proxy = Token(
         jsonrpc_client=c2_client,
         token_address=token_address,
         contract_manager=contract_manager,
-        block_identifier="latest",
+        block_identifier=block_identifier,
     )
     c3_client = JSONRPCClient(web3, private_keys[2])
     c3_service_proxy = ServiceRegistry(
         jsonrpc_client=c3_client,
         service_registry_address=service_registry_address,
         contract_manager=contract_manager,
+        block_identifier=block_identifier,
     )
     c3_token_proxy = Token(
         jsonrpc_client=c3_client,
         token_address=token_address,
         contract_manager=contract_manager,
-        block_identifier="latest",
+        block_identifier=block_identifier,
     )
 
     # Test that getting a random service for an empty registry returns None

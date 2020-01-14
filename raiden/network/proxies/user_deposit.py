@@ -46,6 +46,7 @@ class UserDeposit:
         user_deposit_address: UserDepositAddress,
         contract_manager: ContractManager,
         proxy_manager: "ProxyManager",
+        block_identifier: BlockSpecification,
     ) -> None:
         if not is_binary_address(user_deposit_address):
             raise ValueError("Expected binary address format for token nework")
@@ -55,6 +56,7 @@ class UserDeposit:
             address=Address(user_deposit_address),
             contract_name=CONTRACT_USER_DEPOSIT,
             expected_code=decode_hex(contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT)),
+            given_block_identifier=block_identifier,
         )
 
         self.client = jsonrpc_client
@@ -136,12 +138,14 @@ class UserDeposit:
             expected_code=decode_hex(
                 self.contract_manager.get_runtime_hexcode(CONTRACT_MONITORING_SERVICE)
             ),
+            given_block_identifier=given_block_identifier,
         )
         check_address_has_code(
             client=self.client,
             address=Address(one_to_n_address),
             contract_name=CONTRACT_ONE_TO_N,
             expected_code=decode_hex(self.contract_manager.get_runtime_hexcode(CONTRACT_ONE_TO_N)),
+            given_block_identifier=given_block_identifier,
         )
         try:
             existing_monitoring_service_address = self.monitoring_service_address(
