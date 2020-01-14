@@ -168,7 +168,9 @@ def deploy_user_deposit_and_return_address(
         constructor_arguments=constructor_arguments,
     )
 
-    user_deposit = proxy_manager.user_deposit(UserDepositAddress(user_deposit_address))
+    user_deposit = proxy_manager.user_deposit(
+        UserDepositAddress(user_deposit_address), block_identifier="latest"
+    )
 
     participants = [privatekey_to_address(key) for key in private_keys]
     for transfer_to in participants:
@@ -223,6 +225,7 @@ def secret_registry_proxy(
         jsonrpc_client=deploy_client,
         secret_registry_address=secret_registry_address,
         contract_manager=contract_manager,
+        block_identifier="latest",
     )
 
 

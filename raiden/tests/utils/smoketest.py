@@ -185,7 +185,9 @@ def deploy_smoketest_contracts(
     )
     addresses[CONTRACT_ONE_TO_N] = one_to_n_address
 
-    user_deposit_proxy = proxy_manager.user_deposit(UserDepositAddress(user_deposit_address))
+    user_deposit_proxy = proxy_manager.user_deposit(
+        UserDepositAddress(user_deposit_address), block_identifier="latest"
+    )
     user_deposit_proxy.init(
         monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
         one_to_n_address=OneToNAddress(one_to_n_address),
