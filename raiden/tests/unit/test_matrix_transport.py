@@ -1,8 +1,12 @@
-import random
+from itertools import cycle
+from typing import List
 from unittest.mock import Mock, create_autospec
 from urllib.parse import urlparse
 
+import gevent
 import pytest
+import requests
+import responses
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
@@ -125,31 +129,47 @@ def test_validate_userid_signature():
     assert user.get_display_name.call_count == 0
 
 
-def test_sort_servers_closest(monkeypatch):
-    cnt = 0
+def test_sort_servers_closest(requests_responses):
+    with pytest.raises(TransportError):
+        # `ftp://` is not a valid scheme
+        sort_servers_closest(["ftp://server1.com"])
 
-    def random_or_none(url, timeout):  # pylint: disable=unused-argument
-        nonlocal cnt
-        cnt += 1
-        return (url, random.random() if cnt % 3 else None)
+    def make_dummy_response(response_times: List[float]):
+        response_time_iter = cycle(response_times)
 
-    mock_get_http_rtt = Mock(
-        spec=raiden.network.transport.matrix.utils.return_after_retries, side_effect=random_or_none
+        def response(_):
+            gevent.sleep(next(response_time_iter))
+            return 200, {}, ""
+
+        return response
+
+    # Average response time := 0.1
+    requests_responses.add_callback(
+        responses.HEAD, "http://url0", callback=make_dummy_response([0.05, 0.05, 0.2])
     )
-
-    monkeypatch.setattr(
-        raiden.network.transport.matrix.utils, "return_after_retries", mock_get_http_rtt
+    # Average response time := 0.05
+    requests_responses.add_callback(
+        responses.HEAD, "http://url1", callback=make_dummy_response([0.05, 0.05, 0.05])
     )
+    # Exceeds 0.3 max timeout defined below
+    requests_responses.add_callback(
+        responses.HEAD, "http://url2", callback=make_dummy_response([0.5, 0.5, 0.5])
+    )
+    # Raises an exception
+    requests_responses.add(responses.HEAD, "http://url3", body=requests.RequestException())
+
+    sorted_servers = sort_servers_closest(
+        ["http://url0", "http://url1", "http://url2", "http://url3"], max_timeout=0.3
+    )
+    rtts = list(round(rtt, 2) for rtt in sorted_servers.values())
+
+    assert len(sorted_servers) == 2
+    assert all(rtts) and rtts == sorted(rtts)
+    assert rtts == [0.05, 0.10]
 
     with pytest.raises(TransportError):
-        sort_servers_closest(["ftp://server1.com", "server2.com"])
-
-    server_count = 9
-    sorted_servers = sort_servers_closest([f"https://server{i}.xyz" for i in range(server_count)])
-    rtts = list(sorted_servers.values())
-
-    assert len(sorted_servers) <= server_count
-    assert all(rtts) and rtts == sorted(rtts)
+        # Only invalid servers
+        sort_servers_closest(["http://url2", "http://url3"], max_timeout=0.3)
 
 
 def test_make_client(monkeypatch):
@@ -164,11 +184,15 @@ def test_make_client(monkeypatch):
     # valid but unreachable servers
     with pytest.raises(TransportError), monkeypatch.context() as m:
         mock_get_http_rtt = Mock(
-            spec=raiden.network.transport.matrix.utils.return_after_retries,
-            side_effect=lambda url, timeout: None,
+            spec=raiden.network.transport.matrix.utils.get_average_http_response_time,
+            side_effect=lambda url, samples=None, method=None, sample_delay=None: None,
         )
 
-        m.setattr(raiden.network.transport.matrix.utils, "return_after_retries", mock_get_http_rtt)
+        m.setattr(
+            raiden.network.transport.matrix.utils,
+            "get_average_http_response_time",
+            mock_get_http_rtt,
+        )
 
         make_client(ignore_messages, [f"http://server{i}.xyz" for i in range(3)])
 

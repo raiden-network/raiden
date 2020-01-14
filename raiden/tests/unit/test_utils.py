@@ -6,7 +6,7 @@ from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, to_canonical_address
 
 from raiden.exceptions import InvalidSignature
-from raiden.network.utils import return_after_retries
+from raiden.network.utils import get_average_http_response_time
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
 from raiden.utils.signing import pack_data, sha3
@@ -63,18 +63,16 @@ def test_recover_exception(signature, nested_exception):
 
 def test_get_http_rtt_happy(requests_responses):
     """ Ensure get_http_rtt returns the average RTT over the number of samples. """
-    delay = iter([0.05, 0.05, 0.1])
+    delay = iter([0.05, 0.05, 0.2])
 
     def response(_):
         gevent.sleep(next(delay))
         return 200, {}, ""
 
     requests_responses.add_callback(responses.GET, "http://url", callback=response)
-    requests_responses.add_callback(responses.GET, "http://url", callback=response)
-    requests_responses.add_callback(responses.GET, "http://url", callback=response)
 
-    result = return_after_retries(url="http://url", timeout=1, method="get", samples=3)
-    assert round(result[1], 1) == 0.1
+    result = get_average_http_response_time(url="http://url", method="get", samples=3)
+    assert round(result[1], 2) == 0.10
 
 
 def test_get_http_rtt_ignore_failing(requests_responses):
@@ -82,15 +80,15 @@ def test_get_http_rtt_ignore_failing(requests_responses):
 
     # RequestException (e.g. DNS not resolvable, server not reachable)
     requests_responses.add(responses.GET, "http://url1", body=requests.RequestException())
-    assert return_after_retries(url="http://url1", timeout=1, method="get") is None
+    assert get_average_http_response_time(url="http://url1", method="get") is None
 
     # Server misconfigured
     requests_responses.add(responses.GET, "http://url2", status=404)
-    assert return_after_retries(url="http://url2", timeout=1, method="get") is None
+    assert get_average_http_response_time(url="http://url2", method="get") is None
 
     # Internal server error
     requests_responses.add(responses.GET, "http://url3", status=500)
-    assert return_after_retries(url="http://url3", timeout=1, method="get") is None
+    assert get_average_http_response_time(url="http://url3", method="get") is None
 
 
 def test_pack_data():

@@ -5,15 +5,18 @@ import sys
 from contextlib import closing
 from itertools import count, repeat
 from socket import SocketKind
-from time import sleep
 
+import gevent
 import psutil
 import requests
 from requests import Response
+from structlog import get_logger
 
 from raiden.utils.typing import Any, Iterator, Optional, Port, Tuple
 
 LOOPBACK = "127.0.0.1"
+
+log = get_logger(__name__)
 
 
 def get_response_json(response: Response) -> Any:
@@ -97,24 +100,27 @@ def get_free_port(initial_port: Optional[int] = None) -> Iterator[Port]:
     return _unused_ports(initial_port=initial_port)
 
 
-def return_after_retries(
-    url: str, timeout: float, samples: int = 3, method: str = "head"
+def get_average_http_response_time(
+    url: str, samples: int = 3, method: str = "head", sample_delay: float = 0.125
 ) -> Optional[Tuple[str, float]]:
-    """Return the `url` after `samples` successful requests.
+    """ Returns a tuple (`url`, `average_response_time`) after `samples` successful requests.
 
-    Use this to sort the fastest servers, the vallues `samples` and `timeout`
-    must be equal for each `url`. The first `url` to return is the fastest
-    server.
+    When called multiple times the parameter `samples` must remain constant for each `url` in order
+    to obtain comparable results.
+
+    The requests performed by this function do not timeout. Handling this is left to higher layers.
     """
     durations = 0.0
-    for _ in range(samples):
+    for sample in range(samples):
         try:
-            response = requests.request(method, url, timeout=timeout)
+            response = requests.request(method, url)
             response.raise_for_status()
             durations += response.elapsed.total_seconds()
-        except (OSError, requests.RequestException):
+        except (OSError, requests.RequestException) as ex:
+            log.debug("Server not reachable", url=url, exception_=repr(ex))
             return None
 
-        sleep(0.125)  # Slight delay to avoid overloading
+        if sample < samples - 1:
+            gevent.sleep(sample_delay)  # Slight delay to avoid overloading
 
-    return (url, durations / samples)
+    return url, durations / samples
