@@ -81,7 +81,7 @@ scenario:
             - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount was tranferred on the correct path
+            # Assert that correct amount was transferred on the correct path
             - wait_blocks: 1
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
@@ -109,11 +109,11 @@ scenario:
       - serial:
           name: "Make payment from 0 to 3 after node4 is stopped"
           tasks:
-            # Check that a payment is made with the only availabe path [0, 1, 2, 3] from 0 to 3
+            # Check that a payment is made with the only available path [0, 1, 2, 3] from 0 to 3
             - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount was tranferred on the correct path
+            # Assert that correct amount was transferred on the correct path
             - wait_blocks: 1
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
