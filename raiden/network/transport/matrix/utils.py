@@ -313,7 +313,7 @@ class UserAddressManager:
         new_address_reachability = USER_PRESENCE_TO_ADDRESS_REACHABILITY[new_presence]
 
         prev_reachability_state = self.get_address_reachability_state(address)
-        if new_address_reachability == prev_reachability_state:
+        if new_address_reachability == prev_reachability_state.reachability:
             return
 
         now = datetime.now()
