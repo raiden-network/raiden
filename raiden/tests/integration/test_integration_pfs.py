@@ -1,5 +1,3 @@
-from unittest.mock import MagicMock
-
 import pytest
 
 from raiden.api.python import RaidenAPI
@@ -7,8 +5,6 @@ from raiden.app import App
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.messages.abstract import Message
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
-from raiden.network.transport.matrix import make_room_alias
-from raiden.network.transport.matrix.client import Room
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
@@ -27,6 +23,22 @@ from raiden.utils.typing import (
     TokenAmount,
     WithdrawAmount,
 )
+
+
+def get_messages(app: App) -> List[Message]:
+    assert isinstance(
+        app.raiden.transport, TestMatrixTransport
+    ), "Transport is not a `TestMatrixTransport`"
+
+    return app.raiden.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM]
+
+
+def reset_messages(app: App) -> None:
+    assert isinstance(
+        app.raiden.transport, TestMatrixTransport
+    ), "Transport is not a `TestMatrixTransport`"
+
+    app.raiden.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM] = []
 
 
 @raise_on_failure
@@ -54,11 +66,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
         partner_address=app1.raiden.address,
     )
 
-    def get_messages(app: App) -> List[Message]:
-        assert isinstance(app.raiden.transport, TestMatrixTransport)
-        return app.raiden.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM]
-
-    # the room should not have been called at channel opening
+    # There should be no messages sent at channel opening
     assert len(get_messages(app0)) == 0
     assert len(get_messages(app1)) == 0
     assert len(get_messages(app2)) == 0
@@ -124,18 +132,16 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
         chain_state, token_network_registry_address, token_address
     )
 
-    chain_id = app0.raiden.rpc_client.chain_id
-    pfs_room_name = make_room_alias(chain_id, PATH_FINDING_BROADCASTING_ROOM)
+    # There have been two PFSCapacityUpdates and two PFSFeeUpdates per channel per node
+    assert len(get_messages(app0)) == 4
+    # The mediator has two channels
+    assert len(get_messages(app1)) == 8
+    assert len(get_messages(app2)) == 4
 
-    # Mock send_text on the PFS room
-    pfs_rooms: List[Room] = []
-    for app in [app0, app1, app2]:
-        transport = app.raiden.transport
-        pfs_room = transport._broadcast_rooms.get(pfs_room_name)
-        # need to assert for mypy that pfs_room is not None
-        assert isinstance(pfs_room, Room)
-        pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
-        pfs_rooms.append(pfs_room)
+    # Reset message lists for more understandable assertions
+    reset_messages(app0)
+    reset_messages(app1)
+    reset_messages(app2)
 
     amount = PaymentAmount(10)
     secrethash = transfer(
@@ -172,18 +178,21 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
         )
 
     # Initiator: we expect one PFSCapacityUpdate when locking and one when unlocking
-    assert pfs_rooms[0].send_text.call_count == 2
-    assert "PFSCapacityUpdate" in str(pfs_rooms[0].send_text.call_args_list[0])
-    assert "PFSFeeUpdate" not in str(pfs_rooms[0].send_text.call_args_list[0])
+    messages0 = get_messages(app0)
+    assert len(messages0) == 2
+    assert len([x for x in messages0 if isinstance(x, PFSCapacityUpdate)]) == 2
+    assert len([x for x in messages0 if isinstance(x, PFSFeeUpdate)]) == 0
 
     # Mediator:
     #   incoming channel: we expect one PFSCapacityUpdate when locking and one when unlocking
     #   outgoing channel: we expect one PFSCapacityUpdate when funds are unlocked
-    assert pfs_rooms[1].send_text.call_count == 3
-    assert "PFSCapacityUpdate" in str(pfs_rooms[1].send_text.call_args_list[0])
-    assert "PFSFeeUpdate" not in str(pfs_rooms[1].send_text.call_args_list[0])
+    messages1 = get_messages(app1)
+    assert len(messages1) == 3
+    assert len([x for x in messages1 if isinstance(x, PFSCapacityUpdate)]) == 3
+    assert len([x for x in messages1 if isinstance(x, PFSFeeUpdate)]) == 0
 
     # Target: we expect one PFSCapacityUpdate when funds are unlocked
-    assert pfs_rooms[2].send_text.call_count == 1
-    assert "PFSCapacityUpdate" in str(pfs_rooms[2].send_text.call_args_list[0])
-    assert "PFSFeeUpdate" not in str(pfs_rooms[2].send_text.call_args_list[0])
+    messages2 = get_messages(app2)
+    assert len(messages2) == 1
+    assert len([x for x in messages2 if isinstance(x, PFSCapacityUpdate)]) == 1
+    assert len([x for x in messages2 if isinstance(x, PFSFeeUpdate)]) == 0
