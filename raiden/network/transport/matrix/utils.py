@@ -2,6 +2,8 @@ import json
 import re
 from binascii import Error as DecodeError
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from operator import attrgetter
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
@@ -66,6 +68,16 @@ class AddressReachability(Enum):
     REACHABLE = 1
     UNREACHABLE = 2
     UNKNOWN = 3
+
+
+@dataclass
+class ReachabilityState:
+    reachability: AddressReachability
+    time: datetime
+
+
+EPOCH = datetime(1970, 1, 1)
+UNKNOWN_REACHABILITY_STATE = ReachabilityState(AddressReachability.UNKNOWN, EPOCH)
 
 
 USER_PRESENCE_REACHABLE_STATES = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
@@ -224,7 +236,13 @@ class UserAddressManager:
 
     def get_address_reachability(self, address: Address) -> AddressReachability:
         """ Return the current reachability state for ``address``. """
-        return self._address_to_reachability.get(address, AddressReachability.UNKNOWN)
+        return self._address_to_reachabilitystate.get(
+            address, UNKNOWN_REACHABILITY_STATE
+        ).reachability
+
+    def get_address_reachability_state(self, address: Address) -> ReachabilityState:
+        """ Return the current reachability state for ``address``. """
+        return self._address_to_reachabilitystate.get(address, UNKNOWN_REACHABILITY_STATE)
 
     def force_user_presence(self, user: User, presence: UserPresence) -> None:
         """ Forcibly set the ``user`` presence to ``presence``.
@@ -294,18 +312,25 @@ class UserAddressManager:
 
         new_address_reachability = USER_PRESENCE_TO_ADDRESS_REACHABILITY[new_presence]
 
-        prev_addresss_reachability = self.get_address_reachability(address)
-        if new_address_reachability == prev_addresss_reachability:
+        prev_reachability_state = self.get_address_reachability_state(address)
+        if new_address_reachability == prev_reachability_state:
             return
+
+        now = datetime.now()
 
         self.log.debug(
             "Changing address reachability state",
             address=to_checksum_address(address),
-            prev_state=prev_addresss_reachability,
+            prev_state=prev_reachability_state.reachability,
             state=new_address_reachability,
+            last_change=prev_reachability_state.time,
+            change_after=now - prev_reachability_state.time,
         )
 
-        self._address_to_reachability[address] = new_address_reachability
+        self._address_to_reachabilitystate[address] = ReachabilityState(
+            new_address_reachability, now
+        )
+
         self._address_reachability_changed_callback(address, new_address_reachability)
 
     def _presence_listener(self, event: Dict[str, Any], presence_update_id: int) -> None:
@@ -355,7 +380,7 @@ class UserAddressManager:
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
-        self._address_to_reachability: Dict[Address, AddressReachability] = dict()
+        self._address_to_reachabilitystate: Dict[Address, ReachabilityState] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
         self._userid_to_presence_update_id: Dict[str, int] = dict()
 
