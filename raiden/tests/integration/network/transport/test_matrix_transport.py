@@ -1128,6 +1128,7 @@ def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5663")
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("matrix_sync_timeout", [5_000])  # Shorten sync timeout to prevent timeout
