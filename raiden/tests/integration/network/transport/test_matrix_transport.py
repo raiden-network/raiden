@@ -1,5 +1,6 @@
 import json
 import random
+from datetime import datetime
 from functools import partial
 from typing import Any, Set
 from unittest.mock import MagicMock
@@ -24,7 +25,12 @@ from raiden.messages.path_finding_service import PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
-from raiden.network.transport.matrix.utils import UserPresence, make_room_alias, my_place_or_yours
+from raiden.network.transport.matrix.utils import (
+    ReachabilityState,
+    UserPresence,
+    make_room_alias,
+    my_place_or_yours,
+)
 from raiden.raiden_service import RaidenService
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, RaidenConfig, ServiceConfig
@@ -322,9 +328,9 @@ def test_matrix_message_retry(
     transport.log = MagicMock()
 
     # Receiver is online
-    transport._address_mgr._address_to_reachability[
-        partner_address
-    ] = AddressReachability.REACHABLE
+    transport._address_mgr._address_to_reachabilitystate[partner_address] = ReachabilityState(
+        AddressReachability.REACHABLE, datetime.now()
+    )
 
     queueid = QueueIdentifier(
         recipient=partner_address, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
@@ -344,9 +350,9 @@ def test_matrix_message_retry(
     assert transport._send_raw.call_count == 1
 
     # Receiver goes offline
-    transport._address_mgr._address_to_reachability[
-        partner_address
-    ] = AddressReachability.UNREACHABLE
+    transport._address_mgr._address_to_reachabilitystate[partner_address] = ReachabilityState(
+        AddressReachability.UNREACHABLE, datetime.now()
+    )
 
     with gevent.Timeout(retry_interval + 2):
         wait_assert(
@@ -360,9 +366,9 @@ def test_matrix_message_retry(
     assert transport._send_raw.call_count == 1
 
     # Receiver comes back online
-    transport._address_mgr._address_to_reachability[
-        partner_address
-    ] = AddressReachability.REACHABLE
+    transport._address_mgr._address_to_reachabilitystate[partner_address] = ReachabilityState(
+        AddressReachability.REACHABLE, datetime.now()
+    )
 
     # Retrier should send the message again
     with gevent.Timeout(retry_interval + 2):
