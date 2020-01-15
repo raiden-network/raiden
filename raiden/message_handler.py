@@ -40,7 +40,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, Address, List
+from raiden.utils.typing import MYPY_ANNOTATION, Address, List, TargetAddress
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -291,7 +291,7 @@ class MessageHandler:
 
         assert message.sender, "Invalid message dispatched, it should be signed"
 
-        if message.target == raiden.address:
+        if message.target == TargetAddress(raiden.address):
             raiden.start_health_check_for(Address(message.initiator))
 
             from_transfer = lockedtransfersigned_from_message(message)

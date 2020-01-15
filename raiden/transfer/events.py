@@ -281,6 +281,7 @@ class EventPaymentReceivedSuccess(Event):
     token_network_registry_address: TokenNetworkRegistryAddress
     token_network_address: TokenNetworkAddress
     identifier: PaymentID
+    # XXX: Should be PaymentAmount
     amount: TokenAmount
     initiator: InitiatorAddress
 

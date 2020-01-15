@@ -10,7 +10,14 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
-from raiden.utils.typing import Address, Balance, BlockSpecification, TokenAddress, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    Balance,
+    BlockSpecification,
+    Optional,
+    TokenAddress,
+    TokenAmount,
+)
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -163,11 +170,26 @@ class Token:
             block_identifier=block_identifier
         )
 
-    def total_supply(self, block_identifier: BlockSpecification = "latest") -> TokenAmount:
-        """ Return the total supply of the token at the given block identifier. """
-        return TokenAmount(
-            self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
+    def total_supply(
+        self, block_identifier: BlockSpecification = "latest"
+    ) -> Optional[TokenAmount]:
+        """ Return the total supply of the token at the given block identifier.
+
+        Because Token is just an interface, it is not possible to check the
+        bytecode during the proxy instantiation. This means it is possible for
+        the proxy to be instantiated with a a smart contrat address of the
+        wrong type (a non ERC20 contract), or a partial implementation of the
+        ERC20 standard (the funciton totalSupply is missing). If that happens
+        this method will return `None`.
+        """
+        total_supply = self.proxy.contract.functions.totalSupply().call(
+            block_identifier=block_identifier
         )
+
+        if isinstance(total_supply, int):
+            return TokenAmount(total_supply)
+
+        return None
 
     def transfer(self, to_address: Address, amount: TokenAmount) -> None:
         """ Transfer `amount` tokens to `to_address`.

@@ -129,15 +129,15 @@ def get_account_and_private_key(
 
 
 def get_smart_contracts_start_at(network_id: ChainID) -> BlockNumber:
-    if network_id == Networks.MAINNET:
+    if network_id == Networks.MAINNET.value:
         smart_contracts_start_at = EthereumForks.CONSTANTINOPLE.value
-    elif network_id == Networks.ROPSTEN:
+    elif network_id == Networks.ROPSTEN.value:
         smart_contracts_start_at = RopstenForks.CONSTANTINOPLE.value
-    elif network_id == Networks.KOVAN:
+    elif network_id == Networks.KOVAN.value:
         smart_contracts_start_at = KovanForks.CONSTANTINOPLE.value
-    elif network_id == Networks.RINKEBY:
+    elif network_id == Networks.RINKEBY.value:
         smart_contracts_start_at = RinkebyForks.CONSTANTINOPLE.value
-    elif network_id == Networks.GOERLI:
+    elif network_id == Networks.GOERLI.value:
         smart_contracts_start_at = GoerliForks.CONSTANTINOPLE.value
     else:
         smart_contracts_start_at = GENESIS_BLOCK_NUMBER

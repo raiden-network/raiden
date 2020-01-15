@@ -60,6 +60,7 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChannelID,
     Dict,
+    InitiatorAddress,
     List,
     LockedTransferType,
     NetworkTimeout,
@@ -108,9 +109,9 @@ def event_filter_for_payments(
     """
     sent_and_target_matches = isinstance(
         event, (EventPaymentSentFailed, EventPaymentSentSuccess)
-    ) and (partner_address is None or event.target == partner_address)
+    ) and (partner_address is None or event.target == TargetAddress(partner_address))
     received_and_initiator_matches = isinstance(event, EventPaymentReceivedSuccess) and (
-        partner_address is None or event.initiator == partner_address
+        partner_address is None or event.initiator == InitiatorAddress(partner_address)
     )
 
     token_address_matches = True

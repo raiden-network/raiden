@@ -646,57 +646,48 @@ def assert_balance_proof(
         )
 
         if received_balance_proof is not None:
-            if type(received_balance_proof) == ReceiveTransferRefund:
-                msg = (
-                    f"Node1 received a refund from node0 and rejected it. This "
-                    f"is likely a Raiden bug. state_change={received_balance_proof}"
-                )
-            elif type(received_balance_proof) in (
-                ActionInitMediator,
-                ActionInitTarget,
-                ReceiveUnlock,
-                ReceiveLockExpired,
-            ):
-                if type(received_balance_proof) == ReceiveUnlock:
-                    assert isinstance(received_balance_proof, ReceiveUnlock), MYPY_ANNOTATION
-                    is_valid, _, innermsg = channel.handle_unlock(
-                        channel_state=channel1, unlock=received_balance_proof
-                    )
-                elif type(received_balance_proof) == ReceiveLockExpired:
-                    assert isinstance(received_balance_proof, ReceiveLockExpired), MYPY_ANNOTATION
-                    is_valid, innermsg, _ = channel.is_valid_lock_expired(
-                        state_change=received_balance_proof,
-                        channel_state=channel1,
-                        sender_state=channel1.partner_state,
-                        receiver_state=channel1.our_state,
-                        block_number=saved_state1.state.block_number,
-                    )
-                else:
-                    assert isinstance(
-                        received_balance_proof, (ActionInitMediator, ActionInitTarget)
-                    ), MYPY_ANNOTATION
-                    is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
-                        channel_state=channel1,
-                        mediated_transfer=received_balance_proof.from_transfer,
-                    )
+            state_change_type = type(received_balance_proof.data)
 
-                if not is_valid:
-                    msg = (
-                        f"Node1 received the node0's message but rejected it. This "
-                        f"is likely a Raiden bug. reason={innermsg} "
-                        f"state_change={received_balance_proof}"
-                    )
-                else:
-                    msg = (
-                        f"Node1 received the node0's message at that time it "
-                        f"was rejected, this is likely a race condition, node1 "
-                        f"has to process the message again. reason={innermsg} "
-                        f"state_change={received_balance_proof}"
-                    )
-            else:
+            if state_change_type == ReceiveTransferRefund:
+                is_valid = False
+                innermsg = "Message is a refund"
+            elif state_change_type == ReceiveUnlock:
+                assert isinstance(received_balance_proof, ReceiveUnlock), MYPY_ANNOTATION
+                is_valid, _, innermsg = channel.handle_unlock(
+                    channel_state=channel1, unlock=received_balance_proof
+                )
+            elif state_change_type == ReceiveLockExpired:
+                assert isinstance(received_balance_proof, ReceiveLockExpired), MYPY_ANNOTATION
+                is_valid, innermsg, _ = channel.is_valid_lock_expired(
+                    state_change=received_balance_proof,
+                    channel_state=channel1,
+                    sender_state=channel1.partner_state,
+                    receiver_state=channel1.our_state,
+                    block_number=saved_state1.state.block_number,
+                )
+            elif state_change_type == ActionInitMediator:
+                assert isinstance(received_balance_proof, ActionInitMediator), MYPY_ANNOTATION
+                is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
+                    channel_state=channel1, mediated_transfer=received_balance_proof.from_transfer
+                )
+            elif state_change_type == ActionInitTarget:
+                assert isinstance(received_balance_proof, ActionInitTarget), MYPY_ANNOTATION
+                is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
+                    channel_state=channel1, mediated_transfer=received_balance_proof.from_transfer
+                )
+
+            if not is_valid:
                 msg = (
                     f"Node1 received the node0's message but rejected it. This "
-                    f"is likely a Raiden bug. state_change={received_balance_proof}"
+                    f"is likely a Raiden bug. reason={innermsg} "
+                    f"state_change={received_balance_proof}"
+                )
+            else:
+                msg = (
+                    f"Node1 received the node0's message at that time it "
+                    f"was rejected, this is likely a race condition, node1 "
+                    f"has to process the message again. reason={innermsg} "
+                    f"state_change={received_balance_proof}"
                 )
 
         elif sent_balance_proof is None:
@@ -919,7 +910,7 @@ def assert_balance(
     assert channel_distributable == distributable, msg
 
     msg = f"channel locked amount does not match. Expected: {locked} got: {channel_locked_amount}"
-    assert channel_locked_amount == locked, msg
+    assert LockedAmount(channel_locked_amount) == locked, msg
 
     msg = (
         f"locked_amount ({locked}) + distributable ({distributable}) "
