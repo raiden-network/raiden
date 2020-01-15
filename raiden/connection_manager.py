@@ -164,20 +164,22 @@ class ConnectionManager:  # pragma: no unittest
 
             log_open_channels(self.raiden, self.registry_address, self.token_address, funds)
 
-            qty_network_channels = views.count_token_network_channels(
-                views.state_from_raiden(self.raiden), self.registry_address, self.token_address
-            )
-
-            if qty_network_channels == 0:
+            if not self._have_online_channels_to_connect_to():
                 log.info(
                     "Bootstrapping token network.",
                     node=to_checksum_address(self.raiden.address),
                     network_id=to_checksum_address(self.registry_address),
                     token_id=to_checksum_address(self.token_address),
                 )
-                self.api.channel_open(
-                    self.registry_address, self.token_address, self.BOOTSTRAP_ADDR
-                )
+                try:
+                    self.api.channel_open(
+                        self.registry_address, self.token_address, self.BOOTSTRAP_ADDR
+                    )
+                except DuplicatedChannelError:
+                    # If we have none else to connect to and connect got called twice
+                    # then it's possible to already have channel with the bootstrap node.
+                    # In that case do nothing
+                    pass
             else:
                 self._open_channels()
 
@@ -297,6 +299,16 @@ class ConnectionManager:  # pragma: no unittest
         with self.lock:
             if self._funds_remaining > 0 and not self._leaving_state:
                 self._open_channels()
+
+    def _have_online_channels_to_connect_to(self) -> bool:
+        """Returns whether there are any possible new online channel partners to connect to"""
+        potential_addresses = self._find_new_partners()
+        for address in potential_addresses:
+            reachability = self.raiden.transport.force_check_address_reachability(address)
+            if reachability == AddressReachability.REACHABLE:
+                return True
+
+        return False
 
     def _find_new_partners(self) -> List[Address]:
         """ Search the token network for potential channel partners. """
