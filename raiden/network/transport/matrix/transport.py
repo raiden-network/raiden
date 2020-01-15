@@ -3,7 +3,7 @@ import time
 from collections import defaultdict
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import gevent
 import structlog
@@ -21,7 +21,6 @@ from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
-    JSONResponse,
     MatrixMessage,
     MatrixSyncMessages,
     Room,
@@ -683,7 +682,7 @@ class MatrixTransport(Runnable):
         # Process the result from the sync executed above
         response_queue = self._client.response_queue
         while response_queue:
-            token_response: Tuple[UUID, JSONResponse] = response_queue.get(block=False)
+            token_response = response_queue.get(block=False)
             self._client._handle_response(token_response[1], first_sync=True)
 
     def _initialize_room_inventory(self) -> None:

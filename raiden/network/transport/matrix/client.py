@@ -1,6 +1,7 @@
 import itertools
 import json
 import time
+from datetime import datetime
 from functools import wraps
 from itertools import repeat
 from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
@@ -228,7 +229,7 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
-        self.response_queue = NotifyingQueue()
+        self.response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]] = NotifyingQueue()
         self.stop_event = Event()
 
         super().__init__(
@@ -526,11 +527,15 @@ class GMatrixClient(MatrixClient):
 
             # Updating the sync token should only be done after the response is
             # saved in the queue, otherwise the data can be lost in a stop/start.
-            self.response_queue.put((token, response))
+            self.response_queue.put((token, response, datetime.now()))
             self.sync_token = response["next_batch"]
             self.sync_iteration += 1
 
-    def _handle_message(self, response_queue: NotifyingQueue, stop_event: Event) -> None:
+    def _handle_message(
+        self,
+        response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]],
+        stop_event: Event,
+    ) -> None:
         """ Worker to process network messages from the asynchronous transport.
 
         Note that this worker will process the messages in the order of
@@ -554,8 +559,7 @@ class GMatrixClient(MatrixClient):
                 # semantics. At-most-once would also be acceptable because of
                 # message retries, however has the potential of introducing
                 # latency.
-                token_response: Tuple[UUID, JSONResponse] = response_queue.peek(block=False)
-                token, response = token_response
+                token, response, received_at = response_queue.peek(block=False)
                 assert response is not None, "None is not a valid value for a Matrix response."
 
                 log.debug(
@@ -563,6 +567,7 @@ class GMatrixClient(MatrixClient):
                     token=token,
                     node=node_address_from_userid(self.user_id),
                     current_size=len(response_queue),
+                    processing_lag=datetime.now() - received_at,
                 )
 
                 self._handle_response(response)
