@@ -788,7 +788,7 @@ def refund_transfer_matches_transfer(
 ) -> bool:
     refund_transfer_sender = refund_transfer.balance_proof.sender
     # Ignore a refund from the target
-    if refund_transfer_sender == transfer.target:
+    if TargetAddress(refund_transfer_sender) == transfer.target:
         return False
 
     return (
@@ -1098,6 +1098,7 @@ def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmou
     )
 
 
+# XXX: return type should be LockedAmount
 def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
     total_pending = sum(lock.amount for lock in end_state.secrethashes_to_lockedlocks.values())
 

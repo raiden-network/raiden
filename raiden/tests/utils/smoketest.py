@@ -50,6 +50,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     Any,
+    Balance,
     BlockNumber,
     Callable,
     ChainID,
@@ -448,7 +449,7 @@ def run_smoketest(
             channel_state.our_state, channel_state.partner_state
         )
         assert distributable == TEST_DEPOSIT_AMOUNT
-        assert distributable == channel_state.our_state.contract_balance
+        assert Balance(distributable) == channel_state.our_state.contract_balance
         assert channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
         port_number = raiden_service.config.api_port

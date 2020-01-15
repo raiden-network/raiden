@@ -1205,7 +1205,7 @@ class RaidenService(Runnable):
             for event in event_queue:
                 if isinstance(event, SendLockedTransfer):
                     transfer = event.transfer
-                    if transfer.initiator == self.address:
+                    if transfer.initiator == InitiatorAddress(self.address):
                         neighbour_addresses.append(Address(transfer.target))
 
         return neighbour_addresses

@@ -13,7 +13,7 @@ from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import (
-    EMPTY_HASH,
+    EMPTY_BALANCE_HASH,
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
     NULL_ADDRESS_BYTES,
@@ -1797,7 +1797,7 @@ class TokenNetwork:
         non_closing_signature: Signature,
         given_block_identifier: BlockSpecification,
     ) -> None:
-        if balance_hash is EMPTY_HASH:
+        if balance_hash is EMPTY_BALANCE_HASH:
             raise RaidenUnrecoverableError("update_transfer called with an empty balance_hash")
 
         if nonce <= 0 or nonce > UINT256_MAX:

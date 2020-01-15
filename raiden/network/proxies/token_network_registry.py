@@ -147,7 +147,7 @@ class TokenNetworkRegistry:
                     f"Number of token networks will exceed the max of {max_token_networks}"
                 )
 
-            if token_supply == "":
+            if token_supply is None:
                 raise InvalidToken(
                     "Given token address does not follow the "
                     "ERC20 standard (missing `totalSupply()`)"

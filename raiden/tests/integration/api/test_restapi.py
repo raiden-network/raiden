@@ -15,6 +15,7 @@ from eth_utils import (
 )
 from flask import url_for
 
+from raiden import api
 from raiden.api.rest import APIServer
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import (
@@ -154,7 +155,7 @@ def test_hex_converter():
     with pytest.raises(Exception):
         converter.to_python("414d72a6f6e28f4950117696081450d63d56c354")
 
-    address = b"AMr\xa6\xf6\xe2\x8fIP\x11v\x96\x08\x14P\xd6=V\xc3T"
+    address = api.objects.Address(b"AMr\xa6\xf6\xe2\x8fIP\x11v\x96\x08\x14P\xd6=V\xc3T")
     assert converter.to_python("0x414D72a6f6E28F4950117696081450d63D56C354") == address
 
 

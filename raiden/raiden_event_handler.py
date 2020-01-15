@@ -6,7 +6,6 @@ from eth_utils import encode_hex, to_hex
 
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
-    EMPTY_HASH,
     EMPTY_MESSAGE_HASH,
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
@@ -666,7 +665,7 @@ class RaidenEventHandler(EventHandler):
             "partner_locked_amount": partner_details.locked_amount,
         }
 
-        if our_details.balance_hash != EMPTY_HASH:
+        if our_details.balance_hash != EMPTY_BALANCE_HASH:
             event_record = get_event_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
@@ -689,7 +688,7 @@ class RaidenEventHandler(EventHandler):
             our_locked_amount = 0
             our_locksroot = LOCKSROOT_OF_NO_LOCKS
 
-        if partner_details.balance_hash != EMPTY_HASH:
+        if partner_details.balance_hash != EMPTY_BALANCE_HASH:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,

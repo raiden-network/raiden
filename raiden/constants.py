@@ -10,6 +10,7 @@ from raiden.utils.typing import (
     BalanceHash,
     BlockHash,
     BlockNumber,
+    ChainID,
     Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
@@ -70,12 +71,12 @@ class GoerliForks(Enum):
 
 
 class Networks(Enum):
-    MAINNET = 1
-    ROPSTEN = 3
-    RINKEBY = 4
-    GOERLI = 5
-    KOVAN = 42
-    SMOKETEST = 627
+    MAINNET = ChainID(1)
+    ROPSTEN = ChainID(3)
+    RINKEBY = ChainID(4)
+    GOERLI = ChainID(5)
+    KOVAN = ChainID(42)
+    SMOKETEST = ChainID(627)
 
 
 # Set at 64 since parity's default is 64 and Geth's default is 128
@@ -96,6 +97,7 @@ EMPTY_SECRET = Secret(bytes(32))
 EMPTY_SECRETHASH = SecretHash(bytes(32))
 EMPTY_SECRET_SHA256 = sha256_secrethash(EMPTY_SECRET)
 LOCKSROOT_OF_NO_LOCKS = Locksroot(keccak(b""))
+EMPTY_LOCKSROOT = Locksroot(bytes(32))
 ZERO_TOKENS = TokenAmount(0)
 
 ABSENT_SECRET = Secret(b"")

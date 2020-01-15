@@ -68,8 +68,8 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.opened("latest") is True
 
     # Test deposit
-    initial_token_balance = TokenAmount(100)
-    token_proxy.transfer(rpc_client.address, initial_token_balance)
+    initial_token_balance = 100
+    token_proxy.transfer(rpc_client.address, TokenAmount(initial_token_balance))
     assert token_proxy.balance_of(rpc_client.address) == initial_token_balance
     assert token_proxy.balance_of(partner) == 0
     channel_proxy_1.set_total_deposit(total_deposit=TokenAmount(10), block_identifier="latest")

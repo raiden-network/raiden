@@ -20,7 +20,7 @@ from raiden.blockchain.state import (
     get_contractreceivechannelsettled_data_from_event,
     get_contractreceiveupdatetransfer_data_from_event,
 )
-from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import EMPTY_LOCKSROOT, LOCKSROOT_OF_NO_LOCKS
 from raiden.settings import MediationFeeConfig
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
@@ -284,12 +284,12 @@ def contractreceivechannelsettled_from_event(
     transaction_hash = data["transaction_hash"]
 
     # For saving gas, LOCKSROOT_OF_NO_LOCKS is stored as EMPTY_HASH onchain
-    if channel_settle_state.our_locksroot == EMPTY_HASH:
+    if channel_settle_state.our_locksroot == EMPTY_LOCKSROOT:
         our_locksroot = LOCKSROOT_OF_NO_LOCKS
     else:
         our_locksroot = channel_settle_state.our_locksroot
 
-    if channel_settle_state.partner_locksroot == EMPTY_HASH:
+    if channel_settle_state.partner_locksroot == EMPTY_LOCKSROOT:
         partner_locksroot = LOCKSROOT_OF_NO_LOCKS
     else:
         partner_locksroot = channel_settle_state.partner_locksroot

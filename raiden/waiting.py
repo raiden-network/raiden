@@ -520,7 +520,7 @@ def wait_for_received_transfer_result(
             unlocked = (
                 isinstance(event, EventPaymentReceivedSuccess)
                 and event.identifier == payment_identifier
-                and event.amount == amount
+                and PaymentAmount(event.amount) == amount
             )
             if unlocked:
                 result = TransferWaitResult.UNLOCKED

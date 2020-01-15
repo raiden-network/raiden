@@ -363,7 +363,7 @@ def handle_secretrequest(
 ) -> TransitionResult[InitiatorTransferState]:
 
     is_message_from_target = (
-        state_change.sender == initiator_state.transfer_description.target
+        state_change.sender == Address(initiator_state.transfer_description.target)
         and state_change.secrethash == initiator_state.transfer_description.secrethash
         and state_change.payment_identifier
         == initiator_state.transfer_description.payment_identifier
