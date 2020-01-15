@@ -261,7 +261,7 @@ def test_participant_selection(raiden_network, token_addresses):
 
 
 @raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
 @pytest.mark.parametrize("reveal_timeout", [3])
@@ -275,7 +275,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
     token_address = token_addresses[0]
-    app0, app1 = raiden_network
+    app0, app1, _ = raiden_network
     offline_node = app0
     target_channels_num = 1
 
@@ -293,18 +293,61 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     offline_node.raiden.greenlet.get()
     assert not offline_node.raiden
 
-    # Call the connect endpoint for app 1, the node which stayed online
-    RaidenAPI(app1.raiden).token_network_connect(
-        registry_address=registry_address,
+    # Call the connect endpoint for all but the first node
+    connect_greenlets = [
+        gevent.spawn(
+            RaidenAPI(app.raiden).token_network_connect,
+            registry_address,
+            token_address,
+            100,
+            target_channels_num,
+        )
+        for app in raiden_network[1:]
+    ]
+    gevent.wait(connect_greenlets)
+
+    token_network_registry_address = views.get_token_network_address_by_token_address(
+        views.state_from_raiden(app1.raiden),
+        token_network_registry_address=registry_address,
         token_address=token_address,
-        funds=TokenAmount(100),
-        initial_channel_target=target_channels_num,
+    )
+    connection_managers = [
+        app.raiden.connection_manager_for_token_network(token_network_registry_address)
+        for app in raiden_network[1:]
+    ]
+
+    # Wait until channels are opened and connections are done
+    unsaturated_connection_managers = connection_managers[1:]
+    exception = AssertionError("Unsaturated connection managers", unsaturated_connection_managers)
+    with gevent.Timeout(120, exception):
+        while unsaturated_connection_managers:
+            for manager in unsaturated_connection_managers:
+                if is_manager_saturated(manager, registry_address, token_address):
+                    unsaturated_connection_managers.remove(manager)
+            gevent.sleep(1)
+
+    assert saturated_count(connection_managers, registry_address, token_address) == len(
+        connection_managers
     )
 
-    # ensure that we did not open a channel with the offline node
-    node_state = views.state_from_raiden(app1.raiden)
-    network_state = views.get_token_network_by_token_address(
-        node_state, registry_address, token_address
-    )
-    assert network_state is not None
-    assert len(network_state.channelidentifiers_to_channels) == 0
+    # Call the connect endpoint for all apps again to see this is handled fine.
+    # This essentially checks that connecting to bootstrap address again is not a problem
+    for app in raiden_network[1:]:
+        RaidenAPI(app.raiden).token_network_connect(
+            registry_address=registry_address,
+            token_address=token_address,
+            funds=TokenAmount(100),
+            initial_channel_target=target_channels_num,
+        )
+
+    for app in raiden_network[1:]:
+        # ensure that we did not open a channel with the offline node
+        node_state = views.state_from_raiden(app.raiden)
+        network_state = views.get_token_network_by_token_address(
+            node_state, registry_address, token_address
+        )
+        assert network_state is not None
+        msg = "Each node should connect to at least 1 address + bootstrap address"
+        assert len(network_state.channelidentifiers_to_channels) >= 1, msg
+        for _, netchannel in network_state.channelidentifiers_to_channels.items():
+            assert netchannel.partner_state.address != offline_node.raiden.address
