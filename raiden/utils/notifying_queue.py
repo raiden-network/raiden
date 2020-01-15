@@ -1,4 +1,4 @@
-from typing import Iterable, List, TypeVar
+from typing import Generic, Iterable, List, TypeVar
 
 from gevent.event import Event
 from gevent.queue import Queue
@@ -6,7 +6,7 @@ from gevent.queue import Queue
 T = TypeVar("T")
 
 
-class NotifyingQueue(Event):
+class NotifyingQueue(Event, Generic[T]):
     """This is not the same as a JoinableQueue. Here, instead of waiting for
     all the work to be processed, the wait is for work to be available.
     """
