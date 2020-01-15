@@ -10,6 +10,7 @@ from raiden.transfer import channel
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import NettingChannelState
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import Address, BlockTimeout, Nonce, TokenAmount
 
@@ -62,6 +63,14 @@ class PFSCapacityUpdate(SignedMessage):
             (self.updating_capacity, "uint256"),
             (self.other_capacity, "uint256"),
             (self.reveal_timeout, "uint256"),
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"<{self.__class__.__name__}("
+            f"updating_participant={to_checksum_address(self.updating_participant)} "
+            f"updating_capacity={self.updating_capacity} "
+            f"other_capacity={self.other_capacity})>"
         )
 
 
