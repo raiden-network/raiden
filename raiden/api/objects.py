@@ -1,3 +1,6 @@
+from raiden.utils.typing import List, TokenAddress
+
+
 class FlatList(list):
     """
     This class inherits from list and has the same interface as a list-type.
@@ -6,10 +9,10 @@ class FlatList(list):
     """
 
     @property
-    def data(self):
+    def data(self) -> List:
         return list(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<{}: {}>".format(self.__class__.__name__, list(self))
 
 
@@ -22,11 +25,11 @@ class PartnersPerTokenList(FlatList):
 
 
 class Address:
-    def __init__(self, token_address):
+    def __init__(self, token_address: TokenAddress) -> None:
         self.address = token_address
 
 
 class PartnersPerToken:
-    def __init__(self, partner_address, channel):
+    def __init__(self, partner_address: Address, channel: str) -> None:
         self.partner_address = partner_address
         self.channel = channel
