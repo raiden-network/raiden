@@ -649,7 +649,13 @@ def sort_servers_closest(servers: Sequence[str]) -> Dict[str, float]:
     if not {urlparse(url).scheme for url in servers}.issubset({"http", "https"}):
         raise TransportError("Invalid server urls")
 
-    timeout = 1.0
+    # Timeout chosen after measuring the long tail of the development matrix
+    # servers. Under no stress, servers will have a very long tail of up to 2.5
+    # seconds (measured 15/01/2020), which can lead to failure during startup
+    # if the timeout is too low. This increases the timeout so that the network
+    # hiccups won't cause Raiden startup failures.
+    timeout = 3.0
+
     rtt_greenlets = set(
         gevent.spawn(return_after_retries, server_url, timeout) for server_url in servers
     )
