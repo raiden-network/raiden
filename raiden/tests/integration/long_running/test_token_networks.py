@@ -275,9 +275,8 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
     token_address = token_addresses[0]
-    app0 = raiden_network[0]
-    app1 = raiden_network[1]
-    offline_node = raiden_network[0]
+    app0, app1 = raiden_network
+    offline_node = app0
     target_channels_num = 1
 
     # connect the first node - this will register the token and open the first channel
@@ -290,7 +289,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     )
 
     # First node will now go offline
-    offline_node.raiden.stop()
+    offline_node.stop()
     offline_node.raiden.greenlet.get()
     assert not offline_node.raiden
 
