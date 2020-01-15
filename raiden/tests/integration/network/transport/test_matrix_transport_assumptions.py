@@ -199,6 +199,8 @@ def test_assumption_federation_works_after_original_server_goes_down(
     assert sorted(received.keys()) == [0, 1, 2]
     assert all("Message1" == m for m in received.values())
 
+    # Shut down the room_creator before we stop the server
+    user_room_creator.stop_listener_thread()
     # Shutdown server 0, the original creator of the room
     server: HTTPExecutor = local_matrix_servers_with_executor[0][1]
     server.stop()
@@ -213,7 +215,6 @@ def test_assumption_federation_works_after_original_server_goes_down(
     assert all("Message2" == m for m in received.values())
 
     # Shut down longrunning threads
-    user_room_creator.stop_listener_thread()
     user_federated_1.stop_listener_thread()
     user_federated_2.stop_listener_thread()
 
