@@ -69,7 +69,7 @@ def test_token_network_registry(
     # Check the proper exception is raised if the token does not comply to the
     # ERC20 interface. In this case the token does not have the totalSupply()
     # function implemented #3697 which is validated in the smart contract.
-    with patch.object(Token, "total_supply", return_value=""):
+    with patch.object(Token, "total_supply", return_value=None):
         with pytest.raises(InvalidToken):
             token_network_registry_proxy.add_token(
                 token_address=test_token_address,

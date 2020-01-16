@@ -29,7 +29,7 @@ from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
 from raiden.transfer.views import get_token_network_by_address
-from raiden.utils.typing import AddressHex
+from raiden.utils.typing import Address as AddressBytes, AddressHex
 
 
 class InvalidEndpoint(NotFound):
@@ -41,7 +41,7 @@ class InvalidEndpoint(NotFound):
 
 class HexAddressConverter(BaseConverter):
     @staticmethod
-    def to_python(value: Any) -> Address:
+    def to_python(value: Any) -> AddressBytes:
         if not is_0x_prefixed(value):
             raise InvalidEndpoint("Not a valid hex address, 0x prefix missing.")
 

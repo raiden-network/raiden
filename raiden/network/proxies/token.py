@@ -179,7 +179,7 @@ class Token:
         bytecode during the proxy instantiation. This means it is possible for
         the proxy to be instantiated with a a smart contrat address of the
         wrong type (a non ERC20 contract), or a partial implementation of the
-        ERC20 standard (the funciton totalSupply is missing). If that happens
+        ERC20 standard (the function totalSupply is missing). If that happens
         this method will return `None`.
         """
         total_supply = self.proxy.contract.functions.totalSupply().call(
