@@ -31,8 +31,8 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
-SYNC_TIMEOUT_MS = 20_000
-SYNC_MAX_LATENCY_MS = 2_000
+SYNC_TIMEOUT_MS = 10_000
+SYNC_MAX_LATENCY_MS = 12_000
 
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
