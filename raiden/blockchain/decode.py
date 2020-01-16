@@ -29,6 +29,7 @@ from raiden.transfer.state import (
     FeeScheduleState,
     NettingChannelEndState,
     NettingChannelState,
+    SuccessfulTransactionState,
     TokenNetworkGraphState,
     TokenNetworkState,
     TransactionChannelDeposit,
@@ -143,9 +144,7 @@ def contractreceivechannelnew_from_event(
     our_state = NettingChannelEndState(new_channel_details.our_address, Balance(0))
     partner_state = NettingChannelEndState(new_channel_details.partner_address, Balance(0))
 
-    open_transaction = TransactionExecutionStatus(
-        None, block_number, TransactionExecutionStatus.SUCCESS
-    )
+    open_transaction = SuccessfulTransactionState(block_number, None)
 
     # If the node was offline for a long period, the channel may have been
     # closed already, if that is the case during initialization the node will

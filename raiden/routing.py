@@ -14,6 +14,7 @@ from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     ChannelID,
     FeeAmount,
     InitiatorAddress,
