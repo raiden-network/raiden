@@ -54,9 +54,9 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     """
     We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
     sent after a deposit and withdraw.
-    Therefore, we create two Raiden nodes app0 and app1.
-    The nodes open a channel but do not deposit
-    a pfs matrix room is mocked to see what is sent to it
+
+    The nodes open a channel but do not deposit. After deposit and
+    withdraw it is checked that the correct messages are sent.
     """
     app0, app1, app2 = raiden_network
     api0 = RaidenAPI(app0.raiden)
@@ -124,6 +124,10 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 def test_pfs_send_capacity_updates_during_mediated_transfer(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
+    """
+    Tests that PFSCapacityUpdates and PFSFeeUpdates are being
+    sent during a mediated transfer.
+    """
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
