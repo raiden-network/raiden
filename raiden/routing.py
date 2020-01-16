@@ -97,6 +97,7 @@ def get_best_routes(
 
             error_direct = is_usable
 
+    latest_channel_opened_at = BlockNumber(0)
     for partner_address in all_neighbors:
         for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]:
             channel_state = token_network.channelidentifiers_to_channels[channel_id]
@@ -104,6 +105,10 @@ def get_best_routes(
             if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
                 error_closed += 1
                 continue
+
+            latest_channel_opened_at = max(
+                latest_channel_opened_at, channel_state.open_transaction.finished_block_number
+            )
 
             try:
                 route = networkx.shortest_path(
@@ -171,6 +176,7 @@ def get_best_routes(
             previous_address=previous_address,
             pfs_config=pfs_config,
             privkey=privkey,
+            pfs_wait_for_block=latest_channel_opened_at,
         )
 
         if not pfs_error_msg:
@@ -234,6 +240,7 @@ def get_best_routes_pfs(
     previous_address: Optional[Address],
     pfs_config: PFSConfig,
     privkey: bytes,
+    pfs_wait_for_block: BlockNumber,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
     try:
         pfs_routes, feedback_token = query_paths(
@@ -247,6 +254,7 @@ def get_best_routes_pfs(
             route_from=from_address,
             route_to=to_address,
             value=amount,
+            pfs_wait_for_block=pfs_wait_for_block,
         )
     except ServiceRequestFailed as e:
         log_message = ("PFS: " + e.args[0]) if e.args[0] else None
