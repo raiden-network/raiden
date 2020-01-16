@@ -61,6 +61,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
+    SuccessfulTransactionState,
     TransactionChannelDeposit,
     TransactionExecutionStatus,
     UnlockPartialProofState,
@@ -679,7 +680,7 @@ def test_invalid_timeouts():
     balance1 = 10
     balance2 = 10
 
-    opened_transaction = TransactionExecutionStatus(None, 1, TransactionExecutionStatus.SUCCESS)
+    opened_transaction = SuccessfulTransactionState(1, None)
     closed_transaction = None
     settled_transaction = None
 

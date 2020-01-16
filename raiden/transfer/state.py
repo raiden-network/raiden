@@ -254,6 +254,26 @@ class TransactionExecutionStatus(State):
 
 
 @dataclass
+class SuccessfulTransactionState(State):
+    """ Represents the status of a transaction. """
+
+    finished_block_number: BlockNumber
+    started_block_number: Optional[BlockNumber] = None
+
+    def __post_init__(self) -> None:
+        is_valid_start = self.started_block_number is None or isinstance(
+            self.started_block_number, T_BlockNumber
+        )
+        is_valid_finish = isinstance(self.finished_block_number, T_BlockNumber)
+
+        if not is_valid_start:
+            raise ValueError("started_block_number must be None or a block_number")
+
+        if not is_valid_finish:
+            raise ValueError("finished_block_number must be None or a block_number")
+
+
+@dataclass
 class PendingLocksState(State):
     locks: List[EncodedData]
 
@@ -361,7 +381,7 @@ class NettingChannelState(State):
     fee_schedule: FeeScheduleState = field(repr=False)
     our_state: NettingChannelEndState
     partner_state: NettingChannelEndState
-    open_transaction: TransactionExecutionStatus
+    open_transaction: SuccessfulTransactionState
     close_transaction: Optional[TransactionExecutionStatus] = None
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
@@ -380,11 +400,6 @@ class NettingChannelState(State):
 
         if self.settle_timeout <= 0:
             raise ValueError("settle_timeout must be a positive integer")
-
-        if self.open_transaction.result != TransactionExecutionStatus.SUCCESS:
-            raise ValueError(
-                "Cannot create a NettingChannelState with a non successfull open_transaction"
-            )
 
         if (
             self.canonical_identifier.channel_identifier < 0
