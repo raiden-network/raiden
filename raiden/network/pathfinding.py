@@ -56,6 +56,7 @@ class PFSInfo:
     message: str
     operator: str
     version: str
+    confirmed_block_number: BlockNumber
 
 
 @dataclass
@@ -160,6 +161,7 @@ def get_pfs_info(url: str) -> PFSInfo:
             message=infos["message"],
             operator=infos["operator"],
             version=infos["version"],
+            confirmed_block_number=infos["network_info"]["confirmed_block"],
         )
     except requests.exceptions.RequestException as e:
         msg = "Selected Pathfinding Service did not respond"
@@ -555,6 +557,7 @@ def query_paths(
     route_from: InitiatorAddress,
     route_to: TargetAddress,
     value: PaymentAmount,
+    pfs_wait_for_block: BlockNumber,
 ) -> Tuple[List[Dict[str, Any]], Optional[UUID]]:
     """ Query paths from the PFS.
 
@@ -570,6 +573,16 @@ def query_paths(
     }
     offered_fee = pfs_config.info.price
     scrap_existing_iou = False
+
+    current_info = get_pfs_info(pfs_config.info.url)
+    while current_info.confirmed_block_number < pfs_wait_for_block:
+        log.info(
+            "Waiting for PFS to reach target confirmed block number",
+            pfs_wait_for_block=pfs_wait_for_block,
+            pfs_confirmed_block_number=current_info.confirmed_block_number,
+        )
+        gevent.sleep(0.5)
+        current_info = get_pfs_info(pfs_config.info.url)
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
         # Since the IOU amount is monotonically increasing, only a single
