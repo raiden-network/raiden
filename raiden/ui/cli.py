@@ -5,7 +5,9 @@ import os
 import signal
 import sys
 import textwrap
+import time
 import traceback
+from dataclasses import dataclass, field
 from enum import Enum
 from io import StringIO
 from subprocess import TimeoutExpired
@@ -14,6 +16,7 @@ from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, 
 
 import click
 import filelock
+import gevent
 import structlog
 from click import Context
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
@@ -116,6 +119,42 @@ class ReturnCode(Enum):
     PORT_ALREADY_IN_USE = 5
     ETH_ACCOUNT_ERROR = 6
     CONFIGURATION_ERROR = 7
+
+
+@dataclass
+class Idle:
+    interval: float
+    before: float = field(default_factory=time.time)
+    start: float = field(init=False)
+    measurements: List[float] = field(init=False, default_factory=list)
+
+    def __post_init__(self) -> None:
+        self._reset(time.time())
+
+    def _reset(self, start: float) -> None:
+        self.start = start
+        self.measurements.clear()  # pylint: disable=no-member
+
+    def before_poll(self) -> None:
+        self.before = time.time()
+
+    def after_poll(self) -> None:
+        curr_time = time.time()
+
+        self.measurements.append(curr_time - self.before)  # pylint: disable=no-member
+
+        if curr_time - self.start >= self.interval:
+            idled = sum(self.measurements)
+            log.debug(
+                "Idle",
+                start=self.start,
+                curr_time=curr_time,
+                interval=self.interval,
+                idled=idled,
+                idle_pct=idled / self.interval,
+            )
+
+            self._reset(curr_time)
 
 
 def write_stack_trace(ex: Exception) -> None:
@@ -565,6 +604,13 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
     if switch_tracing is True:
         switch_monitor = SwitchMonitoring()
+
+    if kwargs["environment_type"] == Environment.DEVELOPMENT:
+        loop = gevent.get_hub().loop
+        idle = Idle(10)
+
+        loop.prepare().start(idle.before_poll)
+        loop.check().start(idle.after_poll)
 
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
