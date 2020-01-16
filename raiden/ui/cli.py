@@ -605,12 +605,19 @@ def run(ctx: Context, **kwargs: Any) -> None:
     if switch_tracing is True:
         switch_monitor = SwitchMonitoring()
 
+    # The monitoring thread will use the trace api just like the TraceSampler
+    # and the SwitchMonitoring. Sadly there is no API to uninstall the thread,
+    # but this should not be a problem.
     if kwargs["environment_type"] == Environment.DEVELOPMENT:
         loop = gevent.get_hub().loop
         idle = Idle(10)
 
         loop.prepare().start(idle.before_poll)
         loop.check().start(idle.after_poll)
+
+        gevent.config.monitor_thread = True
+        gevent.config.max_blocking_time = 1.0
+        gevent.get_hub().start_periodic_monitoring_thread()
 
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
