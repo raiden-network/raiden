@@ -7,7 +7,7 @@ from types import TracebackType
 from typing import Generator
 
 import gevent
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_canonical_address, to_checksum_address
 
 import raiden.storage.serialization.fields as fields
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
@@ -792,9 +792,11 @@ class SerializedSQLiteStorage:
         # `to_checksum_address` is slow and is not necessary for our internal serialization.
         # FIXME: We should be able to adapt the serialization without this evil
         #        monkey patching, but right now there is no simple way to do it.
-        fields.to_checksum_address = to_hex
+        fields.to_checksum_address = bytes.hex  # type: ignore
+        fields.to_canonical_address = bytes.fromhex  # type: ignore
         serialized_data = self.serializer.serialize(snapshot)
         fields.to_checksum_address = to_checksum_address  # type: ignore
+        fields.to_canonical_address = to_canonical_address
 
         return self.database.write_state_snapshot(serialized_data, statechange_id, statechange_qty)
 
@@ -820,11 +822,17 @@ class SerializedSQLiteStorage:
         row = self.database.get_snapshot_before_state_change(state_change_identifier)
 
         if row is not None:
+            fields.to_checksum_address = bytes.hex  # type: ignore
+            fields.to_canonical_address = bytes.fromhex  # type: ignore
+            deserialized_data = self.serializer.deserialize(row.data)
+            fields.to_checksum_address = to_checksum_address  # type: ignore
+            fields.to_canonical_address = to_canonical_address
+
             result = SnapshotRecord(
                 row.identifier,
                 row.state_change_qty,
                 row.state_change_identifier,
-                self.serializer.deserialize(row.data),
+                deserialized_data,
             )
         else:
             result = None
