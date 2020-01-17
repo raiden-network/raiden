@@ -626,6 +626,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
             if tracer.did_block_hub(hub):
                 active_greenlet = tracer.active_greenlet
+                log.error("Greenlet blocked to long", greenlet=active_greenlet)
                 hub.loop.run_callback(lambda: active_greenlet.throw(GreenletExit()))
 
         monitor_thread.add_monitoring_function(kill_offender, gevent.config.max_blocking_time)
