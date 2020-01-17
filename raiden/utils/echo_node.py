@@ -52,7 +52,7 @@ class EchoNode:  # pragma: no unittest
         ]
 
         if len(open_channels) == 0:
-            confirmed_block_identifier = views.state_from_raiden(api.raiden).block_hash
+            confirmed_block_identifier = views.get_confirmed_blockhash(api.raiden)
             token_proxy = self.api.raiden.proxy_manager.token(
                 self.token_address, confirmed_block_identifier
             )

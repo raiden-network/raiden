@@ -14,6 +14,7 @@ from raiden.transfer.state import (
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    BlockHash,
     BlockNumber,
     Callable,
     Dict,
@@ -546,3 +547,7 @@ def get_networks(
             )
 
     return tn_registry_state, token_network_state
+
+
+def get_confirmed_blockhash(raiden: "RaidenService") -> BlockHash:
+    return state_from_raiden(raiden).block_hash
