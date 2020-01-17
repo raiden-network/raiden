@@ -558,12 +558,14 @@ class GMatrixClient(MatrixClient):
                 )
                 return
 
-            while response_queue:
-                # Here `peek` is used to implement delivery at-least-once
-                # semantics. At-most-once would also be acceptable because of
-                # message retries, however has the potential of introducing
-                # latency.
-                token, response, received_at = response_queue.peek(block=False)
+            # Iterating over the Queue and adding to a separted list to
+            # implement delivery at-least-once semantics. At-most-once would
+            # also be acceptable because of message retries, however it has the
+            # potential of introducing latency.
+            #
+            # The Queue's iterator cannot be used because it defaults do `get`.
+            currently_queued_responses = list()
+            for token, response, received_at in response_queue.queue.queue:
                 assert response is not None, "None is not a valid value for a Matrix response."
 
                 log.debug(
@@ -573,16 +575,21 @@ class GMatrixClient(MatrixClient):
                     current_size=len(response_queue),
                     processing_lag=datetime.now() - received_at,
                 )
+                currently_queued_responses.append(response)
 
-                self._handle_response(response)
+            self._handle_responses(currently_queued_responses)
 
-                # Pop the processed message, if the process is killed right
-                # before this call, on the next transport start the same message
-                # will be processed again, that is why this is at-least-once
-                # semantics.
+            # Pop the processed messages, this relies on the fact the queue is
+            # ordered to pop the correct messages.Iif the process is killed
+            # right before this call, on the next transport start the same
+            # message will be processed again, that is why this is
+            # at-least-once semantics.
+            for _ in currently_queued_responses:
                 response_queue.get(block=False)
 
-    def _handle_response(self, response: JSONResponse, first_sync: bool = False) -> None:
+    def _handle_responses(
+        self, currently_queued_responses: List[JSONResponse], first_sync: bool = False
+    ) -> None:
         # We must ignore the stop flag during first_sync
         if not self.should_listen and not first_sync:
             log.warning(
@@ -593,56 +600,60 @@ class GMatrixClient(MatrixClient):
             )
             return
 
-        # Handle presence after rooms
-        for presence_update in response["presence"]["events"]:
-            for callback in list(self.presence_listeners.values()):
-                self._worker_pool.spawn(callback, presence_update, next(self._presence_update_ids))
-        # Collect finished greenlets and errors without blocking
-        self._worker_pool.join(timeout=0, raise_error=True)
-
-        for to_device_message in response["to_device"]["events"]:
-            for listener in self.listeners[:]:
-                if listener["event_type"] == "to_device":
-                    listener["callback"](to_device_message)
-
-        for room_id, invite_room in response["rooms"]["invite"].items():
-            for listener in self.invite_listeners[:]:
-                listener(room_id, invite_room["invite_state"])
-
-        for room_id, left_room in response["rooms"]["leave"].items():
-            for listener in self.left_listeners[:]:
-                listener(room_id, left_room)
-            if room_id in self.rooms:
-                del self.rooms[room_id]
-
         all_messages: MatrixSyncMessages = []
-        for room_id, sync_room in response["rooms"]["join"].items():
-            if room_id not in self.rooms:
-                self._mkroom(room_id)
-            room = self.rooms[room_id]
-            # TODO: the rest of this for loop should be in room object method
-            room.prev_batch = sync_room["timeline"]["prev_batch"]
-
-            for event in sync_room["state"]["events"]:
-                event["room_id"] = room_id
-                room._process_state_event(event)
-
-            for event in sync_room["timeline"]["events"]:
-                event["room_id"] = room_id
-                room._put_event(event)
-
-            all_messages.append((room, sync_room["timeline"]["events"]))
-
-            for event in sync_room["ephemeral"]["events"]:
-                event["room_id"] = room_id
-                room._put_ephemeral_event(event)
-
-                for listener in self.ephemeral_listeners:
-                    should_call = (
-                        listener["event_type"] is None or listener["event_type"] == event["type"]
+        for response in currently_queued_responses:
+            for presence_update in response["presence"]["events"]:
+                for callback in list(self.presence_listeners.values()):
+                    self._worker_pool.spawn(
+                        callback, presence_update, next(self._presence_update_ids)
                     )
-                    if should_call:
-                        listener["callback"](event)
+
+            # Collect finished greenlets and errors without blocking
+            self._worker_pool.join(timeout=0, raise_error=True)
+
+            for to_device_message in response["to_device"]["events"]:
+                for listener in self.listeners[:]:
+                    if listener["event_type"] == "to_device":
+                        listener["callback"](to_device_message)
+
+            for room_id, invite_room in response["rooms"]["invite"].items():
+                for listener in self.invite_listeners[:]:
+                    listener(room_id, invite_room["invite_state"])
+
+            for room_id, left_room in response["rooms"]["leave"].items():
+                for listener in self.left_listeners[:]:
+                    listener(room_id, left_room)
+                if room_id in self.rooms:
+                    del self.rooms[room_id]
+
+            for room_id, sync_room in response["rooms"]["join"].items():
+                if room_id not in self.rooms:
+                    self._mkroom(room_id)
+
+                room = self.rooms[room_id]
+                room.prev_batch = sync_room["timeline"]["prev_batch"]
+
+                for event in sync_room["state"]["events"]:
+                    event["room_id"] = room_id
+                    room._process_state_event(event)
+
+                for event in sync_room["timeline"]["events"]:
+                    event["room_id"] = room_id
+                    room._put_event(event)
+
+                all_messages.append((room, sync_room["timeline"]["events"]))
+
+                for event in sync_room["ephemeral"]["events"]:
+                    event["room_id"] = room_id
+                    room._put_ephemeral_event(event)
+
+                    for listener in self.ephemeral_listeners:
+                        should_call = (
+                            listener["event_type"] is None
+                            or listener["event_type"] == event["type"]
+                        )
+                        if should_call:
+                            listener["callback"](event)
 
         if len(all_messages) > 0:
             self.handle_messages_callback(all_messages)

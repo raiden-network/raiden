@@ -13,32 +13,32 @@ class NotifyingQueue(Event, Generic[T]):
 
     def __init__(self, maxsize: int = None, items: Iterable[T] = ()) -> None:
         super().__init__()
-        self._queue = Queue(maxsize, items)
+        self.queue = Queue(maxsize, items)
 
         if items:
             self.set()
 
     def put(self, item: T) -> None:
         """ Add new item to the queue. """
-        self._queue.put(item)
+        self.queue.put(item)
         self.set()
 
     def get(self, block: bool = True, timeout: float = None) -> T:
         """ Removes and returns an item from the queue. """
-        value = self._queue.get(block, timeout)
-        if self._queue.empty():
+        value = self.queue.get(block, timeout)
+        if self.queue.empty():
             self.clear()
         return value
 
     def peek(self, block: bool = True, timeout: float = None) -> T:
-        return self._queue.peek(block, timeout)
+        return self.queue.peek(block, timeout)
 
     def __len__(self) -> int:
-        return len(self._queue)
+        return len(self.queue)
 
     def copy(self) -> List[T]:
         """ Copies the current queue items. """
-        copy = self._queue.copy()
+        copy = self.queue.copy()
 
         result = list()
         while not copy.empty():
@@ -46,4 +46,4 @@ class NotifyingQueue(Event, Generic[T]):
         return result
 
     def __repr__(self) -> str:
-        return f"NotifyingQueue(num_items={len(self._queue)})"
+        return f"NotifyingQueue(num_items={len(self.queue)})"
