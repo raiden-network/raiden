@@ -18,14 +18,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.utils.typing import (
-    Address,
-    InitiatorAddress,
-    PaymentAmount,
-    PaymentID,
-    TargetAddress,
-    TokenAmount,
-)
+from raiden.utils.typing import Address, InitiatorAddress, PaymentAmount, PaymentID, TargetAddress
 
 
 def test_get_contract_events_invalid_blocknumber():
@@ -87,7 +80,7 @@ def test_event_filter_for_payments():
         token_network_registry_address=UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS,
         token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
         identifier=identifier,
-        amount=TokenAmount(5),
+        amount=PaymentAmount(5),
         initiator=initiator,
     )
     assert event_filter_for_payments(event=event2, partner_address=None)

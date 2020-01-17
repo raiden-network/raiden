@@ -28,7 +28,6 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TargetAddress,
-    TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
@@ -281,8 +280,7 @@ class EventPaymentReceivedSuccess(Event):
     token_network_registry_address: TokenNetworkRegistryAddress
     token_network_address: TokenNetworkAddress
     identifier: PaymentID
-    # XXX: Should be PaymentAmount
-    amount: TokenAmount
+    amount: PaymentAmount
     initiator: InitiatorAddress
 
     def __post_init__(self) -> None:
