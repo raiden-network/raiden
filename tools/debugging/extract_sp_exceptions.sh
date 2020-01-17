@@ -42,9 +42,15 @@ mkdir -p $DESTINATION_DIR
 
 print_bold "Downloading PFS logs"
 
-ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli | gzip' > ${DESTINATION_DIR}/pfs.log.gz
+ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli | gzip' > ${DESTINATION_DIR}/pfs-goerli.log.gz
 if [[ $? -ne 0 ]]; then
-    echo "Error: failed to download PFS logs"
+    echo "Error: failed to download pfs-goerli logs"
+    exit 1
+fi
+
+ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli-with-fee | gzip' > ${DESTINATION_DIR}/pfs-goerli-with-fee.log.gz
+if [[ $? -ne 0 ]]; then
+    echo "Error: failed to download pfs-goerli-with-fee logs"
     exit 1
 fi
 
