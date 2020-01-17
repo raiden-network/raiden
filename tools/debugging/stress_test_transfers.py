@@ -27,9 +27,11 @@ from greenlet import greenlet
 
 from raiden.network.utils import get_free_port
 from raiden.utils.formatting import pex
+from raiden.utils.typing import Host, Port
 
 BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)
+URL = NewType("URL", str)
 
 log = structlog.get_logger(__name__)
 NO_ROUTE_ERROR = 409
@@ -71,8 +73,8 @@ class NodeConfig:
     """
 
     args: List[str]
+    interface: Host
     address: str
-    base_url: BaseURL
     data_dir: str
 
 
@@ -84,6 +86,7 @@ class RunningNode:
 
     process: Popen
     config: NodeConfig
+    url: URL
 
 
 @dataclass
@@ -240,25 +243,35 @@ def wait_for_address_endpoint(base_url: str, retry_timeout: int) -> str:
 
 
 def start_and_wait_for_server(
-    nursery: Nursery, node: NodeConfig, retry_timeout: int
+    nursery: Nursery, port_generator: Iterator[Port], node: NodeConfig, retry_timeout: int
 ) -> RunningNode:
     # redirect the process output for debugging
     os.makedirs(node.data_dir, exist_ok=True)
     stdout = open(os.path.join(node.data_dir, "stress_test.out"), "a")
 
-    process = Popen(node.args, bufsize=UNBUFERRED, stdout=stdout, stderr=STDOUT)
+    port = next(port_generator)
+    api_url = f"{node.interface}:{port}"
+    running_url = URL(f"http://{api_url}")
+
+    process_args = node.args + ["--api-address", api_url]
+    process = Popen(process_args, bufsize=UNBUFERRED, stdout=stdout, stderr=STDOUT)
 
     nursery.track(process)
 
-    wait_for_address_endpoint(node.base_url, retry_timeout)
-    return RunningNode(process, node)
+    wait_for_address_endpoint(running_url, retry_timeout)
+    return RunningNode(process, node, running_url)
 
 
 def start_and_wait_for_all_servers(
-    nursery: Nursery, nodes_config: List[NodeConfig], retry_timeout: int
+    nursery: Nursery,
+    port_generator: Iterator[Port],
+    nodes_config: List[NodeConfig],
+    retry_timeout: int,
 ) -> List[RunningNode]:
     greenlets = set(
-        nursery.spawn_under_watch(start_and_wait_for_server, nursery, node, retry_timeout)
+        nursery.spawn_under_watch(
+            start_and_wait_for_server, nursery, port_generator, node, retry_timeout
+        )
         for node in nodes_config
     )
     gevent.joinall(greenlets, raise_error=True)
@@ -267,18 +280,27 @@ def start_and_wait_for_all_servers(
 
 
 def kill_restart_and_wait_for_server(
-    nursery: Nursery, node: RunningNode, retry_timeout: int
+    nursery: Nursery, port_generator: Iterator[Port], node: RunningNode, retry_timeout: int
 ) -> RunningNode:
     node.process.send_signal(signal.SIGINT)
-    gevent.sleep(WAIT_FOR_SOCKET_TO_BE_AVAILABLE)
-    return start_and_wait_for_server(nursery, node.config, retry_timeout)
+
+    # Wait for the process to completely shutdown, this is necessary because
+    # concurrent usage of the database is not allowed.
+    node.process.result.get()
+
+    return start_and_wait_for_server(nursery, port_generator, node.config, retry_timeout)
 
 
 def restart_network(
-    nursery: Nursery, running_nodes: List[RunningNode], retry_timeout: int
+    nursery: Nursery,
+    port_generator: Iterator[Port],
+    running_nodes: List[RunningNode],
+    retry_timeout: int,
 ) -> List[RunningNode]:
     greenlets = [
-        nursery.spawn_under_watch(kill_restart_and_wait_for_server, nursery, node, retry_timeout)
+        nursery.spawn_under_watch(
+            kill_restart_and_wait_for_server, nursery, port_generator, node, retry_timeout
+        )
         for node in running_nodes
     ]
     gevent.wait(greenlets)
@@ -354,7 +376,7 @@ def do_transfers(
     for transfer in transfers:
         task: Greenlet = pool.spawn(
             transfer_and_assert_successful,
-            base_url=transfer.from_to.initiator.config.base_url,
+            base_url=transfer.from_to.initiator.url,
             token_address=token_address,
             target_address=transfer.from_to.target.config.address,
             payment_identifier=next(identifier_generator),
@@ -426,6 +448,7 @@ def scheduler_preserve_order(
 
 def run_stress_test(
     nursery: Nursery,
+    port_generator: Iterator[Port],
     retry_timeout: int,
     running_nodes: List[RunningNode],
     capacity_lower_bound: Amount,
@@ -473,7 +496,7 @@ def run_stress_test(
 
             # After each `do_transfers` the state of the system must be
             # reset, otherwise there is a bug in the planner or Raiden.
-            restart_network(nursery, running_nodes, retry_timeout)
+            running_nodes = restart_network(nursery, port_generator, running_nodes, retry_timeout)
 
 
 # TODO: cancel the spawn_later if `greenlet` exits normally.
@@ -514,7 +537,7 @@ def main() -> None:
 
     datadir = args.nodes_data_dir
 
-    interface = args.interface
+    interface = Host(args.interface)
     port_generator = get_free_port(5000)
     retry_timeout = 1
 
@@ -531,8 +554,6 @@ def main() -> None:
         if NODE_SECTION_RE.match(section):
             node_config = config[section]
             address = node_config["address"]
-            port = next(port_generator)
-            api_url = f"{interface}:{port}"
 
             node = defaults.copy()
             node.update(
@@ -542,7 +563,6 @@ def main() -> None:
                     "--eth-rpc-endpoint": node_config["eth-rpc-endpoint"],
                     "--network-id": node_config["network-id"],
                     "--address": address,
-                    "--api-address": api_url,
                 }
             )
 
@@ -573,9 +593,7 @@ def main() -> None:
                 raise ValueError(f"address {address} is not checksummed.")
 
             nodedir = os.path.join(datadir, f"node_{pex(to_canonical_address(address))}")
-            nodes_config.append(
-                NodeConfig(raiden_args, address, BaseURL(f"http://{api_url}"), nodedir)
-            )
+            nodes_config.append(NodeConfig(raiden_args, interface, address, nodedir))
 
     # TODO: Determine the `capacity_lower_bound` by querying the nodes.
     capacity_lower_bound = 1130220
@@ -608,7 +626,9 @@ def main() -> None:
     # since once can assume a bug happened and the state of the node is
     # inconsistent, however it is nice to have.
     with Janitor(stop) as nursery:
-        nodes_running = start_and_wait_for_all_servers(nursery, nodes_config, retry_timeout)
+        nodes_running = start_and_wait_for_all_servers(
+            nursery, port_generator, nodes_config, retry_timeout
+        )
 
         # If any of the processes failed to startup
         if stop.is_set():
@@ -621,6 +641,7 @@ def main() -> None:
         nursery.spawn_under_watch(
             run_stress_test,
             nursery,
+            port_generator,
             retry_timeout,
             nodes_running,
             capacity_lower_bound,
