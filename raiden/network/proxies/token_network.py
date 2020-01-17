@@ -32,7 +32,6 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
-from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import (
     get_channel_participants_from_open_event,
     log_transaction,
@@ -170,7 +169,7 @@ class TokenNetwork:
         self.node_address = self.client.address
         self.metadata = metadata
 
-        self.token: Token = proxy_manager.token(
+        self.token = proxy_manager.token(
             token_address=self.token_address(), block_identifier=block_identifier
         )
 
