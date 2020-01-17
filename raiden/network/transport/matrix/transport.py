@@ -681,9 +681,16 @@ class MatrixTransport(Runnable):
         self._client.set_sync_limit(prev_sync_limit)
         # Process the result from the sync executed above
         response_queue = self._client.response_queue
-        while response_queue:
-            token_response = response_queue.get(block=False)
-            self._client._handle_response(token_response[1], first_sync=True)
+
+        queue_copy = response_queue.queue.queue.copy()
+        response_queue.queue.queue.clear()
+
+        pending_queue = [response for _, response, _ in queue_copy]
+        assert all(
+            pending_queue
+        ), "The queue must only have Matrix responses. None and empty are invalid values."
+
+        self._client._handle_responses(pending_queue, first_sync=True)
 
     def _initialize_room_inventory(self) -> None:
         msg = "The rooms can only be inventoried after the first sync."

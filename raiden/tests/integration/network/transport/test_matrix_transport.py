@@ -1157,18 +1157,19 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
 
     received_sync_events: Dict[str, List[Dict[str, Any]]] = {"t1": [], "t2": []}
 
-    def _handle_response(
-        name: str, response: Dict[str, Any], first_sync: bool = False
+    def _handle_responses(
+        name: str, responses: List[Dict[str, Any]], first_sync: bool = False
     ):  # pylint: disable=unused-argument
-        joined_rooms = response.get("rooms", {}).get("join", {})
-        for joined_room in joined_rooms.values():
-            timeline_events = joined_room.get("timeline").get("events", [])
-            received_sync_events[name].extend(timeline_events)
+        for response in responses:
+            joined_rooms = response.get("rooms", {}).get("join", {})
+            for joined_room in joined_rooms.values():
+                timeline_events = joined_room.get("timeline").get("events", [])
+                received_sync_events[name].extend(timeline_events)
 
     # Replace the transport's handle_response method
     # Should be able to detect if sync delivered a message
-    transport1._client._handle_response = partial(_handle_response, "t1")
-    transport2._client._handle_response = partial(_handle_response, "t2")
+    transport1._client._handle_responses = partial(_handle_responses, "t1")
+    transport2._client._handle_responses = partial(_handle_responses, "t2")
 
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
