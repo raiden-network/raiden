@@ -1,4 +1,4 @@
 -r requirements-dev.txt
 
-pyinstaller
+pyinstaller>=3.6
 s3cmd
