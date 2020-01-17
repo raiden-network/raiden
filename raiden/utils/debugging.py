@@ -3,8 +3,9 @@ from typing import Any
 
 import gevent
 import gevent.util
-from gevent import GreenletExit
 from gevent.hub import Hub
+
+from raiden.exceptions import RaidenUnrecoverableError
 
 
 def enable_gevent_monitoring_signal() -> None:
@@ -45,6 +46,13 @@ def limit_thread_cpu_usage_by_time() -> None:
 
         if tracer.did_block_hub(hub):
             active_greenlet = tracer.active_greenlet
-            hub.loop.run_callback(lambda: active_greenlet.throw(GreenletExit()))
+            hub.loop.run_callback(
+                lambda: active_greenlet.throw(
+                    RaidenUnrecoverableError(
+                        f"A greenlet used the CPU for longer than "
+                        f"{gevent.config.max_blocking_time} seconds, killing it"
+                    )
+                )
+            )
 
     monitor_thread.add_monitoring_function(kill_offender, gevent.config.max_blocking_time)
