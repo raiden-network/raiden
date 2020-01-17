@@ -218,14 +218,13 @@ class SecretRequest(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.message_identifier, "uint64"),
-            (self.payment_identifier, "uint64"),
-            (self.secrethash, "bytes32"),
-            (self.amount, "uint256"),
-            (self.expiration, "uint256"),
+        return (
+            bytes([self.cmdid.value, 0, 0, 0])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.payment_identifier.to_bytes(8, byteorder="big")
+            + self.secrethash
+            + self.amount.to_bytes(32, byteorder="big")
+            + self.expiration.to_bytes(32, byteorder="big")
         )
 
 
@@ -334,11 +333,10 @@ class RevealSecret(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.message_identifier, "uint64"),
-            (self.secret, "bytes32"),
+        return (
+            bytes([self.cmdid.value, 0, 0, 0])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.secret
         )
 
 
@@ -411,17 +409,17 @@ class LockedTransferBase(EnvelopeMessage):
         )
 
     def _packed_data(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (self.message_identifier, "uint64"),
-            (self.payment_identifier, "uint64"),
-            (self.lock.expiration, "uint256"),
-            (self.token, "address"),
-            (self.recipient, "address"),
-            (self.target, "address"),
-            (self.initiator, "address"),
-            (self.lock.secrethash, "bytes32"),
-            (self.lock.amount, "uint256"),
+        return (
+            bytes([self.cmdid.value])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.payment_identifier.to_bytes(8, byteorder="big")
+            + self.lock.expiration.to_bytes(32, byteorder="big")
+            + self.token
+            + self.recipient
+            + self.target
+            + self.initiator
+            + self.lock.secrethash
+            + self.lock.amount.to_bytes(32, byteorder="big")
         )
 
 
