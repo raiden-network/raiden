@@ -19,8 +19,6 @@ import filelock
 import gevent
 import structlog
 from click import Context
-from gevent import GreenletExit
-from gevent.hub import Hub
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -607,28 +605,12 @@ def run(ctx: Context, **kwargs: Any) -> None:
     if switch_tracing is True:
         switch_monitor = SwitchMonitoring()
 
-    # The monitoring thread will use the trace api just like the TraceSampler
-    # and the SwitchMonitoring. Sadly there is no API to uninstall the thread,
-    # but this should not be a problem.
     if kwargs["environment_type"] == Environment.DEVELOPMENT:
         loop = gevent.get_hub().loop
         idle = Idle(10)
 
         loop.prepare().start(idle.before_poll)
         loop.check().start(idle.after_poll)
-
-        gevent.config.monitor_thread = True
-        gevent.config.max_blocking_time = 10.0
-        monitor_thread = gevent.get_hub().start_periodic_monitoring_thread()
-
-        def kill_offender(hub: Hub) -> None:
-            tracer = monitor_thread._greenlet_tracer
-
-            if tracer.did_block_hub(hub):
-                active_greenlet = tracer.active_greenlet
-                hub.loop.run_callback(lambda: active_greenlet.throw(GreenletExit()))
-
-        monitor_thread.add_monitoring_function(kill_offender, gevent.config.max_blocking_time)
 
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
