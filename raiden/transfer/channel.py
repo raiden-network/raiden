@@ -97,6 +97,7 @@ from raiden.utils.typing import (
     EncodedData,
     InitiatorAddress,
     List,
+    LockedAmount,
     Locksroot,
     LockType,
     MessageID,
@@ -124,7 +125,7 @@ if TYPE_CHECKING:
 # This should be changed to `Union[str, PendingLocksState]`
 PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
-BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
+BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, LockedAmount]
 SendUnlockAndPendingLocksState = Tuple[SendUnlock, PendingLocksState]
 
 
@@ -1098,8 +1099,7 @@ def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmou
     )
 
 
-# XXX: return type should be LockedAmount
-def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
+def get_amount_locked(end_state: NettingChannelEndState) -> LockedAmount:
     total_pending = sum(lock.amount for lock in end_state.secrethashes_to_lockedlocks.values())
 
     total_unclaimed = sum(
@@ -1109,7 +1109,7 @@ def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
     total_unclaimed_onchain = get_amount_unclaimed_onchain(end_state)
 
     result = total_pending + total_unclaimed + total_unclaimed_onchain
-    return TokenAmount(result)
+    return LockedAmount(result)
 
 
 def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
@@ -1194,7 +1194,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
         nonce = Nonce(0)
         transferred_amount = TokenAmount(0)
-        locked_amount = TokenAmount(0)
+        locked_amount = LockedAmount(0)
 
     return locksroot, nonce, transferred_amount, locked_amount
 
