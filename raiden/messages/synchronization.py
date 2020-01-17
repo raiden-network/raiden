@@ -49,7 +49,7 @@ class Processed(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         return bytes([self.cmdid.value, 0, 0, 0]) + self.message_identifier.to_bytes(
-            64, byteorder="big"
+            8, byteorder="big"
         )
 
     def __repr__(self) -> str:
@@ -74,7 +74,7 @@ class Delivered(SignedMessage):
 
     def _data_to_sign(self) -> bytes:
         return bytes([self.cmdid.value, 0, 0, 0]) + self.delivered_message_identifier.to_bytes(
-            64, byteorder="big"
+            8, byteorder="big"
         )
 
     def __repr__(self) -> str:
