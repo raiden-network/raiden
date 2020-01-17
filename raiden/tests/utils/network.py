@@ -143,7 +143,7 @@ def payment_channel_open_and_deposit(
 
     block_identifier: BlockSpecification
     if app0.raiden.wal:
-        block_identifier = views.state_from_raiden(app0.raiden).block_hash
+        block_identifier = views.get_confirmed_blockhash(app0.raiden)
     else:
         block_identifier = "latest"
     token_network_address = app0.raiden.default_registry.get_token_network(

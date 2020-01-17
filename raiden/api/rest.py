@@ -638,7 +638,7 @@ class RestAPI:  # pragma: no unittest
             reveal_timeout=reveal_timeout,
         )
 
-        confirmed_block_identifier = views.state_from_raiden(self.raiden_api.raiden).block_hash
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden_api.raiden)
         try:
             token = self.raiden_api.raiden.proxy_manager.token(
                 token_address, block_identifier=confirmed_block_identifier

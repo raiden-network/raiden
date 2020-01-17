@@ -435,7 +435,7 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for partner in channel open"
             )
 
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
         registry = self.raiden.proxy_manager.token_network_registry(
             registry_address, block_identifier=confirmed_block_identifier
         )
@@ -691,7 +691,7 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = chain_state.block_hash
         token = self.raiden.proxy_manager.token(
             token_address, block_identifier=confirmed_block_identifier
         )
@@ -1223,7 +1223,7 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for token in get_blockchain_events_token_network"
             )
 
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
@@ -1258,7 +1258,7 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_blockchain_events_channel"
             )
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
