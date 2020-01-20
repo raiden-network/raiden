@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from functools import lru_cache
 from operator import attrgetter, itemgetter
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
@@ -46,6 +47,7 @@ from raiden.utils.typing import Address, ChainID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
+cached_deserialize = lru_cache()(MessageSerializer.deserialize)
 
 JOIN_RETRIES = 10
 USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
@@ -804,7 +806,7 @@ def validate_and_parse_message(data: Any, peer_address: Address) -> List[Message
         if not line:
             continue
         try:
-            message = MessageSerializer.deserialize(line)
+            message = cached_deserialize(line)
         except SerializationError as ex:
             log.warning(
                 "Not a valid Message",
