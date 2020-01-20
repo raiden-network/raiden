@@ -23,6 +23,7 @@ from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached
+from raiden.utils.debugging import IDLE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.typing import AddressHex
@@ -475,9 +476,12 @@ class GMatrixClient(MatrixClient):
             and self.environment == Environment.DEVELOPMENT
         )
         if timeout_reached:
+            if IDLE:
+                IDLE.log()
+
             raise MatrixSyncMaxTimeoutReached(
                 f"Time between syncs exceeded timeout:  "
-                f"{time_since_last_sync_in_seconds}s > {timeout_in_seconds}s."
+                f"{time_since_last_sync_in_seconds}s > {timeout_in_seconds}s. {IDLE}"
             )
 
         self.last_sync = time_before_sync
