@@ -446,9 +446,7 @@ class TokenNetwork:
         raise_if_invalid_address_pair(detail_for, partner)
 
         data = self.proxy.contract.functions.getChannelParticipantInfo(
-            channel_identifier=channel_identifier,
-            participant=to_checksum_address(detail_for),
-            partner=to_checksum_address(partner),
+            channel_identifier=channel_identifier, participant=detail_for, partner=partner
         ).call(block_identifier=block_identifier)
 
         return ParticipantDetails(
@@ -492,8 +490,8 @@ class TokenNetwork:
 
         channel_data = self.proxy.contract.functions.getChannelInfo(
             channel_identifier=channel_identifier,
-            participant1=to_checksum_address(participant1),
-            participant2=to_checksum_address(participant2),
+            participant1=participant1,
+            participant2=participant2,
         ).call(block_identifier=block_identifier)
 
         return ChannelData(

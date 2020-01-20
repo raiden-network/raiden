@@ -79,9 +79,9 @@ class TokenNetworkRegistry:
         """
         typecheck(token_address, T_TargetAddress)
 
-        address = self.proxy.contract.functions.token_to_token_networks(
-            to_checksum_address(token_address)
-        ).call(block_identifier=block_identifier)
+        address = self.proxy.contract.functions.token_to_token_networks(token_address).call(
+            block_identifier=block_identifier
+        )
         address = to_canonical_address(address)
 
         if address == NULL_ADDRESS_BYTES:
