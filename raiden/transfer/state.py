@@ -389,7 +389,7 @@ class NettingChannelState(State):
     def __post_init__(self) -> None:
         typecheck(self.reveal_timeout, int)
         typecheck(self.settle_timeout, int)
-        typecheck(self.open_transaction, TransactionExecutionStatus)
+        typecheck(self.open_transaction, SuccessfulTransactionState)
         typecheck(self.canonical_identifier.channel_identifier, T_ChannelID)
 
         if self.our_state.address == self.partner_state.address:

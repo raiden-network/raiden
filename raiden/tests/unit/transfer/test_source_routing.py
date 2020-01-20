@@ -235,8 +235,8 @@ def test_initiator_skips_used_routes():
     defaults = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties.OUR_STATE,
         partner_state=factories.NettingChannelEndStateProperties(balance=10),
-        open_transaction=factories.TransactionExecutionStatusProperties(
-            started_block_number=1, finished_block_number=2, result="success"
+        open_transaction=factories.SuccessfulTransactionStateProperties(
+            started_block_number=1, finished_block_number=2
         ),
     )
     properties = [
@@ -330,8 +330,8 @@ def test_mediator_skips_used_routes():
     defaults = factories.NettingChannelStateProperties(
         our_state=factories.NettingChannelEndStateProperties.OUR_STATE,
         partner_state=factories.NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT),
-        open_transaction=factories.TransactionExecutionStatusProperties(
-            started_block_number=1, finished_block_number=2, result="success"
+        open_transaction=factories.SuccessfulTransactionStateProperties(
+            started_block_number=1, finished_block_number=2
         ),
     )
     properties = [

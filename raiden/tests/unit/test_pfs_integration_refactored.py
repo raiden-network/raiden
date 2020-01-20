@@ -26,6 +26,7 @@ def test_get_pfs_info_success():
             "chain_id": 42,
             "token_network_registry_address": pfs_test_default_registry_address,
             "user_deposit_address": pfs_test_default_user_deposit_address,
+            "confirmed_block": 11,
         },
         "version": "0.0.3",
         "operator": "John Doe",
@@ -50,6 +51,7 @@ def test_get_pfs_info_success():
         assert pfs_info.message == "This is your favorite pathfinding service"
         assert pfs_info.operator == "John Doe"
         assert pfs_info.version == "0.0.3"
+        assert pfs_info.confirmed_block_number == 11
 
 
 def test_get_pfs_info_error():
