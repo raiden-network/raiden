@@ -22,7 +22,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
-from raiden.exceptions import MatrixSyncMaxTimeoutReached
+from raiden.exceptions import MatrixMessageQueueMaxSizeReached, MatrixSyncMaxTimeoutReached
 from raiden.utils.debugging import IDLE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -32,6 +32,7 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
+MSG_QUEUE_MAX_SIZE = 10  # This are matrix sync batches, not messages
 
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
@@ -566,6 +567,16 @@ class GMatrixClient(MatrixClient):
             currently_queued_responses = list()
             for token, response, received_at in response_queue.queue.queue:
                 assert response is not None, "None is not a valid value for a Matrix response."
+
+                queue_size_exceeded = (
+                    len(response_queue) > MSG_QUEUE_MAX_SIZE
+                    and self.environment == Environment.DEVELOPMENT
+                )
+                if queue_size_exceeded:
+                    raise MatrixMessageQueueMaxSizeReached(
+                        f"Number of queued sync batches exceed limit:  "
+                        f"{len(response_queue)} > {MSG_QUEUE_MAX_SIZE}."
+                    )
 
                 log.debug(
                     "Handling Matrix response",
