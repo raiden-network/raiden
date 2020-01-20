@@ -129,6 +129,7 @@ def test_validate_userid_signature():
     assert user.get_display_name.call_count == 0
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5678")
 def test_sort_servers_closest(requests_responses):
     with pytest.raises(TransportError):
         # `ftp://` is not a valid scheme
