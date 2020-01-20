@@ -36,7 +36,13 @@ DEFAULT_TRANSPORT_THROTTLE_CAPACITY = 10.0
 DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.0
 # matrix gets spammed with the default retry-interval of 1s, wait a little more
 DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.0
-DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT = 20_000
+DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT = 10_000
+# Maximum allowed time between syncs in addition to DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT.
+# This is necessary because
+# - The matrix server adds up to 10% to avoid thundering herds
+# - Network latency
+# - The Raiden node might not be able to process the messages immediately
+DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY = 15_000
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
@@ -127,6 +133,7 @@ class MatrixTransportConfig:
     available_servers: List[str]
     server_name: Optional[str] = None
     sync_timeout: int = DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
+    sync_latency: int = DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY
 
 
 @dataclass
