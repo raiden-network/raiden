@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 
 from raiden.tests.utils import factories
@@ -24,6 +22,7 @@ from raiden.transfer.views import (
     get_transfer_secret,
     role_from_transfer_task,
 )
+from raiden.utils.copy import deepcopy
 
 
 def test_filter_channels_by_partneraddress_empty(chain_state):

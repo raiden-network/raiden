@@ -1,7 +1,6 @@
 # pylint: disable=invalid-name,too-few-public-methods,too-many-arguments,too-many-locals
 import random
 import uuid
-from copy import deepcopy
 from typing import NamedTuple
 from unittest.mock import patch
 
@@ -71,6 +70,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
 )
 from raiden.utils import typing
+from raiden.utils.copy import deepcopy
 from raiden.utils.signing import sha3
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (

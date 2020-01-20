@@ -1,6 +1,5 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
-from copy import deepcopy
 from dataclasses import replace
 from typing import List, Optional, Tuple
 
@@ -93,6 +92,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
+from raiden.utils.copy import deepcopy
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import BlockExpiration, BlockNumber, FeeAmount, TokenAmount
 

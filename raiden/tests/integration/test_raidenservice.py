@@ -1,4 +1,3 @@
-from copy import deepcopy
 from unittest.mock import Mock
 
 import pytest
@@ -30,6 +29,7 @@ from raiden.tests.utils.transfer import transfer
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import Block
+from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     BlockNumber,
     FeeAmount,

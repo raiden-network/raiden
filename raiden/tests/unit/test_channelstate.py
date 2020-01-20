@@ -1,7 +1,6 @@
 # pylint: disable=too-many-locals,too-many-statements,too-many-lines
 import random
 from collections import namedtuple
-from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
 
@@ -82,6 +81,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.utils.copy import deepcopy
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner

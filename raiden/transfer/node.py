@@ -1,5 +1,3 @@
-import copy
-
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -68,6 +66,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     BlockHash,
@@ -678,7 +677,7 @@ def handle_action_transfer_reroute(
         state_change.transfer.lock.secrethash
     ]
     chain_state.payment_mapping.secrethashes_to_task.update(
-        {new_secrethash: copy.deepcopy(current_payment_task)}
+        {new_secrethash: deepcopy(current_payment_task)}
     )
 
     return subdispatch_to_paymenttask(chain_state, state_change, new_secrethash)

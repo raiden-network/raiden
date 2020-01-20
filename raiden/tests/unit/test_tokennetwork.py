@@ -1,4 +1,3 @@
-import copy
 import random
 from hashlib import sha256
 
@@ -29,6 +28,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
 )
+from raiden.utils.copy import deepcopy
 from raiden.utils.signing import sha3
 
 
@@ -61,7 +61,7 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
 
     properties, _ = channel_properties
     channel_state1 = factories.create(properties)
-    channel_state2 = copy.deepcopy(channel_state1)
+    channel_state2 = deepcopy(channel_state1)
 
     state_change1 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),

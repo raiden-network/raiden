@@ -1,5 +1,3 @@
-import copy
-
 import pytest
 
 import raiden.transfer.node
@@ -69,6 +67,7 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
 )
 from raiden.transfer.views import get_networks
+from raiden.utils.copy import deepcopy
 
 
 def test_is_transaction_effect_satisfied(
@@ -332,7 +331,7 @@ def test_subdispatch_by_canonical_id(chain_state):
         canonical_identifier.token_network_address
     ] = token_network_registry.address
     # dispatching a Block will be ignored
-    previous_state = copy.deepcopy(chain_state)
+    previous_state = deepcopy(chain_state)
     state_change = Block(
         block_number=chain_state.block_number,
         gas_limit=GAS_LIMIT,
