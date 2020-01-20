@@ -603,12 +603,7 @@ class GMatrixClient(MatrixClient):
         for response in currently_queued_responses:
             for presence_update in response["presence"]["events"]:
                 for callback in list(self.presence_listeners.values()):
-                    self._worker_pool.spawn(
-                        callback, presence_update, next(self._presence_update_ids)
-                    )
-
-            # Collect finished greenlets and errors without blocking
-            self._worker_pool.join(timeout=0, raise_error=True)
+                    callback(presence_update, next(self._presence_update_ids))
 
             for to_device_message in response["to_device"]["events"]:
                 for listener in self.listeners[:]:
