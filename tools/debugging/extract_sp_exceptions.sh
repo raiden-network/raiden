@@ -61,6 +61,9 @@ function download_nodes_logs {
     for node in $nodes; do
         $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${node})
     done
+
+    latest_sp_log=$(${CURL_COMMAND} ${current_server}${scenario} | sed -e 's/<[^>]*>//g' | grep -v Directory | sed -e '/^$/d' | grep ".log$" | sort | tail -n 1)
+    $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${latest_sp_log})
 }
 
 function download_server_logs {
@@ -73,7 +76,6 @@ function download_server_logs {
     done;
 
     separator
-
 }
 
 function search_for_failures {
@@ -83,8 +85,7 @@ function search_for_failures {
         print_bold ${scenario}
         separator
         scenario_dir=${scenarios_dir}/${scenario}
-        for node in $(ls $scenario_dir); do
-            node_dir="${scenario_dir}/${node}"
+        for node_dir in $(find $scenario_dir -maxdepth 1 -type d -name "node_*"); do
             result=$(cat ${node_dir}/*.log | jq --tab 'select (.error!=null or .exception!=null)')
             if [[ $result == "" ]]; then
                 result=$(cat ${node_dir}/*.stderr | grep -v Starting | grep -v Stopped)
@@ -94,6 +95,12 @@ function search_for_failures {
                 echo -e "${result}"
             fi
         done
+        separator
+        sp_error=$(cat ${scenario_dir}/scenario-player-run_*.log | jq 'select (.error!=null or .exception!=null)')
+        if [[ $sp_error != "" ]]; then
+            print_bold "- SP reported an error in ${scenario_dir}"
+            echo -e "${sp_error}"
+        fi
         separator
     done;
 }
