@@ -1,5 +1,4 @@
 from collections import Counter, defaultdict
-from copy import deepcopy
 from dataclasses import dataclass, field
 from hashlib import sha256
 from random import Random
@@ -53,6 +52,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import typing
+from raiden.utils.copy import deepcopy
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.transfers import random_secret
 

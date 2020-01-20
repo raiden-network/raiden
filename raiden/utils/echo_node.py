@@ -1,4 +1,3 @@
-import copy
 import random
 from collections import deque
 from typing import Any, Deque, Dict, List, Set
@@ -16,6 +15,7 @@ from raiden.tasks import REMOVE_CALLBACK
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import ChannelState
+from raiden.utils.copy import deepcopy
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Optional,
@@ -133,7 +133,7 @@ class EchoNode:  # pragma: no unittest
                     ]
 
                     for event in received_transfers:
-                        transfer = copy.deepcopy(event)
+                        transfer = deepcopy(event)
                         self.received_transfers.put(transfer)
 
                     # set last_poll_block after events are enqueued (timeout safe)

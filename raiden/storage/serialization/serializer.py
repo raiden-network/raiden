@@ -6,7 +6,6 @@ with sanitized input, to avoid the risk of exploits.
 """
 import importlib
 import json
-from copy import deepcopy
 from dataclasses import is_dataclass
 from json import JSONDecodeError
 from typing import Mapping
@@ -15,6 +14,7 @@ from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
 from raiden.storage.serialization.types import MESSAGE_NAME_TO_QUALIFIED_NAME, SchemaCache
+from raiden.utils.copy import deepcopy
 from raiden.utils.typing import Any, Dict
 
 
