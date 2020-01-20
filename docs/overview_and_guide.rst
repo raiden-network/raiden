@@ -259,14 +259,13 @@ You can obtain the address of the contract from
 
 where ``network`` is one of ``mainnet``, ``ropsten``, ``rinkeby`` or ``goerli``.
 
-Log into MyEtherWallet, the geth console or any other Ethereum interface you like with an account
-that holds enough Raiden tokens, and call ``UserDeposit.deposit(<beneficiary>, <total_deposit>)``.
+As an example, suppose we want to run a Raiden node with address ``0x3040435D7F1012e861f0B0989422a47D1825F120`` on the mainnet
+and deposit 10 Raiden tokens (10**19 REI) for it to use. Here we use `MetaMask <https://metamask.io>`_ to access our wallet
+and the contract interface of `Etherscan <https://etherscan.io>`_ to do the transactions. Of course, you can also use another
+service or your own Ethereum node.
 
-Here ``total_deposit`` is the amount of Raiden tokens you wish to deposit and ``beneficiary`` is the
-Ethereum address of your Raiden node.
-
-For example, suppose we use Raiden with the address ``0x3040435D7F1012e861f0B0989422a47D1825F120`` on the mainnet and want
-to deposit 10 Raiden tokens (10**19 REI) for our Raiden node to use. We take a look at ``deployment_services_mainnet.json``, which yields:
+We log into MetaMask with our account that holds the Raiden tokens (which should be a different account than the one we use with
+Raiden, as the latter is supposed to be used with Raiden only.) To find the ``UserDeposit`` contract, we take a look at ``deployment_services_mainnet.json``:
 
 .. code-block:: none
 
@@ -278,12 +277,26 @@ to deposit 10 Raiden tokens (10**19 REI) for our Raiden node to use. We take a l
             (...)
 
 
-Using MyEtherWallet, we log into our account that holds the Raiden tokens (which must not be the same that we use
-for the Raiden node, since that is supposed to be used only by Raiden) and look up the ``UserDeposit`` contract at
-``0x53Cc1decDD7d452c8844a5f383e23AD479A1f614``, the address we found in the deployment JSON file.
+We can then look up the contract address on Etherscan, and use Etherscan's "read/write contract" panels to interact with it.
+The Raiden token (RDN) can be searched by name on Etherscan, or we can look up its address in the ``UserDeposit`` contract's
+``token`` property. On the testnets, the token symbol is SVT (service token) rather than RDN and it may not be possible
+to find the token by name, but it can always be found in ``UserDeposit.token``.
 
-In the contract interface on MyEtherWallet, we set ``method`` to ``deposit``, ``beneficiary`` to our Raiden address
-``0x3040435D7F1012e861f0B0989422a47D1825F120`` and ``total_deposit`` to ``10000000000000000000`` and send the transaction.
+
+As usual with ERC-20 tokens, we need to call two contract functions:
+
+.. code-block:: none
+
+    approve(0x53Cc1decDD7d452c8844a5f383e23AD479A1f614, 10000000000000000000)
+
+on the RDN (or SVT) token contract, to allow the ``UserDeposit`` contract to move the 10 RDN, and
+
+.. code-block:: none
+
+    deposit(0x3040435D7F1012e861f0B0989422a47D1825F120, 10000000000000000000)
+
+on the ``UserDeposit`` contract.
+
 
 Optional CLI arguments
 ======================
