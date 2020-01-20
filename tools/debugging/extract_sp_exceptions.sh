@@ -91,8 +91,11 @@ function search_for_failures {
         separator
         scenario_dir=${scenarios_dir}/${scenario}
         for node in $(ls $scenario_dir); do
-            node_dir="${scenario_dir}/${node}/"
+            node_dir="${scenario_dir}/${node}"
             result=$(cat ${node_dir}/*.log | jq --tab 'select (.error!=null or .exception!=null)')
+            if [[ $result == "" ]]; then
+                result=$(cat ${node_dir}/*.stderr | grep -v Starting | grep -v Stopped)
+            fi
             if [[ $result != "" ]]; then
                 print_bold "- Found error in ${node_dir}"
                 echo -e "${result}"
