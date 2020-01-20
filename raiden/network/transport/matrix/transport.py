@@ -684,10 +684,11 @@ class MatrixTransport(Runnable):
         # Process the result from the sync executed above
         response_queue = self._client.response_queue
 
-        queue_copy = response_queue.queue.queue.copy()
-        response_queue.queue.queue.clear()
+        pending_queue = []
+        while len(response_queue) > 0:
+            _, response, _ = response_queue.get()
+            pending_queue.append(response)
 
-        pending_queue = [response for _, response, _ in queue_copy]
         assert all(
             pending_queue
         ), "The queue must only have Matrix responses. None and empty are invalid values."
