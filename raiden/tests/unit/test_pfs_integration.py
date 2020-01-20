@@ -111,6 +111,7 @@ PFS_CONFIG = PFSConfig(
         message="",
         operator="",
         version="",
+        confirmed_block_number=BlockNumber(10),
     ),
     maximum_fee=TokenAmount(100),
     iou_timeout=BlockTimeout(100),
@@ -130,17 +131,36 @@ def get_best_routes_with_iou_request_mocked(
     amount,
     iou_json_data=None,
 ):
-    def iou_side_effect(*_, **kwargs):
-        assert "params" in kwargs
-        body = kwargs["params"]
+    def iou_side_effect(*args, **kwargs):
+        if args[0].endswith("/info"):
+            return mocked_json_response(
+                {
+                    "price_info": 5,
+                    "network_info": {
+                        "chain_id": 42,
+                        "token_network_registry_address": to_checksum_address(
+                            factories.make_token_network_registry_address()
+                        ),
+                        "user_deposit_address": to_checksum_address(factories.make_address()),
+                        "confirmed_block": 11,
+                    },
+                    "version": "0.0.3",
+                    "operator": "John Doe",
+                    "message": "This is your favorite pathfinding service",
+                    "payment_address": to_checksum_address(factories.make_address()),
+                }
+            )
+        else:
+            assert "params" in kwargs
+            body = kwargs["params"]
 
-        assert is_hex_address(body["sender"])
-        assert is_hex_address(body["receiver"])
-        assert "timestamp" in body
-        assert is_hex(body["signature"])
-        assert len(body["signature"]) == 65 * 2 + 2  # 65 hex encoded bytes with 0x prefix
+            assert is_hex_address(body["sender"])
+            assert is_hex_address(body["receiver"])
+            assert "timestamp" in body
+            assert is_hex(body["signature"])
+            assert len(body["signature"]) == 65 * 2 + 2  # 65 hex encoded bytes with 0x prefix
 
-        return mocked_json_response(response_data=iou_json_data)
+            return mocked_json_response(response_data=iou_json_data)
 
     with patch.object(requests, "get", side_effect=iou_side_effect) as patched:
         _, best_routes, feedback_token = get_best_routes(
@@ -621,16 +641,18 @@ def assert_failed_pfs_request(
         for data, status_code in zip(responses, status_codes)
     ]
 
-    with patch.object(requests, "get", return_value=mocked_json_response()) as get_iou:
-        with patch.object(requests, "post", side_effect=path_mocks) as post_paths:
-            if expected_success:
-                query_paths(**paths_args)
-            else:
-                with pytest.raises(exception_type) as raised_exception:
+    with patch("raiden.network.pathfinding.get_pfs_info") as mocked_pfs_info:
+        mocked_pfs_info.return_value = PFS_CONFIG.info
+        with patch.object(requests, "get", return_value=mocked_json_response()) as get_iou:
+            with patch.object(requests, "post", side_effect=path_mocks) as post_paths:
+                if expected_success:
                     query_paths(**paths_args)
-                    assert "broken iou" in str(raised_exception)
-            assert get_iou.call_count == (expected_get_iou_requests or expected_requests)
-            assert post_paths.call_count == expected_requests
+                else:
+                    with pytest.raises(exception_type) as raised_exception:
+                        query_paths(**paths_args)
+                        assert "broken iou" in str(raised_exception)
+                assert get_iou.call_count == (expected_get_iou_requests or expected_requests)
+                assert post_paths.call_count == expected_requests
 
 
 def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_address):
@@ -691,6 +713,7 @@ def query_paths_args(
         route_from=our_address,
         route_to=factories.make_address(),
         value=50,
+        pfs_wait_for_block=10,
     )
 
 
@@ -762,7 +785,7 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
 
     # PFS fails to return info
     assert_failed_pfs_request(
-        query_paths_args, [insufficient_response], expected_requests=1, expected_get_iou_requests=2
+        query_paths_args, [insufficient_response], expected_requests=2, expected_get_iou_requests=2
     )
 
     # PFS has increased fees
@@ -785,8 +808,8 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
         assert_failed_pfs_request(
             query_paths_args,
             [insufficient_response],
-            expected_requests=1,
-            expected_get_iou_requests=1,
+            expected_requests=2,
+            expected_get_iou_requests=2,
         )
 
 
@@ -870,6 +893,7 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
             token_network_registry_address=factories.make_token_network_registry_address(),
             user_deposit_address=factories.make_address(),
             payment_address=factories.make_address(),
+            confirmed_block_number=BlockNumber(1),
             message="",
             operator="",
             version="",
@@ -878,29 +902,32 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
         iou_timeout=BlockNumber(100),
         max_paths=5,
     )
+    with patch("raiden.network.pathfinding.get_pfs_info") as mocked_pfs_info:
+        mocked_pfs_info.return_value = PFS_CONFIG.info
 
-    with patch.object(
-        pathfinding, "post_pfs_paths", return_value=mocked_json_response()
-    ) as post_path:
-        query_paths(
-            pfs_config=query_paths_args["pfs_config"],
-            our_address=query_paths_args["our_address"],
-            privkey=query_paths_args["privkey"],
-            current_block_number=query_paths_args["current_block_number"],
+        with patch.object(
+            pathfinding, "post_pfs_paths", return_value=mocked_json_response()
+        ) as post_path:
+            query_paths(
+                pfs_config=query_paths_args["pfs_config"],
+                our_address=query_paths_args["our_address"],
+                privkey=query_paths_args["privkey"],
+                current_block_number=query_paths_args["current_block_number"],
+                token_network_address=query_paths_args["token_network_address"],
+                one_to_n_address=query_paths_args["one_to_n_address"],
+                chain_id=query_paths_args["chain_id"],
+                route_from=query_paths_args["route_from"],
+                route_to=query_paths_args["route_to"],
+                value=query_paths_args["value"],
+                pfs_wait_for_block=query_paths_args["pfs_wait_for_block"],
+            )
+        assert post_path.call_args == call(
+            payload={
+                "from": to_checksum_address(query_paths_args["route_from"]),
+                "to": to_checksum_address(query_paths_args["route_to"]),
+                "value": query_paths_args["value"],
+                "max_paths": query_paths_args["pfs_config"].max_paths,
+            },
             token_network_address=query_paths_args["token_network_address"],
-            one_to_n_address=query_paths_args["one_to_n_address"],
-            chain_id=query_paths_args["chain_id"],
-            route_from=query_paths_args["route_from"],
-            route_to=query_paths_args["route_to"],
-            value=query_paths_args["value"],
+            url=query_paths_args["pfs_config"].info.url,
         )
-    assert post_path.call_args == call(
-        payload={
-            "from": to_checksum_address(query_paths_args["route_from"]),
-            "to": to_checksum_address(query_paths_args["route_to"]),
-            "value": query_paths_args["value"],
-            "max_paths": query_paths_args["pfs_config"].max_paths,
-        },
-        token_network_address=query_paths_args["token_network_address"],
-        url=query_paths_args["pfs_config"].info.url,
-    )

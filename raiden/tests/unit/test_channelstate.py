@@ -149,7 +149,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 balance=partner_model.balance,
                 pending_locks=PendingLocksState(partner_model.pending_locks),
             ),
-            open_transaction=TransactionExecutionStatusProperties(finished_block_number=1),
+            open_transaction=SuccessfulTransactionState(finished_block_number=1),
         )
     )
 

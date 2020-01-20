@@ -34,6 +34,7 @@ from raiden.transfer.state import (
     NetworkState,
     PendingLocksState,
     RouteState,
+    SuccessfulTransactionState,
     TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -433,6 +434,23 @@ def make_canonical_identifier(
 
 
 @dataclass(frozen=True)
+class SuccessfulTransactionStateProperties(Properties):
+    started_block_number: BlockNumber = EMPTY
+    finished_block_number: BlockNumber = EMPTY
+
+
+SuccessfulTransactionStateProperties.DEFAULTS = SuccessfulTransactionStateProperties(
+    started_block_number=1, finished_block_number=1
+)
+
+
+@create.register(SuccessfulTransactionStateProperties)  # noqa: F811
+def _(properties, defaults=None) -> NettingChannelEndState:
+    kwargs = _properties_to_kwargs(properties, defaults)
+    return SuccessfulTransactionState(**kwargs)
+
+
+@dataclass(frozen=True)
 class TransactionExecutionStatusProperties(Properties):
     started_block_number: BlockNumber = EMPTY
     finished_block_number: BlockNumber = EMPTY
@@ -524,7 +542,7 @@ class NettingChannelStateProperties(Properties):
     our_state: NettingChannelEndStateProperties = EMPTY
     partner_state: NettingChannelEndStateProperties = EMPTY
 
-    open_transaction: TransactionExecutionStatusProperties = EMPTY
+    open_transaction: SuccessfulTransactionStateProperties = EMPTY
     close_transaction: TransactionExecutionStatusProperties = EMPTY
     settle_transaction: TransactionExecutionStatusProperties = EMPTY
 
@@ -540,7 +558,7 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     fee_schedule=FeeScheduleStateProperties.DEFAULTS,
     our_state=NettingChannelEndStateProperties.OUR_STATE,
     partner_state=NettingChannelEndStateProperties.DEFAULTS,
-    open_transaction=TransactionExecutionStatusProperties.DEFAULTS,
+    open_transaction=SuccessfulTransactionStateProperties.DEFAULTS,
     close_transaction=None,
     settle_transaction=None,
 )
@@ -1242,7 +1260,7 @@ def make_transfers_pair(
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=deposit),
             partner_state=NettingChannelEndStateProperties(balance=deposit),
-            open_transaction=TransactionExecutionStatusProperties(finished_block_number=10),
+            open_transaction=SuccessfulTransactionStateProperties(finished_block_number=10),
         )
     )
     properties_list = [
@@ -1443,6 +1461,7 @@ def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
             partner_state=NettingChannelEndStateProperties(
                 address=route.address2, balance=route.capacity2to1
             ),
+            open_transaction=SuccessfulTransactionState(1, 0),
         )
     )
     return channel  # type: ignore

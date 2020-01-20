@@ -366,6 +366,7 @@ def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: L
                 token_network_registry_address=token_network_registry_address,
                 user_deposit_address=factories.make_address(),
                 payment_address=factories.make_address(),
+                confirmed_block_number=chain_state.block_number,
                 message="",
                 operator="",
                 version="",

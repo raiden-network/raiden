@@ -18,7 +18,7 @@ from raiden.ui.startup import (
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
 )
-from raiden.utils.typing import Address, TokenAmount, TokenNetworkRegistryAddress
+from raiden.utils.typing import Address, BlockNumber, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -43,6 +43,7 @@ PFS_INFO = PFSInfo(
     token_network_registry_address=token_network_registry_address_test_default,
     user_deposit_address=user_deposit_address_test_default,
     payment_address=pfs_payment_address_default,
+    confirmed_block_number=BlockNumber(1),
     message="This is your favorite pathfinding service",
     operator="John Doe",
     version="0.0.3",
@@ -220,6 +221,7 @@ def test_setup_proxies_all_addresses_are_known():
         ),
         user_deposit_address=user_deposit_address_test_default,
         payment_address=pfs_payment_address_default,
+        confirmed_block_number=BlockNumber(1),
         message="This is your favorite pathfinding service",
         operator="John Doe",
         version="0.0.3",
@@ -273,6 +275,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
             contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
         ),
         user_deposit_address=user_deposit_address_test_default,
+        confirmed_block_number=BlockNumber(1),
         payment_address=pfs_payment_address_default,
         message="This is your favorite pathfinding service",
         operator="John Doe",
