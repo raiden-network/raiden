@@ -1,11 +1,18 @@
 import signal
-from typing import Any
+import time
+from dataclasses import dataclass, field
+from typing import Any, List
 
 import gevent
 import gevent.util
+import structlog
 from gevent.hub import Hub
 
 from raiden.exceptions import RaidenUnrecoverableError
+
+LIBEV_LOW_PRIORITY = -2
+LIBEV_HIGH_PRIORITY = 2
+log = structlog.get_logger(__name__)
 
 
 def enable_gevent_monitoring_signal() -> None:
@@ -56,3 +63,119 @@ def limit_thread_cpu_usage_by_time() -> None:
             )
 
     monitor_thread.add_monitoring_function(kill_offender, gevent.config.max_blocking_time)
+
+
+@dataclass
+class IdleMeasurement:
+    before_poll: float
+    after_poll: float
+
+
+@dataclass
+class Idle:
+    """ Measures how much time the thread waited on the libev backend. """
+
+    measurement_interval: float
+    before_poll: float = field(init=False, default_factory=time.time)
+    last_print: float = field(init=False, default_factory=time.time)
+    measurements: List[IdleMeasurement] = field(init=False, default_factory=list)
+
+    def prepare_handler(self) -> None:
+        """ The prepare handler executed before the call to the polling backend
+        (e.g. select/epoll).
+
+        Note:
+        - Gevent uses a prepare handler to execute deferred callbacks. This
+          means there will be some work done on with this type of handler that
+          must not added to the idle time. To avoid counting the time spent on
+          the deferred callbacks the prepare_handler must be installed with a
+          low priority, so that it executes after the gevent's callbacks.
+        """
+        self.before = time.time()
+
+    def check_handler(self) -> None:
+        """ Check handler executed after the poll backend returns.
+
+        Note:
+        - For each of the watchers in the ready state there will be a callback,
+          which will do work related to the watcher (e.g. read from a socket).
+          This time must not be accounted for in the Idle timeout, therefore
+          this handler must have a high priority.
+        """
+        curr_time = time.time()
+
+        self.measurements.append(  # pylint: disable=no-member
+            IdleMeasurement(self.before, curr_time)
+        )
+
+        while self.measurements[0].after_poll - curr_time > self.measurement_interval:
+            self.measurements.pop()  # pylint: disable=no-member
+
+        if curr_time - self.last_print >= self.measurement_interval:
+            self.log()
+            self.last_print = curr_time
+
+    def enable(self) -> None:
+        loop = gevent.get_hub().loop
+        loop.prepare(priority=LIBEV_LOW_PRIORITY).start(self.prepare_handler)
+        loop.check(priority=LIBEV_HIGH_PRIORITY).start(self.check_handler)
+
+    @property
+    def measurements_start(self) -> float:
+        return self.measurements[0].before_poll
+
+    @property
+    def measurements_end(self) -> float:
+        return self.measurements[-1].after_poll
+
+    @property
+    def running_interval(self) -> float:
+        """ The number of seconds idled by this thread.
+
+        This will take into account the measurements frequency. Ideally the
+        measurements would happen exactly every `measurement_interval` seconds,
+        however that dependends on the existing load for the given thread, if
+        the event loop doesn't run often enough the running_interval  will be
+        larger than the target `measurement_interval`.
+        """
+        return self.measurements_end - self.measurements_start
+
+    @property
+    def idled(self) -> float:
+        """ The amount of seconds the thread idled. """
+        return sum(interval.after_poll - interval.before_poll for interval in self.measurements)
+
+    @property
+    def idled_pct(self) -> float:
+        """ The percentage of time the thread idled, waiting on the event loop. """
+        return self.idled / self.running_interval
+
+    @property
+    def context_switches(self) -> int:
+        """ The number of context switches done for the past `measurement_interval`. """
+        return len(IDLE.measurements)
+
+    def log(self) -> None:
+        log.debug(
+            "Idle",
+            start=self.measurements_start,
+            context_switches=self.context_switches,
+            idled=self.idled,
+            interval=self.running_interval,
+            idle_pct=self.idled_pct,
+        )
+
+    def __bool__(self) -> bool:
+        return bool(self.measurements)
+
+    def __str__(self) -> str:
+        if not self.measurements:
+            return ""
+
+        return (
+            f"The thread had {self.context_switches} context_switches, and "
+            f"idled {self.idled_pct}% of the time."
+        )
+
+
+IDLE = Idle(10)
