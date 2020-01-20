@@ -4,13 +4,19 @@ SCENARIO_REMOTE_URL_2="http://139.59.211.171:8000/scenario-player/scenarios/"
 CURL_COMMAND="curl --silent"
 WGET_DIR="wget --no-parent --no-clobber --continue -nH -r"
 
-COLUMNS=$(/usr/bin/tput cols)
-
 ### STYLES: IGNORE
+COLUMNS=$(/usr/bin/tput cols)
 RESET="\e[0m"
 BOLD="\e[1m"
-###
 
+function print_bold {
+    echo -e "${BOLD}$1${RESET}"
+}
+
+function separator {
+    printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+}
+###
 
 function display_usage {
     echo "This script does the following:"
@@ -22,9 +28,6 @@ function display_usage {
     echo -e "\tDESTINATION_URL is optional and is used to specify the path prefix for the downloaded files. Otherwise the current directory is used\n"
 }
 
-function print_bold {
-    echo -e "${BOLD}$1${RESET}"
-}
 
 if [[  $1 == "--help" ]]; then 
     display_usage
@@ -40,30 +43,20 @@ fi
 DESTINATION_DIR="$(realpath -s ${DESTINATION_DIR})/$(date +%m-%d-%Y)"
 mkdir -p $DESTINATION_DIR
 
-print_bold "Downloading PFS logs"
-
-ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli | gzip' > ${DESTINATION_DIR}/pfs-goerli.log.gz
-if [[ $? -ne 0 ]]; then
-    echo "Error: failed to download pfs-goerli logs"
-    exit 1
-fi
-
-ssh root@services-dev.raiden.network 'cd raiden-services/deployment/; docker-compose logs pfs-goerli-with-fee | gzip' > ${DESTINATION_DIR}/pfs-goerli-with-fee.log.gz
-if [[ $? -ne 0 ]]; then
-    echo "Error: failed to download pfs-goerli-with-fee logs"
-    exit 1
-fi
-
-print_bold "Downloading scenarios list"
-
-function separator {
-    printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+function download_pfs_logs {
+    container=$1
+    ssh root@services-dev.raiden.network "cd raiden-services/deployment/; docker-compose logs ${container} | gzip" > ${DESTINATION_DIR}/${container}.log.gz
+    if [[ $? -ne 0 ]]; then
+        echo "Error: failed to download pfs-goerli logs"
+        exit 1
+    fi
 }
 
 function download_nodes_logs {
     scenario=$1
     current_server=$2
     run_number=$3
+
     nodes=$(${CURL_COMMAND} ${current_server}${scenario} | sed -e 's/<[^>]*>//g' | grep -v Directory | sed -e '/^$/d' | grep "^node_${run_number}")
     for node in $nodes; do
         $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${node})
@@ -105,6 +98,11 @@ function search_for_failures {
     done;
 }
 
+print_bold "Downloading PFS logs"
+download_pfs_logs pfs-goerli
+download_pfs_logs pfs-goerli-with-fee
+
+print_bold "Downloading scenarios list"
 download_server_logs $SCENARIO_REMOTE_URL_1
 download_server_logs $SCENARIO_REMOTE_URL_2
 search_for_failures
