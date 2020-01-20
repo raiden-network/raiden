@@ -62,9 +62,9 @@ class Token:
         self, owner: Address, spender: Address, block_identifier: BlockSpecification
     ) -> TokenAmount:
         return TokenAmount(
-            self.proxy.contract.functions.allowance(
-                to_checksum_address(owner), to_checksum_address(spender)
-            ).call(block_identifier=block_identifier)
+            self.proxy.contract.functions.allowance(owner, spender).call(
+                block_identifier=block_identifier
+            )
         )
 
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
@@ -93,7 +93,7 @@ class Token:
                 checking_block = self.client.get_checking_block()
                 error_prefix = "Call to approve will fail"
                 gas_limit = self.proxy.estimate_gas(
-                    checking_block, "approve", to_checksum_address(allowed_address), allowance
+                    checking_block, "approve", allowed_address, allowance
                 )
 
                 if gas_limit:
@@ -101,7 +101,7 @@ class Token:
                     gas_limit = safe_gas_limit(gas_limit)
                     log_details["gas_limit"] = gas_limit
                     transaction_hash = self.proxy.transact(
-                        "approve", gas_limit, to_checksum_address(allowed_address), allowance
+                        "approve", gas_limit, allowed_address, allowance
                     )
 
                     receipt = self.client.poll(transaction_hash)
@@ -173,7 +173,7 @@ class Token:
         self, address: Address, block_identifier: BlockSpecification = "latest"
     ) -> Balance:
         """ Return the balance of `address`. """
-        return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
+        return self.proxy.contract.functions.balanceOf(address).call(
             block_identifier=block_identifier
         )
 
@@ -220,9 +220,7 @@ class Token:
 
             with log_transaction(log, "transfer", log_details):
                 checking_block = self.client.get_checking_block()
-                gas_limit = self.proxy.estimate_gas(
-                    checking_block, "transfer", to_checksum_address(to_address), amount
-                )
+                gas_limit = self.proxy.estimate_gas(checking_block, "transfer", to_address, amount)
                 failed_receipt = None
 
                 if gas_limit is not None:
@@ -230,7 +228,7 @@ class Token:
                     log_details["gas_limit"] = gas_limit
 
                     transaction_hash = self.proxy.transact(
-                        "transfer", gas_limit, to_checksum_address(to_address), amount
+                        "transfer", gas_limit, to_address, amount
                     )
 
                     receipt = self.client.poll(transaction_hash)

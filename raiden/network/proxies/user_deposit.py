@@ -188,10 +188,7 @@ class UserDeposit:
     ) -> None:
         checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
-            "init",
-            to_checksum_address(monitoring_service_address),
-            to_checksum_address(one_to_n_address),
+            checking_block, "init", monitoring_service_address, one_to_n_address
         )
 
         if not gas_limit:
@@ -232,10 +229,7 @@ class UserDeposit:
             log_details["gas_limit"] = gas_limit
 
             transaction_hash = self.proxy.transact(
-                "init",
-                gas_limit,
-                to_checksum_address(monitoring_service_address),
-                to_checksum_address(one_to_n_address),
+                "init", gas_limit, monitoring_service_address, one_to_n_address
             )
 
             receipt = self.client.poll(transaction_hash)
@@ -379,9 +373,7 @@ class UserDeposit:
         token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
-        )
+        gas_limit = self.proxy.estimate_gas(checking_block, "deposit", beneficiary, total_deposit)
 
         if not gas_limit:
             failed_at = self.proxy.rpc_client.get_block("latest")
@@ -444,7 +436,7 @@ class UserDeposit:
             log_details["gas_limit"] = gas_limit
 
             transaction_hash = self.proxy.transact(
-                "deposit", gas_limit, to_checksum_address(beneficiary), total_deposit
+                "deposit", gas_limit, beneficiary, total_deposit
             )
 
             receipt = self.client.poll(transaction_hash)
