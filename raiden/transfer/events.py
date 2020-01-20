@@ -39,6 +39,19 @@ from raiden.utils.typing import (
 
 @dataclass(frozen=True)
 class SendProcessed(SendMessageEvent):
+    """ Event used to send a Processed message.
+
+    This message is used to resolve race conditions for data that has to be
+    validated against the blockchain.
+
+    - Node A deposits
+    - Node A sees the deposit before the partner B
+    - Node A sends a transfer to B using the new capacity
+    - Node B rejects the transfer, since it did not see the capacity yet.
+    * Here, node A will retry the message until B sends a Processed to A.
+    - Node B sees the deposit, and on the next retry answer with a Processed.
+    """
+
     pass
 
 
