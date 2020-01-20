@@ -12,6 +12,10 @@ from raiden.network.transport.matrix.utils import (
     make_client,
     make_room_alias,
 )
+from raiden.settings import (
+    DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
+    DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
+)
 from raiden.tests.utils import factories
 from raiden.tests.utils.transport import ignore_messages, new_client
 from raiden.utils.formatting import to_checksum_address
@@ -170,15 +174,24 @@ def test_assumption_federation_works_after_original_server_goes_down(
 
     user_room_creator, _ = create_logged_in_client(local_matrix_servers_with_executor[0][0])
     original_room: Room = user_room_creator.create_room(room_alias, is_public=True)
-    user_room_creator.start_listener_thread()
+    user_room_creator.start_listener_thread(
+        timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
+        latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
+    )
 
     user_federated_1, _ = create_logged_in_client(local_matrix_servers_with_executor[1][0])
     room_server1 = join_broadcast_room(user_federated_1, room_name_full)
-    user_federated_1.start_listener_thread()
+    user_federated_1.start_listener_thread(
+        timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
+        latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
+    )
 
     user_federated_2, _ = create_logged_in_client(local_matrix_servers_with_executor[2][0])
     room_server2 = join_broadcast_room(user_federated_2, room_name_full)
-    user_federated_2.start_listener_thread()
+    user_federated_2.start_listener_thread(
+        timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
+        latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
+    )
 
     received = {}
 

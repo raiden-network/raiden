@@ -418,7 +418,9 @@ class MatrixTransport(Runnable):
             if greenlet in self.greenlets:
                 self.greenlets.remove(greenlet)
 
-        self._client.start_listener_thread(timeout_ms=self._config.sync_timeout)
+        self._client.start_listener_thread(
+            timeout_ms=self._config.sync_timeout, latency_ms=self._config.sync_latency
+        )
         assert isinstance(self._client.sync_worker, gevent.Greenlet)
         self._client.sync_worker.link_exception(self.on_error)
         self._client.sync_worker.link_value(on_success)
@@ -677,7 +679,7 @@ class MatrixTransport(Runnable):
         prev_sync_limit = self._client.set_sync_limit(0)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
-        self._client._sync()
+        self._client._sync(timeout_ms=0, latency_ms=30_000)
         self._client.set_sync_limit(prev_sync_limit)
         # Process the result from the sync executed above
         response_queue = self._client.response_queue

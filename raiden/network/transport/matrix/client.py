@@ -32,8 +32,6 @@ log = structlog.get_logger(__name__)
 
 
 SHUTDOWN_TIMEOUT = 35
-SYNC_TIMEOUT_MS = 20_000
-SYNC_MAX_LATENCY_MS = 2_000
 
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
@@ -280,7 +278,8 @@ class GMatrixClient(MatrixClient):
 
     def listen_forever(
         self,
-        timeout_ms: int = 20_000,
+        timeout_ms: int,
+        latency_ms: int,
         exception_handler: Callable[[Exception], None] = None,
         bad_sync_timeout: int = 5,
     ) -> None:
@@ -299,7 +298,7 @@ class GMatrixClient(MatrixClient):
         while self.should_listen:
             try:
                 # may be killed and raise exception from message_worker
-                self._sync(timeout_ms)
+                self._sync(timeout_ms, latency_ms)
                 _bad_sync_timeout = bad_sync_timeout
             except MatrixRequestError as e:
                 log.warning(
@@ -339,7 +338,7 @@ class GMatrixClient(MatrixClient):
                     raise
 
     def start_listener_thread(
-        self, timeout_ms: int = 20_000, exception_handler: Callable = None
+        self, timeout_ms: int, latency_ms: int, exception_handler: Callable = None
     ) -> None:
         """
         Start a listener greenlet to listen for events in the background.
@@ -354,7 +353,9 @@ class GMatrixClient(MatrixClient):
         # Needs to be reset, otherwise we might run into problems when restarting
         self.last_sync = float("inf")
 
-        self.sync_worker = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
+        self.sync_worker = gevent.spawn(
+            self.listen_forever, timeout_ms, latency_ms, exception_handler
+        )
         self.sync_worker.name = f"GMatrixClient._sync_worker user_id:{self.user_id}"
 
         self.message_worker = gevent.spawn(
@@ -452,9 +453,7 @@ class GMatrixClient(MatrixClient):
     def get_user_presence(self, user_id: str) -> Optional[str]:
         return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
 
-    def _sync(
-        self, timeout_ms: int = SYNC_TIMEOUT_MS, max_latency_ms: int = SYNC_MAX_LATENCY_MS
-    ) -> None:
+    def _sync(self, timeout_ms: int, latency_ms: int) -> None:
         """ Reimplements MatrixClient._sync """
         log.debug(
             "Sync called",
@@ -467,10 +466,10 @@ class GMatrixClient(MatrixClient):
         time_before_sync = time.time()
         time_since_last_sync_in_seconds = time_before_sync - self.last_sync
 
-        # If it takes longer than `timeout_ms + max_latency_ms` to call `_sync`
+        # If it takes longer than `timeout_ms + latency_ms` to call `_sync`
         # again, we throw an exception.  The exception is only thrown when in
         # development mode.
-        timeout_in_seconds = (timeout_ms + max_latency_ms) // 1_000
+        timeout_in_seconds = (timeout_ms + latency_ms) // 1_000
         timeout_reached = (
             time_since_last_sync_in_seconds >= timeout_in_seconds
             and self.environment == Environment.DEVELOPMENT
