@@ -13,7 +13,7 @@ settings:
         balance_per_node: 5000
 
 token:
-  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  address: "0x92a579CD0016BD677C4C38025F883C275102A96E"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
@@ -30,10 +30,10 @@ nodes:
     pathfinding-max-fee: 100
     enable-monitoring: true
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
       - 0
 
 ## This is the PFS8 scenario. It aims to make sure that the PFS reacts correctly if a node along

@@ -14,7 +14,7 @@ settings:
         min_balance: 5_000_000_000_000_000_000
 
 token:
-  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  address: "0x92a579CD0016BD677C4C38025F883C275102A96E"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
@@ -29,10 +29,10 @@ nodes:
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
       - 0
 
 ## This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in both directions.
