@@ -1,1 +1,104 @@
-/home/nls/devel/raiden/raiden/tests/scenarios/ci/sp2/pfs7_multiple_payments.yaml
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+        balance_per_node: 7_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 5
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: 100
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+
+## This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in both directions.
+## 100 payments is then carried out and assertions are made to ensure the PFS gets the corrects amount
+## of requests and IOUs. During the transfers the [0, 4, 3] path will have too low capacity and the other one
+## should be used.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+            - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - parallel:
+          name: "Deposit in the other directions"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - serial:
+          name: "adding a wait before the asserts"
+          tasks:
+            - wait: 60
+      - parallel:
+          name: "Assert after opening and depositing"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make 100 transfers from 0 to 3"
+          repeat: 100
+          tasks:
+            # An amount is used that eventually cause one path to run out of capacity
+            # and must then use the other path instead.
+            - transfer: {from: 0, to: 3, amount: 15_000_000_000_000_000, expected_http_status: 200}
+      - serial:
+          name: "Assert after 100 payments from 0 to 3"
+          tasks:
+            - wait: 10
+            - assert_sum: {from: 0, balance_sum: 500_000_000_000_000_000}
+            - assert_sum: {from: 3, balance_sum: 3_500_000_000_000_000_000}
+      - serial:
+          name: "Check that IOUs exist after the payments"
+          tasks:
+            # Add a wait until all ious are processed correctly
+            - assert_pfs_iou: {source: 0, amount: 10000}
+            - assert_pfs_history:
+                source: 0
+                target: 3
+                request_count: 100
+                distinct_routes_only: true
+                expected_routes:
+                  - [0, 4, 3]
+                  - [0, 1, 2, 3]
