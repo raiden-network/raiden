@@ -39,6 +39,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 token_network_registry_address_test_default
             ),
             "user_deposit_address": to_checksum_address(privatekey_to_address(private_keys[1])),
+            "confirmed_block": 10,
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
@@ -163,6 +164,7 @@ def test_check_pfs_for_production(service_registry_address, private_keys, web3, 
         operator="",
         version="",
         user_deposit_address=privatekey_to_address(private_keys[1]),
+        confirmed_block_number=10,
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
@@ -178,6 +180,7 @@ def test_check_pfs_for_production(service_registry_address, private_keys, web3, 
         operator="",
         version="",
         user_deposit_address=privatekey_to_address(private_keys[1]),
+        confirmed_block_number=10,
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
