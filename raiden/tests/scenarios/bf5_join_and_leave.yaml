@@ -33,12 +33,12 @@ nodes:
     pathfinding-max-fee: 100
     enable-monitoring: true
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
       - 0
-    default-settle-timeout: 40
+    #default-settle-timeout: 40
     default-reveal-timeout: 20
 
   node_options:
