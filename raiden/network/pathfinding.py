@@ -161,7 +161,7 @@ def get_pfs_info(url: str) -> PFSInfo:
             message=infos["message"],
             operator=infos["operator"],
             version=infos["version"],
-            confirmed_block_number=infos["network_info"]["confirmed_block"],
+            confirmed_block_number=infos["network_info"]["confirmed_block"]["number"],
         )
     except requests.exceptions.RequestException as e:
         msg = "Selected Pathfinding Service did not respond"

@@ -39,7 +39,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 token_network_registry_address_test_default
             ),
             "user_deposit_address": to_checksum_address(privatekey_to_address(private_keys[1])),
-            "confirmed_block": 10,
+            "confirmed_block": {"number": 10},
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
