@@ -142,7 +142,7 @@ def get_best_routes_with_iou_request_mocked(
                             factories.make_token_network_registry_address()
                         ),
                         "user_deposit_address": to_checksum_address(factories.make_address()),
-                        "confirmed_block": 11,
+                        "confirmed_block": {"number": 11},
                     },
                     "version": "0.0.3",
                     "operator": "John Doe",
@@ -893,7 +893,7 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
             token_network_registry_address=factories.make_token_network_registry_address(),
             user_deposit_address=factories.make_address(),
             payment_address=factories.make_address(),
-            confirmed_block_number=BlockNumber(1),
+            confirmed_block_number=dict(number=BlockNumber(1)),
             message="",
             operator="",
             version="",

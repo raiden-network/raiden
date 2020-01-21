@@ -26,7 +26,7 @@ def test_get_pfs_info_success():
             "chain_id": 42,
             "token_network_registry_address": pfs_test_default_registry_address,
             "user_deposit_address": pfs_test_default_user_deposit_address,
-            "confirmed_block": 11,
+            "confirmed_block": {"number": 11},
         },
         "version": "0.0.3",
         "operator": "John Doe",
