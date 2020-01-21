@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING
-
 import structlog
 from eth_utils import to_hex
 
@@ -40,7 +38,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, Address, List, TargetAddress
+from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, Address, Dict, List, TargetAddress
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -52,8 +50,19 @@ class MessageHandler:
     def on_messages(self, raiden: "RaidenService", messages: List[Message]) -> None:
         # pylint: disable=unidiomatic-typecheck
 
+        # Remove duplicate messages. A node will receive duplicate messages
+        # because of retries and persistent of the Matrix transport. This can
+        # be a problem when the recipient is under high load and the sender has
+        # a fast retries. This works because multiple batches of messages are
+        # dispatched collectively.
+        unique_messages: Dict[Message, int] = dict()
+        for msg in messages:
+            if msg not in unique_messages:
+                unique_messages[msg] = 1
+
         all_state_changes: List[StateChange] = list()
-        for message in messages:
+
+        for message in unique_messages.keys():
             if type(message) == SecretRequest:
                 assert isinstance(message, SecretRequest), MYPY_ANNOTATION
                 all_state_changes.extend(self.handle_message_secretrequest(raiden, message))
