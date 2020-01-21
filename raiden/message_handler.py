@@ -1,5 +1,7 @@
 import structlog
 from eth_utils import to_hex
+from gevent import joinall
+from gevent.pool import Pool
 
 from raiden import routing
 from raiden.constants import ABSENT_SECRET
@@ -69,56 +71,59 @@ class MessageHandler:
             if msg not in unique_messages:
                 unique_messages[msg] = 1
 
-        all_state_changes: List[StateChange] = list()
+        pool = Pool()
 
         for message in unique_messages.keys():
             if type(message) == SecretRequest:
                 assert isinstance(message, SecretRequest), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_secretrequest(raiden, message))
+                pool.apply_async(self.handle_message_secretrequest, (raiden, message))
 
             elif type(message) == RevealSecret:
                 assert isinstance(message, RevealSecret), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_revealsecret(raiden, message))
+                pool.apply_async(self.handle_message_revealsecret, (raiden, message))
 
             elif type(message) == Unlock:
                 assert isinstance(message, Unlock), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_unlock(raiden, message))
+                pool.apply_async(self.handle_message_unlock, (raiden, message))
 
             elif type(message) == LockExpired:
                 assert isinstance(message, LockExpired), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_lockexpired(raiden, message))
+                pool.apply_async(self.handle_message_lockexpired, (raiden, message))
 
             elif type(message) == RefundTransfer:
                 assert isinstance(message, RefundTransfer), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_refundtransfer(raiden, message))
+                pool.apply_async(self.handle_message_refundtransfer, (raiden, message))
 
             elif type(message) == LockedTransfer:
                 assert isinstance(message, LockedTransfer), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_lockedtransfer(raiden, message))
+                pool.apply_async(self.handle_message_lockedtransfer, (raiden, message))
 
             elif type(message) == WithdrawRequest:
                 assert isinstance(message, WithdrawRequest), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_withdrawrequest(raiden, message))
+                pool.apply_async(self.handle_message_withdrawrequest, (raiden, message))
 
             elif type(message) == WithdrawConfirmation:
                 assert isinstance(message, WithdrawConfirmation), MYPY_ANNOTATION
-                all_state_changes.extend(
-                    self.handle_message_withdraw_confirmation(raiden, message)
-                )
+                pool.apply_async(self.handle_message_withdraw_confirmation, (raiden, message))
 
             elif type(message) == WithdrawExpired:
                 assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_withdraw_expired(raiden, message))
+                pool.apply_async(self.handle_message_withdraw_expired, (raiden, message))
 
             elif type(message) == Delivered:
                 assert isinstance(message, Delivered), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_delivered(raiden, message))
+                pool.apply_async(self.handle_message_delivered, (raiden, message))
 
             elif type(message) == Processed:
                 assert isinstance(message, Processed), MYPY_ANNOTATION
-                all_state_changes.extend(self.handle_message_processed(raiden, message))
+                pool.apply_async(self.handle_message_processed, (raiden, message))
+
             else:
                 log.error(f"Unknown message cmdid {message.cmdid}")
+
+        all_state_changes: List[StateChange] = list()
+        for greenlet in joinall(set(pool), raise_error=True):
+            all_state_changes.extend(greenlet.get())
 
         if all_state_changes:
             # Order balance proof messages, based the target channel and the
