@@ -100,7 +100,7 @@ pexpect==4.7.0
 phonenumbers==8.10.13     # via matrix-synapse
 pickleshare==0.7.5
 pillow==6.2.0             # via matrix-synapse
-pip-tools==3.8.0
+pip-tools==4.4.0
 pluggy==0.12.0            # via pytest
 prometheus-client==0.3.1  # via matrix-synapse
 psutil==5.6.3
@@ -178,4 +178,4 @@ zipp==0.5.1               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==45.1.0        # via ipython, jsonschema, pyhamcrest, sphinx, zope.interface
+# setuptools

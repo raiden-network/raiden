@@ -24,7 +24,7 @@ ADD requirements/requirements.txt /tmp/
 WORKDIR /tmp
 
 
-RUN pip install -U 'pip<19.0.0' setuptools pip-tools
+RUN pip install -U pip setuptools pip-tools
 RUN pip-sync requirements.txt
 
 ADD . /raiden
