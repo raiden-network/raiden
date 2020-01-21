@@ -109,6 +109,7 @@ ptyprocess==0.6.0
 py-ecc==1.4.7
 py-geth==2.1.0
 py-solc==3.2.0
+py-spy==0.3.2
 py==1.8.0
 pyasn1-modules==0.2.5
 pyasn1==0.4.5
