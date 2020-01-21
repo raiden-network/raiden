@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 import gevent
 import gevent.util
 import structlog
+from gevent._tracer import GreenletTracer
 from gevent.hub import Hub
 
 from raiden.exceptions import RaidenUnrecoverableError
@@ -48,10 +49,16 @@ def limit_thread_cpu_usage_by_time() -> None:
     # but this should not be a problem.
     monitor_thread = gevent.get_hub().start_periodic_monitoring_thread()
 
+    # This code must not use the tracer from the monitor_thread because calls
+    # to `did_block_hub` will reset its internal state. If two threads use the
+    # same underlying tracer false positives will happen, because the switch
+    # counter will be artifically reset.
+    greenlet_tracer = GreenletTracer()
+
     def kill_offender(hub: Hub) -> None:
         tracer = monitor_thread._greenlet_tracer
 
-        if tracer.did_block_hub(hub):
+        if greenlet_tracer.did_block_hub(hub):
             active_greenlet = tracer.active_greenlet
             hub.loop.run_callback(
                 lambda: active_greenlet.throw(
