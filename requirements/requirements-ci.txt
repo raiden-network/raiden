@@ -34,7 +34,7 @@ colour==0.1.5
 constantly==15.1.0
 coverage==4.5.3
 cryptography==2.7
-cytoolz==0.9.0.1
+cytoolz==0.10.1
 daemonize==2.5.0
 decorator==4.4.0
 docutils==0.14
@@ -46,7 +46,7 @@ eth-keyfile==0.5.1
 eth-keys==0.2.4
 eth-rlp==0.1.2
 eth-typing==2.1.0
-eth-utils==1.6.4
+eth-utils==1.8.1
 execnet==1.6.0
 fancycompleter==0.8
 filelock==3.0.12
@@ -137,7 +137,7 @@ python-magic==0.4.15      # via s3cmd
 pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1
-raiden-contracts==0.33.3
+raiden-contracts==0.34.0
 raiden-webui==0.11.0
 readme-renderer==24.0
 releases==1.6.1
