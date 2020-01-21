@@ -69,10 +69,12 @@ from raiden.utils.typing import (
     List,
     Locksroot,
     MessageID,
+    MonitoringServiceAddress,
     NamedTuple,
     NodeNetworkStateMap,
     Nonce,
     Optional,
+    PaymentAmount,
     PaymentID,
     Secret,
     SecretHash,
@@ -86,6 +88,7 @@ from raiden.utils.typing import (
     Tuple,
     Type,
     TypeVar,
+    WithdrawAmount,
 )
 
 EMPTY = "empty"
@@ -194,12 +197,28 @@ def make_token_amount() -> TokenAmount:
     return TokenAmount(random.randint(0, UINT256_MAX))
 
 
+def make_withdraw_amount() -> WithdrawAmount:
+    return WithdrawAmount(random.randint(0, UINT256_MAX))
+
+
+def make_payment_amount() -> PaymentAmount:
+    return PaymentAmount(random.randint(0, UINT256_MAX))
+
+
 def make_balance() -> Balance:
     return Balance(random.randint(0, UINT256_MAX))
 
 
 def make_block_number() -> BlockNumber:
     return BlockNumber(random.randint(0, UINT256_MAX))
+
+
+def make_block_timeout() -> BlockTimeout:
+    return BlockTimeout(random.randint(0, UINT256_MAX))
+
+
+def make_block_expiration_number() -> BlockExpiration:
+    return BlockExpiration(random.randint(0, UINT256_MAX))
 
 
 def make_chain_id() -> ChainID:
@@ -224,6 +243,10 @@ def make_locksroot() -> Locksroot:
 
 def make_address() -> Address:
     return Address(make_bytes(20))
+
+
+def make_monitoring_service_address() -> MonitoringServiceAddress:
+    return MonitoringServiceAddress(make_bytes(20))
 
 
 def make_initiator_address() -> InitiatorAddress:
@@ -290,7 +313,7 @@ def make_secret_with_hash(i: int = EMPTY) -> Tuple[Secret, SecretHash]:
     return secret, secrethash
 
 
-def make_signature() -> bytes:
+def make_signature() -> Signature:
     return make_bytes(65)
 
 
