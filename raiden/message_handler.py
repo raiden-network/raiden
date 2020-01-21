@@ -22,6 +22,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
     ActionTransferReroute,
+    BalanceProofStateChange,
     ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
@@ -38,7 +39,15 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, Address, Dict, List, TargetAddress
+from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    TYPE_CHECKING,
+    Address,
+    Dict,
+    List,
+    TargetAddress,
+    Tuple,
+)
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -112,6 +121,24 @@ class MessageHandler:
                 log.error(f"Unknown message cmdid {message.cmdid}")
 
         if all_state_changes:
+            # Order balance proof messages, based the target channel and the
+            # nonce. Because the balance proofs messages must be processed in
+            # order, and there is no guarantee of the order of messages
+            # (an asynchronous network is assumed) This reduces latency when a
+            # balance proof is considered invalid because of a race with the
+            # blockchain view of each node.
+            def by_canonical_identifier(state_change: StateChange) -> Tuple[int, int]:
+                if isinstance(state_change, BalanceProofStateChange):
+                    balance_proof = state_change.balance_proof
+                    return (
+                        balance_proof.canonical_identifier.channel_identifier,
+                        balance_proof.nonce,
+                    )
+
+                return (0, 0)
+
+            all_state_changes.sort(key=by_canonical_identifier)
+
             raiden.handle_and_track_state_changes(all_state_changes)
 
     @staticmethod
