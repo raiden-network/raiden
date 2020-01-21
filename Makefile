@@ -96,14 +96,10 @@ docs:
 install: check-pip-tools clean-pyc
 	cd requirements; pip-sync requirements.txt _raiden.txt
 
-install-dev: check-pip-tools clean-pyc osx-detect-proper-python force-pip-version
+install-dev: check-pip-tools clean-pyc osx-detect-proper-python
 	touch requirements/requirements-local.txt
 	cd requirements; pip-sync requirements-dev.txt _raiden-dev.txt
 	pip install -c requirements/requirements-dev.txt -r requirements/requirements-local.txt
-
-# This is necessary to circumvent #4585
-force-pip-version:
-	pip install 'pip<19.2.0'
 
 osx-detect-proper-python:
 ifeq ($(shell uname -s),Darwin)
