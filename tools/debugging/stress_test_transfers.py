@@ -457,17 +457,20 @@ def run_stress_test(
 ) -> None:
     identifier_generator = count(start=FIRST_VALID_PAYMENT_ID)
 
-    config = StressTestConfiguration(
-        initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
-        concurrency=[50],
-        planners=[do_fifty_transfer_up_to],
-        schedulers=[scheduler_preserve_order],
-    )
-
     # TODO: Add tests with fees. This may require changes to the transfer plan,
     # since ATM it depends only in the `capacity_lower_bound` settings.
     for iteration in iteration_counter:
         log.info(f"Starting iteration {iteration}")
+
+        # The configuration has to be re-created on every iteration because the
+        # port numbers change
+        config = StressTestConfiguration(
+            initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
+            concurrency=[50],
+            planners=[do_fifty_transfer_up_to],
+            schedulers=[scheduler_preserve_order],
+        )
+
         # TODO: Before running the first plan each node should be queried for
         # their channel status. The script should assert the open channels have
         # at least `capacity_lower_bound` together.
