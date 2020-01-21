@@ -104,7 +104,7 @@ class WithdrawConfirmation(SignedRetrieableMessage):
         )
 
 
-@dataclass
+@dataclass(eq=False)
 class WithdrawExpired(SignedRetrieableMessage):
     """ Notifies about withdraw expiration/cancellation from partner. """
 

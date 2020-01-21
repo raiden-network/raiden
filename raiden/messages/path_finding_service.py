@@ -74,7 +74,7 @@ class PFSCapacityUpdate(SignedMessage):
         )
 
 
-@dataclass
+@dataclass(eq=False)
 class PFSFeeUpdate(SignedMessage):
     """Informs the PFS of mediation fees demanded by the client"""
 
