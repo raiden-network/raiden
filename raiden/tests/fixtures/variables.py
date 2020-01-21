@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Dict
 
 import pytest
+from eth_typing import HexStr
 from eth_utils import remove_0x_prefix
 
 from raiden.constants import Environment
@@ -105,8 +106,7 @@ def random_marker():
     detect unwanted interations if the user sets the PYTHONHASHSEED to the same
     value.
     """
-    random_hex = hex(random.getrandbits(100))
-    return remove_0x_prefix(random_hex)
+    return remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
 
 
 @pytest.fixture

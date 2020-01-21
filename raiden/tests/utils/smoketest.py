@@ -7,6 +7,7 @@ from http import HTTPStatus
 
 import click
 import requests
+from eth_typing import HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
@@ -231,7 +232,7 @@ def setup_testchain(
         )
     ]
 
-    random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
+    random_marker = remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
     genesis_description = GenesisDescription(
         prefunded_accounts=[AccountDescription(TEST_ACCOUNT_ADDRESS, DEFAULT_BALANCE)],
         random_marker=random_marker,

@@ -234,7 +234,6 @@ class Account:
 
     def __repr__(self) -> str:
         if self.address is not None:
-            address = encode_hex(self.address)
-        else:
-            address = "?"
-        return f"<Account(address={address}, id={self.uuid})>"
+            return f"<Account(address={encode_hex(self.address)}, id={self.uuid})>"
+
+        return f"<Account(address=???, id={self.uuid})>"

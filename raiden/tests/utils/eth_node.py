@@ -216,7 +216,7 @@ def geth_keyfile(datadir: str, address: Address) -> str:
     keystore = geth_keystore(datadir)
     os.makedirs(keystore, exist_ok=True)
 
-    address_hex = remove_0x_prefix(to_normalized_address(address))
+    address_hex = remove_0x_prefix(encode_hex(address))
     broken_iso_8601 = datetime.now().isoformat().replace(":", "-")
     account = f"UTC--{broken_iso_8601}000Z--{address_hex}"
 
@@ -262,7 +262,7 @@ def geth_generate_poa_genesis(
         to_normalized_address(account.address): {"balance": str(account.balance)}
         for account in genesis_description.prefunded_accounts
     }
-    seal_address_normalized = remove_0x_prefix(to_normalized_address(seal_account))
+    seal_address_normalized = remove_0x_prefix(encode_hex(seal_account))
     extra_data = geth_clique_extradata(genesis_description.random_marker, seal_address_normalized)
 
     genesis = GENESIS_STUB.copy()

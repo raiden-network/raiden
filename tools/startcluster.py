@@ -5,6 +5,7 @@ from signal import SIGINT, SIGTERM, Signals, signal
 from types import FrameType
 from typing import ContextManager
 
+from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import HTTPProvider, Web3
 
@@ -62,7 +63,7 @@ def main() -> None:
     rpc_endpoint = f"http://127.0.0.1:{START_RPCPORT}"
     web3 = Web3(HTTPProvider(rpc_endpoint))
 
-    random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
+    random_marker = remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
     genesis_description = GenesisDescription(
         prefunded_accounts=DEFAULT_ACCOUNTS,
         random_marker=random_marker,
