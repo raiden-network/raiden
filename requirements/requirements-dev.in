@@ -33,6 +33,7 @@ responses
 # Debugging
 pdbpp
 colour
+py-spy
 
 # Continuous Integration
 coverage
