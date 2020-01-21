@@ -159,11 +159,13 @@ def channels_per_node() -> int:
 
 
 @pytest.fixture
-def retry_interval(transport_protocol):
-    if transport_protocol is TransportProtocol.MATRIX:
-        return 2
-    else:
-        return 0.5
+def retry_interval_initial(transport_protocol):  # pylint: disable=unused-argument
+    return 2
+
+
+@pytest.fixture
+def retry_interval_max(transport_protocol):  # pylint: disable=unused-argument
+    return 2
 
 
 @pytest.fixture

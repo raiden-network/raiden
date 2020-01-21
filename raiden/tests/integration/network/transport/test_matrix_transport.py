@@ -298,7 +298,11 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
 
 
 def test_matrix_message_retry(
-    local_matrix_servers, retry_interval, retries_before_backoff, broadcast_rooms
+    local_matrix_servers,
+    retry_interval_initial,
+    retry_interval_max,
+    retries_before_backoff,
+    broadcast_rooms,
 ):
     """ Test the retry mechanism implemented into the matrix client.
     The test creates a transport and sends a message. Given that the
@@ -314,7 +318,8 @@ def test_matrix_message_retry(
         config=MatrixTransportConfig(
             broadcast_rooms=broadcast_rooms,
             retries_before_backoff=retries_before_backoff,
-            retry_interval=retry_interval,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
             server=local_matrix_servers[0],
             server_name=local_matrix_servers[0].netloc,
             available_servers=[local_matrix_servers[0]],
@@ -354,7 +359,7 @@ def test_matrix_message_retry(
         AddressReachability.UNREACHABLE, datetime.now()
     )
 
-    with gevent.Timeout(retry_interval + 2):
+    with gevent.Timeout(retry_interval_initial + 2):
         wait_assert(
             transport.log.debug.assert_called_with,
             "Partner not reachable. Skipping.",
@@ -371,7 +376,7 @@ def test_matrix_message_retry(
     )
 
     # Retrier should send the message again
-    with gevent.Timeout(retry_interval + 2):
+    with gevent.Timeout(retry_interval_initial + 2):
         while transport._send_raw.call_count != 2:
             gevent.sleep(0.1)
 
@@ -380,7 +385,11 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    local_matrix_servers, retry_interval, retries_before_backoff, broadcast_rooms
+    local_matrix_servers,
+    retry_interval_initial,
+    retry_interval_max,
+    retries_before_backoff,
+    broadcast_rooms,
 ):
     """join_broadcast_room tries to join on all servers on available_servers config
 
@@ -392,7 +401,8 @@ def test_join_invalid_discovery(
         config=MatrixTransportConfig(
             broadcast_rooms=broadcast_rooms,
             retries_before_backoff=retries_before_backoff,
-            retry_interval=retry_interval,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
             server=local_matrix_servers[0],
             server_name=local_matrix_servers[0].netloc,
             available_servers=["http://invalid.server"],
@@ -450,14 +460,19 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
 
 
 def test_matrix_discovery_room_offline_server(
-    local_matrix_servers, retries_before_backoff, retry_interval, broadcast_rooms
+    local_matrix_servers,
+    retries_before_backoff,
+    retry_interval_initial,
+    retry_interval_max,
+    broadcast_rooms,
 ):
 
     transport = MatrixTransport(
         config=MatrixTransportConfig(
             broadcast_rooms=broadcast_rooms,
             retries_before_backoff=retries_before_backoff,
-            retry_interval=retry_interval,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
             server=local_matrix_servers[0],
             server_name=local_matrix_servers[0].netloc,
             available_servers=[local_matrix_servers[0], "https://localhost:1"],
@@ -479,13 +494,18 @@ def test_matrix_discovery_room_offline_server(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
 )
 def test_matrix_broadcast(
-    local_matrix_servers, retries_before_backoff, retry_interval, broadcast_rooms
+    local_matrix_servers,
+    retries_before_backoff,
+    retry_interval_initial,
+    retry_interval_max,
+    broadcast_rooms,
 ):
     transport = MatrixTransport(
         config=MatrixTransportConfig(
             broadcast_rooms=broadcast_rooms,
             retries_before_backoff=retries_before_backoff,
-            retry_interval=retry_interval,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
             server=local_matrix_servers[0],
             server_name=local_matrix_servers[0].netloc,
             available_servers=[local_matrix_servers[0]],
@@ -523,7 +543,12 @@ def test_matrix_broadcast(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
 )
 def test_monitoring_broadcast_messages(
-    local_matrix_servers, retry_interval, retries_before_backoff, monkeypatch, broadcast_rooms
+    local_matrix_servers,
+    retry_interval_initial,
+    retry_interval_max,
+    retries_before_backoff,
+    monkeypatch,
+    broadcast_rooms,
 ):
     """
     Test that RaidenService broadcast RequestMonitoring messages to
@@ -533,7 +558,8 @@ def test_monitoring_broadcast_messages(
         config=MatrixTransportConfig(
             broadcast_rooms=broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
             retries_before_backoff=retries_before_backoff,
-            retry_interval=retry_interval,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
             server=local_matrix_servers[0],
             server_name=local_matrix_servers[0].netloc,
             available_servers=[local_matrix_servers[0]],
@@ -595,7 +621,8 @@ def test_monitoring_broadcast_messages(
 )
 def test_pfs_broadcast_messages(
     local_matrix_servers,
-    retry_interval,
+    retry_interval_initial,
+    retry_interval_max,
     retries_before_backoff,
     monkeypatch,
     broadcast_rooms,
@@ -609,7 +636,8 @@ def test_pfs_broadcast_messages(
         config=MatrixTransportConfig(
             broadcast_rooms=broadcast_rooms,
             retries_before_backoff=retries_before_backoff,
-            retry_interval=retry_interval,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
             server=local_matrix_servers[0],
             server_name=local_matrix_servers[0].netloc,
             available_servers=[local_matrix_servers[0]],

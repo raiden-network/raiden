@@ -144,8 +144,8 @@ class _RetryQueue(Runnable):
                 return
             timeout_generator = timeout_exponential_backoff(
                 self.transport._config.retries_before_backoff,
-                self.transport._config.retry_interval,
-                self.transport._config.retry_interval * 10,
+                self.transport._config.retry_interval_initial,
+                self.transport._config.retry_interval_max,
             )
             expiration_generator = self._expiration_generator(timeout_generator)
             self._message_queue.append(
@@ -278,7 +278,7 @@ class _RetryQueue(Runnable):
                 self.log.debug("Exiting idle RetryQueue", queue=self)
                 return
             # wait up to retry_interval (or to be notified) before checking again
-            self._notify_event.wait(self.transport._config.retry_interval)
+            self._notify_event.wait(self.transport._config.retry_interval_initial)
 
     @property
     def is_idle(self) -> bool:
@@ -313,8 +313,8 @@ class MatrixTransport(Runnable):
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
             return timeout_exponential_backoff(
                 self._config.retries_before_backoff,
-                self._config.retry_interval / 5,
-                self._config.retry_interval,
+                self._config.retry_interval_initial,
+                self._config.retry_interval_max,
             )
 
         self._client: GMatrixClient = make_client(
@@ -642,7 +642,7 @@ class MatrixTransport(Runnable):
 
             # Stop prioritizing broadcast messages after initial queue has been emptied
             self._prioritize_broadcast_messages = False
-            self._broadcast_event.wait(self._config.retry_interval)
+            self._broadcast_event.wait(self._config.retry_interval_initial)
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:

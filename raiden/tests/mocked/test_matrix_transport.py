@@ -61,7 +61,13 @@ def mock_raiden_service():
 
 
 @pytest.fixture()
-def mock_matrix(monkeypatch, mock_raiden_service, retry_interval, retries_before_backoff):
+def mock_matrix(
+    monkeypatch,
+    mock_raiden_service,
+    retry_interval_initial,
+    retry_interval_max,
+    retries_before_backoff,
+):
 
     from raiden.network.transport.matrix.client import GMatrixClient
     from raiden.network.transport.matrix.utils import UserPresence
@@ -96,7 +102,8 @@ def mock_matrix(monkeypatch, mock_raiden_service, retry_interval, retries_before
     config = MatrixTransportConfig(
         broadcast_rooms=[],
         retries_before_backoff=retries_before_backoff,
-        retry_interval=retry_interval,
+        retry_interval_initial=retry_interval_initial,
+        retry_interval_max=retry_interval_max,
         server="http://none",
         server_name="none",
         available_servers=[],
@@ -314,9 +321,9 @@ def test_processing_invalid_message_type_json(  # pylint: disable=unused-argumen
     assert not mock_matrix._handle_sync_messages([(room, [event])])
 
 
-@pytest.mark.parametrize("retry_interval", [0.01])
+@pytest.mark.parametrize("retry_interval_initial", [0.01])
 def test_retry_queue_does_not_resend_removed_messages(
-    mock_matrix, record_sent_messages, retry_interval, all_peers_reachable
+    mock_matrix, record_sent_messages, retry_interval_initial, all_peers_reachable
 ):
     """
     Ensure the ``RetryQueue`` doesn't unnecessarily re-send messages.
@@ -352,7 +359,7 @@ def test_retry_queue_does_not_resend_removed_messages(
     mock_matrix._queueids_to_queues[queue_identifier].clear()
 
     # Make sure the retry interval has elapsed
-    gevent.sleep(retry_interval * 5)
+    gevent.sleep(retry_interval_initial * 5)
 
     with retry_queue._lock:
         # The message has been removed from the raiden queue and should therefore not be sent again
@@ -361,13 +368,13 @@ def test_retry_queue_does_not_resend_removed_messages(
     assert len(mock_matrix.sent_messages) == 1
 
 
-@pytest.mark.parametrize("retry_interval", [0.05])
-def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval: int):
+@pytest.mark.parametrize("retry_interval_initial", [0.05])
+def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_initial: float):
     """ Ensure ``RetryQueue``s exit if they are idle for too long. """
     retry_queue = mock_matrix._get_retrier(factories.HOP1)
-    idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval
+    idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
 
-    with Timeout(idle_after + (retry_interval * 5)):
+    with Timeout(idle_after + (retry_interval_initial * 5)):
         # Retry
         while not gevent.wait([retry_queue.greenlet], idle_after / 2):
             pass
@@ -382,11 +389,13 @@ def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval:
     assert retry_queue_2 is not retry_queue
 
 
-@pytest.mark.parametrize("retry_interval", [0.05])
-def test_retryqueue_not_idle_with_messages(mock_matrix: MatrixTransport, retry_interval: int):
+@pytest.mark.parametrize("retry_interval_initial", [0.05])
+def test_retryqueue_not_idle_with_messages(
+    mock_matrix: MatrixTransport, retry_interval_initial: float
+):
     """ Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue. """
     retry_queue = mock_matrix._get_retrier(factories.HOP1)
-    idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval
+    idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
 
     queue_identifier = QueueIdentifier(
         recipient=factories.HOP1, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
@@ -397,7 +406,7 @@ def test_retryqueue_not_idle_with_messages(mock_matrix: MatrixTransport, retry_i
     # therefore the message will remain in the internal queue indefinitely.
 
     # Wait for the idle timeout to expire
-    gevent.sleep(idle_after + (retry_interval * 5))
+    gevent.sleep(idle_after + (retry_interval_initial * 5))
 
     assert not retry_queue.greenlet.ready()
     assert retry_queue._idle_since == 0
