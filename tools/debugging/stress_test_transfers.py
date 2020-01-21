@@ -531,6 +531,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--nodes-data-dir", default=os.getcwd())
+    parser.add_argument("--wait-after-first-sync", default=False, action="store_true")
     parser.add_argument("--interface", default="127.0.0.1")
     parser.add_argument("config")
     args = parser.parse_args()
@@ -637,9 +638,9 @@ def main() -> None:
         if stop.is_set():
             return
 
-        # Uncomment this if you want to interact manually with the started nodes
-        # print("All nodes are ready! Press Enter to continue and perform the stress tests.")
-        # input()
+        if args.wait_after_first_sync:
+            print("All nodes are ready! Press Enter to continue and perform the stress tests.")
+            input()
 
         nursery.spawn_under_watch(
             run_stress_test,
