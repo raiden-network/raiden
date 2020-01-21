@@ -1,7 +1,7 @@
 import json
 import time
-from collections import defaultdict
-from typing import TYPE_CHECKING
+from collections import Counter, defaultdict
+from typing import TYPE_CHECKING, Counter as CounterType
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -63,6 +63,7 @@ from raiden.utils.typing import (
     Iterable,
     Iterator,
     List,
+    MessageID,
     NamedTuple,
     NewType,
     Optional,
@@ -241,6 +242,13 @@ class _RetryQueue(Runnable):
                 # The message is still eligible for retry, consult the expiration generator if
                 # it should be retried now
                 if next(message_data.expiration_generator):
+                    if isinstance(message_data.message, RetrieableMessage):
+                        self.transport._counter_retry[
+                            (
+                                message_data.message.__class__.__name__,
+                                message_data.message.message_identifier,
+                            )
+                        ] += 1
                     message_texts.append(message_data.text)
 
             if remove:
@@ -360,6 +368,10 @@ class MatrixTransport(Runnable):
         self._client.add_invite_listener(self._handle_invite)
 
         self._health_lock = Semaphore()
+
+        self._counter_send: CounterType[MessageID] = Counter()
+        self._counter_retry: CounterType[MessageID] = Counter()
+        self._counter_dispatch: CounterType[MessageID] = Counter()
 
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
@@ -508,6 +520,13 @@ class MatrixTransport(Runnable):
         # Ensure keep-alive http connections are closed
         self._client.api.session.close()
 
+        self.log.debug(
+            "Transport performance counters",
+            send=self._counter_send.most_common(50),
+            retry=self._counter_retry.most_common(50),
+            dispatch=self._counter_dispatch.most_common(50),
+        )
+
         self.log.debug("Matrix stopped", config=self._config)
         try:
             del self.log
@@ -582,6 +601,9 @@ class MatrixTransport(Runnable):
             message=redact_secret(DictSerializer.serialize(message)),
             queue_identifier=queue_identifier,
         )
+
+        if isinstance(message, RetrieableMessage):
+            self._counter_send[(message.__class__.__name__, message.message_identifier)] += 1
 
         self._send_with_retry(queue_identifier, message)
 
@@ -980,7 +1002,10 @@ class MatrixTransport(Runnable):
                 self._raiden_service.sign(delivered_message)
                 retrier = self._get_retrier(message.sender)
                 retrier.enqueue_unordered(delivered_message)
-
+            if isinstance(message, RetrieableMessage):
+                self._counter_dispatch[
+                    (message.__class__.__name__, message.message_identifier)
+                ] += 1
         self.log.debug("Incoming messages", messages=all_messages)
 
         self._raiden_service.on_messages(all_messages)
