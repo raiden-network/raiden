@@ -1,1 +1,77 @@
-/home/nls/devel/raiden/raiden/tests/scenarios/ci/sp2/pfs4_use_best_path.yaml
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 5
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 1
+    pathfinding-max-fee: 100
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+
+## This is the PFS4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and 0 -> 4 -> 3
+## and checks whether the best path is the one used for the payment. 
+## Note that `max-paths` is set to 1 path.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000}
+            # Setup alternative path
+            - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000}
+      - serial:
+          name: "Test providing routes"
+          tasks:
+            - wait_blocks: 1
+            # Check that the payment goes through from 0 to 3
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+            - wait_blocks: 1
+
+            # Assert that correct amount was transferred
+            - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
+
+            # Check that IOU is created
+            - assert_pfs_iou: {source: 0, amount: 100}
+
+            ## Check that the paths are indeed the expected ones
+            - assert_pfs_history:
+                source: 0
+                request_count: 1
+                target: 3
+                routes_count: 1
+                expected_routes:
+                  - [0, 4, 3]

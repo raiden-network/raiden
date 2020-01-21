@@ -1,1 +1,424 @@
-/home/nls/devel/raiden/raiden/tests/scenarios/ci/sp2/bf7_long_path.yaml
+version: 2
+
+settings:
+  # Gas price to use, either `fast`, `medium` or an integer (in gwei)
+  gas_price: "fast"
+  chain: any
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        # Make sure that enough is deposited to pay for an MR
+        # The cost of an MR is `5 * 10 ** 18`
+        deposit: true
+        balance_per_node: 100_000_000_000_000_000_000
+        min_balance: 5_000_000_000_000_000_000
+
+
+token:
+  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  mode: managed
+  count: 15
+  raiden_version: local
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-fee: 100
+    enable-monitoring: true
+    proportional-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+    proportional-imbalance-fee:
+      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - 0
+
+  node_options:
+    0:
+      matrix-server: https://transport01.raiden.network
+    1:
+      matrix-server: https://transport02.raiden.network
+    2:
+      matrix-server: https://transport03.raiden.network
+    3:
+      matrix-server: https://transport04.raiden.network
+    4:
+      matrix-server: https://transport01.raiden.network
+    5:
+      matrix-server: https://transport02.raiden.network
+    6:
+      matrix-server: https://transport03.raiden.network
+    7:
+      matrix-server: https://transport04.raiden.network
+    8:
+      matrix-server: https://transport01.raiden.network
+    9:
+      matrix-server: https://transport02.raiden.network
+    10:
+      matrix-server: https://transport03.raiden.network
+    11:
+      matrix-server: https://transport04.raiden.network
+    12:
+      matrix-server: https://transport01.raiden.network
+    13:
+      matrix-server: https://transport02.raiden.network
+    14:
+      matrix-server: https://transport03.raiden.network
+
+# This is the bf7 scenario. It tests long paths. There are a total of 15 nodes in the scenario.
+# A topology with deposits in both directions are created as [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+# After opening channels, transfers are made with incrementing length starting with a transfer
+# from node0 to node1 and back, then from node0 to node2 with node1 as a mediatorand back etc.
+# This is done all the way up to a transfer from node0 to node14 and back.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open 15 channels in both directions"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 5, to: 6, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 6, to: 5, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 6, to: 7, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 7, to: 6, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 7, to: 8, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 8, to: 7, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 8, to: 9, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 9, to: 8, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 9, to: 10, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 10, to: 9, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 10, to: 11, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 11, to: 10, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 11, to: 12, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 12, to: 11, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 12, to: 13, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 13, to: 12, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 13, to: 14, total_deposit: 1_000_000_000_000_000_000}
+            - open_channel: {from: 14, to: 13, total_deposit: 1_000_000_000_000_000_000}
+      - parallel:
+          name: "Assert after open"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 6, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 6, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 6, to: 7, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 7, to: 6, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 7, to: 8, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 8, to: 7, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 8, to: 9, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 9, to: 8, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 9, to: 10, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 10, to: 9, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 10, to: 11, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 11, to: 10, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 11, to: 12, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 12, to: 11, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 12, to: 13, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 13, to: 12, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 13, to: 14, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 14, to: 13, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node1"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node1"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node1 to node0"
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node1 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node2"
+          tasks:
+            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node2"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 2 to 0"
+          tasks:
+            - transfer: {from: 2, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node2 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node3"
+          tasks:
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node3"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node3 to node0"
+          tasks:
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node3 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node4"
+          tasks:
+            - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node4"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node4 to node0"
+          tasks:
+            - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node4 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node5"
+          tasks:
+            - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node5"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node5 to node0"
+          tasks:
+            - transfer: {from: 5, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node5 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node6"
+          tasks:
+            - transfer: {from: 0, to: 6, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node6"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 6, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node6 to node0"
+          tasks:
+            - transfer: {from: 6, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node6 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 6, to: 5, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node7"
+          tasks:
+            - transfer: {from: 0, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node7"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 7, to: 6, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node7 to node0"
+          tasks:
+            - transfer: {from: 7, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node7 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 7, to: 6, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node8"
+          tasks:
+            - transfer: {from: 0, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node8"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 8, to: 7, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node8 to node0"
+          tasks:
+            - transfer: {from: 8, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node8 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 8, to: 7, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node9"
+          tasks:
+            - transfer: {from: 0, to: 9, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node9"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 9, to: 8, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node9 to node0"
+          tasks:
+            - transfer: {from: 9, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node9 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 9, to: 8, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node10"
+          tasks:
+            - transfer: {from: 0, to: 10, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node10"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 10, to: 9, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node10 to node0"
+          tasks:
+            - transfer: {from: 10, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node10 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 10, to: 9, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node11"
+          tasks:
+            - transfer: {from: 0, to: 11, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node11"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 11, to: 10, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node11 to node0"
+          tasks:
+            - transfer: {from: 11, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node11 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 11, to: 10, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node12"
+          tasks:
+            - transfer: {from: 0, to: 12, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node12"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 12, to: 11, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node12 to node0"
+          tasks:
+            - transfer: {from: 12, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node12 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 12, to: 11, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node13"
+          tasks:
+            - transfer: {from: 0, to: 13, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node13"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 13, to: 12, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node13 to node0"
+          tasks:
+            - transfer: {from: 13, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node13 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 13, to: 12, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node0 to node14"
+          tasks:
+            - transfer: {from: 0, to: 14, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node0 to node14"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000, state: "opened"}
+            - assert: {from: 14, to: 13, total_deposit: 1_000_000_000_000_000_000, balance: 1_001_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make one transfer from node14 to node0"
+          tasks:
+            - transfer: {from: 14, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
+      - wait: 100
+      - parallel:
+          name: "Assert after one transfer from node14 to node0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 14, to: 13, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
