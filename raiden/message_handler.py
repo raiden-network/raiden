@@ -333,7 +333,7 @@ class MessageHandler:
         assert message.sender, "Invalid message dispatched, it should be signed"
 
         if message.target == TargetAddress(raiden.address):
-            raiden.start_health_check_for(Address(message.initiator))
+            raiden.immediate_health_check_for(Address(message.initiator))
 
             from_transfer = lockedtransfersigned_from_message(message)
             from_hop = HopState(

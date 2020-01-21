@@ -35,7 +35,7 @@ def after_new_channel_start_healthcheck(
     partner_address = channelnew.channel_state.partner_state.address
     if ConnectionManager.BOOTSTRAP_ADDR != partner_address:
         to_health_check = partner_address
-        raiden.start_health_check_for(to_health_check)
+        raiden.async_start_health_check_for(to_health_check)
 
 
 def after_new_deposit_join_network(

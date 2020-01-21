@@ -587,7 +587,7 @@ class GMatrixClient(MatrixClient):
             )
 
             # Pop the processed messages, this relies on the fact the queue is
-            # ordered to pop the correct messages.Iif the process is killed
+            # ordered to pop the correct messages. If the process is killed
             # right before this call, on the next transport start the same
             # message will be processed again, that is why this is
             # at-least-once semantics.

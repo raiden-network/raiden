@@ -197,8 +197,8 @@ def test_matrix_message_sync(matrix_transports):
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
 
-    transport0.start_health_check(transport1._raiden_service.address)
-    transport1.start_health_check(transport0._raiden_service.address)
+    transport0.immediate_health_check_for(transport1._raiden_service.address)
+    transport1.immediate_health_check_for(transport0._raiden_service.address)
 
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,
@@ -245,7 +245,7 @@ def test_matrix_message_sync(matrix_transports):
 
     # Should fetch the 5 messages sent while transport1 was offline
     transport1.start(transport1._raiden_service, [], None)
-    transport1.start_health_check(transport0._raiden_service.address)
+    transport1.immediate_health_check_for(transport0._raiden_service.address)
 
     with gevent.Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while len(transport1_messages) != 10:
@@ -442,14 +442,14 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
     transport1.start(raiden_service1, [], "")
     transport2.start(raiden_service2, [], "")
 
-    transport0.start_health_check(raiden_service1.address)
-    transport0.start_health_check(raiden_service2.address)
+    transport0.immediate_health_check_for(raiden_service1.address)
+    transport0.immediate_health_check_for(raiden_service2.address)
 
-    transport1.start_health_check(raiden_service0.address)
-    transport1.start_health_check(raiden_service2.address)
+    transport1.immediate_health_check_for(raiden_service0.address)
+    transport1.immediate_health_check_for(raiden_service2.address)
 
-    transport2.start_health_check(raiden_service0.address)
-    transport2.start_health_check(raiden_service1.address)
+    transport2.immediate_health_check_for(raiden_service0.address)
+    transport2.immediate_health_check_for(raiden_service1.address)
 
     assert ping_pong_message_success(transport0, transport1)
     assert ping_pong_message_success(transport0, transport2)
@@ -705,8 +705,8 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
 
-    transport0.start_health_check(transport1._raiden_service.address)
-    transport1.start_health_check(transport0._raiden_service.address)
+    transport0.immediate_health_check_for(transport1._raiden_service.address)
+    transport1.immediate_health_check_for(transport0._raiden_service.address)
 
     room = transport0._get_room_for_address(raiden_service1.address)
     # Transport0 is on the higher end of the lexical order of the addresses.
@@ -769,7 +769,7 @@ def test_matrix_invite_retry_with_offline_invitee(
     invitee_transport.stop()
 
     inviter_transport.start(inviter_service, [], None)
-    inviter_transport.start_health_check(invitee_service.address)
+    inviter_transport.immediate_health_check_for(invitee_service.address)
 
     wait_for_peer_unreachable(inviter_transport, invitee_service.address)
     assert not is_reachable(inviter_transport, invitee_service.address)
@@ -778,7 +778,7 @@ def test_matrix_invite_retry_with_offline_invitee(
     assert room, "The inviter should have created the room, even if the invitee is offline."
 
     invitee_transport.start(invitee_service, [], None)
-    invitee_transport.start_health_check(inviter_service.address)
+    invitee_transport.immediate_health_check_for(inviter_service.address)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
@@ -835,7 +835,7 @@ def test_matrix_invitee_receives_invite_on_restart(
     invitee_transport.stop()
 
     inviter_transport.start(inviter_service, [], None)
-    inviter_transport.start_health_check(invitee_service.address)
+    inviter_transport.immediate_health_check_for(invitee_service.address)
 
     room = inviter_transport._get_room_for_address(invitee_service.address)
     assert room, "The inviter should have created the room, even if the invitee is offline."
@@ -844,7 +844,7 @@ def test_matrix_invitee_receives_invite_on_restart(
     inviter_transport.stop()
 
     invitee_transport.start(invitee_service, [], None)
-    invitee_transport.start_health_check(inviter_service.address)
+    invitee_transport.immediate_health_check_for(inviter_service.address)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
@@ -880,8 +880,8 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     transport0.start(raiden_service0, [], "")
     transport1.start(raiden_service1, [], "")
 
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
+    transport0.immediate_health_check_for(raiden_service1.address)
+    transport1.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport0, transport1)
 
@@ -891,7 +891,7 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     assert not is_reachable(transport1, raiden_service0.address)
 
     transport2.start(raiden_service0, [], "")
-    transport2.start_health_check(raiden_service1.address)
+    transport2.immediate_health_check_for(raiden_service1.address)
 
     assert ping_pong_message_success(transport2, transport1)
 
@@ -901,7 +901,7 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     assert not is_reachable(transport1, raiden_service0.address)
 
     transport0.start(raiden_service0, [], "")
-    transport0.start_health_check(raiden_service1.address)
+    transport0.immediate_health_check_for(raiden_service1.address)
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while not is_reachable(transport1, raiden_service0.address):
@@ -944,8 +944,8 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs0_0.start(raiden_service0, [], "")
     transport_rs1_0.start(raiden_service1, [], "")
 
-    transport_rs0_0.start_health_check(raiden_service1.address)
-    transport_rs1_0.start_health_check(raiden_service0.address)
+    transport_rs0_0.immediate_health_check_for(raiden_service1.address)
+    transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_0, raiden_service0.address)
@@ -957,7 +957,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
 
     transport_rs1_1.start(raiden_service1, [], "")
-    transport_rs1_1.start_health_check(raiden_service0.address)
+    transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_1, raiden_service0.address)
@@ -969,7 +969,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
 
     transport_rs1_2.start(raiden_service1, [], "")
-    transport_rs1_2.start_health_check(raiden_service0.address)
+    transport_rs1_2.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_2, raiden_service0.address)
@@ -982,8 +982,8 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs0_1.start(raiden_service0, [], "")
     transport_rs1_0.start(raiden_service1, [], "")
 
-    transport_rs0_1.start_health_check(raiden_service1.address)
-    transport_rs1_0.start_health_check(raiden_service0.address)
+    transport_rs0_1.immediate_health_check_for(raiden_service1.address)
+    transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_0, raiden_service0.address)
@@ -995,7 +995,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
 
     transport_rs1_1.start(raiden_service1, [], "")
-    transport_rs1_1.start_health_check(raiden_service0.address)
+    transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_1, raiden_service0.address)
@@ -1007,7 +1007,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
 
     transport_rs1_2.start(raiden_service1, [], "")
-    transport_rs1_2.start_health_check(raiden_service0.address)
+    transport_rs1_2.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_2, raiden_service0.address)
@@ -1019,9 +1019,9 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs1_2.stop()
 
     transport_rs0_2.start(raiden_service0, [], "")
-    transport_rs0_2.start_health_check(raiden_service1.address)
+    transport_rs0_2.immediate_health_check_for(raiden_service1.address)
     transport_rs1_0.start(raiden_service1, [], "")
-    transport_rs1_0.start_health_check(raiden_service0.address)
+    transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_0, raiden_service0.address)
@@ -1033,7 +1033,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
     transport_rs1_1.start(raiden_service1, [], "")
-    transport_rs1_1.start_health_check(raiden_service0.address)
+    transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_1, raiden_service0.address)
@@ -1045,7 +1045,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
 
     transport_rs1_2.start(raiden_service1, [], "")
-    transport_rs1_2.start_health_check(raiden_service0.address)
+    transport_rs1_2.immediate_health_check_for(raiden_service0.address)
 
     wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
     wait_for_room_with_address(transport_rs1_2, raiden_service0.address)
@@ -1068,8 +1068,8 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
 
     transport0.start(raiden_service0, [], "")
     transport1.start(raiden_service1, [], "")
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
+    transport0.immediate_health_check_for(raiden_service1.address)
+    transport1.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport0, transport1)
 
@@ -1098,8 +1098,8 @@ def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
     # We use this fact to wait on the room state to know when transport1 has processed the invite.
     transport1._config.broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
 
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
+    transport0.immediate_health_check_for(raiden_service1.address)
+    transport1.immediate_health_check_for(raiden_service0.address)
 
     pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
     pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
@@ -1251,14 +1251,14 @@ def test_transport_presence_updates(raiden_network, retry_timeout):
     """
     app0, app1, app2 = raiden_network
 
-    app0.raiden.transport.start_health_check(app1.raiden.address)
-    app0.raiden.transport.start_health_check(app2.raiden.address)
+    app0.raiden.transport.immediate_health_check_for(app1.raiden.address)
+    app0.raiden.transport.immediate_health_check_for(app2.raiden.address)
 
-    app1.raiden.transport.start_health_check(app0.raiden.address)
-    app1.raiden.transport.start_health_check(app2.raiden.address)
+    app1.raiden.transport.immediate_health_check_for(app0.raiden.address)
+    app1.raiden.transport.immediate_health_check_for(app2.raiden.address)
 
-    app2.raiden.transport.start_health_check(app0.raiden.address)
-    app2.raiden.transport.start_health_check(app1.raiden.address)
+    app2.raiden.transport.immediate_health_check_for(app0.raiden.address)
+    app2.raiden.transport.immediate_health_check_for(app1.raiden.address)
 
     wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
     wait_for_network_state(app0.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
@@ -1280,8 +1280,8 @@ def test_transport_presence_updates(raiden_network, retry_timeout):
 
     # Restart app0
     app0.start()
-    app0.raiden.transport.start_health_check(app1.raiden.address)
-    app0.raiden.transport.start_health_check(app2.raiden.address)
+    app0.raiden.transport.immediate_health_check_for(app1.raiden.address)
+    app0.raiden.transport.immediate_health_check_for(app2.raiden.address)
     wait_for_network_state(app1.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
     wait_for_network_state(app2.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
 
@@ -1296,8 +1296,8 @@ def test_transport_presence_updates(raiden_network, retry_timeout):
 
     # Restart app1
     app1.start()
-    app1.raiden.transport.start_health_check(app0.raiden.address)
-    app1.raiden.transport.start_health_check(app2.raiden.address)
+    app1.raiden.transport.immediate_health_check_for(app0.raiden.address)
+    app1.raiden.transport.immediate_health_check_for(app2.raiden.address)
     wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
     wait_for_network_state(app2.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
 
@@ -1312,7 +1312,7 @@ def test_transport_presence_updates(raiden_network, retry_timeout):
 
     # Restart app0
     app2.start()
-    app2.raiden.transport.start_health_check(app0.raiden.address)
-    app2.raiden.transport.start_health_check(app1.raiden.address)
+    app2.raiden.transport.immediate_health_check_for(app0.raiden.address)
+    app2.raiden.transport.immediate_health_check_for(app1.raiden.address)
     wait_for_network_state(app0.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
     wait_for_network_state(app1.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)

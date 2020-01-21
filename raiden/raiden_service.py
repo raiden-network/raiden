@@ -463,7 +463,7 @@ class RaidenService(Runnable):
 
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                self.start_health_check_for(neighbour)
+                self.async_start_health_check_for(neighbour)
 
     def _initialize_wal(self) -> None:
         if self.database_dir is not None:
@@ -836,7 +836,7 @@ class RaidenService(Runnable):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
         self.handle_and_track_state_changes([state_change])
 
-    def start_health_check_for(self, node_address: Address) -> None:
+    def async_start_health_check_for(self, node_address: Address) -> None:
         """Start health checking `node_address`.
 
         This function is a noop during initialization, because health checking
@@ -845,7 +845,18 @@ class RaidenService(Runnable):
         `start_neighbours_healthcheck`.
         """
         if self.transport:
-            self.transport.start_health_check(node_address)
+            self.transport.async_start_health_check(node_address)
+
+    def immediate_health_check_for(self, node_address: Address) -> None:
+        """Start health checking `node_address`.
+
+        This function is a noop during initialization, because health checking
+        can be started as a side effect of some events (e.g. new channel). For
+        these cases the healthcheck will be started by
+        `start_neighbours_healthcheck`.
+        """
+        if self.transport:
+            self.transport.immediate_health_check_for(node_address)
 
     def _callback_new_block(self, latest_block: Dict) -> None:
         """Called once a new block is detected by the alarm task.
@@ -1323,7 +1334,7 @@ class RaidenService(Runnable):
                 f" That secret is already registered onchain."
             )
 
-        self.start_health_check_for(Address(target))
+        self.async_start_health_check_for(Address(target))
 
         # Checks if there is a payment in flight with the same payment_id and
         # target. If there is such a payment and the details match, instead of
