@@ -415,7 +415,7 @@ def test_query_events(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_secret_revealed_on_chain(
-    raiden_chain, deposit, settle_timeout, token_addresses, retry_interval
+    raiden_chain, deposit, settle_timeout, token_addresses, retry_interval_initial
 ):
     """ A node must reveal the secret on-chain if it's known and the channel is closed. """
     app0, app1, app2 = raiden_chain
@@ -444,7 +444,7 @@ def test_secret_revealed_on_chain(
 
     with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
-            app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
+            app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval_initial
         )
 
     channel_state2_1 = get_channelstate(app2, app1, token_network_address)
@@ -484,7 +484,10 @@ def test_secret_revealed_on_chain(
 
     with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
-            app2.raiden, ContractReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
+            app2.raiden,
+            ContractReceiveSecretReveal,
+            {"secrethash": secrethash},
+            retry_interval_initial,
         )
 
 

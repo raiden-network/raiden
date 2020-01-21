@@ -73,7 +73,8 @@ def broadcast_rooms() -> List[str]:
 def matrix_transports(
     local_matrix_servers: List[ParsedURL],
     retries_before_backoff: int,
-    retry_interval: float,
+    retry_interval_initial: float,
+    retry_interval_max: float,
     number_of_transports: int,
     broadcast_rooms: List[str],
     matrix_sync_timeout: int,
@@ -88,7 +89,8 @@ def matrix_transports(
                 config=MatrixTransportConfig(
                     broadcast_rooms=broadcast_rooms.copy(),
                     retries_before_backoff=retries_before_backoff,
-                    retry_interval=retry_interval,
+                    retry_interval_initial=retry_interval_initial,
+                    retry_interval_max=retry_interval_max,
                     server=server,
                     server_name=server.netloc,
                     available_servers=local_matrix_servers_str,

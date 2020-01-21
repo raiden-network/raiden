@@ -31,12 +31,10 @@ GAS_PRICE = denoms.shannon * 20  # pylint: disable=no-member
 
 DEFAULT_HTTP_SERVER_PORT = 5001
 
-DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF = 5
-DEFAULT_TRANSPORT_THROTTLE_CAPACITY = 10.0
-DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.0
-# matrix gets spammed with the default retry-interval of 1s, wait a little more
-DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.0
-DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT = 10_000
+DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF = 1
+DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL = 5.0
+DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX = 60.0
+DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT = 20_000
 # Maximum allowed time between syncs in addition to DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT.
 # This is necessary because
 # - The matrix server adds up to 10% to avoid thundering herds
@@ -127,7 +125,8 @@ class MediationFeeConfig:
 @dataclass
 class MatrixTransportConfig:
     retries_before_backoff: int
-    retry_interval: float
+    retry_interval_initial: float
+    retry_interval_max: float
     broadcast_rooms: List[str]
     server: str
     available_servers: List[str]
@@ -175,7 +174,8 @@ class RaidenConfig:
         #       as well as the tests
         broadcast_rooms=[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
         retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-        retry_interval=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
+        retry_interval_initial=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL,
+        retry_interval_max=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX,
         server="auto",
         server_name=None,
         sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
