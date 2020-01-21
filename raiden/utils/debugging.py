@@ -1,7 +1,7 @@
 import signal
 import time
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any, List, Optional
 
 import gevent
 import gevent.util
@@ -76,7 +76,7 @@ class Idle:
     """ Measures how much time the thread waited on the libev backend. """
 
     measurement_interval: float
-    before_poll: float = field(init=False, default_factory=time.time)
+    before_poll: Optional[float] = None
     last_print: float = field(init=False, default_factory=time.time)
     measurements: List[IdleMeasurement] = field(init=False, default_factory=list)
 
@@ -91,7 +91,7 @@ class Idle:
           the deferred callbacks the prepare_handler must be installed with a
           low priority, so that it executes after the gevent's callbacks.
         """
-        self.before = time.time()
+        self.before_poll = time.time()
 
     def check_handler(self) -> None:
         """ Check handler executed after the poll backend returns.
@@ -104,12 +104,17 @@ class Idle:
         """
         curr_time = time.time()
 
-        self.measurements.append(  # pylint: disable=no-member
-            IdleMeasurement(self.before, curr_time)
-        )
+        # It is possible for the check_handler to be executed before the
+        # prepare_handler, this happens when the watchers are installed by a
+        # greenlet that was switched onto because of IO (IOW, Idle.enable is
+        # called while the event loop is executing watchers, after the `poll`)
+        if self.before_poll is not None:
+            self.measurements.append(  # pylint: disable=no-member
+                IdleMeasurement(self.before_poll, curr_time)
+            )
 
-        while self.measurements[0].after_poll - curr_time > self.measurement_interval:
-            self.measurements.pop()  # pylint: disable=no-member
+            while self.measurements[0].after_poll - curr_time > self.measurement_interval:
+                self.measurements.pop()  # pylint: disable=no-member
 
         if curr_time - self.last_print >= self.measurement_interval:
             self.log()
