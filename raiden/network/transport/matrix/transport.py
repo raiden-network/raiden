@@ -9,7 +9,7 @@ import gevent
 import structlog
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
-from gevent.lock import RLock, Semaphore
+from gevent.lock import RLock
 from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
@@ -53,6 +53,7 @@ from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
+from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -306,6 +307,7 @@ class _RetryQueue(Runnable):
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"
+    _healthcheck_queue: NotifyingQueue[Address]
     log = log
 
     def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
@@ -354,6 +356,7 @@ class MatrixTransport(Runnable):
 
         self._stop_event = Event()
         self._stop_event.set()
+        self._healthcheck_queue = NotifyingQueue()
 
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages = True
@@ -372,7 +375,9 @@ class MatrixTransport(Runnable):
 
         self._client.add_invite_listener(self._handle_invite)
 
-        self._health_lock = Semaphore()
+        self._counter_send: CounterType[MessageID] = Counter()
+        self._counter_retry: CounterType[MessageID] = Counter()
+        self._counter_dispatch: CounterType[MessageID] = Counter()
 
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
@@ -471,6 +476,7 @@ class MatrixTransport(Runnable):
 
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
+        self._schedule_new_greenlet(self._health_check_worker)
 
     def _process_queued_invites(self) -> None:
         if self._invite_queue:
@@ -586,18 +592,48 @@ class MatrixTransport(Runnable):
         self._address_mgr.track_address_presence(address, user_ids)
         return self._address_mgr.get_address_reachability(address)
 
-    def start_health_check(self, node_address: Address) -> None:
+    def async_start_health_check(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
 
         It also whitelists the address to answer invites and listen for messages
         """
         self.whitelist(node_address)
-        with self._health_lock:
-            self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
-            user_ids = self.get_user_ids_for_address(node_address)
-            # Ensure network state is updated in case we already know about the user presences
-            # representing the target node
-            self._address_mgr.track_address_presence(node_address, user_ids)
+        self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
+        user_ids = self.get_user_ids_for_address(node_address)
+        # Ensure network state is updated in case we already know about the user presences
+        # representing the target node
+        self._address_mgr.track_address_presence(node_address, user_ids)
+        self._healthcheck_queue.put(node_address)
+
+    def immediate_health_check_for(self, node_address: Address) -> None:
+        """Start healthcheck (status monitoring) for a peer
+
+        It also whitelists the address to answer invites and listen for messages
+        """
+        self.whitelist(node_address)
+        node_address_hex = to_normalized_address(node_address)
+        self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
+
+        candidates = self._client.search_user_directory(node_address_hex)
+        self._displayname_cache.warm_users(candidates)
+
+        user_ids = {
+            user.user_id for user in candidates if validate_userid_signature(user) == node_address
+        }
+        # Ensure network state is updated in case we already know about the user presences
+        # representing the target node
+        self._address_mgr.track_address_presence(node_address, user_ids)
+
+    def _health_check_worker(self) -> None:
+        """ Worker to process healthcheck requests. """
+        while True:
+            gevent.wait({self._healthcheck_queue, self._stop_event}, count=1)
+
+            if self._stop_event.is_set():
+                self.log.debug("Health check worker exiting, stop is set")
+                return
+
+            self.immediate_health_check_for(self._healthcheck_queue.get())
 
     def send_async(self, queue_identifier: QueueIdentifier, message: Message) -> None:
         """Queue the message for sending to recipient in the queue_identifier
