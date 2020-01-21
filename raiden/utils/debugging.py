@@ -120,7 +120,7 @@ class Idle:
                 IdleMeasurement(self.before_poll, curr_time)
             )
 
-            while self.measurements[0].after_poll - curr_time > self.measurement_interval:
+            while curr_time - self.measurements_start > self.measurement_interval:
                 self.measurements.pop()  # pylint: disable=no-member
 
         if curr_time - self.last_print >= self.measurement_interval:
@@ -175,6 +175,7 @@ class Idle:
             idled=self.idled,
             interval=self.running_interval,
             idle_pct=self.idled_pct,
+            measurements=self.measurements,
         )
 
     def __bool__(self) -> bool:
