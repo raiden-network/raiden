@@ -1,5 +1,6 @@
+import random
 from random import shuffle
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Tuple
 
 import gevent
 import structlog
@@ -163,17 +164,25 @@ class ConnectionManager:  # pragma: no unittest
             self.joinable_funds_target = joinable_funds_target
 
             log_open_channels(self.raiden, self.registry_address, self.token_address, funds)
-
-            if not self._have_online_channels_to_connect_to():
+            have_online_partners, potential_partners = self._have_online_channels_to_connect_to()
+            if not have_online_partners:
+                bootstrap_address = (
+                    self.BOOTSTRAP_ADDR
+                    if len(potential_partners) == 0
+                    else random.choice(potential_partners)
+                )
                 log.info(
                     "Bootstrapping token network.",
                     node=to_checksum_address(self.raiden.address),
                     network_id=to_checksum_address(self.registry_address),
                     token_id=to_checksum_address(self.token_address),
+                    bootstrap_address=to_checksum_address(bootstrap_address),
                 )
                 try:
                     self.api.channel_open(
-                        self.registry_address, self.token_address, self.BOOTSTRAP_ADDR
+                        registry_address=self.registry_address,
+                        token_address=self.token_address,
+                        partner_address=bootstrap_address,
                     )
                 except DuplicatedChannelError:
                     # If we have none else to connect to and connect got called twice
@@ -300,15 +309,21 @@ class ConnectionManager:  # pragma: no unittest
             if self._funds_remaining > 0 and not self._leaving_state:
                 self._open_channels()
 
-    def _have_online_channels_to_connect_to(self) -> bool:
-        """Returns whether there are any possible new online channel partners to connect to"""
+    def _have_online_channels_to_connect_to(self) -> Tuple[bool, List[Address]]:
+        """Returns whether there are any possible new online channel partners to connect to
+
+        If there are channels online the first element of the returned tuple is True
+        The second element is the list of all potential addresses to connect to(online and offline)
+        """
         potential_addresses = self._find_new_partners()
+        have_online_channels = False
         for address in potential_addresses:
             reachability = self.raiden.transport.force_check_address_reachability(address)
             if reachability == AddressReachability.REACHABLE:
-                return True
+                have_online_channels = True
+                break
 
-        return False
+        return have_online_channels, potential_addresses
 
     def _find_new_partners(self) -> List[Address]:
         """ Search the token network for potential channel partners. """
