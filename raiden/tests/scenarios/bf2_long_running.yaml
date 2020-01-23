@@ -16,7 +16,7 @@ settings:
         min_balance: 5_000_000_000_000_000_000
 
 token:
-  address: "0x92a579CD0016BD677C4C38025F883C275102A96E"
+  address: "0x59105441977ecD9d805A4f5b060E34676F50F806"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
@@ -30,15 +30,15 @@ nodes:
     #default-settle-timeout: 40
     default-reveal-timeout: 20
     proportional-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
     proportional-imbalance-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
 
-# This is the bf2 long running scenario. This scenario mimics user behaviour for 
-# opening channels, depositing, transferring, waiting keeping the raiden node alive for 
-# a long time in the process checking that the raiden network 
+# This is the bf2 long running scenario. This scenario mimics user behaviour for
+# opening channels, depositing, transferring, waiting keeping the raiden node alive for
+# a long time in the process checking that the raiden network
 # works accurately with a sufficiently dirty state of blockchain for a long time.
 
 scenario:
@@ -72,7 +72,7 @@ scenario:
             - deposit: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000}
             - deposit: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000}
             # deposit 101_000_000_000_000_000 is deliberate
-            - deposit: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000} 
+            - deposit: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000}
             - deposit: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000}
       - parallel:
           name: "Checking if the deposit was successful"
