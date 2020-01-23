@@ -51,7 +51,6 @@ from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
-from raiden.transfer.architecture import SendRetriableMessageEvent
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
@@ -253,8 +252,7 @@ class _RetryQueue(Runnable):
             #   - Those are retried according to their retry generator as long as they haven't been
             #     removed from the Raiden queue
             remove = False
-
-            if not isinstance(message_data.message, SendRetriableMessageEvent):
+            if not isinstance(message_data.message, RetriableMessage):
                 remove = True
                 message_texts.append(message_data.text)
             elif not message_is_in_queue(message_data):
@@ -639,7 +637,7 @@ class MatrixTransport(Runnable):
 
             # These are not protocol messages, but transport specific messages
             for message in queue.messages:
-                if isinstance(message, (Delivered, Ping, Pong)):
+                if isinstance(message, Delivered):
                     raise ValueError(
                         f"Do not use send_async for {message.__class__.__name__} messages"
                     )
@@ -1103,7 +1101,11 @@ class MatrixTransport(Runnable):
                     all_messages.extend(self._handle_text(room, text))
 
         for message in all_messages:
-            if isinstance(message, SignedRetriableMessage) and message.sender:
+            if (
+                isinstance(message, SignedRetriableMessage)
+                and not isinstance(message, (Ping, Pong))
+                and message.sender
+            ):
                 delivered_message = Delivered(
                     delivered_message_identifier=message.message_identifier,
                     signature=EMPTY_SIGNATURE,

@@ -1,5 +1,4 @@
 import json
-import random
 from datetime import datetime
 from functools import partial
 from typing import Any
@@ -17,12 +16,13 @@ from raiden.constants import (
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
+    PROTOCOL_VERSION,
     Environment,
     RoutingMode,
 )
 from raiden.exceptions import InsufficientEth
+from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.path_finding_service import PFSFeeUpdate
-from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue, _RetryQueue
 from raiden.network.transport.matrix.utils import (
@@ -55,14 +55,31 @@ TIMEOUT_MESSAGE_RECEIVE = 15
 
 
 class MessageHandler:
-    def __init__(self, bag: set):
+    def __init__(self, transport: MatrixTransport, bag: set):
+        self.transport = transport
         self.bag = bag
 
     def on_messages(self, _, messages):
+        for message in messages:
+            if isinstance(message, Ping):
+                queueid = QueueIdentifier(
+                    recipient=message.sender,
+                    canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+                )
+                pong = Pong(
+                    message_identifier=message.message_identifier,
+                    nonce=message.nonce,
+                    signature=EMPTY_SIGNATURE,
+                )
+                self.transport._raiden_service.sign(pong)
+                self.transport.send_async(queueid, pong)
         self.bag.update(messages)
 
 
 def ping_pong_message_success(transport0, transport1):
+    msg = "Raiden service should be set"
+    assert transport0._raiden_service is not None, msg
+    assert transport1._raiden_service is not None, msg
     queueid0 = QueueIdentifier(
         recipient=transport0._raiden_service.address,
         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
@@ -86,10 +103,13 @@ def ping_pong_message_success(transport0, transport1):
     received_messages0 = transport0._raiden_service.message_handler.bag
     received_messages1 = transport1._raiden_service.message_handler.bag
 
-    msg_id = random.randint(1e5, 9e5)
-
-    ping_message = Processed(message_identifier=msg_id, signature=EMPTY_SIGNATURE)
-    pong_message = Delivered(delivered_message_identifier=msg_id, signature=EMPTY_SIGNATURE)
+    ping_message = Ping(
+        message_identifier=1,
+        nonce=1,
+        current_protocol_version=PROTOCOL_VERSION,
+        signature=EMPTY_SIGNATURE,
+    )
+    pong_message = Pong(message_identifier=1, nonce=1, signature=EMPTY_SIGNATURE)
 
     transport0_raiden_queues[queueid1].append(ping_message)
 
@@ -186,8 +206,8 @@ def test_matrix_message_sync(matrix_transports):
     transport0_messages = set()
     transport1_messages = set()
 
-    transport0_message_handler = MessageHandler(transport0_messages)
-    transport1_message_handler = MessageHandler(transport1_messages)
+    transport0_message_handler = MessageHandler(transport0, transport0_messages)
+    transport1_message_handler = MessageHandler(transport1, transport1_messages)
 
     raiden_service0 = MockRaidenService(transport0_message_handler)
     raiden_service1 = MockRaidenService(transport1_message_handler)
@@ -209,7 +229,9 @@ def test_matrix_message_sync(matrix_transports):
     raiden0_queues[queue_identifier] = []
 
     for i in range(5):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Ping(
+            message_identifier=i, nonce=i, current_protocol_version=1, signature=EMPTY_SIGNATURE
+        )
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
         transport0.send_async([MessagesQueue(queue_identifier, [message])])
@@ -221,13 +243,13 @@ def test_matrix_message_sync(matrix_transports):
         while not len(transport1_messages) == 5:
             gevent.sleep(0.1)
 
-    # transport1 receives the `Processed` messages sent by transport0
+    # transport1 receives the `Ping` messages sent by transport0
     for i in range(5):
         assert any(m.message_identifier == i for m in transport1_messages)
 
-    # transport0 answers with a `Delivered` for each `Processed`
+    # transport0 answers with a `Pong` for each `Processed`
     for i in range(5):
-        assert any(m.delivered_message_identifier == i for m in transport0_messages)
+        assert any(m.message_identifier == i for m in transport0_messages)
 
     # Clear out queue
     raiden0_queues[queue_identifier] = []
@@ -238,7 +260,9 @@ def test_matrix_message_sync(matrix_transports):
 
     # Send more messages while the other end is offline
     for i in range(10, 15):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Ping(
+            message_identifier=i, nonce=i, current_protocol_version=1, signature=EMPTY_SIGNATURE
+        )
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
         transport0.send_async([MessagesQueue(queue_identifier, [message])])
@@ -260,7 +284,7 @@ def test_matrix_message_sync(matrix_transports):
 
     # transport0 answers with a `Delivered` for each one of the new `Processed`
     for i in range(10, 15):
-        assert any(m.delivered_message_identifier == i for m in transport0_messages)
+        assert any(m.message_identifier == i for m in transport0_messages)
 
 
 @expect_failure
@@ -345,7 +369,9 @@ def test_matrix_message_retry(
     assert bool(retry_queue), "retry_queue not running"
 
     # Send the initial message
-    message = Processed(message_identifier=0, signature=EMPTY_SIGNATURE)
+    message = Ping(
+        message_identifier=1, nonce=1, current_protocol_version=1, signature=EMPTY_SIGNATURE
+    )
     transport._raiden_service.sign(message)
     chain_state.queueids_to_queues[queueid] = [message]
     retry_queue.enqueue_unordered(message)
@@ -428,9 +454,9 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
     received_messages1 = set()
     received_messages2 = set()
 
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
-    message_handler2 = MessageHandler(received_messages2)
+    message_handler0 = MessageHandler(transport0, received_messages0)
+    message_handler1 = MessageHandler(transport1, received_messages1)
+    message_handler2 = MessageHandler(transport2, received_messages2)
 
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
@@ -518,7 +544,9 @@ def test_matrix_broadcast(
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
     for i in range(5):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Ping(
+            message_identifier=i, nonce=1, current_protocol_version=1, signature=EMPTY_SIGNATURE
+        )
         transport._raiden_service.sign(message)
         transport.broadcast(MONITORING_BROADCASTING_ROOM, message)
     transport._schedule_new_greenlet(transport._broadcast_worker)
@@ -855,8 +883,8 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     received_messages0 = set()
     received_messages1 = set()
 
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
+    message_handler0 = MessageHandler(transport0, received_messages0)
+    message_handler1 = MessageHandler(transport1, received_messages1)
 
     reverse_privkey_order = roaming_peer == "low"
     privkey0, privkey1 = make_privkeys_ordered(count=2, reverse=reverse_privkey_order)
@@ -918,8 +946,8 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     received_messages0 = set()
     received_messages1 = set()
 
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
+    message_handler0 = MessageHandler(transport_rs0_0, received_messages0)
+    message_handler1 = MessageHandler(transport_rs1_0, received_messages1)
 
     reverse_privkey_order = roaming_peer == "low"
     privkey0, privkey1 = make_privkeys_ordered(count=2, reverse=reverse_privkey_order)
@@ -1047,8 +1075,8 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     received_messages0 = set()
     received_messages1 = set()
 
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
+    message_handler0 = MessageHandler(transport0, received_messages0)
+    message_handler1 = MessageHandler(transport1, received_messages1)
 
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
@@ -1126,7 +1154,9 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     last_synced_token2 = sync_progress2.synced_event.wait()[0]
     # Send another message to the broadcast room, if transport1 listens on the room it will
     # throw an exception
-    message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
+    message = Ping(
+        message_identifier=1, nonce=1, current_protocol_version=1, signature=EMPTY_SIGNATURE
+    )
     message_text = MessageSerializer.serialize(message)
     pfs_broadcast_room_t0.send_text(message_text)
 

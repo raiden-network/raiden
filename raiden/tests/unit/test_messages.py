@@ -21,7 +21,9 @@ signer = LocalSigner(PRIVKEY)
 
 
 def test_signature():
-    ping = Ping(nonce=0, current_protocol_version=0, signature=EMPTY_SIGNATURE)
+    ping = Ping(
+        message_identifier=1, nonce=0, current_protocol_version=0, signature=EMPTY_SIGNATURE
+    )
     ping.sign(signer)
     assert ping.sender == ADDRESS
 

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from raiden.messages.abstract import SignedMessage
+from raiden.messages.abstract import SignedRetriableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.utils.typing import ClassVar, Nonce, RaidenProtocolVersion
 
 
 @dataclass(repr=False, eq=False)
-class Ping(SignedMessage):
+class Ping(SignedRetriableMessage):
     """ Healthcheck message.
 
     This message is sent to another node with an unique nonce, a Pong response is
@@ -31,7 +31,7 @@ class Ping(SignedMessage):
 
 
 @dataclass(repr=False, eq=False)
-class Pong(SignedMessage):
+class Pong(SignedRetriableMessage):
     """ Response to a Ping message. """
 
     cmdid: ClassVar[CmdId] = CmdId.PONG
