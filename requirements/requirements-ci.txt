@@ -5,7 +5,7 @@
 #    './deps compile' (for details see README)
 #
 alabaster==0.7.12
-altgraph==0.16.1          # via macholib, pyinstaller
+altgraph==0.16.1          # via pyinstaller
 aniso8601==7.0.0
 apipkg==1.5
 appdirs==1.4.3
@@ -77,7 +77,6 @@ jinja2==2.10.1
 jsonschema==3.0.1
 lazy-object-proxy==1.4.1
 lru-dict==1.1.6
-macholib==1.14            # via pyinstaller
 markupsafe==1.1.1
 marshmallow-dataclass==6.0.0
 marshmallow-enum==1.5.1
@@ -137,7 +136,7 @@ python-magic==0.4.15      # via s3cmd
 pytoml==0.1.20
 pytz==2019.1
 pyyaml==5.1.1
-raiden-contracts==0.34.0
+raiden-contracts==0.35.0
 raiden-webui==0.11.0
 readme-renderer==24.0
 releases==1.6.1
