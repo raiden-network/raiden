@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from hashlib import sha256
 from random import Random
+from typing import Dict, List, Set
 
 from hypothesis import assume, event
 from hypothesis.stateful import (
@@ -16,8 +16,10 @@ from hypothesis.stateful import (
 from hypothesis.strategies import binary, builds, composite, integers, random_module, randoms
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
+from raiden.messages.transfers import SecretRequest
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import make_block_hash
 from raiden.transfer import channel, node
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.channel import compute_locksroot
@@ -40,6 +42,7 @@ from raiden.transfer.state import (
     ChainState,
     ChannelState,
     HashTimeLockState,
+    NettingChannelState,
     NetworkState,
     TokenNetworkGraphState,
     TokenNetworkRegistryState,
@@ -55,6 +58,19 @@ from raiden.utils import typing
 from raiden.utils.copy import deepcopy
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.transfers import random_secret
+from raiden.utils.typing import (
+    Address,
+    BlockExpiration,
+    BlockGasLimit,
+    BlockNumber,
+    MessageID,
+    Nonce,
+    PrivateKey,
+    Secret,
+    SecretHash,
+    TokenAddress,
+    TokenAmount,
+)
 
 
 @composite
@@ -94,6 +110,10 @@ address_pairs = Bundle("address_pairs")
 AddressToAmount = typing.Dict[typing.Address, typing.TokenAmount]
 
 
+def make_tokenamount_defaultdict():
+    return defaultdict(lambda: typing.TokenAmount(0))
+
+
 @dataclass
 class Client:
     chain_state: ChainState
@@ -102,17 +122,23 @@ class Client:
     expected_expiry: typing.Dict[typing.SecretHash, typing.BlockNumber] = field(
         default_factory=dict
     )
-
-    our_previous_deposit: AddressToAmount = field(default_factory=lambda: defaultdict(int))
-    partner_previous_deposit: AddressToAmount = field(default_factory=lambda: defaultdict(int))
-    our_previous_transferred: AddressToAmount = field(default_factory=lambda: defaultdict(int))
-    partner_previous_transferred: AddressToAmount = field(default_factory=lambda: defaultdict(int))
-    our_previous_unclaimed: AddressToAmount = field(default_factory=lambda: defaultdict(int))
-    partner_previous_unclaimed: AddressToAmount = field(default_factory=lambda: defaultdict(int))
+    our_previous_deposit: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
+    partner_previous_deposit: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
+    our_previous_transferred: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
+    partner_previous_transferred: AddressToAmount = field(
+        default_factory=make_tokenamount_defaultdict
+    )
+    our_previous_unclaimed: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
+    partner_previous_unclaimed: AddressToAmount = field(
+        default_factory=make_tokenamount_defaultdict
+    )
 
     def assert_monotonicity_invariants(self):
         """ Assert all monotonicity properties stated in Raiden specification """
-        for address, netting_channel in self.address_to_channel.items():
+        for (
+            address,
+            netting_channel,
+        ) in self.address_to_channel.items():  # pylint: disable=no-member
 
             # constraint (1TN)
             assert netting_channel.our_total_deposit >= self.our_previous_deposit[address]
@@ -144,7 +170,7 @@ class Client:
 
     def assert_channel_state_invariants(self):
         """ Assert all channel state invariants given in the Raiden specification """
-        for netting_channel in self.address_to_channel.values():
+        for netting_channel in self.address_to_channel.values():  # pylint: disable=no-member
             our_state = netting_channel.our_state
             partner_state = netting_channel.partner_state
 
@@ -209,10 +235,10 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         client.address_to_channel[partner_address] = factories.create(
             factories.NettingChannelStateProperties(
                 our_state=factories.NettingChannelEndStateProperties(
-                    balance=1000, address=client_address
+                    balance=TokenAmount(1000), address=client_address
                 ),
                 partner_state=factories.NettingChannelEndStateProperties(
-                    balance=1000, address=partner_address
+                    balance=TokenAmount(1000), address=partner_address
                 ),
                 canonical_identifier=factories.make_canonical_identifier(
                     token_network_address=self.token_network_address
@@ -227,9 +253,11 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         address_pair = self.new_channel(client_address)
 
         partner_address = address_pair.partner_address
+        channel_state = client.address_to_channel[partner_address]
+        assert isinstance(channel_state, NettingChannelState)
         channel_new_state_change = ContractReceiveChannelNew(
             transaction_hash=factories.make_transaction_hash(),
-            channel_state=client.address_to_channel[partner_address],
+            channel_state=channel_state,
             block_number=self.block_number,
             block_hash=factories.make_block_hash(),
         )
@@ -265,7 +293,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_registry_address, [self.token_network_state]
         )
 
-        channels = []
+        channels: List[NettingChannelState] = []
         for _ in range(self.number_of_clients):
             private_key, address = factories.make_privkey_address()
             self.address_to_privkey[address] = private_key
@@ -316,11 +344,14 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
 
 class InitiatorMixin:
+    address_to_client: dict
+    block_number: BlockNumber
+
     def __init__(self):
         super().__init__()
-        self.used_secrets = set()
-        self.processed_secret_requests = set()
-        self.initiated = set()
+        self.used_secrets: Set[Secret] = set()
+        self.processed_secret_requests: Set[SecretRequest] = set()
+        self.initiated: Set[Secret] = set()
 
     def _get_initiator_client(self, transfer: TransferDescriptionWithSecretState):
         return self.address_to_client[transfer.initiator]
@@ -334,13 +365,13 @@ class InitiatorMixin:
 
     def _receive_secret_request(self, transfer: TransferDescriptionWithSecretState):
         client = self._get_initiator_client(transfer)
-        secrethash = sha256(transfer.secret).digest()
+        secrethash = sha256_secrethash(transfer.secret)
         return ReceiveSecretRequest(
             payment_identifier=transfer.payment_identifier,
             amount=transfer.amount,
             expiration=client.expected_expiry[transfer.secrethash],
             secrethash=secrethash,
-            sender=transfer.target,
+            sender=Address(transfer.target),
         )
 
     def _new_transfer_description(self, address_pair, payment_id, amount, secret):
@@ -364,7 +395,8 @@ class InitiatorMixin:
         else:
             self.processed_secret_requests.add(action.secrethash)
 
-    def _unauthentic_secret_request(self, action, client):
+    @staticmethod
+    def _unauthentic_secret_request(action, client):
         result = node.state_transition(client.chain_state, action)
         assert not result.events
 
@@ -501,6 +533,7 @@ class BalanceProofData:
 
     def update(self, amount, lock):
         self._pending_locks = channel.compute_locks_with(self._pending_locks, lock)
+        assert self._pending_locks
         if self.properties:
             self.properties = factories.replace(
                 self.properties,
@@ -510,9 +543,9 @@ class BalanceProofData:
             )
         else:
             self.properties = factories.BalanceProofProperties(
-                transferred_amount=0,
+                transferred_amount=TokenAmount(0),
                 locked_amount=amount,
-                nonce=1,
+                nonce=Nonce(1),
                 locksroot=compute_locksroot(self._pending_locks),
                 canonical_identifier=self._canonical_identifier,
             )
@@ -525,11 +558,16 @@ class WithOurAddress:
 
 
 class MediatorMixin:
+    address_to_privkey: Dict[Address, PrivateKey]
+    address_to_client: Dict[Address, Client]
+    block_number: BlockNumber
+    token_id: TokenAddress
+
     def __init__(self):
         super().__init__()
-        self.partner_to_balance_proof_data = dict()
-        self.secrethash_to_secret = dict()
-        self.waiting_for_unlock = dict()
+        self.partner_to_balance_proof_data: Dict[Address, BalanceProofData] = dict()
+        self.secrethash_to_secret: Dict[SecretHash, Secret] = dict()
+        self.waiting_for_unlock: Dict[Secret, Address] = dict()
         self.initial_number_of_channels = 2
 
     def _get_balance_proof_data(self, partner, client_address):
@@ -563,10 +601,10 @@ class MediatorMixin:
         self.secrethash_to_secret[sha256_secrethash(secret)] = secret
 
         return factories.create(
-            factories.LockedTransferSignedStateProperties(
+            factories.LockedTransferSignedStateProperties(  # type: ignore
                 **balance_proof_data.properties.__dict__,
                 amount=amount,
-                expiration=self.block_number + 10,
+                expiration=BlockExpiration(self.block_number + 10),
                 payment_identifier=payment_id,
                 secret=secret,
                 initiator=initiator_address,
@@ -575,7 +613,7 @@ class MediatorMixin:
                 sender=initiator_address,
                 recipient=our_address,
                 pkey=initiator_pkey,
-                message_identifier=1,
+                message_identifier=MessageID(1),
             )
         )
 
@@ -583,8 +621,9 @@ class MediatorMixin:
         self, transfer: LockedTransferSignedState, client_address
     ) -> WithOurAddress:
         client = self.address_to_client[client_address]
-        initiator_channel = client.address_to_channel[transfer.initiator]
-        target_channel = client.address_to_channel[transfer.target]
+        initiator_channel = client.address_to_channel[Address(transfer.initiator)]
+        target_channel = client.address_to_channel[Address(transfer.target)]
+        assert isinstance(target_channel, NettingChannelState)
 
         action = ActionInitMediator(
             route_states=[factories.make_route_from_channel(target_channel)],
@@ -715,9 +754,9 @@ class OnChainMixin:
     def new_blocks(self, number):
         for _ in range(number):
             block_state_change = Block(
-                block_number=self.block_number + 1,
-                gas_limit=1,
-                block_hash=factories.make_keccak_hash(),
+                block_number=BlockNumber(self.block_number + 1),
+                gas_limit=BlockGasLimit(1),
+                block_hash=make_block_hash(),
             )
             for client in self.address_to_client.values():
                 events = list()

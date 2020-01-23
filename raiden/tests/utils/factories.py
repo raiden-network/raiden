@@ -76,6 +76,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
+    PrivateKey,
     Secret,
     SecretHash,
     Signature,
@@ -325,7 +326,7 @@ def make_lock() -> HashTimeLockState:
     )
 
 
-def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, Address]:
+def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[PrivateKey, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
     return privatekey, address
