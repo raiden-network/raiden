@@ -6,7 +6,7 @@ import eth_hash.auto as eth_hash
 from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
-from raiden.messages.abstract import SignedRetrieableMessage
+from raiden.messages.abstract import SignedRetriableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -153,7 +153,7 @@ class Lock:
 
 
 @dataclass(repr=False, eq=False)
-class EnvelopeMessage(SignedRetrieableMessage):
+class EnvelopeMessage(SignedRetriableMessage):
     """ Contains an on-chain message and shares its signature.
 
     For performance reasons envelope messages share the signature with the
@@ -200,7 +200,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class SecretRequest(SignedRetrieableMessage):
+class SecretRequest(SignedRetriableMessage):
     """ Requests the secret/preimage which unlocks a lock. """
 
     cmdid: ClassVar[CmdId] = CmdId.SECRETREQUEST
@@ -312,7 +312,7 @@ class Unlock(EnvelopeMessage):
 
 
 @dataclass(repr=False, eq=False)
-class RevealSecret(SignedRetrieableMessage):
+class RevealSecret(SignedRetriableMessage):
     """Reveal the lock's secret.
 
     This message is not sufficient to unlock a lock, refer to the Unlock.

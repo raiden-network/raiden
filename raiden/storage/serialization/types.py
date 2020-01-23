@@ -82,7 +82,7 @@ MESSAGE_NAME_TO_QUALIFIED_NAME = {
     "RevealSecret": "raiden.messages.transfers.RevealSecret",
     "SecretRequest": "raiden.messages.transfers.SecretRequest",
     "SignedMessage": "raiden.messages.abstract.SignedMessage",
-    "SignedRetrieableMessage": "raiden.messages.abstract.SignedRetrieableMessage",
+    "SignedRetriableMessage": "raiden.messages.abstract.SignedRetriableMessage",
     "Unlock": "raiden.messages.transfers.Unlock",
     "WithdrawConfirmation": "raiden.messages.withdraw.WithdrawConfirmation",
     "WithdrawExpired": "raiden.messages.withdraw.WithdrawExpired",

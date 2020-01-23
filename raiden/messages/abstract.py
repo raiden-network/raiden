@@ -96,14 +96,14 @@ class SignedMessage(AuthenticatedMessage):
 
 
 @dataclass(repr=False, eq=False)
-class RetrieableMessage(Message):
+class RetriableMessage(Message):
     """ Message, that supports a retry-queue. """
 
     message_identifier: MessageID
 
 
 @dataclass(repr=False, eq=False)
-class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
-    """ Mixin of SignedMessage and RetrieableMessage. """
+class SignedRetriableMessage(SignedMessage, RetriableMessage):
+    """ Mixin of SignedMessage and RetriableMessage. """
 
     pass
