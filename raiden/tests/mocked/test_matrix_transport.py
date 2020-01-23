@@ -1,4 +1,3 @@
-import random
 from typing import List, Optional
 
 import gevent
@@ -8,7 +7,7 @@ from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, Environment
+from raiden.constants import EMPTY_SIGNATURE, Environment
 from raiden.exceptions import TransportError
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
@@ -19,12 +18,12 @@ from raiden.network.transport.matrix.utils import UserAddressManager
 from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
-from raiden.tests.utils.factories import make_signer
+from raiden.tests.utils.factories import make_message_identifier, make_signer
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, BlockExpiration, PaymentAmount, PaymentID
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
 USERID1 = f"@{to_checksum_address(factories.HOP1.hex())}:Wonderland"  # pylint: disable=no-member
@@ -96,7 +95,7 @@ def mock_matrix(
             assert message
             assert message.sender
 
-    def mock_get_user_presence(self, user_id: str):
+    def mock_get_user_presence(self, user_id: str):  # pylint: disable=unused-argument
         return UserPresence.ONLINE
 
     config = MatrixTransportConfig(
@@ -112,7 +111,7 @@ def mock_matrix(
     transport = MatrixTransport(config=config, environment=Environment.DEVELOPMENT)
     transport._raiden_service = mock_raiden_service
     transport._stop_event.clear()
-    transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)
+    transport._address_mgr.add_userid_for_address(Address(factories.HOP1), USERID1)
     transport._client.user_id = USERID0
 
     monkeypatch.setattr(
@@ -148,7 +147,7 @@ def room_with_members(mock_raiden_service, partner_config_for_room):
     number_of_partners = partner_config_for_room["number_of_partners"]
     users_per_address = partner_config_for_room["users_per_address"]
     number_of_base_users = partner_config_for_room["number_of_base_users"]
-    room_members = list()
+    room_members: List[User] = list()
     base_users = create_new_users_for_address(mock_raiden_service.signer, number_of_base_users)
     room_members.extend(base_users)
 
@@ -157,7 +156,7 @@ def room_with_members(mock_raiden_service, partner_config_for_room):
         room_members.extend(users)
 
     room_id = "!roomofdoom:server"
-    room = Room(client=None, room_id=room_id)
+    room = Room(client=None, room_id=room_id)  # type: ignore
     for member in room_members:
         room._mkmembers(member)
 
@@ -216,7 +215,9 @@ def test_leave_unexpected_rooms(mock_matrix: MatrixTransport, room_with_members,
 
 @pytest.fixture
 def all_peers_reachable(monkeypatch):
-    def mock_get_address_reachability(self, address: Address) -> AddressReachability:
+    def mock_get_address_reachability(
+        self, address: Address  # pylint: disable=unused-argument
+    ) -> AddressReachability:
         return AddressReachability.REACHABLE
 
     monkeypatch.setattr(
@@ -245,11 +246,11 @@ def record_sent_messages(mock_matrix):
 
 def make_message(sign=True):
     message = SecretRequest(
-        message_identifier=random.randint(0, UINT64_MAX),
-        payment_identifier=1,
+        message_identifier=make_message_identifier(),
+        payment_identifier=PaymentID(1),
         secrethash=factories.UNIT_SECRETHASH,
-        amount=1,
-        expiration=10,
+        amount=PaymentAmount(1),
+        expiration=BlockExpiration(10),
         signature=EMPTY_SIGNATURE,
     )
     if sign:
@@ -258,7 +259,7 @@ def make_message(sign=True):
 
 
 def make_message_text(sign=True, overwrite_data=None):
-    room = Room(None, "!roomID:server")
+    room = Room(None, "!roomID:server")  # type: ignore
     if not overwrite_data:
         data = MessageSerializer.serialize(make_message(sign=sign))
     else:
@@ -322,9 +323,8 @@ def test_processing_invalid_message_type_json(  # pylint: disable=unused-argumen
 
 
 @pytest.mark.parametrize("retry_interval_initial", [0.01])
-def test_retry_queue_does_not_resend_removed_messages(
-    mock_matrix, record_sent_messages, retry_interval_initial, all_peers_reachable
-):
+@pytest.mark.usefixtures("record_sent_messages", "all_peers_reachable")
+def test_retry_queue_does_not_resend_removed_messages(mock_matrix, retry_interval_initial):
     """
     Ensure the ``RetryQueue`` doesn't unnecessarily re-send messages.
 
@@ -339,12 +339,13 @@ def test_retry_queue_does_not_resend_removed_messages(
 
     # This is intentionally not using ``MatrixTransport._get_retrier()`` since we don't want the
     # greenlet to run but instead manually call its `_check_and_send()` method.
-    retry_queue = _RetryQueue(transport=mock_matrix, receiver=factories.HOP1)
+    retry_queue = _RetryQueue(transport=mock_matrix, receiver=Address(factories.HOP1))
 
     message = make_message()
     serialized_message = MessageSerializer.serialize(message)
     queue_identifier = QueueIdentifier(
-        recipient=factories.HOP1, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
+        recipient=Address(factories.HOP1),
+        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
     retry_queue.enqueue(queue_identifier, message)
 
@@ -371,7 +372,7 @@ def test_retry_queue_does_not_resend_removed_messages(
 @pytest.mark.parametrize("retry_interval_initial", [0.05])
 def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_initial: float):
     """ Ensure ``RetryQueue``s exit if they are idle for too long. """
-    retry_queue = mock_matrix._get_retrier(factories.HOP1)
+    retry_queue = mock_matrix._get_retrier(Address(factories.HOP1))
     idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
 
     with Timeout(idle_after + (retry_interval_initial * 5)):
@@ -383,7 +384,7 @@ def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_
     assert retry_queue._idle_since == RETRY_QUEUE_IDLE_AFTER
     assert retry_queue.is_idle
 
-    retry_queue_2 = mock_matrix._get_retrier(factories.HOP1)
+    retry_queue_2 = mock_matrix._get_retrier(Address(factories.HOP1))
 
     # Since the initial RetryQueue has exited `get_retrier()` must return a new instance
     assert retry_queue_2 is not retry_queue
@@ -394,11 +395,12 @@ def test_retryqueue_not_idle_with_messages(
     mock_matrix: MatrixTransport, retry_interval_initial: float
 ):
     """ Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue. """
-    retry_queue = mock_matrix._get_retrier(factories.HOP1)
+    retry_queue = mock_matrix._get_retrier(Address(factories.HOP1))
     idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
 
     queue_identifier = QueueIdentifier(
-        recipient=factories.HOP1, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
+        recipient=Address(factories.HOP1),
+        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
     retry_queue.enqueue(queue_identifier, make_message())
 
@@ -412,6 +414,6 @@ def test_retryqueue_not_idle_with_messages(
     assert retry_queue._idle_since == 0
     assert not retry_queue.is_idle
 
-    retry_queue_2 = mock_matrix._get_retrier(factories.HOP1)
+    retry_queue_2 = mock_matrix._get_retrier(Address(factories.HOP1))
     # The first queue has never become idle, therefore the same object must be returned
     assert retry_queue is retry_queue_2

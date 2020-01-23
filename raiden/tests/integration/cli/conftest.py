@@ -2,6 +2,7 @@ import os
 import sys
 from copy import copy
 from tempfile import mkdtemp
+from typing import Iterable
 
 import pexpect
 import pytest
@@ -21,7 +22,7 @@ def cli_tests_contracts_version() -> str:
 @pytest.fixture(scope="module")
 def raiden_testchain(
     blockchain_type: str, port_generator, cli_tests_contracts_version: str
-) -> Dict[str, Any]:
+) -> Iterable[Dict[str, Any]]:
     import time
 
     start_time = time.monotonic()
