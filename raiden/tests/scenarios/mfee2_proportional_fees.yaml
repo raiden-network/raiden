@@ -12,7 +12,7 @@ settings:
         deposit: true
 
 token:
-  address: "0x92a579CD0016BD677C4C38025F883C275102A96E"
+  address: "0x59105441977ecD9d805A4f5b060E34676F50F806"
   balance_fund: 1_000_000
 
 nodes:
@@ -27,14 +27,14 @@ nodes:
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
     flat-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
     proportional-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       # For every 1000 TKN transferred 10 TKN is paid as fee
       - 10_000
     proportional-imbalance-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
 
 ## This is the MFEE2 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks

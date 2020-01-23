@@ -13,7 +13,7 @@ settings:
         balance_per_node: 5000
 
 token:
-  address: "0x92a579CD0016BD677C4C38025F883C275102A96E"
+  address: "0x59105441977ecD9d805A4f5b060E34676F50F806"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
@@ -30,10 +30,10 @@ nodes:
     pathfinding-max-fee: 100
     enable-monitoring: true
     proportional-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
     proportional-imbalance-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
 
 ## This is the PFS9 scenario. It aims to make sure that the PFS reacts correctly to balance updates
@@ -108,7 +108,7 @@ scenario:
           tasks:
             - withdraw: {from: 4, to: 3, total_withdraw: 500_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount is updated after withdraw 
+            # Assert that correct amount is updated after withdraw
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, state: "opened"}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, state: "opened"}
@@ -122,7 +122,7 @@ scenario:
             - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 300_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount is updated after payment 
+            # Assert that correct amount is updated after payment
             - wait_blocks: 1
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, balance: 700_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 0, balance: 700_000_000_000_000_000, state: "opened"}

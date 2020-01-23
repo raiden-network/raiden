@@ -12,7 +12,7 @@ settings:
         deposit: true
 
 token:
-  address: "0x92a579CD0016BD677C4C38025F883C275102A96E"
+  address: "0x59105441977ecD9d805A4f5b060E34676F50F806"
   balance_min: 100_000_000_000_000_000_000
   balance_fund: 100_000_000_000_000_000_000
 
@@ -28,13 +28,13 @@ nodes:
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
     flat-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 100
     proportional-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 10_000  # 1% proportional fee
     proportional-imbalance-fee:
-      - "0x92a579CD0016BD677C4C38025F883C275102A96E"
+      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 20_000  # 2% imbalance fee on channel balance
     no-cap-mediation-fees: true
 
