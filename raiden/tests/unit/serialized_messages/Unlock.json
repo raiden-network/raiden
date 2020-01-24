@@ -1,0 +1,14 @@
+{
+    "chain_id": "337",
+    "channel_identifier": "1338",
+    "locked_amount": "0",
+    "locksroot": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+    "message_identifier": "1",
+    "nonce": "1",
+    "payment_identifier": "1",
+    "secret": "0x7365637265747365637265747365637265747365637265747365637265747365",
+    "signature": "0x765f22e214d06a6fbb3da00f5a0f4cabdeb4cf5907290ae67f416e9e99f37cf3535f63450884340c27b727d5aebdc454be3d43eb577f0161c31ef3530006a5601c",
+    "token_network_address": "0x6E6574776F726b6E6574776F726b6e6574776f72",
+    "transferred_amount": "50",
+    "type": "Unlock"
+}

@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,6 +18,12 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
+from raiden.utils.signer import LocalSigner
+
+# Required for test_message_identical. It would be better to have a set of
+# messages that don't depend on randomness for that test. But right now, we
+# don't have that.
+random.seed(1)
 
 message_factories = (
     factories.LockedTransferProperties(),
@@ -113,7 +120,7 @@ messages.append(
         canonical_identifier=factories.make_canonical_identifier(),
         updating_participant=factories.make_address(),
         fee_schedule=factories.create(factories.FeeScheduleStateProperties()),
-        timestamp=datetime.now(),
+        timestamp=datetime(2000, 1, 1),
         signature=factories.make_signature(),
     )
 )
@@ -260,6 +267,42 @@ def test_encoding_and_decoding():
         serialized = MessageSerializer.serialize(message)
         deserialized = MessageSerializer.deserialize(serialized)
         assert deserialized == message
+
+
+def test_message_identical() -> None:
+    """ Will fail if the messages changed since the committed version
+
+    If you intend to change the serialized messages, then update the messages
+    on disc (see comment inside test). This test exists only to prevent
+    accidental breaking of compatibility.
+
+    If many values change in unexpected ways, that might have to do with the
+    pseudo-random initialization of the messages (see random.seed() above).
+    """
+    signer = LocalSigner(bytes(range(32)))
+    for message in messages:
+        # The messages contain only random signatures. We don't want to test
+        # only the serialization itself, but also prevent accidental changes of
+        # the signature. To do this, we have to create proper signatures.
+        message.sign(signer)
+
+        filename = os.path.join(
+            os.path.dirname(__file__), "serialized_messages", message.__class__.__name__ + ".json"
+        )
+
+        # Uncomment this for one run if you intentionally changed the message
+        # with open(filename, "w") as f:
+        #     json_msg = MessageSerializer.serialize(message)
+        #     # pretty print for more readable diffs
+        #     json_msg = json.dumps(json.loads(json_msg), indent=4, sort_keys=True)
+        #     f.write(json_msg)
+
+        with open(filename) as f:
+            saved_message_dict = JSONSerializer.deserialize(f.read())
+
+        # The assert output is more readable when we used dicts than with plain JSON
+        message_dict = JSONSerializer.deserialize(MessageSerializer.serialize(message))
+        assert message_dict == saved_message_dict
 
 
 def test_hashing():

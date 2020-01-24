@@ -1,0 +1,32 @@
+{
+    "chain_id": "337",
+    "channel_identifier": "1338",
+    "initiator": "0x696e69746961746F72696E69746961746F72696e",
+    "lock": {
+        "amount": "50",
+        "expiration": "5",
+        "secrethash": "0xd4683a22c1ce39824d931eedc68ea8fa5259ceb03528b1a22f7075863ef8baf0"
+    },
+    "locked_amount": "50",
+    "locksroot": "0x07fe6255272aa923234b651199a2d7a277e3b1af3156f18c3bc0ba45d27fa380",
+    "message_identifier": "1",
+    "metadata": {
+        "routes": [
+            {
+                "route": [
+                    "0x77952Ce83Ca3cad9F7AdcFabeDA85Bd2F1f52008",
+                    "0x94622cC2A5b64a58C25A129d48a2bEEC4b65b779"
+                ]
+            }
+        ]
+    },
+    "nonce": "1",
+    "payment_identifier": "1",
+    "recipient": "0x7461726765747461726765747461726765747461",
+    "signature": "0x4136eebf7095249ac02c3e6cb3d55eaf0e6ab41a5f8b114b5fb173697be9d6056e18d291798760ed3d72a48c7fdd94fb5fd0400e9bc4e5bfa0cab6513c27f40f1c",
+    "target": "0x7461726765747461726765747461726765747461",
+    "token": "0x746F6b656E746F6b656E746f6b656e746f6B656e",
+    "token_network_address": "0x6E6574776F726b6E6574776F726b6e6574776f72",
+    "transferred_amount": "0",
+    "type": "LockedTransfer"
+}
