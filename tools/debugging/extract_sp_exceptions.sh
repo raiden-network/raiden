@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-SCENARIO_REMOTE_URL_1="http://68.183.70.168:8000/scenario-player/scenarios/"
-SCENARIO_REMOTE_URL_2="http://139.59.211.171:8000/scenario-player/scenarios/"
+SCENARIO_REMOTE_URL_1="http://scenario-player.ci.raiden.network/scenarios/"
+SCENARIO_REMOTE_URL_2="http://scenario-player2.ci.raiden.network/scenarios/"
 CURL_COMMAND="curl --silent"
 WGET_DIR="wget --no-parent --no-clobber --continue -nH -r"
 
