@@ -12,7 +12,7 @@ from raiden.exceptions import TransportError
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
-from raiden.network.transport.matrix.client import Room
+from raiden.network.transport.matrix.client import GMatrixHttpApi, Room
 from raiden.network.transport.matrix.transport import RETRY_QUEUE_IDLE_AFTER, _RetryQueue
 from raiden.network.transport.matrix.utils import UserAddressManager
 from raiden.settings import MatrixTransportConfig
@@ -222,6 +222,67 @@ def all_peers_reachable(monkeypatch):
     monkeypatch.setattr(
         UserAddressManager, "get_address_reachability", mock_get_address_reachability
     )
+
+
+@pytest.fixture(scope="session")
+def sync_filter_dict():
+    return {}
+
+
+@pytest.fixture
+def create_sync_filter_patch(monkeypatch, sync_filter_dict):
+    def mock_create_sync_filter(self, user_id, sync_filter):  # pylint: disable=unused-argument
+        count = len(sync_filter_dict)
+        sync_filter_dict[count] = sync_filter
+        return {"filter_id": count}
+
+    monkeypatch.setattr(GMatrixHttpApi, "create_filter", mock_create_sync_filter)
+
+
+@pytest.mark.parametrize(
+    "filter_params",
+    [
+        {
+            "broadcast_rooms": {
+                "!room1:server": Room(None, "!room1:server"),  # type: ignore
+                "!room2:server": Room(None, "!room2:server"),  # type: ignore
+            },
+            "limit": None,
+        },
+        {"broadcast_rooms": None, "limit": 0},
+        {
+            "broadcast_rooms": {
+                "!room1:server": Room(None, "!room1:server"),  # type: ignore
+                "!room2:server": Room(None, "!room2:server"),  # type: ignore
+            },
+            "limit": 10,
+        },
+    ],
+)
+@pytest.mark.usefixtures("create_sync_filter_patch")
+def test_create_sync_filter(mock_matrix, sync_filter_dict, filter_params):
+
+    broadcast_rooms = filter_params["broadcast_rooms"]
+    limit = filter_params["limit"]
+
+    filter_id = mock_matrix._client.create_sync_filter(
+        broadcast_rooms=broadcast_rooms, limit=limit
+    )
+
+    sync_filter = sync_filter_dict[filter_id]
+
+    if broadcast_rooms and not limit:
+        assert "room" in sync_filter
+        assert "presence" in sync_filter
+        assert set(sync_filter["room"]["not_rooms"]) == set(broadcast_rooms.keys())
+        assert "timeline" not in sync_filter["room"]
+    if limit and not broadcast_rooms:
+        assert "room" in sync_filter
+        assert sync_filter["room"]["timeline"]["limit"] == limit
+        assert "presence" not in sync_filter
+    if limit and broadcast_rooms:
+        assert "timeline" in sync_filter["room"]
+        assert "not_rooms" in sync_filter["room"]
 
 
 @pytest.fixture

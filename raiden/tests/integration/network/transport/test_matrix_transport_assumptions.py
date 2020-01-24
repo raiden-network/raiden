@@ -250,9 +250,12 @@ def test_assumption_matrix_returns_same_id_for_same_filter_payload(chain_id, loc
 
     assert client._sync_filter_id is None
 
-    client.create_sync_filter(broadcast_rooms={broadcast_room.name: broadcast_room})
-    current_sync_filter_id = client._sync_filter_id
+    first_sync_filter_id = client.create_sync_filter(
+        broadcast_rooms={broadcast_room.name: broadcast_room}
+    )
 
     # Try again and make sure the filter has the same ID
-    client.create_sync_filter(broadcast_rooms={broadcast_room.name: broadcast_room})
-    assert client._sync_filter_id == current_sync_filter_id
+    second_sync_filter_id = client.create_sync_filter(
+        broadcast_rooms={broadcast_room.name: broadcast_room}
+    )
+    assert first_sync_filter_id == second_sync_filter_id

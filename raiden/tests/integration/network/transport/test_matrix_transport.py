@@ -1200,13 +1200,12 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
     pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
     pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
 
-    transport1._client._sync_filter_id = None
-
     # Reset transport2 sync filter identifier so that
     # we can receive broadcast messages
+    sync_iteration_during_filter_reset2 = transport2._client.sync_iteration
     assert transport2._client._sync_filter_id is not None
-    transport2._client._sync_filter_id = None
-
+    transport2._client.set_sync_filter_id(None)
+    transport2._client.synced.wait()
     # Send another message to the broadcast room, if transport1 listens on the room it will
     # throw an exception
     message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
@@ -1214,10 +1213,12 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
     pfs_broadcast_room_t0.send_text(message_text)
 
     with Timeout(matrix_sync_timeout + 2):
-        sync_iteration = transport2._client.sync_iteration
-        while sync_iteration == transport2._client.sync_iteration:
+        # The transport needs to wait for sync request initiated AFTER the change of the filter
+        # Otherwise the filter does not become effective
+        while transport2._client.sync_iteration <= sync_iteration_during_filter_reset2 + 1:
             gevent.joinall({transport2.greenlet}, timeout=0.1, raise_error=True)
 
+        # No filter changed for transport1 -> wait only for current sync
         sync_iteration = transport1._client.sync_iteration
         while sync_iteration == transport1._client.sync_iteration:
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)

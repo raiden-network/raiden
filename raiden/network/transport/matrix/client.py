@@ -1,5 +1,4 @@
 import itertools
-import json
 import time
 from datetime import datetime
 from functools import wraps
@@ -29,7 +28,6 @@ from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.typing import AddressHex
 
 log = structlog.get_logger(__name__)
-
 
 SHUTDOWN_TIMEOUT = 35
 MSG_QUEUE_MAX_SIZE = 10  # This are matrix sync batches, not messages
@@ -206,7 +204,6 @@ class GMatrixHttpApi(MatrixHttpApi):
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
 
-    sync_filter: str
     sync_worker: Optional[Greenlet] = None
     message_worker: Optional[Greenlet] = None
     last_sync: float = float("inf")
@@ -251,31 +248,42 @@ class GMatrixClient(MatrixClient):
         # Gets incremented every time a sync loop is completed. This is useful since the sync token
         # can remain constant over multiple loops (if no events occur).
         self.sync_iteration = 0
-
         self._sync_filter_id: Optional[int] = None
 
-    def create_sync_filter(self, broadcast_rooms: Dict[str, Room]) -> None:
-        ignore_rooms = [room.room_id for room in broadcast_rooms.values()]
-        filter_params = {
-            "room": {
-                # Filter out all room state events / messages from broadcast rooms
-                "not_rooms": ignore_rooms,
-                # Ignore "message recipts" from all rooms
-                "ephemeral": {"not_types": ["m.receipt"]},
-            },
-            # Get all presence updates
-            "presence": {"types": ["m.presence"]},
-        }
+    def create_sync_filter(
+        self, broadcast_rooms: Optional[Dict[str, Room]] = None, limit: Optional[int] = None
+    ) -> Optional[int]:
+        broadcast_room_filter: Dict[str, Any] = {"room": {}}
+        limit_filter: Dict[str, Any] = {"room": {}}
+        if broadcast_rooms:
+            ignore_rooms = [room.room_id for room in broadcast_rooms.values()]
+            broadcast_room_filter = {
+                "room": {
+                    # Filter out all room state events / messages from broadcast rooms
+                    "not_rooms": ignore_rooms,
+                    # Ignore "message receipts" from all rooms
+                    "ephemeral": {"not_types": ["m.receipt"]},
+                },
+                # Get all presence updates
+                "presence": {"types": ["m.presence"]},
+            }
+        if limit is not None:
+            limit_filter = {"room": {"timeline": {"limit": limit}}}
+
+        room_filter = {**(broadcast_room_filter["room"]), **(limit_filter["room"])}
+        sync_filter = {**broadcast_room_filter, **limit_filter}
+        sync_filter["room"] = room_filter
 
         filter_id = None
         try:
             # 0 is a valid filter ID
-            filter_response = self.api.create_filter(self.user_id, filter_params)
+            filter_response = self.api.create_filter(self.user_id, sync_filter)
             filter_id = filter_response.get("filter_id")
+            log.debug("Sync Filter Created", filter_id=filter_id, filter=sync_filter)
         except MatrixRequestError:
-            log.error(f"Failed to create filter: {filter_params} for user {self.user_id}")
+            log.error(f"Failed to create filter: {sync_filter} for user {self.user_id}")
 
-        self._sync_filter_id = filter_id
+        return filter_id
 
     def listen_forever(
         self,
@@ -575,7 +583,7 @@ class GMatrixClient(MatrixClient):
                 )
                 return
 
-            # Iterating over the Queue and adding to a separted list to
+            # Iterating over the Queue and adding to a separated list to
             # implement delivery at-least-once semantics. At-most-once would
             # also be acceptable because of message retries, however it has the
             # potential of introducing latency.
@@ -684,14 +692,11 @@ class GMatrixClient(MatrixClient):
         self.user_id = user_id
         self.token = self.api.token = token
 
-    def set_sync_limit(self, limit: Optional[int]) -> Optional[int]:
+    def set_sync_filter_id(self, sync_filter_id: Optional[int]) -> Optional[int]:
         """ Sets the events limit per room for sync and return previous limit """
-        try:
-            prev_limit = json.loads(self.sync_filter)["room"]["timeline"]["limit"]
-        except (json.JSONDecodeError, KeyError):
-            prev_limit = None
-        self.sync_filter = json.dumps({"room": {"timeline": {"limit": limit}}})
-        return prev_limit
+        prev_id = self._sync_filter_id
+        self._sync_filter_id = sync_filter_id
+        return prev_id
 
 
 # Monkey patch matrix User class to provide nicer repr

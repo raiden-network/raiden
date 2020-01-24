@@ -375,7 +375,6 @@ class MatrixTransport(Runnable):
         )
 
         self._address_to_room_ids: Dict[Address, List[_RoomID]] = defaultdict(list)
-
         self._client.add_invite_listener(self._handle_invite)
 
         # Forbids concurrent room creation.
@@ -437,7 +436,10 @@ class MatrixTransport(Runnable):
         self._initialize_room_inventory()
         self._initialize_broadcast_rooms()
 
-        self._client.create_sync_filter(self._broadcast_rooms)
+        broadcast_filter_id = self._client.create_sync_filter(
+            broadcast_rooms=self._broadcast_rooms
+        )
+        self._client.set_sync_filter_id(broadcast_filter_id)
 
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
@@ -755,11 +757,12 @@ class MatrixTransport(Runnable):
         # the messages themselves should not be processed because the room
         # callbacks are not installed yet (this is done below). The sync limit
         # prevents fetching the messages.
-        prev_sync_limit = self._client.set_sync_limit(0)
+        filter_id = self._client.create_sync_filter(limit=0)
+        prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
         self._client._sync(timeout_ms=0, latency_ms=30_000)
-        self._client.set_sync_limit(prev_sync_limit)
+        self._client.set_sync_filter_id(prev_sync_filter_id)
         # Process the result from the sync executed above
         response_queue = self._client.response_queue
 
