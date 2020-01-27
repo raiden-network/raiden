@@ -87,6 +87,7 @@ class Runnable:
                 self.greenlets.remove(greenlet)
 
         greenlet = Greenlet(func, *args, **kwargs)
+        greenlet.name = f"Greenlet<fn:{func.__name__}>"
         greenlet.link_exception(self.on_error)
         greenlet.link_value(on_success)
         self.greenlets.append(greenlet)

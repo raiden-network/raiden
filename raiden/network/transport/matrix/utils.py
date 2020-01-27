@@ -42,6 +42,7 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
+from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
@@ -687,7 +688,8 @@ def sort_servers_closest(
         raise TransportError("Invalid server urls")
 
     rtt_greenlets = set(
-        gevent.spawn(
+        spawn_named(
+            "get_average_http_response_time",
             get_average_http_response_time,
             url=server_url,
             samples=samples_per_server,
