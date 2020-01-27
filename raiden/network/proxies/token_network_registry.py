@@ -188,12 +188,6 @@ class TokenNetworkRegistry:
                     "should be larger than zero."
                 )
 
-            if settlement_timeout_min == 0:
-                raise BrokenPreconditionError(
-                    "The minimum settlement timeout for the token network "
-                    "should be larger than zero."
-                )
-
             if settlement_timeout_max <= settlement_timeout_min:
                 raise BrokenPreconditionError(
                     "The maximum settlement timeout for the token network "
@@ -312,12 +306,6 @@ class TokenNetworkRegistry:
                         "should be larger than zero."
                     )
 
-                if settlement_timeout_min == 0:
-                    raise RaidenUnrecoverableError(
-                        "The minimum settlement timeout for the token network "
-                        "should be larger than zero."
-                    )
-
                 if settlement_timeout_max <= settlement_timeout_min:
                     raise RaidenUnrecoverableError(
                         "The maximum settlement timeout for the token network "
@@ -407,12 +395,6 @@ class TokenNetworkRegistry:
             if secret_registry_address == NULL_ADDRESS_BYTES:
                 raise RaidenUnrecoverableError(
                     "The secret registry address for the token network is invalid."
-                )
-
-            if settlement_timeout_min == 0:
-                raise RaidenUnrecoverableError(
-                    "The minimum settlement timeout for the token network "
-                    "should be larger than zero."
                 )
 
             if settlement_timeout_min == 0:
