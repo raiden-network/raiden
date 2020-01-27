@@ -5,7 +5,7 @@ from typing import Dict
 
 import pytest
 from eth_typing import HexStr
-from eth_utils import remove_0x_prefix
+from eth_utils import keccak, remove_0x_prefix
 
 from raiden.constants import Environment
 from raiden.network.utils import get_free_port
@@ -14,7 +14,6 @@ from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
-from raiden.utils.signing import sha3
 from raiden.utils.typing import TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
@@ -205,7 +204,7 @@ def private_keys(number_of_nodes, privatekey_seed):
 
     # Note: The fixtures depend on the order of the private keys
     result = [
-        sha3(privatekey_seed.format(position).encode()) for position in range(number_of_nodes)
+        keccak(privatekey_seed.format(position).encode()) for position in range(number_of_nodes)
     ]
 
     # this must not happen, otherwise the keys and addresses will be equal!
@@ -216,7 +215,7 @@ def private_keys(number_of_nodes, privatekey_seed):
 
 @pytest.fixture
 def deploy_key(privatekey_seed):
-    return sha3(privatekey_seed.format("deploykey").encode())
+    return keccak(privatekey_seed.format("deploykey").encode())
 
 
 @pytest.fixture(scope="session")
@@ -254,7 +253,7 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
     raiden's private key.
     """
     return [
-        sha3(blockchain_key_seed.format(position).encode())
+        keccak(blockchain_key_seed.format(position).encode())
         for position in range(blockchain_number_of_nodes)
     ]
 

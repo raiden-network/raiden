@@ -2,6 +2,8 @@ import random
 from dataclasses import replace
 from hashlib import sha256
 
+from eth_utils import keccak
+
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
@@ -43,7 +45,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.copy import deepcopy
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
-from raiden.utils.signing import sha3
 from raiden.utils.typing import BlockExpiration, TokenAmount
 
 
@@ -52,7 +53,7 @@ def _channel_and_transfer(num_pending_locks):
     partner_model, privkey = create_model(700, num_pending_locks)
     reverse_channel_state = create_channel_from_models(partner_model, our_model, privkey)
 
-    lock_secret = sha3(b"some secret seed")
+    lock_secret = keccak(b"some secret seed")
     lock = HashTimeLockState(30, 10, sha256(lock_secret).digest())
 
     mediated_transfer = make_receive_transfer_mediated(
@@ -293,15 +294,15 @@ def test_get_secret():
         end_state,
         secrethashes_to_lockedlocks={secrethash3: lock_state},
         secrethashes_to_unlockedlocks={
-            sha3(secret1): UnlockPartialProofState(lock=lock_state, secret=secret1)
+            keccak(secret1): UnlockPartialProofState(lock=lock_state, secret=secret1)
         },
         secrethashes_to_onchain_unlockedlocks={
-            sha3(secret2): UnlockPartialProofState(lock=lock_state, secret=secret2)
+            keccak(secret2): UnlockPartialProofState(lock=lock_state, secret=secret2)
         },
     )
 
-    assert get_secret(end_state, sha3(secret1)) == secret1  # known secret from offchain unlock
-    assert get_secret(end_state, sha3(secret2)) == secret2  # known secret from offchain unlock
+    assert get_secret(end_state, keccak(secret1)) == secret1  # known secret from offchain unlock
+    assert get_secret(end_state, keccak(secret2)) == secret2  # known secret from offchain unlock
     assert get_secret(end_state, secrethash3) is None  # known lock but not unlocked yet
     assert get_secret(end_state, secrethash4) is None  # unknown secrethash
 

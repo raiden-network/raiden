@@ -2,7 +2,8 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any, overload
 
-from eth_hash.auto import keccak
+import eth_hash.auto as eth_hash
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages.abstract import SignedRetrieableMessage
@@ -20,7 +21,6 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.predicates import ishash
-from raiden.utils.signing import sha3
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -140,7 +140,7 @@ class Lock:
     # FIXME: is this used?
     @property
     def lockhash(self) -> bytes:
-        return sha3(self.as_bytes)
+        return keccak(self.as_bytes)
 
     @classmethod
     def from_bytes(cls, serialized: bytes) -> "Lock":
@@ -302,7 +302,7 @@ class Unlock(EnvelopeMessage):
 
     @property
     def message_hash(self) -> bytes:
-        return keccak(
+        return eth_hash.keccak(
             bytes([self.cmdid.value])
             + self.message_identifier.to_bytes(8, byteorder="big")
             + self.payment_identifier.to_bytes(8, byteorder="big")
@@ -452,7 +452,7 @@ class LockedTransfer(LockedTransferBase):
     @property
     def message_hash(self) -> bytes:
         metadata_hash = (self.metadata and self.metadata.hash) or b""
-        return sha3(self._packed_data() + metadata_hash)
+        return keccak(self._packed_data() + metadata_hash)
 
 
 @dataclass(repr=False, eq=False)
@@ -469,7 +469,7 @@ class RefundTransfer(LockedTransferBase):
 
     @property
     def message_hash(self) -> bytes:
-        return sha3(self._packed_data())
+        return keccak(self._packed_data())
 
 
 @dataclass(repr=False, eq=False)
@@ -516,7 +516,7 @@ class LockExpired(EnvelopeMessage):
 
     @property
     def message_hash(self) -> bytes:
-        return keccak(
+        return eth_hash.keccak(
             bytes([self.cmdid.value])
             + self.message_identifier.to_bytes(8, byteorder="big")
             + self.recipient

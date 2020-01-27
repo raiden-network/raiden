@@ -5,6 +5,7 @@ from typing import NamedTuple
 from unittest.mock import patch
 
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.raiden_service import initiator_init
@@ -71,7 +72,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import typing
 from raiden.utils.copy import deepcopy
-from raiden.utils.signing import sha3
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     Address,
@@ -1960,7 +1960,7 @@ def test_initiator_init():
             transfer_identifier=1,
             transfer_amount=PaymentAmount(100),
             transfer_secret=secret,
-            transfer_secrethash=sha3(secret),
+            transfer_secrethash=keccak(secret),
             token_network_address=factories.make_token_network_address(),
             target_address=factories.make_address(),
         )

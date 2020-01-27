@@ -1,4 +1,5 @@
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages.healthcheck import Ping
@@ -10,7 +11,6 @@ from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.utils.packing import pack_balance_proof, pack_reward_proof, pack_signed_balance_proof
 from raiden.utils.signer import LocalSigner, recover
-from raiden.utils.signing import sha3
 from raiden.utils.typing import MonitoringServiceAddress, TokenAmount
 from raiden_contracts.constants import MessageTypeId
 
@@ -58,7 +58,9 @@ def test_request_monitoring() -> None:
     direct_created.sign(signer)
     # Instances created from same balance proof are equal
     assert direct_created == request_monitoring
-    other_balance_proof = factories.create(factories.replace(properties, message_hash=sha3(b"2")))
+    other_balance_proof = factories.create(
+        factories.replace(properties, message_hash=keccak(b"2"))
+    )
     other_instance = RequestMonitoring.from_balance_proof_signed_state(
         balance_proof=other_balance_proof,
         non_closing_participant=ADDRESS,

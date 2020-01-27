@@ -5,6 +5,7 @@ from hashlib import sha256
 from itertools import cycle
 
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.messages.decode import balanceproof_from_envelope
@@ -86,7 +87,6 @@ from raiden.utils.copy import deepcopy
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
-from raiden.utils.signing import sha3
 from raiden.utils.typing import EncodedData, LockedAmount
 
 PartnerStateModel = namedtuple(
@@ -208,7 +208,7 @@ def test_new_end_state():
     node_address = make_address()
     end_state = NettingChannelEndState(node_address, balance1)
 
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
 
     assert channel.is_lock_pending(end_state, lock_secrethash) is False
@@ -379,7 +379,7 @@ def test_channelstate_send_lockedtransfer():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
 
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
@@ -437,7 +437,7 @@ def test_channelstate_receive_lockedtransfer():
     # - The lock must be registered with the sender end
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -883,7 +883,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
 
     lock = HashTimeLockState(
@@ -942,7 +942,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(b"test_regression_must_update_balanceproof_remove_expired_lock")
+    lock_secret = keccak(b"test_regression_must_update_balanceproof_remove_expired_lock")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
@@ -1008,7 +1008,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(
+    lock_secret = keccak(
         b"test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain"
     )
     lock_secrethash = sha256(lock_secret).digest()
@@ -1132,7 +1132,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
     secret_reveal_block_number = block_number - 5
 
     lock_amount = 10
-    lock_secret = sha3(b"test_channel_rejects_onchain_secret_reveal_with_expired_locks")
+    lock_secret = keccak(b"test_channel_rejects_onchain_secret_reveal_with_expired_locks")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
@@ -1193,7 +1193,7 @@ def test_receive_lockedtransfer_before_deposit():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -1285,7 +1285,7 @@ def test_channelstate_unlock_unlocked_onchain():
 
     lock_amount = 10
     lock_expiration = 100
-    lock_secret = sha3(b"test_channelstate_lockedtransfer_overspent")
+    lock_secret = keccak(b"test_channelstate_lockedtransfer_overspent")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -1395,7 +1395,7 @@ def test_update_must_be_called_if_close_lost_race():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_update_must_be_called_if_close_lost_race")
+    lock_secret = keccak(b"test_update_must_be_called_if_close_lost_race")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -1531,7 +1531,7 @@ def test_valid_lock_expired_for_unlocked_lock():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(b"test_valid_lock_expired_for_unlocked_lock")
+    lock_secret = keccak(b"test_valid_lock_expired_for_unlocked_lock")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash

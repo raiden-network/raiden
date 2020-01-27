@@ -1,3 +1,5 @@
+from eth_utils import keccak
+
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.synchronization import Processed
 from raiden.tests.utils import factories
@@ -7,9 +9,8 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.state_change import ActionCancelPayment, Block
-from raiden.utils.signing import sha3
 
-ADDRESS = sha3(b"foo")[:20]
+ADDRESS = keccak(b"foo")[:20]
 SECRET = b"secret"
 
 
@@ -36,10 +37,10 @@ def test_transfer_statechange_operators():
 
 
 def test_event_operators():
-    a = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b"target"), b"0", [])
-    b = EventPaymentSentSuccess(1, 4, 2, 5, sha3(b"target"), b"0", [])
-    c = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b"target"), b"0", [])
-    d = EventPaymentSentSuccess(2, 7, 3, 4, sha3(b"differenttarget"), b"0", [])
+    a = EventPaymentSentSuccess(1, 4, 2, 5, keccak(b"target"), b"0", [])
+    b = EventPaymentSentSuccess(1, 4, 2, 5, keccak(b"target"), b"0", [])
+    c = EventPaymentSentSuccess(2, 7, 3, 4, keccak(b"target"), b"0", [])
+    d = EventPaymentSentSuccess(2, 7, 3, 4, keccak(b"differenttarget"), b"0", [])
 
     # pylint: disable=unneeded-not
     assert a == b
@@ -57,10 +58,10 @@ def test_event_operators():
     assert a != c
     assert not a == c
 
-    a = EventPaymentReceivedSuccess(4, 4, 2, 5, sha3(b"initiator"))
-    b = EventPaymentReceivedSuccess(4, 4, 2, 5, sha3(b"initiator"))
-    c = EventPaymentReceivedSuccess(1, 2, 3, 5, sha3(b"initiator"))
-    d = EventPaymentReceivedSuccess(1, 2, 3, 5, sha3(b"other initiator"))
+    a = EventPaymentReceivedSuccess(4, 4, 2, 5, keccak(b"initiator"))
+    b = EventPaymentReceivedSuccess(4, 4, 2, 5, keccak(b"initiator"))
+    c = EventPaymentReceivedSuccess(1, 2, 3, 5, keccak(b"initiator"))
+    d = EventPaymentReceivedSuccess(1, 2, 3, 5, keccak(b"other initiator"))
 
     assert a == b
     assert not a != b

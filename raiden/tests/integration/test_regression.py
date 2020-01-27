@@ -1,5 +1,6 @@
 import gevent
 import pytest
+from eth_utils import keccak
 
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
@@ -21,7 +22,6 @@ from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_un
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
-from raiden.utils.signing import sha3
 from raiden.utils.typing import (
     BlockExpiration,
     InitiatorAddress,
@@ -224,7 +224,7 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
 
     secret_registry = proxy_manager.secret_registry(secret_registry_address, "latest")
 
-    secret = sha3(b"test_regression_register_secret_once")
+    secret = keccak(b"test_regression_register_secret_once")
     secret_registry.register_secret(secret=secret)
 
     previous_nonce = proxy_manager.client._available_nonce
