@@ -96,6 +96,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.utils.formatting import lpex, to_checksum_address
+from raiden.utils.gevent import spawn_named
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.secrethash import sha256_secrethash
@@ -807,7 +808,7 @@ class RaidenService(Runnable):
             This is spawning a new greenlet for /each/ transaction. It's
             therefore /required/ that there is *NO* order among these.
         """
-        return gevent.spawn(self._handle_event, chain_state, raiden_event)
+        return spawn_named("rs-handle_event", self._handle_event, chain_state, raiden_event)
 
     def _handle_event(self, chain_state: ChainState, raiden_event: RaidenEvent) -> None:
         assert isinstance(chain_state, ChainState)

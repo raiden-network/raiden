@@ -40,6 +40,7 @@ class BlockTimeout:  # pragma: no unittest
             self.block_number,
             self.retry_timeout,
         )
+        self._task.name = "timout_task"
 
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         if self._task:

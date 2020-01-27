@@ -20,6 +20,7 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import Port, TokenAddress
 
+from ..utils.gevent import spawn_named
 from .app import run_app
 from .config import dump_cmd_options, dump_module
 
@@ -115,11 +116,16 @@ class NodeRunner:
 
             gevent_tasks.append(console)
 
-        gevent_tasks.append(gevent.spawn(check_version, get_system_spec()["raiden"]))
-        gevent_tasks.append(gevent.spawn(check_gas_reserve, app.raiden))
         gevent_tasks.append(
-            gevent.spawn(
-                check_network_id, app.raiden.rpc_client.chain_id, app.raiden.rpc_client.web3
+            spawn_named("check_version", check_version, get_system_spec()["raiden"])
+        )
+        gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, app.raiden))
+        gevent_tasks.append(
+            spawn_named(
+                "check_network_id",
+                check_network_id,
+                app.raiden.rpc_client.chain_id,
+                app.raiden.rpc_client.web3,
             )
         )
 
@@ -127,7 +133,9 @@ class NodeRunner:
             self._options["pathfinding_service_address"] or self._options["enable_monitoring"]
         )
         if spawn_user_deposit_task:
-            gevent_tasks.append(gevent.spawn(check_rdn_deposits, app.raiden, app.user_deposit))
+            gevent_tasks.append(
+                spawn_named("check_rdn_deposits", check_rdn_deposits, app.raiden, app.user_deposit)
+            )
 
         self._startup_hook()
 

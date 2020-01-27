@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING
 
-import gevent
-
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state_change import (
@@ -9,6 +7,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveRouteNew,
 )
+from raiden.utils.gevent import spawn_named
 from raiden.utils.typing import MYPY_ANNOTATION
 
 if TYPE_CHECKING:
@@ -25,7 +24,7 @@ def after_new_route_join_network(
     connection_manager = raiden.connection_manager_for_token_network(
         channelnew.token_network_address
     )
-    retry_connect = gevent.spawn(connection_manager.retry_connect)
+    retry_connect = spawn_named("cm-retry_connect", connection_manager.retry_connect)
     raiden.add_pending_greenlet(retry_connect)
 
 
@@ -57,7 +56,8 @@ def after_new_deposit_join_network(
             state_change.canonical_identifier.token_network_address
         )
 
-        join_channel = gevent.spawn(
+        join_channel = spawn_named(
+            "cm-join_channel",
             connection_manager.join_channel,
             our_address,
             state_change.deposit_transaction.contract_balance,

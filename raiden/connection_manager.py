@@ -27,6 +27,7 @@ from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.utils import typing
 from raiden.utils.formatting import to_checksum_address
+from raiden.utils.gevent import spawn_named
 from raiden.utils.typing import (
     Address,
     TokenAddress,
@@ -463,7 +464,10 @@ class ConnectionManager:  # pragma: no unittest
             num_greenlets=len(join_partners),
         )
 
-        greenlets = set(gevent.spawn(self._join_partner, partner) for partner in join_partners)
+        greenlets = set(
+            spawn_named(f"cm-join_partner-{partner}", self._join_partner, partner)
+            for partner in join_partners
+        )
         gevent.joinall(greenlets, raise_error=True)
         return True
 
