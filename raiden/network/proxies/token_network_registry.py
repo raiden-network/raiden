@@ -338,7 +338,8 @@ class TokenNetworkRegistry:
                 # At this point, the TokenNetworkRegistry fails to instantiate
                 # a new TokenNetwork.
                 raise RaidenUnrecoverableError(
-                    "createERC20TokenNetwork failed for an unknown reason"
+                    "createERC20TokenNetwork failed for an unknown reason, even "
+                    "though the gas estimation succeeded."
                 )
 
             token_network_address = self.get_token_network(token_address, receipt["blockHash"])
@@ -457,7 +458,9 @@ class TokenNetworkRegistry:
 
             # At this point, the TokenNetworkRegistry fails to instantiate
             # a new TokenNetwork.
-            raise RaidenUnrecoverableError("createERC20TokenNetwork failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                "gas estimation for createERC20TokenNetwork failed for an unknown reason"
+            )
         return token_network_address
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
