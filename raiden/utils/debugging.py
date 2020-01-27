@@ -120,10 +120,9 @@ class Idle:
                 IdleMeasurement(self.before_poll, curr_time)
             )
 
-            while (
-                self.measurements
-                and curr_time - self.measurements_start > self.measurement_interval
-            ):
+            # keep at least one measurement, this will tell if the code is
+            # blocking for an extended period of time.
+            while len(self.measurements) > 1 and self.running_interval > self.measurement_interval:
                 self.measurements.pop()  # pylint: disable=no-member
 
         if curr_time - self.last_print >= self.measurement_interval:
@@ -173,11 +172,22 @@ class Idle:
     def log(self) -> None:
         if not self.measurements:
             log.debug(
-                "Idle", context_switches=self.context_switches, measurements=self.measurements
+                "No idle data",
+                context_switches=self.context_switches,
+                measurements=self.measurements,
             )
             return
+
+        is_blocking = (
+            len(self.measurements) == 1 and self.running_interval > self.measurement_interval
+        )
+        if is_blocking:
+            msg = "Blocking function, there is not a lot of idle time"
+        else:
+            msg = "Idle"
+
         log.debug(
-            "Idle",
+            msg,
             start=self.measurements_start,
             context_switches=self.context_switches,
             idled=self.idled,
