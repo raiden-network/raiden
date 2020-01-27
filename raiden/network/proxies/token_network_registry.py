@@ -422,7 +422,7 @@ class TokenNetworkRegistry:
 
             if deprecation_executor == NULL_ADDRESS_BYTES:
                 raise RaidenUnrecoverableError(
-                    "The deprecation executor property for the " "TokenNetworkRegistry is invalid."
+                    "The deprecation executor property for the TokenNetworkRegistry is invalid."
                 )
 
             if chain_id == 0:
