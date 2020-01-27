@@ -353,7 +353,7 @@ def setup_raiden(
         token_address=TokenAddress(to_canonical_address(token.contract.address)),
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
-        block_identifier=confirmed_block_identifier,
+        given_block_identifier=confirmed_block_identifier,
     )
 
     print_step("Setting up Raiden")

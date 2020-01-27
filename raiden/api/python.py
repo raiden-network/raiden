@@ -275,7 +275,7 @@ class RaidenAPI:  # pragma: no unittest
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,
-            block_identifier=chainstate.block_hash,
+            given_block_identifier=chainstate.block_hash,
         )
 
         waiting.wait_for_token_network(

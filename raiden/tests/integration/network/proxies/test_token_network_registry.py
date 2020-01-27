@@ -54,7 +54,7 @@ def test_token_network_registry(
             token_address=bad_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier=confirmed_block_identifier,
+            given_block_identifier=confirmed_block_identifier,
         )
 
     test_token = deploy_token(
@@ -77,7 +77,7 @@ def test_token_network_registry(
                 token_address=test_token_address,
                 channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
                 token_network_deposit_limit=TokenAmount(UINT256_MAX),
-                block_identifier=deploy_client.get_confirmed_blockhash(),
+                given_block_identifier=deploy_client.get_confirmed_blockhash(),
             )
 
     # Register a valid token
@@ -86,7 +86,7 @@ def test_token_network_registry(
         token_address=test_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
-        block_identifier=preblockhash,
+        given_block_identifier=preblockhash,
     )
     assert token_network_address
     assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 1
@@ -98,7 +98,7 @@ def test_token_network_registry(
             token_address=test_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier=preblockhash,
+            given_block_identifier=preblockhash,
         )
 
     logs = token_network_registry_proxy.filter_token_added_events()
@@ -167,7 +167,7 @@ def test_token_network_registry_with_zero_token_address(
             token_address=NULL_ADDRESS_BYTES,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier=deploy_client.get_confirmed_blockhash(),
+            given_block_identifier=deploy_client.get_confirmed_blockhash(),
         )
 
 
@@ -208,7 +208,7 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
         token_address=first_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
-        block_identifier=preblockhash,
+        given_block_identifier=preblockhash,
     )
 
     test_token = deploy_token(
@@ -230,5 +230,5 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
             token_address=second_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier=preblockhash,
+            given_block_identifier=preblockhash,
         )
