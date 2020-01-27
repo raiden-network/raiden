@@ -27,7 +27,7 @@ nodes:
   default_options:
     gas-price: fast
     environment-type: development
-    #default-settle-timeout: 40
+    default-settle-timeout: 40
     default-reveal-timeout: 20
     proportional-fee:
       - "0x59105441977ecD9d805A4f5b060E34676F50F806"
