@@ -10,7 +10,7 @@ from raiden.messages.metadata import RouteMetadata
 from raiden.network.pathfinding import PFSConfig, query_paths
 from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer import channel, views
-from raiden.transfer.state import ChainState, ChannelState, RouteState
+from raiden.transfer.state import ChainState, ChannelState, NetworkState, RouteState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
@@ -67,6 +67,7 @@ def get_best_routes(
     error_closed = 0
     error_no_route = 0
     error_no_capacity = 0
+    error_not_online = 0
     error_direct = None
     shortest_routes: List[Neighbour] = list()
 
@@ -121,8 +122,14 @@ def get_best_routes(
                     channel_state.our_state, channel_state.partner_state
                 )
 
+                network_status = views.get_node_network_status(
+                    chain_state, channel_state.partner_state.address
+                )
+
                 if distributable < amount:
                     error_no_capacity += 1
+                elif network_status != NetworkState.REACHABLE:
+                    error_not_online += 1
                 else:
                     nonrefundable = amount > channel.get_distributable(
                         channel_state.partner_state, channel_state.our_state
@@ -147,9 +154,10 @@ def get_best_routes(
         error_msg = (
             f"None of the existing channels could be used to complete the "
             f"transfer. From the {qty_channels} existing channels. "
-            f"{error_closed} are closed. {error_no_route} don't have a route to "
-            f"the target in the given token network. {error_no_capacity} don't "
-            f"have enough capacity for the requested transfer."
+            f"{error_closed} are closed. {error_not_online} are not online. "
+            f"{error_no_route} don't have a route to the target in the given "
+            f"token network. {error_no_capacity} don't have enough capacity for "
+            f"the requested transfer."
         )
         if error_direct is not None:
             error_msg += "direct channel {error_direct}."
@@ -162,6 +170,7 @@ def get_best_routes(
             error_no_route=error_no_route,
             error_no_capacity=error_no_capacity,
             error_direct=error_direct,
+            error_not_online=error_not_online,
         )
         return (error_msg, list(), None)
 
