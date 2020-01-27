@@ -232,7 +232,7 @@ scenario:
                 event_args: {closing_participant: 0}
             - assert: {from: 0, to: 4, state: "closed"}
             # Make sure that channel between 0 and 4 is also settled
-            - wait_blocks: 500
+            - wait_blocks: 40
       - serial:
           name: "Close channel between 3 and 4 while 4 is offline"
           tasks:
@@ -248,7 +248,7 @@ scenario:
                 event_args: {closing_participant: 3}
 
             ## The MS reacts within the settle_timeout
-            - wait_blocks: 500
+            - wait_blocks: 40
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "NonClosingBalanceProofUpdated"

@@ -84,7 +84,7 @@ scenario:
           name: "Wait for MS to not react"
           tasks:
             # The MS reacts within the settle_timeout
-            - wait_blocks: 500
+            - wait_blocks: 40
             # Note that 0 events are expected
             - assert_events:
                 contract_name: "TokenNetwork"
