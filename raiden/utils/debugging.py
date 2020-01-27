@@ -120,7 +120,10 @@ class Idle:
                 IdleMeasurement(self.before_poll, curr_time)
             )
 
-            while curr_time - self.measurements_start > self.measurement_interval:
+            while (
+                self.measurements
+                and curr_time - self.measurements_start > self.measurement_interval
+            ):
                 self.measurements.pop()  # pylint: disable=no-member
 
         if curr_time - self.last_print >= self.measurement_interval:
@@ -168,6 +171,11 @@ class Idle:
         return len(IDLE.measurements)
 
     def log(self) -> None:
+        if not self.measurements:
+            log.debug(
+                "Idle", context_switches=self.context_switches, measurements=self.measurements
+            )
+            return
         log.debug(
             "Idle",
             start=self.measurements_start,
