@@ -8,7 +8,6 @@ from raiden.transfer.events import (
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
-from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -52,14 +51,14 @@ class WithdrawRequest(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.token_network_address, "address"),
-            (self.chain_id, "uint256"),
-            (self.message_type, "uint256"),
-            (self.channel_identifier, "uint256"),
-            (self.participant, "address"),
-            (self.total_withdraw, "uint256"),
-            (self.expiration, "uint256"),
+        return (
+            self.token_network_address
+            + self.chain_id.to_bytes(32, byteorder="big")
+            + self.message_type.to_bytes(32, byteorder="big")
+            + self.channel_identifier.to_bytes(32, byteorder="big")
+            + self.participant
+            + self.total_withdraw.to_bytes(32, byteorder="big")
+            + self.expiration.to_bytes(32, byteorder="big")
         )
 
 
@@ -93,14 +92,14 @@ class WithdrawConfirmation(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.token_network_address, "address"),
-            (self.chain_id, "uint256"),
-            (self.message_type, "uint256"),
-            (self.channel_identifier, "uint256"),
-            (self.participant, "address"),
-            (self.total_withdraw, "uint256"),
-            (self.expiration, "uint256"),
+        return (
+            self.token_network_address
+            + self.chain_id.to_bytes(32, byteorder="big")
+            + self.message_type.to_bytes(32, byteorder="big")
+            + self.channel_identifier.to_bytes(32, byteorder="big")
+            + self.participant
+            + self.total_withdraw.to_bytes(32, byteorder="big")
+            + self.expiration.to_bytes(32, byteorder="big")
         )
 
 
@@ -134,16 +133,15 @@ class WithdrawExpired(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.nonce, "uint256"),
-            (self.message_identifier, "uint64"),
-            (self.token_network_address, "address"),
-            (self.chain_id, "uint256"),
-            (self.message_type, "uint256"),
-            (self.channel_identifier, "uint256"),
-            (self.participant, "address"),
-            (self.total_withdraw, "uint256"),
-            (self.expiration, "uint256"),
+        return (
+            bytes([self.cmdid.value, 0, 0, 0])
+            + self.nonce.to_bytes(32, byteorder="big")
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.token_network_address
+            + self.chain_id.to_bytes(32, byteorder="big")
+            + self.message_type.to_bytes(32, byteorder="big")
+            + self.channel_identifier.to_bytes(32, byteorder="big")
+            + self.participant
+            + self.total_withdraw.to_bytes(32, byteorder="big")
+            + self.expiration.to_bytes(32, byteorder="big")
         )

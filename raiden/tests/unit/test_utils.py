@@ -9,7 +9,7 @@ from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_average_http_response_time
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
-from raiden.utils.signing import pack_data, sha3
+from raiden.utils.signing import sha3
 
 
 def test_privatekey_to_publickey():
@@ -89,13 +89,3 @@ def test_get_http_rtt_ignore_failing(requests_responses):
     # Internal server error
     requests_responses.add(responses.GET, "http://url3", status=500)
     assert get_average_http_response_time(url="http://url3", method="get") is None
-
-
-def test_pack_data():
-    assert pack_data(("Test", "string"), (49, "uint32")) == b"Test\x00\x00\x001"
-
-    with pytest.raises(ValueError):
-        pack_data((13, "uint256"), ("address"))
-
-    with pytest.raises(TypeError):
-        pack_data((256, "uint256"), ("This is not a uint256", "uint256"))
