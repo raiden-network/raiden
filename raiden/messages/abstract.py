@@ -96,7 +96,7 @@ class SignedMessage(AuthenticatedMessage):
 
 
 @dataclass(repr=False, eq=False)
-class RetrieableMessage:
+class RetrieableMessage(Message):
     """ Message, that supports a retry-queue. """
 
     message_identifier: MessageID

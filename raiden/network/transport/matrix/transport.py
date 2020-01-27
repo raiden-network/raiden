@@ -370,9 +370,9 @@ class MatrixTransport(Runnable):
 
         self._health_lock = Semaphore()
 
-        self._counter_send: CounterType[MessageID] = Counter()
-        self._counter_retry: CounterType[MessageID] = Counter()
-        self._counter_dispatch: CounterType[MessageID] = Counter()
+        self._counter_send: CounterType[Tuple[str, MessageID]] = Counter()
+        self._counter_retry: CounterType[Tuple[str, MessageID]] = Counter()
+        self._counter_dispatch: CounterType[Tuple[str, MessageID]] = Counter()
 
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
