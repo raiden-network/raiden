@@ -81,6 +81,7 @@ class BalanceProof:
 
     @staticmethod
     def hash_balance_data(transferred_amount: int, locked_amount: int, locksroot: str) -> str:
+        # Use transfer.utils.hash_balance_data instead?
         return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter
             ["uint256", "uint256", "bytes32"], [transferred_amount, locked_amount, locksroot]
         )

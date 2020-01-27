@@ -2,7 +2,7 @@ import random
 from random import Random
 from typing import TYPE_CHECKING
 
-from web3 import Web3
+from eth_hash.auto import keccak
 
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.utils.typing import Any, BalanceHash, Locksroot, SecretHash, TokenAmount, Union
@@ -21,8 +21,10 @@ def hash_balance_data(
     if transferred_amount == 0 and locked_amount == 0 and locksroot == LOCKSROOT_OF_NO_LOCKS:
         return BalanceHash(EMPTY_HASH)
 
-    return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter
-        ["uint256", "uint256", "bytes32"], [transferred_amount, locked_amount, locksroot]
+    return keccak(
+        transferred_amount.to_bytes(32, byteorder="big")
+        + locked_amount.to_bytes(32, byteorder="big")
+        + locksroot
     )
 
 
