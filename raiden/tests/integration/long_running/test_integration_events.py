@@ -1,6 +1,6 @@
 import gevent
 import pytest
-from eth_utils import is_list_like
+from eth_utils import is_list_like, keccak
 from web3.utils.events import construct_event_topic_set
 
 from raiden import waiting
@@ -33,7 +33,6 @@ from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.signing import sha3
 from raiden.utils.typing import (
     Address,
     Balance,
@@ -518,7 +517,7 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
     )
 
     target = app1.raiden.address
-    secret = Secret(sha3(target))
+    secret = Secret(keccak(target))
     secrethash = sha256_secrethash(secret)
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 

@@ -3,17 +3,16 @@ import pytest
 import requests
 import responses
 from eth_keys.exceptions import BadSignature, ValidationError
-from eth_utils import decode_hex, to_canonical_address
+from eth_utils import decode_hex, keccak, to_canonical_address
 
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_average_http_response_time
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
-from raiden.utils.signing import sha3
 
 
 def test_privatekey_to_publickey():
-    privkey = sha3(b"secret")
+    privkey = keccak(b"secret")
     pubkey = (
         "c283b0507c4ec6903a49fac84a5aead951f3c38b2c72b69da8a70a5bac91e9c"
         "705f70c7554b26e82b90d2d1bbbaf711b10c6c8b807077f4070200a8fb4c6b771"
@@ -23,7 +22,7 @@ def test_privatekey_to_publickey():
 
 
 def test_signer_sign():
-    privkey = sha3(b"secret")  # 0x38e959391dD8598aE80d5d6D114a7822A09d313A
+    privkey = keccak(b"secret")  # 0x38e959391dD8598aE80d5d6D114a7822A09d313A
     message = b"message"
     # generated with Metamask's web3.personal.sign
     signature = decode_hex(

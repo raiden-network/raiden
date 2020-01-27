@@ -47,7 +47,6 @@ from raiden.utils.keys import privatekey_to_address
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
-from raiden.utils.signing import sha3
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     AdditionalHash,
@@ -381,9 +380,9 @@ UNIT_TOKEN_NETWORK_REGISTRY_ADDRESS = TokenNetworkRegistryAddress(
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = Address(b"initiatorinitiatorin")
 UNIT_TRANSFER_TARGET = Address(b"targettargettargetta")
-UNIT_TRANSFER_PKEY_BIN = sha3(b"transfer pkey")
+UNIT_TRANSFER_PKEY_BIN = keccak(b"transfer pkey")
 UNIT_TRANSFER_PKEY = UNIT_TRANSFER_PKEY_BIN
-UNIT_TRANSFER_SENDER = Address(privatekey_to_address(sha3(b"transfer pkey")))
+UNIT_TRANSFER_SENDER = Address(privatekey_to_address(keccak(b"transfer pkey")))
 
 HOP1_KEY = b"11111111111111111111111111111111"
 HOP2_KEY = b"22222222222222222222222222222222"
@@ -953,7 +952,7 @@ def prepare_locked_transfer(properties, defaults):
         amount=params.pop("amount"), expiration=params.pop("expiration"), secrethash=secrethash
     )
     if params["locksroot"] == GENERATE:
-        params["locksroot"] = sha3(params["lock"].as_bytes)
+        params["locksroot"] = keccak(params["lock"].as_bytes)
 
     params["signature"] = EMPTY_SIGNATURE
 

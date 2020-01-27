@@ -2,6 +2,7 @@ import random
 
 import gevent
 import pytest
+from eth_utils import keccak
 from gevent.timeout import Timeout
 
 from raiden import waiting
@@ -32,7 +33,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.signing import sha3
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (
     Balance,
@@ -328,7 +328,7 @@ def test_batch_unlock(
 
     alice_to_bob_amount = 10
     identifier = 1
-    secret = Secret(sha3(bob_address))
+    secret = Secret(keccak(bob_address))
     secrethash = sha256_secrethash(secret)
 
     secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -471,7 +471,7 @@ def test_channel_withdraw(
     alice_to_bob_amount = 10
     identifier = 1
     target = bob_app.raiden.address
-    secret = sha3(target)
+    secret = keccak(target)
 
     payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
@@ -538,7 +538,7 @@ def test_channel_withdraw_expired(
 
     identifier = 1
     target = bob_app.raiden.address
-    secret = sha3(target)
+    secret = keccak(target)
 
     payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
@@ -630,7 +630,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     initial_balance1 = token_proxy.balance_of(address1)
     identifier = 1
     target = app1.raiden.address
-    secret = Secret(sha3(target))
+    secret = Secret(keccak(target))
     secrethash = sha256_secrethash(secret)
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -711,7 +711,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     app1.raiden.message_handler = message_handler
 
     target = app1.raiden.address
-    secret = Secret(sha3(target))
+    secret = Secret(keccak(target))
     secrethash = sha256_secrethash(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -780,7 +780,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     # the attacker owns app0 and app2 and creates a transfer through app1
     identifier = 1
     target = app2.raiden.address
-    secret = Secret(sha3(target))
+    secret = Secret(keccak(target))
     secrethash = sha256_secrethash(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -973,10 +973,10 @@ def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
     alice_to_bob_amount = 10
     identifier = 1
 
-    alice_transfer_secret = Secret(sha3(alice_app.raiden.address))
+    alice_transfer_secret = Secret(keccak(alice_app.raiden.address))
     alice_transfer_secrethash = sha256_secrethash(alice_transfer_secret)
 
-    bob_transfer_secret = Secret(sha3(bob_app.raiden.address))
+    bob_transfer_secret = Secret(keccak(bob_app.raiden.address))
     bob_transfer_secrethash = sha256_secrethash(bob_transfer_secret)
 
     alice_transfer_hold = bob_app.raiden.raiden_event_handler.hold_secretrequest_for(

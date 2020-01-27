@@ -2,6 +2,7 @@ import random
 from hashlib import sha256
 
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.routing import get_best_routes
@@ -29,7 +30,6 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
 )
 from raiden.utils.copy import deepcopy
-from raiden.utils.signing import sha3
 
 
 @pytest.fixture
@@ -205,7 +205,7 @@ def test_channel_data_removed_after_unlock(
 
     lock_amount = 30
     lock_expiration = 20
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -329,7 +329,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
 
     lock_amount = 30
     lock_expiration = 20
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -454,7 +454,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
 
     lock_amount = 30
     lock_expiration = 20
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
