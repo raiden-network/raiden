@@ -51,11 +51,19 @@ OpenQueue = Dict[str, List[ChannelNew]]
 DepositQueue = Dict[Tuple[str, str], List[ChannelDeposit]]
 
 
-def is_successful_reponse(response: requests.Response) -> bool:
+def http_response_is_okay(response: requests.Response) -> bool:
     return (
         response is not None
         and response.headers["Content-Type"] == "application/json"
         and response.status_code == HTTPStatus.OK
+    )
+
+
+def http_response_is_created(response: requests.Response) -> bool:
+    return (
+        response is not None
+        and response.headers["Content-Type"] == "application/json"
+        and response.status_code == HTTPStatus.CREATED
     )
 
 
@@ -104,7 +112,7 @@ def channel_open(open_queue: List[ChannelNew]) -> None:
         url_channel_open = f"{channel_open.endpoint}/api/{API_VERSION}/channels"
         response = requests.put(url_channel_open, json=channel_open_request)
 
-        assert is_successful_reponse(response), response
+        assert http_response_is_created(response), (response, response.text)
 
 
 def channel_deposit_with_the_same_token_network(deposit_queue: List[ChannelDeposit]) -> None:
@@ -146,7 +154,7 @@ def channel_deposit_with_the_same_token_network(deposit_queue: List[ChannelDepos
                 )
                 response = requests.patch(url_channel, json=deposit_json)
 
-                assert is_successful_reponse(response), response
+                assert http_response_is_okay(response), (response, response.text)
             else:
                 log.info(f"Channel exists and has enough capacity {channel_deposit}")
 
