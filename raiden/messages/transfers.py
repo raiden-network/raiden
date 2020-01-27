@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any, overload
 
+from eth_hash.auto import keccak
+
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages.abstract import SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
@@ -18,7 +20,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.predicates import ishash
-from raiden.utils.signing import pack_data, sha3
+from raiden.utils.signing import sha3
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -129,8 +131,10 @@ class Lock:
 
     @property
     def as_bytes(self) -> bytes:
-        return pack_data(
-            (self.expiration, "uint256"), (self.amount, "uint256"), (self.secrethash, "bytes32")
+        return (
+            self.expiration.to_bytes(32, byteorder="big")
+            + self.amount.to_bytes(32, byteorder="big")
+            + self.secrethash
         )
 
     # FIXME: is this used?
@@ -298,13 +302,11 @@ class Unlock(EnvelopeMessage):
 
     @property
     def message_hash(self) -> bytes:
-        return sha3(
-            pack_data(
-                (self.cmdid.value, "uint8"),
-                (self.message_identifier, "uint64"),
-                (self.payment_identifier, "uint64"),
-                (self.secret, "bytes32"),
-            )
+        return keccak(
+            bytes([self.cmdid.value])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.payment_identifier.to_bytes(8, byteorder="big")
+            + self.secret
         )
 
 
@@ -514,11 +516,9 @@ class LockExpired(EnvelopeMessage):
 
     @property
     def message_hash(self) -> bytes:
-        return sha3(
-            pack_data(
-                (self.cmdid.value, "uint8"),
-                (self.message_identifier, "uint64"),
-                (self.recipient, "address"),
-                (self.secrethash, "bytes32"),
-            )
+        return keccak(
+            bytes([self.cmdid.value])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.recipient
+            + self.secrethash
         )
