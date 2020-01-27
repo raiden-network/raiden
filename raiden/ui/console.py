@@ -236,7 +236,7 @@ class ConsoleTools:
             token_address=token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier="latest",
+            given_block_identifier="latest",
         )
         waiting.wait_for_token_network(
             self._raiden, registry.address, token_address, retry_timeout

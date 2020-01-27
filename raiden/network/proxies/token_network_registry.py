@@ -94,14 +94,14 @@ class TokenNetworkRegistry:
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
-        block_identifier: BlockSpecification,
+        given_block_identifier: BlockSpecification,
     ) -> TokenNetworkAddress:
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
         since instantiation also takes the limits as constructor arguments.
         """
-        if block_identifier == "latest":
+        if given_block_identifier == "latest":
             raise ValueError(
                 'Calling a proxy with "latest" is usually wrong because '
                 "the result of the precondition check is not precisely predictable."
@@ -121,28 +121,36 @@ class TokenNetworkRegistry:
                 f"{channel_participant_deposit_limit} is invalid"
             )
 
-        token_proxy = self.proxy_manager.token(token_address, block_identifier)
+        token_proxy = self.proxy_manager.token(token_address, given_block_identifier)
         try:
-            token_supply = token_proxy.total_supply(block_identifier=block_identifier)
+            token_supply = token_proxy.total_supply(block_identifier=given_block_identifier)
             already_registered = self.get_token_network(
-                token_address=token_address, block_identifier=block_identifier
+                token_address=token_address, block_identifier=given_block_identifier
             )
-            deprecation_executor = self.get_deprecation_executor(block_identifier=block_identifier)
-            settlement_timeout_min = self.settlement_timeout_min(block_identifier=block_identifier)
-            settlement_timeout_max = self.settlement_timeout_max(block_identifier=block_identifier)
-            chain_id = self.get_chain_id(block_identifier=block_identifier)
+            deprecation_executor = self.get_deprecation_executor(
+                block_identifier=given_block_identifier
+            )
+            settlement_timeout_min = self.settlement_timeout_min(
+                block_identifier=given_block_identifier
+            )
+            settlement_timeout_max = self.settlement_timeout_max(
+                block_identifier=given_block_identifier
+            )
+            chain_id = self.get_chain_id(block_identifier=given_block_identifier)
             secret_registry_address = self.get_secret_registry_address(
-                block_identifier=block_identifier
+                block_identifier=given_block_identifier
             )
-            max_token_networks = self.get_max_token_networks(block_identifier=block_identifier)
+            max_token_networks = self.get_max_token_networks(
+                block_identifier=given_block_identifier
+            )
             token_networks_created = self.get_token_network_created(
-                block_identifier=block_identifier
+                block_identifier=given_block_identifier
             )
         except ValueError:
-            # If `block_identifier` has been pruned the checks cannot be performed
+            # If `given_block_identifier` has been pruned the checks cannot be performed
             pass
         except BadFunctionCallOutput:
-            raise_on_call_returned_empty(block_identifier)
+            raise_on_call_returned_empty(given_block_identifier)
         else:
             if token_networks_created >= max_token_networks:
                 raise BrokenPreconditionError(
@@ -196,6 +204,7 @@ class TokenNetworkRegistry:
             "node": to_checksum_address(self.node_address),
             "contract": to_checksum_address(self.address),
             "token_address": to_checksum_address(token_address),
+            "given_block_identifier": given_block_identifier,
         }
         with log_transaction(log, "add_token", log_details):
             return self._add_token(

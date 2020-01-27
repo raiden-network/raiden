@@ -129,6 +129,7 @@ class UserDeposit:
         log_details = {
             "monitoring_service_address": to_checksum_address(monitoring_service_address),
             "one_to_n_address": to_checksum_address(one_to_n_address),
+            "given_block_identifier": given_block_identifier,
         }
 
         check_address_has_code(
@@ -279,6 +280,7 @@ class UserDeposit:
             "contract": to_checksum_address(self.address),
             "node": to_checksum_address(self.node_address),
             "total_deposit": total_deposit,
+            "given_block_identifier": given_block_identifier,
         }
 
         # To prevent concurrent transactions for token transfers where it is unknown if

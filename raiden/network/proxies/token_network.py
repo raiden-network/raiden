@@ -281,6 +281,7 @@ class TokenNetwork:
                 "peer1": to_checksum_address(self.node_address),
                 "peer2": to_checksum_address(partner),
                 "settle_timeout": settle_timeout,
+                "given_block_identifier": given_block_identifier,
             }
 
             with log_transaction(log, "new_netting_channel", log_details):
@@ -864,6 +865,7 @@ class TokenNetwork:
                 "channel_identifier": channel_identifier,
                 "total_deposit": total_deposit,
                 "previous_total_deposit": our_details.deposit,
+                "given_block_identifier": given_block_identifier,
             }
 
             with log_transaction(log, "set_total_deposit", log_details):
@@ -1339,6 +1341,7 @@ class TokenNetwork:
                 "participant": to_checksum_address(participant),
                 "partner": to_checksum_address(partner),
                 "total_withdraw": total_withdraw,
+                "given_block_identifier": given_block_identifier,
             }
 
             with log_transaction(log, "set_total_withdraw", log_details):
@@ -1648,6 +1651,7 @@ class TokenNetwork:
             "additional_hash": encode_hex(additional_hash),
             "non_closing_signature": encode_hex(non_closing_signature),
             "closing_signature": encode_hex(closing_signature),
+            "given_block_identifier": given_block_identifier,
         }
 
         with log_transaction(log, "close", log_details):
@@ -1910,6 +1914,7 @@ class TokenNetwork:
             "additional_hash": encode_hex(additional_hash),
             "closing_signature": encode_hex(closing_signature),
             "non_closing_signature": encode_hex(non_closing_signature),
+            "given_block_identifier": given_block_identifier,
         }
 
         with log_transaction(log, "update_transfer", log_details):
@@ -2190,6 +2195,7 @@ class TokenNetwork:
             "sender": to_checksum_address(sender),
             "receiver": to_checksum_address(receiver),
             "pending_locks": pending_locks,
+            "given_block_identifier": given_block_identifier,
         }
 
         with log_transaction(log, "unlock", log_details):
@@ -2405,6 +2411,7 @@ class TokenNetwork:
                 "partner_transferred_amount": partner_transferred_amount,
                 "partner_locked_amount": partner_locked_amount,
                 "partner_locksroot": encode_hex(partner_locksroot),
+                "given_block_identifier": given_block_identifier,
             }
             with log_transaction(log, "settle", log_details):
                 self._settle(
