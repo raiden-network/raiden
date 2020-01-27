@@ -6,6 +6,7 @@ from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import NULL_ADDRESS_BYTES
 from raiden.exceptions import (
+    AddressWithoutCode,
     BrokenPreconditionError,
     InvalidChannelParticipantDepositLimit,
     InvalidToken,
@@ -262,6 +263,26 @@ class TokenNetworkRegistry:
                     block_identifier=failed_at_blocknumber
                 )
 
+                try:
+                    check_address_has_code(
+                        self.rpc_client,
+                        Address(token_address),
+                        "Token",
+                        expected_code=None,
+                        given_block_identifier=failed_at_blocknumber,
+                    )
+                except AddressWithoutCode:
+                    # This cannot be an unrecoverable error, since the ERC20
+                    # code is external.
+                    raise RaidenRecoverableError(
+                        "Token disappeared! The address "
+                        "{to_checksum_address(token_address)} did have code at "
+                        "block {log_details['given_block_identifier']}, however "
+                        "at block {failed_at_blocknumber} when the registration "
+                        "transaction was mined the address didn't have code "
+                        "anymore."
+                    )
+
                 if failed_receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         f"createERC20TokenNetwork failed and all gas was used "
@@ -351,6 +372,26 @@ class TokenNetworkRegistry:
             secret_registry_address = self.get_secret_registry_address(
                 block_identifier=failed_at_blocknumber
             )
+
+            try:
+                check_address_has_code(
+                    self.rpc_client,
+                    Address(token_address),
+                    "Token",
+                    expected_code=None,
+                    given_block_identifier=failed_at_blocknumber,
+                )
+            except AddressWithoutCode:
+                # This cannot be an unrecoverable error, since the ERC20
+                # code is external.
+                raise RaidenRecoverableError(
+                    "Token disappeared! The address "
+                    "{to_checksum_address(token_address)} did have code at "
+                    "block {log_details['given_block_identifier']}, however "
+                    "at block {failed_at_blocknumber} when the registration "
+                    "transaction was mined the address didn't have code "
+                    "anymore."
+                )
 
             required_gas = (
                 gas_limit
