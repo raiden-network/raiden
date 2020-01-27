@@ -200,6 +200,8 @@ class TokenNetworkRegistry:
             "contract": to_checksum_address(self.address),
             "token_address": to_checksum_address(token_address),
             "given_block_identifier": given_block_identifier,
+            "channel_participant_deposit_limit": channel_participant_deposit_limit,
+            "token_network_deposit_limit": token_network_deposit_limit,
         }
         with log_transaction(log, "add_token", log_details):
             return self._add_token(
