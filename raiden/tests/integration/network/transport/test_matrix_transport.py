@@ -66,11 +66,17 @@ class MessageHandler:
                     recipient=message.sender,
                     canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
                 )
+                transport_queue = views.get_all_messagequeues(
+                    views.state_from_raiden(self.transport._raiden_service)
+                )
                 pong = Pong(
                     message_identifier=message.message_identifier,
                     nonce=message.nonce,
                     signature=EMPTY_SIGNATURE,
                 )
+                if queueid not in transport_queue:
+                    transport_queue[queueid] = []
+                transport_queue[queueid].append(pong)
                 self.transport._raiden_service.sign(pong)
                 self.transport.send_async(queueid, pong)
         self.bag.update(messages)
