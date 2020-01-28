@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from binascii import Error as DecodeError
 from collections import defaultdict
 from dataclasses import dataclass
@@ -32,7 +33,8 @@ from raiden.exceptions import (
     SerializationError,
     TransportError,
 )
-from raiden.messages.abstract import Message, SignedMessage
+from raiden.messages.abstract import Message, RetrieableMessage, SignedMessage
+from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixSyncMessages,
@@ -44,7 +46,7 @@ from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, Signature
+from raiden.utils.typing import Address, ChainID, MessageID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -466,6 +468,31 @@ class UserAddressManager:
 
         # Apply  the `_log_context` even if the user_id is not yet available
         return log.bind(**context)
+
+
+class MessageAckTimingKeeper:
+    def __init__(self) -> None:
+        self._seen_messages: Set[MessageID] = set()
+        self._messages_in_flight: Dict[MessageID, float] = {}
+        self._durations: List[float] = []
+
+    def add_message(self, message: RetrieableMessage) -> None:
+        if message.message_identifier in self._seen_messages:
+            return
+        self._messages_in_flight[message.message_identifier] = time.monotonic()
+        self._seen_messages.add(message.message_identifier)
+
+    def finalize_message(self, message: Processed) -> None:
+        start_time = self._messages_in_flight.pop(message.message_identifier, None)
+        if start_time is None:
+            # We received an unknown `Processed` message. This can happen after a restart. Ignore.
+            return
+        self._durations.append(time.monotonic() - start_time)
+
+    def generate_report(self) -> List[float]:
+        if not self._durations:
+            return []
+        return sorted(self._durations)
 
 
 def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
