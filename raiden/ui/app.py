@@ -12,6 +12,7 @@ from raiden.accounts import AccountManager
 from raiden.app import App
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
+    MATRIX_AUTO_SELECT_SERVER,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     RAIDEN_DB_VERSION,
@@ -89,7 +90,7 @@ def setup_matrix(
     environment_type: Environment,
     routing_mode: RoutingMode,
 ) -> MatrixTransport:
-    if not transport_config.available_servers:
+    if transport_config.server == MATRIX_AUTO_SELECT_SERVER:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[environment_type]
         available_servers = get_matrix_servers(available_servers_url)

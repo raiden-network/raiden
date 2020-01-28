@@ -12,7 +12,12 @@ import structlog
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_hex
 from web3 import Web3
 
-from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
+from raiden.constants import (
+    DEFAULT_HTTP_REQUEST_TIMEOUT,
+    MATRIX_AUTO_SELECT_SERVER,
+    ZERO_TOKENS,
+    RoutingMode,
+)
 from raiden.exceptions import RaidenError, ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
@@ -259,7 +264,7 @@ def configure_pfs_or_exit(
 
     msg = "With PFS routing mode we shouldn't get to configure_pfs with pfs_address being None"
     assert pfs_url, msg
-    if pfs_url == "auto":
+    if pfs_url == MATRIX_AUTO_SELECT_SERVER:
         if service_registry is None:
             raise RaidenError(
                 "Raiden was started with routing mode set to PFS, the pathfinding service address "

@@ -27,6 +27,7 @@ from raiden.constants import (
     FLAT_MED_FEE_MIN,
     IMBALANCE_MED_FEE_MAX,
     IMBALANCE_MED_FEE_MIN,
+    MATRIX_AUTO_SELECT_SERVER,
     PATH_FINDING_BROADCASTING_ROOM,
     PROPORTIONAL_MED_FEE_MAX,
     PROPORTIONAL_MED_FEE_MIN,
@@ -319,12 +320,13 @@ def options(func: Callable) -> Callable:
             option(
                 "--pathfinding-service-address",
                 help=(
-                    "URL to the Raiden path finding service to request paths from.\n"
-                    "Example: https://pfs-ropsten.services-dev.raiden.network\n"
-                    'Can also be given the "auto" value so that raiden chooses a '
-                    "PFS randomly from the service registry contract"
+                    f"URL to the Raiden path finding service to request paths from.\n "
+                    f"Example: https://pfs-ropsten.services-dev.raiden.network\n "
+                    f"Can also be given the '{MATRIX_AUTO_SELECT_SERVER}' value "
+                    f"so that raiden chooses a PFS randomly from the service "
+                    f"registry contract."
                 ),
-                default="auto",
+                default=MATRIX_AUTO_SELECT_SERVER,
                 type=str,
                 show_default=True,
             ),
@@ -361,13 +363,13 @@ def options(func: Callable) -> Callable:
             option(
                 "--matrix-server",
                 help=(
-                    "Matrix homeserver to use for communication.\n"
-                    "Valid values:\n"
-                    '"auto" - automatically select a suitable homeserver\n'
-                    "A URL pointing to a Raiden matrix homeserver"
+                    f"Matrix homeserver to use for communication.\n"
+                    f"Valid values:\n"
+                    f"'{MATRIX_AUTO_SELECT_SERVER}' - automatically select a suitable homeserver\n"
+                    f"A URL pointing to a Raiden matrix homeserver"
                 ),
-                default="auto",
-                type=MatrixServerType(["auto", "<url>"]),
+                default=MATRIX_AUTO_SELECT_SERVER,
+                type=MatrixServerType([MATRIX_AUTO_SELECT_SERVER, "<url>"]),
                 show_default=True,
             ),
         ),
