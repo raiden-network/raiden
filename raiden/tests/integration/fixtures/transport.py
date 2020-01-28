@@ -92,7 +92,6 @@ def matrix_transports(
                     retry_interval_initial=retry_interval_initial,
                     retry_interval_max=retry_interval_max,
                     server=server,
-                    server_name=server.netloc,
                     available_servers=local_matrix_servers_str,
                     sync_timeout=matrix_sync_timeout,
                 ),

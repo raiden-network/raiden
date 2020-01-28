@@ -130,7 +130,6 @@ class MatrixTransportConfig:
     broadcast_rooms: List[str]
     server: str
     available_servers: List[str]
-    server_name: Optional[str] = None
     sync_timeout: int = DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
     sync_latency: int = DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY
 
@@ -177,7 +176,6 @@ class RaidenConfig:
         retry_interval_initial=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL,
         retry_interval_max=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX,
         server="auto",
-        server_name=None,
         sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
     )
 

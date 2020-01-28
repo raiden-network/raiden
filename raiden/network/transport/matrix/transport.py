@@ -341,7 +341,7 @@ class MatrixTransport(Runnable):
             environment=environment,
         )
         self._server_url = self._client.api.base_url
-        self._server_name = config.server_name or urlparse(self._server_url).netloc
+        self._server_name = urlparse(self._server_url).netloc
 
         self.greenlets: List[gevent.Greenlet] = list()
 
