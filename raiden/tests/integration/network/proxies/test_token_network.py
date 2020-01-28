@@ -329,7 +329,7 @@ def test_token_network_proxy(
     transferred_amount = 3
     balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
-        token_network_address=to_checksum_address(token_network_address),
+        token_network_address=token_network_address,
         nonce=1,
         chain_id=chain_id,
         transferred_amount=transferred_amount,
@@ -558,7 +558,7 @@ def test_token_network_proxy_update_transfer(
     transferred_amount_c2 = 3
     balance_proof_c1 = BalanceProof(
         channel_identifier=channel_identifier,
-        token_network_address=to_checksum_address(token_network_address),
+        token_network_address=token_network_address,
         nonce=1,
         chain_id=chain_id,
         transferred_amount=transferred_amount_c1,
@@ -569,7 +569,7 @@ def test_token_network_proxy_update_transfer(
     # balance proof signed by c2
     balance_proof_c2 = BalanceProof(
         channel_identifier=channel_identifier,
-        token_network_address=to_checksum_address(token_network_address),
+        token_network_address=token_network_address,
         nonce=2,
         chain_id=chain_id,
         transferred_amount=transferred_amount_c2,
@@ -820,7 +820,7 @@ def test_token_network_actions_at_pruned_blocks(
     transferred_amount_c1 = 1
     balance_proof_c1 = BalanceProof(
         channel_identifier=channel_identifier,
-        token_network_address=to_checksum_address(token_network_address),
+        token_network_address=token_network_address,
         nonce=1,
         chain_id=chain_id,
         transferred_amount=transferred_amount_c1,
