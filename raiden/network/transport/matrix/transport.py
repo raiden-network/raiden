@@ -31,6 +31,7 @@ from raiden.network.transport.matrix.utils import (
     USER_PRESENCE_REACHABLE_STATES,
     AddressReachability,
     DisplayNameCache,
+    MessageAckTimingKeeper,
     UserAddressManager,
     UserPresence,
     join_broadcast_room,
@@ -54,6 +55,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     AddressHex,
     Any,
@@ -243,14 +245,15 @@ class _RetryQueue(Runnable):
                 # The message is still eligible for retry, consult the expiration generator if
                 # it should be retried now
                 if next(message_data.expiration_generator):
-                    if isinstance(message_data.message, RetrieableMessage):
-                        self.transport._counter_retry[
-                            (
-                                message_data.message.__class__.__name__,
-                                message_data.message.message_identifier,
-                            )
-                        ] += 1
                     message_texts.append(message_data.text)
+                    if self.transport._environment is Environment.DEVELOPMENT:
+                        if isinstance(message_data.message, RetrieableMessage):
+                            self.transport._counters["retry"][
+                                (
+                                    message_data.message.__class__.__name__,
+                                    message_data.message.message_identifier,
+                                )
+                            ] += 1
 
             if remove:
                 self._message_queue.remove(message_data)
@@ -309,6 +312,7 @@ class MatrixTransport(Runnable):
         super().__init__()
         self._uuid = uuid4()
         self._config = config
+        self._environment = environment
         self._raiden_service: Optional["RaidenService"] = None
 
         if config.server == "auto":
@@ -370,12 +374,16 @@ class MatrixTransport(Runnable):
 
         self._health_lock = Semaphore()
 
-        self._counter_send: CounterType[Tuple[str, MessageID]] = Counter()
-        self._counter_retry: CounterType[Tuple[str, MessageID]] = Counter()
-        self._counter_dispatch: CounterType[Tuple[str, MessageID]] = Counter()
-
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
+
+        self._counters: Dict[str, CounterType[Tuple[str, MessageID]]] = {}
+        self._message_timing_keeper: Optional[MessageAckTimingKeeper] = None
+        if environment is Environment.DEVELOPMENT:
+            self._counters["send"] = Counter()
+            self._counters["retry"] = Counter()
+            self._counters["dispatch"] = Counter()
+            self._message_timing_keeper = MessageAckTimingKeeper()
 
     def __repr__(self) -> str:
         if self._raiden_service is not None:
@@ -521,12 +529,17 @@ class MatrixTransport(Runnable):
         # Ensure keep-alive http connections are closed
         self._client.api.session.close()
 
-        self.log.debug(
-            "Transport performance counters",
-            send=self._counter_send.most_common(50),
-            retry=self._counter_retry.most_common(50),
-            dispatch=self._counter_dispatch.most_common(50),
-        )
+        if self._environment is Environment.DEVELOPMENT:
+            assert self._message_timing_keeper is not None, MYPY_ANNOTATION
+            counters_most_common = {
+                counter_type: counter.most_common(50)
+                for counter_type, counter in self._counters.items()
+            }
+            self.log.debug(
+                "Transport performance report",
+                counters=counters_most_common,
+                message_ack_durations=self._message_timing_keeper.generate_report(),
+            )
 
         self.log.debug("Matrix stopped", config=self._config)
         try:
@@ -609,8 +622,10 @@ class MatrixTransport(Runnable):
             queue_identifier=queue_identifier,
         )
 
-        if isinstance(message, RetrieableMessage):
-            self._counter_send[(message.__class__.__name__, message.message_identifier)] += 1
+        if self._environment is Environment.DEVELOPMENT and isinstance(message, RetrieableMessage):
+            assert self._message_timing_keeper is not None, MYPY_ANNOTATION
+            self._counters["send"][(message.__class__.__name__, message.message_identifier)] += 1
+            self._message_timing_keeper.add_message(message)
 
         self._send_with_retry(queue_identifier, message)
 
@@ -1009,10 +1024,14 @@ class MatrixTransport(Runnable):
                 self._raiden_service.sign(delivered_message)
                 retrier = self._get_retrier(message.sender)
                 retrier.enqueue_unordered(delivered_message)
-            if isinstance(message, RetrieableMessage):
-                self._counter_dispatch[
-                    (message.__class__.__name__, message.message_identifier)
-                ] += 1
+            if self._environment is Environment.DEVELOPMENT:
+                if isinstance(message, RetrieableMessage):
+                    self._counters["dispatch"][
+                        (message.__class__.__name__, message.message_identifier)
+                    ] += 1
+                if isinstance(message, Processed):
+                    assert self._message_timing_keeper is not None, MYPY_ANNOTATION
+                    self._message_timing_keeper.finalize_message(message)
         self.log.debug("Incoming messages", messages=all_messages)
 
         self._raiden_service.on_messages(all_messages)

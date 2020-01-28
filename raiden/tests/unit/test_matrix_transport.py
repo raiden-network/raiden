@@ -14,7 +14,10 @@ from matrix_client.user import User
 import raiden.network.transport.matrix.client
 import raiden.network.transport.matrix.utils
 from raiden.exceptions import TransportError
+from raiden.messages.synchronization import Processed
+from raiden.messages.transfers import RevealSecret
 from raiden.network.transport.matrix.utils import (
+    MessageAckTimingKeeper,
     login,
     make_client,
     make_message_batches,
@@ -23,9 +26,10 @@ from raiden.network.transport.matrix.utils import (
     sort_servers_closest,
     validate_userid_signature,
 )
-from raiden.tests.utils.factories import make_signer
+from raiden.tests.utils.factories import make_secret, make_signature, make_signer
 from raiden.tests.utils.transport import ignore_messages
 from raiden.utils.signer import recover
+from raiden.utils.typing import MessageID
 
 
 def test_login_for_the_first_time_must_set_the_display_name():
@@ -245,3 +249,41 @@ def test_make_message_batches(message_list, expected_batch_count, should_raise, 
 
         assert len(batches) == expected_batch_count
         assert sum(len(batch.split("\n")) for batch in batches) == len(message_list)
+
+
+def test_message_ack_timing_keeper_edge_cases():
+    matk = MessageAckTimingKeeper()
+
+    # No measurements -> empty report
+    assert matk.generate_report() == []
+
+    # Unknown messages must be ignored
+    processed = Processed(MessageID(999), make_signature())
+    matk.finalize_message(processed)
+
+    assert matk.generate_report() == []
+
+    reveal_secret = RevealSecret(MessageID(1), make_signature(), make_secret())
+    matk.add_message(reveal_secret)
+
+    # In flight messages are not included in reports
+    assert matk.generate_report() == []
+
+
+def test_message_ack_timing_keeper():
+    matk = MessageAckTimingKeeper()
+
+    matk.add_message(RevealSecret(MessageID(1), make_signature(), make_secret()))
+
+    gevent.sleep(0.05)
+    matk.finalize_message(Processed(MessageID(1), make_signature()))
+
+    assert len(matk._durations) == 1
+    assert 0.05 <= matk._durations[0] <= 0.06
+
+    # Set duration to a fixed value
+    matk._durations[0] = 0.05
+
+    report = matk.generate_report()
+    assert len(report) == 1
+    assert report == [0.05]
