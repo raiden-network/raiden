@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address, to_hex
+from eth_utils import decode_hex, to_canonical_address, to_checksum_address, to_hex
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import NULL_ADDRESS_BYTES
@@ -16,6 +16,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
+from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -33,7 +34,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     typecheck,
 )
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
+from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -113,13 +114,21 @@ class TokenNetworkRegistry:
 
         if token_network_deposit_limit <= 0:
             raise InvalidTokenNetworkDepositLimit(
-                f"Token network deposit limit of {token_network_deposit_limit} is invalid"
+                f"Token network deposit limit must be larger than zero, "
+                f"{token_network_deposit_limit} given."
+            )
+
+        if channel_participant_deposit_limit <= 0:
+            raise InvalidTokenNetworkDepositLimit(
+                f"Participant deposit limit must be larger than zero, "
+                f"{channel_participant_deposit_limit} given"
             )
 
         if channel_participant_deposit_limit > token_network_deposit_limit:
             raise InvalidChannelParticipantDepositLimit(
-                f"Channel participant deposit limit of "
-                f"{channel_participant_deposit_limit} is invalid"
+                f"Participant deposit limit must be smaller than the network "
+                f"deposit limit, {channel_participant_deposit_limit} is larger "
+                f"than {token_network_deposit_limit}."
             )
 
         token_proxy = self.proxy_manager.token(token_address, given_block_identifier)
@@ -176,6 +185,12 @@ class TokenNetworkRegistry:
             if chain_id == 0:
                 raise BrokenPreconditionError(
                     "The chain ID property for the TokenNetworkRegistry is invalid."
+                )
+
+            if chain_id != self.rpc_client.chain_id:
+                raise BrokenPreconditionError(
+                    f"The provided chain ID {chain_id} does not match the "
+                    f"network Raiden is running on: {self.rpc_client.chain_id}."
                 )
 
             if secret_registry_address == NULL_ADDRESS_BYTES:
@@ -266,12 +281,12 @@ class TokenNetworkRegistry:
                 )
 
                 try:
-                    check_address_has_code(
-                        self.rpc_client,
-                        Address(token_address),
-                        "Token",
-                        expected_code=None,
-                        given_block_identifier=failed_at_blocknumber,
+                    # Creating a new instance to run the constructor checks.
+                    token_proxy = Token(
+                        jsonrpc_client=self.rpc_client,
+                        token_address=token_address,
+                        contract_manager=self.proxy_manager.contract_manager,
+                        block_identifier=failed_at_blocknumber,
                     )
                 except AddressWithoutCode:
                     # This cannot be an unrecoverable error, since the ERC20
@@ -294,6 +309,18 @@ class TokenNetworkRegistry:
                         f"conditional assert."
                     )
                     raise RaidenRecoverableError(msg)
+
+                check_address_has_code(
+                    client=self.rpc_client,
+                    address=Address(secret_registry_address),
+                    contract_name=CONTRACT_SECRET_REGISTRY,
+                    expected_code=decode_hex(
+                        self.proxy_manager.contract_manager.get_runtime_hexcode(
+                            CONTRACT_SECRET_REGISTRY
+                        )
+                    ),
+                    given_block_identifier=failed_at_blocknumber,
+                )
 
                 if token_networks_created >= max_token_networks:
                     raise RaidenRecoverableError(
@@ -318,6 +345,12 @@ class TokenNetworkRegistry:
                         "The chain ID property for the TokenNetworkRegistry is invalid."
                     )
 
+                if chain_id != self.rpc_client.chain_id:
+                    raise RaidenUnrecoverableError(
+                        f"The provided chain ID {chain_id} does not match the "
+                        f"network Raiden is running on: {self.rpc_client.chain_id}."
+                    )
+
                 if secret_registry_address == NULL_ADDRESS_BYTES:
                     raise RaidenUnrecoverableError(
                         "The secret registry address for the token network is invalid."
@@ -333,6 +366,13 @@ class TokenNetworkRegistry:
                     raise RaidenUnrecoverableError(
                         "The maximum settlement timeout for the token network "
                         "should be larger than the minimum settlement timeout."
+                    )
+
+                total_supply = token_proxy.total_supply(block_identifier=failed_at_blocknumber)
+                if not total_supply or total_supply <= 0:
+                    raise RaidenRecoverableError(
+                        f"The given token address is not a valid ERC20 token, "
+                        f"total_supply() returned an invalid value {total_supply}."
                     )
 
                 # At this point, the TokenNetworkRegistry fails to instantiate
@@ -377,12 +417,12 @@ class TokenNetworkRegistry:
             )
 
             try:
-                check_address_has_code(
-                    self.rpc_client,
-                    Address(token_address),
-                    "Token",
-                    expected_code=None,
-                    given_block_identifier=failed_at_blocknumber,
+                # Creating a new instance to run the constructor checks.
+                token_proxy = Token(
+                    jsonrpc_client=self.rpc_client,
+                    token_address=token_address,
+                    contract_manager=self.proxy_manager.contract_manager,
+                    block_identifier=failed_at_blocknumber,
                 )
             except AddressWithoutCode:
                 # This cannot be an unrecoverable error, since the ERC20
@@ -395,6 +435,18 @@ class TokenNetworkRegistry:
                     "transaction was mined the address didn't have code "
                     "anymore."
                 )
+
+            check_address_has_code(
+                client=self.rpc_client,
+                address=Address(secret_registry_address),
+                contract_name=CONTRACT_SECRET_REGISTRY,
+                expected_code=decode_hex(
+                    self.proxy_manager.contract_manager.get_runtime_hexcode(
+                        CONTRACT_SECRET_REGISTRY
+                    )
+                ),
+                given_block_identifier=failed_at_blocknumber,
+            )
 
             required_gas = (
                 gas_limit
@@ -441,7 +493,7 @@ class TokenNetworkRegistry:
                     "The secret registry address for the token network is invalid."
                 )
 
-            if settlement_timeout_min == 0:
+            if settlement_timeout_min <= 0:
                 raise RaidenUnrecoverableError(
                     "The minimum settlement timeout for the token network "
                     "should be larger than zero."
@@ -453,8 +505,12 @@ class TokenNetworkRegistry:
                     "should be larger than the minimum settlement timeout."
                 )
 
-            if self.get_token_network(token_address, failed_at_blocknumber):
-                raise RaidenRecoverableError("Token already registered")
+            total_supply = token_proxy.total_supply(block_identifier=failed_at_blocknumber)
+            if not total_supply or total_supply <= 0:
+                raise RaidenRecoverableError(
+                    f"The given token address is not a valid ERC20 token, "
+                    f"total_supply() returned an invalid value {total_supply}."
+                )
 
             # At this point, the TokenNetworkRegistry fails to instantiate
             # a new TokenNetwork.
