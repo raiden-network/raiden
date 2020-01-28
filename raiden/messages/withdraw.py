@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from raiden.constants import EMPTY_SIGNATURE
-from raiden.messages.abstract import SignedRetriableMessage
+from raiden.messages.abstract import SignedMessage, SignedRetriableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.transfer.events import (
     SendWithdrawConfirmation,
@@ -14,6 +14,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     ClassVar,
+    MessageID,
     Nonce,
     TokenNetworkAddress,
     WithdrawAmount,
@@ -63,12 +64,13 @@ class WithdrawRequest(SignedRetriableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawConfirmation(SignedRetriableMessage):
+class WithdrawConfirmation(SignedMessage):
     """ Confirms withdraw to partner with a signature """
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_CONFIRMATION
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
 
+    message_identifier: MessageID
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
