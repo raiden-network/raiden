@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from eth_utils import decode_hex, to_hex
 from structlog import BoundLoggerBase
@@ -118,7 +119,8 @@ def get_onchain_locksroots(
 
 @contextmanager
 def log_transaction(log: BoundLoggerBase, description: str, details: Dict[Any, Any]) -> Generator:
-    bound_log = log.bind(description=description, **details)
+    token = uuid4()
+    bound_log = log.bind(description=description, token=token, **details)
     try:
         bound_log.debug("Entered")
         yield
