@@ -1399,3 +1399,10 @@ class RaidenService(Runnable):
             db_filename=self.config.database_path, raiden=self, web3=self.rpc_client.web3
         )
         manager.run()
+
+
+def this_function_is_useless() -> None:
+    print("This function is useless.")
+    print("It is also not tested.")
+    print("Therefore, the pr containing it")
+    print("will have poor patch coverage.")
