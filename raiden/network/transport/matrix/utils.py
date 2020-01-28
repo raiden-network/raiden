@@ -576,7 +576,11 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     signature_hex = encode_hex(signature_bytes)
 
     user = client.get_user(client.user_id)
-    user.set_display_name(signature_hex)
+    current_display_name = user.get_display_name()
+
+    # Only set the display name if necessary, since this is a slow operation.
+    if current_display_name != signature_hex:
+        user.set_display_name(signature_hex)
 
     log.debug(
         "Logged in",
