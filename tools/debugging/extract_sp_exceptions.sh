@@ -6,8 +6,8 @@ WGET_DIR="wget --no-parent --no-clobber --continue -nH -r"
 
 ### STYLES: IGNORE
 COLUMNS=$(/usr/bin/tput cols)
-RESET="\e[0m"
-BOLD="\e[1m"
+RESET=$(/usr/bin/tput init)
+BOLD=$(/usr/bin/tput bold)
 
 function print_bold {
     echo -e "${BOLD}$1${RESET}"
@@ -80,7 +80,7 @@ function download_server_logs {
 
 function search_for_failures {
     echo -e "${BOLD}Looking for failures${RESET}"
-    scenarios_dir="${DESTINATION_DIR}/scenario-player/scenarios"
+    scenarios_dir="${DESTINATION_DIR}/scenarios"
     for scenario in $(ls $scenarios_dir); do
         print_bold ${scenario}
         separator
