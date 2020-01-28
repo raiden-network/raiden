@@ -8,7 +8,19 @@ from datetime import datetime
 from enum import Enum
 from functools import lru_cache
 from operator import attrgetter, itemgetter
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+)
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -274,15 +286,24 @@ class UserAddressManager:
                 ),
             )
 
-    def track_address_presence(self, address: Address, user_ids: Set[str]) -> None:
+    def track_address_presence(
+        self, address: Address, user_ids: Union[Set[str], FrozenSet[str]] = frozenset()
+    ) -> None:
         """
         Update synthesized address presence state.
 
         Triggers callback (if any) in case the state has changed.
-
-        This method is only provided to cover an edge case in our use of the Matrix protocol and
-        should **not** generally be used.
         """
+        # Is this address already tracked for all given user_ids?
+        state_known = (
+            self.get_address_reachability_state(address).reachability
+            != AddressReachability.UNKNOWN
+        )
+        no_new_user_ids = user_ids.issubset(self._address_to_userids[address])
+        if state_known and no_new_user_ids:
+            return
+
+        # Update presence
         self.add_userids_for_address(address, user_ids)
         userids_to_presence = {}
         for uid in user_ids:
