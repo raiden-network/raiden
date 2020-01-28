@@ -229,7 +229,7 @@ def test_token_network_proxy(
     empty_balance_proof = BalanceProof(
         channel_identifier=100,
         token_network_address=c1_token_network_proxy.address,
-        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
+        balance_hash=EMPTY_BALANCE_HASH,
         nonce=0,
         chain_id=chain_id,
         transferred_amount=0,
@@ -356,7 +356,7 @@ def test_token_network_proxy(
             c2_token_network_proxy.close(
                 channel_identifier=channel_identifier,
                 partner=c1_client.address,
-                balance_hash=decode_hex(balance_proof.balance_hash),
+                balance_hash=balance_proof.balance_hash,
                 nonce=balance_proof.nonce,
                 additional_hash=decode_hex(balance_proof.additional_hash),
                 non_closing_signature=invalid_signature,
@@ -373,7 +373,7 @@ def test_token_network_proxy(
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
-        balance_hash=decode_hex(balance_proof.balance_hash),
+        balance_hash=balance_proof.balance_hash,
         nonce=balance_proof.nonce,
         additional_hash=decode_hex(balance_proof.additional_hash),
         non_closing_signature=decode_hex(balance_proof.signature),
@@ -407,7 +407,7 @@ def test_token_network_proxy(
         c2_token_network_proxy.close(
             channel_identifier=channel_identifier,
             partner=c1_client.address,
-            balance_hash=decode_hex(balance_proof.balance_hash),
+            balance_hash=balance_proof.balance_hash,
             nonce=balance_proof.nonce,
             additional_hash=decode_hex(balance_proof.additional_hash),
             non_closing_signature=decode_hex(balance_proof.signature),
@@ -425,7 +425,7 @@ def test_token_network_proxy(
         c2_token_network_proxy.close(
             channel_identifier=channel_identifier,
             partner=c1_client.address,
-            balance_hash=decode_hex(balance_proof.balance_hash),
+            balance_hash=balance_proof.balance_hash,
             nonce=balance_proof.nonce,
             additional_hash=decode_hex(balance_proof.additional_hash),
             non_closing_signature=decode_hex(balance_proof.signature),
@@ -587,7 +587,7 @@ def test_token_network_proxy_update_transfer(
         c2_token_network_proxy.update_transfer(
             channel_identifier=channel_identifier,
             partner=c1_client.address,
-            balance_hash=decode_hex(balance_proof_c1.balance_hash),
+            balance_hash=balance_proof_c1.balance_hash,
             nonce=balance_proof_c1.nonce,
             additional_hash=decode_hex(balance_proof_c1.additional_hash),
             closing_signature=decode_hex(balance_proof_c1.signature),
@@ -604,7 +604,7 @@ def test_token_network_proxy_update_transfer(
     c1_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c2_client.address,
-        balance_hash=decode_hex(balance_proof_c2.balance_hash),
+        balance_hash=balance_proof_c2.balance_hash,
         nonce=balance_proof_c2.nonce,
         additional_hash=decode_hex(balance_proof_c2.additional_hash),
         non_closing_signature=decode_hex(balance_proof_c2.signature),
@@ -617,7 +617,7 @@ def test_token_network_proxy_update_transfer(
         c2_token_network_proxy.update_transfer(
             channel_identifier=channel_identifier,
             partner=c1_client.address,
-            balance_hash=decode_hex(balance_proof_c1.balance_hash),
+            balance_hash=balance_proof_c1.balance_hash,
             nonce=balance_proof_c1.nonce,
             additional_hash=decode_hex(balance_proof_c1.additional_hash),
             closing_signature=b"",
@@ -634,7 +634,7 @@ def test_token_network_proxy_update_transfer(
         c2_token_network_proxy.update_transfer(
             channel_identifier=channel_identifier,
             partner=c1_client.address,
-            balance_hash=decode_hex(balance_proof_c1.balance_hash),
+            balance_hash=balance_proof_c1.balance_hash,
             nonce=balance_proof_c1.nonce,
             additional_hash=decode_hex(balance_proof_c1.additional_hash),
             closing_signature=decode_hex(balance_proof_c1.signature),
@@ -649,7 +649,7 @@ def test_token_network_proxy_update_transfer(
     c2_token_network_proxy.update_transfer(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
-        balance_hash=decode_hex(balance_proof_c1.balance_hash),
+        balance_hash=balance_proof_c1.balance_hash,
         nonce=balance_proof_c1.nonce,
         additional_hash=decode_hex(balance_proof_c1.additional_hash),
         closing_signature=decode_hex(balance_proof_c1.signature),
@@ -837,7 +837,7 @@ def test_token_network_actions_at_pruned_blocks(
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
         token_network_address=c1_token_network_proxy.address,
-        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
+        balance_hash=EMPTY_BALANCE_HASH,
         nonce=0,
         chain_id=chain_id,
         transferred_amount=0,
@@ -883,7 +883,7 @@ def test_token_network_actions_at_pruned_blocks(
     c2_token_network_proxy.update_transfer(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
-        balance_hash=decode_hex(balance_proof_c1.balance_hash),
+        balance_hash=balance_proof_c1.balance_hash,
         nonce=balance_proof_c1.nonce,
         additional_hash=decode_hex(balance_proof_c1.additional_hash),
         closing_signature=decode_hex(balance_proof_c1.signature),
