@@ -158,6 +158,7 @@ DEFAULT_HTTP_REQUEST_TIMEOUT = 10.0  # seconds
 DISCOVERY_DEFAULT_ROOM = "discovery"
 MONITORING_BROADCASTING_ROOM = "monitoring"
 PATH_FINDING_BROADCASTING_ROOM = "path_finding"
+MATRIX_AUTO_SELECT_SERVER = "auto"
 
 # According to the smart contracts as of 07/08:
 # https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213

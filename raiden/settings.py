@@ -4,7 +4,12 @@ from pathlib import Path
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, Environment
+from raiden.constants import (
+    DISCOVERY_DEFAULT_ROOM,
+    MATRIX_AUTO_SELECT_SERVER,
+    PATH_FINDING_BROADCASTING_ROOM,
+    Environment,
+)
 from raiden.network.pathfinding import PFSConfig
 from raiden.utils.typing import (
     Address,
@@ -175,7 +180,7 @@ class RaidenConfig:
         retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
         retry_interval_initial=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL,
         retry_interval_max=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX,
-        server="auto",
+        server=MATRIX_AUTO_SELECT_SERVER,
         sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
     )
 

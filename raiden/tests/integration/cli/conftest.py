@@ -7,7 +7,7 @@ from typing import Iterable
 import pexpect
 import pytest
 
-from raiden.constants import Environment, EthClient
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, Environment, EthClient
 from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
@@ -46,7 +46,7 @@ def raiden_testchain(
     with testchain_manager as testchain:
         result = setup_raiden(
             transport="matrix",
-            matrix_server="auto",
+            matrix_server=MATRIX_AUTO_SELECT_SERVER,
             print_step=lambda x: None,
             contracts_version=cli_tests_contracts_version,
             eth_client=testchain["eth_client"],

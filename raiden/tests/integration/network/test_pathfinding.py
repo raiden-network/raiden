@@ -9,7 +9,7 @@ from eth_utils import (
     to_checksum_address,
 )
 
-from raiden.constants import RoutingMode
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, RoutingMode
 from raiden.exceptions import RaidenError
 from raiden.network.pathfinding import PFSInfo, check_pfs_for_production, configure_pfs_or_exit
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
@@ -76,7 +76,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     patch_random = patch("raiden.network.pathfinding.get_random_pfs", return_value="http://foo")
     with patch.object(requests, "get", return_value=response), patch_random:
         config = configure_pfs_or_exit(
-            pfs_url="auto",
+            pfs_url=MATRIX_AUTO_SELECT_SERVER,
             routing_mode=RoutingMode.PFS,
             service_registry=service_registry,
             node_network_id=chain_id,

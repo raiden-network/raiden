@@ -14,7 +14,7 @@ from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
-from raiden.constants import EMPTY_SIGNATURE, Environment
+from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
@@ -317,12 +317,15 @@ class MatrixTransport(Runnable):
         self._environment = environment
         self._raiden_service: Optional["RaidenService"] = None
 
-        if config.server == "auto":
+        if config.server == MATRIX_AUTO_SELECT_SERVER:
             available_servers = config.available_servers
         elif urlparse(config.server).scheme in {"http", "https"}:
             available_servers = [config.server]
         else:
-            raise TransportError('Invalid matrix server specified (valid values: "auto" or a URL)')
+            raise TransportError(
+                f"Invalid matrix server specified (valid values: "
+                f"'{MATRIX_AUTO_SELECT_SERVER}' or a URL)"
+            )
 
         def _http_retry_delay() -> Iterable[float]:
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
