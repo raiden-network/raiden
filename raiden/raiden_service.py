@@ -665,7 +665,7 @@ class RaidenService(Runnable):
             f"for the alarm task and the alarm task should be started before the "
             f"transport to avoid race conditions. node:{self!r}"
         )
-        assert not self.transport
+        assert not self.transport, msg
         msg = (
             f"Alarm task must not be started before the "
             f"`ready_to_process_events` flag is set, otherwise events may be "
