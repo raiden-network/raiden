@@ -357,12 +357,12 @@ class GMatrixClient(MatrixClient):
         self.sync_worker = gevent.spawn(
             self.listen_forever, timeout_ms, latency_ms, exception_handler
         )
-        self.sync_worker.name = f"GMatrixClient._sync_worker user_id:{self.user_id}"
+        self.sync_worker.name = f"GMatrixClient.sync_worker user_id:{self.user_id}"
 
         self.message_worker = gevent.spawn(
             self._handle_message, self.response_queue, self.stop_event
         )
-        self.message_worker.name = f"GMatrixClient._message_worker user_id:{self.user_id}"
+        self.message_worker.name = f"GMatrixClient.message_worker user_id:{self.user_id}"
         self.message_worker.link_exception(lambda g: self.sync_worker.kill(g.exception))
 
         # FIXME: This is just a temporary hack, this adds a race condition of the user pressing
@@ -577,7 +577,14 @@ class GMatrixClient(MatrixClient):
                 )
                 currently_queued_responses.append(response)
 
+            time_before_processing = time.time()
             self._handle_responses(currently_queued_responses)
+            time_after_processing = time.time()
+            log.debug(
+                "Processed queued Matrix responses",
+                node=node_address_from_userid(self.user_id),
+                elapsed=time_after_processing - time_before_processing,
+            )
 
             # Pop the processed messages, this relies on the fact the queue is
             # ordered to pop the correct messages.Iif the process is killed
