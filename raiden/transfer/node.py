@@ -16,11 +16,7 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
-    CanonicalIdentifier,
-    QueueIdentifier,
-)
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
@@ -439,7 +435,7 @@ def maybe_add_tokennetwork(
 
 def inplace_delete_message_queue(
     chain_state: ChainState,
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
+    state_change: Union[ReceiveProcessed, ReceiveWithdrawConfirmation],
     queueid: QueueIdentifier,
 ) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
@@ -459,7 +455,7 @@ def inplace_delete_message_queue(
 
 def inplace_delete_message(
     message_queue: List[SendRetriableMessageEvent],
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
+    state_change: Union[ReceiveProcessed, ReceiveWithdrawConfirmation],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
@@ -561,7 +557,7 @@ def handle_contract_receive_channel_closed(
 
 
 def handle_receive_delivered(
-    chain_state: ChainState, state_change: ReceiveDelivered
+    chain_state: ChainState, state_change: ReceiveDelivered  # pylint: disable=unused-argument
 ) -> TransitionResult[ChainState]:
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
     return TransitionResult(chain_state, [])
