@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import NULL_ADDRESS_BYTES
@@ -199,7 +199,7 @@ class TokenNetworkRegistry:
             "node": to_checksum_address(self.node_address),
             "contract": to_checksum_address(self.address),
             "token_address": to_checksum_address(token_address),
-            "given_block_identifier": given_block_identifier,
+            "given_block_identifier": to_hex(given_block_identifier),
             "channel_participant_deposit_limit": channel_participant_deposit_limit,
             "token_network_deposit_limit": token_network_deposit_limit,
         }
