@@ -104,7 +104,6 @@ def mock_matrix(
         retry_interval_initial=retry_interval_initial,
         retry_interval_max=retry_interval_max,
         server="http://none",
-        server_name="none",
         available_servers=[],
     )
 

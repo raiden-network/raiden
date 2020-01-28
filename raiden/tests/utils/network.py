@@ -404,7 +404,6 @@ def create_apps(
                 retry_interval_initial=retry_interval_initial,
                 retry_interval_max=retry_interval_max,
                 server=local_matrix_url,
-                server_name=local_matrix_url.netloc,
                 available_servers=[],
             )
 
