@@ -54,7 +54,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import typing
 from raiden.utils.copy import deepcopy
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.transfers import random_secret
@@ -98,8 +97,8 @@ def transferred_amount(state):
 
 @dataclass
 class AddressPair:
-    our_address: typing.Address
-    partner_address: typing.Address
+    our_address: Address
+    partner_address: Address
 
 
 address_pairs = Bundle("address_pairs")
@@ -107,21 +106,19 @@ address_pairs = Bundle("address_pairs")
 # contains address pairs for all existing channels
 
 
-AddressToAmount = typing.Dict[typing.Address, typing.TokenAmount]
+AddressToAmount = Dict[Address, TokenAmount]
 
 
 def make_tokenamount_defaultdict():
-    return defaultdict(lambda: typing.TokenAmount(0))
+    return defaultdict(lambda: TokenAmount(0))
 
 
 @dataclass
 class Client:
     chain_state: ChainState
 
-    address_to_channel: typing.Dict[typing.Address, ChannelState] = field(default_factory=dict)
-    expected_expiry: typing.Dict[typing.SecretHash, typing.BlockNumber] = field(
-        default_factory=dict
-    )
+    address_to_channel: Dict[Address, ChannelState] = field(default_factory=dict)
+    expected_expiry: Dict[SecretHash, BlockNumber] = field(default_factory=dict)
     our_previous_deposit: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
     partner_previous_deposit: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
     our_previous_transferred: AddressToAmount = field(default_factory=make_tokenamount_defaultdict)
@@ -216,14 +213,14 @@ class Client:
 class ChainStateStateMachine(RuleBasedStateMachine):
     def __init__(self):
         self.replay_path: bool = False
-        self.address_to_privkey: typing.Dict[typing.Address, typing.PrivateKey] = dict()
-        self.address_to_client: typing.Dict[typing.Address, Client] = dict()
+        self.address_to_privkey: Dict[Address, PrivateKey] = dict()
+        self.address_to_client: Dict[Address, Client] = dict()
         self.initial_number_of_channels = 1
         self.number_of_clients = 1
 
         super().__init__()
 
-    def new_channel(self, client_address: typing.Address) -> AddressPair:
+    def new_channel(self, client_address: Address) -> AddressPair:
         """Create a new partner address with private key and channel. The
         private key and channels are listed in the instance's dictionaries,
         the address is returned and should be added to the partners Bundle.
@@ -248,7 +245,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         return AddressPair(our_address=client_address, partner_address=partner_address)
 
-    def new_channel_with_transaction(self, client_address: typing.Address) -> AddressPair:
+    def new_channel_with_transaction(self, client_address: Address) -> AddressPair:
         client = self.address_to_client[client_address]
         address_pair = self.new_channel(client_address)
 
@@ -553,7 +550,7 @@ class BalanceProofData:
 
 @dataclass
 class WithOurAddress:
-    our_address: typing.Address
+    our_address: Address
     data: StateChange
 
 
@@ -748,7 +745,7 @@ class MediatorMixin:
 
 class OnChainMixin:
 
-    block_number: typing.BlockNumber
+    block_number: BlockNumber
 
     @rule(number=integers(min_value=1, max_value=50))
     def new_blocks(self, number):

@@ -271,7 +271,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
         RaidenAPI(app0.raiden).transfer(  # type: ignore
             app0.raiden.default_registry.address,
             token_address,
-            10,
+            PaymentAmount(10),
             target=str_address,
             transfer_timeout=10,
         )

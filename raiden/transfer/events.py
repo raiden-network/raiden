@@ -191,7 +191,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     def __repr__(self) -> str:
         secrethash = sha256_secrethash(self.secret)
         return "ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})".format(
-            secrethash, to_hex(self.triggered_by_block_hash)
+            to_hex(secrethash), to_hex(self.triggered_by_block_hash)
         )
 
 

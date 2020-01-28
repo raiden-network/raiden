@@ -465,7 +465,9 @@ class ConnectionManager:  # pragma: no unittest
         )
 
         greenlets = set(
-            spawn_named(f"cm-join_partner-{partner}", self._join_partner, partner)
+            spawn_named(
+                f"cm-join_partner-{to_checksum_address(partner)}", self._join_partner, partner
+            )
             for partner in join_partners
         )
         gevent.joinall(greenlets, raise_error=True)
