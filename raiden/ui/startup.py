@@ -122,8 +122,8 @@ class ServicesBundle:
         if not token_address_matches_monitoring_service:
             raise RaidenError(
                 f"The token used in the provided user deposit contract "
-                f"{user_deposit_address} does not match the one in the "
-                f"MonitoringService contract {monitoring_service_address}."
+                f"{to_checksum_address(user_deposit_address)} does not match the one in the "
+                f"MonitoringService contract {to_checksum_address(monitoring_service_address)}."
             )
 
         token_address_matches_service_registry = (
@@ -132,8 +132,8 @@ class ServicesBundle:
         if not token_address_matches_service_registry:
             raise RaidenError(
                 f"The token used in the provided user deposit contract "
-                f"{user_deposit_address} does not match the one in the ServiceRegistry "
-                f"contract {monitoring_service_address}."
+                f"{to_checksum_address(user_deposit_address)} does not match the one in the "
+                f"ServiceRegistry contract {to_checksum_address(monitoring_service_address)}."
             )
 
 

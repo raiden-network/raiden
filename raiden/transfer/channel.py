@@ -532,8 +532,8 @@ def is_balance_proof_usable_onchain(
         # the signature** must match for the balance_proof to be valid.
         return SuccessOrError(
             f"token_network_address does not match. "
-            f"expected: {channel_state.token_network_address} "
-            f"got: {received_balance_proof.token_network_address}."
+            f"expected: {to_checksum_address(channel_state.token_network_address)} "
+            f"got: {to_checksum_address(received_balance_proof.token_network_address)}."
         )
 
     elif received_balance_proof.chain_id != channel_state.chain_id:

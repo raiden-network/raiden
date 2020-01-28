@@ -327,8 +327,8 @@ def wait_for_channel_in_states(
 
     if token_network is None:
         raise ValueError(
-            f"The token {token_address} is not registered on "
-            f"the network {token_network_registry_address}."
+            f"The token {to_checksum_address(token_address)} is not registered on "
+            f"the network {to_checksum_address(token_network_registry_address)}."
         )
 
     token_network_address = token_network.address

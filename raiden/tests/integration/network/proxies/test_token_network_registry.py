@@ -88,7 +88,7 @@ def test_token_network_registry(
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
         given_block_identifier=preblockhash,
     )
-    assert token_network_address
+    assert token_network_address is not None
     assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 1
 
     # Re-registering the same token should fail with a recoverable error
@@ -117,8 +117,8 @@ def test_token_network_registry(
     # These are not registered token addresses
     assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
     assert token_network_registry_proxy.get_token_network(test_token_address, "latest") is not None
-    address = token_network_registry_proxy.get_token_network(  # type: ignore
-        token_network_address, "latest"
+    address = token_network_registry_proxy.get_token_network(
+        TokenAddress(token_network_address), "latest"
     )
     assert address is None
 

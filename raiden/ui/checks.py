@@ -20,7 +20,6 @@ from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     ChainID,
@@ -80,13 +79,6 @@ def check_ethereum_has_accounts(account_manager: AccountManager) -> None:
             f"No Ethereum accounts found in the provided keystore directory "
             f"{account_manager.keystore_path}. Please provide a directory "
             f"containing valid ethereum account files."
-        )
-
-
-def check_account(account_manager: AccountManager, address_hex: Address) -> None:
-    if not account_manager.address_in_keystore(to_checksum_address(address_hex)):
-        raise RaidenError(
-            f"Account '{address_hex}' could not be found on the system. Aborting ..."
         )
 
 

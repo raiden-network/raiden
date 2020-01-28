@@ -1321,7 +1321,7 @@ class RaidenAPI:  # pragma: no unittest
                 token_address=token_address, block_identifier=confirmed_block_identifier
             )
             if token_network is None:
-                raise UnknownTokenAddress(f"Token {token_address} not found.")
+                raise UnknownTokenAddress(f"Token {to_checksum_address(token_address)} not found.")
             if partner_address is not None:
                 partner_channel = views.get_channelstate_for(
                     chain_state=chain_state,
