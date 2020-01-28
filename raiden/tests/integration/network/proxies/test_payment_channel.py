@@ -1,5 +1,4 @@
 import pytest
-from eth_utils import encode_hex
 from web3 import Web3
 
 from raiden.blockchain.events import get_all_netting_channel_events
@@ -23,7 +22,15 @@ from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import BlockNumber, ChainID, List, Nonce, PrivateKey, TokenAmount
+from raiden.utils.typing import (
+    BlockNumber,
+    ChainID,
+    List,
+    LockedAmount,
+    Nonce,
+    PrivateKey,
+    TokenAmount,
+)
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, MessageTypeId
 from raiden_contracts.contract_manager import ContractManager
 
@@ -93,10 +100,10 @@ def test_payment_channel_proxy_basics(
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_proxy_1.channel_identifier,
         token_network_address=token_network_address,
-        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
+        balance_hash=EMPTY_BALANCE_HASH,
         nonce=0,
         chain_id=chain_id,
-        transferred_amount=0,
+        transferred_amount=TokenAmount(0),
     )
     closing_data = (
         empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
@@ -133,10 +140,10 @@ def test_payment_channel_proxy_basics(
 
     channel_proxy_1.settle(
         transferred_amount=TokenAmount(0),
-        locked_amount=TokenAmount(0),
+        locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner_transferred_amount=TokenAmount(0),
-        partner_locked_amount=TokenAmount(0),
+        partner_locked_amount=LockedAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         block_identifier="latest",
     )

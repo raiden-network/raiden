@@ -2,7 +2,14 @@ from eth_utils import decode_hex, encode_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils.typing import BalanceHash, ChannelID, Locksroot, TokenAmount, TokenNetworkAddress
+from raiden.utils.typing import (
+    BalanceHash,
+    ChannelID,
+    LockedAmount,
+    Locksroot,
+    TokenAmount,
+    TokenNetworkAddress,
+)
 from raiden_contracts.constants import MessageTypeId
 
 LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
@@ -28,7 +35,7 @@ class BalanceProof:
         chain_id: int = 1,
         signature: str = None,
         transferred_amount: TokenAmount = None,
-        locked_amount: TokenAmount = TokenAmount(0),  # noqa
+        locked_amount: LockedAmount = LockedAmount(0),  # noqa
         locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS,
     ):
         self.channel_identifier = channel_identifier
@@ -80,6 +87,6 @@ class BalanceProof:
 
     @staticmethod
     def hash_balance_data(
-        transferred_amount: TokenAmount, locked_amount: TokenAmount, locksroot: Locksroot
+        transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
     ) -> BalanceHash:
         return hash_balance_data(transferred_amount, locked_amount, locksroot)

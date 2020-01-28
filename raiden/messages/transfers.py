@@ -29,6 +29,7 @@ from raiden.utils.typing import (
     ChannelID,
     ClassVar,
     InitiatorAddress,
+    LockedAmount,
     Locksroot,
     Nonce,
     PaymentAmount,
@@ -47,7 +48,7 @@ def assert_envelope_values(
     nonce: int,
     channel_identifier: ChannelID,
     transferred_amount: TokenAmount,
-    locked_amount: TokenAmount,
+    locked_amount: LockedAmount,
     locksroot: Locksroot,
 ) -> None:
     if nonce <= 0:
@@ -163,7 +164,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
     chain_id: ChainID
     nonce: Nonce
     transferred_amount: TokenAmount
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
     locksroot: Locksroot
     channel_identifier: ChannelID
     token_network_address: TokenNetworkAddress

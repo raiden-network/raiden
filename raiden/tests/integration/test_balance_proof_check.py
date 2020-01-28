@@ -1,5 +1,4 @@
 import pytest
-from eth_utils import encode_hex
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -12,7 +11,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
-from raiden.utils.typing import Nonce, PaymentAmount, PaymentID, TokenNetworkAddress
+from raiden.utils.typing import Nonce, PaymentAmount, PaymentID, TokenAmount, TokenNetworkAddress
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -64,10 +63,10 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
         token_network_address=TokenNetworkAddress(token_network_contract.address),
-        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
+        balance_hash=EMPTY_BALANCE_HASH,
         nonce=Nonce(0),
         chain_id=chain_state.chain_id,
-        transferred_amount=0,
+        transferred_amount=TokenAmount(0),
     )
     closing_data = (
         empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE

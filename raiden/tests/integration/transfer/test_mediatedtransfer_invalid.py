@@ -27,6 +27,7 @@ from raiden.transfer.events import EventPaymentSentFailed
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     InitiatorAddress,
+    LockedAmount,
     Nonce,
     PaymentAmount,
     PaymentID,
@@ -114,7 +115,7 @@ def test_receive_lockedtransfer_invalidnonce(
         token=token_address,
         channel_identifier=channel0.identifier,
         transferred_amount=TokenAmount(amount),
-        locked_amount=TokenAmount(amount),
+        locked_amount=LockedAmount(amount),
         recipient=app1.raiden.address,
         locksroot=make_locksroot(),
         lock=Lock(
@@ -158,7 +159,7 @@ def test_receive_lockedtransfer_invalidsender(
     )
     assert token_network_address
     channel0 = get_channelstate(app0, app1, token_network_address)
-    lock_amount = TokenAmount(10)
+    lock_amount = LockedAmount(10)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
@@ -204,7 +205,7 @@ def test_receive_lockedtransfer_invalidrecipient(
 
     payment_identifier = PaymentID(1)
     invalid_recipient = make_address()
-    lock_amount = TokenAmount(10)
+    lock_amount = LockedAmount(10)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
@@ -257,7 +258,7 @@ def test_received_lockedtransfer_closedchannel(
     )
 
     # Now receive one mediated transfer for the closed channel
-    lock_amount = TokenAmount(10)
+    lock_amount = LockedAmount(10)
     payment_identifier = PaymentID(1)
     expiration = reveal_timeout * 2
     mediated_transfer_message = LockedTransfer(

@@ -11,6 +11,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     BlockTimeout,
     ChannelID,
+    LockedAmount,
     Locksroot,
     Nonce,
     Signature,
@@ -216,10 +217,10 @@ class PaymentChannel:
     def settle(
         self,
         transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
+        locked_amount: LockedAmount,
         locksroot: Locksroot,
         partner_transferred_amount: TokenAmount,
-        partner_locked_amount: TokenAmount,
+        partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         block_identifier: BlockSpecification,
     ) -> None:
