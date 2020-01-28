@@ -5,7 +5,15 @@ from typing import TYPE_CHECKING
 from eth_hash.auto import keccak
 
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
-from raiden.utils.typing import Any, BalanceHash, Locksroot, SecretHash, TokenAmount, Union
+from raiden.utils.typing import (
+    Any,
+    BalanceHash,
+    LockedAmount,
+    Locksroot,
+    SecretHash,
+    TokenAmount,
+    Union,
+)
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -14,7 +22,7 @@ if TYPE_CHECKING:
 
 
 def hash_balance_data(
-    transferred_amount: TokenAmount, locked_amount: TokenAmount, locksroot: Locksroot
+    transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
 ) -> BalanceHash:
     assert locksroot != b""
     assert len(locksroot) == 32

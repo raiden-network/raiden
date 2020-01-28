@@ -28,6 +28,7 @@ from raiden.utils.typing import (
     Address,
     ChannelID,
     List,
+    LockedAmount,
     Nonce,
     Optional,
     PaymentAmount,
@@ -70,7 +71,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     def detail_participants(_participant1, _participant2, _block_identifier, _channel_identifier):
         transferred_amount = TokenAmount(1)
-        locked_amount = TokenAmount(1)
+        locked_amount = LockedAmount(1)
         locksroot = make_locksroot()
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         our_details = ParticipantDetails(
@@ -85,7 +86,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         )
 
         transferred_amount = TokenAmount(1)
-        locked_amount = TokenAmount(1)
+        locked_amount = LockedAmount(1)
         # Let's mock here that partner locksroot is 0x0
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         partner_details = ParticipantDetails(

@@ -23,6 +23,7 @@ from raiden.utils.typing import (
     ChannelID,
     Generic,
     List,
+    LockedAmount,
     Locksroot,
     MessageID,
     Nonce,
@@ -32,6 +33,7 @@ from raiden.utils.typing import (
     T_BlockHash,
     T_BlockNumber,
     T_Keccak256,
+    T_LockedAmount,
     T_Signature,
     T_TokenAmount,
     TokenAmount,
@@ -298,7 +300,7 @@ class BalanceProofUnsignedState(State):
 
     nonce: Nonce
     transferred_amount: TokenAmount
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
     locksroot: Locksroot
     canonical_identifier: CanonicalIdentifier
     balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
@@ -353,7 +355,7 @@ class BalanceProofSignedState(State):
 
     nonce: Nonce
     transferred_amount: TokenAmount
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
     locksroot: Locksroot
     message_hash: AdditionalHash
     signature: Signature
@@ -364,7 +366,7 @@ class BalanceProofSignedState(State):
     def __post_init__(self) -> None:
         typecheck(self.nonce, int)
         typecheck(self.transferred_amount, T_TokenAmount)
-        typecheck(self.locked_amount, T_TokenAmount)
+        typecheck(self.locked_amount, T_LockedAmount)
         typecheck(self.locksroot, T_Keccak256)
         typecheck(self.message_hash, T_Keccak256)
         typecheck(self.signature, T_Signature)

@@ -1427,7 +1427,7 @@ def create_sendlockedtransfer(
     token = channel_state.token_address
     recipient = channel_state.partner_state.address
     # the new lock is not registered yet
-    locked_amount = TokenAmount(get_amount_locked(our_state) + amount)
+    locked_amount = LockedAmount(get_amount_locked(our_state) + amount)
 
     nonce = get_next_nonce(channel_state.our_state)
 
@@ -1490,7 +1490,7 @@ def create_unlock(
     token_address = channel_state.token_address
     recipient = channel_state.partner_state.address
     # the lock is still registered
-    locked_amount = TokenAmount(get_amount_locked(our_state) - lock.amount)
+    locked_amount = LockedAmount(get_amount_locked(our_state) - lock.amount)
 
     nonce = get_next_nonce(our_state)
     channel_state.our_state.nonce = nonce
@@ -1687,7 +1687,7 @@ def create_sendexpiredlock(
 ) -> Tuple[Optional[SendLockExpired], Optional[PendingLocksState]]:
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
-    updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)
+    updated_locked_amount = LockedAmount(locked_amount - locked_lock.amount)
 
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount

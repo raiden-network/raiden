@@ -58,6 +58,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    LockedAmount,
     Locksroot,
     NamedTuple,
     Nonce,
@@ -112,7 +113,7 @@ class ParticipantDetails(NamedTuple):
     balance_hash: BalanceHash
     nonce: Nonce
     locksroot: Locksroot
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
 
 
 class ParticipantsDetails(NamedTuple):
@@ -2319,11 +2320,11 @@ class TokenNetwork:
         self,
         channel_identifier: ChannelID,
         transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
+        locked_amount: LockedAmount,
         locksroot: Locksroot,
         partner: Address,
         partner_transferred_amount: TokenAmount,
-        partner_locked_amount: TokenAmount,
+        partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         given_block_identifier: BlockSpecification,
     ) -> None:
@@ -2430,11 +2431,11 @@ class TokenNetwork:
         self,
         channel_identifier: ChannelID,
         transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
+        locked_amount: LockedAmount,
         locksroot: Locksroot,
         partner: Address,
         partner_transferred_amount: TokenAmount,
-        partner_locked_amount: TokenAmount,
+        partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         log_details: Dict[Any, Any],
     ) -> None:

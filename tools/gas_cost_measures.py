@@ -18,6 +18,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    LockedAmount,
     Locksroot,
     Nonce,
     TokenAmount,
@@ -177,7 +178,7 @@ def find_max_pending_transfers(gas_limit) -> None:
 
         balance_hash = hash_balance_data(
             transferred_amount=TokenAmount(3000),
-            locked_amount=TokenAmount(2000),
+            locked_amount=LockedAmount(2000),
             locksroot=Locksroot(pending_transfers_tree.hash_of_packed_transfers),
         )
         canonical_identifier = CanonicalIdentifier(
