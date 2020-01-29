@@ -819,7 +819,7 @@ class RaidenService(Runnable):
                 raiden=self, chain_state=chain_state, event=raiden_event
             )
         except RaidenRecoverableError as e:
-            log.error(str(e))
+            log.info(str(e))
         except InvalidDBData:
             raise
         except (RaidenUnrecoverableError, BrokenPreconditionError) as e:
