@@ -10,7 +10,16 @@ from eth_utils import (
 )
 
 from raiden.exceptions import InvalidChecksummedAddress
-from raiden.utils.typing import Address, Iterable, List, Optional, TokenAddress, Union
+from raiden.utils.typing import (
+    Address,
+    BlockSpecification,
+    Iterable,
+    List,
+    Optional,
+    T_BlockHash,
+    TokenAddress,
+    Union,
+)
 
 
 def address_checksum_and_decode(addr: str) -> Address:
@@ -47,3 +56,12 @@ def optional_address_to_string(
 
 # to_checksum_address is slow, so let's cache the last 1000 results
 to_checksum_address = functools.lru_cache(maxsize=1000)(eth_utils.to_checksum_address)
+
+
+def format_block_id(block_id: BlockSpecification) -> str:
+    """ Formats a block identifier to a string. """
+    # Got a block hash
+    if isinstance(block_id, T_BlockHash):
+        return encode_hex(block_id)
+
+    return str(block_id)
