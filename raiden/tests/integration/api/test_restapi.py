@@ -422,16 +422,16 @@ def test_api_open_and_deposit_channel(
     assert check_dict_nested_attrs(json_response, expected_response)
     token_network_address = json_response["token_network_address"]
 
-    # Now let's try to open the same channel again and see that a proper error is returned
+    # Now let's try to open the same channel again, because it is possible for
+    # the participants to race on the channel creation, this is not considered
+    # an error.
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, HTTPStatus.CONFLICT)
+    assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert first_partner_address in json_response["errors"]
-    assert token_address_hex in json_response["errors"]
-    assert "b'" not in json_response["errors"]
+    assert check_dict_nested_attrs(json_response, expected_response)
 
     # now let's open a channel and make a deposit too
     second_partner_address = "0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038"
