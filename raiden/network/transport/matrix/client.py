@@ -693,7 +693,7 @@ class GMatrixClient(MatrixClient):
         self.token = self.api.token = token
 
     def set_sync_filter_id(self, sync_filter_id: Optional[int]) -> Optional[int]:
-        """ Sets the events limit per room for sync and return previous limit """
+        """ Sets the sync filter to the given id and returns previous filters id """
         prev_id = self._sync_filter_id
         self._sync_filter_id = sync_filter_id
         return prev_id
