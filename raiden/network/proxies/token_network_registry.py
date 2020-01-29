@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import structlog
-from eth_utils import decode_hex, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import NULL_ADDRESS_BYTES
@@ -20,6 +20,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.utils.formatting import format_block_id
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -214,7 +215,7 @@ class TokenNetworkRegistry:
             "node": to_checksum_address(self.node_address),
             "contract": to_checksum_address(self.address),
             "token_address": to_checksum_address(token_address),
-            "given_block_identifier": to_hex(given_block_identifier),
+            "given_block_identifier": format_block_id(given_block_identifier),
             "channel_participant_deposit_limit": channel_participant_deposit_limit,
             "token_network_deposit_limit": token_network_deposit_limit,
         }

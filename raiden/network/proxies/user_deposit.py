@@ -9,7 +9,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -129,7 +129,7 @@ class UserDeposit:
         log_details = {
             "monitoring_service_address": to_checksum_address(monitoring_service_address),
             "one_to_n_address": to_checksum_address(one_to_n_address),
-            "given_block_identifier": given_block_identifier,
+            "given_block_identifier": format_block_id(given_block_identifier),
         }
 
         check_address_has_code(
@@ -280,7 +280,7 @@ class UserDeposit:
             "contract": to_checksum_address(self.address),
             "node": to_checksum_address(self.node_address),
             "total_deposit": total_deposit,
-            "given_block_identifier": given_block_identifier,
+            "given_block_identifier": format_block_id(given_block_identifier),
         }
 
         # To prevent concurrent transactions for token transfers where it is unknown if
