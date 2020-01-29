@@ -2,13 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 import structlog
-from eth_utils import (
-    encode_hex,
-    is_binary_address,
-    to_canonical_address,
-    to_checksum_address,
-    to_hex,
-)
+from eth_utils import encode_hex, is_binary_address, to_canonical_address, to_hex
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
@@ -43,7 +37,7 @@ from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils.formatting import format_block_id
+from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_signed_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.smart_contracts import safe_gas_limit
