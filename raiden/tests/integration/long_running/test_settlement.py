@@ -17,7 +17,7 @@ from raiden.storage.restore import channel_state_until_state_change
 from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
@@ -1093,7 +1093,7 @@ def test_batch_unlock_after_restart(raiden_network, restart_node, token_addresse
         )
 
 
-@raise_on_failure
+@expect_failure
 @pytest.mark.parametrize("number_of_nodes", (2,))
 @pytest.mark.parametrize("channels_per_node", (1,))
 def test_handle_insufficient_eth(raiden_network, restart_node, token_addresses, caplog):
