@@ -55,7 +55,6 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
-    ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
@@ -556,13 +555,6 @@ def handle_contract_receive_channel_closed(
     return handle_token_network_action(chain_state=chain_state, state_change=state_change)
 
 
-def handle_receive_delivered(
-    chain_state: ChainState, state_change: ReceiveDelivered  # pylint: disable=unused-argument
-) -> TransitionResult[ChainState]:
-    """ Check if the "Delivered" message exists in the global queue and delete if found."""
-    return TransitionResult(chain_state, [])
-
-
 def handle_action_change_node_network_state(
     chain_state: ChainState, state_change: ActionChangeNodeNetworkState
 ) -> TransitionResult[ChainState]:
@@ -843,9 +835,6 @@ def handle_state_change(
         elif type(state_change) == ContractReceiveUpdateTransfer:
             assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
             iteration = handle_token_network_action(chain_state, state_change)
-        elif type(state_change) == ReceiveDelivered:
-            assert isinstance(state_change, ReceiveDelivered), MYPY_ANNOTATION
-            iteration = handle_receive_delivered(chain_state, state_change)
         elif type(state_change) == ReceiveSecretReveal:
             assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
             iteration = handle_receive_secret_reveal(chain_state, state_change)

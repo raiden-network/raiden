@@ -7,7 +7,7 @@ from raiden import routing
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
-from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.synchronization import Processed
 from raiden.messages.transfers import (
     LockedTransfer,
     LockExpired,
@@ -33,7 +33,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import HopState
 from raiden.transfer.state_change import (
-    ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
@@ -109,10 +108,6 @@ class MessageHandler:
             elif type(message) == WithdrawExpired:
                 assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
                 pool.apply_async(self.handle_message_withdraw_expired, (raiden, message))
-
-            elif type(message) == Delivered:
-                assert isinstance(message, Delivered), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_delivered, (raiden, message))
 
             elif type(message) == Processed:
                 assert isinstance(message, Processed), MYPY_ANNOTATION
@@ -378,11 +373,3 @@ class MessageHandler:
         assert message.sender, "message must be signed"
         processed = ReceiveProcessed(message.sender, message.message_identifier)
         return [processed]
-
-    @staticmethod
-    def handle_message_delivered(
-        raiden: "RaidenService", message: Delivered  # pylint: disable=unused-argument
-    ) -> List[StateChange]:
-        assert message.sender, "message must be signed"
-        delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
-        return [delivered]

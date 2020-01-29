@@ -32,7 +32,6 @@ from raiden.transfer.node import (
     handle_action_change_node_network_state,
     handle_contract_receive_new_token_network,
     handle_contract_receive_new_token_network_registry,
-    handle_receive_delivered,
     handle_receive_processed,
     inplace_delete_message_queue,
     is_transaction_effect_satisfied,
@@ -63,7 +62,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveNewTokenNetwork,
     ContractReceiveNewTokenNetworkRegistry,
-    ReceiveDelivered,
     ReceiveProcessed,
 )
 from raiden.transfer.views import get_networks
@@ -437,19 +435,18 @@ def test_inplace_delete_message_queue(chain_state):
     sender = factories.make_address()
     canonical_identifier = factories.make_canonical_identifier()
     message_id = factories.make_message_identifier()
-    delivered_state_change = ReceiveDelivered(sender=sender, message_identifier=message_id)
     processed_state_change = ReceiveProcessed(sender=sender, message_identifier=message_id)
 
     global_identifier = QueueIdentifier(
         recipient=sender, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
 
-    chain_state.queueids_to_queues[global_identifier] = None
-    assert global_identifier in chain_state.queueids_to_queues, "queue mapping insertion failed"
+    chain_state.queueids_to_queues[global_identifier] = list()
     inplace_delete_message_queue(
-        chain_state=chain_state, state_change=delivered_state_change, queueid=global_identifier
+        chain_state=chain_state, state_change=processed_state_change, queueid=global_identifier
     )
-    assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
+    msg = "Existing but empty queues must be cleared."
+    assert global_identifier not in chain_state.queueids_to_queues, msg
 
     chain_state.queueids_to_queues[global_identifier] = [
         SendRetriableMessageEvent(
@@ -458,10 +455,11 @@ def test_inplace_delete_message_queue(chain_state):
             message_identifier=message_id,
         )
     ]
-    assert global_identifier in chain_state.queueids_to_queues, "queue mapping insertion failed"
-    handle_receive_delivered(chain_state=chain_state, state_change=delivered_state_change)
-    assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
+    handle_receive_processed(chain_state=chain_state, state_change=processed_state_change)
+    msg = "When a queue becames empty it must be cleared."
+    assert global_identifier not in chain_state.queueids_to_queues, msg
 
+    # Same test, but with a different canonical_identifier
     queue_identifier = QueueIdentifier(recipient=sender, canonical_identifier=canonical_identifier)
     assert queue_identifier not in chain_state.queueids_to_queues, "queue not empty"
     chain_state.queueids_to_queues[queue_identifier] = [
@@ -471,6 +469,6 @@ def test_inplace_delete_message_queue(chain_state):
             message_identifier=message_id,
         )
     ]
-    assert queue_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
     handle_receive_processed(chain_state=chain_state, state_change=processed_state_change)
-    assert queue_identifier not in chain_state.queueids_to_queues, "queue did not clear"
+    msg = "When a queue becames empty it must be cleared."
+    assert queue_identifier not in chain_state.queueids_to_queues, msg

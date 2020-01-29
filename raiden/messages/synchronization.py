@@ -34,8 +34,6 @@ class Processed(SignedMessage):
     Notes:
         - This message is required even if the transport guarantees durability
           of the data.
-        - This message provides a stronger guarantee then a Delivered,
-          therefore it can replace it.
     """
 
     cmdid: ClassVar[CmdId] = CmdId.PROCESSED
@@ -53,28 +51,3 @@ class Processed(SignedMessage):
 
     def __repr__(self) -> str:
         return f"<Processed(msg_id={self.message_identifier})>"
-
-
-@dataclass(repr=False, eq=False)
-class Delivered(SignedMessage):
-    """ Informs the sender that the message was received *and* persisted.
-
-    Notes:
-        - This message provides a weaker guarantee in respect to the Processed
-          message. It can be emulated by a transport layer that guarantees
-          persistence, or it can be sent by the recipient before the received
-          message is processed (therefore it does not matter if the message was
-          successfully processed or not).
-    """
-
-    cmdid: ClassVar[CmdId] = CmdId.DELIVERED
-
-    delivered_message_identifier: MessageID
-
-    def _data_to_sign(self) -> bytes:
-        return bytes([self.cmdid.value, 0, 0, 0]) + self.delivered_message_identifier.to_bytes(
-            8, byteorder="big"
-        )
-
-    def __repr__(self) -> str:
-        return f"<Delivered(msg_id={self.delivered_message_identifier})>"

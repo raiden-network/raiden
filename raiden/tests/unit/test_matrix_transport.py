@@ -280,7 +280,7 @@ def test_message_ack_timing_keeper():
     matk.add_message(RevealSecret(MessageID(1), make_signature(), make_secret()))
 
     gevent.sleep(0.05)
-    matk.finalize_message(Processed(MessageID(1), make_signature()))
+    matk.finalize_message(Processed(message_identifier=MessageID(1), signature=make_signature()))
 
     assert len(matk._durations) == 1
     assert 0.05 <= matk._durations[0] <= 0.06

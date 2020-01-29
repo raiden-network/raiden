@@ -34,8 +34,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     )
 
     # Regression test:
-    # The code delivered_message handler worked only with a queue of one
-    # element
+    # The code worked only with a queue of one element
     first_message = SendSecretReveal(
         recipient=recipient,
         message_identifier=message_identifier,
@@ -52,9 +51,9 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
 
     chain_state.queueids_to_queues[queue_identifier] = [first_message, second_message]
 
-    delivered_message = state_change.ReceiveDelivered(recipient, message_identifier)
+    processed_message = state_change.ReceiveProcessed(recipient, message_identifier)
 
-    iteration = node.handle_receive_delivered(chain_state, delivered_message)
+    iteration = node.handle_receive_processed(chain_state, processed_message)
     new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])
 
     assert first_message not in new_queue
@@ -161,7 +160,7 @@ def test_delivered_processed_message_cleanup():
 
     fake_message_identifier = random.randint(0, 2 ** 16)
     node.inplace_delete_message(
-        message_queue, state_change.ReceiveDelivered(recipient, fake_message_identifier)
+        message_queue, state_change.ReceiveProcessed(recipient, fake_message_identifier)
     )
     assert first_message in message_queue, "invalid message id must be ignored"
     assert second_message in message_queue, "invalid message id must be ignored"
@@ -169,7 +168,7 @@ def test_delivered_processed_message_cleanup():
     invalid_sender_address = factories.make_address()
     node.inplace_delete_message(
         message_queue,
-        state_change.ReceiveDelivered(invalid_sender_address, first_message.message_identifier),
+        state_change.ReceiveProcessed(invalid_sender_address, first_message.message_identifier),
     )
     assert first_message in message_queue, "invalid sender id must be ignored"
     assert second_message in message_queue, "invalid sender id must be ignored"
@@ -193,9 +192,6 @@ def test_channel_closed_must_clear_ordered_messages(
         recipient=recipient, canonical_identifier=netting_channel_state.canonical_identifier
     )
 
-    # Regression test:
-    # The code delivered_message handler worked only with a queue of one
-    # element
     message = factories.create(
         factories.LockedTransferProperties(
             message_identifier=message_identifier,

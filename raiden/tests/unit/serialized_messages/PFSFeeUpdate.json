@@ -1,7 +1,7 @@
 {
     "canonical_identifier": {
         "chain_identifier": "337",
-        "channel_identifier": "76772029580080880065711384192941278419613434731761409767757841232989966310411",
+        "channel_identifier": "35374006900054077530017211852078128498302036071459084740348012299737426817566",
         "token_network_address": "0x6e6574776f726b6e6574776f726b6e6574776f72"
     },
     "fee_schedule": {
@@ -10,8 +10,8 @@
         "imbalance_penalty": null,
         "proportional": "0"
     },
-    "signature": "0x9c487afcb4c9c8db7358bbb5633e8dafd41d624198f7e84ac9d26d9caeb11f721c476ee2329b4a350d1f73d28f439f62f1e1d431419e6ba7147f9c730d85b2f11c",
+    "signature": "0xe584925c571e987f319a803fae4ede79a88474c8f646c536be825d15779e5ce559b5c509a1a40b6c17af1f62ae313a0cbbe1175319f3face1d295255206f8f911b",
     "timestamp": "2000-01-01T00:00:00",
     "type": "PFSFeeUpdate",
-    "updating_participant": "0x4e473d79783f3e7676372e2e6d49533a602a3e25"
+    "updating_participant": "0x64744f4622636e35372f320a725e34227b267d3b"
 }

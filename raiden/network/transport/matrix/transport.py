@@ -17,11 +17,10 @@ from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
-from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Environment
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
-from raiden.messages.abstract import Message, RetriableMessage, SignedRetriableMessage
-from raiden.messages.healthcheck import Ping, Pong
-from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.abstract import Message, RetriableMessage
+from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixMessage,
@@ -246,7 +245,7 @@ class _RetryQueue(Runnable):
         message_texts: List[str] = list()
         for message_data in self._message_queue[:]:
             # Messages are sent on two conditions:
-            # - Non-retryable (e.g. Delivered/Processed)
+            # - Non-retryable (e.g. Processed)
             #   - Those are immediately remove from the local queue since they are only sent once
             # - Retryable
             #   - Those are retried according to their retry generator as long as they haven't been
@@ -637,10 +636,6 @@ class MatrixTransport(Runnable):
 
             # These are not protocol messages, but transport specific messages
             for message in queue.messages:
-                if isinstance(message, Delivered):
-                    raise ValueError(
-                        f"Do not use send_async for {message.__class__.__name__} messages"
-                    )
 
                 is_development = self._environment is Environment.DEVELOPMENT
                 if is_development and isinstance(message, RetriableMessage):
@@ -1101,18 +1096,6 @@ class MatrixTransport(Runnable):
                     all_messages.extend(self._handle_text(room, text))
 
         for message in all_messages:
-            if (
-                isinstance(message, SignedRetriableMessage)
-                and not isinstance(message, (Ping, Pong))
-                and message.sender
-            ):
-                delivered_message = Delivered(
-                    delivered_message_identifier=message.message_identifier,
-                    signature=EMPTY_SIGNATURE,
-                )
-                self._raiden_service.sign(delivered_message)
-                retrier = self._get_retrier(message.sender)
-                retrier.enqueue_unordered(delivered_message)
             if self._environment is Environment.DEVELOPMENT:
                 if isinstance(message, RetriableMessage):
                     self._counters["dispatch"][

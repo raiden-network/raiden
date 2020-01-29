@@ -8,6 +8,7 @@ import gevent
 import pytest
 from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
+from web3.types import Nonce
 
 import raiden
 from raiden.app import App
@@ -47,7 +48,7 @@ from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, Qu
 from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Dict, List, cast
+from raiden.utils.typing import Address, Dict, List, MessageID, cast
 from raiden.waiting import wait_for_network_state
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
@@ -78,7 +79,7 @@ class MessageHandler:
                     transport_queue[queueid] = []
                 transport_queue[queueid].append(pong)
                 self.transport._raiden_service.sign(pong)
-                self.transport.send_async(queueid, pong)
+                self.transport.send_async([MessagesQueue(queueid, [pong])])
         self.bag.update(messages)
 
 
@@ -110,12 +111,12 @@ def ping_pong_message_success(transport0, transport1):
     received_messages1 = transport1._raiden_service.message_handler.bag
 
     ping_message = Ping(
-        message_identifier=1,
-        nonce=1,
+        message_identifier=MessageID(1),
+        nonce=Nonce(1),
         current_protocol_version=PROTOCOL_VERSION,
         signature=EMPTY_SIGNATURE,
     )
-    pong_message = Pong(message_identifier=1, nonce=1, signature=EMPTY_SIGNATURE)
+    pong_message = Pong(message_identifier=MessageID(1), nonce=Nonce(1), signature=EMPTY_SIGNATURE)
 
     transport0_raiden_queues[queueid1].append(ping_message)
 
@@ -284,11 +285,11 @@ def test_matrix_message_sync(matrix_transports):
         while len(transport0_messages) != 10:
             gevent.sleep(0.1)
 
-    # transport1 receives the 5 new `Processed` messages sent by transport0
+    # transport1 receives the 5 new `Ping` messages sent by transport0
     for i in range(10, 15):
         assert any(m.message_identifier == i for m in transport1_messages)
 
-    # transport0 answers with a `Delivered` for each one of the new `Processed`
+    # transport0 answers with a `Pong` for each one of the new `Ping`
     for i in range(10, 15):
         assert any(m.message_identifier == i for m in transport0_messages)
 

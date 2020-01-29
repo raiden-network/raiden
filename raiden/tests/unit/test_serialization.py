@@ -11,7 +11,7 @@ from networkx import Graph
 from raiden.exceptions import SerializationError
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
-from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.synchronization import Processed
 from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
 from raiden.storage.serialization import JSONSerializer
@@ -34,12 +34,6 @@ message_factories = (
 messages = [factories.create(factory) for factory in message_factories]
 
 # TODO Handle these with factories once #5091 is implemented
-messages.append(
-    Delivered(
-        delivered_message_identifier=factories.make_message_identifier(),
-        signature=factories.make_signature(),
-    )
-)
 messages.append(
     Processed(
         message_identifier=factories.make_message_identifier(),
