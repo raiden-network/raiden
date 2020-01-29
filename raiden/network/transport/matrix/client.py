@@ -162,7 +162,7 @@ class GMatrixHttpApi(MatrixHttpApi):
     def _send(self, method: str, path: str, *args: Any, **kwargs: Any) -> Dict:
         # we use an infinite loop + time + sleep instead of gevent.Timeout
         # to be able to re-raise the last exception instead of declaring one beforehand
-        started = time.time()
+        started = time.monotonic()
 
         # paths in long_paths have a reserved slot in the pool, and aren't error-handled
         # to avoid them getting stuck when listener greenlet is killed
@@ -178,7 +178,7 @@ class GMatrixHttpApi(MatrixHttpApi):
                 # from MatrixRequestError, retry only 5xx http errors
                 if isinstance(ex, MatrixRequestError) and ex.code < 500:
                     raise
-                if time.time() > started + self.retry_timeout:
+                if time.monotonic() > started + self.retry_timeout:
                     raise
                 last_ex = ex
                 log.debug(
@@ -462,9 +462,10 @@ class GMatrixClient(MatrixClient):
             user_id=self.user_id,
             sync_iteration=self.sync_iteration,
             sync_filter=self.sync_filter,
+            last_sync_time=self.last_sync,
         )
 
-        time_before_sync = time.time()
+        time_before_sync = time.monotonic()
         time_since_last_sync_in_seconds = time_before_sync - self.last_sync
 
         # If it takes longer than `timeout_ms + latency_ms` to call `_sync`
@@ -484,11 +485,27 @@ class GMatrixClient(MatrixClient):
                 f"{time_since_last_sync_in_seconds}s > {timeout_in_seconds}s. {IDLE}"
             )
 
+        log.debug(
+            "Calling api.sync",
+            node=node_address_from_userid(self.user_id),
+            user_id=self.user_id,
+            sync_iteration=self.sync_iteration,
+            time_since_last_sync_in_seconds=time_since_last_sync_in_seconds,
+        )
         self.last_sync = time_before_sync
         response = self.api.sync(
             since=self.sync_token, timeout_ms=timeout_ms, filter=self._sync_filter_id
         )
-        time_after_sync = time.time()
+        time_after_sync = time.monotonic()
+
+        log.debug(
+            "api.sync returned",
+            node=node_address_from_userid(self.user_id),
+            user_id=self.user_id,
+            sync_iteration=self.sync_iteration,
+            time_after_sync=time_after_sync,
+            time_taken=time_after_sync - time_before_sync,
+        )
 
         if response:
             token = uuid4()
@@ -577,9 +594,9 @@ class GMatrixClient(MatrixClient):
                 )
                 currently_queued_responses.append(response)
 
-            time_before_processing = time.time()
+            time_before_processing = time.monotonic()
             self._handle_responses(currently_queued_responses)
-            time_after_processing = time.time()
+            time_after_processing = time.monotonic()
             log.debug(
                 "Processed queued Matrix responses",
                 node=node_address_from_userid(self.user_id),
