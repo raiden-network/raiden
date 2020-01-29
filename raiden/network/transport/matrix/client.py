@@ -21,7 +21,8 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
-from raiden.exceptions import MatrixSyncMaxTimeoutReached
+from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
+from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -253,8 +254,10 @@ class GMatrixClient(MatrixClient):
     def create_sync_filter(
         self, broadcast_rooms: Optional[Dict[str, Room]] = None, limit: Optional[int] = None
     ) -> Optional[int]:
-        broadcast_room_filter: Dict[str, Any] = {"room": {}}
-        limit_filter: Dict[str, Any] = {"room": {}}
+        if broadcast_rooms is None and limit is None:
+            return None
+        broadcast_room_filter: Dict[str, Any] = {}
+        limit_filter: Dict[str, Any] = {}
         if broadcast_rooms:
             ignore_rooms = [room.room_id for room in broadcast_rooms.values()]
             broadcast_room_filter = {
@@ -270,18 +273,18 @@ class GMatrixClient(MatrixClient):
         if limit is not None:
             limit_filter = {"room": {"timeline": {"limit": limit}}}
 
-        room_filter = {**(broadcast_room_filter["room"]), **(limit_filter["room"])}
-        sync_filter = {**broadcast_room_filter, **limit_filter}
-        sync_filter["room"] = room_filter
+        final_filter = broadcast_room_filter
+        merge_dict(final_filter, limit_filter)
 
-        filter_id = None
         try:
             # 0 is a valid filter ID
-            filter_response = self.api.create_filter(self.user_id, sync_filter)
+            filter_response = self.api.create_filter(self.user_id, final_filter)
             filter_id = filter_response.get("filter_id")
-            log.debug("Sync Filter Created", filter_id=filter_id, filter=sync_filter)
-        except MatrixRequestError:
-            log.error(f"Failed to create filter: {sync_filter} for user {self.user_id}")
+            log.debug("Sync filter created", filter_id=filter_id, filter=final_filter)
+        except MatrixRequestError as ex:
+            raise TransportError(
+                f"Failed to create filter: {final_filter} for user {self.user_id}"
+            ) from ex
 
         return filter_id
 
