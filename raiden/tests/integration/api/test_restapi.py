@@ -1137,7 +1137,6 @@ def test_api_payments_target_error(
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
-    app1.start()
 
 
 @raise_on_failure
