@@ -375,10 +375,6 @@ class MatrixTransport(Runnable):
 
         self._client.add_invite_listener(self._handle_invite)
 
-        self._counter_send: CounterType[MessageID] = Counter()
-        self._counter_retry: CounterType[MessageID] = Counter()
-        self._counter_dispatch: CounterType[MessageID] = Counter()
-
         # Forbids concurrent room creation.
         self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
 
