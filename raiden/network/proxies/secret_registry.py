@@ -2,7 +2,7 @@ from typing import List
 
 import gevent
 import structlog
-from eth_utils import decode_hex, encode_hex, is_binary_address, to_checksum_address
+from eth_utils import decode_hex, encode_hex, is_binary_address
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
@@ -14,6 +14,7 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
