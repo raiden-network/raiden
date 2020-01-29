@@ -662,7 +662,27 @@ class RestAPI:  # pragma: no unittest
                 settle_timeout=settle_timeout,
                 reveal_timeout=reveal_timeout,
             )
+            status_code = HTTPStatus.CREATED
+        except DuplicatedChannelError:
+            # This is unlikely to happen in the wild, but it does happen in our
+            # tests.
+
+            channel_status = channel.get_status(
+                self.raiden_api.get_channel(registry_address, token_address, partner_address)
+            )
+
+            if not channel_status == ChannelState.STATE_OPENED:
+                return api_error(
+                    errors="Channel is not in an open state.", status_code=HTTPStatus.CONFLICT
+                )
+
+            # The channel is open, just fall-through
+            status_code = HTTPStatus.OK
+
         except (
+            InvalidRevealTimeout,
+            InvalidSettleTimeout,
+            TokenNetworkDeprecated,
             InvalidBinaryAddress,
             InvalidSettleTimeout,
             SamePeerAddress,
@@ -707,7 +727,7 @@ class RestAPI:  # pragma: no unittest
 
         result = self.channel_schema.dump(channel_state)
 
-        return api_response(result=result, status_code=HTTPStatus.CREATED)
+        return api_response(result=result, status_code=status_code)
 
     def connect(
         self,
