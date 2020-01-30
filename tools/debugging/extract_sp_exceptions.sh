@@ -80,6 +80,7 @@ function download_server_logs {
 }
 
 function search_for_failures {
+    mkdir -p "${DESTINATION_DIR}/errors/"
     echo -e "${BOLD}Looking for failures${RESET}"
     scenarios_dir="${DESTINATION_DIR}/scenarios"
     for scenario in $(ls $scenarios_dir); do
@@ -94,6 +95,7 @@ function search_for_failures {
             if [[ $result != "" ]]; then
                 print_bold "- Found error in ${node_dir}"
                 echo -e "${result}"
+                echo ${result} > "${DESTINATION_DIR}/errors/${scenario}.node.log"
             fi
         done
         separator
@@ -101,6 +103,7 @@ function search_for_failures {
         if [[ $sp_error != "" ]]; then
             print_bold "- SP reported an error in ${scenario_dir}"
             echo -e "${sp_error}"
+                echo ${sp_error} > "${DESTINATION_DIR}/errors/${scenario}.sp.log"
         fi
         separator
     done;
