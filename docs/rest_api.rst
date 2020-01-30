@@ -157,6 +157,7 @@ Deploying
 
    :statuscode 201: A token network for the token has been successfully created.
    :statuscode 402: Insufficient ETH to pay for the gas of the register on-chain transaction
+   :statuscode 403: Maximum of allowed token networks reached. No new token networks can be registered.
    :statuscode 404: The given token address is invalid.
    :statuscode 409:
     - The token was already registered before, or

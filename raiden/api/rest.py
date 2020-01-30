@@ -79,6 +79,7 @@ from raiden.exceptions import (
     InvalidSettleTimeout,
     InvalidToken,
     InvalidTokenAddress,
+    MaxTokenNetworkNumberReached,
     MintFailed,
     PaymentConflict,
     RaidenRecoverableError,
@@ -126,6 +127,7 @@ from raiden.utils.typing import (
 log = structlog.get_logger(__name__)
 
 ERROR_STATUS_CODES = [
+    HTTPStatus.FORBIDDEN,
     HTTPStatus.CONFLICT,
     HTTPStatus.REQUEST_TIMEOUT,
     HTTPStatus.PAYMENT_REQUIRED,
@@ -580,6 +582,8 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
+        except MaxTokenNetworkNumberReached as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.FORBIDDEN)
 
         return api_response(
             result=dict(token_network_address=to_checksum_address(token_network_address)),

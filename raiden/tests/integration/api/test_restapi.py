@@ -1616,6 +1616,7 @@ def test_register_token_mainnet(
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("max_token_networks", [1])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 def test_register_token(
     api_server_test_instance,
@@ -1630,13 +1631,13 @@ def test_register_token(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.rpc_client,
         contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        constructor_arguments=(token_amount, 2, "raiden", "Rd1"),
     )
     other_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.rpc_client,
         contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+        constructor_arguments=(token_amount, 2, "raiden", "Rd2"),
     )
 
     # Wait until Raiden can start using the token contract.
@@ -1677,13 +1678,57 @@ def test_register_token(
     conflict_response = conflict_request.send().response
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
 
+    # Test that adding a second token throws a forbidden error
+    forbidden_request = grequests.put(
+        api_url_for(
+            api_server_test_instance,
+            "registertokenresource",
+            token_address=to_checksum_address(other_token_address),
+        )
+    )
+    forbidden_response = forbidden_request.send().response
+    assert_response_with_error(forbidden_response, HTTPStatus.FORBIDDEN)
+    response_json = get_json_response(forbidden_response)
+    assert "Number of token networks will exceed the maximum of" in response_json["errors"]
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_tokens", [0])
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
+def test_register_token_without_balance(
+    api_server_test_instance,
+    token_amount,
+    token_addresses,
+    raiden_network,
+    contract_manager,
+    retry_timeout,
+):
+    app0 = raiden_network[0]
+    new_token_address = deploy_contract_web3(
+        CONTRACT_HUMAN_STANDARD_TOKEN,
+        app0.raiden.rpc_client,
+        contract_manager=contract_manager,
+        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    )
+
+    # Wait until Raiden can start using the token contract.
+    # Here, the block at which the contract was deployed should be confirmed by Raiden.
+    # Therefore, until that block is received.
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        retry_timeout=retry_timeout,
+    )
+
     # Burn all the eth and then make sure we get the appropriate API error
     burn_eth(app0.raiden.rpc_client)
     poor_request = grequests.put(
         api_url_for(
             api_server_test_instance,
             "registertokenresource",
-            token_address=to_checksum_address(other_token_address),
+            token_address=to_checksum_address(new_token_address),
         )
     )
     poor_response = poor_request.send().response

@@ -9,6 +9,7 @@ from raiden.exceptions import (
     BrokenPreconditionError,
     InvalidToken,
     InvalidTokenAddress,
+    MaxTokenNetworkNumberReached,
     RaidenRecoverableError,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
@@ -225,7 +226,7 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
 
     # Tries to register a new valid token after all slots have been used. This
     # has to fail.
-    with pytest.raises(BrokenPreconditionError):
+    with pytest.raises(MaxTokenNetworkNumberReached):
         token_network_registry_proxy.add_token(
             token_address=second_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
