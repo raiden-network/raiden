@@ -535,6 +535,11 @@ to instant failure of the test, and `@expect_failure` indicates that we
 actually expect the crash of a `RaidenService` instance within the test
 and want to ignore it.
 
+Sometimes a test using `@raise_on_failure` needs to restart nodes or start
+new ones during the test. Simply calling `App.start` to achieve this will
+make `@raise_on_failure` lose track of the app. Therefore, such tests should
+always use the `restart_node` fixture and call `restart_node(app)` instead.
+
 ### Workflow
 
 When developing a feature, or a bug fix you should always start by writing a
