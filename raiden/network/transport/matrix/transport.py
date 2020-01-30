@@ -603,16 +603,21 @@ class MatrixTransport(Runnable):
     def immediate_health_check_for(self, node_address: Address) -> None:
         """Start healthcheck (status monitoring) for a peer
 
-        It also whitelists the address to answer invites and listen for messages
+        It also whitelists the address to answer invites and listen for messages.
         """
-        self.whitelist(node_address)
-        self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
+        if self._address_mgr.is_address_known(node_address):
+            self.log.debug(
+                "Healthcheck already enabled", peer_address=to_checksum_address(node_address)
+            )
+        else:
+            self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
 
-        user_ids = self.get_user_ids_for_address(node_address)
+            self.whitelist(node_address)
 
-        # Ensure network state is updated in case we already know about the user presences
-        # representing the target node
-        self._address_mgr.track_address_presence(node_address, user_ids)
+            # Ensure network state is updated in case we already know about the user presences
+            # representing the target node
+            user_ids = self.get_user_ids_for_address(node_address)
+            self._address_mgr.track_address_presence(node_address, user_ids)
 
     def _health_check_worker(self) -> None:
         """ Worker to process healthcheck requests. """
