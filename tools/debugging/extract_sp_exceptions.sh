@@ -29,7 +29,7 @@ function display_usage {
 }
 
 
-if [[  $1 == "--help" ]]; then 
+if [[  $1 == "--help" ]]; then
     display_usage
     exit 1
 fi
@@ -57,20 +57,21 @@ function download_nodes_logs {
     current_server=$2
     run_number=$3
 
-    nodes=$(${CURL_COMMAND} ${current_server}${scenario} | sed -e 's/<[^>]*>//g' | grep -v Directory | sed -e '/^$/d' | grep "^node_${run_number}")
+    nodes=$(${CURL_COMMAND} ${current_server}${scenario} | grep -P '^<a ' | cut -d\" -f2 | grep "^node_${run_number}")
     for node in $nodes; do
         $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${node})
     done
 
-    latest_sp_log=$(${CURL_COMMAND} ${current_server}${scenario} | sed -e 's/<[^>]*>//g' | grep -v Directory | sed -e '/^$/d' | grep ".log$" | sort | tail -n 1)
+    latest_sp_log=$(${CURL_COMMAND} ${current_server}${scenario} | grep -P '^<a ' | cut -d\" -f2 | grep ".log$" | sort | tail -n 1)
     $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${latest_sp_log})
 }
 
 function download_server_logs {
     current_server=$1
-    scenarios=$(${CURL_COMMAND} ${current_server} | sed -e 's/<[^>]*>//g' | grep -v Directory | sed -e '/^$/d')
+    scenarios=$(${CURL_COMMAND} ${current_server} | grep -P '^<a ' | cut -d\" -f2)
     for scenario in $scenarios; do
         run_number=$(${CURL_COMMAND} "${current_server}${scenario}run_number.txt")
+        [ -n "$run_number" ] || { echo 'Could not find run number!'; exit 1; }
         download_nodes_logs $scenario $current_server $run_number
         echo -e "\t - ${scenario}, run_number: ${run_number}"
     done;
