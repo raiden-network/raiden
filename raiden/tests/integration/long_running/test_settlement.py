@@ -931,7 +931,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
+def test_batch_unlock_after_restart(raiden_network, restart_node, token_addresses, deposit):
     """Simulate the case where:
     - A sends B a transfer
     - B sends A a transfer
@@ -1082,7 +1082,7 @@ def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
             sender=alice_bob_channel_state.our_state.address,
         )
 
-    alice_app.start()
+    restart_node(alice_app)
 
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
@@ -1096,7 +1096,7 @@ def test_batch_unlock_after_restart(raiden_network, token_addresses, deposit):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", (2,))
 @pytest.mark.parametrize("channels_per_node", (1,))
-def test_handle_insufficient_eth(raiden_network, token_addresses, caplog):
+def test_handle_insufficient_eth(raiden_network, restart_node, token_addresses, caplog):
     app0, app1 = raiden_network
     token = token_addresses[0]
     registry_address = app0.raiden.default_registry.address
@@ -1121,7 +1121,7 @@ def test_handle_insufficient_eth(raiden_network, token_addresses, caplog):
 
     app1.raiden.stop()
     burn_eth(app1.raiden.rpc_client)
-    app1.raiden.start()
+    restart_node(app1)
 
     settle_block_timeout = BlockTimeout(
         exception_to_throw=RuntimeError("Settle did not happen."),

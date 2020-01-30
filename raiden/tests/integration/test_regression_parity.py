@@ -38,7 +38,7 @@ STATE_PRUNING = {
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
 def test_locksroot_loading_during_channel_settle_handling(
-    raiden_chain, deploy_client, token_addresses
+    raiden_chain, restart_node, deploy_client, token_addresses
 ):
     app0, app1 = raiden_chain
     token_network_registry_address = app0.raiden.default_registry.address
@@ -141,7 +141,7 @@ def test_locksroot_loading_during_channel_settle_handling(
 
     # This must not raise when the settle event is being raised and the
     # locksroot is being recover (#3856)
-    app0.start()
+    restart_node(app0)
 
     assert wait_for_state_change(
         raiden=app0.raiden,
