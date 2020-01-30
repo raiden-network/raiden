@@ -80,7 +80,12 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
 )
 def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
-    raiden_network, number_of_nodes, token_addresses, network_wait, user_deposit_address
+    raiden_network,
+    restart_node,
+    number_of_nodes,
+    token_addresses,
+    network_wait,
+    user_deposit_address,
 ):
     """ Raiden must broadcast the latest known balance proof on restarts.
 
@@ -159,7 +164,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
             user_deposit_address, block_identifier="latest"
         ),
     )
-    app0_restart.start()
+    restart_node(app0_restart)
 
 
 @expect_failure  # raise_on_failure will not work here since the apps are not started
@@ -175,7 +180,7 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     """
     app0, _ = raiden_network
 
-    # Make sure we get into app0.start() with a confirmed block that contains
+    # Make sure we get into the restart of app0 with a confirmed block that contains
     # the channel creation events
     target_block_num = (
         blockchain_services.proxy_manager.client.block_number()
@@ -197,7 +202,7 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_fees_are_updated_during_startup(
-    raiden_network, token_addresses, deposit, retry_timeout
+    raiden_network, restart_node, token_addresses, deposit, retry_timeout
 ) -> None:
     """
     Test that the supplied fee settings are correctly forwarded to all
@@ -264,7 +269,7 @@ def test_fees_are_updated_during_startup(
     app0.stop()
     app0.raiden.config = deepcopy(original_config)
     app0.raiden.config.mediation_fees.token_to_flat_fee[token_address] = flat_fee
-    app0.start()
+    restart_node(app0)
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == flat_fee
@@ -276,7 +281,7 @@ def test_fees_are_updated_during_startup(
     app0.stop()
     app0.raiden.config = deepcopy(original_config)
     app0.raiden.config.mediation_fees.token_to_proportional_fee[token_address] = prop_fee
-    app0.start()
+    restart_node(app0)
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
@@ -287,7 +292,7 @@ def test_fees_are_updated_during_startup(
     app0.stop()
     app0.raiden.config = deepcopy(original_config)
     app0.raiden.config.mediation_fees.token_to_proportional_imbalance_fee[token_address] = 0.05e6
-    app0.start()
+    restart_node(app0)
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE

@@ -1238,7 +1238,7 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
 @pytest.mark.parametrize(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
-def test_transport_presence_updates(raiden_network, retry_timeout):
+def test_transport_presence_updates(raiden_network, restart_node, retry_timeout):
     """
     Create transports and test that matrix delivers presence updates
     in the presence of filters which ignore all event updates
@@ -1274,7 +1274,7 @@ def test_transport_presence_updates(raiden_network, retry_timeout):
     )
 
     # Restart app0
-    app0.start()
+    restart_node(app0)
     app0.raiden.transport.immediate_health_check_for(app1.raiden.address)
     app0.raiden.transport.immediate_health_check_for(app2.raiden.address)
     wait_for_network_state(app1.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
@@ -1290,7 +1290,7 @@ def test_transport_presence_updates(raiden_network, retry_timeout):
     )
 
     # Restart app1
-    app1.start()
+    restart_node(app1)
     app1.raiden.transport.immediate_health_check_for(app0.raiden.address)
     app1.raiden.transport.immediate_health_check_for(app2.raiden.address)
     wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)

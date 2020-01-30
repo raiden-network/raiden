@@ -35,7 +35,7 @@ from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_happy_case(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
+    raiden_network, restart_node, number_of_nodes, deposit, token_addresses, network_wait
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -65,7 +65,7 @@ def test_recovery_happy_case(
         app1.raiden, app0.raiden.address, NetworkState.UNREACHABLE, network_wait
     )
 
-    app0.start()
+    restart_node(app0)
 
     assert_synced_channel_state(
         token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
@@ -108,7 +108,13 @@ def test_recovery_happy_case(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_unhappy_case(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait, retry_timeout
+    raiden_network,
+    restart_node,
+    number_of_nodes,
+    deposit,
+    token_addresses,
+    network_wait,
+    retry_timeout,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -178,7 +184,7 @@ def test_recovery_unhappy_case(
         routing_mode=RoutingMode.PRIVATE,
     )
     del app0  # from here on the app0_restart should be used
-    app0_restart.start()
+    restart_node(app0_restart)
     wal = app0_restart.raiden.wal
     assert wal
 
@@ -198,7 +204,7 @@ def test_recovery_unhappy_case(
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_recovery_blockchain_events(raiden_network, token_addresses, network_wait):
+def test_recovery_blockchain_events(raiden_network, restart_node, token_addresses, network_wait):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
     app sees the change
@@ -242,7 +248,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
 
     del app0  # from here on the app0_restart should be used
 
-    app0_restart.raiden.start()
+    restart_node(app0_restart)
     wal = app0_restart.raiden.wal
     assert wal
 
@@ -257,7 +263,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
 @pytest.mark.parametrize("deposit", [2])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
-    raiden_network, token_addresses, network_wait, number_of_nodes, retry_timeout
+    raiden_network, restart_node, token_addresses, network_wait, number_of_nodes, retry_timeout
 ):
     """ A test case related to https://github.com/raiden-network/raiden/issues/4639
     Where a node sends a withdraw transaction, is stopped before the transaction is completed.
@@ -316,7 +322,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
         retry_timeout=retry_timeout,
     )
 
-    app0.raiden.start()
+    restart_node(app0)
 
     chain_state = views.state_from_app(app0)
 

@@ -7,6 +7,7 @@ from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_secret
@@ -37,6 +38,7 @@ from raiden.utils.typing import (
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
     raiden_network: List[App],
+    restart_node: RestartNode,
     deposit: TokenAmount,
     token_addresses: List[TokenAddress],
     network_wait: float,
@@ -101,7 +103,7 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
     )
 
     del app0
-    app0_restart.start()
+    restart_node(app0_restart)
 
     # XXX: There is no synchronization among the app and the test, so it is
     # possible between `start` and the check below that some of the transfers
@@ -154,7 +156,10 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
-    raiden_network: List[App], token_addresses: List[TokenAddress], network_wait: float
+    raiden_network: List[App],
+    restart_node: RestartNode,
+    token_addresses: List[TokenAddress],
+    network_wait: float,
 ):
     """ Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport
@@ -221,7 +226,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     del app0  # from here on the app0_restart should be used
     # stop app1 to make sure that we don't complete the transfers before our checks
     app1.stop()
-    app0_restart.start()
+    restart_node(app0_restart)
 
     # Check that the payment statuses were restored properly after restart
     for identifier in range(spent_amount):
@@ -232,7 +237,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         assert status.payment_identifier == identifier
         assert status.token_network_address == token_network_address
 
-    app1.start()  # now that our checks are done start app1 again
+    restart_node(app1)  # now that our checks are done start app1 again
 
     with watch_for_unlock_failures(*raiden_network):
         waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)

@@ -19,6 +19,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
+from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
@@ -83,7 +84,7 @@ def start_apiserver_for_network(
     return [start_apiserver(app, next(port_generator)) for app in raiden_network]
 
 
-def restart_app(app: App) -> App:
+def restart_app(app: App, restart_node: RestartNode) -> App:
     new_transport = MatrixTransport(
         config=app.raiden.config.transport, environment=app.raiden.config.environment_type
     )
@@ -105,16 +106,18 @@ def restart_app(app: App) -> App:
         routing_mode=RoutingMode.PRIVATE,
     )
 
-    app.start()
+    restart_node(app)
 
     return app
 
 
-def restart_network(raiden_network: List[App], retry_timeout: float) -> List[App]:
+def restart_network(
+    raiden_network: List[App], restart_node: RestartNode, retry_timeout: float
+) -> List[App]:
     for app in raiden_network:
         app.stop()
 
-    wait_network = [gevent.spawn(restart_app, app) for app in raiden_network]
+    wait_network = [gevent.spawn(restart_app, app, restart_node) for app in raiden_network]
 
     gevent.wait(wait_network)
 
@@ -129,6 +132,7 @@ def restart_network(raiden_network: List[App], retry_timeout: float) -> List[App
 
 def restart_network_and_apiservers(
     raiden_network: List[App],
+    restart_node: RestartNode,
     api_servers: List[APIServer],
     port_generator: Iterator[Port],
     retry_timeout: float,
@@ -137,7 +141,7 @@ def restart_network_and_apiservers(
     for rest_api in api_servers:
         rest_api.stop()
 
-    new_network = restart_network(raiden_network, retry_timeout)
+    new_network = restart_network(raiden_network, restart_node, retry_timeout)
     new_servers = start_apiserver_for_network(new_network, port_generator)
 
     return (new_network, new_servers)
@@ -357,6 +361,7 @@ def assert_channels(
 @pytest.mark.parametrize("settle_timeout", [120])
 def test_stress(
     raiden_network: List[App],
+    restart_node: RestartNode,
     deposit: TokenAmount,
     retry_timeout: float,
     token_addresses: List[TokenAddress],
@@ -380,7 +385,7 @@ def test_stress(
             stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network, rest_apis, port_generator, retry_timeout
+            raiden_network, restart_node, rest_apis, port_generator, retry_timeout
         )
 
         assert_channels(raiden_network, token_network_address, deposit)
@@ -389,7 +394,7 @@ def test_stress(
             stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network, rest_apis, port_generator, retry_timeout
+            raiden_network, restart_node, rest_apis, port_generator, retry_timeout
         )
 
         assert_channels(raiden_network, token_network_address, deposit)
@@ -400,7 +405,7 @@ def test_stress(
             )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network, rest_apis, port_generator, retry_timeout
+            raiden_network, restart_node, rest_apis, port_generator, retry_timeout
         )
 
-    restart_network(raiden_network, retry_timeout)
+    restart_network(raiden_network, restart_node, retry_timeout)

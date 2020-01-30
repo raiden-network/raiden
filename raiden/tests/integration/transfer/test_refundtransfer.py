@@ -311,6 +311,7 @@ def test_refund_transfer(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_different_view_of_last_bp_during_unlock(
     raiden_chain: List[App],
+    restart_node,
     number_of_nodes,
     token_addresses,
     deposit,
@@ -481,7 +482,7 @@ def test_different_view_of_last_bp_during_unlock(
     setattr(app1.raiden.raiden_event_handler, "on_raiden_event", patched_on_raiden_event)  # NOQA
 
     # and now app1 comes back online
-    app1.raiden.start()
+    restart_node(app1)
     # test for https://github.com/raiden-network/raiden/issues/3216
     assert count == 1, "Update transfer should have only been called once during restart"
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
