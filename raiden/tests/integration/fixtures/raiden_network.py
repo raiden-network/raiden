@@ -4,6 +4,7 @@ from pathlib import Path
 
 import gevent
 import pytest
+from gevent.event import AsyncResult
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
@@ -279,3 +280,21 @@ def raiden_network(
     yield raiden_apps
 
     shutdown_apps_and_cleanup_tasks(raiden_apps)
+
+
+class RestartNode:
+    def __init__(self):
+        self.async_result: Optional[AsyncResult] = None
+
+    def link_exception_to(self, result: AsyncResult) -> None:
+        self.async_result = result
+
+    def __call__(self, app: App) -> None:
+        if self.async_result is not None:
+            app.raiden.greenlet.link_exception(self.async_result)
+        app.start()
+
+
+@pytest.fixture
+def restart_node() -> RestartNode:
+    return RestartNode()

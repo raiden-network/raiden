@@ -42,6 +42,10 @@ def raise_on_failure(test_function: Callable) -> Callable:
                 "which uses neither `raiden_network` nor `raiden_chain` fixtures."
             )
 
+        restart_node = kwargs.get("restart_node", None)
+        if restart_node is not None:
+            restart_node.link_exception_to(result)
+
         # Do not use `link` or `link_value`, an app an be stopped to test restarts.
         for raiden in raiden_services:
             assert raiden, "The RaidenService must be started"
