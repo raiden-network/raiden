@@ -598,12 +598,6 @@ class MatrixTransport(Runnable):
 
         It also whitelists the address to answer invites and listen for messages
         """
-        self.whitelist(node_address)
-        self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
-        user_ids = self.get_user_ids_for_address(node_address)
-        # Ensure network state is updated in case we already know about the user presences
-        # representing the target node
-        self._address_mgr.track_address_presence(node_address, user_ids)
         self._healthcheck_queue.put(node_address)
 
     def immediate_health_check_for(self, node_address: Address) -> None:
