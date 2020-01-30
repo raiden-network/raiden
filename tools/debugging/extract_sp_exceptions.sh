@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 SCENARIO_REMOTE_URL_1="http://scenario-player.ci.raiden.network/scenarios/"
 SCENARIO_REMOTE_URL_2="http://scenario-player2.ci.raiden.network/scenarios/"
 CURL_COMMAND="curl --silent"
@@ -40,12 +41,12 @@ else
     DESTINATION_DIR=$(pwd)
 fi
 
-DESTINATION_DIR="$(realpath -s ${DESTINATION_DIR})/$(date +%m-%d-%Y)"
-mkdir -p $DESTINATION_DIR
+DESTINATION_DIR="$(realpath -s "${DESTINATION_DIR}")/$(date +%m-%d-%Y)"
+mkdir -p "$DESTINATION_DIR"
 
 function download_pfs_logs {
     container=$1
-    ssh root@services-dev.raiden.network "cd raiden-services/deployment/; docker-compose logs ${container} | gzip" > ${DESTINATION_DIR}/${container}.log.gz
+    ssh root@services-dev.raiden.network "cd raiden-services/deployment/; docker-compose logs ${container} | gzip" > "${DESTINATION_DIR}/${container}.log.gz"
     if [[ $? -ne 0 ]]; then
         echo "Error: failed to download pfs-goerli logs"
         exit 1
@@ -57,22 +58,25 @@ function download_nodes_logs {
     current_server=$2
     run_number=$3
 
-    nodes=$(${CURL_COMMAND} ${current_server}${scenario} | grep -P '^<a ' | cut -d\" -f2 | grep "^node_${run_number}")
+    nodes=$(${CURL_COMMAND} "${current_server}${scenario}" | grep -P '^<a ' | cut -d\" -f2 | grep "^node_${run_number}")
+
     for node in $nodes; do
-        $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${node})
+        ${WGET_DIR} -q -P "${DESTINATION_DIR}" "${current_server}${scenario}${node}" &
     done
 
-    latest_sp_log=$(${CURL_COMMAND} ${current_server}${scenario} | grep -P '^<a ' | cut -d\" -f2 | grep ".log$" | sort | tail -n 1)
-    $(${WGET_DIR} -q -P ${DESTINATION_DIR} ${current_server}${scenario}${latest_sp_log})
+    latest_sp_log=$(${CURL_COMMAND} "${current_server}${scenario}" | grep -P '^<a ' | cut -d\" -f2 | grep ".log.gz$" | sort | tail -n 1)
+    ${WGET_DIR} -q -P "${DESTINATION_DIR}" "${current_server}${scenario}${latest_sp_log}" &
+
+    wait
 }
 
 function download_server_logs {
     current_server=$1
-    scenarios=$(${CURL_COMMAND} ${current_server} | grep -P '^<a ' | cut -d\" -f2)
+    scenarios=$(${CURL_COMMAND} "${current_server}" | grep -P '^<a ' | cut -d\" -f2)
     for scenario in $scenarios; do
         run_number=$(${CURL_COMMAND} "${current_server}${scenario}run_number.txt")
         [ -n "$run_number" ] || { echo 'Could not find run number!'; exit 1; }
-        download_nodes_logs $scenario $current_server $run_number
+        download_nodes_logs "$scenario" "${current_server}" "${run_number}"
         echo -e "\t - ${scenario}, run_number: ${run_number}"
     done;
 
@@ -83,35 +87,47 @@ function search_for_failures {
     mkdir -p "${DESTINATION_DIR}/errors/"
     echo -e "${BOLD}Looking for failures${RESET}"
     scenarios_dir="${DESTINATION_DIR}/scenarios"
-    for scenario in $(ls $scenarios_dir); do
-        print_bold ${scenario}
+
+    for scenario in "${scenarios_dir}"/*; do
+        print_bold "${scenario}"
         separator
         scenario_dir=${scenarios_dir}/${scenario}
-        for node_dir in $(find $scenario_dir -maxdepth 1 -type d -name "node_*"); do
-            result=$(cat ${node_dir}/*.log | jq --tab 'select (.error!=null or .exception!=null)')
+
+        for node_dir in $(find "${scenario_dir}" -maxdepth 1 -type d -name "node_*"); do
+            result=$(zcat ${node_dir}/*.log.gz | jq --tab 'select (.error!=null or .exception!=null)')
             if [[ $result == "" ]]; then
-                result=$(cat ${node_dir}/*.stderr | grep -v Starting | grep -v Stopped)
+                result=$(cat "${node_dir}"/*.stderr | grep -v Starting | grep -v Stopped)
             fi
             if [[ $result != "" ]]; then
                 print_bold "- Found error in ${node_dir}"
                 echo -e "${result}"
-                echo ${result} > "${DESTINATION_DIR}/errors/${scenario}.node.log"
+                echo "${result}" > "${DESTINATION_DIR}/errors/${scenario}.node.log.gz"
             fi
         done
+
         separator
-        sp_error=$(cat ${scenario_dir}/scenario-player-run_*.log | jq 'select (.error!=null or .exception!=null)')
+        sp_error=$(zcat "${scenario_dir}"/scenario-player-run_*.log.gz | jq 'select (.error!=null or .exception!=null)')
+
         if [[ $sp_error != "" ]]; then
             print_bold "- SP reported an error in ${scenario_dir}"
+
             echo -e "${sp_error}"
-                echo ${sp_error} > "${DESTINATION_DIR}/errors/${scenario}.sp.log"
+            echo "${sp_error}" > "${DESTINATION_DIR}/errors/${scenario}.sp.log"
         fi
+
         separator
     done;
 }
 
+# export the symbol to allow the subshell spawned by parallel to use it
+export -f download_pfs_logs 
+export -f download_server_logs
+
 print_bold "Downloading PFS logs"
-download_pfs_logs pfs-goerli
-download_pfs_logs pfs-goerli-with-fee
+
+download_pfs_logs pfs-goerli &
+download_pfs_logs pfs-goerli-with-fee &
+wait
 
 print_bold "Downloading scenarios list"
 download_server_logs $SCENARIO_REMOTE_URL_1
