@@ -12,6 +12,7 @@ from raiden.exceptions import (
     InvalidToken,
     InvalidTokenAddress,
     InvalidTokenNetworkDepositLimit,
+    MaxTokenNetworkNumberReached,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -164,8 +165,8 @@ class TokenNetworkRegistry:
             raise_on_call_returned_empty(given_block_identifier)
         else:
             if token_networks_created >= max_token_networks:
-                raise BrokenPreconditionError(
-                    f"Number of token networks will exceed the max of {max_token_networks}"
+                raise MaxTokenNetworkNumberReached(
+                    f"Number of token networks will exceed the maximum of {max_token_networks}"
                 )
 
             if token_supply is None:

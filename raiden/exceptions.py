@@ -185,11 +185,15 @@ class AlreadyRegisteredTokenAddress(RaidenError):
 
 
 class InvalidToken(RaidenError):
-    """ Raised if the token does not follow the ERC20 standard """
+    """ Raised if the token does not follow the ERC20 standard. """
+
+
+class MaxTokenNetworkNumberReached(RaidenError):
+    """ Raised if the maximum amount of token networks has been registered. """
 
 
 class InvalidTokenAddress(RaidenError):
-    """ Raised if the token address is invalid """
+    """ Raised if the token address is invalid. """
 
 
 class InvalidTokenNetworkDepositLimit(RaidenError):
