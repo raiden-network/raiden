@@ -487,7 +487,10 @@ class GMatrixClient(MatrixClient):
             time_since_last_sync_in_seconds >= timeout_in_seconds
             and self.environment == Environment.DEVELOPMENT
         )
-        if timeout_reached:
+        # The second sync is the first full sync and can be slow. This is
+        # acceptable, we only want to know if we fail to sync quickly
+        # afterwards.
+        if timeout_reached and self.sync_iteration > 1:
             if IDLE:
                 IDLE.log()
 
