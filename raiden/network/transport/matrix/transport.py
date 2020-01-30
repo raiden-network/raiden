@@ -570,8 +570,8 @@ class MatrixTransport(Runnable):
         self._address_mgr.add_address(address)
 
         # Start the room creation early on. This reduces latency for channel
-        # partners, because by removing the latency of creating the room on the
-        # first message.
+        # partners, by removing the latency of creating the room on the first
+        # message.
         #
         # This does not reduce latency for target<->initiator communication,
         # since the target may be the node with lower address, and therefore
@@ -606,15 +606,10 @@ class MatrixTransport(Runnable):
         It also whitelists the address to answer invites and listen for messages
         """
         self.whitelist(node_address)
-        node_address_hex = to_normalized_address(node_address)
         self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
 
-        candidates = self._client.search_user_directory(node_address_hex)
-        self._displayname_cache.warm_users(candidates)
+        user_ids = self.get_user_ids_for_address(node_address)
 
-        user_ids = {
-            user.user_id for user in candidates if validate_userid_signature(user) == node_address
-        }
         # Ensure network state is updated in case we already know about the user presences
         # representing the target node
         self._address_mgr.track_address_presence(node_address, user_ids)
