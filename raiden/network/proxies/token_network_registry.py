@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import structlog
-from eth_utils import decode_hex, to_canonical_address
+from eth_utils import decode_hex, encode_hex, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import NULL_ADDRESS_BYTES
@@ -254,10 +254,10 @@ class TokenNetworkRegistry:
             transaction_hash = self.proxy.transact("createERC20TokenNetwork", gas_limit, **kwargs)
 
             receipt = self.rpc_client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
 
-            if failed_receipt:
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+            if check_transaction_threw(receipt=receipt):
+                failed_at_blocknumber = receipt["blockNumber"]
+                failed_at_blockhash = receipt["blockHash"]
 
                 max_token_networks = self.get_max_token_networks(
                     block_identifier=failed_at_blocknumber
@@ -302,7 +302,7 @@ class TokenNetworkRegistry:
                         "anymore."
                     )
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                if receipt["cumulativeGasUsed"] == gas_limit:
                     msg = (
                         f"createERC20TokenNetwork failed and all gas was used "
                         f"({gas_limit}). Estimate gas may have underestimated "
@@ -384,7 +384,8 @@ class TokenNetworkRegistry:
                     "though the gas estimation succeeded."
                 )
 
-            token_network_address = self.get_token_network(token_address, receipt["blockHash"])
+            succeeded_at_blockhash = receipt["blockHash"]
+            token_network_address = self.get_token_network(token_address, succeeded_at_blockhash)
             if token_network_address is None:
                 msg = "createERC20TokenNetwork succeeded but token network address is Null"
                 raise RaidenUnrecoverableError(msg)
@@ -392,6 +393,8 @@ class TokenNetworkRegistry:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
             failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at_blockhash_bytes = failed_at["hash"]
+            failed_at_blockhash = encode_hex(failed_at_blockhash_bytes)
             failed_at_blocknumber = failed_at["number"]
 
             max_token_networks = self.get_max_token_networks(
@@ -517,7 +520,9 @@ class TokenNetworkRegistry:
             # At this point, the TokenNetworkRegistry fails to instantiate
             # a new TokenNetwork.
             raise RaidenUnrecoverableError(
-                "gas estimation for createERC20TokenNetwork failed for an unknown reason"
+                f"createERC20TokenNetwork gas estimation failed for an unknown "
+                f"reason. Reference block {failed_at_blockhash} "
+                f"{failed_at_blocknumber}."
             )
         return token_network_address
 

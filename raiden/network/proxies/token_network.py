@@ -336,7 +336,9 @@ class TokenNetwork:
                 raise RaidenRecoverableError("This token network is deprecated.")
 
             raise RaidenRecoverableError(
-                "Creating a new channel will fail - Gas estimation failed for unknown reason."
+                f"Creating a new channel will fail - Gas estimation failed for "
+                f"unknown reason. Reference block {failed_at_blockhash} "
+                f"{failed_at_blocknumber}."
             )
         else:
             gas_limit = safe_gas_limit(
@@ -1194,7 +1196,10 @@ class TokenNetwork:
                 msg = f"Deposit of {amount_to_deposit} exceeded the token network deposit limit."
                 raise RaidenRecoverableError(msg)
 
-            raise RaidenRecoverableError("Deposit gas estimatation failed for unknown reasons")
+            raise RaidenRecoverableError(
+                f"Deposit gas estimatation failed for unknown reasons. Reference "
+                f"block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def set_total_withdraw(
         self,
@@ -1529,7 +1534,10 @@ class TokenNetwork:
             if total_withdraw_done:
                 raise RaidenRecoverableError("Requested total withdraw was already performed")
 
-            raise RaidenUnrecoverableError("setTotalWithdraw failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                f"setTotalWithdraw gas estimation failed for an unknown reason. "
+                f"Reference block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def close(
         self,
@@ -1785,7 +1793,11 @@ class TokenNetwork:
                     )
                     raise RaidenRecoverableError(msg)
 
-                raise RaidenUnrecoverableError("close channel failed for an unknown reason")
+                raise RaidenUnrecoverableError(
+                    f"close channel gas estimation failed for an unknown "
+                    f"reason. Reference block {failed_at_blockhash} "
+                    f"{failed_at_blocknumber}."
+                )
 
     def update_transfer(
         self,
@@ -2123,7 +2135,10 @@ class TokenNetwork:
                     "update_transfer cannot be sent if the partner did not close the channel"
                 )
 
-            raise RaidenUnrecoverableError("update_transfer failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                f"update_transfer gas estimation failed for an unknown reason. "
+                f"Reference block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def unlock(
         self,
@@ -2309,7 +2324,10 @@ class TokenNetwork:
             if is_unlock_done:
                 raise RaidenRecoverableError("The locks are already unlocked ")
 
-            raise RaidenUnrecoverableError("unlock failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                f"unlock estimation failed for an unknown reason. Reference "
+                f"block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def settle(
         self,
@@ -2653,4 +2671,7 @@ class TokenNetwork:
                 msg = "Partner balance hash does not match the on-chain value"
                 raise RaidenUnrecoverableError(msg)
 
-            raise RaidenRecoverableError("Settle failed for an unknown reason")
+            raise RaidenRecoverableError(
+                f"Settle gas estimation failed for an unknown reason. Reference "
+                f"block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
