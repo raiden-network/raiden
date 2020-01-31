@@ -6,7 +6,6 @@ from eth_utils import is_same_address, to_canonical_address, to_normalized_addre
 from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
 from raiden.exceptions import (
     AddressWithoutCode,
-    BrokenPreconditionError,
     InvalidToken,
     InvalidTokenAddress,
     MaxTokenNetworkNumberReached,
