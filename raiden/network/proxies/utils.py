@@ -6,7 +6,7 @@ from eth_utils import decode_hex, to_hex
 from structlog import BoundLoggerBase
 
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.exceptions import RaidenUnrecoverableError
+from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
@@ -122,12 +122,16 @@ def log_transaction(log: BoundLoggerBase, description: str, details: Dict[Any, A
     token = uuid4()
     bound_log = log.bind(description=description, token=token, **details)
     try:
-        bound_log.debug("Entered")
+        bound_log.debug("Transaction will be sent")
         yield
-    except:  # noqa
-        bound_log.critical("Failed", exc_info=True)
+    except RaidenRecoverableError:
+        bound_log.debug("Transaction invalidated", exc_info=True)
         raise
-    bound_log.debug("Exited")
+    except:  # noqa
+        bound_log.critical("Transaction execution failed", exc_info=True)
+        raise
+
+    bound_log.debug("Transaction successful")
 
 
 def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:
