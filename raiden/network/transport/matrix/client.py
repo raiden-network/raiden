@@ -490,7 +490,9 @@ class GMatrixClient(MatrixClient):
         # The second sync is the first full sync and can be slow. This is
         # acceptable, we only want to know if we fail to sync quickly
         # afterwards.
-        if timeout_reached and self.sync_iteration > 1:
+        # As the runtime is evaluated in the subsequent run, we only run this
+        # after the second iteration is finished.
+        if timeout_reached and self.sync_iteration > 2:
             if IDLE:
                 IDLE.log()
 
