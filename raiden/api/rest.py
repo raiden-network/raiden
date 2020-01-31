@@ -62,6 +62,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
     APIServerPortInUseError,
+    BrokenPreconditionError,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -560,6 +561,7 @@ class RestAPI:  # pragma: no unittest
         conflict_exceptions = (
             AddressWithoutCode,
             AlreadyRegisteredTokenAddress,
+            BrokenPreconditionError,
             InvalidBinaryAddress,
             InvalidToken,
             InvalidTokenAddress,
