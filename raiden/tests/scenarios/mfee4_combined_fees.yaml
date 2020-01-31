@@ -17,7 +17,6 @@ token:
   balance_fund: 100_000_000_000_000_000_000
 
 nodes:
-  mode: managed
   count: 4
   raiden_version: local
 
