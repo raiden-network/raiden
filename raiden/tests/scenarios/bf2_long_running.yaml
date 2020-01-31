@@ -199,13 +199,6 @@ scenario:
             - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "opened"}
-      - parallel:
-          name: "Check edge cases again"
-          tasks:
-            # Try to open a channel with an offline node, but the channel already exists, we will get a 200
-            - open_channel: {from: 0, to: 1, total_deposit: 200_000_000_000_000_000, expected_http_status: 200}
-            # Try to make a payment to an offline node
-            - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
       - serial:
           name: "Restarting node1"
           tasks:
