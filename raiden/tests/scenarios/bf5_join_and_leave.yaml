@@ -128,7 +128,7 @@ scenario:
       - serial:
           name: "Make sure that all transfers finish"
           tasks:
-            - wait: 200
+            - wait: 30
       - parallel:
           name: "Assert after transfers. Should be the same as before the transfers were made"
           tasks:
