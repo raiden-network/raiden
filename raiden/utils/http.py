@@ -35,7 +35,7 @@ def split_endpoint(endpoint: Endpoint) -> HostPort:
     return Host(host), Port(int(port))
 
 
-class HTTPExecutor(MiHTTPExecutor):
+class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
     """ Subclass off mirakuru.HTTPExecutor, which allows other methods than HEAD """
 
     def __init__(
@@ -190,7 +190,7 @@ class HTTPExecutor(MiHTTPExecutor):
         return True
 
 
-class JSONRPCExecutor(HTTPExecutor):
+class JSONRPCExecutor(HTTPExecutor):  # pragma: no cover
     def __init__(
         self,
         command: Union[str, List[str]],
