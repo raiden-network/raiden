@@ -88,10 +88,10 @@ function search_for_failures {
     echo -e "${BOLD}Looking for failures${RESET}"
     scenarios_dir="${DESTINATION_DIR}/scenarios"
 
-    for scenario in "${scenarios_dir}"/*; do
+    for scenario_dir in "${scenarios_dir}"/*; do
+        scenario=$(basename "${scenario_dir}")
         print_bold "${scenario}"
         separator
-        scenario_dir=${scenarios_dir}/${scenario}
 
         for node_dir in $(find "${scenario_dir}" -maxdepth 1 -type d -name "node_*"); do
             result=$(zcat ${node_dir}/*.log.gz | jq --tab 'select (.error!=null or .exception!=null)')
