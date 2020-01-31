@@ -56,15 +56,26 @@ def limit_thread_cpu_usage_by_time() -> None:
     greenlet_tracer = GreenletTracer()
 
     def kill_offender(hub: Hub) -> None:
-        tracer = monitor_thread._greenlet_tracer
-
         if greenlet_tracer.did_block_hub(hub):
-            active_greenlet = tracer.active_greenlet
+            active_greenlet = greenlet_tracer.active_greenlet
+
+            msg = ""
+            if monitor_thread._tracer.active_greenlet != active_greenlet:
+                msg = (
+                    f"Mismatch values for the active_greenlet among the "
+                    f"monitor_thread and deubgging tracer, this either means "
+                    f"there is a bug in the trace chain (the wrong values are "
+                    f"forwarded), or that one of the trace functions was wrongly "
+                    f"uninstalled. Active greenlets "
+                    f"monitor_thread={monitor_thread._tracer.active_greenlet} "
+                    f"debug_tracer={active_greenlet}."
+                )
+
             hub.loop.run_callback(
                 lambda: active_greenlet.throw(
                     RaidenUnrecoverableError(
                         f"A greenlet used the CPU for longer than "
-                        f"{gevent.config.max_blocking_time} seconds, killing it"
+                        f"{gevent.config.max_blocking_time} seconds, killing it.{msg}"
                     )
                 )
             )
