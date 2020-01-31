@@ -66,6 +66,7 @@ from raiden.utils.typing import (
     Any,
     Balance,
     BlockNumber,
+    BlockTimeout as BlockOffset,
     Callable,
     ChainID,
     FeeAmount,
@@ -1051,6 +1052,30 @@ def make_receive_expired_lock(
     )
 
     return receive_lockedtransfer
+
+
+def block_offset_timeout(
+    raiden: RaidenService,
+    error_message: Optional[str] = None,
+    offset: Optional[BlockOffset] = None,
+    safety_margin: int = 5,
+) -> BlockTimeout:
+    """
+    Returns a BlockTimeout that will fire after a number of blocks. Usually created
+    at the same time as a set of transfers to wait until their expiration.
+    """
+    expiration = BlockNumber(
+        raiden.get_block_number() + (offset or raiden.config.settle_timeout) + safety_margin
+    )
+    exception = RuntimeError(
+        error_message or "Events were not completed in the required number of blocks."
+    )
+    return BlockTimeout(
+        raiden=raiden,
+        exception_to_throw=exception,
+        block_number=expiration,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
+    )
 
 
 def block_timeout_for_transfer_by_secrethash(
