@@ -71,9 +71,9 @@ def check_version(current_version: str) -> None:  # pragma: no unittest
         except ValueError as verr:
             click.secho("Error while checking the version", fg="red")
             print(verr)
-        finally:
-            # repeat the process once every 3h
-            gevent.sleep(CHECK_VERSION_INTERVAL)
+
+        # repeat the process once every 3h
+        gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
 def check_gas_reserve(raiden: "RaidenService") -> None:  # pragma: no unittest
