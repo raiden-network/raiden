@@ -65,12 +65,9 @@ def check_version(current_version: str) -> None:  # pragma: no unittest
     while True:
         try:
             _do_check_version(app_version)
-        except requests.exceptions.HTTPError as herr:
+        except (requests.exceptions.HTTPError, ValueError) as err:
             click.secho("Error while checking for version", fg="red")
-            print(herr)
-        except ValueError as verr:
-            click.secho("Error while checking the version", fg="red")
-            print(verr)
+            print(err)
 
         # repeat the process once every 3h
         gevent.sleep(CHECK_VERSION_INTERVAL)
