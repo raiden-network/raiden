@@ -80,7 +80,7 @@ from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
 from raiden_contracts.constants import ID_TO_NETWORKNAME, NETWORKNAME_TO_ID
 
-from .runners import EchoNodeRunner, MatrixRunner
+from .runners import EchoNodeRunner, NodeRunner
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
@@ -597,7 +597,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
         return
 
     assert kwargs["transport"] == "matrix", "Invalid transport type. This should not happen."
-    runner = MatrixRunner(kwargs, ctx)
+    runner = NodeRunner(kwargs, ctx)
 
     click.secho(runner.welcome_string, fg="green")
     click.secho(

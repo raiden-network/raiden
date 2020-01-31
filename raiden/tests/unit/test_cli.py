@@ -17,7 +17,7 @@ from raiden.exceptions import (
     ReplacementTransactionUnderpriced,
 )
 from raiden.ui.cli import ReturnCode, run
-from raiden.ui.runners import MatrixRunner
+from raiden.ui.runners import NodeRunner
 from raiden.utils.ethereum_clients import is_supported_client
 
 
@@ -76,7 +76,7 @@ def test_run_error_reporting(cli_runner, monkeypatch):
     }
 
     for exception, code in caught_exceptions.items():
-        monkeypatch.setattr(MatrixRunner, "run", mock_raises(exception))
+        monkeypatch.setattr(NodeRunner, "run", mock_raises(exception))
         result = cli_runner(run, "--accept-disclaimer")
         assert result.exception.code == code
 
