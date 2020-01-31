@@ -93,7 +93,7 @@ scenario:
             # Perform a couple of more transfers
             - assert_pfs_history: {source: 0, request_count: 0}
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
-            - wait: 10
+            - wait: 30
             - assert_pfs_history: {source: 0, target: 3, request_count: 1}
             - assert_pfs_iou: {source: 0, amount: 100}
             - assert_pfs_iou: {source: 1, iou_exists: false}
@@ -101,7 +101,7 @@ scenario:
             - assert_pfs_iou: {source: 3, amount: 200}
 
             - transfer: {from: 2, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
-            - wait: 10
+            - wait: 30
             - assert_pfs_history: {source: 2, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 2, amount: 100}
 
