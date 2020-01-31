@@ -13,7 +13,6 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
-from raiden.utils.debugging import limit_thread_cpu_usage_by_time
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
@@ -169,12 +168,6 @@ class NodeRunner:
         assert isinstance(runnable_tasks[-1], RaidenService), msg
 
         try:
-            # Only enable the cpu limit after initialization has finished,
-            # since there wil be long running tasks during startup, which are
-            # not a problem for normal operation.
-            if self._options["environment_type"] == constants.Environment.DEVELOPMENT:
-                limit_thread_cpu_usage_by_time()
-
             stop_event.get()
             print("Signal received. Shutting down ...")
         finally:
