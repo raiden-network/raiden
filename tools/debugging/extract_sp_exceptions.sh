@@ -58,13 +58,13 @@ function download_nodes_logs {
     current_server=$2
     run_number=$3
 
-    nodes=$(${CURL_COMMAND} "${current_server}${scenario}" | grep -P '^<a ' | cut -d\" -f2 | grep "^node_${run_number}")
+    nodes=$(${CURL_COMMAND} "${current_server}${scenario}" | grep '^<a ' | cut -d\" -f2 | grep "^node_${run_number}")
 
     for node in $nodes; do
         ${WGET_DIR} -q -P "${DESTINATION_DIR}" "${current_server}${scenario}${node}" &
     done
 
-    latest_sp_log=$(${CURL_COMMAND} "${current_server}${scenario}" | grep -P '^<a ' | cut -d\" -f2 | grep ".log.gz$" | sort | tail -n 1)
+    latest_sp_log=$(${CURL_COMMAND} "${current_server}${scenario}" | grep '^<a ' | cut -d\" -f2 | grep ".log.gz$" | sort | tail -n 1)
     ${WGET_DIR} -q -P "${DESTINATION_DIR}" "${current_server}${scenario}${latest_sp_log}" &
 
     wait
@@ -72,7 +72,7 @@ function download_nodes_logs {
 
 function download_server_logs {
     current_server=$1
-    scenarios=$(${CURL_COMMAND} "${current_server}" | grep -P '^<a ' | cut -d\" -f2)
+    scenarios=$(${CURL_COMMAND} "${current_server}" | grep '^<a ' | cut -d\" -f2)
     for scenario in $scenarios; do
         run_number=$(${CURL_COMMAND} "${current_server}${scenario}run_number.txt")
         [ -n "$run_number" ] || { echo 'Could not find run number!'; exit 1; }
@@ -120,7 +120,7 @@ function search_for_failures {
 }
 
 # export the symbol to allow the subshell spawned by parallel to use it
-export -f download_pfs_logs 
+export -f download_pfs_logs
 export -f download_server_logs
 
 print_bold "Downloading PFS logs"
