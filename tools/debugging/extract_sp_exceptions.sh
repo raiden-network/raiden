@@ -94,7 +94,7 @@ function search_for_failures {
         separator
 
         for node_dir in $(find "${scenario_dir}" -maxdepth 1 -type d -name "node_*"); do
-            result=$(zcat ${node_dir}/*.log.gz | jq --tab 'select (.error!=null or .exception!=null)')
+            result=$(gunzip -c ${node_dir}/*.log.gz | jq --tab 'select (.error!=null or .exception!=null)')
             if [[ $result == "" ]]; then
                 result=$(cat "${node_dir}"/*.stderr | grep -v Starting | grep -v Stopped)
             fi
@@ -106,7 +106,7 @@ function search_for_failures {
         done
 
         separator
-        sp_error=$(zcat "${scenario_dir}"/scenario-player-run_*.log.gz | jq 'select (.error!=null or .exception!=null)')
+        sp_error=$(gunzip -c "${scenario_dir}"/scenario-player-run_*.log.gz | jq 'select (.error!=null or .exception!=null)')
 
         if [[ $sp_error != "" ]]; then
             print_bold "- SP reported an error in ${scenario_dir}"
