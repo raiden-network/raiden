@@ -59,6 +59,8 @@ class NodeRunner:
         if self._options["config_file"]:
             log.debug("Using config file", config_file=self._options["config_file"])
 
+        self._start_services()
+
     def _start_services(self) -> None:
         if self._options["showconfig"]:
             print("Configuration Dump:")
@@ -186,21 +188,11 @@ class NodeRunner:
             app.stop()
 
 
-class MatrixRunner(NodeRunner):
-    def run(self) -> None:
-        super().run()
-        self._start_services()
-
-
 class EchoNodeRunner(NodeRunner):
     def __init__(self, options: Dict[str, Any], ctx: Context, token_address: TokenAddress) -> None:
         super().__init__(options, ctx)
         self._token_address = token_address
         self._echo_node: Optional[EchoNode] = None
-
-    def run(self) -> None:
-        super().run()
-        self._start_services()
 
     @property
     def welcome_string(self) -> str:
