@@ -297,7 +297,9 @@ def kill_restart_and_wait_for_server(
 
     # Wait for the process to completely shutdown, this is necessary because
     # concurrent usage of the database is not allowed.
-    node.process.result.get()
+    exit_code = node.process.result.get()
+    if exit_code != 0:
+        raise Exception(f"Node did not shut down cleanly {node!r}")
 
     return start_and_wait_for_server(nursery, port_generator, node.config, retry_timeout)
 
