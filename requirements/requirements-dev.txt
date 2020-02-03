@@ -84,7 +84,7 @@ marshmallow==3.2.2
 matrix-client==0.3.2
 matrix-synapse==1.5.1
 mccabe==0.6.1             # via flake8, pylint
-mirakuru==1.1.0
+mirakuru==2.1.2
 more-itertools==7.0.0     # via pytest
 msgpack==0.6.1            # via matrix-synapse
 mypy-extensions==0.4.1
