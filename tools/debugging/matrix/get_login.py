@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import os
+import sys
 
 import click
-from eth_utils import encode_hex
+from eth_utils import encode_hex, to_normalized_address
 
 from raiden.accounts import AccountManager
 from raiden.utils.cli import ADDRESS_TYPE
@@ -21,10 +22,17 @@ from raiden.utils.signer import LocalSigner
     "--password", confirmation_prompt=False, help="Password to unlock the keystore file."
 )
 def get_login(address, password) -> None:
-    am = AccountManager(os.path.expanduser("~/.ethereum/keystore"))
+    path = os.path.expanduser("~/.ethereum/keystore")
+    if sys.platform.startswith('darwin'):
+        path = os.path.expanduser("~/Library/Ethereum/keystore")
+
+    am = AccountManager(path)
     signer = LocalSigner(am.get_privkey(to_checksum_address(address), password))
+
+    print(f"Username: {to_normalized_address(address)}")
+    print(f"Password:")
     for i in range(1, 5):
-        print(f"{i:02d}:", encode_hex(signer.sign(f"transport{i:02d}.raiden.network".encode())))
+        print(f"\ttransport {i:02d}:", encode_hex(signer.sign(f"transport{i:02d}.raiden.network".encode())))
 
 
 if __name__ == "__main__":
