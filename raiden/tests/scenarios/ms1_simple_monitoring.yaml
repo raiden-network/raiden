@@ -34,7 +34,7 @@ nodes:
     proportional-imbalance-fee:
       - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
-    default-settle-timeout: 40
+    default-settle-timeout: 100
     default-reveal-timeout: 20
 
 # This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
