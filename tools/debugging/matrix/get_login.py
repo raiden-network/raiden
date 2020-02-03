@@ -23,7 +23,7 @@ from raiden.utils.signer import LocalSigner
 )
 def get_login(address, password) -> None:
     path = os.path.expanduser("~/.ethereum/keystore")
-    if sys.platform.startswith('darwin'):
+    if sys.platform.startswith("darwin"):
         path = os.path.expanduser("~/Library/Ethereum/keystore")
 
     am = AccountManager(path)
@@ -32,7 +32,10 @@ def get_login(address, password) -> None:
     print(f"Username: {to_normalized_address(address)}")
     print(f"Password:")
     for i in range(1, 5):
-        print(f"\ttransport {i:02d}:", encode_hex(signer.sign(f"transport{i:02d}.raiden.network".encode())))
+        print(
+            f"\ttransport {i:02d}:",
+            encode_hex(signer.sign(f"transport{i:02d}.raiden.network".encode())),
+        )
 
 
 if __name__ == "__main__":
