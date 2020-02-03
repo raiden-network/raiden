@@ -66,7 +66,7 @@ scenario:
             - deposit: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
-      - wait: 30  # Wait for the PFS to receive and process the capacity updates
+      - wait: 100  # Wait for the PFS to receive and process the capacity updates
       - parallel:
           name: "Assert after deposits"
           tasks:
@@ -87,7 +87,7 @@ scenario:
                 repeat: 100
                 tasks:
                   - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000}
-      - wait: 30
+      - wait: 100
       - parallel:
           name: "Assert that all balances are the same as before the payments, since same amounts are sent in both directions"
           tasks:
