@@ -756,21 +756,6 @@ class JSONRPCClient:
             checking_block = "latest"
         return checking_block
 
-    def is_synced(self) -> bool:
-        result = self.web3.eth.syncing
-
-        # the node is synchronized
-        if result is False:
-            return True
-
-        current_block = self.block_number()
-        highest_block = result["highestBlock"]
-
-        if highest_block - current_block > 2:
-            return False
-
-        return True
-
     def wait_until_block(
         self, target_block_number: BlockNumber, retry_timeout: float = 0.5
     ) -> BlockNumber:
