@@ -29,6 +29,7 @@ from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5821")
 @raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
