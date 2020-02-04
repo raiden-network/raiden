@@ -162,7 +162,7 @@ def check_raiden_environment(network_id: ChainID, environment_type: Environment)
             f"The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, "
             f'but the "development" environment was selected.\n'
             f"This crashes the node often. Please start again with a safe environment setting "
-            f"(--environment production)."
+            f"(--environment-type production)."
         )
 
 
