@@ -62,7 +62,7 @@ scenario:
 
       ## node1 gets back online before the MS reacts
       ## node1 should call updateNonClosingBalanceProof in this case and the MS wont react
-      - wait_blocks: 20
+      - wait_blocks: 10
       - start_node: 1
 
       ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 100 = 80
@@ -75,7 +75,7 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 100 blocks, but we already waited 40 blocks.
-      - wait_blocks: 60
+      ## Settlement timeout is 100 blocks, but we already waited 30 blocks.
+      - wait_blocks: 70
       # will fail for now since channel was closed by node1.
       - assert_ms_claim: {channel_info_key: "MS Test Channel", must_claim: False}
