@@ -140,14 +140,16 @@ class NodeRunner:
 
         self._startup_hook()
 
-        stop_event: AsyncResult[None] = AsyncResult()
+        stop_event: AsyncResult[Optional[signal.Signals]]  # pylint: disable=no-member
+        stop_event = AsyncResult()
 
-        def sig_set(sig: Any = None, _frame: Any = None) -> None:
-            stop_event.set(sig)
+        def sig_set(sig: int, _frame: Any = None) -> None:
+            stop_event.set(signal.Signals(sig))  # pylint: disable=no-member
 
-        gevent.signal(signal.SIGQUIT, sig_set)
-        gevent.signal(signal.SIGTERM, sig_set)
-        gevent.signal(signal.SIGINT, sig_set)
+        gevent.signal.signal(signal.SIGQUIT, sig_set)  # pylint: disable=no-member
+        gevent.signal.signal(signal.SIGTERM, sig_set)  # pylint: disable=no-member
+        gevent.signal.signal(signal.SIGINT, sig_set)  # pylint: disable=no-member
+        gevent.signal.signal(signal.SIGPIPE, sig_set)  # pylint: disable=no-member
 
         # Make sure RaidenService is the last service in the list.
         runnable_tasks.reverse()
@@ -170,8 +172,10 @@ class NodeRunner:
         assert isinstance(runnable_tasks[-1], RaidenService), msg
 
         try:
-            stop_event.get()
-            print("Signal received. Shutting down ...")
+            signal_received = stop_event.get()
+            if signal_received:
+                print("\r", end="")  # Reset cursor to overwrite a possibly printed "^C"
+                log.info(f"Signal received. Shutting down.", signal=signal_received)
         finally:
             self._shutdown_hook()
 
