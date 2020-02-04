@@ -39,7 +39,7 @@ def blockcypher_query_with_retries(sleep: float, retries: int = 3) -> Optional[B
 def wait_for_sync_blockcypher(
     rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: float
 ) -> None:
-    syncing_str = "\nSyncing ... Current: {} / Target: ~{}"
+    syncing_str = "\rSyncing ... Current: {} / Target: ~{}"
     error_str = "Could not get blockchain information from blockcypher. Ignoring."
 
     local_block = rpc_client.block_number()
@@ -77,8 +77,25 @@ def wait_for_sync_blockcypher(
     print("")
 
 
-def wait_for_sync_rpc_api(rpc_client: JSONRPCClient, sleep: float) -> None:
-    if rpc_client.is_synced():
+def wait_for_sync_rpc_api(
+    rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: float
+) -> None:
+    def is_synced(rpc_client: JSONRPCClient) -> bool:
+        result = rpc_client.web3.eth.syncing
+
+        # the node is synchronized
+        if result is False:
+            return True
+
+        current_block = rpc_client.block_number()
+        highest_block = result["highestBlock"]
+
+        if highest_block - current_block > tolerance:
+            return False
+
+        return True
+
+    if is_synced(rpc_client):
         return
 
     print("Waiting for the ethereum node to synchronize [Use ^C to exit].")
@@ -92,7 +109,7 @@ def wait_for_sync_rpc_api(rpc_client: JSONRPCClient, sleep: float) -> None:
 
         gevent.sleep(sleep)
 
-        if rpc_client.is_synced():
+        if is_synced(rpc_client):
             return
 
     # add a newline so that the next print will start have it's own line
@@ -105,7 +122,7 @@ def wait_for_sync(rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: flo
     print("Checking if the ethereum node is synchronized")
 
     # Only use blockcypher on mainnet
-    if rpc_client.chain_id == ChainID(2345):
+    if rpc_client.chain_id == ChainID(1):
         wait_for_sync_blockcypher(rpc_client, tolerance, sleep)
-    else:
-        wait_for_sync_rpc_api(rpc_client, sleep)
+
+    wait_for_sync_rpc_api(rpc_client, tolerance, sleep)
