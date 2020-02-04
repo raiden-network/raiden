@@ -1,53 +1,59 @@
 import json
 import sys
 from itertools import count
-from typing import Any
+from json import JSONDecodeError
 
 import gevent
 import pkg_resources
 import requests
-from eth_utils import to_int
 from requests.exceptions import RequestException
 
 import raiden
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.utils.typing import BlockNumber, BlockTimeout, Optional
+from raiden_contracts.utils.type_aliases import ChainID
 
 
-def etherscan_query_with_retries(url: str, sleep: float, retries: int = 3) -> int:
-    def get_result() -> Any:
+def blockcypher_query_with_retries(sleep: float, retries: int = 3) -> Optional[BlockNumber]:
+    """ Queries blockcypher for latest mainnet block number """
+
+    def make_request() -> BlockNumber:
         response = requests.get(
-            url,
+            "https://api.blockcypher.com/v1/eth/main",
             headers={
                 "ACCEPT": "application/json",
                 "USER-AGENT": f"raiden-{pkg_resources.require(raiden.__name__)[0].version}",
             },
         )
-        return json.loads(response.content)["result"]
+        return BlockNumber(json.loads(response.content)["height"])
 
-    for _ in range(retries - 1):
+    for _ in range(retries):
         try:
-            etherscan_block = to_int(hexstr=get_result())
-        except (RequestException, ValueError, KeyError):
+            return make_request()
+        except (RequestException, JSONDecodeError, ValueError, KeyError):
             gevent.sleep(sleep)
-        else:
-            return etherscan_block
 
-    etherscan_block = to_int(hexstr=get_result())
-    return etherscan_block
+    return None
 
 
-def wait_for_sync_etherscan(
-    rpc_client: JSONRPCClient, url: str, tolerance: int, sleep: float
+def wait_for_sync_blockcypher(
+    rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: float
 ) -> None:
-    local_block = rpc_client.block_number()
-    etherscan_block = etherscan_query_with_retries(url, sleep)
-    syncing_str = "\rSyncing ... Current: {} / Target: ~{}"
+    syncing_str = "\nSyncing ... Current: {} / Target: ~{}"
+    error_str = "Could not get blockchain information from blockcypher. Ignoring."
 
-    if local_block >= etherscan_block - tolerance:
+    local_block = rpc_client.block_number()
+    blockcypher_block = blockcypher_query_with_retries(sleep)
+
+    if blockcypher_block is None:
+        print(error_str)
+        return
+
+    if local_block >= blockcypher_block - tolerance:
         return
 
     print("Waiting for the ethereum node to synchronize. [Use ^C to exit]")
-    print(syncing_str.format(local_block, etherscan_block), end="")
+    print(syncing_str.format(local_block, blockcypher_block), end="")
 
     for i in count():
         sys.stdout.flush()
@@ -55,13 +61,17 @@ def wait_for_sync_etherscan(
         local_block = rpc_client.block_number()
 
         # update the oracle block number sparsely to not spam the server
-        if local_block >= etherscan_block or i % 50 == 0:
-            etherscan_block = etherscan_query_with_retries(url, sleep)
+        if local_block >= blockcypher_block or i % 50 == 0:
+            blockcypher_block = blockcypher_query_with_retries(sleep)
 
-            if local_block >= etherscan_block - tolerance:
+            if blockcypher_block is None:
+                print(error_str)
                 return
 
-        print(syncing_str.format(local_block, etherscan_block), end="")
+            if local_block >= blockcypher_block - tolerance:
+                return
+
+        print(syncing_str.format(local_block, blockcypher_block), end="")
 
     # add a newline so that the next print will start have it's own line
     print("")
@@ -89,15 +99,13 @@ def wait_for_sync_rpc_api(rpc_client: JSONRPCClient, sleep: float) -> None:
     print("")
 
 
-def wait_for_sync(rpc_client: JSONRPCClient, url: str, tolerance: int, sleep: float) -> None:
+def wait_for_sync(rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: float) -> None:
     # print something since the actual test may take a few moments for the first
     # iteration
     print("Checking if the ethereum node is synchronized")
 
-    try:
-        wait_for_sync_etherscan(rpc_client, url, tolerance, sleep)
-    except (RequestException, ValueError, KeyError):
-        print(f"Cannot use {url}. Request failed")
-        print("Falling back to eth_sync api.")
-
+    # Only use blockcypher on mainnet
+    if rpc_client.chain_id == ChainID(2345):
+        wait_for_sync_blockcypher(rpc_client, tolerance, sleep)
+    else:
         wait_for_sync_rpc_api(rpc_client, sleep)

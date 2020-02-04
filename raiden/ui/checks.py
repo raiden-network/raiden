@@ -16,7 +16,7 @@ from raiden.constants import (
 from raiden.exceptions import EthNodeInterfaceError, RaidenError
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
+from raiden.settings import ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
@@ -194,20 +194,4 @@ def check_pfs_configuration(pathfinding_service_address: str) -> None:
 
 
 def check_synced(rpc_client: JSONRPCClient) -> None:
-    network_id = ChainID(int(rpc_client.web3.version.network))
-    network_name = ID_TO_NETWORKNAME.get(network_id)
-
-    if network_name is None:
-        raise RaidenError(
-            f"Your ethereum client is connected to a non-recognized private "
-            f"network with network-ID {network_id}. Since we can not check if the "
-            f"client is synced please restart raiden with the --no-sync-check "
-            f"argument."
-        )
-
-    url = ETHERSCAN_API.format(
-        network=network_name if network_id != 1 else "api", action="eth_blockNumber"
-    )
-    wait_for_sync(
-        rpc_client=rpc_client, url=url, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3
-    )
+    wait_for_sync(rpc_client=rpc_client, tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE, sleep=3)
