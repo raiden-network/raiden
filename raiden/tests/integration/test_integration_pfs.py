@@ -23,6 +23,7 @@ from raiden.utils.typing import (
     TokenAmount,
     WithdrawAmount,
 )
+from raiden.waiting import wait_for_block
 
 
 def get_messages(app: App) -> List[Message]:
@@ -41,7 +42,13 @@ def reset_messages(app: App) -> None:
     app.raiden.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM] = []
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5680")
+def wait_all_apps(raiden_network: List[App]) -> None:
+    last_known_block = max(app.raiden.rpc_client.block_number() for app in raiden_network)
+
+    for app in raiden_network:
+        wait_for_block(app.raiden, last_known_block, 0.5)
+
+
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -66,6 +73,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
         registry_address=app0.raiden.default_registry.address,
         partner_address=app1.raiden.address,
     )
+    wait_all_apps(raiden_network)
 
     # There should be no messages sent at channel opening
     assert len(get_messages(app0)) == 0
@@ -78,6 +86,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
         partner_address=app1.raiden.address,
         total_deposit=TokenAmount(10),
     )
+    wait_all_apps(raiden_network)
 
     # We expect a PFSCapacityUpdate and a PFSFeeUpdate after the deposit
     messages0 = get_messages(app0)
@@ -100,6 +109,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
         partner_address=app1.raiden.address,
         total_withdraw=WithdrawAmount(5),
     )
+    wait_all_apps(raiden_network)
 
     # We expect a PFSCapacityUpdate and a PFSFeeUpdate after the withdraw
     messages0 = get_messages(app0)
