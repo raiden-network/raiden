@@ -44,13 +44,13 @@ fi
 DESTINATION_DIR="$(realpath -s "${DESTINATION_DIR}")/$(date +%m-%d-%Y)"
 mkdir -p "$DESTINATION_DIR"
 
-function download_pfs_logs {
-    container=$1
-    ssh root@services-dev.raiden.network "cd raiden-services/deployment/; docker-compose logs ${container} | gzip" > "${DESTINATION_DIR}/${container}.log.gz"
-    if [[ $? -ne 0 ]]; then
-        echo "Error: failed to download pfs-goerli logs"
-        exit 1
-    fi
+function download_service_logs {
+    sources=()
+    for file in "$@"; do
+        sources+=("root@services-dev.raiden.network:/home/services/${file}")
+    done
+
+    scp "${sources[@]}" "${DESTINATION_DIR}"
 }
 
 function download_nodes_logs {
@@ -123,11 +123,8 @@ function search_for_failures {
 export -f download_pfs_logs
 export -f download_server_logs
 
-print_bold "Downloading PFS logs"
-
-download_pfs_logs pfs-goerli &
-download_pfs_logs pfs-goerli-with-fee &
-wait
+print_bold "Downloading services logs"
+download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
 
 print_bold "Downloading scenarios list"
 download_server_logs $SCENARIO_REMOTE_URL_1
