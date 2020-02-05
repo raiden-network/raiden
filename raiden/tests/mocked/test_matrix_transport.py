@@ -243,46 +243,59 @@ def create_sync_filter_patch(monkeypatch, sync_filter_dict):
     "filter_params",
     [
         {
-            "broadcast_rooms": {
+            "not_rooms": {
                 "!room1:server": Room(None, "!room1:server"),  # type: ignore
                 "!room2:server": Room(None, "!room2:server"),  # type: ignore
+            },
+            "rooms": {
+                "!room1:server": Room(None, "!room1:server")  # type: ignore
             },
             "limit": None,
         },
-        {"broadcast_rooms": None, "limit": 0},
+        {"not_rooms": None, "rooms": None, "limit": 0},
         {
-            "broadcast_rooms": {
+            "not_rooms": {
                 "!room1:server": Room(None, "!room1:server"),  # type: ignore
                 "!room2:server": Room(None, "!room2:server"),  # type: ignore
             },
+            "rooms": None,
             "limit": 10,
         },
+        {"not_rooms": None, "rooms": None, "limit": None},
     ],
 )
 @pytest.mark.usefixtures("create_sync_filter_patch")
 def test_create_sync_filter(mock_matrix, sync_filter_dict, filter_params):
-
-    broadcast_rooms = filter_params["broadcast_rooms"]
+    not_rooms = filter_params["not_rooms"]
+    rooms = filter_params["rooms"]
     limit = filter_params["limit"]
 
     filter_id = mock_matrix._client.create_sync_filter(
-        broadcast_rooms=broadcast_rooms, limit=limit
+        not_rooms=not_rooms, rooms=rooms, limit=limit
     )
 
-    sync_filter = sync_filter_dict[filter_id]
+    if filter_id is not None:
+        sync_filter = sync_filter_dict[filter_id]
 
-    if broadcast_rooms and not limit:
+    if not_rooms and not limit:
         assert "room" in sync_filter
         assert "presence" in sync_filter
-        assert set(sync_filter["room"]["not_rooms"]) == set(broadcast_rooms.keys())
+        assert set(sync_filter["room"]["not_rooms"]) == set(not_rooms.keys())
+        assert set(sync_filter["room"]["rooms"]) == set(rooms.keys())
         assert "timeline" not in sync_filter["room"]
-    if limit and not broadcast_rooms:
+
+    if limit and not not_rooms:
         assert "room" in sync_filter
         assert sync_filter["room"]["timeline"]["limit"] == limit
         assert "presence" not in sync_filter
-    if limit and broadcast_rooms:
+
+    if limit and not_rooms:
         assert "timeline" in sync_filter["room"]
         assert "not_rooms" in sync_filter["room"]
+        assert "rooms" not in sync_filter["room"]
+
+    if not_rooms is None and rooms is None and limit is None:
+        assert filter_id is None
 
 
 @pytest.fixture

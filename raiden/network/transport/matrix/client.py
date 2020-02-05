@@ -252,24 +252,38 @@ class GMatrixClient(MatrixClient):
         self._sync_filter_id: Optional[int] = None
 
     def create_sync_filter(
-        self, broadcast_rooms: Optional[Dict[str, Room]] = None, limit: Optional[int] = None
+        self,
+        not_rooms: Optional[Dict[str, Room]] = None,
+        rooms: Optional[Dict[str, Room]] = None,
+        limit: Optional[int] = None,
     ) -> Optional[int]:
-        if broadcast_rooms is None and limit is None:
+        if not_rooms is None and rooms is None and limit is None:
             return None
-        broadcast_room_filter: Dict[str, Any] = {}
+
+        broadcast_room_filter: Dict[str, Dict] = {
+            # Get all presence updates
+            "presence": {"types": ["m.presence"]},
+            # Ignore "message receipts" from all rooms
+            "room": {"ephemeral": {"not_types": ["m.receipt"]}},
+        }
+        if not_rooms:
+            negative_rooms = [room.room_id for room in not_rooms.values()]
+            broadcast_room_filter["room"].update(
+                {
+                    # Filter out all unwanted rooms
+                    "not_rooms": negative_rooms
+                }
+            )
+        if rooms:
+            positive_rooms = [room.room_id for room in rooms.values()]
+            broadcast_room_filter["room"].update(
+                {
+                    # Set all wanted rooms
+                    "rooms": positive_rooms
+                }
+            )
+
         limit_filter: Dict[str, Any] = {}
-        if broadcast_rooms:
-            ignore_rooms = [room.room_id for room in broadcast_rooms.values()]
-            broadcast_room_filter = {
-                "room": {
-                    # Filter out all room state events / messages from broadcast rooms
-                    "not_rooms": ignore_rooms,
-                    # Ignore "message receipts" from all rooms
-                    "ephemeral": {"not_types": ["m.receipt"]},
-                },
-                # Get all presence updates
-                "presence": {"types": ["m.presence"]},
-            }
         if limit is not None:
             limit_filter = {"room": {"timeline": {"limit": limit}}}
 
