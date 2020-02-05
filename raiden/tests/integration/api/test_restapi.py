@@ -253,7 +253,7 @@ def test_payload_with_address_invalid_chars(api_server_test_instance: APIServer)
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_payload_with_address_invalid_length(api_server_test_instance: APIServer):
     """ Encoded addresses must have the right length. """
-    invalid_address = "0x61c808d82a3ac53231750dadc13c777b59310b"  # g at the end is invalid
+    invalid_address = "0x61c808d82a3ac53231750dadc13c777b59310b"  # one char short
     channel_data_obj = {
         "partner_address": invalid_address,
         "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
