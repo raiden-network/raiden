@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-SCENARIO_REMOTE_URL_1="http://scenario-player.ci.raiden.network/scenarios/"
-SCENARIO_REMOTE_URL_2="http://scenario-player2.ci.raiden.network/scenarios/"
-CURL_COMMAND="curl --silent"
-WGET_DIR="wget --no-parent --no-clobber --continue -nH -r"
+SCENARIO_REMOTE_URL_1="root@scenario-player.ci.raiden.network"
+SCENARIO_REMOTE_URL_2="root@scenario-player2.ci.raiden.network"
 
 ### STYLES: IGNORE
 COLUMNS=$(/usr/bin/tput cols)
@@ -53,34 +51,28 @@ function download_service_logs {
     scp "${sources[@]}" "${DESTINATION_DIR}"
 }
 
-function download_nodes_logs {
-    scenario=$1
-    current_server=$2
-    run_number=$3
-
-    nodes=$(${CURL_COMMAND} "${current_server}${scenario}" | grep '^<a ' | cut -d\" -f2 | grep "^node_${run_number}")
-
-    for node in $nodes; do
-        ${WGET_DIR} -q -P "${DESTINATION_DIR}" "${current_server}${scenario}${node}" &
-    done
-
-    latest_sp_log=$(${CURL_COMMAND} "${current_server}${scenario}" | grep '^<a ' | cut -d\" -f2 | grep ".log.gz$" | sort | tail -n 1)
-    ${WGET_DIR} -q -P "${DESTINATION_DIR}" "${current_server}${scenario}${latest_sp_log}" &
-
-    wait
-}
-
 function download_server_logs {
     current_server=$1
-    scenarios=$(${CURL_COMMAND} "${current_server}" | grep '^<a ' | cut -d\" -f2)
-    for scenario in $scenarios; do
-        run_number=$(${CURL_COMMAND} "${current_server}${scenario}run_number.txt")
-        [ -n "$run_number" ] || { echo 'Could not find run number!'; exit 1; }
-        download_nodes_logs "$scenario" "${current_server}" "${run_number}"
-        echo -e "\t - ${scenario}, run_number: ${run_number}"
-    done;
 
-    separator
+    (
+        cd ${DESTINATION_DIR}
+
+        ssh "$current_server" '
+        cd /var/lib/scenario-player;
+        source env.sh
+
+        cd /data/scenario-player/scenarios;
+        for scenario_path in "$SCENARIOS_DIR"/ci/"$SP"/*.yaml; do
+            scenario_file=$(basename "$scenario_path")
+            scenario=${scenario_file//.yaml}
+
+            run=$(cat "${scenario}"/run_number.txt)
+
+            find "$scenario"/node_"$run"_*
+            ls "$scenario"/scenario-player-run* -1 -t | head -1
+        done | tar zcf - -T -
+        ' | tar zxf -
+    )
 }
 
 function search_for_failures {
@@ -118,10 +110,6 @@ function search_for_failures {
         separator
     done;
 }
-
-# export the symbol to allow the subshell spawned by parallel to use it
-export -f download_pfs_logs
-export -f download_server_logs
 
 print_bold "Downloading services logs"
 download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
