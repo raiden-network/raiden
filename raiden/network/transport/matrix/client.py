@@ -486,7 +486,7 @@ class GMatrixClient(MatrixClient):
             node=node_address_from_userid(self.user_id),
             user_id=self.user_id,
             sync_iteration=self.sync_iteration,
-            sync_filter=self.sync_filter,
+            sync_filter_id=self._sync_filter_id,
             last_sync_time=self.last_sync,
         )
 
