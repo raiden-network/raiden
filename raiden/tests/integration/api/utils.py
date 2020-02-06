@@ -32,7 +32,7 @@ def create_api_server(raiden_app: App, port_number: int) -> APIServer:
     api_server.flask_app.config["SERVER_NAME"] = f"localhost:{port_number}"
     api_server.start()
 
-    # Fixes flaky test, were requests are done prior to the server initializing
+    # Fixes flaky test, where requests are done prior to the server initializing
     # the listening socket.
     # https://github.com/raiden-network/raiden/issues/389#issuecomment-305551563
     wait_for_listening_port(port_number)

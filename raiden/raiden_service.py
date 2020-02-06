@@ -715,7 +715,7 @@ class RaidenService(Runnable):
 
         # For safety of the mediation the monitoring service must be updated
         # before the balance proof is sent. Otherwise a timing attack would be
-        # possible, were an attacker would mediate a transfer through a node,
+        # possible, where an attacker would mediate a transfer through a node,
         # and try to DoS it, with the expectation that the victim would
         # forward the payment, but wouldn't be able to send a transaction to
         # the blockchain nor update a MS.

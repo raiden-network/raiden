@@ -1016,7 +1016,7 @@ class MatrixTransport(Runnable):
             )
             return []
 
-        # rooms we created and invited user, or were invited specifically by them
+        # rooms we created and invited user, or we're invited specifically by them
         room_ids = self._get_room_ids_for_address(peer_address)
 
         if room.room_id not in room_ids:

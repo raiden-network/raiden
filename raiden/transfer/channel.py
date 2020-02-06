@@ -207,7 +207,7 @@ def is_channel_usable_for_mediation(
     lower than the block gas limit constraints.
 
     The lock expiration has to be smaller than the channel's settlement window
-    because otherwise it is possible to employ attacks. Where an attacker open
+    because otherwise it is possible to employ attacks, where an attacker opens
     two channels to the victim, with different settlement windows. The channel
     with lower settlement is used to start a payment to the other channel, if
     the lock's expiration is allowed to be larger than the settlement window,
