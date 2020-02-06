@@ -40,7 +40,6 @@ else
 fi
 
 DESTINATION_DIR="$(realpath -s "${DESTINATION_DIR}")/$(date +%m-%d-%Y)"
-mkdir -p "$DESTINATION_DIR"
 
 function download_service_logs {
     sources=()
@@ -78,7 +77,7 @@ function download_server_logs {
 function search_for_failures {
     mkdir -p "${DESTINATION_DIR}/errors/"
     echo -e "${BOLD}Looking for failures${RESET}"
-    scenarios_dir="${DESTINATION_DIR}/scenarios"
+    scenarios_dir="${DESTINATION_DIR}"
 
     for scenario_dir in "${scenarios_dir}"/*; do
         scenario=$(basename "${scenario_dir}")
@@ -111,10 +110,15 @@ function search_for_failures {
     done;
 }
 
-print_bold "Downloading services logs"
-download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
+[ ! -d "$DESTINATION_DIR" ] && {
+    mkdir -p "$DESTINATION_DIR"
 
-print_bold "Downloading scenarios list"
-download_server_logs $SCENARIO_REMOTE_URL_1
-download_server_logs $SCENARIO_REMOTE_URL_2
+    print_bold "Downloading services logs"
+    download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
+
+    print_bold "Downloading scenarios list"
+    download_server_logs $SCENARIO_REMOTE_URL_1
+    download_server_logs $SCENARIO_REMOTE_URL_2
+}
+
 search_for_failures
