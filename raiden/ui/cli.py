@@ -77,10 +77,10 @@ from raiden.utils.profiling.greenlets import SwitchMonitoring
 from raiden.utils.profiling.memory import MemoryLogger
 from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
+from raiden.utils.typing import MYPY_ANNOTATION
 from raiden_contracts.constants import ID_TO_NETWORKNAME, NETWORKNAME_TO_ID
 
-from .runners import EchoNodeRunner, NodeRunner
+from .runners import NodeRunner
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
@@ -914,18 +914,3 @@ def smoketest(
 
     if not success:
         sys.exit(1)
-
-
-@run.command(
-    help=(
-        "Start an echo node.\n"
-        "Mainly useful for development.\n"
-        "See: https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html"
-        "#interacting-with-the-raiden-echo-node"
-    )
-)
-@click.option("--token-address", type=ADDRESS_TYPE, required=True)
-@click.pass_context
-def echonode(ctx: Context, token_address: TokenAddress) -> None:
-    """ Start a raiden Echo Node that will send received transfers back to the initiator. """
-    EchoNodeRunner(ctx.obj, ctx, token_address).run()
