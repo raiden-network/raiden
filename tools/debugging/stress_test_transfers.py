@@ -48,7 +48,7 @@ WAIT_FOR_SOCKET_TO_BE_AVAILABLE = 60
 # restore the channel state.
 PartialTransferPlan = Iterator[Amount]
 
-# A transfer plan is a list of transfer amounts were every transfer WILL be
+# A transfer plan is a list of transfer amounts where every transfer WILL be
 # **successfully** executed and the channels restored to their initial state.
 TransferPlan = Iterator[Amount]
 

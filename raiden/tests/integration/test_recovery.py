@@ -266,7 +266,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
     raiden_network, restart_node, token_addresses, network_wait, number_of_nodes, retry_timeout
 ):
     """ A test case related to https://github.com/raiden-network/raiden/issues/4639
-    Where a node sends a withdraw transaction, is stopped before the transaction is completed.
+    where a node sends a withdraw transaction, is stopped before the transaction is completed.
     Meanwhile, the partner node closes the channel so when the stopped node is back up, it tries to
     execute the pending withdraw transaction and fails because the channel was closed.
     Expected behaviour: Channel closed state change should cancel a withdraw transaction.
