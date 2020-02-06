@@ -49,8 +49,8 @@ templates:
     PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-apple-darwin/parity'
     PARITY_SHA256_MACOS: '1deb0d9dcf3eef2fee32867a200ddb65c9343071b6e4e39660d8837184b164e3'
     PARITY_VERSION: 'v2.5.5'
-    SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.5.4/solc-static-linux'
-    SOLC_VERSION: 'v0.5.4'
+    SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.5.16/solc-static-linux'
+    SOLC_VERSION: 'v0.5.16'
 
 
 executors:
