@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`4588` Remove the echo_node subcommand of the command line interface.
 * :bug:`5779` Handle the API exception when no further token networks can be registered by returning 403 FORBIDDEN.
 * :bug:`5583` The connection manager no longer opens channels with offline nodes when trying to connect to a token network.
 * :feature:`5589` The Rest API now includes the token address in all returned payment related events.
