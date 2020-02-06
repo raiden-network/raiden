@@ -128,6 +128,9 @@ class MessageSerializer(SerializationBase):
         except (UnicodeDecodeError, JSONDecodeError) as ex:
             raise SerializationError(f"Can't decode invalid JSON: {data}") from ex
 
+        if not isinstance(decoded_json, dict):
+            raise SerializationError(f"JSON is not a dictionary: {data}")
+
         try:
             msg_type = decoded_json.pop("type")
         except KeyError as ex:

@@ -269,6 +269,13 @@ def test_encoding_and_decoding():
         assert deserialized == message
 
 
+def test_bad_messages():
+    "SerializationErrors should be raised on all kinds of wrong messages"
+    for message in ["{}", "[]", '"foo"', "123"]:
+        with pytest.raises(SerializationError):
+            MessageSerializer.deserialize(message)
+
+
 def test_message_identical() -> None:
     """ Will fail if the messages changed since the committed version
 
