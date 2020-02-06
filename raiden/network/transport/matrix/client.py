@@ -253,10 +253,24 @@ class GMatrixClient(MatrixClient):
 
     def create_sync_filter(
         self,
-        not_rooms: Optional[Iterable[Room]] = None,
         rooms: Optional[Iterable[Room]] = None,
+        not_rooms: Optional[Iterable[Room]] = None,
         limit: Optional[int] = None,
     ) -> Optional[int]:
+        """ Create a matrix sync filter
+
+        A whitelist and blacklist of rooms can be supplied optionally. If
+        no whitelist ist given, all rooms are whitelisted. The blacklist is
+        applied on top of the whitelist.
+
+        Ref. https://matrix.org/docs/spec/client_server/r0.6.0#api-endpoints
+
+        Args:
+            rooms: whitelist of rooms, if not given all rooms are whitelisted
+            not_rooms: blacklist of rooms, applied after the whitelist
+            limit: maximum number of messages to return
+
+        """
         if not_rooms is None and rooms is None and limit is None:
             return None
 

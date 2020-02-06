@@ -271,7 +271,7 @@ def test_create_sync_filter(mock_matrix, sync_filter_dict, filter_params):
     limit = filter_params["limit"]
 
     filter_id = mock_matrix._client.create_sync_filter(
-        not_rooms=not_rooms, rooms=rooms, limit=limit
+        rooms=rooms, not_rooms=not_rooms, limit=limit
     )
 
     if filter_id is not None:
