@@ -13,11 +13,10 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
-from raiden.utils.echo_node import EchoNode
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import Port, TokenAddress
+from raiden.utils.typing import Port
 
 from ..utils.gevent import spawn_named
 from .app import run_app
@@ -190,22 +189,3 @@ class NodeRunner:
             )
 
             app.stop()
-
-
-class EchoNodeRunner(NodeRunner):
-    def __init__(self, options: Dict[str, Any], ctx: Context, token_address: TokenAddress) -> None:
-        super().__init__(options, ctx)
-        self._token_address = token_address
-        self._echo_node: Optional[EchoNode] = None
-
-    @property
-    def welcome_string(self) -> str:
-        return "{} [ECHO NODE]".format(super().welcome_string)
-
-    def _startup_hook(self) -> None:
-        if self.raiden_api is not None:
-            self._echo_node = EchoNode(self.raiden_api, self._token_address)
-
-    def _shutdown_hook(self) -> None:
-        if self._echo_node:
-            self._echo_node.stop()
