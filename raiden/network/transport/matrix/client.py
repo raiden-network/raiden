@@ -253,8 +253,8 @@ class GMatrixClient(MatrixClient):
 
     def create_sync_filter(
         self,
-        not_rooms: Optional[Dict[str, Room]] = None,
-        rooms: Optional[Dict[str, Room]] = None,
+        not_rooms: Optional[Iterable[Room]] = None,
+        rooms: Optional[Iterable[Room]] = None,
         limit: Optional[int] = None,
     ) -> Optional[int]:
         if not_rooms is None and rooms is None and limit is None:
@@ -267,7 +267,7 @@ class GMatrixClient(MatrixClient):
             "room": {"ephemeral": {"not_types": ["m.receipt"]}},
         }
         if not_rooms:
-            negative_rooms = [room.room_id for room in not_rooms.values()]
+            negative_rooms = [room.room_id for room in not_rooms]
             broadcast_room_filter["room"].update(
                 {
                     # Filter out all unwanted rooms
@@ -275,7 +275,7 @@ class GMatrixClient(MatrixClient):
                 }
             )
         if rooms:
-            positive_rooms = [room.room_id for room in rooms.values()]
+            positive_rooms = [room.room_id for room in rooms]
             broadcast_room_filter["room"].update(
                 {
                     # Set all wanted rooms

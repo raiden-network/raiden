@@ -436,7 +436,9 @@ class MatrixTransport(Runnable):
         self._initialize_room_inventory()
         self._initialize_broadcast_rooms()
 
-        broadcast_filter_id = self._client.create_sync_filter(not_rooms=self._broadcast_rooms)
+        broadcast_filter_id = self._client.create_sync_filter(
+            not_rooms=self._broadcast_rooms.values()
+        )
         self._client.set_sync_filter_id(broadcast_filter_id)
 
         def on_success(greenlet: gevent.Greenlet) -> None:

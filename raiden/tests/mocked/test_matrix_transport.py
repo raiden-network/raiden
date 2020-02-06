@@ -243,21 +243,21 @@ def create_sync_filter_patch(monkeypatch, sync_filter_dict):
     "filter_params",
     [
         {
-            "not_rooms": {
-                "!room1:server": Room(None, "!room1:server"),  # type: ignore
-                "!room2:server": Room(None, "!room2:server"),  # type: ignore
-            },
-            "rooms": {
-                "!room1:server": Room(None, "!room1:server")  # type: ignore
-            },
+            "not_rooms": [
+                Room(None, "!room1:server"),  # type: ignore
+                Room(None, "!room2:server"),  # type: ignore
+            ],
+            "rooms": [
+                Room(None, "!room1:server")  # type: ignore
+            ],
             "limit": None,
         },
         {"not_rooms": None, "rooms": None, "limit": 0},
         {
-            "not_rooms": {
-                "!room1:server": Room(None, "!room1:server"),  # type: ignore
-                "!room2:server": Room(None, "!room2:server"),  # type: ignore
-            },
+            "not_rooms": [
+                Room(None, "!room1:server"),  # type: ignore
+                Room(None, "!room2:server"),  # type: ignore
+            ],
             "rooms": None,
             "limit": 10,
         },
@@ -280,8 +280,8 @@ def test_create_sync_filter(mock_matrix, sync_filter_dict, filter_params):
     if not_rooms and not limit:
         assert "room" in sync_filter
         assert "presence" in sync_filter
-        assert set(sync_filter["room"]["not_rooms"]) == set(not_rooms.keys())
-        assert set(sync_filter["room"]["rooms"]) == set(rooms.keys())
+        assert set(sync_filter["room"]["not_rooms"]) == set(room.room_id for room in not_rooms)
+        assert set(sync_filter["room"]["rooms"]) == set(room.room_id for room in rooms)
         assert "timeline" not in sync_filter["room"]
 
     if limit and not not_rooms:
