@@ -40,6 +40,7 @@ else
 fi
 
 DESTINATION_DIR="$(realpath -s "${DESTINATION_DIR}")/$(date +%m-%d-%Y)"
+SCENARIOS_DIR="$DESTINATION_DIR"/scenarios
 
 function download_service_logs {
     sources=()
@@ -54,7 +55,7 @@ function download_server_logs {
     current_server=$1
 
     (
-        cd ${DESTINATION_DIR}
+        cd "${SCENARIOS_DIR}"
 
         ssh "$current_server" '
         cd /var/lib/scenario-player;
@@ -77,41 +78,33 @@ function download_server_logs {
 function search_for_failures {
     mkdir -p "${DESTINATION_DIR}/errors/"
     echo -e "${BOLD}Looking for failures${RESET}"
-    scenarios_dir="${DESTINATION_DIR}"
 
-    for scenario_dir in "${scenarios_dir}"/*; do
-        scenario=$(basename "${scenario_dir}")
-        print_bold "${scenario}"
-        separator
+    for scenario_logs in $(find "${SCENARIOS_DIR}" -maxdepth 2 -type f -name "scenario-player*.gz"); do
+        scenario_successful=$(gunzip -c  "$scenario_logs" | jq 'select(.result == "success")')
 
-        for node_dir in $(find "${scenario_dir}" -maxdepth 1 -type d -name "node_*"); do
-            result=$(gunzip -c ${node_dir}/*.log.gz | jq --tab 'select (.error!=null or .exception!=null)')
-            if [[ $result == "" ]]; then
-                result=$(cat "${node_dir}"/*.stderr | grep -v Starting | grep -v Stopped)
-            fi
-            if [[ $result != "" ]]; then
-                print_bold "- Found error in ${node_dir}"
-                echo -e "${result}"
-                echo "${result}" > "${DESTINATION_DIR}/errors/${scenario}.node.log.gz"
-            fi
-        done
+        if [ -z "${scenario_successful}" ]; then
+            scenario=$(basename "${scenario_logs}")
+            scenario_dir=$(dirname "${scenario_logs}")
 
-        separator
-        sp_error=$(gunzip -c "${scenario_dir}"/scenario-player-run_*.log.gz | jq 'select (.error!=null or .exception!=null)')
+            separator
+            print_bold "Scenario ${scenario} failed"
+            gunzip -c  "$scenario_logs" | jq 'select(.result != null) | .message'
+            separator
 
-        if [[ $sp_error != "" ]]; then
-            print_bold "- SP reported an error in ${scenario_dir}"
+            for node_dir in $(find "${scenario_dir}" -maxdepth 1 -type d -name "node_*"); do
+                gunzip -c ${node_dir}/*.log.gz | jq --tab 'select (.error!=null or .exception!=null)'
+                cat "${node_dir}"/*.stderr | grep -v Starting | grep -v Stopped
+            done
 
-            echo -e "${sp_error}"
-            echo "${sp_error}" > "${DESTINATION_DIR}/errors/${scenario}.sp.log"
+            separator
+
+            gunzip -c "${scenario_dir}"/scenario-player-run_*.log.gz | jq 'select (.error!=null or .exception!=null)'
         fi
-
-        separator
     done;
 }
 
 [ ! -d "$DESTINATION_DIR" ] && {
-    mkdir -p "$DESTINATION_DIR"
+    mkdir -p "${SCENARIOS_DIR}"
 
     print_bold "Downloading services logs"
     download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
@@ -120,5 +113,8 @@ function search_for_failures {
     download_server_logs $SCENARIO_REMOTE_URL_1
     download_server_logs $SCENARIO_REMOTE_URL_2
 }
+
+# search_for_failures expects the logs to be compressed
+find "${SCENARIOS_DIR}" -type f -iname '*.log' | xargs gzip -q
 
 search_for_failures
