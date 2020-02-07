@@ -105,6 +105,44 @@ class ApproveSentTransaction:
         self.gas_limit = transaction.gas_limit
         self.transaction_hash = transaction_hash
 
+    def poll(self, token: "Token") -> None:
+        receipt = token.client.poll(self.transaction_hash)
+        failed_receipt = check_transaction_threw(receipt=receipt)
+
+        if failed_receipt:
+            failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+
+            if failed_receipt["cumulativeGasUsed"] == self.gas_limit:
+                msg = (
+                    f"approve failed and all gas was used "
+                    f"({self.gas_limit}). Estimate gas may "
+                    f"have underestimated approve, or succeeded even "
+                    f"though an assert is triggered, or the smart "
+                    f"contract code has a conditional assert."
+                )
+                raise RaidenRecoverableError(msg)
+
+            approve_data = token.approve_data(failed_at_blockhash)
+
+            if approve_data.balance < self.allowance:
+                msg = (
+                    f"Call to approve failed. Your balance of {approve_data.balance} is "
+                    "below the required amount of {allowance}."
+                )
+                if approve_data.balance == 0:
+                    msg += (
+                        " Note: The balance was 0, which may also happen "
+                        "if the contract is not a valid ERC20 token "
+                        "(balanceOf method missing)."
+                    )
+                raise RaidenRecoverableError(msg)
+
+            raise RaidenRecoverableError(
+                f"Call to approve failed. The reason is unknown, you have enough "
+                f"tokens for the requested allowance and enough eth to pay the "
+                f"gas. There may be a problem with the token contract."
+            )
+
 
 class Token:
     def __init__(
@@ -178,9 +216,18 @@ class Token:
         large critical section, which includes the mining and confirmation of
         the transaction.
         """
-        with self.token_lock:
+        log_details = {
+            "node": to_checksum_address(self.node_address),
+            "contract": to_checksum_address(self.address),
+            "allowed_address": to_checksum_address(allowed_address),
+            "allowance": allowance,
+        }
+
+        with log_transaction(log, "approve", log_details), self.token_lock:
             unchecked = ApproveUncheckedTransaction(allowed_address, allowance)
+
             pending = unchecked.estimate_gas(self)
+            log_details["gas_limit"] = pending.gas_limit
 
             yield pending
 
@@ -199,59 +246,12 @@ class Token:
         # There are no direct calls to this method in any event handler,
         # so a precondition check would make no sense.
         with self.token_lock:
-            log_details = {
-                "node": to_checksum_address(self.node_address),
-                "contract": to_checksum_address(self.address),
-                "allowed_address": to_checksum_address(allowed_address),
-                "allowance": allowance,
-            }
+            unchecked = ApproveUncheckedTransaction(allowed_address, allowance)
+            pending = unchecked.estimate_gas(self)
 
-            with log_transaction(log, "approve", log_details):
-                error_prefix = "Call to approve will fail"
-                unchecked = ApproveUncheckedTransaction(allowed_address, allowance)
-                pending = unchecked.estimate_gas(self)
-
-                if pending:
-                    transaction = pending.send(self.proxy)
-                    error_prefix = "Call to approve failed"
-                    log_details["gas_limit"] = transaction.gas_limit
-
-                    receipt = self.client.poll(transaction.transaction_hash)
-                    failed_receipt = check_transaction_threw(receipt=receipt)
-
-                    if failed_receipt:
-                        failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-
-                        if failed_receipt["cumulativeGasUsed"] == transaction.gas_limit:
-                            msg = (
-                                f"approve failed and all gas was used "
-                                f"({transaction.gas_limit}). Estimate gas may "
-                                f"have underestimated approve, or succeeded even "
-                                f"though an assert is triggered, or the smart "
-                                f"contract code has a conditional assert."
-                            )
-                            raise RaidenRecoverableError(msg)
-
-                        approve_data = self.approve_data(failed_at_blockhash)
-
-                        if approve_data.balance < allowance:
-                            msg = (
-                                f"{error_prefix} Your balance of {approve_data.balance} is "
-                                "below the required amount of {allowance}."
-                            )
-                            if approve_data.balance == 0:
-                                msg += (
-                                    " Note: The balance was 0, which may also happen "
-                                    "if the contract is not a valid ERC20 token "
-                                    "(balanceOf method missing)."
-                                )
-                            raise RaidenRecoverableError(msg)
-
-                        raise RaidenRecoverableError(
-                            f"{error_prefix}. The reason is unknown, you have enough tokens for "
-                            f"the requested allowance and enough eth to pay the gas. There may "
-                            f"be a problem with the token contract."
-                        )
+            if pending:
+                transaction = pending.send(self.proxy)
+                transaction.poll(self)
 
     def balance_of(
         self, address: Address, block_identifier: BlockSpecification = "latest"
