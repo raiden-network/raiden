@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 import structlog
@@ -16,6 +17,7 @@ from raiden.utils.typing import (
     Address,
     Balance,
     BlockSpecification,
+    Iterator,
     Optional,
     TokenAddress,
     TokenAmount,
@@ -42,17 +44,43 @@ class ApproveUncheckedTransaction:
         self.allowed_address = allowed_address
         self.allowance = allowance
 
-    def estimate_gas(
-        self, proxy: ContractProxy, rpc_client: JSONRPCClient
-    ) -> Optional["ApprovePendingTransaction"]:
-        gas_limit = proxy.estimate_gas(
-            rpc_client.get_checking_block(), "approve", self.allowed_address, self.allowance
+    def estimate_gas(self, token: "Token") -> "ApprovePendingTransaction":
+        gas_limit = token.proxy.estimate_gas(
+            token.client.get_checking_block(), "approve", self.allowed_address, self.allowance
         )
 
         if gas_limit is not None:
             return ApprovePendingTransaction(self, safe_gas_limit(gas_limit))
 
-        return None
+        failed_at = token.client.get_block("latest")
+        failed_at_blockhash = encode_hex(failed_at["hash"])
+        failed_at_blocknumber = failed_at["number"]
+
+        token.client.check_for_insufficient_eth(
+            transaction_name="approve",
+            transaction_executed=False,
+            required_gas=GAS_REQUIRED_FOR_APPROVE,
+            block_identifier=failed_at_blocknumber,
+        )
+
+        approve_data = token.approve_data(failed_at_blockhash)
+
+        if approve_data.balance < self.allowance:
+            msg = (
+                f"Call to approve will fail. Your balance of {approve_data.balance} is "
+                "below the required amount of {allowance}."
+            )
+            if approve_data.balance == 0:
+                msg += (
+                    " Note: The balance was 0, which may also happen if the contract "
+                    "is not a valid ERC20 token (balanceOf method missing)."
+                )
+            raise RaidenRecoverableError(msg)
+
+        raise RaidenRecoverableError(
+            f"Call to approve will fail. Gas estimation failed for unknown reason. "
+            f"Please make sure the contract is a valid ERC20 token."
+        )
 
 
 class ApprovePendingTransaction:
@@ -122,6 +150,40 @@ class Token:
         balance = self.balance_of(self.client.address, failed_at_blockhash)
         return ApproveConditionsData(balance=balance)
 
+    @contextmanager
+    def approve_transaction(
+        self, allowed_address: Address, allowance: TokenAmount
+    ) -> Iterator[ApprovePendingTransaction]:
+        """Minimal critical section to serialize allowance transactions.
+
+        Each channel deposit requires an allowance at least equal to the
+        deposit amount, because allowance itself is an idempontent operation
+        and by default the Raiden's proxies allow only the exact token amount
+        necessary for the deposit, an interesting race condition with
+        concurrent deposits. If the transactions are order as such:
+
+        - Approve1 + Approve2 + Deposit1 + Deposit2
+
+        One of the approvals will be a no-op and the second Deposit will fail.
+        To prevent the above error the following order must be enforced:
+
+        - Approve1 + Deposit1 + Approve2 + Deposit2
+
+        This context manager allows user code to forbid another approve
+        transaction from being sent concurrently, allowing the token network
+        proxy to send the first deposit transaction before the second approval
+        is sent.
+
+        This is necessary since the high-level `approve` method has a very
+        large critical section, which includes the mining and confirmation of
+        the transaction.
+        """
+        with self.token_lock:
+            unchecked = ApproveUncheckedTransaction(allowed_address, allowance)
+            pending = unchecked.estimate_gas(self)
+
+            yield pending
+
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
         """ Approve `allowed_address` to transfer up to `deposit` amount of token.
 
@@ -147,7 +209,7 @@ class Token:
             with log_transaction(log, "approve", log_details):
                 error_prefix = "Call to approve will fail"
                 unchecked = ApproveUncheckedTransaction(allowed_address, allowance)
-                pending = unchecked.estimate_gas(self.proxy, self.client)
+                pending = unchecked.estimate_gas(self)
 
                 if pending:
                     transaction = pending.send(self.proxy)
@@ -190,37 +252,6 @@ class Token:
                             f"the requested allowance and enough eth to pay the gas. There may "
                             f"be a problem with the token contract."
                         )
-
-                else:
-                    failed_at = self.proxy.rpc_client.get_block("latest")
-                    failed_at_blockhash = encode_hex(failed_at["hash"])
-                    failed_at_blocknumber = failed_at["number"]
-
-                    self.proxy.rpc_client.check_for_insufficient_eth(
-                        transaction_name="approve",
-                        transaction_executed=False,
-                        required_gas=GAS_REQUIRED_FOR_APPROVE,
-                        block_identifier=failed_at_blocknumber,
-                    )
-
-                    approve_data = self.approve_data(failed_at_blockhash)
-
-                    if approve_data.balance < allowance:
-                        msg = (
-                            f"{error_prefix} Your balance of {approve_data.balance} is "
-                            "below the required amount of {allowance}."
-                        )
-                        if approve_data.balance == 0:
-                            msg += (
-                                " Note: The balance was 0, which may also happen if the contract "
-                                "is not a valid ERC20 token (balanceOf method missing)."
-                            )
-                        raise RaidenRecoverableError(msg)
-
-                    raise RaidenRecoverableError(
-                        f"{error_prefix} Gas estimation failed for unknown reason. "
-                        f"Please make sure the contract is a valid ERC20 token."
-                    )
 
     def balance_of(
         self, address: Address, block_identifier: BlockSpecification = "latest"
