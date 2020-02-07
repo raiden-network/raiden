@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import gevent
+import pkg_resources
 import structlog
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
@@ -14,6 +15,7 @@ from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
 
+import raiden
 from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
@@ -335,6 +337,7 @@ class MatrixTransport(Runnable):
                 self._config.retry_interval_max,
             )
 
+        version = pkg_resources.require(raiden.__name__)[0].version
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
             available_servers,
@@ -342,6 +345,7 @@ class MatrixTransport(Runnable):
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
             environment=environment,
+            user_agent=f"Raiden {version}",
         )
         self._server_url = self._client.api.base_url
         self._server_name = urlparse(self._server_url).netloc
