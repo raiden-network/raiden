@@ -413,6 +413,13 @@ class UserDeposit:
             allowed_address=Address(self.address), allowance=amount_to_deposit
         ) as pending_approve:
             checking_block = self.client.get_checking_block()
+            approve = pending_approve.send(token.proxy)
+
+            # Wait until the node processes the approve transaction, this is
+            # necessary because the `setTotalDeposit` transaction depends on
+            # the side-effects of `approve` to work.
+            self.client.wait_for_transaction(approve.transaction_hash)
+
             gas_limit = self.proxy.estimate_gas(
                 checking_block, "deposit", beneficiary, total_deposit
             )
@@ -421,10 +428,11 @@ class UserDeposit:
                 gas_limit = safe_gas_limit(gas_limit)
                 log_details["gas_limit"] = gas_limit
 
-                pending_approve.send(token.proxy)
                 transaction_hash = self.proxy.transact(
                     "deposit", gas_limit, beneficiary, total_deposit
                 )
+
+        approve.poll(token)
 
         if transaction_hash:
             receipt = self.client.poll(transaction_hash)

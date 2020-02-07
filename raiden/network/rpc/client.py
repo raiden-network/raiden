@@ -638,6 +638,21 @@ class JSONRPCClient:
             receipt,
         )
 
+    def wait_for_transaction(self, transaction_hash: bytes) -> Dict[str, Any]:
+        """ Wait until the `transaction_hash` is available in the client's
+        pool.
+
+        Could return None for a short period of time, until the transaction is
+        added to the pool
+        """
+        if len(transaction_hash) != 32:
+            raise ValueError("transaction_hash must be a 32 byte hash")
+
+        transaction = None
+        while not transaction:
+            transaction = self.web3.eth.getTransaction(transaction_hash)
+            gevent.sleep(1.0)
+
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.

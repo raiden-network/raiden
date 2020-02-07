@@ -938,6 +938,14 @@ class TokenNetwork:
         with self.token.approve_transaction(
             allowed_address=Address(self.address), allowance=amount_to_deposit
         ) as pending_approve:
+
+            approve = pending_approve.send(self.token.proxy)
+
+            # Wait until the node processes the approve transaction, this is
+            # necessary because the `setTotalDeposit` transaction depends on
+            # the side-effects of `approve` to work.
+            self.client.wait_for_transaction(approve.transaction_hash)
+
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
                 "setTotalDeposit",
@@ -953,7 +961,6 @@ class TokenNetwork:
                 )
                 log_details["gas_limit"] = gas_limit
 
-                pending_approve.send(self.token.proxy)
                 transaction_hash = self.proxy.transact(
                     "setTotalDeposit",
                     gas_limit,
@@ -962,6 +969,8 @@ class TokenNetwork:
                     total_deposit=total_deposit,
                     partner=partner,
                 )
+
+        approve.poll(self.token)
 
         if transaction_hash:
             receipt = self.client.poll(transaction_hash)
