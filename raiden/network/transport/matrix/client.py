@@ -133,6 +133,7 @@ class GMatrixHttpApi(MatrixHttpApi):
         retry_timeout: int = 60,
         retry_delay: Callable[[], Iterable[float]] = None,
         long_paths: Container[str] = (),
+        user_agent: str = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -144,6 +145,8 @@ class GMatrixHttpApi(MatrixHttpApi):
         self.session.mount("http://", http_adapter)
         self.session.mount("https://", https_adapter)
         self.session.hooks["response"].append(self._record_server_ident)
+        if user_agent:
+            self.session.headers.update({"User-Agent": user_agent})
 
         self._long_paths = long_paths
         if long_paths:
@@ -222,6 +225,7 @@ class GMatrixClient(MatrixClient):
         http_retry_timeout: int = 60,
         http_retry_delay: Callable[[], Iterable[float]] = lambda: repeat(1),
         environment: Environment = Environment.PRODUCTION,
+        user_agent: str = None,
     ) -> None:
 
         self.token: Optional[str] = None
@@ -240,6 +244,7 @@ class GMatrixClient(MatrixClient):
             retry_timeout=http_retry_timeout,
             retry_delay=http_retry_delay,
             long_paths=("/sync",),
+            user_agent=user_agent,
         )
         self.api.validate_certificate(valid_cert_check)
         self.synced = gevent.event.Event()  # Set at the end of every sync, then cleared
