@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import structlog
 from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from gevent.lock import RLock
@@ -37,6 +39,17 @@ if TYPE_CHECKING:
 
 
 log = structlog.get_logger(__name__)
+
+
+@dataclass
+class DepositConditionsData:
+    """ Values used in assert or require expressions in the smart contract. """
+
+    previous_total_deposit: TokenAmount
+    current_balance: Balance
+    whole_balance: TokenAmount
+    whole_balance_limit: TokenAmount
+    allowance: TokenAmount
 
 
 class UserDeposit:
@@ -261,6 +274,31 @@ class UserDeposit:
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
 
+    def deposit_data(
+        self, beneficiary: Address, token: Token, given_block_identifier: BlockSpecification
+    ) -> DepositConditionsData:
+        previous_total_deposit = self.get_total_deposit(
+            address=beneficiary, block_identifier=given_block_identifier
+        )
+        current_balance = token.balance_of(
+            address=self.node_address, block_identifier=given_block_identifier
+        )
+        whole_balance = self.whole_balance(block_identifier=given_block_identifier)
+        whole_balance_limit = self.whole_balance_limit(block_identifier=given_block_identifier)
+        allowance = token.allowance(
+            owner=self.node_address,
+            spender=Address(self.address),
+            block_identifier=given_block_identifier,
+        )
+
+        return DepositConditionsData(
+            previous_total_deposit=previous_total_deposit,
+            current_balance=current_balance,
+            whole_balance=whole_balance,
+            whole_balance_limit=whole_balance_limit,
+            allowance=allowance,
+        )
+
     def deposit(
         self,
         beneficiary: Address,
@@ -290,16 +328,8 @@ class UserDeposit:
         with self.deposit_lock:
             # check preconditions
             try:
-                previous_total_deposit = self.get_total_deposit(
-                    address=beneficiary, block_identifier=given_block_identifier
-                )
-                current_balance = token.balance_of(
-                    address=self.node_address, block_identifier=given_block_identifier
-                )
-                whole_balance = self.whole_balance(block_identifier=given_block_identifier)
-                whole_balance_limit = self.whole_balance_limit(
-                    block_identifier=given_block_identifier
-                )
+                precondition_data = self.deposit_data(beneficiary, token, given_block_identifier)
+                previous_total_deposit = precondition_data.previous_total_deposit
             except ValueError:
                 # If 'given_block_identifier' has been pruned, we cannot perform the
                 # precondition checks but must still set the amount_to_deposit to a
@@ -314,18 +344,22 @@ class UserDeposit:
                 log_details["previous_total_deposit"] = previous_total_deposit
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
-                if whole_balance + amount_to_deposit > UINT256_MAX:
+                if precondition_data.whole_balance + amount_to_deposit > UINT256_MAX:
                     msg = (
-                        f"Current whole balance is {whole_balance}. "
+                        f"Current whole balance is {precondition_data.whole_balance}. "
                         f"The new deposit of {amount_to_deposit} would lead to an overflow."
                     )
                     raise BrokenPreconditionError(msg)
 
-                if whole_balance + amount_to_deposit > whole_balance_limit:
+                is_above_limit = (
+                    precondition_data.whole_balance + amount_to_deposit
+                    > precondition_data.whole_balance_limit
+                )
+                if is_above_limit:
                     msg = (
-                        f"Current whole balance is {whole_balance}. "
+                        f"Current whole balance is {precondition_data.whole_balance}. "
                         f"With the new deposit of {amount_to_deposit}, the deposit "
-                        f"limit of {whole_balance_limit} would be exceeded."
+                        f"limit of {precondition_data.whole_balance_limit} would be exceeded."
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -336,11 +370,13 @@ class UserDeposit:
                     )
                     raise BrokenPreconditionError(msg)
 
-                if current_balance < amount_to_deposit:
+                if precondition_data.current_balance < amount_to_deposit:
                     msg = (
-                        f"new_total_deposit - previous_total_deposit = {amount_to_deposit} "
-                        f"can not be larger than the available balance {current_balance}, "
-                        f"for token at address {to_checksum_address(token.address)}"
+                        f"new_total_deposit - previous_total_deposit = "
+                        f"{amount_to_deposit} can not be larger than the "
+                        f"available balance {precondition_data.current_balance}, "
+                        f"for token at address "
+                        f"{to_checksum_address(token.address)}."
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -383,6 +419,9 @@ class UserDeposit:
             if not gas_limit:
                 failed_at = self.proxy.rpc_client.get_block("latest")
                 failed_at_blocknumber = failed_at["number"]
+                invalid_transaction_data = self.deposit_data(
+                    beneficiary, token, failed_at_blocknumber
+                )
 
                 self.proxy.rpc_client.check_for_insufficient_eth(
                     transaction_name="deposit",
@@ -391,22 +430,11 @@ class UserDeposit:
                     block_identifier=failed_at_blocknumber,
                 )
 
-                latest_deposit = self.get_total_deposit(
-                    address=self.node_address, block_identifier=failed_at_blocknumber
-                )
-                amount_to_deposit = TokenAmount(total_deposit - latest_deposit)
-
-                allowance = token.allowance(
-                    owner=self.node_address,
-                    spender=Address(self.address),
-                    block_identifier=failed_at_blocknumber,
-                )
-                whole_balance = self.whole_balance(block_identifier=failed_at_blocknumber)
-                whole_balance_limit = self.whole_balance_limit(
-                    block_identifier=failed_at_blocknumber
+                amount_to_deposit = TokenAmount(
+                    total_deposit - invalid_transaction_data.previous_total_deposit
                 )
 
-                if allowance < amount_to_deposit:
+                if invalid_transaction_data.allowance < amount_to_deposit:
                     msg = (
                         "The allowance is insufficient. Check concurrent deposits "
                         "for the same user deposit but different proxies."
@@ -417,22 +445,28 @@ class UserDeposit:
                     msg = "The address doesnt have enough tokens"
                     raise RaidenRecoverableError(msg)
 
-                if latest_deposit < total_deposit:
+                if invalid_transaction_data.current_balance < total_deposit:
                     msg = "Deposit amount did not increase after deposit transaction"
                     raise RaidenRecoverableError(msg)
 
-                if whole_balance + amount_to_deposit > UINT256_MAX:
+                if invalid_transaction_data.whole_balance + amount_to_deposit > UINT256_MAX:
                     msg = (
-                        f"Current whole balance is {whole_balance}. "
+                        f"Current whole balance is {invalid_transaction_data.whole_balance}. "
                         f"The new deposit of {amount_to_deposit} would lead to an overflow."
                     )
                     raise RaidenRecoverableError(msg)
 
-                if whole_balance + amount_to_deposit > whole_balance_limit:
+                is_above_limit = (
+                    invalid_transaction_data.whole_balance + amount_to_deposit
+                    > invalid_transaction_data.whole_balance_limit
+                )
+                if is_above_limit:
                     msg = (
-                        f"Current whole balance is {whole_balance}. "
-                        f"With the new deposit of {amount_to_deposit}, the deposit "
-                        f"limit of {whole_balance_limit} would be exceeded."
+                        f"Current whole balance is "
+                        f"{invalid_transaction_data.whole_balance}.  With the new "
+                        f"deposit of {amount_to_deposit}, the deposit limit of "
+                        f"{invalid_transaction_data.whole_balance_limit} would be "
+                        f"exceeded."
                     )
                     raise RaidenRecoverableError(msg)
 
@@ -453,27 +487,18 @@ class UserDeposit:
                 if failed_receipt:
                     failed_at_blocknumber = failed_receipt["blockNumber"]
 
-                    latest_deposit = self.get_total_deposit(
-                        address=self.node_address, block_identifier=failed_at_blocknumber
+                    failed_transaction_data = self.deposit_data(
+                        beneficiary, token, failed_at_blocknumber
                     )
-                    amount_to_deposit = TokenAmount(total_deposit - latest_deposit)
-
-                    allowance = token.allowance(
-                        owner=self.node_address,
-                        spender=Address(self.address),
-                        block_identifier=failed_at_blocknumber,
+                    amount_to_deposit = TokenAmount(
+                        total_deposit - failed_transaction_data.previous_total_deposit
                     )
 
-                    whole_balance = self.whole_balance(block_identifier=failed_at_blocknumber)
-                    whole_balance_limit = self.whole_balance_limit(
-                        block_identifier=failed_at_blocknumber
-                    )
-
-                    if latest_deposit >= total_deposit:
+                    if failed_transaction_data.previous_total_deposit >= total_deposit:
                         msg = "Deposit amount already increased after another transaction"
                         raise RaidenRecoverableError(msg)
 
-                    if allowance < amount_to_deposit:
+                    if failed_transaction_data.allowance < amount_to_deposit:
                         msg = (
                             "The allowance is insufficient. Check concurrent deposits "
                             "for the same token network but different proxies."
@@ -482,10 +507,7 @@ class UserDeposit:
 
                     # Because we acquired the lock for the token, and the gas estimation succeeded,
                     # We know that the account had enough balance for the deposit transaction.
-                    if (
-                        token.balance_of(self.node_address, failed_at_blocknumber)
-                        < amount_to_deposit
-                    ):
+                    if failed_transaction_data.current_balance < amount_to_deposit:
                         msg = (
                             f"Transaction failed and balance decreased unexpectedly. "
                             f"This could be a bug in Raiden or a mallicious "
@@ -493,23 +515,29 @@ class UserDeposit:
                         )
                         raise RaidenRecoverableError(msg)
 
-                    if whole_balance + amount_to_deposit > UINT256_MAX:
+                    if failed_transaction_data.whole_balance + amount_to_deposit > UINT256_MAX:
                         msg = (
-                            f"Current whole balance is {whole_balance}. "
+                            f"Current whole balance is {failed_transaction_data.whole_balance}. "
                             f"The new deposit of {amount_to_deposit} caused an overflow."
                         )
                         raise RaidenRecoverableError(msg)
 
-                    if whole_balance + amount_to_deposit > whole_balance_limit:
+                    is_above_limit = (
+                        failed_transaction_data.whole_balance + amount_to_deposit
+                        > failed_transaction_data.whole_balance_limit
+                    )
+                    if is_above_limit:
                         msg = (
-                            f"Current whole balance is {whole_balance}. "
+                            f"Current whole balance is {failed_transaction_data.whole_balance}. "
                             f"With the new deposit of {amount_to_deposit}, the deposit "
-                            f"limit of {whole_balance_limit} was exceeded."
+                            f"limit of {failed_transaction_data.whole_balance_limit} was exceeded."
                         )
                         raise RaidenRecoverableError(msg)
 
-                    if latest_deposit < total_deposit:
+                    if invalid_transaction_data.current_balance < total_deposit:
                         msg = "Deposit amount did not increase after deposit transaction"
                         raise RaidenRecoverableError(msg)
 
-                    raise RaidenRecoverableError("Deposit failed of unknown reason")
+                    raise RaidenRecoverableError(
+                        f"Deposit gas estimation failed of unknown reason at block {failed_at}"
+                    )
