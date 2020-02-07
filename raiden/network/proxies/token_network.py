@@ -46,6 +46,7 @@ from raiden.utils.typing import (
     AdditionalHash,
     Address,
     Any,
+    Balance,
     BalanceHash,
     BlockExpiration,
     BlockNumber,
@@ -126,6 +127,22 @@ class ChannelDetails(NamedTuple):
 @dataclass
 class TokenNetworkMetadata(SmartContractMetadata):
     token_network_registry_address: Optional[TokenNetworkRegistryAddress]
+
+
+@dataclass
+class SetTotalDepositConditionsData:
+    """ Values used in assert or require expressions in the smart contract. """
+
+    channel_identifier: Optional[ChannelID]
+    channel_onchain_detail: ChannelData
+    our_details: ParticipantDetails
+    partner_details: ParticipantDetails
+    current_balance: Balance
+    safety_deprecation_switch: bool
+    token_network_deposit_limit: TokenAmount
+    channel_participant_deposit_limit: TokenAmount
+    network_total_deposit: Balance
+    allowance: TokenAmount
 
 
 class TokenNetwork:
@@ -680,6 +697,69 @@ class TokenNetwork:
         ).deposit
         return deposit > 0
 
+    def set_total_deposit_data(
+        self,
+        given_block_identifier: BlockSpecification,
+        channel_identifier: ChannelID,
+        partner: Address,
+    ) -> SetTotalDepositConditionsData:
+        queried_channel_identifier = self.get_channel_identifier_or_none(
+            participant1=self.node_address,
+            participant2=partner,
+            block_identifier=given_block_identifier,
+        )
+        channel_onchain_detail = self._detail_channel(
+            participant1=self.node_address,
+            participant2=partner,
+            block_identifier=given_block_identifier,
+            channel_identifier=channel_identifier,
+        )
+        our_details = self._detail_participant(
+            channel_identifier=channel_identifier,
+            detail_for=self.node_address,
+            partner=partner,
+            block_identifier=given_block_identifier,
+        )
+        partner_details = self._detail_participant(
+            channel_identifier=channel_identifier,
+            detail_for=partner,
+            partner=self.node_address,
+            block_identifier=given_block_identifier,
+        )
+        current_balance = self.token.balance_of(
+            address=self.node_address, block_identifier=given_block_identifier
+        )
+        safety_deprecation_switch = self.safety_deprecation_switch(
+            block_identifier=given_block_identifier
+        )
+        token_network_deposit_limit = self.token_network_deposit_limit(
+            block_identifier=given_block_identifier
+        )
+        channel_participant_deposit_limit = self.channel_participant_deposit_limit(
+            block_identifier=given_block_identifier
+        )
+        network_total_deposit = self.token.balance_of(
+            address=Address(self.address), block_identifier=given_block_identifier
+        )
+        allowance = self.token.allowance(
+            owner=self.node_address,
+            spender=Address(self.address),
+            block_identifier=given_block_identifier,
+        )
+
+        return SetTotalDepositConditionsData(
+            channel_identifier=queried_channel_identifier,
+            channel_onchain_detail=channel_onchain_detail,
+            our_details=our_details,
+            partner_details=partner_details,
+            current_balance=current_balance,
+            safety_deprecation_switch=safety_deprecation_switch,
+            token_network_deposit_limit=token_network_deposit_limit,
+            channel_participant_deposit_limit=channel_participant_deposit_limit,
+            network_total_deposit=network_total_deposit,
+            allowance=allowance,
+        )
+
     def set_total_deposit(
         self,
         given_block_identifier: BlockSpecification,
@@ -741,71 +821,39 @@ class TokenNetwork:
         # transactions in-flight that move tokens from the same address.
         with self.channel_operations_lock[partner]:
             try:
-                queried_channel_identifier = self.get_channel_identifier_or_none(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    block_identifier=given_block_identifier,
-                )
-                channel_onchain_detail = self._detail_channel(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    block_identifier=given_block_identifier,
+                preconditions_data = self.set_total_deposit_data(
+                    given_block_identifier=given_block_identifier,
                     channel_identifier=channel_identifier,
-                )
-                our_details = self._detail_participant(
-                    channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
                     partner=partner,
-                    block_identifier=given_block_identifier,
                 )
-                partner_details = self._detail_participant(
-                    channel_identifier=channel_identifier,
-                    detail_for=partner,
-                    partner=self.node_address,
-                    block_identifier=given_block_identifier,
-                )
-                current_balance = self.token.balance_of(
-                    address=self.node_address, block_identifier=given_block_identifier
-                )
-                safety_deprecation_switch = self.safety_deprecation_switch(
-                    block_identifier=given_block_identifier
-                )
-                token_network_deposit_limit = self.token_network_deposit_limit(
-                    block_identifier=given_block_identifier
-                )
-                channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                    block_identifier=given_block_identifier
-                )
-                network_total_deposit = self.token.balance_of(
-                    address=Address(self.address), block_identifier=given_block_identifier
-                )
+                previous_total_deposit = preconditions_data.our_details.deposit
             except ValueError:
                 # If `given_block_identifier` has been pruned the checks cannot be
                 # performed.
-                our_details = self._detail_participant(
+                previous_total_deposit = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=self.node_address,
                     partner=partner,
                     block_identifier="latest",
-                )
+                ).deposit
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
-                if queried_channel_identifier != channel_identifier:
+                if preconditions_data.channel_identifier != channel_identifier:
                     msg = (
                         f"There is a channel open between "
                         f"{to_checksum_address(self.node_address)} and "
                         f"{to_checksum_address(partner)}. However the channel id "
-                        f"on-chain {queried_channel_identifier} and the provided "
+                        f"on-chain {preconditions_data.channel_identifier} and the provided "
                         f"id {channel_identifier} do not match."
                     )
                     raise BrokenPreconditionError(msg)
 
-                if safety_deprecation_switch:
+                if preconditions_data.safety_deprecation_switch:
                     msg = "This token_network has been deprecated."
                     raise BrokenPreconditionError(msg)
 
-                if channel_onchain_detail.state != ChannelState.OPENED:
+                if preconditions_data.channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
                         f"The channel was not opened at the provided block "
                         f"({given_block_identifier}). This call should never have "
@@ -813,38 +861,45 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                amount_to_deposit = total_deposit - our_details.deposit
+                amount_to_deposit = total_deposit - preconditions_data.our_details.deposit
 
-                if total_deposit <= our_details.deposit:
+                if total_deposit <= preconditions_data.our_details.deposit:
                     msg = (
-                        f"Current total deposit ({our_details.deposit}) is already larger "
-                        f"than the requested total deposit amount ({total_deposit})"
+                        f"Current total deposit "
+                        f"({preconditions_data.our_details.deposit}) is already "
+                        f"larger than the requested total deposit amount "
+                        f"({total_deposit})."
                     )
                     raise BrokenPreconditionError(msg)
 
-                total_channel_deposit = total_deposit + partner_details.deposit
+                total_channel_deposit = total_deposit + preconditions_data.partner_details.deposit
                 if total_channel_deposit > UINT256_MAX:
                     raise BrokenPreconditionError("Deposit overflow")
 
-                if total_deposit > channel_participant_deposit_limit:
+                if total_deposit > preconditions_data.channel_participant_deposit_limit:
                     msg = (
                         f"Deposit of {total_deposit} is larger than the "
                         f"channel participant deposit limit"
                     )
                     raise BrokenPreconditionError(msg)
 
-                if network_total_deposit + amount_to_deposit > token_network_deposit_limit:
+                if (
+                    preconditions_data.network_total_deposit + amount_to_deposit
+                    > preconditions_data.token_network_deposit_limit
+                ):
                     msg = (
                         f"Deposit of {amount_to_deposit} will have "
                         f"exceeded the token network deposit limit."
                     )
                     raise BrokenPreconditionError(msg)
 
-                if current_balance < amount_to_deposit:
+                if preconditions_data.current_balance < amount_to_deposit:
                     msg = (
-                        f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can "
-                        f"not be larger than the available balance {current_balance}, "
-                        f"for token at address {to_checksum_address(self.token.address)}"
+                        f"new_total_deposit - previous_total_deposit = "
+                        f"{amount_to_deposit} can not be larger than the "
+                        f"available balance {preconditions_data.current_balance}, "
+                        f"for token at address "
+                        f"{to_checksum_address(self.token.address)}"
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -855,7 +910,7 @@ class TokenNetwork:
                 "receiver": to_checksum_address(partner),
                 "channel_identifier": channel_identifier,
                 "total_deposit": total_deposit,
-                "previous_total_deposit": our_details.deposit,
+                "previous_total_deposit": previous_total_deposit,
                 "given_block_identifier": format_block_id(given_block_identifier),
             }
 
@@ -863,7 +918,7 @@ class TokenNetwork:
                 self._set_total_deposit(
                     channel_identifier=channel_identifier,
                     total_deposit=total_deposit,
-                    previous_total_deposit=our_details.deposit,
+                    previous_total_deposit=previous_total_deposit,
                     partner=partner,
                     log_details=log_details,
                 )
@@ -930,82 +985,69 @@ class TokenNetwork:
                         )
                         raise RaidenRecoverableError(msg)
 
-                    safety_deprecation_switch = self.safety_deprecation_switch(
-                        block_identifier=failed_at_blockhash
+                    failed_transaction_data = self.set_total_deposit_data(
+                        given_block_identifier=failed_at_blockhash,
+                        channel_identifier=channel_identifier,
+                        partner=partner,
                     )
-                    if safety_deprecation_switch:
+
+                    if failed_transaction_data.safety_deprecation_switch:
                         msg = "This token_network has been deprecated."
                         raise RaidenRecoverableError(msg)
 
-                    # Query the channel state when the transaction was mined
-                    # to check for transaction races
-                    our_details = self._detail_participant(
-                        channel_identifier=channel_identifier,
-                        detail_for=self.node_address,
-                        partner=partner,
-                        block_identifier=failed_at_blockhash,
-                    )
-                    partner_details = self._detail_participant(
-                        channel_identifier=channel_identifier,
-                        detail_for=self.node_address,
-                        partner=partner,
-                        block_identifier=failed_at_blockhash,
-                    )
-                    channel_data = self._detail_channel(
-                        participant1=self.node_address,
-                        participant2=partner,
-                        block_identifier=failed_at_blockhash,
-                        channel_identifier=channel_identifier,
-                    )
-
-                    if channel_data.state == ChannelState.CLOSED:
+                    if failed_transaction_data.channel_onchain_detail.state == ChannelState.CLOSED:
                         msg = "Deposit failed because the channel was closed meanwhile"
                         raise RaidenRecoverableError(msg)
 
-                    if channel_data.state == ChannelState.SETTLED:
+                    channel_settled = (
+                        failed_transaction_data.channel_onchain_detail.state
+                        == ChannelState.SETTLED
+                    )
+                    if channel_settled:
                         msg = "Deposit failed because the channel was settled meanwhile"
                         raise RaidenRecoverableError(msg)
 
-                    if channel_data.state == ChannelState.REMOVED:
+                    channel_removed = (
+                        failed_transaction_data.channel_onchain_detail.state
+                        == ChannelState.REMOVED
+                    )
+                    if channel_removed:
                         msg = (
                             "Deposit failed because the channel was settled and unlocked meanwhile"
                         )
                         raise RaidenRecoverableError(msg)
 
-                    deposit_amount = total_deposit - our_details.deposit
+                    deposit_amount = total_deposit - failed_transaction_data.our_details.deposit
 
                     # If an overflow is possible then we are interacting with a bad token.
                     # This must not crash the client, because it is not a Raiden bug,
                     # and otherwise this could be an attack vector.
-                    total_channel_deposit = total_deposit + partner_details.deposit
+                    total_channel_deposit = (
+                        total_deposit + failed_transaction_data.partner_details.deposit
+                    )
                     if total_channel_deposit > UINT256_MAX:
                         raise RaidenRecoverableError("Deposit overflow")
 
-                    total_deposit_done = our_details.deposit >= total_deposit
+                    total_deposit_done = (
+                        failed_transaction_data.our_details.deposit >= total_deposit
+                    )
                     if total_deposit_done:
                         raise RaidenRecoverableError(
                             "Requested total deposit was already performed"
                         )
 
-                    token_network_deposit_limit = self.token_network_deposit_limit(
-                        block_identifier=failed_receipt["blockHash"]
+                    deposit_above_limit = (
+                        failed_transaction_data.network_total_deposit + deposit_amount
+                        > failed_transaction_data.token_network_deposit_limit
                     )
-
-                    network_total_deposit = self.token.balance_of(
-                        address=Address(self.address), block_identifier=failed_receipt["blockHash"]
-                    )
-
-                    if network_total_deposit + deposit_amount > token_network_deposit_limit:
+                    if deposit_above_limit:
                         msg = (
                             f"Deposit of {deposit_amount} would have "
                             f"exceeded the token network deposit limit."
                         )
                         raise RaidenRecoverableError(msg)
 
-                    channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                        block_identifier=failed_receipt["blockHash"]
-                    )
-                    if total_deposit > channel_participant_deposit_limit:
+                    if total_deposit > failed_transaction_data.channel_participant_deposit_limit:
                         msg = (
                             f"Deposit of {total_deposit} is larger than the "
                             f"channel participant deposit limit"
@@ -1013,20 +1055,14 @@ class TokenNetwork:
                         raise RaidenRecoverableError(msg)
 
                     has_sufficient_balance = (
-                        self.token.balance_of(self.node_address, failed_at_blocknumber)
-                        < amount_to_deposit
+                        failed_transaction_data.current_balance < amount_to_deposit
                     )
                     if not has_sufficient_balance:
                         raise RaidenRecoverableError(
                             "The account does not have enough balance to complete the deposit"
                         )
 
-                    allowance = self.token.allowance(
-                        owner=self.node_address,
-                        spender=Address(self.address),
-                        block_identifier=failed_at_blockhash,
-                    )
-                    if allowance < amount_to_deposit:
+                    if failed_transaction_data.allowance < amount_to_deposit:
                         msg = (
                             f"The allowance of the {amount_to_deposit} deposit changed. "
                             f"Check concurrent deposits "
@@ -1034,13 +1070,7 @@ class TokenNetwork:
                         )
                         raise RaidenRecoverableError(msg)
 
-                    latest_deposit = self._detail_participant(
-                        channel_identifier=channel_identifier,
-                        detail_for=self.node_address,
-                        partner=partner,
-                        block_identifier=failed_at_blockhash,
-                    ).deposit
-                    if latest_deposit < total_deposit:
+                    if failed_transaction_data.our_details.deposit < total_deposit:
                         raise RaidenRecoverableError("The tokens were not transferred")
 
                     # Here, we don't know what caused the failure. But because we are
@@ -1061,120 +1091,96 @@ class TokenNetwork:
                     block_identifier=failed_at_blocknumber,
                 )
 
-                safety_deprecation_switch = self.safety_deprecation_switch(
-                    block_identifier=failed_at_blockhash
+                invalid_transaction_data = self.set_total_deposit_data(
+                    given_block_identifier=failed_at_blockhash,
+                    channel_identifier=channel_identifier,
+                    partner=partner,
                 )
-                if safety_deprecation_switch:
+
+                if invalid_transaction_data.safety_deprecation_switch:
                     msg = "This token_network has been deprecated."
                     raise RaidenRecoverableError(msg)
 
-                allowance = self.token.allowance(
-                    owner=self.node_address,
-                    spender=Address(self.address),
-                    block_identifier=failed_at_blockhash,
-                )
-                has_sufficient_balance = (
-                    self.token.balance_of(self.node_address, failed_at_blocknumber)
-                    < amount_to_deposit
-                )
-                if allowance < amount_to_deposit:
+                if invalid_transaction_data.allowance < amount_to_deposit:
                     msg = (
                         "The allowance is insufficient. Check concurrent deposits "
                         "for the same token network but different proxies."
                     )
                     raise RaidenRecoverableError(msg)
 
+                has_sufficient_balance = (
+                    invalid_transaction_data.current_balance < amount_to_deposit
+                )
                 if has_sufficient_balance:
                     msg = "The address doesnt have enough tokens"
                     raise RaidenRecoverableError(msg)
 
-                queried_channel_identifier = self.get_channel_identifier_or_none(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    block_identifier=failed_at_blockhash,
-                )
-                our_details = self._detail_participant(
-                    channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
-                    partner=partner,
-                    block_identifier=failed_at_blockhash,
-                )
-                partner_details = self._detail_participant(
-                    channel_identifier=channel_identifier,
-                    detail_for=self.node_address,
-                    partner=partner,
-                    block_identifier=failed_at_blockhash,
-                )
-                channel_data = self._detail_channel(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    block_identifier=failed_at_blockhash,
-                    channel_identifier=channel_identifier,
-                )
-                token_network_deposit_limit = self.token_network_deposit_limit(
-                    block_identifier=failed_at_blockhash
-                )
-                channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                    block_identifier=failed_at_blockhash
-                )
-
-                total_channel_deposit = total_deposit + partner_details.deposit
-
-                network_total_deposit = self.token.balance_of(
-                    Address(self.address), failed_at_blocknumber
+                total_channel_deposit = (
+                    total_deposit + invalid_transaction_data.partner_details.deposit
                 )
 
                 # This check can only be done if the channel is in the open/closed
                 # states because from the settled state and after the id is removed
                 # from the smart contract.
                 is_invalid_channel_id = (
-                    channel_data.state in (ChannelState.OPENED, ChannelState.CLOSED)
-                    and queried_channel_identifier != channel_identifier
+                    invalid_transaction_data.channel_onchain_detail.state
+                    in (ChannelState.OPENED, ChannelState.CLOSED)
+                    and invalid_transaction_data.channel_identifier != channel_identifier
                 )
                 if is_invalid_channel_id:
                     msg = (
-                        f"There is an open channel with the id {channel_identifier}. "
-                        f"However addresses {to_checksum_address(self.node_address)} "
-                        f"and {to_checksum_address(partner)} are not participants of "
-                        f"that channel. The correct id is {queried_channel_identifier}."
+                        f"There is an open channel with the id "
+                        f"{channel_identifier}. However addresses "
+                        f"{to_checksum_address(self.node_address)} and "
+                        f"{to_checksum_address(partner)} are not participants of "
+                        f"that channel. The correct id is "
+                        f"{invalid_transaction_data.channel_identifier}."
                     )
                     raise RaidenUnrecoverableError(msg)  # This error is considered a bug
 
-                if channel_data.state == ChannelState.CLOSED:
+                if invalid_transaction_data.channel_onchain_detail.state == ChannelState.CLOSED:
                     msg = "Deposit was prohibited because the channel is closed"
                     raise RaidenRecoverableError(msg)
 
-                if channel_data.state == ChannelState.SETTLED:
+                if invalid_transaction_data.channel_onchain_detail.state == ChannelState.SETTLED:
                     msg = "Deposit was prohibited because the channel is settled"
                     raise RaidenRecoverableError(msg)
 
-                if channel_data.state == ChannelState.REMOVED:
+                if invalid_transaction_data.channel_onchain_detail.state == ChannelState.REMOVED:
                     msg = "Deposit was prohibited because the channel is settled and unlocked"
                     raise RaidenRecoverableError(msg)
 
-                if our_details.deposit >= total_deposit:
-                    msg = "Attempted deposit has already been done"
-                    raise RaidenRecoverableError(msg)
-
                 # Check if deposit is being made on a nonexistent channel
-                if channel_data.state == ChannelState.NONEXISTENT:
+                channel_exists = (
+                    invalid_transaction_data.channel_onchain_detail.state
+                    == ChannelState.NONEXISTENT
+                )
+                if channel_exists:
                     msg = (
                         f"Channel between participant {to_checksum_address(self.node_address)} "
                         f"and {to_checksum_address(partner)} does not exist"
                     )
                     raise RaidenUnrecoverableError(msg)
 
+                if invalid_transaction_data.our_details.deposit >= total_deposit:
+                    msg = "Attempted deposit has already been done"
+                    raise RaidenRecoverableError(msg)
+
                 if total_channel_deposit >= UINT256_MAX:
                     raise RaidenRecoverableError("Deposit overflow")
 
-                if total_deposit > channel_participant_deposit_limit:
+                if total_deposit > invalid_transaction_data.channel_participant_deposit_limit:
                     msg = (
                         f"Deposit of {total_deposit} exceeded the "
                         f"channel participant deposit limit"
                     )
                     raise RaidenRecoverableError(msg)
 
-                if network_total_deposit + amount_to_deposit > token_network_deposit_limit:
+                exceeded_network_limit = (
+                    invalid_transaction_data.network_total_deposit + amount_to_deposit
+                    > invalid_transaction_data.token_network_deposit_limit
+                )
+                if exceeded_network_limit:
                     msg = (
                         f"Deposit of {amount_to_deposit} exceeded the token network deposit limit."
                     )
