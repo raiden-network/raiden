@@ -1,10 +1,10 @@
-import gevent
 import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.transfer import block_offset_timeout
 from raiden.utils.typing import PaymentAmount, PaymentID, TargetAddress
 
 
@@ -33,17 +33,19 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     amount = PaymentAmount(10)
     identifier = PaymentID(42)
     secret, secrethash = factories.make_secret_with_hash()
-    assert api1.transfer_and_wait(
-        registry_address=registry_address,
-        token_address=token_address,
-        amount=amount,
-        target=TargetAddress(api2.address),
-        identifier=identifier,
-        secret=secret,
-        transfer_timeout=10,
-    )
-    exception = ValueError("Waiting for transfer received success in the WAL timed out")
-    with gevent.Timeout(seconds=5, exception=exception):
+    timeout = block_offset_timeout(app1.raiden)
+    with timeout:
+        assert api1.transfer_and_wait(
+            registry_address=registry_address,
+            token_address=token_address,
+            amount=amount,
+            target=TargetAddress(api2.address),
+            identifier=identifier,
+            secret=secret,
+        )
+        timeout.exception_to_throw = ValueError(
+            "Waiting for transfer received success in the WAL timed out"
+        )
         result = waiting.wait_for_received_transfer_result(
             raiden=app1.raiden,
             payment_identifier=identifier,
@@ -51,8 +53,9 @@ def test_close_regression(raiden_network, deposit, token_addresses):
             retry_timeout=app1.raiden.alarm.sleep_time,
             secrethash=secrethash,
         )
-        msg = f"Unexpected transfer result: {str(result)}"
-        assert result == waiting.TransferWaitResult.UNLOCKED, msg
+
+    msg = f"Unexpected transfer result: {str(result)}"
+    assert result == waiting.TransferWaitResult.UNLOCKED, msg
 
     api2.channel_close(registry_address, token_address, api1.address)
 
