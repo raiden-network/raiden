@@ -402,17 +402,21 @@ jobs:
       - store_test_results:
           path: test-reports
 
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
+      - run:
+          name: Compress the logs to seed up the CI (upload can be very slow)
+          command: |
+            files=()
+            for f in /tmp/tests/logs test-reports /tmp/synapse-logs; do
+              if [ -e "$f" ]; then
+                files+=("$f")
+              fi
+            done
+
+            tar czf /tmp/tests-logs.tar.gz $files
 
       - store_artifacts:
-          path: /tmp/synapse-logs
-          destination: synapse-logs
-
-      - store_artifacts:
-          path: /tmp/tests/logs
-          destination: eth-logs
+          path: /tmp/tests-logs.tar.gz
+          destination: tests-logs
 
   finalize:
     parameters:
