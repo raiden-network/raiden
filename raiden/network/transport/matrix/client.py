@@ -564,6 +564,19 @@ class GMatrixClient(MatrixClient):
         response = self.api.create_room(alias, is_public, invitees, **kwargs)
         return self._mkroom(response["room_id"])
 
+    def blocking_sync(self, timeout_ms: int, latency_ms: int, first_sync: bool) -> None:
+        """Perform a /sync and process the response synchronously."""
+        self._sync(timeout_ms=timeout_ms, latency_ms=latency_ms)
+
+        pending_queue = []
+        while len(self.response_queue) > 0:
+            _, response, _ = self.response_queue.get()
+            pending_queue.append(response)
+
+        assert all(pending_queue), "Sync returned, None and empty are invalid values."
+
+        self._handle_responses(pending_queue, first_sync=first_sync)
+
     def _sync(self, timeout_ms: int, latency_ms: int) -> None:
         """ Reimplements MatrixClient._sync """
         log.debug(

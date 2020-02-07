@@ -1,3 +1,6 @@
+import time
+from collections import defaultdict
+from contextlib import contextmanager
 from functools import partial
 from urllib.parse import urlsplit
 
@@ -8,6 +11,8 @@ from matrix_client.errors import MatrixRequestError
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import (
+    UserPresence,
+    address_from_userid,
     join_broadcast_room,
     login,
     make_client,
@@ -29,10 +34,19 @@ from raiden.tests.utils.transport import (
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
-from raiden.utils.typing import Any, Dict, List, Tuple
+from raiden.utils.typing import Address, Any, Dict, Generator, List, Tuple
 
 # https://matrix.org/docs/spec/appendices#user-identifiers
 USERID_VALID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-.=_/"
+
+
+@contextmanager
+def must_run_for_at_least(minimum_elapsed_time: float, msg: str) -> Generator:
+    start = time.time()
+    yield
+    elapsed = time.time() - start
+    if elapsed < minimum_elapsed_time:
+        raise AssertionError(msg)
 
 
 def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
@@ -82,6 +96,175 @@ def test_assumption_matrix_userid(local_matrix_servers):
     newlogin_client, _ = create_logged_in_client(local_matrix_servers[0])
     user = User(client.api, newlogin_client.user_id)
     user.get_display_name()
+
+
+class PresenceTracker:
+    def __init__(self) -> None:
+        self.address_presence: Dict[Address, UserPresence] = defaultdict(
+            lambda: UserPresence.UNKNOWN
+        )
+
+    def presence_listener(
+        self, event: Dict[str, Any], presence_update_id: int  # pylint: disable=unused-argument
+    ) -> None:
+        address = address_from_userid(event["sender"])
+
+        if address:
+            presence = UserPresence(event["content"]["presence"])
+            self.address_presence[address] = presence
+
+
+def test_assumption_user_goes_offline_if_sync_is_not_called_within_35s(local_matrix_servers):
+    """A user changes presence status if /sync is not called within 35 seconds.
+
+    Note:
+
+    The timeout value was adjusted to work on the CI, the 5 additional seconds
+    are arbitrary.
+
+    Assumption test to make sure the presence information changes as per the following rules:
+    - Presence information is UNKNOWN for nodes that don't share a room.
+    - A node is considered ONLINE if it has done a /sync call within the past
+      the timeout.
+    - Otherwise the is OFFLINE.
+
+    If any of the above assumptions changes, then the Matrix transport has to
+    be adjusted accordingly.
+    """
+    # This timeout is used to *avoid* blocking the sync thread, otherwise we
+    # would have to generate events for the long-polling to return.
+    SHORT_TIMEOUT_MS = 1_000
+
+    # This is the interval in seconds which a client must perform /sync calls
+    # to stay online.
+    PRESENCE_TIMEOUT = 30
+    CI_LATENCY = 5
+
+    tracker1 = PresenceTracker()
+    client1, signer1 = create_logged_in_client(local_matrix_servers[0])
+    client1.add_presence_listener(tracker1.presence_listener)
+
+    tracker2 = PresenceTracker()
+    client2, signer2 = create_logged_in_client(local_matrix_servers[0])
+    client2.add_presence_listener(tracker2.presence_listener)
+
+    tracker3 = PresenceTracker()
+    client3, signer3 = create_logged_in_client(local_matrix_servers[0])
+    client3.add_presence_listener(tracker3.presence_listener)
+
+    client1.blocking_sync(
+        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+    client2.blocking_sync(
+        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+
+    msg = (
+        "The client called sync but the nodes don't share a room, each node "
+        "must only see itself as online."
+    )
+    assert tracker1.address_presence[signer1.address] == UserPresence.ONLINE, msg
+    assert tracker1.address_presence[signer2.address] == UserPresence.UNKNOWN, msg
+    assert tracker1.address_presence[signer3.address] == UserPresence.UNKNOWN, msg
+    assert tracker2.address_presence[signer1.address] == UserPresence.UNKNOWN, msg
+    assert tracker2.address_presence[signer2.address] == UserPresence.ONLINE, msg
+    assert tracker2.address_presence[signer3.address] == UserPresence.UNKNOWN, msg
+
+    msg_no_sync = "Client3 never calls sync, all presences must be unknown."
+    assert len(tracker3.address_presence) == 0, msg_no_sync
+
+    room: Room = client1.create_room("test", is_public=True)
+    client2.join_room(room.aliases[0])
+    client3.join_room(room.aliases[0])
+
+    client1.blocking_sync(
+        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+    client2.blocking_sync(
+        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+
+    msg = "All clients share a room, presence information must be available"
+    assert tracker1.address_presence[signer1.address] == UserPresence.ONLINE, msg
+    assert tracker1.address_presence[signer2.address] == UserPresence.ONLINE, msg
+    assert tracker1.address_presence[signer3.address] == UserPresence.OFFLINE, msg
+    assert tracker2.address_presence[signer1.address] == UserPresence.ONLINE, msg
+    assert tracker2.address_presence[signer2.address] == UserPresence.ONLINE, msg
+    assert tracker2.address_presence[signer3.address] == UserPresence.OFFLINE, msg
+
+    msg_no_sync = "Client3 never calls sync, all presences must be unknown."
+    assert len(tracker3.address_presence) == 0, msg_no_sync
+
+    # Wait for PRESENCE_TIMEOUT to happen
+    gevent.sleep(PRESENCE_TIMEOUT + CI_LATENCY)
+
+    # Do a new sync, this time client1 must change status to offline
+    client2.blocking_sync(
+        timeout_ms=PRESENCE_TIMEOUT, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+    assert tracker2.address_presence[signer1.address] == UserPresence.OFFLINE, msg
+    assert tracker2.address_presence[signer2.address] == UserPresence.ONLINE, msg
+    assert tracker2.address_presence[signer3.address] == UserPresence.OFFLINE, msg
+
+
+def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
+    """A user presence does not change while a /sync is blocking.
+
+    This assumption test makes sure a user is considered online while there is
+    one outstand /sync request. This is important because it guides the choice
+    of the `DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT` setting. Because the node is
+    considered online while the /sync is withstanding, then a large value is
+    better to avoid unecessary load to the Matrix server.
+    """
+    # This is the interval in seconds which a client must perform /sync calls
+    # to stay online.
+    PRESENCE_TIMEOUT = 30
+
+    # This timeout is used to *avoid* blocking the sync thread, otherwise we
+    # would have to generate events for the long-polling to return.
+    SHORT_TIMEOUT_MS = 1
+    LONG_TIMEOUT_MS = 60_000
+
+    tracker1 = PresenceTracker()
+    client1, signer1 = create_logged_in_client(local_matrix_servers[0])
+    client1.add_presence_listener(tracker1.presence_listener)
+
+    tracker2 = PresenceTracker()
+    client2, _ = create_logged_in_client(local_matrix_servers[0])
+    client2.add_presence_listener(tracker2.presence_listener)
+
+    room: Room = client1.create_room("test", is_public=True)
+    client2.join_room(room.aliases[0])
+
+    client2.blocking_sync(
+        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+    client1.blocking_sync(
+        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+    )
+
+    def long_polling():
+        timeout_secs = (LONG_TIMEOUT_MS - 100) / 1_000
+        with must_run_for_at_least(timeout_secs, msg):
+            client1._sync(timeout_ms=LONG_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
+
+        assert len(client1.response_queue) == 1, "Matrix must *one* a valid response"
+
+    msg = "Client1 must not change presence state before LONG_TIMEOUT_MS."
+    timeout_secs = (PRESENCE_TIMEOUT - 100) / 1_000
+    with must_run_for_at_least(timeout_secs, msg):
+        long_running = gevent.spawn(long_polling)
+
+        while long_running:
+            gevent.sleep(1)
+
+            client2.blocking_sync(
+                timeout_ms=PRESENCE_TIMEOUT, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
+            )
+            msg = "Client1 should be online while the sync is blocking"
+            assert tracker2.address_presence[signer1.address] == UserPresence.ONLINE, msg
+
+    assert long_running.successful(), "Thread calling sync failed"
 
 
 @pytest.mark.parametrize("matrix_server_count", [2])
