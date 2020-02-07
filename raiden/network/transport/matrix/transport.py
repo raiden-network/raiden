@@ -737,30 +737,23 @@ class MatrixTransport(Runnable):
         assert self._client.sync_thread is None, msg
         assert self._client.message_worker is None, msg
 
-        # Call sync to fetch the inventory rooms and new invites. At this point
-        # the messages themselves should not be processed because the room
-        # callbacks are not installed yet (this is done below). The sync limit
-        # prevents fetching the messages.
+        # Call sync to fetch the inventory rooms and new invites, the sync
+        # limit prevents fetching the messages.
         filter_id = self._client.create_sync_filter(
             not_rooms=self._broadcast_rooms.values(), limit=0
         )
         prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
-        self._client._sync(timeout_ms=0, latency_ms=30_000)
+
+        self._client.blocking_sync(
+            timeout_ms=self._config.sync_timeout,
+            latency_ms=self._config.sync_latency,
+            first_sync=True,
+        )
+
+        # Restore the filter to start fetching the messages
         self._client.set_sync_filter_id(prev_sync_filter_id)
-
-        # Process the result from the sync executed above
-        response_queue = self._client.response_queue
-        pending_queue = []
-        while len(response_queue) > 0:
-            _, response, _ = response_queue.get()
-            pending_queue.append(response)
-
-        assert all(
-            pending_queue
-        ), "The queue must only have Matrix responses. None and empty are invalid values."
-        self._client._handle_responses(pending_queue, first_sync=True)
 
         for room in self._client.rooms.values():
             partner_address = self._extract_partner_addresses(room.get_joined_members())
