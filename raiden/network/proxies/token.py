@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import structlog
 from eth_utils import encode_hex, is_binary_address
 from gevent.lock import RLock
@@ -25,6 +27,13 @@ log = structlog.get_logger(__name__)
 
 # Determined by safe_gas_limit(estimateGas(approve)) on 17/01/19 with geth 1.8.20
 GAS_REQUIRED_FOR_APPROVE = 58792
+
+
+@dataclass
+class ApproveConditionsData:
+    """ Values used in assert or require expressions in the smart contract. """
+
+    balance: int
 
 
 class Token:
@@ -66,6 +75,10 @@ class Token:
                 block_identifier=block_identifier
             )
         )
+
+    def approve_data(self, failed_at_blockhash: BlockSpecification) -> ApproveConditionsData:
+        balance = self.balance_of(self.client.address, failed_at_blockhash)
+        return ApproveConditionsData(balance=balance)
 
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
         """ Approve `allowed_address` to transfer up to `deposit` amount of token.
@@ -119,13 +132,14 @@ class Token:
                             )
                             raise RaidenRecoverableError(msg)
 
-                        balance = self.balance_of(self.client.address, failed_at_blockhash)
-                        if balance < allowance:
+                        approve_data = self.approve_data(failed_at_blockhash)
+
+                        if approve_data.balance < allowance:
                             msg = (
-                                f"{error_prefix} Your balance of {balance} is "
+                                f"{error_prefix} Your balance of {approve_data.balance} is "
                                 "below the required amount of {allowance}."
                             )
-                            if balance == 0:
+                            if approve_data.balance == 0:
                                 msg += (
                                     " Note: The balance was 0, which may also happen "
                                     "if the contract is not a valid ERC20 token "
@@ -151,13 +165,14 @@ class Token:
                         block_identifier=failed_at_blocknumber,
                     )
 
-                    balance = self.balance_of(self.client.address, failed_at_blockhash)
-                    if balance < allowance:
+                    approve_data = self.approve_data(failed_at_blockhash)
+
+                    if approve_data.balance < allowance:
                         msg = (
-                            f"{error_prefix} Your balance of {balance} is "
+                            f"{error_prefix} Your balance of {approve_data.balance} is "
                             "below the required amount of {allowance}."
                         )
-                        if balance == 0:
+                        if approve_data.balance == 0:
                             msg += (
                                 " Note: The balance was 0, which may also happen if the contract "
                                 "is not a valid ERC20 token (balanceOf method missing)."
