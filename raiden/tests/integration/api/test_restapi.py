@@ -40,7 +40,7 @@ from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, 
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.tests.utils.transfer import watch_for_unlock_failures
+from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
@@ -2122,7 +2122,6 @@ def test_payment_events_endpoints(
         json={"amount": str(amount1), "identifier": str(identifier1), "secret": to_hex(secret1)},
     )
     request.send()
-
     # app0 is sending some tokens to target 2
     identifier2 = PaymentID(43)
     amount2 = PaymentAmount(10)
@@ -2153,10 +2152,10 @@ def test_payment_events_endpoints(
     )
     request.send()
 
-    exception = ValueError("Waiting for transfer received success in the WAL timed out")
-    with watch_for_unlock_failures(*raiden_network), gevent.Timeout(
-        seconds=60, exception=exception
-    ):
+    timeout = block_offset_timeout(
+        app2.raiden, "Waiting for transfer received success in the WAL timed out"
+    )
+    with watch_for_unlock_failures(*raiden_network), timeout:
         result = wait_for_received_transfer_result(
             app1.raiden, identifier1, amount1, app1.raiden.alarm.sleep_time, secrethash1
         )
