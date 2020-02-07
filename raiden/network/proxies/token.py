@@ -19,6 +19,7 @@ from raiden.utils.typing import (
     Optional,
     TokenAddress,
     TokenAmount,
+    TransactionHash,
 )
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager
@@ -34,6 +35,47 @@ class ApproveConditionsData:
     """ Values used in assert or require expressions in the smart contract. """
 
     balance: int
+
+
+class ApproveUncheckedTransaction:
+    def __init__(self, allowed_address: Address, allowance: TokenAmount) -> None:
+        self.allowed_address = allowed_address
+        self.allowance = allowance
+
+    def estimate_gas(
+        self, proxy: ContractProxy, rpc_client: JSONRPCClient
+    ) -> Optional["ApprovePendingTransaction"]:
+        gas_limit = proxy.estimate_gas(
+            rpc_client.get_checking_block(), "approve", self.allowed_address, self.allowance
+        )
+
+        if gas_limit is not None:
+            return ApprovePendingTransaction(self, safe_gas_limit(gas_limit))
+
+        return None
+
+
+class ApprovePendingTransaction:
+    def __init__(self, transaction: ApproveUncheckedTransaction, gas_limit: int) -> None:
+        self.allowed_address = transaction.allowed_address
+        self.allowance = transaction.allowance
+        self.gas_limit = gas_limit
+
+    def send(self, proxy: ContractProxy) -> "ApproveSentTransaction":
+        transaction_hash = proxy.transact(
+            "approve", self.gas_limit, self.allowed_address, self.allowance
+        )
+        return ApproveSentTransaction(self, transaction_hash)
+
+
+class ApproveSentTransaction:
+    def __init__(
+        self, transaction: ApprovePendingTransaction, transaction_hash: TransactionHash
+    ) -> None:
+        self.allowed_address = transaction.allowed_address
+        self.allowance = transaction.allowance
+        self.gas_limit = transaction.gas_limit
+        self.transaction_hash = transaction_hash
 
 
 class Token:
@@ -103,32 +145,28 @@ class Token:
             }
 
             with log_transaction(log, "approve", log_details):
-                checking_block = self.client.get_checking_block()
                 error_prefix = "Call to approve will fail"
-                gas_limit = self.proxy.estimate_gas(
-                    checking_block, "approve", allowed_address, allowance
-                )
+                unchecked = ApproveUncheckedTransaction(allowed_address, allowance)
+                pending = unchecked.estimate_gas(self.proxy, self.client)
 
-                if gas_limit:
+                if pending:
+                    transaction = pending.send(self.proxy)
                     error_prefix = "Call to approve failed"
-                    gas_limit = safe_gas_limit(gas_limit)
-                    log_details["gas_limit"] = gas_limit
-                    transaction_hash = self.proxy.transact(
-                        "approve", gas_limit, allowed_address, allowance
-                    )
+                    log_details["gas_limit"] = transaction.gas_limit
 
-                    receipt = self.client.poll(transaction_hash)
+                    receipt = self.client.poll(transaction.transaction_hash)
                     failed_receipt = check_transaction_threw(receipt=receipt)
 
                     if failed_receipt:
                         failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
 
-                        if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                        if failed_receipt["cumulativeGasUsed"] == transaction.gas_limit:
                             msg = (
-                                f"approve failed and all gas was used ({gas_limit}). "
-                                f"Estimate gas may have underestimated approve, or "
-                                f"succeeded even though an assert is triggered, or "
-                                f"the smart contract code has a conditional assert."
+                                f"approve failed and all gas was used "
+                                f"({transaction.gas_limit}). Estimate gas may "
+                                f"have underestimated approve, or succeeded even "
+                                f"though an assert is triggered, or the smart "
+                                f"contract code has a conditional assert."
                             )
                             raise RaidenRecoverableError(msg)
 
