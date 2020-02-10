@@ -4,6 +4,7 @@ from gevent import monkey  # isort:skip # noqa
 monkey.patch_all()  # isort:skip # noqa
 
 import atexit
+import logging.config
 import os
 import os.path
 import signal
@@ -34,7 +35,45 @@ BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)
 URL = NewType("URL", str)
 
+processors = [
+    structlog.stdlib.add_logger_name,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.PositionalArgumentsFormatter(),
+    structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f"),
+    structlog.processors.StackInfoRenderer(),
+    structlog.processors.format_exc_info,
+]
+structlog.reset_defaults()
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "colorized-formatter": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "processor": structlog.dev.ConsoleRenderer(colors=True),
+                "foreign_pre_chain": processors,
+            }
+        },
+        "handlers": {
+            "colorized-handler": {
+                "class": "logging.StreamHandler",
+                "level": "DEBUG",
+                "formatter": "colorized-formatter",
+            }
+        },
+        "loggers": {"": {"handlers": ["colorized-handler"], "propagate": True}},
+    }
+)
+structlog.configure(
+    processors=processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+    wrapper_class=structlog.stdlib.BoundLogger,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+)
+
 log = structlog.get_logger(__name__)
+log.setLevel("DEBUG")
+
 NO_ROUTE_ERROR = 409
 UNBUFERRED = 0
 STATUS_CODE_FOR_SUCCESS = 0
