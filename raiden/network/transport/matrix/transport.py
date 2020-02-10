@@ -860,7 +860,10 @@ class MatrixTransport(Runnable):
                 )
 
     def _initialize_whitelist(self, whitelist: List[Address]) -> None:
-        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
+        msg = (
+            "Whitelisting requires the Matrix client to be properly "
+            "authenticated, because this may create the private rooms."
+        )
         assert self._user_id, msg
 
         msg = (
