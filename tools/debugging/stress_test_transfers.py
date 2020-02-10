@@ -595,6 +595,10 @@ def main() -> None:
     nodes_config: List[NodeConfig] = list()
     nodes_running: List[RunningNode] = list()
 
+    token_address = config.defaults()["token-address"]
+    if not is_checksum_address(token_address):
+        raise ValueError(f"Invalid token address {token_address}, check it is checksummed.")
+
     defaults = {
         "--log-config": "raiden:DEBUG",
         "--environment-type": "development",
@@ -627,13 +631,13 @@ def main() -> None:
                 "--log-json",
                 "--disable-debug-logfile",
                 "--flat-fee",
-                "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
+                token_address,
                 "0",
                 "--proportional-fee",
-                "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
+                token_address,
                 "0",
                 "--proportional-imbalance-fee",
-                "0xf9BA8aDF7F7024D7de8eB37b4c981CFFe3C88Ea7",
+                token_address,
                 "0",
             ]
             raiden_args.extend(chain.from_iterable(node.items()))
@@ -648,11 +652,7 @@ def main() -> None:
     capacity_lower_bound = 1130220
 
     iterations = 5
-    token_address = config.defaults()["token-address"]
     profiler_data_directory = args.profiler_data_directory
-
-    if not is_checksum_address(token_address):
-        raise ValueError(f"Invalid token address {token_address}, check it is checksummed.")
 
     if iterations is None:
         iteration_counter = count()
