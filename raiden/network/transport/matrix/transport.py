@@ -605,7 +605,12 @@ class MatrixTransport(Runnable):
 
         It also whitelists the address to answer invites and listen for messages.
         """
-        if self._address_mgr.is_address_known(node_address):
+        is_health_information_available = (
+            self._address_mgr.get_address_reachability(node_address)
+            is not AddressReachability.UNKNOWN
+        )
+
+        if is_health_information_available:
             self.log.debug(
                 "Healthcheck already enabled", peer_address=to_checksum_address(node_address)
             )
