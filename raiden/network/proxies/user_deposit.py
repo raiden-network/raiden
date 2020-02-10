@@ -418,7 +418,12 @@ class UserDeposit:
             # Wait until the node processes the approve transaction, this is
             # necessary because the `setTotalDeposit` transaction depends on
             # the side-effects of `approve` to work.
-            self.client.wait_for_transaction(approve.transaction_hash)
+            #
+            # Here, it is necessary to wait for the transaction to be mined and
+            # confirmed. See test
+            # `test_estimate_gas_for_dependent_transactions_needs_a_mined_transaction`
+            # for more details.
+            approve.poll(token)
 
             gas_limit = self.proxy.estimate_gas(
                 checking_block, "deposit", beneficiary, total_deposit
@@ -431,8 +436,6 @@ class UserDeposit:
                 transaction_hash = self.proxy.transact(
                     "deposit", gas_limit, beneficiary, total_deposit
                 )
-
-        approve.poll(token)
 
         if transaction_hash:
             receipt = self.client.poll(transaction_hash)

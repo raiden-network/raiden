@@ -941,34 +941,42 @@ class TokenNetwork:
 
             approve = pending_approve.send(self.token.proxy)
 
-            # Wait until the node processes the approve transaction, this is
-            # necessary because the `setTotalDeposit` transaction depends on
-            # the side-effects of `approve` to work.
-            self.client.wait_for_transaction(approve.transaction_hash)
+            # Here we have to wait for the approve transaction to be
+            # successfully mined. This is necessary because the
+            # `setTotalDeposit` transaction depends on the success of the
+            # `approve` transaction, and there doesn't seem to be any reliable
+            # interface to force this behavior on the current JSON RPC inteface
+            # (10/02/2020).
+            tx_receipt = self.client.poll(approve.transaction_hash)
 
-            gas_limit = self.proxy.estimate_gas(
-                checking_block,
-                "setTotalDeposit",
-                channel_identifier=channel_identifier,
-                participant=self.node_address,
-                total_deposit=total_deposit,
-                partner=partner,
-            )
-
-            if gas_limit:
-                gas_limit = safe_gas_limit(
-                    gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
-                )
-                log_details["gas_limit"] = gas_limit
-
-                transaction_hash = self.proxy.transact(
+            # Only send the `setTotalDeposit` if `approve` succeded, since we
+            # have to wait for the transaction to be mined and confirmed
+            # anyways, it doesn't make sense to send setTotalDeposit if
+            # `approve` failed.
+            if not check_transaction_threw(receipt=tx_receipt):
+                gas_limit = self.proxy.estimate_gas(
+                    checking_block,
                     "setTotalDeposit",
-                    gas_limit,
                     channel_identifier=channel_identifier,
                     participant=self.node_address,
                     total_deposit=total_deposit,
                     partner=partner,
                 )
+
+                if gas_limit:
+                    gas_limit = safe_gas_limit(
+                        gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
+                    )
+                    log_details["gas_limit"] = gas_limit
+
+                    transaction_hash = self.proxy.transact(
+                        "setTotalDeposit",
+                        gas_limit,
+                        channel_identifier=channel_identifier,
+                        participant=self.node_address,
+                        total_deposit=total_deposit,
+                        partner=partner,
+                    )
 
         approve.poll(self.token)
 

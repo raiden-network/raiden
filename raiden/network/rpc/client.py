@@ -651,7 +651,7 @@ class JSONRPCClient:
         transaction = None
         while not transaction:
             transaction = self.web3.eth.getTransaction(transaction_hash)
-            gevent.sleep(1.0)
+            gevent.sleep(0.1)
 
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
