@@ -1,6 +1,7 @@
 pragma solidity ^0.6.3;
 
 contract RpcWithStorageTest {
+    uint256 current_counter;
     uint256[] data;
 
     event RpcEvent(
@@ -34,5 +35,17 @@ contract RpcWithStorageTest {
             data.push(i);
         }
         emit RpcEvent(i);
+    }
+
+    function next(uint256 next_counter, uint256 iterations) public {
+        assert(current_counter + 1 == next_counter);
+
+        uint256 i;
+
+        for (i=0; i<iterations; i++) {
+            data.push(i);
+        }
+
+        current_counter = next_counter;
     }
 }

@@ -74,8 +74,11 @@ def web3(
 @pytest.fixture
 def deploy_client(deploy_key, web3, blockchain_type):
     if blockchain_type == "parity":
-        return JSONRPCClient(web3, deploy_key, gas_estimate_correction=lambda gas: 2 * gas)
-    return JSONRPCClient(web3, deploy_key)
+        return JSONRPCClient(
+            web3=web3, privkey=deploy_key, gas_estimate_correction=lambda gas: 2 * gas
+        )
+
+    return JSONRPCClient(web3=web3, privkey=deploy_key)
 
 
 @pytest.fixture

@@ -22,10 +22,10 @@ def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
 
 
 def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
-    deploy_client: JSONRPCClient
+    deploy_client: JSONRPCClient,
 ) -> None:
     """ Gas estimation fails if the transaction execution requires more gas
-    then the block's gas limit.
+    than the block's gas limit.
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
 
@@ -82,3 +82,52 @@ def test_estimate_gas_defaults_to_pending(deploy_client: JSONRPCClient) -> None:
     assert second_receipt["gasLimit"] < deploy_client.get_block("latest")["gasLimit"]
     assert first_receipt["status"] != RECEIPT_FAILURE_CODE
     assert second_receipt["status"] != RECEIPT_FAILURE_CODE
+
+
+def test_estimate_gas_for_dependent_transactions_needs_a_mined_transaction(
+    deploy_client: JSONRPCClient,
+) -> None:
+    """Gas estimation for a transaction that depends on another works after
+    the first is mined and confirmed.
+
+    This is not sufficient (as of geth 1.9.10):
+
+    - eth_getTransaction returning the transaction
+
+    This test makes sure that consecutive transactions which depends on the
+    changes from pending ones can have their gas estimate after
+    `eth_getTransaction` returns. This assumption is important for the fast
+    handling of `approve` and `setTotalDeposit` transactions, where the
+    `setTotalDeposit` needs the result of an estimate_gas just after sending an
+    approve transaction.
+    """
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
+
+    iterations = 100
+
+    for next_counter in range(1, 20):
+        transaction = deploy_client.estimate_gas(
+            contract_proxy, "next", {}, next_counter, iterations
+        )
+        msg = (
+            "gas estimation should not have failed, this means the side-effects "
+            "of the previous transaction have not been accounted for and the "
+            "strategy of polling is not sufficient to avoid race conditions."
+        )
+        assert transaction, msg
+
+        transaction_hash = deploy_client.transact(transaction)
+
+        # This does not work:
+        #
+        # tx_receipt = None
+        # while tx_receipt is None:
+        #     try:
+        #         tx_receipt = deploy_client.web3.eth.getTransaction(transaction_hash)
+        #     except TransactionNotFound:
+        #         pass
+
+        # Neither `eth_getTransaction` and `eth_pendingTransactions` are
+        # sufficient here, it still possible to have race conditoins with both
+        # of these RPC calls.
+        deploy_client.poll_transaction(transaction_hash)
