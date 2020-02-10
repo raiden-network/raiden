@@ -435,6 +435,7 @@ class MatrixTransport(Runnable):
         self._initialize_first_sync()
         self._initialize_room_inventory()
         self._initialize_broadcast_rooms()
+        self._initialize_whitelist(whitelist)
 
         broadcast_filter_id = self._client.create_sync_filter(
             not_rooms=self._broadcast_rooms.values()
@@ -468,10 +469,6 @@ class MatrixTransport(Runnable):
         super().start()  # start greenlet
         self._starting = False
         self._started = True
-
-        pool = Pool(size=10)
-        greenlets = set(pool.apply_async(self.whitelist, [address]) for address in whitelist)
-        gevent.joinall(greenlets, raise_error=True)
 
         self.log.debug("Matrix started", config=self._config)
 
@@ -861,6 +858,21 @@ class MatrixTransport(Runnable):
                 self._broadcast_rooms[room_name] = join_broadcast_room(
                     client=self._client, broadcast_room_alias=broadcast_room_alias
                 )
+
+    def _initialize_whitelist(self, whitelist: List[Address]) -> None:
+        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
+        assert self._user_id, msg
+
+        msg = (
+            "Whitelisting must be initialized after the first sync, because "
+            "that fetches the existing rooms from the Matrix server, and "
+            "whitelist may create rooms."
+        )
+        assert self._client.sync_iteration >= 1, msg
+
+        pool = Pool(size=10)
+        greenlets = set(pool.apply_async(self.whitelist, [address]) for address in whitelist)
+        gevent.joinall(greenlets, raise_error=True)
 
     def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
         """Handle an invite request.
