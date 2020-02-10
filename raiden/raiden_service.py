@@ -842,7 +842,7 @@ class RaidenService(Runnable):
         This function is a noop during initialization, because health checking
         can be started as a side effect of some events (e.g. new channel). For
         these cases the healthcheck will be started by
-        `start_neighbours_healthcheck`.
+        `_start_transport`.
         """
         if self.transport:
             self.transport.async_start_health_check(node_address)
@@ -853,7 +853,7 @@ class RaidenService(Runnable):
         This function is a noop during initialization, because health checking
         can be started as a side effect of some events (e.g. new channel). For
         these cases the healthcheck will be started by
-        `start_neighbours_healthcheck`.
+        `_start_transport`.
         """
         if self.transport:
             self.transport.immediate_health_check_for(node_address)
