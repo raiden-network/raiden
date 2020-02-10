@@ -202,3 +202,16 @@ DatabasePath = Union[Path, Literal[":memory:"]]
 
 T_RoomID = str
 RoomID = NewType("RoomID", T_RoomID)
+
+AddressTypes = Union[
+    Address,
+    TokenAddress,
+    TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
+    MonitoringServiceAddress,
+    TargetAddress,
+    InitiatorAddress,
+    OneToNAddress,
+    SecretRegistryAddress,
+    ServiceRegistryAddress,
+]
