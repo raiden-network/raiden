@@ -23,6 +23,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
+    block_offset_timeout,
     get_channelstate,
     watch_for_unlock_failures,
 )
@@ -447,7 +448,7 @@ def test_secret_revealed_on_chain(
         secret=secret,
     )
 
-    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), block_offset_timeout(app0.raiden):
         wait_for_state_change(
             app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval_initial
         )
@@ -563,8 +564,7 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
     # A ChannelClose event will be generated, this will be polled by both apps
     RaidenAPI(app0.raiden).channel_close(registry_address, token_address, app1.raiden.address)
 
-    exception = ValueError("Could not get close event")
-    with gevent.Timeout(seconds=30, exception=exception):
+    with block_offset_timeout(app0.raiden, "Could not get close event"):
         waiting.wait_for_close(
             app0.raiden,
             registry_address,
