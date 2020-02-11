@@ -46,7 +46,7 @@ from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, Signature
+from raiden.utils.typing import Address, ChainID, MessageID, RoomID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -60,6 +60,7 @@ ROOM_NAME_PREFIX = "raiden"
 # The maximum matrix event size is 65 kB. Since events are larger than just the message
 # content we chose a conservative value
 MATRIX_MAX_BATCH_SIZE = 50_000
+JSONResponse = Dict[str, Any]
 
 
 class UserPresence(Enum):
@@ -752,6 +753,7 @@ def sort_servers_closest(
 
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    handle_member_join_callback: Callable[[RoomID], None],
     servers: List[str],
     *args: Any,
     **kwargs: Any,
@@ -774,7 +776,9 @@ def make_client(
 
     last_ex = None
     for server_url, rtt in sorted_servers.items():
-        client = GMatrixClient(handle_messages_callback, server_url, *args, **kwargs)
+        client = GMatrixClient(
+            handle_messages_callback, handle_member_join_callback, server_url, *args, **kwargs
+        )
 
         retries = 3
         while retries:

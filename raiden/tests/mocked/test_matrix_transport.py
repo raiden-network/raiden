@@ -8,7 +8,6 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.constants import EMPTY_SIGNATURE, Environment
-from raiden.exceptions import TransportError
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
@@ -23,7 +22,7 @@ from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Address, BlockExpiration, PaymentAmount, PaymentID
+from raiden.utils.typing import Address, BlockExpiration, PaymentAmount, PaymentID, RoomID
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
 USERID1 = f"@{to_checksum_address(factories.HOP1.hex())}:Wonderland"  # pylint: disable=no-member
@@ -73,9 +72,13 @@ def mock_matrix(
     from raiden.network.transport.matrix import transport as transport_module
 
     def make_client_monkey(
-        handle_messages_callback, servers, *args, **kwargs
+        handle_messages_callback, handle_member_join_callback, servers, *args, **kwargs
     ):  # pylint: disable=unused-argument
-        return GMatrixClient(handle_messages_callback, servers[0])
+        return GMatrixClient(
+            handle_messages_callback=handle_messages_callback,
+            handle_member_join_callback=handle_member_join_callback,
+            base_url=servers[0],
+        )
 
     monkeypatch.setattr(User, "get_display_name", lambda _: "random_display_name")
     monkeypatch.setattr(transport_module, "make_client", make_client_monkey)
@@ -107,6 +110,11 @@ def mock_matrix(
         available_servers=[],
     )
 
+    def mock_join_room(self, room_id_or_alias):
+        raise MatrixRequestError(
+            code=404, content={"errcode": "M_UNKNOWN", "error": "No known servers"}
+        )
+
     transport = MatrixTransport(config=config, environment=Environment.DEVELOPMENT)
     transport._raiden_service = mock_raiden_service
     transport._stop_event.clear()
@@ -119,6 +127,7 @@ def mock_matrix(
     monkeypatch.setattr(MatrixTransport, "_set_room_id_for_address", mock_set_room_id_for_address)
     monkeypatch.setattr(transport._raiden_service, "on_messages", mock_on_messages)
     monkeypatch.setattr(GMatrixClient, "get_user_presence", mock_get_user_presence)
+    monkeypatch.setattr(GMatrixClient, "join_room", mock_join_room)
 
     monkeypatch.setattr(transport._client.api, "leave_room", lambda room_id: None)
     monkeypatch.setattr(transport._client, "sync_token", "already_synced")
@@ -187,29 +196,116 @@ def room_with_members(mock_raiden_service, partner_config_for_room):
         ),
     ],
 )
-@pytest.mark.parametrize("api_available", [True, False], ids=["API-available", "API-unavailable"])
-def test_leave_unexpected_rooms(mock_matrix: MatrixTransport, room_with_members, api_available):
+def test_unexpected_rooms_raise_assertion_error(mock_matrix: MatrixTransport, room_with_members):
 
     room, should_leave = room_with_members
     room.client = mock_matrix._client
     mock_matrix._client.rooms[room.room_id] = room
 
-    if not api_available:
-
-        def raise_ex(room_id):
-            raise MatrixRequestError()
-
-        mock_matrix._client.api.leave_room = raise_ex
-
     # if an api happens a MatrixRequestError should be propagated and raising a TransportError
     # This should only happen when a room is to be left
-    if not api_available and should_leave:
-        with pytest.raises(TransportError):
+    if should_leave:
+        with pytest.raises(AssertionError):
             mock_matrix._initialize_room_inventory()
-    else:
-        assert len(mock_matrix._client.rooms) == 1
-        mock_matrix._initialize_room_inventory()
-        assert not mock_matrix._client.rooms if should_leave else mock_matrix._client.rooms
+
+
+@pytest.fixture
+def invite_state(signer, mock_matrix):
+    invite_user = create_new_users_for_address(signer)[0]
+
+    return {
+        "events": [
+            {
+                "sender": invite_user.user_id,
+                "type": "m.room.name",
+                "state_key": "",
+                "content": {"name": "Invalid Room"},
+            },
+            {
+                "sender": invite_user.user_id,
+                "state_key": mock_matrix._user_id,
+                "content": {"membership": "invite"},
+                "type": "m.room.member",
+            },
+            {
+                "content": {
+                    "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
+                    "displayname": "Alice Margatroid",
+                    "membership": "join",
+                },
+                "event_id": "$143273582443PhrSn:example.org",
+                "origin_server_ts": 1432735824653,
+                "room_id": "!someroom:invalidserver",
+                "sender": invite_user.user_id,
+                "state_key": invite_user.user_id,
+                "type": "m.room.member",
+                "unsigned": {"age": 1234},
+            },
+        ]
+    }
+
+
+@pytest.mark.parametrize("signer", [make_signer()])
+def test_reject_invite_of_invalid_room(
+    mock_matrix: MatrixTransport, monkeypatch, signer, invite_state
+):
+
+    invalid_room_id = RoomID("!someroom:invalidserver")
+    user = create_new_users_for_address(signer)[0]
+    mock_matrix._displayname_cache.warm_users([user])
+
+    leave_room_called = False
+
+    def mock_leave_room(room_id):
+        nonlocal leave_room_called
+        if room_id == invalid_room_id:
+            leave_room_called = True
+
+    monkeypatch.setattr(mock_matrix._client.api, "leave_room", mock_leave_room)
+
+    with pytest.raises(AssertionError):
+        mock_matrix._handle_invite(invalid_room_id, invite_state)
+
+    assert leave_room_called
+
+
+@pytest.mark.parametrize(
+    "partner_config_for_room",
+    [{"number_of_partners": 1, "users_per_address": 1, "number_of_base_users": 1}],
+)
+def test_leave_after_member_join(mock_matrix, room_with_members):
+    # create a valid room with one external member
+    room = room_with_members[0]
+    user = create_new_users_for_address(make_signer())[0]
+    room.client = mock_matrix._client
+    mock_matrix._client.rooms[room.room_id] = room
+    mock_matrix._client.should_listen = True
+
+    # response showing that user from another address joins the room
+    response_list = list()
+    member_join = {
+        "room_id": 9,
+        "type": "m.room.member",
+        "state_key": user.user_id,
+        "content": {"membership": "join", "displayname": user.displayname},
+    }
+    response = {
+        "presence": {"events": {}},
+        "to_device": {"events": {}},
+        "rooms": {
+            "invite": {},
+            "leave": {},
+            "join": {
+                room.room_id: {
+                    "state": {"events": {}},
+                    "ephemeral": {"events": {}},
+                    "timeline": {"prev_batch": "PREV_SYNC_TOKEN", "events": [member_join]},
+                }
+            },
+        },
+    }
+    response_list.append(response)
+    mock_matrix._client._handle_responses(response_list)
 
 
 @pytest.fixture

@@ -170,11 +170,10 @@ def wait_for_peer_reachable(transport: MatrixTransport, target_address: Address,
 
 def wait_for_room_with_address(transport: MatrixTransport, address: Address, timeout: int = 10):
     with Timeout(timeout):
-        while True:
+        room = transport._get_room_for_address(address)
+        while room is None:
+            transport._client.synced.wait()
             room = transport._get_room_for_address(address)
-            if room is not None:
-                break
-            gevent.sleep(0.1)
 
 
 @pytest.mark.parametrize("matrix_server_count", [2])
@@ -691,43 +690,36 @@ def test_pfs_broadcast_messages(
 @pytest.mark.parametrize("matrix_server_count", [2])
 def test_matrix_invite_private_room_happy_case(matrix_transports):
     """ Test that a room has been created between two communicating nodes."""
+
+    # initialize transport
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
-
     transport0, transport1 = matrix_transports
-
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
-
+    # start health check to create private room
     transport0.immediate_health_check_for(transport1._raiden_service.address)
     transport1.immediate_health_check_for(transport0._raiden_service.address)
-
+    # wait for room synchronization of transports
+    # due to asynchronous room creation
+    wait_for_room_with_address(transport0, raiden_service1.address)
+    wait_for_room_with_address(transport1, raiden_service0.address)
+    # check that there exist a room state by server
+    # meaning that both user are members of the room
     room = transport0._get_room_for_address(raiden_service1.address)
-    # Transport0 is on the higher end of the lexical order of the addresses.
-    # It did not create the room and therefore we check that the other
-    # node creates it.
-    if room is None:
-        room = transport1._maybe_create_room_for_address(raiden_service0.address)
+    assert room is not None
     room_id = room.room_id
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while True:
             try:
                 room_state0 = transport0._client.api.get_room_state(room_id)
-                break
-            except MatrixRequestError:
-                gevent.sleep(0.1)
-
-    assert room_state0 is not None
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
                 room_state1 = transport1._client.api.get_room_state(room_id)
                 break
             except MatrixRequestError:
                 gevent.sleep(0.1)
 
+    assert room_state0 is not None
     assert room_state1 is not None
 
 
