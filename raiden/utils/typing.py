@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Tuple, Type, Union
 
-from eth_typing import Address, ChecksumAddress
+from eth_typing import Address, HexAddress
 from typing_extensions import Literal
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
@@ -10,6 +10,9 @@ from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-
     ChainID,
     T_ChainID,
 )
+
+from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
+
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -46,7 +49,7 @@ GasMeasurements = Dict[str, int]
 
 T_Address = bytes
 
-AddressHex = ChecksumAddress
+AddressHex = HexAddress
 
 # An absolute number of blocks
 T_BlockExpiration = int
@@ -214,4 +217,5 @@ AddressTypes = Union[
     OneToNAddress,
     SecretRegistryAddress,
     ServiceRegistryAddress,
+    UserDepositAddress,
 ]
