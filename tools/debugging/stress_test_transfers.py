@@ -9,13 +9,25 @@ import os
 import os.path
 import signal
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
 from itertools import chain, count, product
 from time import time
 from types import TracebackType
-from typing import Any, Callable, Iterable, Iterator, List, NewType, NoReturn, Optional, Set, Type
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    NewType,
+    NoReturn,
+    Optional,
+    Set,
+    Type,
+)
 
 import gevent
 import requests
@@ -29,7 +41,7 @@ from greenlet import greenlet
 
 from raiden.network.utils import get_free_port
 from raiden.utils.formatting import pex
-from raiden.utils.typing import Host, Port
+from raiden.utils.typing import Address, Host, Port, TokenAmount
 
 BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)
@@ -127,6 +139,7 @@ class RunningNode:
     process: Popen
     config: NodeConfig
     url: URL
+    starting_balances: Dict[Address, TokenAmount] = field(default_factory=dict)
 
 
 @dataclass
@@ -523,6 +536,33 @@ def run_profiler(
     return profiler_processes
 
 
+def get_balance_for_node(node: RunningNode) -> Dict[Address, TokenAmount]:
+    response = requests.get(f"{node.url}/api/v1/channels")
+    assert response.headers["Content-Type"] == "application/json", response.headers["Content-Type"]
+    assert response.status_code == HTTPStatus.OK, response.json()
+
+    response_data = response.json()
+    return {channel["partner_address"]: channel["balance"] for channel in response_data}
+
+
+def get_starting_balances(running_nodes: List[RunningNode]) -> None:
+    for node in running_nodes:
+        node.starting_balances = get_balance_for_node(node)
+
+
+def wait_for_balance(running_nodes: List[RunningNode]) -> None:
+    """ Wait until the nodes have `starting_balance`, again
+
+    This makes sure that we can run another iteration of the stress test
+    """
+    for node in running_nodes:
+        assert node.starting_balances
+        balances = get_balance_for_node(node)
+        while any(bal < start_bal for bal, start_bal in zip(balances, node.starting_balances)):
+            gevent.sleep(0.1)
+            balances = get_balance_for_node(node)
+
+
 def run_stress_test(
     nursery: Nursery, running_nodes: List[RunningNode], config: StressTestConfiguration
 ) -> None:
@@ -542,6 +582,8 @@ def run_stress_test(
             planners=[do_fifty_transfer_up_to],
             schedulers=[scheduler_preserve_order],
         )
+
+        get_starting_balances([pair.initiator for pair in plan.initiator_target_pairs[0]])
 
         # TODO: Before running the first plan each node should be queried for
         # their channel status. The script should assert the open channels have
@@ -573,6 +615,8 @@ def run_stress_test(
                 identifier_generator=identifier_generator,
                 pool_size=concurrency,
             )
+
+            wait_for_balance([pair.initiator for pair in plan.initiator_target_pairs[0]])
 
             # After each `do_transfers` the state of the system must be
             # reset, otherwise there is a bug in the planner or Raiden.
@@ -736,7 +780,7 @@ def main() -> None:
             profiler_data_directory,
         )
 
-        nursery.spawn_under_watch(run_stress_test, nursery, nodes_running, test_config).get()
+        run_stress_test(nursery, nodes_running, test_config)
 
 
 if __name__ == "__main__":
