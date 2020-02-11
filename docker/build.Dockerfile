@@ -6,7 +6,7 @@ ARG GETH_URL_LINUX
 
 # install dependencies
 RUN apt-get update
-RUN apt-get install -y git-core wget xz-utils libgmp-dev libffi-dev
+RUN apt-get install -y git-core wget xz-utils build-essential automake pkg-config libtool libffi-dev python3-dev libgmp-dev
 
 RUN wget -nv -O /usr/bin/solc ${SOLC_URL_LINUX} && \
     chmod +x /usr/bin/solc
