@@ -181,7 +181,7 @@ class BaseSchema(Schema):
     def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
         # this will depend on the Schema used, which has its object class in
         # the class Meta attributes
-        decoding_class = self.opts.decoding_class  # pylint: disable=no-member
+        decoding_class = self.opts.decoding_class  # type: ignore # pylint: disable=no-member
         return decoding_class(**data)
 
 
@@ -202,7 +202,7 @@ class BaseListSchema(Schema):
 
     @post_load
     def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
-        decoding_class = self.opts.decoding_class  # pylint: disable=no-member
+        decoding_class = self.opts.decoding_class  # type: ignore # pylint: disable=no-member
         list_ = data["data"]
         return decoding_class(list_)
 

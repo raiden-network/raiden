@@ -212,25 +212,25 @@ class EthAuthProvider:
                 user_id,
             )
             defer.returnValue(False)
+        else:
+            user_addr_hex = user_match.group(1)
+            user_addr = unhexlify(user_addr_hex[2:])
 
-        user_addr_hex = user_match.group(1)
-        user_addr = unhexlify(user_addr_hex[2:])
+            rec_addr = recover(data=self.hs_hostname.encode(), signature=signature)
+            if not rec_addr or rec_addr != user_addr:
+                self.log.error(
+                    "invalid account password/signature. user=%r, signer=%r", user_id, rec_addr
+                )
+                defer.returnValue(False)
 
-        rec_addr = recover(data=self.hs_hostname.encode(), signature=signature)
-        if not rec_addr or rec_addr != user_addr:
-            self.log.error(
-                "invalid account password/signature. user=%r, signer=%r", user_id, rec_addr
-            )
-            defer.returnValue(False)
+            localpart = user_id.split(":", 1)[0][1:]
+            self.log.info("eth login! valid signature. user=%r", user_id)
 
-        localpart = user_id.split(":", 1)[0][1:]
-        self.log.info("eth login! valid signature. user=%r", user_id)
+            if not (yield self.account_handler.check_user_exists(user_id)):
+                self.log.info("first user login, registering: user=%r", user_id)
+                yield self.account_handler.register(localpart=localpart)
 
-        if not (yield self.account_handler.check_user_exists(user_id)):
-            self.log.info("first user login, registering: user=%r", user_id)
-            yield self.account_handler.register(localpart=localpart)
-
-        defer.returnValue(True)
+            defer.returnValue(True)
 
     @staticmethod
     def parse_config(config):

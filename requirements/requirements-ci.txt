@@ -5,7 +5,7 @@
 #    './deps compile' (for details see README)
 #
 alabaster==0.7.12
-altgraph==0.16.1          # via macholib, pyinstaller
+altgraph==0.16.1          # via pyinstaller
 aniso8601==7.0.0
 apipkg==1.5
 appdirs==1.4.3
@@ -78,7 +78,6 @@ jinja2==2.10.1
 jsonschema==3.2.0
 lazy-object-proxy==1.4.1
 lru-dict==1.1.6
-macholib==1.14            # via pyinstaller
 markupsafe==1.1.1
 marshmallow-dataclass==6.0.0
 marshmallow-enum==1.5.1
@@ -91,8 +90,8 @@ mirakuru==2.1.2
 more-itertools==7.0.0
 msgpack==0.6.1
 multiaddr==0.0.9
-mypy-extensions==0.4.1
-mypy==0.720
+mypy-extensions==0.4.3
+mypy==0.761
 netaddr==0.7.19
 netifaces==0.10.9
 networkx==2.3

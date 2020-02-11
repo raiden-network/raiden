@@ -101,12 +101,12 @@ class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
         if self.process is None:
             command = self.command
             if not self._shell:
-                command = self.command_parts
+                command = self.command_parts  # type: ignore
 
             if isinstance(self.stdio, (list, tuple)):
                 stdin, stdout, stderr = self.stdio
             else:
-                stdin = stdout = stderr = self.stdio
+                stdin = stdout = stderr = self.stdio  # type: ignore
             env = os.environ.copy()
             env[ENV_UUID] = self._uuid
             popen_kwargs = {
@@ -119,7 +119,7 @@ class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
                 "cwd": self.cwd,
             }
             if platform.system() != "Windows":
-                popen_kwargs["preexec_fn"] = os.setsid
+                popen_kwargs["preexec_fn"] = os.setsid  # type: ignore
             self.process = subprocess.Popen(command, **popen_kwargs)
 
         self._set_timeout()
@@ -132,7 +132,9 @@ class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
                     f"Can not execute {command!r}, check that the executable exists."
                 ) from e
             else:
-                output_file_names = {io.name for io in (stdout, stderr) if hasattr(io, "name")}
+                output_file_names = {
+                    io.name for io in (stdout, stderr) if hasattr(io, "name")  # type: ignore
+                }
                 if output_file_names:
                     log.warning("Process output file(s)", output_files=output_file_names)
             raise
