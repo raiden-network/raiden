@@ -950,6 +950,13 @@ class MatrixTransport(Runnable):
             join_rules_event = join_rules_events[0]
             private_room = join_rules_event["content"].get("join_rule") == "invite"
 
+        # Ignore the room if it is not private, since that can be an attack
+        # vector, e.g. secret reveal messages would be availalbe to any user that
+        # knowns the room id. (only private rooms are used since ce246af806)
+        if private_room is False:
+            self.log.debug("Invite: ignoring room since it is not private", room_id=room_id)
+            return
+
         # we join room and _set_room_id_for_address despite room privacy and requirements,
         # _get_room_ids_for_address will take care of returning only matching rooms and
         # _leave_unused_rooms will clear it in the future, if and when needed
