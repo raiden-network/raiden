@@ -648,16 +648,6 @@ jobs:
           command: |
             twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*.{tar.gz,whl}
 
-  build-nightly-image:
-    executor:
-      name: docker
-
-    steps:
-      - run:
-          name: Trigger nightly automated build on Docker Hub.
-          command: >
-            curl -H "Content-Type: application/json" --data '{"docker_tag":"nightly"}' -X POST ${NIGHTLY_BUILD_TRIGGER}
-
 workflows:
   raiden-default:
     jobs:
@@ -1004,11 +994,6 @@ workflows:
           architecture: "aarch64"
           requires:
             - finalize
-
-      - build-nightly-image:
-          requires:
-            - finalize
-            - prepare-python-linux-3.7
 
       - prepare-system-macos:
           requires:
