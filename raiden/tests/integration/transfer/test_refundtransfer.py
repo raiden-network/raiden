@@ -19,6 +19,7 @@ from raiden.tests.utils.protocol import (
 from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
+    block_offset_timeout,
     calculate_fee_for_amount,
     get_channelstate,
     transfer,
@@ -43,7 +44,7 @@ from raiden.waiting import wait_for_block, wait_for_settle
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("settle_timeout", [50])
-def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
+def test_refund_messages(raiden_chain, token_addresses, deposit):
     # The network has the following topology:
     #
     #   App0 <---> App1 <---> App2
@@ -89,7 +90,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
     send_refundtransfer = raiden_events_search_for_item(app1.raiden, SendRefundTransfer, {})
     assert send_refundtransfer
 
-    with gevent.Timeout(network_wait):
+    with block_offset_timeout(app1.raiden):
         wait_assert(
             func=assert_synced_channel_state,
             token_network_address=token_network_address,
@@ -100,9 +101,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
             balance1=deposit,
             pending_locks1=[send_refundtransfer.transfer.lock],
         )
-
-    # This channel was exhausted to force the refund transfer except for the fees
-    with gevent.Timeout(network_wait):
+        # This channel was exhausted to force the refund transfer except for the fees
         wait_assert(
             func=assert_succeeding_transfer_invariants,
             token_network_address=token_network_address,
@@ -119,9 +118,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
 @pytest.mark.parametrize("privatekey_seed", ["test_refund_transfer:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-def test_refund_transfer(
-    raiden_chain, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
-):
+def test_refund_transfer(raiden_chain, token_addresses, deposit, retry_timeout):
     """A failed transfer must send a refund back.
 
     TODO:
@@ -142,28 +139,28 @@ def test_refund_transfer(
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = PaymentID(1)
     amount_path = PaymentAmount(1)
-    transfer(
-        initiator_app=app0,
-        target_app=app2,
-        token_address=token_address,
-        amount=amount_path,
-        identifier=identifier_path,
-        timeout=network_wait * number_of_nodes,
-    )
+    with block_offset_timeout(app0.raiden):
+        transfer(
+            initiator_app=app0,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount_path,
+            identifier=identifier_path,
+        )
 
     # drain the channel app1 -> app2
     identifier_drain = PaymentID(2)
     amount_drain = PaymentAmount(deposit * 8 // 10)
-    transfer(
-        initiator_app=app1,
-        target_app=app2,
-        token_address=token_address,
-        amount=amount_drain,
-        identifier=identifier_drain,
-        timeout=network_wait,
-    )
 
-    with gevent.Timeout(network_wait):
+    transfer_timeout = block_offset_timeout(app1.raiden)
+    with transfer_timeout:
+        transfer(
+            initiator_app=app1,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount_drain,
+            identifier=identifier_drain,
+        )
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -174,7 +171,6 @@ def test_refund_transfer(
             deposit + amount_path,
             [],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -220,7 +216,7 @@ def test_refund_transfer(
     assert lock.secrethash == refund_lock.secrethash
 
     # Both channels have the amount locked because of the refund message
-    with gevent.Timeout(network_wait):
+    with transfer_timeout:
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -231,7 +227,6 @@ def test_refund_transfer(
             deposit + amount_path,
             [refund_lock],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -310,14 +305,7 @@ def test_refund_transfer(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_different_view_of_last_bp_during_unlock(
-    raiden_chain: List[App],
-    restart_node,
-    number_of_nodes,
-    token_addresses,
-    deposit,
-    network_wait,
-    retry_timeout,
-    blockchain_type,
+    raiden_chain: List[App], restart_node, token_addresses, deposit, retry_timeout, blockchain_type
 ):
     """Test for https://github.com/raiden-network/raiden/issues/3196#issuecomment-449163888"""
     # Topology:
@@ -338,28 +326,26 @@ def test_different_view_of_last_bp_during_unlock(
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = PaymentID(1)
     amount_path = PaymentAmount(1)
-    transfer(
-        initiator_app=app0,
-        target_app=app2,
-        token_address=token_address,
-        amount=amount_path,
-        identifier=identifier_path,
-        timeout=network_wait * number_of_nodes,
-    )
+    with block_offset_timeout(app0.raiden):
+        transfer(
+            initiator_app=app0,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount_path,
+            identifier=identifier_path,
+        )
 
     # drain the channel app1 -> app2
     identifier_drain = PaymentID(2)
     amount_drain = PaymentAmount(deposit * 8 // 10)
-    transfer(
-        initiator_app=app1,
-        target_app=app2,
-        token_address=token_address,
-        amount=amount_drain,
-        identifier=identifier_drain,
-        timeout=network_wait,
-    )
-
-    with gevent.Timeout(network_wait):
+    with block_offset_timeout(app1.raiden):
+        transfer(
+            initiator_app=app1,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount_drain,
+            identifier=identifier_drain,
+        )
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -370,7 +356,6 @@ def test_different_view_of_last_bp_during_unlock(
             deposit + amount_path,
             [],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -416,7 +401,7 @@ def test_different_view_of_last_bp_during_unlock(
     assert lock.secrethash == refund_lock.secrethash
 
     # Both channels have the amount locked because of the refund message
-    with gevent.Timeout(network_wait):
+    with block_offset_timeout(app0.raiden):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -427,7 +412,6 @@ def test_different_view_of_last_bp_during_unlock(
             deposit + amount_path,
             [refund_lock],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -545,28 +529,28 @@ def test_refund_transfer_after_2nd_hop(
     # make a transfer to test the path app0 -> app1 -> app2 -> app3
     identifier_path = PaymentID(1)
     amount_path = PaymentAmount(1)
-    transfer(
-        initiator_app=app0,
-        target_app=app3,
-        token_address=token_address,
-        amount=amount_path,
-        identifier=identifier_path,
-        timeout=network_wait * number_of_nodes,
-    )
+    with block_offset_timeout(app0.raiden):
+        transfer(
+            initiator_app=app0,
+            target_app=app3,
+            token_address=token_address,
+            amount=amount_path,
+            identifier=identifier_path,
+            timeout=network_wait * number_of_nodes,
+        )
 
     # drain the channel app2 -> app3
     identifier_drain = PaymentID(2)
     amount_drain = PaymentAmount(deposit * 8 // 10)
-    transfer(
-        initiator_app=app2,
-        target_app=app3,
-        token_address=token_address,
-        amount=amount_drain,
-        identifier=identifier_drain,
-        timeout=network_wait,
-    )
-
-    with gevent.Timeout(network_wait):
+    with block_offset_timeout(app2.raiden):
+        transfer(
+            initiator_app=app2,
+            target_app=app3,
+            token_address=token_address,
+            amount=amount_drain,
+            identifier=identifier_drain,
+            timeout=network_wait,
+        )
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -577,7 +561,6 @@ def test_refund_transfer_after_2nd_hop(
             deposit + amount_path,
             [],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -588,7 +571,6 @@ def test_refund_transfer_after_2nd_hop(
             deposit + amount_path,
             [],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -648,7 +630,8 @@ def test_refund_transfer_after_2nd_hop(
     assert lock2.expiration
 
     # channels have the amount locked because of the refund message
-    with gevent.Timeout(network_wait):
+
+    with block_offset_timeout(app0.raiden):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -659,7 +642,6 @@ def test_refund_transfer_after_2nd_hop(
             deposit + amount_path,
             [refund_lock1],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
@@ -670,7 +652,6 @@ def test_refund_transfer_after_2nd_hop(
             deposit + amount_path,
             [refund_lock2],
         )
-    with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_address,
