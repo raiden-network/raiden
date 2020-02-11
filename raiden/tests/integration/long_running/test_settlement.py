@@ -3,7 +3,6 @@ import random
 import gevent
 import pytest
 from eth_utils import keccak
-from gevent.timeout import Timeout
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -21,7 +20,12 @@ from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
-from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
+from raiden.tests.utils.transfer import (
+    assert_synced_channel_state,
+    block_offset_timeout,
+    get_channelstate,
+    transfer,
+)
 from raiden.transfer import channel, views
 from raiden.transfer.events import SendWithdrawConfirmation
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -33,10 +37,10 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (
     Balance,
     BlockNumber,
+    BlockTimeout as BlockOffset,
     List,
     MessageID,
     PaymentAmount,
@@ -451,9 +455,7 @@ def test_batch_unlock(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_channel_withdraw(
-    raiden_network, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
-):
+def test_channel_withdraw(raiden_network, token_addresses, deposit, retry_timeout):
     """ Withdraw funds after a mediated transfer."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -480,12 +482,10 @@ def test_channel_withdraw(
         identifier=identifier,
         secret=secret,
     )
-
     wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
     )
-    timeout = network_wait * number_of_nodes
-    with Timeout(seconds=timeout):
+    with block_offset_timeout(alice_app.raiden):
         wait_for_unlock.get()
         msg = (
             f"transfer from {to_checksum_address(alice_app.raiden.address)} "
@@ -515,7 +515,7 @@ def test_channel_withdraw(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw_expired(
-    raiden_network, number_of_nodes, token_addresses, deposit, network_wait, retry_timeout
+    raiden_network, network_wait, number_of_nodes, token_addresses, deposit, retry_timeout
 ):
     """ Tests withdraw expiration. """
     alice_app, bob_app = raiden_network
@@ -547,12 +547,11 @@ def test_channel_withdraw_expired(
         identifier=identifier,
         secret=secret,
     )
-
     wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
     )
-    timeout = network_wait * number_of_nodes
-    with Timeout(seconds=timeout):
+    transfer_timeout = block_offset_timeout(alice_app.raiden)
+    with transfer_timeout:
         wait_for_unlock.get()
         msg = (
             f"transfer from {to_checksum_address(alice_app.raiden.address)} "
@@ -567,7 +566,7 @@ def test_channel_withdraw_expired(
         total_withdraw=total_withdraw,
     )
 
-    with Timeout(seconds=timeout):
+    with transfer_timeout:
         send_withdraw_confirmation_event.wait()
 
     # Make sure proper withdraw state is set in both channel states
@@ -594,7 +593,7 @@ def test_channel_withdraw_expired(
     assert bob_alice_channel_state.our_total_withdraw == 0
     assert bob_alice_channel_state.our_state.withdraws_pending.get(total_withdraw) is None
 
-    with Timeout(seconds=timeout):
+    with gevent.Timeout(network_wait * number_of_nodes):
         wait_for_withdraw_expired_message.wait()
 
         alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
@@ -1035,7 +1034,7 @@ def test_batch_unlock_after_restart(raiden_network, restart_node, token_addresse
 
     # wait for the close transaction to be mined, this is necessary to compute
     # the timeout for the settle
-    with gevent.Timeout(timeout):
+    with block_offset_timeout(alice_app.raiden):
         waiting.wait_for_close(
             raiden=alice_app.raiden,
             token_network_registry_address=registry_address,
@@ -1055,17 +1054,9 @@ def test_batch_unlock_after_restart(raiden_network, restart_node, token_addresse
         },
     )
     assert isinstance(channel_closed, ContractReceiveChannelClosed)
-    settle_max_wait_block = BlockNumber(
-        channel_closed.block_number + alice_bob_channel_state.settle_timeout * 2
-    )
 
-    settle_timeout = BlockTimeout(
-        RuntimeError("settle did not happen"),
-        bob_app.raiden,
-        settle_max_wait_block,
-        alice_app.raiden.alarm.sleep_time,
-    )
-    with settle_timeout:
+    offset = BlockOffset(alice_bob_channel_state.settle_timeout * 2)
+    with block_offset_timeout(bob_app.raiden, "Settle did not happen", offset):
         waiting.wait_for_settle(
             raiden=alice_app.raiden,
             token_network_registry_address=registry_address,
@@ -1110,33 +1101,26 @@ def test_handle_insufficient_eth(raiden_network, restart_node, token_addresses, 
     assert isinstance(channel_state, NettingChannelState)
     channel_identifier = channel_state.identifier
 
-    transfer(
-        initiator_app=app0,
-        target_app=app1,
-        amount=PaymentAmount(1),
-        token_address=token,
-        identifier=PaymentID(1),
-        timeout=60,
-    )
+    with block_offset_timeout(app0.raiden):
+        transfer(
+            initiator_app=app0,
+            target_app=app1,
+            amount=PaymentAmount(1),
+            token_address=token,
+            identifier=PaymentID(1),
+        )
 
     app1.raiden.stop()
     burn_eth(app1.raiden.rpc_client)
     restart_node(app1)
 
-    settle_block_timeout = BlockTimeout(
-        exception_to_throw=RuntimeError("Settle did not happen."),
-        raiden=app0.raiden,
-        block_number=app0.raiden.get_block_number() + channel_state.settle_timeout * 2,
-        retry_timeout=DEFAULT_RETRY_TIMEOUT,
-    )
-
-    with settle_block_timeout:
+    block_offset = BlockOffset(channel_state.settle_timeout * 2)
+    with block_offset_timeout(app0.raiden, "Settle did not happen", block_offset):
         RaidenAPI(app0.raiden).channel_close(
             registry_address=registry_address,
             token_address=token,
             partner_address=app1.raiden.address,
         )
-
         waiting.wait_for_settle(
             raiden=app0.raiden,
             token_network_registry_address=registry_address,

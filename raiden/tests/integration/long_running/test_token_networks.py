@@ -6,10 +6,10 @@ from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.transfer import watch_for_unlock_failures
+from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import PaymentAmount, TokenAmount
+from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, TokenAmount
 
 
 def wait_for_transaction(receiver, registry_address, token_address, sender_address):
@@ -230,13 +230,8 @@ def test_participant_selection(raiden_network, token_addresses):
 
     # test `leave()` method
     connection_manager = connection_managers[0]
-
-    timeout = (
-        sender_channel.settle_timeout
-        * estimate_blocktime(connection_manager.raiden.rpc_client)
-        * 10
-    )
-    assert timeout > 0
+    raiden = connection_manager.raiden
+    blocks = BlockOffset(sender_channel.settle_timeout * 10)
 
     channels = views.list_channelstate_for_tokennetwork(
         chain_state=views.state_from_raiden(connection_manager.raiden),
@@ -245,13 +240,11 @@ def test_participant_selection(raiden_network, token_addresses):
     )
     channel_identifiers = [channel.identifier for channel in channels]
 
-    with gevent.Timeout(timeout, exception=ValueError("timeout while waiting for leave")):
-        # sender leaves the network
+    timeout = block_offset_timeout(raiden, "Timeout while waiting for leave", blocks)
+    with timeout:
         RaidenAPI(sender).token_network_leave(registry_address, token_address)
 
-    with gevent.Timeout(
-        timeout, exception=ValueError(f"Channels didnt get settled after {timeout}")
-    ):
+        timeout.exception_to_throw = ValueError("Channels not settled in time")
         waiting.wait_for_settle(
             raiden=connection_manager.raiden,
             token_network_registry_address=registry_address,
