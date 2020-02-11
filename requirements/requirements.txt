@@ -12,7 +12,7 @@ certifi==2019.3.9         # via requests
 cffi==1.12.3              # via coincurve
 chardet==3.0.4            # via requests
 click==7.0                # via flask, raiden-contracts
-coincurve==12.0.0
+coincurve==13.0.0
 colorama==0.4.1
 cytoolz==0.10.1           # via eth-keyfile, eth-utils, web3
 decorator==4.4.0          # via ipython, networkx, traitlets
