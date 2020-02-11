@@ -404,6 +404,7 @@ jobs:
 
       - run:
           name: Compress the logs to seed up the CI (upload can be very slow)
+          when: always
           command: |
             files=()
             for f in /tmp/tests/logs test-reports /tmp/synapse-logs; do
