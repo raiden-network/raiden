@@ -38,7 +38,6 @@ dormant_signal=SIGUSR1
     -vvvvvv \
     --color=yes \
     --log-config='raiden:DEBUG' \
-    --random \
     --junit-xml="${test_report_dir}"/results.xml \
     --blockchain-type="${blockchain_type}" \
     --select-fail-on-missing \
