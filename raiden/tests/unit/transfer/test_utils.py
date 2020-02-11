@@ -6,7 +6,7 @@ from raiden.tests.utils import factories
 from raiden.transfer.secret_registry import events_for_onchain_secretreveal
 from raiden.transfer.state import TransactionExecutionStatus
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 
 
 @pytest.mark.parametrize(
@@ -64,7 +64,7 @@ def test_canonical_identifier_validation():
         negative_channel_id.validate()
 
     wrong_format_token_network_address = factories.make_canonical_identifier(
-        token_network_address=to_checksum_address(factories.UNIT_TOKEN_NETWORK_ADDRESS)
+        token_network_address=to_hex_address(factories.UNIT_TOKEN_NETWORK_ADDRESS)
     )
     with pytest.raises(ValueError):
         wrong_format_token_network_address.validate()

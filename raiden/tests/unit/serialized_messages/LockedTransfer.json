@@ -1,7 +1,7 @@
 {
     "chain_id": "337",
     "channel_identifier": "1338",
-    "initiator": "0x696e69746961746F72696E69746961746F72696e",
+    "initiator": "0x696e69746961746f72696e69746961746f72696e",
     "lock": {
         "amount": "50",
         "expiration": "5",
@@ -14,8 +14,8 @@
         "routes": [
             {
                 "route": [
-                    "0x77952Ce83Ca3cad9F7AdcFabeDA85Bd2F1f52008",
-                    "0x94622cC2A5b64a58C25A129d48a2bEEC4b65b779"
+                    "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
+                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
                 ]
             }
         ]
@@ -25,8 +25,8 @@
     "recipient": "0x7461726765747461726765747461726765747461",
     "signature": "0x4136eebf7095249ac02c3e6cb3d55eaf0e6ab41a5f8b114b5fb173697be9d6056e18d291798760ed3d72a48c7fdd94fb5fd0400e9bc4e5bfa0cab6513c27f40f1c",
     "target": "0x7461726765747461726765747461726765747461",
-    "token": "0x746F6b656E746F6b656E746f6b656e746f6B656e",
-    "token_network_address": "0x6E6574776F726b6E6574776F726b6e6574776f72",
+    "token": "0x746f6b656e746f6b656e746f6b656e746f6b656e",
+    "token_network_address": "0x6e6574776f726b6e6574776f726b6e6574776f72",
     "transferred_amount": "0",
     "type": "LockedTransfer"
 }

@@ -40,7 +40,7 @@ JSONResponse = Dict[str, Any]
 
 def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
     if user_id:
-        return AddressHex(user_id.split(":", 1)[0])
+        return AddressHex(user_id.split(":", 1)[0][1:])
 
     return None
 

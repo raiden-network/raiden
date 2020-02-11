@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import structlog
-from eth_typing import ChecksumAddress
 from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
 from web3 import Web3
@@ -11,7 +10,6 @@ from raiden.blockchain.filters import decode_event, get_filter_args_for_all_even
 from raiden.constants import EMPTY_HASH, GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.proxies.proxy_manager import ProxyManager
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Address,
@@ -48,7 +46,7 @@ ALL_EVENTS = None
 
 @dataclass(frozen=True)
 class SmartContractEvents:
-    """All the events from `checksummed_contract_address` are queried and decoded with
+    """All the events from `contract_address` are queried and decoded with
     `abi`.
 
     This does not support filtering events by design, since this is more
@@ -57,8 +55,6 @@ class SmartContractEvents:
 
     contract_address: Address
     abi: ABI
-    # Cache the checksummed because it will be used multiple times.
-    checksummed_contract_address: ChecksumAddress
 
 
 @dataclass(frozen=True)
@@ -293,7 +289,6 @@ def token_network_registry_events(
 ) -> SmartContractEvents:
     return SmartContractEvents(
         contract_address=Address(token_network_registry_address),
-        checksummed_contract_address=to_checksum_address(token_network_registry_address),
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
     )
 
@@ -303,7 +298,6 @@ def token_network_events(
 ) -> SmartContractEvents:
     return SmartContractEvents(
         contract_address=Address(token_network_address),
-        checksummed_contract_address=to_checksum_address(token_network_address),
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
     )
 
@@ -313,7 +307,6 @@ def secret_registry_events(
 ) -> SmartContractEvents:
     return SmartContractEvents(
         contract_address=Address(secret_registry_address),
-        checksummed_contract_address=to_checksum_address(secret_registry_address),
         abi=contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
     )
 
@@ -336,7 +329,7 @@ def filters_to_rpc(
     return {
         "fromBlock": from_block,
         "toBlock": to_block,
-        "address": [event_filter.checksummed_contract_address for event_filter in filters],
+        "address": [event_filter.contract_address for event_filter in filters],
         # This interface exists to query multiple smart contracts with a single
         # query, therefore topics cannot be supported. Because the address can
         # be different types of smart contract, the topics are likely

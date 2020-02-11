@@ -20,12 +20,12 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_message_identifier, make_signer
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, BlockExpiration, PaymentAmount, PaymentID, RoomID
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
-USERID1 = f"@{to_checksum_address(factories.HOP1.hex())}:Wonderland"  # pylint: disable=no-member
+USERID1 = f"@{to_hex_address(factories.HOP1)}:Wonderland"  # pylint: disable=no-member
 
 
 @pytest.fixture()

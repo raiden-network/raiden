@@ -5,7 +5,7 @@ import time
 
 import gevent
 import IPython
-from eth_utils import decode_hex, to_canonical_address
+from eth_utils import to_canonical_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
@@ -15,7 +15,7 @@ from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden.utils.typing import (
     AddressHex,
@@ -200,7 +200,7 @@ class ConsoleTools:
                 constructor_arguments=(initial_alloc, name, decimals, symbol),
             )
 
-        token_address_hex = to_checksum_address(token_address)
+        token_address_hex = to_hex_address(token_address)
         if auto_register:
             self.register_token(registry_address_hex, token_address_hex)
 
@@ -287,9 +287,10 @@ class ConsoleTools:
         Returns:
             True if the contract got mined, false otherwise
         """
-        contract_address = decode_hex(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.rpc_client.web3.eth.getCode(to_checksum_address(contract_address))
+        result = self._raiden.rpc_client.web3.eth.getCode(
+            to_canonical_address(contract_address_hex)
+        )
 
         current_time = time.time()
         while not result:
@@ -297,7 +298,7 @@ class ConsoleTools:
                 return False
 
             result = self._raiden.rpc_client.web3.eth.getCode(
-                to_checksum_address(contract_address)
+                to_canonical_address(contract_address_hex)
             )
             gevent.sleep(0.5)
 

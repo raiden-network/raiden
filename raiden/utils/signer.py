@@ -6,7 +6,7 @@ from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import keccak
 
 from raiden.exceptions import InvalidSignature
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import Address, AddressHex, Signature
 
 
@@ -66,7 +66,7 @@ class Signer(ABC):
 
     @property
     def address_hex(self) -> AddressHex:
-        return to_checksum_address(self.address)
+        return to_hex_address(self.address)
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} for {self.address_hex}>"

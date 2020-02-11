@@ -1,4 +1,5 @@
 import pytest
+from eth_utils import to_canonical_address
 
 from raiden.constants import Environment
 from raiden.settings import RAIDEN_CONTRACT_VERSION
@@ -79,7 +80,7 @@ def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
     [
         {
             "user_deposit_contract_address": to_checksum_address(
-                "0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359"
+                to_canonical_address("0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359")
             )
         }
     ],

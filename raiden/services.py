@@ -86,7 +86,7 @@ def update_monitoring_service_from_balance_proof(
     if rei_balance < MONITORING_REWARD:
         rdn_balance = to_rdn(rei_balance)
         rdn_reward = to_rdn(MONITORING_REWARD)
-        log.warn(
+        log.warning(
             f"Skipping update to Monitoring service. "
             f"Your deposit balance {rdn_balance} is less than "
             f"the required monitoring service reward of {rdn_reward}"

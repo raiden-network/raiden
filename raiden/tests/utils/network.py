@@ -30,7 +30,7 @@ from raiden.tests.utils.transport import ParsedURL, TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,
@@ -218,10 +218,10 @@ def create_all_channels_for_network(
 
     channels = [
         {
-            "app0": to_checksum_address(app0.raiden.address),
-            "app1": to_checksum_address(app1.raiden.address),
+            "app0": to_hex_address(app0.raiden.address),
+            "app1": to_hex_address(app1.raiden.address),
             "deposit": channel_individual_deposit,
-            "token_address": to_checksum_address(token_address),
+            "token_address": to_hex_address(token_address),
         }
         for (app0, app1), token_address in product(app_channels, token_addresses)
     ]
@@ -469,7 +469,7 @@ def parallel_start_apps(raiden_apps: List[App]) -> None:
     gevent.joinall(start_tasks, raise_error=True)
 
     addresses_in_order = {
-        pos: to_checksum_address(app.raiden.address) for pos, app in enumerate(raiden_apps)
+        pos: to_hex_address(app.raiden.address) for pos, app in enumerate(raiden_apps)
     }
     log.info("Raiden Apps started", addresses_in_order=addresses_in_order)
 

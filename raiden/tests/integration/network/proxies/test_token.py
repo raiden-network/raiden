@@ -2,7 +2,6 @@ from eth_utils import to_canonical_address
 
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 
 
@@ -25,7 +24,7 @@ def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager)
     allow_funds = 100
     token_proxy.approve(address, allow_funds)
     assert allow_funds == token_proxy.proxy.functions.allowance(
-        to_checksum_address(deploy_client.address), to_checksum_address(address)
+        deploy_client.address, address
     ).call(block_identifier="latest")
     other_token_proxy.transfer(deploy_client.address, transfer_funds)
     assert token_proxy.balance_of(address) == 0
