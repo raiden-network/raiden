@@ -26,7 +26,7 @@ from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.utils.typing import AddressHex
+from raiden.utils.typing import AddressHex, RoomID
 
 log = structlog.get_logger(__name__)
 
@@ -71,7 +71,7 @@ class Room(MatrixRoom):
     def leave(self) -> None:
         """ Leave the room. Overriding Matrix method to always return error when request. """
         self.client.api.leave_room(self.room_id)
-        del self.client.rooms[self.room_id]
+        self.client.rooms.pop(self.room_id, None)
 
     def _mkmembers(self, member: User) -> None:
         if member.user_id not in self._members:
@@ -215,6 +215,7 @@ class GMatrixClient(MatrixClient):
     def __init__(
         self,
         handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+        handle_member_join_callback: Callable[[RoomID], None],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -231,6 +232,7 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
+        self._handle_member_join_callback = handle_member_join_callback
         self.response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]] = NotifyingQueue()
         self.stop_event = Event()
 
@@ -700,15 +702,18 @@ class GMatrixClient(MatrixClient):
 
                 room = self.rooms[room_id]
                 room.prev_batch = sync_room["timeline"]["prev_batch"]
+                room_members_count = len(room._members)
 
                 for event in sync_room["state"]["events"]:
                     event["room_id"] = room_id
                     room._process_state_event(event)
-
                 for event in sync_room["timeline"]["events"]:
                     event["room_id"] = room_id
                     room._put_event(event)
 
+                # number of members changed. Verify validity of room
+                if room_members_count != len(room._members):
+                    self._handle_member_join_callback(room.room_id)
                 all_messages.append((room, sync_room["timeline"]["events"]))
 
                 for event in sync_room["ephemeral"]["events"]:

@@ -13,7 +13,7 @@ from gevent.event import Event
 from gevent.lock import RLock
 from gevent.pool import Pool
 from gevent.queue import JoinableQueue
-from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
+from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
 from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Environment
@@ -70,8 +70,8 @@ from raiden.utils.typing import (
     List,
     MessageID,
     NamedTuple,
-    NewType,
     Optional,
+    RoomID,
     Set,
     Tuple,
 )
@@ -81,10 +81,10 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger(__name__)
 
-_RoomID = NewType("_RoomID", str)
+
 # Combined with 10 retries (``..utils.JOIN_RETRIES``) this will give a total wait time of ~15s
-ROOM_JOIN_RETRY_INTERVAL = 0.1
-ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER = 1.55
+RETRY_INTERVAL = 0.1
+RETRY_INTERVAL_MULTIPLIER = 1.55
 # A RetryQueue is considered idle after this many iterations without a message
 RETRY_QUEUE_IDLE_AFTER = 10
 
@@ -340,6 +340,7 @@ class MatrixTransport(Runnable):
         version = pkg_resources.require(raiden.__name__)[0].version
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
+            self._handle_member_join,
             available_servers,
             http_pool_maxsize=4,
             http_retry_timeout=40,
@@ -368,7 +369,7 @@ class MatrixTransport(Runnable):
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages = True
 
-        self._invite_queue: List[Tuple[_RoomID, dict]] = []
+        self._invite_queue: List[Tuple[RoomID, dict]] = []
 
         self._address_mgr: UserAddressManager = UserAddressManager(
             client=self._client,
@@ -378,7 +379,7 @@ class MatrixTransport(Runnable):
             _log_context={"transport_uuid": str(self._uuid)},
         )
 
-        self._address_to_room_ids: Dict[Address, List[_RoomID]] = defaultdict(list)
+        self._address_to_room_ids: Dict[Address, List[RoomID]] = defaultdict(list)
         self._client.add_invite_listener(self._handle_invite)
 
         # Forbids concurrent room creation.
@@ -786,9 +787,7 @@ class MatrixTransport(Runnable):
         )
         assert self._client.sync_worker is None, msg
         assert self._client.message_worker is None, msg
-
         self.log.debug("Inventory rooms", rooms=self._client.rooms)
-        rooms_to_leave = list()
 
         for room in self._client.rooms.values():
             room_aliases = set(room.aliases)
@@ -802,21 +801,15 @@ class MatrixTransport(Runnable):
 
             if not self._is_broadcast_room(room):
                 partner_address = self._extract_partner_addresses(room.get_joined_members())
+                # invalid rooms with multiple addresses should be left already
+                assert len(partner_address) <= 1
                 # should contain only one element which is the partner's address
                 if len(partner_address) == 1:
                     self._set_room_id_for_address(partner_address[0], room.room_id)
-                elif len(partner_address) > 1:
-                    # multiple addresses are part of the room this should not happen
-                    # room is set to be leaved after loop ends
-                    rooms_to_leave.append(room)
 
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
-
-        self._leave_unexpected_rooms(
-            rooms_to_leave, "At least two different addresses in this room"
-        )
 
     def _extract_partner_addresses(self, members: List[User]) -> List[Address]:
         assert self._raiden_service is not None, "_raiden_service not set"
@@ -834,18 +827,25 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         for room in rooms_to_leave:
+            partners = self._extract_partner_addresses(room.get_joined_members())
             self.log.warning(
                 "Leaving Room",
                 reason=reason,
                 room_aliases=room.aliases,
                 room_id=room.room_id,
-                partners=[user.user_id for user in room.get_joined_members()],
+                partners=[to_checksum_address(partner) for partner in partners],
             )
             try:
-                room.leave()
+                self.retry_api_call(room.leave)
             except MatrixRequestError as ex:
-                # At a later stage this should be changed to proper error handling
-                raise TransportError("could not leave room due to request error.") from ex
+                raise TransportError(f"could not leave room due to MatrixRequestError") from ex
+
+            # update address_to_room_ids (remove room_id for address)
+            for partner in partners:
+                address_to_room_ids = self._get_room_ids_for_address(partner)
+                self._address_to_room_ids[partner] = [
+                    room_id for room_id in address_to_room_ids if room_id != room.room_id
+                ]
 
     def _initialize_broadcast_rooms(self) -> None:
         msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
@@ -879,7 +879,7 @@ class MatrixTransport(Runnable):
         greenlets = set(pool.apply_async(self.whitelist, [address]) for address in whitelist)
         gevent.joinall(greenlets, raise_error=True)
 
-    def _handle_invite(self, room_id: _RoomID, state: dict) -> None:
+    def _handle_invite(self, room_id: RoomID, state: dict) -> None:
         """Handle an invite request.
 
         Always join a room, even if the partner is not whitelisted. That was
@@ -948,25 +948,19 @@ class MatrixTransport(Runnable):
             join_rules_event = join_rules_events[0]
             private_room = join_rules_event["content"].get("join_rule") == "invite"
 
-        # we join room and _set_room_id_for_address despite room privacy and requirements,
-        # _get_room_ids_for_address will take care of returning only matching rooms and
-        # _leave_unused_rooms will clear it in the future, if and when needed
-        room: Optional[Room] = None
-        last_ex: Optional[Exception] = None
-        retry_interval = 0.1
-        for _ in range(JOIN_RETRIES):
-            try:
-                room = self._client.join_room(room_id)
-            except MatrixRequestError as e:
-                last_ex = e
-                if self._stop_event.wait(retry_interval):
-                    break
-                retry_interval = retry_interval * 2
-            else:
-                break
-        else:
-            assert last_ex is not None
-            raise last_ex  # re-raise if couldn't succeed in retries
+        room = None
+        # try to join the room
+        try:
+            room = self.retry_api_call(self._client.join_room, room_id_or_alias=room_id)
+        except MatrixRequestError as ex:
+            # this is catching invitation to room of invalid server -> rejecting the invite
+            if ex.code == 404 and ex.content == {
+                "errcode": "M_UNKNOWN",
+                "error": "No known servers",
+            }:
+                # reject invite by "leaving" the room
+                dummy_room = Room(self._client, room_id)
+                self._leave_unexpected_rooms([dummy_room])
 
         assert room is not None, f"joining room {room} failed"
 
@@ -977,17 +971,25 @@ class MatrixTransport(Runnable):
             self.log.warning("Got invite to broadcast room, ignoring", inviting_user=user)
             return
 
-        # room state may not populated yet, so we populate 'invite_only' from event
-        room.invite_only = private_room
-
-        self._set_room_id_for_address(address=peer_address, room_id=room_id)
-
         self.log.debug(
             "Joined from invite",
             room_id=room_id,
             aliases=room.aliases,
             inviting_address=to_checksum_address(peer_address),
         )
+
+        # room state may not populated yet, so we populate 'invite_only' from event
+        room.invite_only = private_room
+        self._set_room_id_for_address(address=peer_address, room_id=room_id)
+
+    def _handle_member_join(self, room_id: RoomID) -> None:
+        room = self._client.rooms[room_id]
+        partner_addresses = self._extract_partner_addresses(room.get_joined_members())
+
+        if len(partner_addresses) > 1:
+            self._leave_unexpected_rooms(
+                [room], "Users from more than one address joined the room"
+            )
 
     def _handle_text(self, room: Room, message: MatrixMessage) -> List[Message]:
         """Handle a single Matrix message.
@@ -1243,35 +1245,27 @@ class MatrixTransport(Runnable):
             room = self._client.create_room(None, invitees=partner_user_ids, is_public=False)
             self.log.debug("Created private room", room=room, invitees=partner_users)
 
-            retry_interval = ROOM_JOIN_RETRY_INTERVAL
-            for _ in range(JOIN_RETRIES):
-                self.log.debug(
-                    "Fetching room members",
-                    room=room,
-                    partner_address=to_checksum_address(address),
-                )
-                try:
-                    members = room.get_joined_members(force_resync=True)
-                except MatrixRequestError as e:
-                    if e.code < 500:
-                        raise
+            self.log.debug(
+                "Fetching room members", room=room, partner_address=to_checksum_address(address)
+            )
 
-                # The display name signatures have been validated already.
-                partner_joined = any(member.user_id in partner_user_ids for member in members)
+            def partner_joined(fetched_members: List[User]) -> bool:
+                if fetched_members is None:
+                    return False
+                return any(member.user_id in partner_user_ids for member in fetched_members)
 
-                if partner_joined:
-                    break
+            members = self.retry_api_call(
+                room.get_joined_members, verify_response=partner_joined, force_resync=True
+            )
 
-                if self._stop_event.wait(retry_interval):
-                    return None
+            assert members is not None, "fetching members failed"
 
-                retry_interval *= ROOM_JOIN_RETRY_INTERVAL_MULTIPLIER
-
+            if not partner_joined(members):
                 self.log.debug(
                     "Peer has not joined from invite yet, should join eventually",
                     room=room,
                     partner_address=to_checksum_address(address),
-                    retry_interval=retry_interval,
+                    retry_interval=RETRY_INTERVAL,
                 )
 
             # Here, the list of valid user ids is composed of
@@ -1380,8 +1374,10 @@ class MatrixTransport(Runnable):
             return
 
         room = self._client.rooms[room_ids[0]]
+
         if not room._members:
             room.get_joined_members(force_resync=True)
+
         if user.user_id not in room._members:
             self.log.debug(
                 "Inviting", peer_address=to_checksum_address(peer_address), user=user, room=room
@@ -1402,7 +1398,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 
-    def _set_room_id_for_address(self, address: Address, room_id: _RoomID) -> None:
+    def _set_room_id_for_address(self, address: Address, room_id: RoomID) -> None:
 
         assert not room_id or room_id in self._client.rooms, "Invalid room_id"
 
@@ -1412,7 +1408,7 @@ class MatrixTransport(Runnable):
         room_ids = [room_id] + [r for r in room_ids if r != room_id]
         self._address_to_room_ids[address] = room_ids
 
-    def _get_room_ids_for_address(self, address: Address) -> List[_RoomID]:
+    def _get_room_ids_for_address(self, address: Address) -> List[RoomID]:
         address_hex: AddressHex = to_checksum_address(address)
         room_ids = self._address_to_room_ids[address]
 
@@ -1423,3 +1419,44 @@ class MatrixTransport(Runnable):
             for room_id in room_ids
             if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
         ]
+
+    def retry_api_call(
+        self,
+        method_with_api_request: Callable,
+        verify_response: Callable[[Any], bool] = lambda x: True,
+        retries: int = JOIN_RETRIES,
+        retry_interval: float = RETRY_INTERVAL,
+        retry_interval_multiplier: float = RETRY_INTERVAL_MULTIPLIER,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        This method wraps around api calls to add a retry mechanism
+        in case of failure or unsatisfying response
+
+        Args:
+            method_with_api_request: wrapped api call
+            verify_response: verify response or try again
+            retries: number of retries
+            retry_interval: retry interval
+            retry_interval_multiplier: multiplier to prolong the waiting interval
+            *args: will be passed to method_with_api_request
+            **kwargs: will be passed to method_with_api_request
+        """
+        return_value = None
+        last_ex = None
+        for _ in range(retries):
+            try:
+                return_value = method_with_api_request(*args, **kwargs)
+                if verify_response(return_value):
+                    return return_value
+            except MatrixError as e:
+                last_ex = e
+            finally:
+                if self._stop_event.wait(retry_interval):
+                    return return_value
+                retry_interval = retry_interval * retry_interval_multiplier
+
+        if last_ex is None:
+            return return_value
+        raise last_ex

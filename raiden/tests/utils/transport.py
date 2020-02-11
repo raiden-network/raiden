@@ -28,7 +28,7 @@ from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Iterable, Port, Signature
+from raiden.utils.typing import Iterable, Port, RoomID, Signature
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
 _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
@@ -39,7 +39,9 @@ SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
 def new_client(
-    handle_messages_callback: Callable[[MatrixSyncMessages], bool], server: "ParsedURL"
+    handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    handle_member_join_callback: Callable[[RoomID], None],
+    server: "ParsedURL",
 ) -> GMatrixClient:
     server_name = server.netloc
 
@@ -47,10 +49,18 @@ def new_client(
     username = str(to_normalized_address(signer.address))
     password = encode_hex(signer.sign(server_name.encode()))
 
-    client = GMatrixClient(handle_messages_callback, server)
+    client = GMatrixClient(
+        handle_messages_callback=handle_messages_callback,
+        handle_member_join_callback=handle_member_join_callback,
+        base_url=server,
+    )
     client.login(username, password, sync=False)
 
     return client
+
+
+def ignore_member_join(_room_id: RoomID) -> None:
+    return None
 
 
 def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
@@ -58,11 +68,11 @@ def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
 
 
 def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
-    client = new_client(ignore_messages, servers[0])
+    client = new_client(ignore_messages, ignore_member_join, servers[0])
     room = client.create_room(alias=broadcast_room_name, is_public=True)
 
     for server in servers[1:]:
-        client = new_client(ignore_messages, server)
+        client = new_client(ignore_messages, ignore_member_join, server)
 
         # A user must join the room to create the room in the federated server
         room = client.join_room(room.aliases[0])

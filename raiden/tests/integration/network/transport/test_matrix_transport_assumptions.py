@@ -6,6 +6,7 @@ import pytest
 from matrix_client.errors import MatrixRequestError
 
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
+from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import (
     join_broadcast_room,
     login,
@@ -17,18 +18,19 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
 )
 from raiden.tests.utils import factories
-from raiden.tests.utils.transport import ignore_messages, new_client
+from raiden.tests.utils.mocks import MockRaidenService
+from raiden.tests.utils.transport import ignore_member_join, ignore_messages, new_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
-from raiden.utils.typing import Any, Dict, Tuple
+from raiden.utils.typing import Any, Dict, List, Tuple
 
 # https://matrix.org/docs/spec/appendices#user-identifiers
 USERID_VALID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-.=_/"
 
 
 def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
-    client = make_client(ignore_messages, [server])
+    client = make_client(ignore_messages, ignore_member_join, [server])
     signer = factories.make_signer()
 
     login(client, signer)
@@ -132,13 +134,13 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
     server1_client.create_room(room_alias_prefix, is_public=True)
 
     # Should have the one room we created
-    public_room = next(iter(server1_client.get_rooms().values()))
+    public_room = next(iter(server1_client.rooms.values()))
 
     for local_server in local_matrix_servers[1:]:
-        client = new_client(ignore_messages, local_server)
-        assert public_room.room_id not in client.get_rooms()
+        client = new_client(ignore_messages, ignore_member_join, local_server)
+        assert public_room.room_id not in client.rooms
         client.join_room(public_room.aliases[0])
-        assert public_room.room_id in client.get_rooms()
+        assert public_room.room_id in client.rooms
 
         alias_on_current_server = f"#{room_alias_prefix}:{local_server.netloc}"
         client.api.set_room_alias(public_room.room_id, alias_on_current_server)
@@ -255,3 +257,62 @@ def test_assumption_matrix_returns_same_id_for_same_filter_payload(chain_id, loc
     # Try again and make sure the filter has the same ID
     second_sync_filter_id = client.create_sync_filter(not_rooms=[broadcast_room])
     assert first_sync_filter_id == second_sync_filter_id
+
+
+@pytest.mark.parametrize("number_of_transports", [20])
+@pytest.mark.parametrize("matrix_server_count", [1])
+def test_assumption_receive_all_state_events_upon_first_sync_after_join(
+    matrix_transports, number_of_transports, monkeypatch
+):
+    """
+    Test that independently of the number of timeline events in the room
+    the first sync after the join always contains all room state events
+    more explicitly all member joins. This means the user always knows
+    all members of a room at the first sync after the joining the room.
+    (Some state events are placed in the timeline history. That does not
+    change the logic but it must be given that no state events are filtered
+    due to limitation of the timeline limit filter)
+    """
+    transports: List[MatrixTransport] = list()
+    # it is necessary to monkeypatch leave_unexpected_rooms
+    # otherwise rooms would be left automatically when members > 2
+    monkeypatch.setattr(
+        MatrixTransport, "_leave_unexpected_rooms", lambda self, rooms_to_leave, reason: None
+    )
+
+    # start all transports
+    for transport in matrix_transports:
+        raiden_service = MockRaidenService()
+        transport.start(raiden_service, [], None)
+        transports.append(transport)
+
+    transport0 = transports[0]
+    transport1 = transports[1]
+    room0 = transport0._client.create_room()
+
+    # invite every user but transport[1]
+    for transport in transports[2:]:
+        room0.invite_user(transport._user_id)
+        transport0._client.synced.wait()
+
+    # wait for every user to be joined
+    while len(room0.get_joined_members()) < number_of_transports - 1:
+        transport0._client.synced.wait()
+
+    # start filling timeline events by sending messages
+    for i in range(1, 100):
+        room0.send_text(f"ping{i}")
+        gevent.sleep(0.05)
+
+    # finally invite transport[1]
+    room0.invite_user(transport1._user_id)
+
+    # wait for the first sync after join
+    while room0.room_id not in transport1._client.rooms:
+        transport1._client.synced.wait()
+    transport1._client.synced.wait()
+
+    # check that all information about existing members are received
+    assert (
+        len(transport1._client.rooms[room0.room_id].get_joined_members()) == number_of_transports
+    )

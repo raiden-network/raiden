@@ -199,3 +199,6 @@ ErrorType = Union[Type["RaidenRecoverableError"], Type["RaidenUnrecoverableError
 LockedTransferType = Union["LockedTransferUnsignedState", "LockedTransferSignedState"]
 
 DatabasePath = Union[Path, Literal[":memory:"]]
+
+T_RoomID = str
+RoomID = NewType("RoomID", T_RoomID)
