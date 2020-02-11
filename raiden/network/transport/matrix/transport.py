@@ -462,8 +462,6 @@ class MatrixTransport(Runnable):
         self._client.message_worker.link_value(on_success)
         self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
-        self._client.set_presence_state(UserPresence.ONLINE.value)
-
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
             if not retrier:
