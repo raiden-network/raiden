@@ -28,7 +28,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_address
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Set, T_ChannelID
 from raiden_contracts.constants import (
@@ -143,8 +143,8 @@ def test_token_network_proxy(
     msg = "Hex encoded addresses are not supported, an assertion must be raised"
     with pytest.raises(AssertionError):
         c1_token_network_proxy.get_channel_identifier(
-            participant1=to_checksum_address(c1_client.address),
-            participant2=to_checksum_address(c2_client.address),
+            participant1=to_hex_address(c1_client.address),
+            participant2=to_hex_address(c2_client.address),
             block_identifier="latest",
         )
         pytest.fail(msg)

@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
-from eth_utils import decode_hex, encode_hex
+from eth_utils import decode_hex, encode_hex, to_canonical_address
 
 from raiden.exceptions import RaidenError
 from raiden.utils.formatting import to_checksum_address
@@ -85,7 +85,7 @@ class AccountManager:
                                 # we expect a dict in specific format.
                                 # Anything else is not a keyfile
                                 raise InvalidAccountFile(f"Invalid keystore file {fullpath}")
-                            address = to_checksum_address(data["address"])
+                            address = to_checksum_address(to_canonical_address(data["address"]))
                             self.accounts[address] = str(fullpath)
                     except OSError as ex:
                         msg = "Can not read account file (errno=%s)" % ex.errno

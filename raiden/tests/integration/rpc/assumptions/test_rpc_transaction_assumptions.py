@@ -5,7 +5,6 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
 
 
@@ -14,7 +13,7 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     check_block = deploy_client.get_checking_block()
     startgas = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
@@ -32,7 +31,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # the gas estimation returns 0 here, so hardcode a value
     startgas = safe_gas_limit(22000)
@@ -53,7 +52,7 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # divide the estimate by 2 to run into out-of-gas
     check_block = deploy_client.get_checking_block()

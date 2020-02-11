@@ -53,7 +53,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
@@ -1411,7 +1411,7 @@ class MatrixTransport(Runnable):
         self._address_to_room_ids[address] = room_ids
 
     def _get_room_ids_for_address(self, address: Address) -> List[RoomID]:
-        address_hex: AddressHex = to_checksum_address(address)
+        address_hex: AddressHex = to_hex_address(address)
         room_ids = self._address_to_room_ids[address]
 
         self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)

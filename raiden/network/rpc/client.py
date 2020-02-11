@@ -18,7 +18,12 @@ from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi, 
 from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
-from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS_HEX, EthClient
+from raiden.constants import (
+    NO_STATE_QUERY_AFTER_BLOCKS,
+    NULL_ADDRESS_CHECKSUM,
+    NULL_ADDRESS_HEX,
+    EthClient,
+)
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
@@ -110,7 +115,7 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
     try:
-        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS_HEX])
+        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS_CHECKSUM])
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the parity rpc interface "
@@ -118,13 +123,13 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
 
-def parity_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce:
+def parity_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
     next_nonce_encoded = web3.manager.request_blocking("parity_nextNonce", [address])
     return Nonce(int(next_nonce_encoded, 16))
 
 
-def geth_discover_next_available_nonce(web3: Web3, address: AddressHex) -> Nonce:
+def geth_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
     return web3.eth.getTransactionCount(address, "pending")
 
@@ -142,7 +147,7 @@ def check_address_has_code(
         block_hash = encode_hex(given_block_identifier)
         given_block_identifier = client.web3.eth.getBlock(block_hash).number
 
-    result = client.web3.eth.getCode(to_checksum_address(address), given_block_identifier)
+    result = client.web3.eth.getCode(address, given_block_identifier)
 
     if not result:
         raise AddressWithoutCode(
@@ -552,15 +557,14 @@ class JSONRPCClient:
             raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
 
         address = privatekey_to_address(privkey)
-        address_checksummed = to_checksum_address(address)
 
         if eth_node is EthClient.PARITY:
             parity_assert_rpc_interfaces(web3)
-            available_nonce = parity_discover_next_available_nonce(web3, address_checksummed)
+            available_nonce = parity_discover_next_available_nonce(web3, address)
 
         elif eth_node is EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
-            available_nonce = geth_discover_next_available_nonce(web3, address_checksummed)
+            available_nonce = geth_discover_next_available_nonce(web3, address)
 
         self.eth_node = eth_node
         self.privkey = privkey
@@ -631,7 +635,7 @@ class JSONRPCClient:
 
     def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
-        return self.web3.eth.getBalance(to_checksum_address(account), "pending")
+        return self.web3.eth.getBalance(account, "pending")
 
     def parity_get_pending_transaction_hash_by_nonce(
         self, address: AddressHex, nonce: Nonce
@@ -646,7 +650,7 @@ class JSONRPCClient:
         transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
         log.debug("RETURNED TRANSACTIONS", transactions=transactions)
         for tx in transactions:
-            address_match = to_checksum_address(tx["from"]) == address
+            address_match = tx["from"] == address
             if address_match and int(tx["nonce"], 16) == nonce:
                 return tx["hash"]
         return None
@@ -686,7 +690,7 @@ class JSONRPCClient:
         """
 
         fn = getattr(contract.functions, function)
-        address = to_checksum_address(self.address)
+        address = self.address
         if self.eth_node is EthClient.GETH:
             # Unfortunately geth does not follow the ethereum JSON-RPC spec and
             # does not accept a block identifier argument for eth_estimateGas
@@ -763,7 +767,7 @@ class JSONRPCClient:
         return tx_hash
 
     def new_contract_proxy(self, abi: ABI, contract_address: Address) -> Contract:
-        return self.web3.eth.contract(abi=abi, address=to_checksum_address(contract_address))
+        return self.web3.eth.contract(abi=abi, address=contract_address)
 
     def get_transaction_receipt(self, tx_hash: TransactionHash) -> Dict[str, Any]:
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
@@ -796,7 +800,7 @@ class JSONRPCClient:
         receipt = self.poll(transaction_hash)
         contract_address = receipt["contractAddress"]
 
-        deployed_code = self.web3.eth.getCode(to_checksum_address(contract_address))
+        deployed_code = self.web3.eth.getCode(contract_address)
 
         if not deployed_code:
             raise RuntimeError(
@@ -883,7 +887,7 @@ class JSONRPCClient:
             {
                 "fromBlock": from_block,
                 "toBlock": to_block,
-                "address": to_checksum_address(contract_address),
+                "address": contract_address,
                 "topics": topics,
             }
         )
@@ -908,8 +912,7 @@ class JSONRPCClient:
         if transaction_executed:
             return
 
-        our_address = to_checksum_address(self.address)
-        balance = self.web3.eth.getBalance(our_address, block_identifier)
+        balance = self.web3.eth.getBalance(self.address, block_identifier)
         required_balance = required_gas * self.gas_price()
         if balance < required_balance:
             msg = f"Failed to execute {transaction_name} due to insufficient ETH"

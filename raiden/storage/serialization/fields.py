@@ -8,7 +8,7 @@ from eth_utils import to_bytes, to_canonical_address, to_hex
 from marshmallow_polyfield import PolyField
 
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tuple
 
 
@@ -47,7 +47,7 @@ class AddressField(marshmallow.fields.Field):
     """ Converts addresses from bytes to hex and vice versa """
 
     def _serialize(self, value: Address, attr: Any, obj: Any, **kwargs: Any) -> str:
-        return to_checksum_address(value)
+        return to_hex_address(value)
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> Address:
         try:
@@ -75,13 +75,13 @@ class QueueIdentifierField(marshmallow.fields.Field):
     def _canonical_id_to_string(canonical_id: CanonicalIdentifier) -> str:
         return (
             f"{canonical_id.chain_identifier}|"
-            f"{to_checksum_address(canonical_id.token_network_address)}|"
+            f"{to_hex_address(canonical_id.token_network_address)}|"
             f"{canonical_id.channel_identifier}"
         )
 
     def _serialize(self, value: QueueIdentifier, attr: Any, obj: Any, **kwargs: Any) -> str:
         return (
-            f"{to_checksum_address(value.recipient)}"
+            f"{to_hex_address(value.recipient)}"
             f"-{self._canonical_id_to_string(value.canonical_identifier)}"
         )
 
@@ -144,7 +144,7 @@ class NetworkXGraphField(marshmallow.fields.Field):
 
     def _serialize(self, value: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
         return json.dumps(
-            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in value.edges]
+            [(to_hex_address(edge[0]), to_hex_address(edge[1])) for edge in value.edges]
         )
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:

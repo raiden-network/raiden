@@ -20,7 +20,7 @@ from raiden.settings import (
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transport import ignore_member_join, ignore_messages, new_client
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, List, Tuple
@@ -113,7 +113,7 @@ def test_assumption_search_user_directory_returns_federated_users(chain_id, loca
         addresses.append(signer.address)
 
     for address in addresses:
-        assert user_federated.search_user_directory(to_checksum_address(address))
+        assert user_federated.search_user_directory(to_hex_address(address))
 
 
 @pytest.mark.parametrize("matrix_server_count", [3])

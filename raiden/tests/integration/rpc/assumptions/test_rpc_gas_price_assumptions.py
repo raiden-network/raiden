@@ -6,7 +6,6 @@ from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import Callable, Dict, GasPrice, List, Port, PrivateKey
 
@@ -40,7 +39,7 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
@@ -71,7 +70,7 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(deploy_client.web3, deploy_client.privkey)
@@ -143,7 +142,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     )
 
     address = normal_gas_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     check_block = deploy_client.get_checking_block()
     gas_estimate = deploy_client.estimate_gas(zero_gas_proxy, check_block, "ret")
@@ -188,7 +187,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     )
 
     address = normal_gas_proxy.address
-    assert len(client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(client.web3.eth.getCode(address)) > 0
 
     check_block = client.get_checking_block()
     gas_estimate = client.estimate_gas(zero_gas_proxy, check_block, "ret")
@@ -239,7 +238,7 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
@@ -274,7 +273,7 @@ def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> No
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 

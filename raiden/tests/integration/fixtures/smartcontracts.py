@@ -19,7 +19,6 @@ from raiden.tests.utils.smartcontracts import (
     deploy_token,
     deploy_tokens_and_fund_accounts,
 )
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
@@ -240,7 +239,7 @@ def deploy_token_network_registry_and_return_address(
     contract_manager: ContractManager,
 ) -> TokenNetworkRegistryAddress:
     constructor_arguments = [
-        to_checksum_address(secret_registry_address),
+        secret_registry_address,
         chain_id,
         settle_timeout_min,
         settle_timeout_max,

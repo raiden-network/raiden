@@ -1,18 +1,18 @@
 import pytest
 
 from raiden.constants import RECEIPT_FAILURE_CODE
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.formatting import to_checksum_address
 
 SSTORE_COST = 20000
 
 
-def test_estimate_gas_fail(deploy_client):
+def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
     """ A JSON RPC estimate gas call for a throwing transaction returns None"""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     check_block = deploy_client.get_checking_block()
 
@@ -23,7 +23,9 @@ def test_estimate_gas_fail(deploy_client):
     assert deploy_client.estimate_gas(contract_proxy, check_block, "fail_require") is None, msg
 
 
-def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(deploy_client):
+def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
+    deploy_client: JSONRPCClient
+) -> None:
     """ Gas estimation fails if the transaction execution requires more gas
     then the block's gas limit.
     """
@@ -50,7 +52,7 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(deploy_clie
 
 
 @pytest.mark.xfail(reason="The pending block is not taken into consideration")
-def test_estimate_gas_defaults_to_pending(deploy_client):
+def test_estimate_gas_defaults_to_pending(deploy_client: JSONRPCClient) -> None:
     """Estimating gas without an explicit block identifier always return an
     usable value.
 

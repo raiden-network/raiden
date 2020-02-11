@@ -1,5 +1,5 @@
 import pytest
-from eth_utils import to_bytes, to_int
+from eth_utils import to_int
 
 from raiden.blockchain.filters import (
     get_filter_args_for_all_events_from_channel,
@@ -20,7 +20,7 @@ def test_get_filter_args(contract_manager):
 
     assert event_filter_params["topics"][0] is None
     assert to_int(hexstr=event_filter_params["topics"][1]) == channel_identifier
-    assert to_bytes(hexstr=event_filter_params["address"]) == token_network_address
+    assert event_filter_params["address"] == token_network_address
     assert event_filter_params["fromBlock"] == 0
     assert event_filter_params["toBlock"] == "latest"
 
@@ -44,6 +44,6 @@ def test_get_filter_args(contract_manager):
 
     assert event_filter_params["topics"][0] is not None
     assert to_int(hexstr=event_filter_params["topics"][1]) == channel_identifier
-    assert to_bytes(hexstr=event_filter_params["address"]) == token_network_address
+    assert event_filter_params["address"] == token_network_address
     assert event_filter_params["fromBlock"] == 100
     assert event_filter_params["toBlock"] == 200
