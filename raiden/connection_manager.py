@@ -30,6 +30,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gevent import spawn_named
 from raiden.utils.typing import (
     Address,
+    AddressHex,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -89,7 +90,7 @@ class ConnectionManager:  # pragma: no unittest
 
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
-    BOOTSTRAP_ADDR_HEX = to_checksum_address("2" * 40)
+    BOOTSTRAP_ADDR_HEX = AddressHex("0x" + "2" * 40)
     BOOTSTRAP_ADDR = to_canonical_address(BOOTSTRAP_ADDR_HEX)
 
     def __init__(self, raiden: "RaidenService", token_network_address: TokenNetworkAddress):

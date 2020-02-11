@@ -24,7 +24,6 @@ from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
 from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.typing import AddressHex
 
@@ -41,7 +40,7 @@ JSONResponse = Dict[str, Any]
 
 def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
     if user_id:
-        return to_checksum_address(user_id.split(":", 1)[0][1:])
+        return AddressHex(user_id.split(":", 1)[0])
 
     return None
 

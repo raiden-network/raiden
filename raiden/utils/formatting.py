@@ -1,6 +1,4 @@
-import functools
-
-import eth_utils
+from eth_hash.auto import keccak
 from eth_utils import (
     encode_hex,
     is_0x_prefixed,
@@ -12,7 +10,10 @@ from eth_utils import (
 from raiden.exceptions import InvalidChecksummedAddress
 from raiden.utils.typing import (
     Address,
+    AddressHex,
+    AddressTypes,
     BlockSpecification,
+    ChecksumAddress,
     Iterable,
     List,
     Optional,
@@ -37,6 +38,27 @@ def address_checksum_and_decode(addr: str) -> Address:
     return to_canonical_address(addr)
 
 
+def to_checksum_address(address: AddressTypes) -> ChecksumAddress:
+    """Implementation of EIP-55 checksum address.
+
+    Adaptation of https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md#specification for
+    python 3.7+.
+
+    Refined after: https://github.com/ethereum/eips/issues/55#issuecomment-261521584
+
+    Note: As of today (eth-utils==1.8.1), this is ~4-5 times faster than
+    `eth_utils.to_checksum_address`.
+    """
+    out = ""
+    v = int.from_bytes(keccak(bytes(address.hex(), "ascii")), byteorder="big")
+    for i, char in enumerate(address.hex()):
+        if char in "0123456789":
+            out += char
+        else:
+            out += char.upper() if (v & (2 ** (255 - 4 * i))) else char.lower()
+    return ChecksumAddress(AddressHex("0x" + out))
+
+
 def pex(data: bytes) -> str:
     return remove_0x_prefix(encode_hex(data))[:8]
 
@@ -51,11 +73,11 @@ def optional_address_to_string(
     if address is None:
         return None
 
-    return to_checksum_address(address)
+    return to_hex_address(address)
 
 
-# to_checksum_address is slow, so let's cache the last 1000 results
-to_checksum_address = functools.lru_cache(maxsize=1000)(eth_utils.to_checksum_address)
+def to_hex_address(address: AddressTypes) -> AddressHex:
+    return AddressHex("0x" + address.hex())
 
 
 def format_block_id(block_id: BlockSpecification) -> str:

@@ -3,10 +3,11 @@ from enum import Enum
 
 from eth_utils import keccak, to_canonical_address
 
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     AdditionalHash,
+    Address,
     BalanceHash,
     BlockHash,
     BlockNumber,
@@ -86,7 +87,7 @@ STATE_PRUNING_SAFETY_MARGIN = 8
 NO_STATE_QUERY_AFTER_BLOCKS = STATE_PRUNING_AFTER_BLOCKS - STATE_PRUNING_SAFETY_MARGIN
 
 NULL_ADDRESS_BYTES = bytes(20)
-NULL_ADDRESS_HEX = to_checksum_address(NULL_ADDRESS_BYTES)
+NULL_ADDRESS_HEX = to_hex_address(Address(NULL_ADDRESS_BYTES))
 
 EMPTY_HASH = BlockHash(bytes(32))
 EMPTY_TRANSACTION_HASH = TransactionHash(bytes(32))
