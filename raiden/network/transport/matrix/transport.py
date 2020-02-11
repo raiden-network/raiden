@@ -368,8 +368,6 @@ class MatrixTransport(Runnable):
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages = True
 
-        self._invite_queue: List[Tuple[_RoomID, dict]] = []
-
         self._address_mgr: UserAddressManager = UserAddressManager(
             client=self._client,
             displayname_cache=self._displayname_cache,
@@ -477,15 +475,7 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix started", config=self._config)
 
         # Handle any delayed invites in the future
-        self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
         self._schedule_new_greenlet(self._health_check_worker)
-
-    def _process_queued_invites(self) -> None:
-        if self._invite_queue:
-            self.log.debug("Processing queued invites", queued_invites=len(self._invite_queue))
-            for room_id, state in self._invite_queue:
-                self._handle_invite(room_id, state)
-            self._invite_queue.clear()
 
     def _run(self) -> None:  # type: ignore
         """ Runnable main method, perform wait on long-running subtasks """
@@ -894,11 +884,6 @@ class MatrixTransport(Runnable):
         from non-whitelisted nodes.
         """
         if self._stop_event.ready():
-            return
-
-        if self._starting:
-            self.log.debug("Queueing invite", room_id=room_id)
-            self._invite_queue.append((room_id, state))
             return
 
         invite_events = [
