@@ -89,6 +89,7 @@ def estimate_blocktime(rpc_client: JSONRPCClient, oldest: int = 256) -> float:
 # TODO: add test scenarios for
 # - subsequent `connect()` calls with different `funds` arguments
 # - `connect()` calls with preexisting channels
+@pytest.mark.skip(reason="Flaky, see https://github.com/raiden-network/raiden/issues/5860")
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [6])
 @pytest.mark.parametrize("channels_per_node", [0])
