@@ -907,7 +907,15 @@ class TokenNetwork:
         # making the second deposit fail.
         transaction_hash = None
         with self.token.token_lock:
-            self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+            # HACK: The hack bellow is necessary to make sure the gas
+            # estimation of an approve works concurrently with the mining of a
+            # deposit. If the *exact* amount is used, the storage of the smart
+            # contract will be set to `0` once the `deposit` is mined, this
+            # means the gas estimation of the concurrent `approve` will be mis
+            # by the 20_000 required by the `SSTORE` to change the value from
+            # `0`.
+            allowance = TokenAmount(amount_to_deposit + 1)
+            self.token.approve(allowed_address=Address(self.address), allowance=allowance)
 
             gas_limit = self.client.estimate_gas(
                 self.proxy,
@@ -925,10 +933,10 @@ class TokenNetwork:
                 )
                 log_details["gas_limit"] = gas_limit
 
-                transaction_hash = self.proxy.transact(
+                transaction_hash = self.client.transact(
                     self.proxy,
-                    "setTotalDeposit",
-                    gas_limit,
+                    function_name="setTotalDeposit",
+                    startgas=gas_limit,
                     channel_identifier=channel_identifier,
                     participant=self.node_address,
                     total_deposit=total_deposit,
