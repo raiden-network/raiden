@@ -19,6 +19,7 @@ from web3._utils.contracts import (
 from web3._utils.empty import empty
 from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
+from web3.exceptions import TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 
@@ -844,7 +845,11 @@ class JSONRPCClient:
         transaction_hash_hex = encode_hex(transaction_hash)
 
         while True:
-            tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash_hex)
+            tx_receipt: Optional[TxReceipt] = None
+            try:
+                tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash_hex)
+            except TransactionNotFound:
+                pass
 
             # Parity (as of 2.5.7) always returns a receipt. When the
             # transaction is not mined in the canonical chain, the receipt will
