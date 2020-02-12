@@ -46,7 +46,7 @@ def test_token_network_deposit_race(
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
     assert token_network_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
 
-    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    token_network_address = to_canonical_address(token_network_proxy.proxy.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
@@ -92,7 +92,7 @@ def test_token_network_proxy(
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
     assert token_network_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
 
-    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    token_network_address = to_canonical_address(token_network_proxy.proxy.address)
 
     c1_signer = LocalSigner(private_keys[1])
     c1_client = JSONRPCClient(web3, private_keys[1])
@@ -507,7 +507,7 @@ def test_token_network_proxy_update_transfer(
     token_network_proxy, private_keys, token_proxy, chain_id, web3, contract_manager
 ):
     """Tests channel lifecycle, with `update_transfer` before settling"""
-    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    token_network_address = to_canonical_address(token_network_proxy.proxy.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
@@ -730,7 +730,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
     If pruning limit blocks pass make sure that can_query_state_for_block returns False.
     """
 
-    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    token_network_address = to_canonical_address(token_network_proxy.proxy.address)
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(
         rpc_client=c1_client,
@@ -768,7 +768,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
 def test_token_network_actions_at_pruned_blocks(
     token_network_proxy, private_keys, token_proxy, web3, chain_id, contract_manager
 ):
-    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    token_network_address = to_canonical_address(token_network_proxy.proxy.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c1_proxy_manager = ProxyManager(

@@ -53,7 +53,7 @@ class MonitoringService:
     ) -> TokenNetworkRegistryAddress:
         return TokenNetworkRegistryAddress(
             to_canonical_address(
-                self.proxy.contract.functions.token_network_registry().call(
+                self.proxy.functions.token_network_registry().call(
                     block_identifier=block_identifier
                 )
             )
@@ -62,7 +62,7 @@ class MonitoringService:
     def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
-                self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+                self.proxy.functions.token().call(block_identifier=block_identifier)
             )
         )
 
@@ -71,8 +71,6 @@ class MonitoringService:
     ) -> ServiceRegistryAddress:
         return ServiceRegistryAddress(
             to_canonical_address(
-                self.proxy.contract.functions.service_registry().call(
-                    block_identifier=block_identifier
-                )
+                self.proxy.functions.service_registry().call(block_identifier=block_identifier)
             )
         )

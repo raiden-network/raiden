@@ -156,10 +156,8 @@ class TokenNetwork:
         )
 
         # These are constants
-        self._chain_id = proxy.contract.functions.chain_id().call()
-        self._token_address = TokenAddress(
-            to_canonical_address(proxy.contract.functions.token().call())
-        )
+        self._chain_id = proxy.functions.chain_id().call()
+        self._token_address = TokenAddress(to_canonical_address(proxy.functions.token().call()))
 
         self.address = TokenNetworkAddress(metadata.address)
         self.proxy = proxy
@@ -194,7 +192,7 @@ class TokenNetwork:
     ) -> TokenAmount:
         """ Return the deposit limit of a channel participant. """
         return TokenAmount(
-            self.proxy.contract.functions.channel_participant_deposit_limit().call(
+            self.proxy.functions.channel_participant_deposit_limit().call(
                 block_identifier=block_identifier
             )
         )
@@ -202,13 +200,13 @@ class TokenNetwork:
     def token_network_deposit_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
         """ Return the token of this manager. """
         return TokenAmount(
-            self.proxy.contract.functions.token_network_deposit_limit().call(
+            self.proxy.functions.token_network_deposit_limit().call(
                 block_identifier=block_identifier
             )
         )
 
     def safety_deprecation_switch(self, block_identifier: BlockSpecification) -> bool:
-        return self.proxy.contract.functions.safety_deprecation_switch().call(
+        return self.proxy.functions.safety_deprecation_switch().call(
             block_identifier=block_identifier
         )
 
@@ -298,7 +296,8 @@ class TokenNetwork:
         self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
     ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
+        gas_limit = self.client.estimate_gas(
+            self.proxy,
             checking_block,
             "openChannel",
             participant1=self.node_address,
@@ -306,11 +305,11 @@ class TokenNetwork:
             settle_timeout=settle_timeout,
         )
         if not gas_limit:
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.openChannel"],
@@ -347,7 +346,8 @@ class TokenNetwork:
                 gas_limit, self.metadata.gas_measurements["TokenNetwork.openChannel"]
             )
             log_details["gas_limit"] = gas_limit
-            transaction_hash = self.proxy.transact(
+            transaction_hash = self.client.transact(
+                self.proxy,
                 "openChannel",
                 gas_limit,
                 participant1=self.node_address,
@@ -407,7 +407,7 @@ class TokenNetwork:
         """
         raise_if_invalid_address_pair(participant1, participant2)
 
-        channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
+        channel_identifier = self.proxy.functions.getChannelIdentifier(
             participant=to_checksum_address(participant1),
             partner=to_checksum_address(participant2),
         ).call(block_identifier=block_identifier)
@@ -446,7 +446,7 @@ class TokenNetwork:
         """ Returns a dictionary with the channel participant information. """
         raise_if_invalid_address_pair(detail_for, partner)
 
-        data = self.proxy.contract.functions.getChannelParticipantInfo(
+        data = self.proxy.functions.getChannelParticipantInfo(
             channel_identifier=channel_identifier, participant=detail_for, partner=partner
         ).call(block_identifier=block_identifier)
 
@@ -489,7 +489,7 @@ class TokenNetwork:
                 "channel_identifier must be larger then 0 and smaller then uint256"
             )
 
-        channel_data = self.proxy.contract.functions.getChannelInfo(
+        channel_data = self.proxy.functions.getChannelInfo(
             channel_identifier=channel_identifier,
             participant1=participant1,
             participant2=participant2,
@@ -589,11 +589,11 @@ class TokenNetwork:
 
     def settlement_timeout_min(self) -> int:
         """ Returns the minimal settlement timeout for the token network. """
-        return self.proxy.contract.functions.settlement_timeout_min().call()
+        return self.proxy.functions.settlement_timeout_min().call()
 
     def settlement_timeout_max(self) -> int:
         """ Returns the maximal settlement timeout for the token network. """
-        return self.proxy.contract.functions.settlement_timeout_max().call()
+        return self.proxy.functions.settlement_timeout_max().call()
 
     def channel_is_opened(
         self,
@@ -917,7 +917,8 @@ class TokenNetwork:
         # making the second deposit fail.
         self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
-        gas_limit = self.proxy.estimate_gas(
+        gas_limit = self.client.estimate_gas(
+            self.proxy,
             checking_block,
             "setTotalDeposit",
             channel_identifier=channel_identifier,
@@ -932,7 +933,8 @@ class TokenNetwork:
             )
             log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
+            transaction_hash = self.client.transact(
+                self.proxy,
                 "setTotalDeposit",
                 gas_limit,
                 channel_identifier=channel_identifier,
@@ -1080,11 +1082,11 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
@@ -1307,7 +1309,7 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 canonical_identifier = CanonicalIdentifier(
-                    chain_identifier=self.proxy.contract.functions.chain_id().call(),
+                    chain_identifier=self.proxy.functions.chain_id().call(),
                     token_network_address=self.address,
                     channel_identifier=channel_identifier,
                 )
@@ -1381,7 +1383,8 @@ class TokenNetwork:
     ) -> None:
         checking_block = self.client.get_checking_block()
 
-        gas_limit = self.proxy.estimate_gas(
+        gas_limit = self.client.estimate_gas(
+            self.proxy,
             checking_block,
             "setTotalWithdraw",
             channel_identifier=channel_identifier,
@@ -1398,7 +1401,8 @@ class TokenNetwork:
             )
             log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
+            transaction_hash = self.client.transact(
+                self.proxy,
                 function_name="setTotalWithdraw",
                 startgas=gas_limit,
                 channel_identifier=channel_identifier,
@@ -1495,11 +1499,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="total_withdraw",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
@@ -1578,7 +1582,7 @@ class TokenNetwork:
         """
 
         canonical_identifier = CanonicalIdentifier(
-            chain_identifier=self.proxy.contract.functions.chain_id().call(),
+            chain_identifier=self.proxy.functions.chain_id().call(),
             token_network_address=self.address,
             channel_identifier=channel_identifier,
         )
@@ -1696,7 +1700,8 @@ class TokenNetwork:
         # operations. E.g. this close and a deposit or withdraw.
         with self.channel_operations_lock[partner]:
             checking_block = self.client.get_checking_block()
-            gas_limit = self.proxy.estimate_gas(
+            gas_limit = self.client.estimate_gas(
+                self.proxy,
                 checking_block,
                 "closeChannel",
                 channel_identifier=channel_identifier,
@@ -1714,7 +1719,8 @@ class TokenNetwork:
                     gas_limit, self.metadata.gas_measurements["TokenNetwork.closeChannel"]
                 )
                 log_details["gas_limit"] = gas_limit
-                transaction_hash = self.proxy.transact(
+                transaction_hash = self.client.transact(
+                    self.proxy,
                     "closeChannel",
                     gas_limit,
                     channel_identifier=channel_identifier,
@@ -1772,11 +1778,11 @@ class TokenNetwork:
 
                 # The latest block can not be used reliably because of reorgs,
                 # therefore every call using this block has to handle pruned data.
-                failed_at = self.proxy.rpc_client.get_block("latest")
+                failed_at = self.client.get_block("latest")
                 failed_at_blockhash = encode_hex(failed_at["hash"])
                 failed_at_blocknumber = failed_at["number"]
 
-                self.proxy.rpc_client.check_for_insufficient_eth(
+                self.client.check_for_insufficient_eth(
                     transaction_name="closeChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.closeChannel"],
@@ -1828,7 +1834,7 @@ class TokenNetwork:
             raise RaidenUnrecoverableError("update_transfer called with an invalid nonce")
 
         canonical_identifier = CanonicalIdentifier(
-            chain_identifier=self.proxy.contract.functions.chain_id().call(),
+            chain_identifier=self.proxy.functions.chain_id().call(),
             token_network_address=self.address,
             channel_identifier=channel_identifier,
         )
@@ -1960,7 +1966,8 @@ class TokenNetwork:
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
+        gas_limit = self.client.estimate_gas(
+            self.proxy,
             checking_block,
             "updateNonClosingBalanceProof",
             channel_identifier=channel_identifier,
@@ -1979,7 +1986,8 @@ class TokenNetwork:
                 self.metadata.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"],
             )
             log_details["gas_limit"] = gas_limit
-            transaction_hash = self.proxy.transact(
+            transaction_hash = self.client.transact(
+                self.proxy,
                 "updateNonClosingBalanceProof",
                 gas_limit,
                 channel_identifier=channel_identifier,
@@ -2093,11 +2101,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="updateNonClosingBalanceProof",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements[
@@ -2241,7 +2249,8 @@ class TokenNetwork:
     ) -> None:
         checking_block = self.client.get_checking_block()
         leaves_packed = b"".join(pending_locks.locks)
-        gas_limit = self.proxy.estimate_gas(
+        gas_limit = self.client.estimate_gas(
+            self.proxy,
             checking_block,
             "unlock",
             channel_identifier=channel_identifier,
@@ -2254,7 +2263,8 @@ class TokenNetwork:
             gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
             log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
+            transaction_hash = self.client.transact(
+                self.proxy,
                 function_name="unlock",
                 startgas=gas_limit,
                 channel_identifier=channel_identifier,
@@ -2301,11 +2311,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="unlock",
                 transaction_executed=False,
                 required_gas=UNLOCK_TX_GAS_LIMIT,
@@ -2492,8 +2502,12 @@ class TokenNetwork:
                 "participant2_locksroot": partner_locksroot,
             }
 
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "settleChannel", channel_identifier=channel_identifier, **kwargs
+        gas_limit = self.client.estimate_gas(
+            self.proxy,
+            checking_block,
+            "settleChannel",
+            channel_identifier=channel_identifier,
+            **kwargs,
         )
 
         if gas_limit:
@@ -2502,7 +2516,8 @@ class TokenNetwork:
             )
             log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
+            transaction_hash = self.client.transact(
+                self.proxy,
                 function_name="settleChannel",
                 startgas=gas_limit,
                 channel_identifier=channel_identifier,
@@ -2515,7 +2530,7 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 failed_at_blocknumber = failed_receipt["blockNumber"]
 
-                self.proxy.rpc_client.check_for_insufficient_eth(
+                self.client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.settleChannel"],
@@ -2602,7 +2617,7 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 

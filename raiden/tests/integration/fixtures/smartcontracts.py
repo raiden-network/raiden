@@ -311,7 +311,7 @@ def deploy_token_and_return_proxy(
 
     return Token(
         jsonrpc_client=deploy_client,
-        token_address=TokenAddress(token_contract.contract_address),
+        token_address=TokenAddress(to_canonical_address(token_contract.address)),
         contract_manager=contract_manager,
         block_identifier="latest",
     )

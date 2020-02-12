@@ -154,8 +154,8 @@ class SecretRegistry:
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "registerSecretBatch", secrets_to_register
+        gas_limit = self.client.estimate_gas(
+            self.proxy, checking_block, "registerSecretBatch", secrets_to_register
         )
         receipt = None
         transaction_hash = None
@@ -168,8 +168,8 @@ class SecretRegistry:
             log_details["gas_limit"] = gas_limit
 
             try:
-                transaction_hash = self.proxy.transact(
-                    "registerSecretBatch", gas_limit, secrets_to_register
+                transaction_hash = self.client.transact(
+                    self.proxy, "registerSecretBatch", gas_limit, secrets_to_register
                 )
                 receipt = self.client.poll(transaction_hash)
             except Exception as e:  # pylint: disable=broad-except
@@ -264,7 +264,7 @@ class SecretRegistry:
             # Either of these is a bug. The contract does not use
             # assert/revert, and the account should always be funded
             assert gas_limit
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="registerSecretBatch",
                 transaction_executed=True,
                 required_gas=gas_limit,
@@ -286,7 +286,7 @@ class SecretRegistry:
         """Return the block number at which the secret for `secrethash` was
         registered, None if the secret was never registered.
         """
-        result = self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call(
+        result = self.proxy.functions.getSecretRevealBlockHeight(secrethash).call(
             block_identifier=block_identifier
         )
 

@@ -26,4 +26,4 @@ def deploy_contract_web3(
         contract=contract_manager.get_contract(contract_name),
         constructor_parameters=constructor_arguments,
     )
-    return Address(to_canonical_address(contract_proxy.contract.address))
+    return Address(to_canonical_address(contract_proxy.address))

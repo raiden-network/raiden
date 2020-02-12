@@ -6,7 +6,6 @@ from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenRecoverableError
 from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
@@ -35,10 +34,9 @@ class Token:
         contract_manager: ContractManager,
         block_identifier: BlockSpecification,
     ) -> None:
-        contract = jsonrpc_client.new_contract(
+        proxy = jsonrpc_client.new_contract_proxy(
             contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN), Address(token_address)
         )
-        proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
@@ -62,9 +60,7 @@ class Token:
         self, owner: Address, spender: Address, block_identifier: BlockSpecification
     ) -> TokenAmount:
         return TokenAmount(
-            self.proxy.contract.functions.allowance(owner, spender).call(
-                block_identifier=block_identifier
-            )
+            self.proxy.functions.allowance(owner, spender).call(block_identifier=block_identifier)
         )
 
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
@@ -92,16 +88,16 @@ class Token:
             with log_transaction(log, "approve", log_details):
                 checking_block = self.client.get_checking_block()
                 error_prefix = "Call to approve will fail"
-                gas_limit = self.proxy.estimate_gas(
-                    checking_block, "approve", allowed_address, allowance
+                gas_limit = self.client.estimate_gas(
+                    self.proxy, checking_block, "approve", allowed_address, allowance
                 )
 
                 if gas_limit:
                     error_prefix = "Call to approve failed"
                     gas_limit = safe_gas_limit(gas_limit)
                     log_details["gas_limit"] = gas_limit
-                    transaction_hash = self.proxy.transact(
-                        "approve", gas_limit, allowed_address, allowance
+                    transaction_hash = self.client.transact(
+                        self.proxy, "approve", gas_limit, allowed_address, allowance
                     )
 
                     receipt = self.client.poll(transaction_hash)
@@ -140,11 +136,11 @@ class Token:
                         )
 
                 else:
-                    failed_at = self.proxy.rpc_client.get_block("latest")
+                    failed_at = self.client.get_block("latest")
                     failed_at_blockhash = encode_hex(failed_at["hash"])
                     failed_at_blocknumber = failed_at["number"]
 
-                    self.proxy.rpc_client.check_for_insufficient_eth(
+                    self.client.check_for_insufficient_eth(
                         transaction_name="approve",
                         transaction_executed=False,
                         required_gas=GAS_REQUIRED_FOR_APPROVE,
@@ -173,9 +169,7 @@ class Token:
         self, address: Address, block_identifier: BlockSpecification = "latest"
     ) -> Balance:
         """ Return the balance of `address`. """
-        return self.proxy.contract.functions.balanceOf(address).call(
-            block_identifier=block_identifier
-        )
+        return self.proxy.functions.balanceOf(address).call(block_identifier=block_identifier)
 
     def total_supply(
         self, block_identifier: BlockSpecification = "latest"
@@ -189,9 +183,7 @@ class Token:
         ERC20 standard (the function totalSupply is missing). If that happens
         this method will return `None`.
         """
-        total_supply = self.proxy.contract.functions.totalSupply().call(
-            block_identifier=block_identifier
-        )
+        total_supply = self.proxy.functions.totalSupply().call(block_identifier=block_identifier)
 
         if isinstance(total_supply, int):
             return TokenAmount(total_supply)
@@ -220,15 +212,17 @@ class Token:
 
             with log_transaction(log, "transfer", log_details):
                 checking_block = self.client.get_checking_block()
-                gas_limit = self.proxy.estimate_gas(checking_block, "transfer", to_address, amount)
+                gas_limit = self.client.estimate_gas(
+                    self.proxy, checking_block, "transfer", to_address, amount
+                )
                 failed_receipt = None
 
                 if gas_limit is not None:
                     gas_limit = safe_gas_limit(gas_limit)
                     log_details["gas_limit"] = gas_limit
 
-                    transaction_hash = self.proxy.transact(
-                        "transfer", gas_limit, to_address, amount
+                    transaction_hash = self.client.transact(
+                        self.proxy, "transfer", gas_limit, to_address, amount
                     )
 
                     receipt = self.client.poll(transaction_hash)
@@ -244,7 +238,7 @@ class Token:
                         self.client.blockhash_from_blocknumber(failed_at_number)
                     )
 
-                    self.proxy.rpc_client.check_for_insufficient_eth(
+                    self.client.check_for_insufficient_eth(
                         transaction_name="transfer",
                         transaction_executed=False,
                         required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,

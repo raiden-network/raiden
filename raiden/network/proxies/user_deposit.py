@@ -78,7 +78,7 @@ class UserDeposit:
     def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
-                self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+                self.proxy.functions.token().call(block_identifier=block_identifier)
             )
         )
 
@@ -87,36 +87,30 @@ class UserDeposit:
     ) -> MonitoringServiceAddress:
         return MonitoringServiceAddress(
             to_canonical_address(
-                self.proxy.contract.functions.msc_address().call(block_identifier=block_identifier)
+                self.proxy.functions.msc_address().call(block_identifier=block_identifier)
             )
         )
 
     def one_to_n_address(self, block_identifier: BlockSpecification) -> OneToNAddress:
         return OneToNAddress(
             to_canonical_address(
-                self.proxy.contract.functions.one_to_n_address().call(
-                    block_identifier=block_identifier
-                )
+                self.proxy.functions.one_to_n_address().call(block_identifier=block_identifier)
             )
         )
 
     def get_total_deposit(
         self, address: Address, block_identifier: BlockSpecification
     ) -> TokenAmount:
-        return self.proxy.contract.functions.balances(address).call(
-            block_identifier=block_identifier
-        )
+        return self.proxy.functions.balances(address).call(block_identifier=block_identifier)
 
     def whole_balance(self, block_identifier: BlockSpecification) -> TokenAmount:
         return TokenAmount(
-            self.proxy.contract.functions.whole_balance().call(block_identifier=block_identifier)
+            self.proxy.functions.whole_balance().call(block_identifier=block_identifier)
         )
 
     def whole_balance_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
         return TokenAmount(
-            self.proxy.contract.functions.whole_balance_limit().call(
-                block_identifier=block_identifier
-            )
+            self.proxy.functions.whole_balance_limit().call(block_identifier=block_identifier)
         )
 
     def init(
@@ -188,15 +182,15 @@ class UserDeposit:
         log_details: Dict[str, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "init", monitoring_service_address, one_to_n_address
+        gas_limit = self.client.estimate_gas(
+            self.proxy, checking_block, "init", monitoring_service_address, one_to_n_address
         )
 
         if not gas_limit:
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="init",
                 transaction_executed=False,
                 required_gas=self.gas_measurements["UserDeposit.init"],
@@ -229,8 +223,8 @@ class UserDeposit:
             gas_limit = safe_gas_limit(gas_limit)
             log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
-                "init", gas_limit, monitoring_service_address, one_to_n_address
+            transaction_hash = self.client.transact(
+                self.proxy, "init", gas_limit, monitoring_service_address, one_to_n_address
             )
 
             receipt = self.client.poll(transaction_hash)
@@ -355,7 +349,7 @@ class UserDeposit:
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
-        balance = self.proxy.contract.functions.effectiveBalance(address).call(
+        balance = self.proxy.functions.effectiveBalance(address).call(
             block_identifier=block_identifier
         )
 
@@ -375,13 +369,15 @@ class UserDeposit:
         token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(checking_block, "deposit", beneficiary, total_deposit)
+        gas_limit = self.client.estimate_gas(
+            self.proxy, checking_block, "deposit", beneficiary, total_deposit
+        )
 
         if not gas_limit:
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="deposit",
                 transaction_executed=False,
                 required_gas=self.gas_measurements["UserDeposit.deposit"],
@@ -437,8 +433,8 @@ class UserDeposit:
             gas_limit = safe_gas_limit(gas_limit)
             log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
-                "deposit", gas_limit, beneficiary, total_deposit
+            transaction_hash = self.client.transact(
+                self.proxy, "deposit", gas_limit, beneficiary, total_deposit
             )
 
             receipt = self.client.poll(transaction_hash)

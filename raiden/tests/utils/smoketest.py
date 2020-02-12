@@ -11,6 +11,7 @@ from eth_typing import HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
+from web3.contract import Contract
 from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
@@ -27,7 +28,6 @@ from raiden.constants import (
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
@@ -341,7 +341,7 @@ def setup_raiden(
         proxy_manager=proxy_manager,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
-        token_address=to_checksum_address(token.contract.address),
+        token_address=to_checksum_address(token.address),
     )
     confirmed_block_identifier = client.get_confirmed_blockhash()
     registry = proxy_manager.token_network_registry(
@@ -350,7 +350,7 @@ def setup_raiden(
     )
 
     registry.add_token(
-        token_address=TokenAddress(to_canonical_address(token.contract.address)),
+        token_address=TokenAddress(to_canonical_address(token.address)),
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
         given_block_identifier=confirmed_block_identifier,
@@ -390,8 +390,8 @@ def run_smoketest(
     print_step: Callable,
     args: Dict[str, Any],
     contract_addresses: Dict[str, Address],
-    token: ContractProxy,
-):
+    token: Contract,
+) -> None:
     print_step("Starting Raiden")
 
     app = None
@@ -414,18 +414,18 @@ def run_smoketest(
             registry_address=TokenNetworkRegistryAddress(
                 contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
-            token_address=TokenAddress(to_canonical_address(token.contract.address)),
+            token_address=TokenAddress(to_canonical_address(token.address)),
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
         )
         raiden_api.set_total_channel_deposit(
             registry_address=TokenNetworkRegistryAddress(
                 contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
-            token_address=TokenAddress(to_canonical_address(token.contract.address)),
+            token_address=TokenAddress(to_canonical_address(token.address)),
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
-        token_addresses = [to_checksum_address(token.contract.address)]
+        token_addresses = [to_checksum_address(token.address)]
 
         print_step("Running smoketest")
 

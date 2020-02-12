@@ -65,7 +65,7 @@ class ServiceRegistry:
         try:
             ret = Address(
                 to_canonical_address(
-                    self.proxy.contract.functions.ever_made_deposits(index).call(
+                    self.proxy.functions.ever_made_deposits(index).call(
                         block_identifier=block_identifier
                     )
                 )
@@ -76,16 +76,14 @@ class ServiceRegistry:
 
     def ever_made_deposits_len(self, block_identifier: BlockSpecification) -> int:
         """Get the number of addresses that have ever made a deposit"""
-        result = self.proxy.contract.functions.everMadeDepositsLen().call(
-            block_identifier=block_identifier
-        )
+        result = self.proxy.functions.everMadeDepositsLen().call(block_identifier=block_identifier)
         return result
 
     def has_valid_registration(
         self, block_identifier: BlockSpecification, service_address: Address
     ) -> Optional[bool]:
         try:
-            result = self.proxy.contract.functions.hasValidRegistration(service_address).call(
+            result = self.proxy.functions.hasValidRegistration(service_address).call(
                 block_identifier=block_identifier
             )
         except web3.exceptions.BadFunctionCallOutput:
@@ -96,31 +94,29 @@ class ServiceRegistry:
         self, block_identifier: BlockSpecification, service_address: Address
     ) -> Optional[str]:
         """Gets the URL of a service by address. If does not exist return None"""
-        result = self.proxy.contract.functions.urls(service_address).call(
-            block_identifier=block_identifier
-        )
+        result = self.proxy.functions.urls(service_address).call(block_identifier=block_identifier)
         if result == "":
             return None
         return result
 
     def current_price(self, block_identifier: BlockSpecification) -> TokenAmount:
         """Gets the currently required deposit amount."""
-        return self.proxy.contract.functions.currentPrice().call(block_identifier=block_identifier)
+        return self.proxy.functions.currentPrice().call(block_identifier=block_identifier)
 
     def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
-                self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+                self.proxy.functions.token().call(block_identifier=block_identifier)
             )
         )
 
     def deposit(self, block_identifier: BlockSpecification, limit_amount: TokenAmount) -> None:
         """Makes a deposit to create or extend a registration"""
-        gas_limit = self.proxy.estimate_gas(block_identifier, "deposit", limit_amount)
+        gas_limit = self.client.estimate_gas(self.proxy, block_identifier, "deposit", limit_amount)
         if not gas_limit:
             msg = "ServiceRegistry.deposit transaction fails"
             raise RaidenUnrecoverableError(msg)
-        transaction_hash = self.proxy.transact("deposit", gas_limit, limit_amount)
+        transaction_hash = self.client.transact(self.proxy, "deposit", gas_limit, limit_amount)
         receipt = self.client.poll(transaction_hash)
         failed_receipt = check_transaction_threw(receipt=receipt)
         if failed_receipt:
@@ -145,13 +141,13 @@ class ServiceRegistry:
             raise BrokenPreconditionError(msg)
 
         with log_transaction(log, "set_url", log_details):
-            gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
+            gas_limit = self.client.estimate_gas(self.proxy, "latest", "setURL", url)
             if not gas_limit:
                 msg = f"URL {url} is invalid"
                 raise RaidenUnrecoverableError(msg)
 
             log_details["gas_limit"] = gas_limit
-            transaction_hash = self.proxy.transact("setURL", gas_limit, url)
+            transaction_hash = self.client.transact(self.proxy, "setURL", gas_limit, url)
             receipt = self.client.poll(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
             if failed_receipt:
