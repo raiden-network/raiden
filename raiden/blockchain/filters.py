@@ -1,4 +1,5 @@
 import structlog
+from eth_abi.codec import ABICodec
 from eth_utils import decode_hex, event_abi_to_log_topic
 from web3._utils.abi import build_default_registry, filter_by_type
 from web3._utils.events import get_event_data
@@ -19,6 +20,8 @@ from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
 
+ABI_CODEC = ABICodec(build_default_registry())
+
 
 def get_filter_args_for_specific_event_from_channel(
     token_network_address: TokenNetworkAddress,
@@ -36,6 +39,7 @@ def get_filter_args_for_specific_event_from_channel(
     # in the case of a token network, the first parameter is always the channel identifier
     _, event_filter_params = construct_event_filter_params(
         event_abi=event_abi,
+        abi_codec=ABI_CODEC,
         contract_address=token_network_address,
         argument_filters={"channel_identifier": channel_identifier},
         fromBlock=from_block,
@@ -89,4 +93,4 @@ def decode_event(abi: ABI, log: BlockchainEvent) -> Dict[str, Any]:
     events = filter_by_type("event", abi)
     topic_to_event_abi = {event_abi_to_log_topic(event_abi): event_abi for event_abi in events}
     event_abi = topic_to_event_abi[event_id]
-    return get_event_data(event_abi, log)
+    return get_event_data(ABI_CODEC, event_abi, log)
