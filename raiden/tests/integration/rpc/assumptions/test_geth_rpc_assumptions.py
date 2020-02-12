@@ -14,9 +14,11 @@ def test_geth_request_pruned_data_raises_an_exception(deploy_client, web3):
 
     def send_transaction():
         check_block = deploy_client.get_checking_block()
-        startgas = contract_proxy.estimate_gas(check_block, "waste_storage", iterations)
+        startgas = deploy_client.estimate_gas(
+            contract_proxy, check_block, "waste_storage", iterations
+        )
         startgas = safe_gas_limit(startgas)
-        transaction = contract_proxy.transact("waste_storage", startgas, iterations)
+        transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
         deploy_client.poll(transaction)
         return deploy_client.get_transaction_receipt(transaction)
 
@@ -36,7 +38,7 @@ def test_geth_request_pruned_data_raises_an_exception(deploy_client, web3):
 
     pruned_block_number = mined_block_number - 1
     with pytest.raises(ValueError):
-        contract_proxy.contract.functions.const().call(block_identifier=pruned_block_number)
+        contract_proxy.functions.const().call(block_identifier=pruned_block_number)
 
     with pytest.raises(ValueError):
-        contract_proxy.contract.functions.get(1).call(block_identifier=pruned_block_number)
+        contract_proxy.functions.get(1).call(block_identifier=pruned_block_number)

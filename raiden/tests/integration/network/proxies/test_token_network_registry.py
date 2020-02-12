@@ -66,7 +66,7 @@ def test_token_network_registry(
         token_symbol="TKN",
         token_contract_name=token_contract_name,
     )
-    test_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
+    test_token_address = TokenAddress(to_canonical_address(test_token.address))
 
     # Check the proper exception is raised if the token does not comply to the
     # ERC20 interface. In this case the token does not have the totalSupply()
@@ -102,7 +102,7 @@ def test_token_network_registry(
         )
 
     logs = token_network_registry_proxy.filter_token_added_events()
-    assert is_same_address(logs[0]["args"]["token_address"], test_token.contract.address)
+    assert is_same_address(logs[0]["args"]["token_address"], test_token.address)
     assert is_same_address(logs[0]["args"]["token_network_address"], token_network_address)
     assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
 
@@ -200,7 +200,7 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
         token_symbol="TKN",
         token_contract_name=token_contract_name,
     )
-    first_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
+    first_token_address = TokenAddress(to_canonical_address(test_token.address))
     preblockhash = deploy_client.get_confirmed_blockhash()
 
     # Register a valid token, this is the last slot and should succeeded
@@ -220,7 +220,7 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
         token_symbol="TKN",
         token_contract_name=token_contract_name,
     )
-    second_token_address = TokenAddress(to_canonical_address(test_token.contract.address))
+    second_token_address = TokenAddress(to_canonical_address(test_token.address))
     preblockhash = deploy_client.get_confirmed_blockhash()
 
     # Tries to register a new valid token after all slots have been used. This

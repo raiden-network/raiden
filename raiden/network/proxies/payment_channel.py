@@ -83,7 +83,7 @@ class PaymentChannel:
             contract_manager=self.contract_manager,
         )
 
-        events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
+        events = self.client.web3.eth.getLogs(filter_args)
         assert len(events) > 0, "No matching ChannelOpen event found."
 
         # we want the latest event here, there might have been multiple channels

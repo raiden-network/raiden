@@ -50,7 +50,7 @@ def get_channel_participants_from_open_event(
         to_block=to_block,
     )
 
-    events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
+    events = token_network.proxy.web3.eth.getLogs(filter_args)
 
     # There must be only one channel open event per channel identifier
     if len(events) != 1:

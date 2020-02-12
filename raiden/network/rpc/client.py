@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import gevent
 import structlog
-from eth_utils import encode_hex, is_bytes, is_checksum_address, to_canonical_address
+from eth_utils import decode_hex, encode_hex, is_bytes, is_checksum_address, to_canonical_address
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
@@ -14,7 +14,7 @@ from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.utils.contracts import prepare_transaction
+from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi, prepare_transaction
 from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
@@ -22,12 +22,13 @@ from raiden.constants import NO_STATE_QUERY_AFTER_BLOCKS, NULL_ADDRESS_HEX, EthC
 from raiden.exceptions import (
     AddressWithoutCode,
     ContractCodeMismatch,
+    EthereumNonceTooLow,
     EthNodeInterfaceError,
     InsufficientEth,
     RaidenUnrecoverableError,
+    ReplacementTransactionUnderpriced,
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
@@ -154,6 +155,98 @@ def check_address_has_code(
         raise ContractCodeMismatch(
             f"[{contract_name}]Address {to_checksum_address(address)} has wrong code."
         )
+
+
+def get_transaction_data(
+    abi: Dict, function_name: str, args: Any = None, kwargs: Any = None
+) -> str:
+    """Get encoded transaction data"""
+    args = args or list()
+    fn_abi = find_matching_fn_abi(abi, function_name, args=args, kwargs=kwargs)
+    return encode_transaction_data(
+        web3=None,
+        fn_identifier=function_name,
+        contract_abi=abi,
+        fn_abi=fn_abi,
+        args=args,
+        kwargs=kwargs,
+    )
+
+
+class ClientErrorInspectResult(Enum):
+    """Represents the action to follow after inspecting a client exception"""
+
+    PROPAGATE_ERROR = 1
+    INSUFFICIENT_FUNDS = 2
+    TRANSACTION_UNDERPRICED = 3
+    TRANSACTION_PENDING = 4
+    ALWAYS_FAIL = 5
+    TRANSACTION_ALREADY_IMPORTED = 7
+    TRANSACTION_PENDING_OR_ALREADY_IMPORTED = 8
+
+
+# Geth has one error message for resending a transaction from the transaction
+# pool, and another for reusing a nonce of a mined transaction. Parity on the
+# other hand has just a single error message, so these errors have to be
+# grouped. (Tested with Geth 1.9.6 and Parity 2.5.9).
+THE_NONCE_WAS_REUSED = (
+    ClientErrorInspectResult.TRANSACTION_PENDING,
+    ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED,
+    ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED,
+)
+
+
+def inspect_client_error(
+    val_err: ValueError, eth_node: Optional[EthClient]
+) -> ClientErrorInspectResult:
+    # both clients return invalid json. They use single quotes while json needs double ones.
+    # Also parity may return something like: 'data': 'Internal("Error message")' which needs
+    # special processing
+    json_response = str(val_err).replace("'", '"').replace('("', "(").replace('")', ")")
+    try:
+        error = json.loads(json_response)
+    except json.JSONDecodeError:
+        return ClientErrorInspectResult.PROPAGATE_ERROR
+
+    if eth_node is EthClient.GETH:
+        if error["code"] == -32000:
+            if "insufficient funds" in error["message"]:
+                return ClientErrorInspectResult.INSUFFICIENT_FUNDS
+
+            if "always failing transaction" in error["message"]:
+                return ClientErrorInspectResult.ALWAYS_FAIL
+
+            if "replacement transaction underpriced" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
+
+            if "known transaction:" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_PENDING
+
+            if "nonce too low" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED
+
+    elif eth_node is EthClient.PARITY:
+        if error["code"] == -32010:
+            if "Insufficient funds" in error["message"]:
+                return ClientErrorInspectResult.INSUFFICIENT_FUNDS
+
+            if "another transaction with same nonce in the queue" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
+
+            # This error code is known to be used for pending transactions, it
+            # may also be used for reusing the nonce of mined transactions.
+            if "Transaction nonce is too low. Try incrementing the nonce." in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED
+
+            # This error code is used for both resending pending transactions
+            # and reusing nonce of mined transactions.
+            if "Transaction with the same hash was already imported" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_PENDING_OR_ALREADY_IMPORTED
+
+        elif error["code"] == -32015 and "Transaction execution error" in error["message"]:
+            return ClientErrorInspectResult.ALWAYS_FAIL
+
+    return ClientErrorInspectResult.PROPAGATE_ERROR
 
 
 class ParityCallType(Enum):
@@ -577,21 +670,99 @@ class JSONRPCClient:
 
         return price
 
-    def new_contract_proxy(
-        self, abi: List[Dict[str, Any]], contract_address: Address
-    ) -> ContractProxy:
-        """ Return a proxy for interacting with a smart contract.
+    def estimate_gas(
+        self,
+        contract: Contract,
+        block_identifier: Optional[BlockSpecification],
+        function: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[int]:
+        """Estimate the gas necessary to run the transaction.
 
-        Args:
-            abi: The contract interface as defined by the json.
-            contract_address: The contract's address.
+        Returns `None` transaction would fail because it hit an assert/require,
+        or if the amount of gas required is larger than the block gas limit.
         """
-        return ContractProxy(self, contract=self.new_contract(abi, contract_address))
 
-    def new_contract(self, contract_interface: ABI, contract_address: Address) -> Contract:
-        return self.web3.eth.contract(
-            abi=contract_interface, address=to_checksum_address(contract_address)
+        fn = getattr(contract.functions, function)
+        address = to_checksum_address(self.address)
+        if self.eth_node is EthClient.GETH:
+            # Unfortunately geth does not follow the ethereum JSON-RPC spec and
+            # does not accept a block identifier argument for eth_estimateGas
+            # parity and py-evm (trinity) do.
+            #
+            # Geth only runs estimateGas on the pending block and that's why we
+            # should also enforce parity, py-evm and others to do the same since
+            # we can't customize geth.
+            #
+            # Spec: https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_estimategas
+            # Geth Issue: https://github.com/ethereum/go-ethereum/issues/2586
+            # Relevant web3 PR: https://github.com/ethereum/web3.py/pull/1046
+            block_identifier = None
+        try:
+            return fn(*args, **kwargs).estimateGas(
+                transaction={"from": address}, block_identifier=block_identifier
+            )
+        except ValueError as err:
+            action = inspect_client_error(err, self.eth_node)
+            will_fail = action in (
+                ClientErrorInspectResult.INSUFFICIENT_FUNDS,
+                ClientErrorInspectResult.ALWAYS_FAIL,
+            )
+            if will_fail:
+                return None
+
+            raise err
+
+    def transact(
+        self, contract: Contract, function_name: str, startgas: int, *args: Any, **kwargs: Any
+    ) -> TransactionHash:
+        data = get_transaction_data(
+            abi=contract.abi, function_name=function_name, args=args, kwargs=kwargs
         )
+
+        slot = self.get_next_transaction()
+        try:
+            tx_hash = slot.send_transaction(
+                to=to_canonical_address(contract.address),
+                startgas=startgas,
+                value=kwargs.pop("value", 0),
+                data=decode_hex(data),
+            )
+        except ValueError as e:
+            action = inspect_client_error(e, self.eth_node)
+            if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
+                raise InsufficientEth(
+                    "Transaction failed due to insufficient ETH balance. "
+                    "Please top up your ETH account."
+                )
+            elif action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
+                raise ReplacementTransactionUnderpriced(
+                    "Transaction was rejected. This is potentially "
+                    "caused by the reuse of the previous transaction "
+                    "nonce as well as paying an amount of gas less than or "
+                    "equal to the previous transaction's gas amount"
+                )
+            elif action in THE_NONCE_WAS_REUSED:
+                # XXX: Add logic to check that it is the same transaction
+                # (instead of relying on the error message), and instead of
+                # raising an unrecoverable error proceed as normal with the
+                # polling.
+                #
+                # This was previously done, but removed by #4909, and for it to
+                # be finished #2088 has to be implemented.
+                raise EthereumNonceTooLow(
+                    "Transaction rejected because the nonce has been already mined."
+                )
+
+            raise RaidenUnrecoverableError(
+                f"Unexpected error in underlying Ethereum node: {str(e)}"
+            )
+
+        return tx_hash
+
+    def new_contract_proxy(self, abi: ABI, contract_address: Address) -> Contract:
+        return self.web3.eth.contract(abi=abi, address=to_checksum_address(contract_address))
 
     def get_transaction_receipt(self, tx_hash: TransactionHash) -> Dict[str, Any]:
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
@@ -601,7 +772,7 @@ class JSONRPCClient:
         contract_name: str,
         contract: CompiledContract,
         constructor_parameters: Sequence = None,
-    ) -> Tuple[ContractProxy, Dict]:
+    ) -> Tuple[Contract, Dict]:
         """
         Deploy a single solidity contract without dependencies.
 

@@ -83,7 +83,7 @@ class TokenNetworkRegistry:
         """
         typecheck(token_address, T_TargetAddress)
 
-        address = self.proxy.contract.functions.token_to_token_networks(token_address).call(
+        address = self.proxy.functions.token_to_token_networks(token_address).call(
             block_identifier=block_identifier
         )
         address = to_canonical_address(address)
@@ -244,14 +244,18 @@ class TokenNetworkRegistry:
             "_channel_participant_deposit_limit": channel_participant_deposit_limit,
             "_token_network_deposit_limit": token_network_deposit_limit,
         }
-        gas_limit = self.proxy.estimate_gas(checking_block, "createERC20TokenNetwork", **kwargs)
+        gas_limit = self.rpc_client.estimate_gas(
+            self.proxy, checking_block, "createERC20TokenNetwork", **kwargs
+        )
 
         if gas_limit:
             gas_limit = safe_gas_limit(
                 gas_limit, self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
             )
             log_details["gas_limit"] = gas_limit
-            transaction_hash = self.proxy.transact("createERC20TokenNetwork", gas_limit, **kwargs)
+            transaction_hash = self.rpc_client.transact(
+                self.proxy, "createERC20TokenNetwork", gas_limit, **kwargs
+            )
 
             receipt = self.rpc_client.poll(transaction_hash)
 
@@ -392,7 +396,7 @@ class TokenNetworkRegistry:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.rpc_client.get_block("latest")
             failed_at_blockhash_bytes = failed_at["hash"]
             failed_at_blockhash = encode_hex(failed_at_blockhash_bytes)
             failed_at_blocknumber = failed_at["number"]
@@ -458,7 +462,7 @@ class TokenNetworkRegistry:
                 if gas_limit
                 else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
             )
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.rpc_client.check_for_insufficient_eth(
                 transaction_name="createERC20TokenNetwork",
                 transaction_executed=False,
                 required_gas=required_gas,
@@ -527,24 +531,24 @@ class TokenNetworkRegistry:
         return token_network_address
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
-        filter_ = self.proxy.contract.events.TokenNetworkCreated.createFilter(
+        filter_ = self.proxy.events.TokenNetworkCreated.createFilter(
             fromBlock=self.metadata.filters_start_at
         )
         events = filter_.get_all_entries()
         if filter_.filter_id:
-            self.proxy.contract.web3.eth.uninstallFilter(filter_.filter_id)
+            self.proxy.web3.eth.uninstallFilter(filter_.filter_id)
 
         return events
 
     def get_chain_id(self, block_identifier: BlockSpecification) -> int:
-        return self.proxy.contract.functions.chain_id().call(block_identifier=block_identifier)
+        return self.proxy.functions.chain_id().call(block_identifier=block_identifier)
 
     def get_secret_registry_address(
         self, block_identifier: BlockSpecification
     ) -> SecretRegistryAddress:
         return SecretRegistryAddress(
             to_canonical_address(
-                self.proxy.contract.functions.secret_registry_address().call(
+                self.proxy.functions.secret_registry_address().call(
                     block_identifier=block_identifier
                 )
             )
@@ -553,21 +557,19 @@ class TokenNetworkRegistry:
     def get_deprecation_executor(self, block_identifier: BlockSpecification) -> Address:
         return Address(
             to_canonical_address(
-                self.proxy.contract.functions.deprecation_executor().call(
-                    block_identifier=block_identifier
-                )
+                self.proxy.functions.deprecation_executor().call(block_identifier=block_identifier)
             )
         )
 
     def settlement_timeout_min(self, block_identifier: BlockSpecification) -> int:
         """ Returns the minimal settlement timeout for the token network registry. """
-        return self.proxy.contract.functions.settlement_timeout_min().call(
+        return self.proxy.functions.settlement_timeout_min().call(
             block_identifier=block_identifier
         )
 
     def settlement_timeout_max(self, block_identifier: BlockSpecification) -> int:
         """ Returns the maximal settlement timeout for the token network registry. """
-        return self.proxy.contract.functions.settlement_timeout_max().call(
+        return self.proxy.functions.settlement_timeout_max().call(
             block_identifier=block_identifier
         )
 
@@ -575,14 +577,10 @@ class TokenNetworkRegistry:
         """ Returns the number of TokenNetwork contracts created so far in the
         token network registry.
         """
-        return self.proxy.contract.functions.token_network_created().call(
-            block_identifier=block_identifier
-        )
+        return self.proxy.functions.token_network_created().call(block_identifier=block_identifier)
 
     def get_max_token_networks(self, block_identifier: BlockSpecification) -> int:
         """ Returns the maximal number of TokenNetwork contracts that the
         token network registry.
         """
-        return self.proxy.contract.functions.max_token_networks().call(
-            block_identifier=block_identifier
-        )
+        return self.proxy.functions.max_token_networks().call(block_identifier=block_identifier)

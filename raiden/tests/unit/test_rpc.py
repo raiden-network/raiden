@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.constants import EthClient
-from raiden.network.rpc.smartcontract_proxy import ClientErrorInspectResult, inspect_client_error
+from raiden.network.rpc.client import ClientErrorInspectResult, inspect_client_error
 from raiden.network.rpc.transactions import check_transaction_threw
 
 

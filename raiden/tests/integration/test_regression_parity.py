@@ -113,11 +113,13 @@ def test_locksroot_loading_during_channel_settle_handling(
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1000
 
-    def send_transaction():
+    def send_transaction() -> None:
         check_block = deploy_client.get_checking_block()
-        startgas = contract_proxy.estimate_gas(check_block, "waste_storage", iterations)
+        startgas = deploy_client.estimate_gas(
+            contract_proxy, check_block, "waste_storage", iterations
+        )
         startgas = safe_gas_limit(startgas)
-        transaction = contract_proxy.transact("waste_storage", startgas, iterations)
+        transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
         return deploy_client.poll(transaction)
 
     for _ in range(10):

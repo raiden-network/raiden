@@ -1,8 +1,9 @@
 from enum import Enum
 
+from web3.contract import Contract
+
 from raiden.exceptions import MintFailed, RaidenError
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.typing import Address, Any, List, TokenAddress, TransactionHash
 
@@ -44,12 +45,12 @@ _MINT_ABI = [
 ]
 
 
-def token_minting_proxy(client: JSONRPCClient, address: TokenAddress) -> ContractProxy:
+def token_minting_proxy(client: JSONRPCClient, address: TokenAddress) -> Contract:
     return client.new_contract_proxy(abi=_MINT_ABI, contract_address=Address(address))
 
 
 def call_minting_method(
-    client: JSONRPCClient, proxy: ContractProxy, contract_method: MintingMethod, args: List[Any]
+    client: JSONRPCClient, proxy: Contract, contract_method: MintingMethod, args: List[Any]
 ) -> TransactionHash:
     """ Try to mint tokens by calling `contract_method` on `proxy`.
 
@@ -58,7 +59,7 @@ def call_minting_method(
     """
     method = contract_method.value
 
-    gas_limit = proxy.estimate_gas("latest", method, *args)
+    gas_limit = client.estimate_gas(proxy, "latest", method, *args)
     if gas_limit is None:
         raise MintFailed(
             f"Gas estimation failed. Make sure the token has a "
@@ -66,11 +67,11 @@ def call_minting_method(
         )
 
     try:
-        tx_hash = proxy.transact(method, gas_limit, *args)
+        tx_hash = client.transact(proxy, method, gas_limit, *args)
     except (RaidenError, ValueError) as e:
         # Re-raise TransactionAlreadyPending etc. as MintFailed.
         # Since the token minting api is not standardized, we also catch ValueErrors
-        # that might fall through ContractProxy.transact()'s exception handling.
+        # that might fall through Contract.transact()'s exception handling.
         raise MintFailed(str(e))
 
     receipt = client.poll(tx_hash)
