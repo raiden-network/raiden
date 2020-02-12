@@ -7,9 +7,7 @@ from types import TracebackType
 from typing import Generator
 
 import gevent
-from eth_utils import to_canonical_address
 
-import raiden.storage.serialization.fields as fields
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.serialization import SerializationBase
@@ -815,9 +813,7 @@ class SerializedSQLiteStorage:
         row = self.database.get_snapshot_before_state_change(state_change_identifier)
 
         if row is not None:
-            fields.to_canonical_address = bytes.fromhex  # type: ignore
             deserialized_data = self.serializer.deserialize(row.data)
-            fields.to_canonical_address = to_canonical_address
 
             result = SnapshotRecord(
                 row.identifier,
