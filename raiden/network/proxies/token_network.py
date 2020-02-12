@@ -747,7 +747,7 @@ class TokenNetwork:
         # approve + deposit + deposit`, since the second approve will overwrite
         # the first and at least one of the deposits will fail. Because of
         # this, the allowance can not change until the deposit is done.
-        with self.channel_operations_lock[partner], self.token.token_lock:
+        with self.channel_operations_lock[partner]:
             try:
                 queried_channel_identifier = self.get_channel_identifier_or_none(
                     participant1=self.node_address,
@@ -905,33 +905,37 @@ class TokenNetwork:
         # in which case the second `approve` will overwrite the first,
         # and the first `setTotalDeposit` will consume the allowance,
         # making the second deposit fail.
-        self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+        transaction_hash = None
+        with self.token.token_lock:
+            self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
-        gas_limit = self.client.estimate_gas(
-            self.proxy,
-            checking_block,
-            "setTotalDeposit",
-            channel_identifier=channel_identifier,
-            participant=self.node_address,
-            total_deposit=total_deposit,
-            partner=partner,
-        )
-
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
-            )
-            log_details["gas_limit"] = gas_limit
-
-            transaction_hash = self.client.transact(
+            gas_limit = self.client.estimate_gas(
                 self.proxy,
+                checking_block,
                 "setTotalDeposit",
-                gas_limit,
                 channel_identifier=channel_identifier,
                 participant=self.node_address,
                 total_deposit=total_deposit,
                 partner=partner,
             )
+
+            if gas_limit:
+                gas_limit = safe_gas_limit(
+                    gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
+                )
+                log_details["gas_limit"] = gas_limit
+
+                transaction_hash = self.proxy.transact(
+                    self.proxy,
+                    "setTotalDeposit",
+                    gas_limit,
+                    channel_identifier=channel_identifier,
+                    participant=self.node_address,
+                    total_deposit=total_deposit,
+                    partner=partner,
+                )
+
+        if transaction_hash:
             receipt = self.client.poll(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
