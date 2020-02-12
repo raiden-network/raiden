@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Dict, Tuple
 
 from raiden.constants import UNLOCK_TX_GAS_LIMIT
+from raiden.network.rpc.client import gas_price_for_fast_transaction
 from raiden.transfer import views
 from raiden_contracts.contract_manager import gas_measurements
 
@@ -111,7 +112,7 @@ def get_required_gas_estimate(raiden: "RaidenService", channels_to_open: int = 0
 
 def get_reserve_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:
     gas_estimate = get_required_gas_estimate(raiden, channels_to_open)
-    gas_price = raiden.rpc_client.gas_price()
+    gas_price = gas_price_for_fast_transaction(raiden.rpc_client.web3)
     reserve_amount = gas_estimate * gas_price
 
     return round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)

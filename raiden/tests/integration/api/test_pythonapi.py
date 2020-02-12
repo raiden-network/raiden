@@ -20,6 +20,7 @@ from raiden.exceptions import (
     UnexpectedChannelState,
     UnknownTokenAddress,
 )
+from raiden.network.rpc.client import deploy_contract_web3
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
@@ -27,7 +28,6 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import BalanceProofSignedState

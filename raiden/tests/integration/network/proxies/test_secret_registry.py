@@ -149,19 +149,15 @@ def test_concurrent_secret_registration(secret_registry_proxy: SecretRegistry, m
         count: Dict[Secret, int] = defaultdict(int)
         transact = secret_registry_proxy.client.transact
 
-        # Using positional arguments with the signature used by SecretRegistry
-        # to call the Contract in order to have access to the secret.
-        # Monkey patching the proxy function because the test must registered
-        # the data that is effectively sent with the transaction.
-        def count_transactions(proxy, function_name, startgas, secrets):
-            for secret in secrets:
+        def count_how_many_times_a_secret_is_sent(transaction):
+            for secret in transaction.data.args[0]:
                 count[secret] += 1
                 msg = "All secrets must be registered, and they all must be registered only once"
                 assert count[secret] == 1, msg
 
-            return transact(proxy, function_name, startgas, secrets)
+            return transact(transaction)
 
-        m.setattr(secret_registry_proxy.client, "transact", count_transactions)
+        m.setattr(secret_registry_proxy.client, "transact", count_how_many_times_a_secret_is_sent)
 
         # Important: Make sure all secrets are actually used
         secrets = [make_secret() for _ in range(7)]

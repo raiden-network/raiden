@@ -7,7 +7,6 @@ from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import Callable, Dict, GasPrice, List, Port, PrivateKey
 
 
@@ -45,10 +44,8 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
-    check_block = deploy_client.get_checking_block()
-    gas_estimate = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
-    assert gas_estimate, "Gas estimation should not fail here"
-    startgas = safe_gas_limit(gas_estimate)
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    assert estimated_transaction, "Gas estimation should not fail here"
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -56,12 +53,15 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     #
     # Note that it is assumed this runs fast enough so that the first transaction is not
     # mined before second is sent.
-    deploy_client.transact(contract_proxy, "ret", startgas)
+    deploy_client.transact(estimated_transaction)
     with pytest.raises(EthereumNonceTooLow):
-        proxy = client_invalid_nonce.new_contract_proxy(
+        proxy_invalid = client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.abi, contract_address=contract_proxy.address
         )
-        client_invalid_nonce.transact(proxy, "ret", startgas)
+        estimated_transaction_invalid = deploy_client.estimate_gas(proxy_invalid, "ret", {})
+        msg = "ret always succed, gas estimation should have succeed."
+        assert estimated_transaction_invalid, msg
+        client_invalid_nonce.transact(estimated_transaction_invalid)
 
 
 def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
@@ -76,13 +76,11 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(deploy_client.web3, deploy_client.privkey)
 
-    check_block = deploy_client.get_checking_block()
-    gas_estimate = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
-    assert gas_estimate, "Gas estimation should not fail here"
-    startgas = safe_gas_limit(gas_estimate)
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    assert estimated_transaction, "Gas estimation should not fail here"
 
-    txhash = deploy_client.transact(contract_proxy, "ret", startgas)
-    deploy_client.poll_transaction(txhash)
+    transaction_hash = deploy_client.transact(estimated_transaction)
+    deploy_client.poll_transaction(transaction_hash)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -90,10 +88,13 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
     #
     # Note that the same function is called in this test.
     with pytest.raises(EthereumNonceTooLow):
-        proxy = client_invalid_nonce.new_contract_proxy(
+        proxy_invalid = client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.abi, contract_address=contract_proxy.address
         )
-        client_invalid_nonce.transact(proxy, "ret", startgas)
+        estimated_transaction_invalid = deploy_client.estimate_gas(proxy_invalid, "ret", {})
+        msg = "ret always succed, gas estimation should have succeed."
+        assert estimated_transaction_invalid, msg
+        client_invalid_nonce.transact(estimated_transaction_invalid)
 
 
 def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
@@ -105,14 +106,14 @@ def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCCli
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(deploy_client.web3, deploy_client.privkey)
 
-    check_block = deploy_client.get_checking_block()
-    startgas = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
-    assert startgas
-    txhash = deploy_client.transact(contract_proxy, "ret", startgas)
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    msg = "ret always succed, gas estimation should have succeed."
+    assert estimated_transaction, msg
+    transaction_hash = deploy_client.transact(estimated_transaction)
 
     # Wait for the transaction to be mined (concurrent transactions are tested
     # by test_local_transaction_with_zero_gasprice_is_mined)
-    deploy_client.poll_transaction(txhash)
+    deploy_client.poll_transaction(transaction_hash)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -120,12 +121,13 @@ def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCCli
     #
     # Note that a different function is called in this test.
     with pytest.raises(EthereumNonceTooLow):
-        proxy = client_invalid_nonce.new_contract_proxy(
+        proxy_invalid = client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.abi, contract_address=contract_proxy.address
         )
-        startgas = deploy_client.estimate_gas(contract_proxy, check_block, "ret_str")
-        assert startgas
-        client_invalid_nonce.transact(proxy, "ret_str", startgas)
+        estimated_transaction_invalid = deploy_client.estimate_gas(proxy_invalid, "ret_str", {})
+        msg = "ret_str always succed, gas estimation should have succeed."
+        assert estimated_transaction_invalid, msg
+        client_invalid_nonce.transact(estimated_transaction_invalid)
 
 
 def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCClient) -> None:
@@ -145,11 +147,11 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     address = normal_gas_proxy.address
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    check_block = deploy_client.get_checking_block()
-    gas_estimate = deploy_client.estimate_gas(zero_gas_proxy, check_block, "ret")
-    assert gas_estimate, "Gas estimation should not fail here"
+    estimated_transaction = deploy_client.estimate_gas(zero_gas_proxy, "ret", {})
+    assert estimated_transaction, "Gas estimation should not fail here"
+    assert estimated_transaction.gas_price == 0, "Test requires a gas_price of zero"
 
-    zerogas_txhash = deploy_client.transact(zero_gas_proxy, "ret", gas_estimate)
+    zerogas_txhash = deploy_client.transact(estimated_transaction)
     zerogas_receipt = deploy_client.poll_transaction(zerogas_txhash)
     zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_txhash)
 
@@ -190,11 +192,10 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     address = normal_gas_proxy.address
     assert len(client.web3.eth.getCode(address)) > 0
 
-    check_block = client.get_checking_block()
-    gas_estimate = client.estimate_gas(zero_gas_proxy, check_block, "ret")
-    assert gas_estimate, "Gas estimation should not fail here"
+    estimated_transaction = client.estimate_gas(zero_gas_proxy, "ret", {})
+    assert estimated_transaction, "Gas estimation should not fail here"
 
-    zerogas_txhash = client.transact(zero_gas_proxy, "ret", gas_estimate)
+    zerogas_txhash = client.transact(estimated_transaction)
 
     # wait for how many blocks it took to mine the deployment, since this is a
     # private chain, if the new transaction will be mined it should be roughly
@@ -249,12 +250,9 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
 
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
-    check_block = deploy_client.get_checking_block()
-    gas_estimate = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
-    assert gas_estimate, "Gas estimation should not fail here"
-    startgas = safe_gas_limit(gas_estimate)
-
-    deploy_client.transact(contract_proxy, "ret", startgas)
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    assert estimated_transaction, "Gas estimation should not fail here"
+    deploy_client.transact(estimated_transaction)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -262,10 +260,13 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
     #
     # Note that the same function is called in this test but the gas is decreasing.
     with pytest.raises(ReplacementTransactionUnderpriced):
-        proxy = client_invalid_nonce.new_contract_proxy(
+        proxy_invalid = client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.abi, contract_address=contract_proxy.address
         )
-        client_invalid_nonce.transact(proxy, "ret", startgas)
+        estimated_transaction_invalid = client_invalid_nonce.estimate_gas(proxy_invalid, "ret", {})
+        msg = "ret always succed, gas estimation should have succeed."
+        assert estimated_transaction_invalid, msg
+        client_invalid_nonce.transact(estimated_transaction_invalid)
 
 
 def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
@@ -284,12 +285,9 @@ def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> No
 
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
-    check_block = deploy_client.get_checking_block()
-    gas_estimate = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
-    assert gas_estimate, "Gas estimation should not fail here"
-    startgas = safe_gas_limit(gas_estimate)
-
-    deploy_client.transact(contract_proxy, "ret", startgas)
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    assert estimated_transaction, "Gas estimation should not fail here"
+    deploy_client.transact(estimated_transaction)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -297,9 +295,9 @@ def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> No
     #
     # Note that the same function is called in this test but the gas is decreasing.
     with pytest.raises(ReplacementTransactionUnderpriced):
-        proxy = client_invalid_nonce.new_contract_proxy(
+        proxy_invalid = client_invalid_nonce.new_contract_proxy(
             abi=contract_proxy.abi, contract_address=contract_proxy.address
         )
-        gas_limit = client_invalid_nonce.estimate_gas(contract_proxy, check_block, "ret_str")
-        assert gas_limit
-        client_invalid_nonce.transact(proxy, "ret_str", gas_limit)
+        estimated_transaction = client_invalid_nonce.estimate_gas(proxy_invalid, "ret_str", {})
+        assert estimated_transaction, "ret_str never fails, gas estimation must succeed."
+        client_invalid_nonce.transact(estimated_transaction)

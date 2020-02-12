@@ -6,7 +6,7 @@ from web3 import HTTPProvider, Web3
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, EthClient
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
 from raiden.tests.utils.eth_node import (
     AccountDescription,
     EthNodeDescription,
@@ -16,7 +16,6 @@ from raiden.tests.utils.eth_node import (
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils.keys import privatekey_to_address
-from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden.utils.typing import TokenAddress
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 

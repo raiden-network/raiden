@@ -4,7 +4,6 @@ import pytest
 
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.smart_contracts import safe_gas_limit
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
 
@@ -27,13 +26,11 @@ def test_parity_request_pruned_data_raises_an_exception(deploy_client: JSONRPCCl
     iterations = 1000
 
     def send_transaction() -> Dict[str, Any]:
-        check_block = deploy_client.get_checking_block()
-        startgas = deploy_client.estimate_gas(
-            contract_proxy, check_block, "waste_storage", iterations
+        estimated_transaction = deploy_client.estimate_gas(
+            contract_proxy, "waste_storage", {}, iterations
         )
-        assert startgas
-        startgas = safe_gas_limit(startgas)
-        transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
+        assert estimated_transaction
+        transaction = deploy_client.transact(estimated_transaction)
         return deploy_client.poll_transaction(transaction)
 
     first_receipt = send_transaction()

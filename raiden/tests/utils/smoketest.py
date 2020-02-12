@@ -25,7 +25,7 @@ from raiden.constants import (
     EthClient,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
@@ -37,7 +37,7 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
+from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app

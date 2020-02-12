@@ -14,13 +14,11 @@ def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
     address = contract_proxy.address
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    check_block = deploy_client.get_checking_block()
-
     msg = "Estimate gas should return None if the transaction hit an assert"
-    assert deploy_client.estimate_gas(contract_proxy, check_block, "fail_assert") is None, msg
+    assert deploy_client.estimate_gas(contract_proxy, "fail_assert", {}) is None, msg
 
     msg = "Estimate gas should return None if the transaction hit a revert."
-    assert deploy_client.estimate_gas(contract_proxy, check_block, "fail_require") is None, msg
+    assert deploy_client.estimate_gas(contract_proxy, "fail_require", {}) is None, msg
 
 
 def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
@@ -43,12 +41,11 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     # block_identifier for eth_estimateGas. The test should not be flaky
     # because number_iterations is order of magnitudes larger then it needs to
     # be
-    block_identifier = None
-
-    startgas = deploy_client.estimate_gas(
-        contract_proxy, block_identifier, "waste_storage", number_iterations
+    estimated_transaction = deploy_client.estimate_gas(
+        contract_proxy, "waste_storage", {}, number_iterations
     )
-    assert startgas is None, "estimate_gas must return empty if sending the transaction would fail"
+    msg = "estimate_gas must return empty if sending the transaction would fail"
+    assert estimated_transaction is None, msg
 
 
 @pytest.mark.xfail(reason="The pending block is not taken into consideration")
@@ -67,13 +64,17 @@ def test_estimate_gas_defaults_to_pending(deploy_client: JSONRPCClient) -> None:
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
 
-    first_gas = deploy_client.estimate_gas(contract_proxy, "pending", "gas_increase_exponential")
-    assert first_gas, "gas estimation should not have failed"
-    first_tx = deploy_client.transact(contract_proxy, "gas_increase_exponential", first_gas)
+    estimated_first_transaction = deploy_client.estimate_gas(
+        contract_proxy, "gas_increase_exponential", {}
+    )
+    assert estimated_first_transaction, "gas estimation should not have failed"
+    first_tx = deploy_client.transact(estimated_first_transaction)
 
-    second_gas = deploy_client.estimate_gas(contract_proxy, "pending", "gas_increase_exponential")
-    assert second_gas, "gas estimation should not have failed"
-    second_tx = deploy_client.transact(contract_proxy, "gas_increase_exponential", second_gas)
+    estimated_second_transaction = deploy_client.estimate_gas(
+        contract_proxy, "gas_increase_exponential", {}
+    )
+    assert estimated_second_transaction, "gas estimation should not have failed"
+    second_tx = deploy_client.transact(estimated_second_transaction)
 
     first_receipt = deploy_client.poll_transaction(first_tx)
     second_receipt = deploy_client.poll_transaction(second_tx)

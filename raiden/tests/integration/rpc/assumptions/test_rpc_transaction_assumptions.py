@@ -1,7 +1,12 @@
 import pytest
 
 from raiden.exceptions import InsufficientEth
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    SmartContractCall,
+    TransactionEstimated,
+    gas_price_for_fast_transaction,
+)
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
@@ -15,13 +20,12 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     address = contract_proxy.address
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    check_block = deploy_client.get_checking_block()
-    startgas = deploy_client.estimate_gas(contract_proxy, check_block, "ret")
-    assert startgas
-    startgas = startgas * 2
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    assert estimated_transaction
+    estimated_transaction.estimated_gas *= 2
 
-    transaction = deploy_client.transact(contract_proxy, "ret", startgas)
-    receipt = deploy_client.poll_transaction(transaction)
+    transaction_hash = deploy_client.transact(estimated_transaction)
+    receipt = deploy_client.poll_transaction(transaction_hash)
 
     assert check_transaction_threw(receipt=receipt) is None, "must be empty"
 
@@ -33,16 +37,38 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     address = contract_proxy.address
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    # the gas estimation returns 0 here, so hardcode a value
-    startgas = safe_gas_limit(22000)
+    # the method always fails, so the gas estimation returns 0 here, using a
+    # hardcoded a value to circumvent gas estimation.
+    estimated_gas = safe_gas_limit(22000)
+    gas_price = gas_price_for_fast_transaction(deploy_client.web3)
 
-    transaction = deploy_client.transact(contract_proxy, "fail_assert", startgas)
-    receipt = deploy_client.poll_transaction(transaction)
+    block = deploy_client.get_block("latest")
+
+    estimated_transaction_fail_assert = TransactionEstimated(
+        from_address=address,
+        data=SmartContractCall(contract_proxy, "fail_assert", (), {}, value=0),
+        eth_node=deploy_client.eth_node,
+        extra_log_details={},
+        estimated_gas=estimated_gas,
+        gas_price=gas_price,
+        approximate_block=(block["hash"], block["number"]),
+    )
+    transaction_hash = deploy_client.transact(estimated_transaction_fail_assert)
+    receipt = deploy_client.poll_transaction(transaction_hash)
 
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 
-    transaction = deploy_client.transact(contract_proxy, "fail_require", startgas)
-    receipt = deploy_client.poll_transaction(transaction)
+    estimated_transaction_fail_require = TransactionEstimated(
+        from_address=address,
+        data=SmartContractCall(contract_proxy, "fail_require", (), {}, value=0),
+        eth_node=deploy_client.eth_node,
+        extra_log_details={},
+        estimated_gas=estimated_gas,
+        gas_price=gas_price,
+        approximate_block=(block["hash"], block["number"]),
+    )
+    transaction_hash = deploy_client.transact(estimated_transaction_fail_require)
+    receipt = deploy_client.poll_transaction(transaction_hash)
 
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 
@@ -55,12 +81,11 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # divide the estimate by 2 to run into out-of-gas
-    check_block = deploy_client.get_checking_block()
-    startgas = deploy_client.estimate_gas(contract_proxy, check_block, "loop", 1000)
-    assert startgas
-    startgas = safe_gas_limit(startgas) // 2
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "loop", {}, 1000)
+    assert estimated_transaction
+    estimated_transaction.estimated_gas //= 2
 
-    transaction = deploy_client.transact(contract_proxy, "loop", startgas, 1000)
+    transaction = deploy_client.transact(estimated_transaction)
     receipt = deploy_client.poll_transaction(transaction)
 
     assert check_transaction_threw(receipt=receipt), "must not be empty"
@@ -75,11 +100,9 @@ def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_g
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    check_block = deploy_client.get_checking_block()
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "loop", {}, 1000)
+    assert estimated_transaction, "The gas estimation should not have failed."
 
-    startgas = deploy_client.estimate_gas(contract_proxy, check_block, "loop", 1000)
-    assert startgas, "The gas estimation should not have failed."
-
-    burn_eth(deploy_client, amount_to_leave=startgas // 2)
+    burn_eth(deploy_client, amount_to_leave=estimated_transaction.estimated_gas // 2)
     with pytest.raises(InsufficientEth):
-        deploy_client.transact(contract_proxy, "loop", startgas, 1000)
+        deploy_client.transact(estimated_transaction)

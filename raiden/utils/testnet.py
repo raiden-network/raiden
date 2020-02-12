@@ -59,15 +59,15 @@ def call_minting_method(
     """
     method = contract_method.value
 
-    gas_limit = client.estimate_gas(proxy, "latest", method, *args)
-    if gas_limit is None:
+    estimated_transaction = client.estimate_gas(proxy, method, {}, *args)
+    if estimated_transaction is None:
         raise MintFailed(
             f"Gas estimation failed. Make sure the token has a "
             f"method named {method} with the expected signature."
         )
 
     try:
-        tx_hash = client.transact(proxy, method, gas_limit, *args)
+        tx_hash = client.transact(estimated_transaction)
     except (RaidenError, ValueError) as e:
         # Re-raise TransactionAlreadyPending etc. as MintFailed.
         # Since the token minting api is not standardized, we also catch ValueErrors

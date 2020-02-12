@@ -12,13 +12,9 @@ from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetad
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
 from raiden.settings import MONITORING_REWARD
-from raiden.tests.utils.smartcontracts import (
-    deploy_contract_web3,
-    deploy_token,
-    deploy_tokens_and_fund_accounts,
-)
+from raiden.tests.utils.smartcontracts import deploy_token, deploy_tokens_and_fund_accounts
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,

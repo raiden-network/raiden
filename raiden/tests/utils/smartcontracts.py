@@ -7,9 +7,8 @@ from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden.utils.typing import Address, Any, Dict, List, TokenAddress, TokenAmount, Tuple
 from raiden_contracts.contract_manager import ContractManager
 
@@ -126,10 +125,13 @@ def deploy_service_registry_and_set_urls(
     pfs_address = get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=TokenAmount(1))
     assert pfs_address is None
 
+    log_details: Dict[str, Any] = {}
     # Test that setting the urls works
     c1_price = c1_service_proxy.current_price(block_identifier="latest")
-    tx = c1_token_proxy.client.transact(c1_token_proxy.proxy, "mint", 1000000, c1_price)
-    receipt = c1_client.poll_transaction(tx)
+    tx1 = c1_token_proxy.client.estimate_gas(c1_token_proxy.proxy, "mint", log_details, c1_price)
+    assert tx1
+    tx1_hash = c1_client.transact(tx1)
+    receipt = c1_client.poll_transaction(tx1_hash)
     assert not check_transaction_threw(receipt=receipt)
     assert c1_token_proxy.balance_of(c1_client.address) > 0
     c1_token_proxy.approve(allowed_address=service_registry_address, allowance=c1_price)
@@ -137,8 +139,10 @@ def deploy_service_registry_and_set_urls(
     c1_service_proxy.set_url(urls[0])
 
     c2_price = c2_service_proxy.current_price(block_identifier="latest")
-    tx = c2_token_proxy.client.transact(c2_token_proxy.proxy, "mint", 1000000, c2_price)
-    receipt = c2_client.poll_transaction(tx)
+    tx2 = c2_token_proxy.client.estimate_gas(c2_token_proxy.proxy, "mint", log_details, c2_price)
+    assert tx2
+    tx2_hash = c2_client.transact(tx2)
+    receipt = c2_client.poll_transaction(tx2_hash)
     assert not check_transaction_threw(receipt=receipt)
     assert c2_token_proxy.balance_of(c2_client.address) > 0
     c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
@@ -146,13 +150,15 @@ def deploy_service_registry_and_set_urls(
     c2_service_proxy.set_url(urls[1])
 
     c3_price = c3_service_proxy.current_price(block_identifier="latest")
-    tx = c3_token_proxy.client.transact(c3_token_proxy.proxy, "mint", 1000000, c3_price)
-    receipt = c3_client.poll_transaction(tx)
+    tx3 = c3_token_proxy.client.estimate_gas(c3_token_proxy.proxy, "mint", log_details, c3_price)
+    assert tx3
+    tx3_hash = c3_client.transact(tx3)
+    receipt = c3_client.poll_transaction(tx3_hash)
     assert not check_transaction_threw(receipt=receipt)
     assert c3_token_proxy.balance_of(c3_client.address) > 0
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
     c3_service_proxy.deposit(block_identifier="latest", limit_amount=c3_price)
-    c3_token_proxy.client.transact(c3_token_proxy.proxy, "mint", 1000000, c3_price)
+    c3_token_proxy.client.estimate_gas(c3_token_proxy.proxy, "mint", log_details, c3_price)
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
     c3_service_proxy.set_url(urls[2])
 
