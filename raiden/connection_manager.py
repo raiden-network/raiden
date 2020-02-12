@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Tuple
 
 import gevent
 import structlog
+from eth_typing import HexStr
 from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
 
@@ -90,7 +91,7 @@ class ConnectionManager:  # pragma: no unittest
 
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
-    BOOTSTRAP_ADDR_HEX = AddressHex("0x" + "2" * 40)
+    BOOTSTRAP_ADDR_HEX = AddressHex(HexStr("0x" + "2" * 40))
     BOOTSTRAP_ADDR = to_canonical_address(BOOTSTRAP_ADDR_HEX)
 
     def __init__(self, raiden: "RaidenService", token_network_address: TokenNetworkAddress):

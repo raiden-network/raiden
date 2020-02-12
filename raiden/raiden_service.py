@@ -630,9 +630,9 @@ class RaidenService(Runnable):
             max_number_of_blocks_to_poll=BlockNumber(100_000),
         )
 
-        latest_block_num = self.rpc_client.get_block(block_identifier="latest")["number"]
-        latest_confirmed_block_number = max(
-            GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks
+        latest_block_num = self.rpc_client.block_number()
+        latest_confirmed_block_number = BlockNumber(
+            max(GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks)
         )
 
         # `blockchain_events` is a requirement for `_poll_until_target`, so it

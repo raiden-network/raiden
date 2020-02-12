@@ -22,6 +22,7 @@ from web3.eth import Eth
 from web3.exceptions import TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
+from web3.types import TxReceipt
 
 from raiden.constants import (
     NO_STATE_QUERY_AFTER_BLOCKS,
@@ -822,7 +823,7 @@ class JSONRPCClient:
         )
 
     # FIXME: Rename
-    def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
+    def poll(self, transaction_hash: TransactionHash) -> TxReceipt:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 
@@ -875,6 +876,7 @@ class JSONRPCClient:
             is_transaction_mined = tx_receipt and tx_receipt.get("blockNumber") is not None
 
             if is_transaction_mined:
+                assert tx_receipt is not None
                 confirmation_block = (
                     tx_receipt["blockNumber"] + self.default_block_num_confirmations
                 )

@@ -1,4 +1,5 @@
 from eth_hash.auto import keccak
+from eth_typing import HexStr
 from eth_utils import (
     encode_hex,
     is_0x_prefixed,
@@ -56,7 +57,7 @@ def to_checksum_address(address: AddressTypes) -> ChecksumAddress:
             out += char
         else:
             out += char.upper() if (v & (2 ** (255 - 4 * i))) else char.lower()
-    return ChecksumAddress(AddressHex("0x" + out))
+    return ChecksumAddress(AddressHex(HexStr("0x" + out)))
 
 
 def pex(data: bytes) -> str:
@@ -77,7 +78,7 @@ def optional_address_to_string(
 
 
 def to_hex_address(address: AddressTypes) -> AddressHex:
-    return AddressHex("0x" + address.hex())
+    return AddressHex(HexStr("0x" + address.hex()))
 
 
 def format_block_id(block_id: BlockSpecification) -> str:
