@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import requests
-from eth_utils import is_hex, is_hex_address
+from eth_utils import is_checksum_address, is_hex, is_hex_address
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
@@ -27,7 +27,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.transfer.state import NettingChannelState, NetworkState, TokenNetworkState
 from raiden.utils import typing
-from raiden.utils.formatting import to_checksum_address, to_hex_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
@@ -44,9 +44,9 @@ from raiden.utils.typing import (
 DEFAULT_FEEDBACK_TOKEN = UUID("381e4a005a4d4687ac200fa1acd15c6f")
 
 
-def address_address_hex_in_url(url):
+def assert_checksum_address_in_url(url):
     message = "URL does not contain properly encoded address."
-    assert any(is_hex_address(token) for token in url.split("/")), message
+    assert any(is_checksum_address(token) for token in url.split("/")), message
 
 
 def create_square_network_topology(
@@ -174,7 +174,7 @@ def get_best_routes_with_iou_request_mocked(
             pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
-        address_address_hex_in_url(patched.call_args[0][0])
+        assert_checksum_address_in_url(patched.call_args[0][0])
         return best_routes, feedback_token
 
 
@@ -196,10 +196,10 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
         "result": [
             {
                 "path": [
-                    to_hex_address(our_address),
-                    to_hex_address(address2),
-                    to_hex_address(address3),
-                    to_hex_address(address4),
+                    to_checksum_address(our_address),
+                    to_checksum_address(address2),
+                    to_checksum_address(address3),
+                    to_checksum_address(address4),
                 ],
                 "estimated_fee": 0,
             }
@@ -227,7 +227,7 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
             amount=50,
         )
 
-    address_address_hex_in_url(patched.call_args[0][0])
+    assert_checksum_address_in_url(patched.call_args[0][0])
 
     assert routes[0].next_hop_address == address2
     assert routes[0].forward_channel_id == channel_state2.identifier
@@ -272,7 +272,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
             iou_json_data=dict(last_iou=last_iou.as_json()),
         )
 
-    address_address_hex_in_url(patched.call_args[0][0])
+    assert_checksum_address_in_url(patched.call_args[0][0])
 
     assert routes[0].next_hop_address == address2
     assert routes[0].forward_channel_id == channel_state2.identifier
