@@ -839,11 +839,20 @@ class TokenNetwork:
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
+                if preconditions_data.channel_identifier is None:
+                    msg = (
+                        f"There is no channel open between "
+                        f"{to_checksum_address(self.node_address)} and "
+                        f"{to_checksum_address(partner)} with the channel identifier "
+                        f"{channel_identifier}."
+                    )
+                    raise BrokenPreconditionError(msg)
+
                 if preconditions_data.channel_identifier != channel_identifier:
                     msg = (
                         f"There is a channel open between "
                         f"{to_checksum_address(self.node_address)} and "
-                        f"{to_checksum_address(partner)}. However the channel id "
+                        f"{to_checksum_address(partner)}. However the channel identifier "
                         f"on-chain {preconditions_data.channel_identifier} and the provided "
                         f"id {channel_identifier} do not match."
                     )
@@ -883,10 +892,11 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                if (
+                is_over_token_network_limit = (
                     preconditions_data.network_total_deposit + amount_to_deposit
                     > preconditions_data.token_network_deposit_limit
-                ):
+                )
+                if is_over_token_network_limit:
                     msg = (
                         f"Deposit of {amount_to_deposit} will have "
                         f"exceeded the token network deposit limit."
