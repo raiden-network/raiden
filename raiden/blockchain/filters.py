@@ -1,8 +1,8 @@
 import structlog
 from eth_utils import decode_hex, event_abi_to_log_topic
-from web3.utils.abi import filter_by_type
-from web3.utils.events import get_event_data
-from web3.utils.filters import construct_event_filter_params
+from web3._utils.abi import build_default_registry, filter_by_type
+from web3._utils.events import get_event_data
+from web3._utils.filters import construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.utils.typing import (

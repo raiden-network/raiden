@@ -272,6 +272,9 @@ def mocked_json_response(response_data: Optional[Dict] = None, status_code: int 
 
 
 class MockEth:
+    def __init__(self, chain_id):
+        self.chain_id = chain_id
+
     def getBlock(  # pylint: disable=unused-argument, no-self-use
         self, block_identifier: BlockSpecification
     ) -> Dict:
@@ -280,13 +283,11 @@ class MockEth:
             "hash": "0x8cb5f5fb0d888c03ec4d13f69d4eb8d604678508a1fa7c1a8f0437d0065b9b67",
         }
 
-
-class MockWeb3Version:
-    def __init__(self, netid):
-        self.network = netid
+    @property
+    def chainId(self):
+        return self.chain_id
 
 
 class MockWeb3:
-    def __init__(self, netid):
-        self.version = MockWeb3Version(netid)
-        self.eth = MockEth()
+    def __init__(self, chain_id):
+        self.eth = MockEth(chain_id=chain_id)

@@ -1,7 +1,7 @@
 import gevent
 import pytest
 from eth_utils import is_list_like, keccak
-from web3.utils.events import construct_event_topic_set
+from web3._utils.events import construct_event_topic_set
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI

@@ -123,7 +123,7 @@ def check_rdn_deposits(
 def check_network_id(network_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
     """ Check periodically if the underlying ethereum client's network id has changed"""
     while True:
-        current_id = int(web3.version.network)
+        current_id = web3.eth.chainId
         if network_id != current_id:
             raise RuntimeError(
                 f"Raiden was running on network with id {network_id} and it detected "
