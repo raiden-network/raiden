@@ -18,10 +18,10 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
+from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.formatting import format_block_id, to_checksum_address
+from raiden.utils.formatting import format_block_id
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -212,21 +212,13 @@ class TokenNetworkRegistry:
                     "should be larger than the minimum settlement timeout."
                 )
 
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "token_address": to_checksum_address(token_address),
-            "given_block_identifier": format_block_id(given_block_identifier),
-            "channel_participant_deposit_limit": channel_participant_deposit_limit,
-            "token_network_deposit_limit": token_network_deposit_limit,
-        }
-        with log_transaction(log, "add_token", log_details):
-            return self._add_token(
-                token_address=token_address,
-                channel_participant_deposit_limit=channel_participant_deposit_limit,
-                token_network_deposit_limit=token_network_deposit_limit,
-                log_details=log_details,
-            )
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
+        return self._add_token(
+            token_address=token_address,
+            channel_participant_deposit_limit=channel_participant_deposit_limit,
+            token_network_deposit_limit=token_network_deposit_limit,
+            log_details=log_details,
+        )
 
     def _add_token(
         self,
@@ -237,26 +229,22 @@ class TokenNetworkRegistry:
     ) -> TokenNetworkAddress:
         token_network_address = None
 
-        checking_block = self.rpc_client.get_checking_block()
-
         kwargs = {
             "_token_address": token_address,
             "_channel_participant_deposit_limit": channel_participant_deposit_limit,
             "_token_network_deposit_limit": token_network_deposit_limit,
         }
-        gas_limit = self.rpc_client.estimate_gas(
-            self.proxy, checking_block, "createERC20TokenNetwork", **kwargs
+        estimated_transaction = self.rpc_client.estimate_gas(
+            self.proxy, "createERC20TokenNetwork", log_details, **kwargs
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
-            )
-            log_details["gas_limit"] = gas_limit
-            transaction_hash = self.rpc_client.transact(
-                self.proxy, "createERC20TokenNetwork", gas_limit, **kwargs
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"],
             )
 
+            transaction_hash = self.rpc_client.transact(estimated_transaction)
             receipt = self.rpc_client.poll_transaction(transaction_hash)
 
             if check_transaction_threw(receipt=receipt):
@@ -306,13 +294,13 @@ class TokenNetworkRegistry:
                         "anymore."
                     )
 
-                if receipt["cumulativeGasUsed"] == gas_limit:
+                if receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
                     msg = (
                         f"createERC20TokenNetwork failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"createERC20TokenNetwork, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
+                        f"({estimated_transaction.estimated_gas}). Estimate gas "
+                        f"may have underestimated createERC20TokenNetwork, or "
+                        f"succeeded even though an assert is triggered, or the "
+                        f"smart contract code has an conditional assert."
                     )
                     raise RaidenRecoverableError(msg)
 
@@ -457,11 +445,13 @@ class TokenNetworkRegistry:
                 given_block_identifier=failed_at_blocknumber,
             )
 
-            required_gas = (
-                gas_limit
-                if gas_limit
-                else self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
-            )
+            if estimated_transaction is not None:
+                required_gas = estimated_transaction.estimated_gas
+            else:
+                required_gas = self.gas_measurements[
+                    "TokenNetworkRegistry createERC20TokenNetwork"
+                ]
+
             self.rpc_client.check_for_insufficient_eth(
                 transaction_name="createERC20TokenNetwork",
                 transaction_executed=False,

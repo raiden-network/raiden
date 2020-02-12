@@ -6,11 +6,10 @@ from web3.exceptions import BadFunctionCallOutput
 from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import log_transaction, raise_on_call_returned_empty
+from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.formatting import format_block_id, to_checksum_address
-from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -120,12 +119,6 @@ class UserDeposit:
         given_block_identifier: BlockSpecification,
     ) -> None:
         """ Initialize the UserDeposit contract with MS and OneToN addresses """
-        log_details = {
-            "monitoring_service_address": to_checksum_address(monitoring_service_address),
-            "one_to_n_address": to_checksum_address(one_to_n_address),
-            "given_block_identifier": format_block_id(given_block_identifier),
-        }
-
         check_address_has_code(
             client=self.client,
             address=Address(monitoring_service_address),
@@ -168,25 +161,20 @@ class UserDeposit:
                 )
                 raise BrokenPreconditionError(msg)
 
-        with log_transaction(log, "init", log_details):
-            self._init(
-                monitoring_service_address=monitoring_service_address,
-                one_to_n_address=one_to_n_address,
-                log_details=log_details,
-            )
-
-    def _init(
-        self,
-        monitoring_service_address: MonitoringServiceAddress,
-        one_to_n_address: OneToNAddress,
-        log_details: Dict[str, Any],
-    ) -> None:
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.client.estimate_gas(
-            self.proxy, checking_block, "init", monitoring_service_address, one_to_n_address
+        self._init(
+            monitoring_service_address=monitoring_service_address,
+            one_to_n_address=one_to_n_address,
         )
 
-        if not gas_limit:
+    def _init(
+        self, monitoring_service_address: MonitoringServiceAddress, one_to_n_address: OneToNAddress
+    ) -> None:
+        log_details: Dict[str, Any] = {}
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy, "init", log_details, monitoring_service_address, one_to_n_address
+        )
+
+        if estimated_transaction is None:
             failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
@@ -220,18 +208,11 @@ class UserDeposit:
             raise RaidenRecoverableError("Deposit failed of unknown reason")
 
         else:
-            gas_limit = safe_gas_limit(gas_limit)
-            log_details["gas_limit"] = gas_limit
-
-            transaction_hash = self.client.transact(
-                self.proxy, "init", gas_limit, monitoring_service_address, one_to_n_address
-            )
-
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
 
-            if failed_receipt:
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+            if check_transaction_threw(receipt=receipt):
+                failed_at_blocknumber = receipt["blockNumber"]
 
                 existing_monitoring_service_address = self.monitoring_service_address(
                     block_identifier=failed_at_blocknumber
@@ -269,14 +250,6 @@ class UserDeposit:
             token_address=token_address, block_identifier=given_block_identifier
         )
 
-        log_details = {
-            "beneficiary": to_checksum_address(beneficiary),
-            "contract": to_checksum_address(self.address),
-            "node": to_checksum_address(self.node_address),
-            "total_deposit": total_deposit,
-            "given_block_identifier": format_block_id(given_block_identifier),
-        }
-
         # To prevent concurrent transactions for token transfers where it is unknown if
         # we have enough capacity for both, we acquire the lock
         # for the token proxy. Example: A user deposit and a channel deposit
@@ -305,7 +278,6 @@ class UserDeposit:
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
-                log_details["previous_total_deposit"] = previous_total_deposit
                 amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
                 if whole_balance + amount_to_deposit > UINT256_MAX:
@@ -338,14 +310,17 @@ class UserDeposit:
                     )
                     raise BrokenPreconditionError(msg)
 
-            with log_transaction(log, "deposit", log_details):
-                self._deposit(
-                    beneficiary=beneficiary,
-                    token=token,
-                    total_deposit=total_deposit,
-                    amount_to_deposit=amount_to_deposit,
-                    log_details=log_details,
-                )
+            log_details = {
+                "given_block_identifier": format_block_id(given_block_identifier),
+                "previous_total_deposit": previous_total_deposit,
+            }
+            self._deposit(
+                beneficiary=beneficiary,
+                token=token,
+                total_deposit=total_deposit,
+                amount_to_deposit=amount_to_deposit,
+                log_details=log_details,
+            )
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
@@ -368,12 +343,11 @@ class UserDeposit:
     ) -> None:
         token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.client.estimate_gas(
-            self.proxy, checking_block, "deposit", beneficiary, total_deposit
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy, "deposit", log_details, beneficiary, total_deposit
         )
 
-        if not gas_limit:
+        if estimated_transaction is None:
             failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
@@ -430,18 +404,11 @@ class UserDeposit:
             raise RaidenRecoverableError("Deposit failed of unknown reason")
 
         else:
-            gas_limit = safe_gas_limit(gas_limit)
-            log_details["gas_limit"] = gas_limit
-
-            transaction_hash = self.client.transact(
-                self.proxy, "deposit", gas_limit, beneficiary, total_deposit
-            )
-
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
 
-            if failed_receipt:
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+            if check_transaction_threw(receipt=receipt):
+                failed_at_blocknumber = receipt["blockNumber"]
 
                 latest_deposit = self.get_total_deposit(
                     address=self.node_address, block_identifier=failed_at_blocknumber

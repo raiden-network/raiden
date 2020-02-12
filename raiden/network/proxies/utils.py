@@ -1,21 +1,15 @@
-from contextlib import contextmanager
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 from eth_utils import decode_hex, to_hex
-from structlog import BoundLoggerBase
 
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
-    Any,
     BlockNumber,
     BlockSpecification,
     ChannelID,
-    Dict,
-    Generator,
     Locksroot,
     NoReturn,
     Optional,
@@ -115,23 +109,6 @@ def get_onchain_locksroots(
     partner_locksroot = partner_details.locksroot
 
     return our_locksroot, partner_locksroot
-
-
-@contextmanager
-def log_transaction(log: BoundLoggerBase, description: str, details: Dict[Any, Any]) -> Generator:
-    token = uuid4()
-    bound_log = log.bind(description=description, token=token, **details)
-    try:
-        bound_log.debug("Transaction will be sent")
-        yield
-    except RaidenRecoverableError:
-        bound_log.debug("Transaction invalidated", exc_info=True)
-        raise
-    except:  # noqa
-        bound_log.critical("Transaction execution failed", exc_info=True)
-        raise
-
-    bound_log.debug("Transaction successful")
 
 
 def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:

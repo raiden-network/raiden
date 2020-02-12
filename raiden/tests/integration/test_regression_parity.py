@@ -12,7 +12,6 @@ from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils.packing import pack_signed_balance_proof
-from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import PaymentAmount, PaymentID
 from raiden_contracts.constants import MessageTypeId
 
@@ -114,12 +113,11 @@ def test_locksroot_loading_during_channel_settle_handling(
     iterations = 1000
 
     def send_transaction() -> None:
-        check_block = deploy_client.get_checking_block()
-        startgas = deploy_client.estimate_gas(
-            contract_proxy, check_block, "waste_storage", iterations
+        estimated_transaction = deploy_client.estimate_gas(
+            contract_proxy, "waste_storage", {}, iterations
         )
-        startgas = safe_gas_limit(startgas)
-        transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
+        assert estimated_transaction
+        transaction = deploy_client.transact(estimated_transaction)
         deploy_client.poll_transaction(transaction)
 
     for _ in range(10):

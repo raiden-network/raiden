@@ -13,10 +13,10 @@ from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
+from raiden.network.rpc.client import deploy_contract_web3
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils.formatting import to_hex_address
-from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden.utils.typing import (
     AddressHex,
     Any,

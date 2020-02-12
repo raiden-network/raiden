@@ -1,25 +1,29 @@
+from typing import Any, Dict
+
 import gevent
 import pytest
+from web3 import Web3
 
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.smart_contracts import safe_gas_limit
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_geth")
 
 
-def test_geth_request_pruned_data_raises_an_exception(deploy_client, web3):
+def test_geth_request_pruned_data_raises_an_exception(
+    deploy_client: JSONRPCClient, web3: Web3
+) -> None:
     """ Interacting with an old block identifier with a pruning client throws. """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1
 
-    def send_transaction():
-        check_block = deploy_client.get_checking_block()
-        startgas = deploy_client.estimate_gas(
-            contract_proxy, check_block, "waste_storage", iterations
+    def send_transaction() -> Dict[str, Any]:
+        estimated_transaction = deploy_client.estimate_gas(
+            contract_proxy, "waste_storage", {}, iterations
         )
-        startgas = safe_gas_limit(startgas)
-        transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
-        return deploy_client.poll_transaction(transaction)
+        assert estimated_transaction
+        transaction_hash = deploy_client.transact(estimated_transaction)
+        return deploy_client.poll_transaction(transaction_hash)
 
     first_receipt = send_transaction()
     mined_block_number = first_receipt["blockNumber"]

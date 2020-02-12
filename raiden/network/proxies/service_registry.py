@@ -6,10 +6,8 @@ from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
-from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,
@@ -112,11 +110,16 @@ class ServiceRegistry:
 
     def deposit(self, block_identifier: BlockSpecification, limit_amount: TokenAmount) -> None:
         """Makes a deposit to create or extend a registration"""
-        gas_limit = self.client.estimate_gas(self.proxy, block_identifier, "deposit", limit_amount)
-        if not gas_limit:
+        extra_log_details = {"given_block_identifier": block_identifier}
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy, "deposit", extra_log_details, limit_amount
+        )
+
+        if estimated_transaction is None:
             msg = "ServiceRegistry.deposit transaction fails"
             raise RaidenUnrecoverableError(msg)
-        transaction_hash = self.client.transact(self.proxy, "deposit", gas_limit, limit_amount)
+
+        transaction_hash = self.client.transact(estimated_transaction)
         receipt = self.client.poll_transaction(transaction_hash)
         failed_receipt = check_transaction_threw(receipt=receipt)
         if failed_receipt:
@@ -125,12 +128,6 @@ class ServiceRegistry:
 
     def set_url(self, url: str) -> None:
         """Sets the url needed to access the service via HTTP for the caller"""
-        log_details: Dict[str, Any] = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "url": url,
-        }
-
         if not url.strip():
             msg = "Invalid empty URL"
             raise BrokenPreconditionError(msg)
@@ -140,16 +137,17 @@ class ServiceRegistry:
             msg = "URL provided to service registry must be a valid HTTP(S) endpoint."
             raise BrokenPreconditionError(msg)
 
-        with log_transaction(log, "set_url", log_details):
-            gas_limit = self.client.estimate_gas(self.proxy, "latest", "setURL", url)
-            if not gas_limit:
-                msg = f"URL {url} is invalid"
-                raise RaidenUnrecoverableError(msg)
+        extra_log_details: Dict[str, Any] = {}
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy, "setURL", extra_log_details, url
+        )
+        if estimated_transaction is None:
+            msg = f"URL {url} is invalid"
+            raise RaidenUnrecoverableError(msg)
 
-            log_details["gas_limit"] = gas_limit
-            transaction_hash = self.client.transact(self.proxy, "setURL", gas_limit, url)
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-            if failed_receipt:
-                msg = f"URL {url} is invalid"
-                raise RaidenUnrecoverableError(msg)
+        transaction_hash = self.client.transact(estimated_transaction)
+        receipt = self.client.poll_transaction(transaction_hash)
+        failed_receipt = check_transaction_threw(receipt=receipt)
+        if failed_receipt:
+            msg = f"URL {url} is invalid"
+            raise RaidenUnrecoverableError(msg)

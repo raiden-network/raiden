@@ -28,7 +28,6 @@ from raiden.exceptions import (
 from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.utils import (
     get_channel_participants_from_open_event,
-    log_transaction,
     raise_on_call_returned_empty,
 )
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
@@ -271,40 +270,27 @@ class TokenNetwork:
                 if safety_deprecation_switch:
                     raise BrokenPreconditionError("This token network is deprecated.")
 
-            log_details = {
-                "node": to_checksum_address(self.node_address),
-                "contract": to_checksum_address(self.address),
-                "peer1": to_checksum_address(self.node_address),
-                "peer2": to_checksum_address(partner),
-                "settle_timeout": settle_timeout,
-                "given_block_identifier": format_block_id(given_block_identifier),
-            }
-
-            with log_transaction(log, "new_netting_channel", log_details):
-                self.opening_channels_count += 1
-                try:
-                    channel_identifier = self._new_netting_channel(
-                        partner, settle_timeout, log_details
-                    )
-                finally:
-                    self.opening_channels_count -= 1
-                log_details["channel_identifier"] = str(channel_identifier)
+            self.opening_channels_count += 1
+            try:
+                channel_identifier = self._new_netting_channel(partner, settle_timeout)
+            finally:
+                self.opening_channels_count -= 1
 
             return channel_identifier
 
     def _new_netting_channel(
-        self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
+        self, partner: Address, settle_timeout: int
     ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.client.estimate_gas(
+        estimated_transaction = self.client.estimate_gas(
             self.proxy,
-            checking_block,
             "openChannel",
+            extra_log_details={},
             participant1=self.node_address,
             participant2=partner,
             settle_timeout=settle_timeout,
         )
-        if not gas_limit:
+
+        if estimated_transaction is None:
             failed_at = self.client.get_block("latest")
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
@@ -342,22 +328,15 @@ class TokenNetwork:
                 f"{failed_at_blocknumber}."
             )
         else:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.openChannel"]
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.openChannel"],
             )
-            log_details["gas_limit"] = gas_limit
-            transaction_hash = self.client.transact(
-                self.proxy,
-                "openChannel",
-                gas_limit,
-                participant1=self.node_address,
-                participant2=partner,
-                settle_timeout=settle_timeout,
-            )
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-            if failed_receipt:
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+
+            if check_transaction_threw(receipt=receipt):
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
                 existing_channel_identifier = self.get_channel_identifier_or_none(
                     participant1=self.node_address,
                     participant2=partner,
@@ -857,24 +836,17 @@ class TokenNetwork:
                     raise BrokenPreconditionError(msg)
 
             log_details = {
-                "node": to_checksum_address(self.node_address),
-                "contract": to_checksum_address(self.address),
-                "participant": to_checksum_address(self.node_address),
-                "receiver": to_checksum_address(partner),
-                "channel_identifier": channel_identifier,
-                "total_deposit": total_deposit,
                 "previous_total_deposit": our_details.deposit,
                 "given_block_identifier": format_block_id(given_block_identifier),
             }
 
-            with log_transaction(log, "set_total_deposit", log_details):
-                self._set_total_deposit(
-                    channel_identifier=channel_identifier,
-                    total_deposit=total_deposit,
-                    previous_total_deposit=our_details.deposit,
-                    partner=partner,
-                    log_details=log_details,
-                )
+            self._set_total_deposit(
+                channel_identifier=channel_identifier,
+                total_deposit=total_deposit,
+                previous_total_deposit=our_details.deposit,
+                partner=partner,
+                log_details=log_details,
+            )
 
     def _set_total_deposit(
         self,
@@ -884,7 +856,6 @@ class TokenNetwork:
         previous_total_deposit: TokenAmount,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         # If there are channels being set up concurrently either the
@@ -905,7 +876,7 @@ class TokenNetwork:
         # in which case the second `approve` will overwrite the first,
         # and the first `setTotalDeposit` will consume the allowance,
         # making the second deposit fail.
-        transaction_hash = None
+        estimated_transaction = None
         with self.token.token_lock:
             # HACK: The hack bellow is necessary to make sure the gas
             # estimation of an approve works concurrently with the mining of a
@@ -917,37 +888,25 @@ class TokenNetwork:
             allowance = TokenAmount(amount_to_deposit + 1)
             self.token.approve(allowed_address=Address(self.address), allowance=allowance)
 
-            gas_limit = self.client.estimate_gas(
+            estimated_transaction = self.client.estimate_gas(
                 self.proxy,
-                checking_block,
                 "setTotalDeposit",
+                extra_log_details=log_details,
                 channel_identifier=channel_identifier,
                 participant=self.node_address,
                 total_deposit=total_deposit,
                 partner=partner,
             )
 
-            if gas_limit:
-                gas_limit = safe_gas_limit(
-                    gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
-                )
-                log_details["gas_limit"] = gas_limit
-
-                transaction_hash = self.client.transact(
-                    self.proxy,
-                    function_name="setTotalDeposit",
-                    startgas=gas_limit,
-                    channel_identifier=channel_identifier,
-                    participant=self.node_address,
-                    total_deposit=total_deposit,
-                    partner=partner,
-                )
-
-        if transaction_hash:
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
+            )
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
 
-            if failed_receipt:
+            if check_transaction_threw(receipt=receipt):
                 # Because the gas estimation succeeded it is known that:
                 # - The channel id was correct, i.e. this node and partner are
                 #   participants of the chanenl with id `channel_identifier`.
@@ -955,16 +914,16 @@ class TokenNetwork:
                 # - The account had enough tokens to deposit
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                if receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
                     msg = (
                         f"setTotalDeposit failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"setTotalDeposit, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
+                        f"({estimated_transaction.estimated_gas}). Estimate gas "
+                        f"may have underestimated setTotalDeposit, or succeeded "
+                        f"even though an assert is triggered, or the smart "
+                        f"contract code has an conditional assert."
                     )
                     raise RaidenRecoverableError(msg)
 
@@ -1022,11 +981,11 @@ class TokenNetwork:
                     raise RaidenRecoverableError("Requested total deposit was already performed")
 
                 token_network_deposit_limit = self.token_network_deposit_limit(
-                    block_identifier=failed_receipt["blockHash"]
+                    block_identifier=receipt["blockHash"]
                 )
 
                 network_total_deposit = self.token.balance_of(
-                    address=Address(self.address), block_identifier=failed_receipt["blockHash"]
+                    address=Address(self.address), block_identifier=receipt["blockHash"]
                 )
 
                 if network_total_deposit + deposit_amount > token_network_deposit_limit:
@@ -1037,7 +996,7 @@ class TokenNetwork:
                     raise RaidenRecoverableError(msg)
 
                 channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                    block_identifier=failed_receipt["blockHash"]
+                    block_identifier=receipt["blockHash"]
                 )
                 if total_deposit > channel_participant_deposit_limit:
                     msg = (
@@ -1351,26 +1310,18 @@ class TokenNetwork:
                     if partner_recovered_address != partner:
                         raise RaidenUnrecoverableError("Invalid withdraw partner signature")
 
-            log_details = {
-                "node": to_checksum_address(participant),
-                "contract": to_checksum_address(self.address),
-                "participant": to_checksum_address(participant),
-                "partner": to_checksum_address(partner),
-                "total_withdraw": total_withdraw,
-                "given_block_identifier": format_block_id(given_block_identifier),
-            }
+            log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-            with log_transaction(log, "set_total_withdraw", log_details):
-                self._set_total_withdraw(
-                    channel_identifier=channel_identifier,
-                    total_withdraw=total_withdraw,
-                    expiration_block=expiration_block,
-                    participant=participant,
-                    partner=partner,
-                    partner_signature=partner_signature,
-                    participant_signature=participant_signature,
-                    log_details=log_details,
-                )
+            self._set_total_withdraw(
+                channel_identifier=channel_identifier,
+                total_withdraw=total_withdraw,
+                expiration_block=expiration_block,
+                participant=participant,
+                partner=partner,
+                partner_signature=partner_signature,
+                participant_signature=participant_signature,
+                log_details=log_details,
+            )
 
     def _set_total_withdraw(
         self,
@@ -1383,12 +1334,11 @@ class TokenNetwork:
         participant_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
 
-        gas_limit = self.client.estimate_gas(
+        estimated_transaction = self.client.estimate_gas(
             self.proxy,
-            checking_block,
             "setTotalWithdraw",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             participant=participant,
             total_withdraw=total_withdraw,
@@ -1397,23 +1347,13 @@ class TokenNetwork:
             participant_signature=participant_signature,
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"]
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
             )
-            log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.client.transact(
-                self.proxy,
-                function_name="setTotalWithdraw",
-                startgas=gas_limit,
-                channel_identifier=channel_identifier,
-                participant=participant,
-                total_withdraw=total_withdraw,
-                expiration_block=expiration_block,
-                partner_signature=partner_signature,
-                participant_signature=participant_signature,
-            )
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
@@ -1427,13 +1367,13 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
                 failed_at_blocknumber = failed_receipt["blockNumber"]
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
                     msg = (
                         f"update transfer failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"update transfer, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
+                        f"({estimated_transaction.estimated_gas}). Estimate gas "
+                        f"may have underestimated update transfer, or succeeded "
+                        f"even though an assert is triggered, or the smart "
+                        f"contract code has an conditional assert."
                     )
                     raise RaidenUnrecoverableError(msg)
 
@@ -1663,29 +1603,18 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "partner": to_checksum_address(partner),
-            "nonce": nonce,
-            "balance_hash": encode_hex(balance_hash),
-            "additional_hash": encode_hex(additional_hash),
-            "non_closing_signature": encode_hex(non_closing_signature),
-            "closing_signature": encode_hex(closing_signature),
-            "given_block_identifier": format_block_id(given_block_identifier),
-        }
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-        with log_transaction(log, "close", log_details):
-            self._close(
-                channel_identifier=channel_identifier,
-                partner=partner,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                non_closing_signature=non_closing_signature,
-                closing_signature=closing_signature,
-                log_details=log_details,
-            )
+        self._close(
+            channel_identifier=channel_identifier,
+            partner=partner,
+            balance_hash=balance_hash,
+            nonce=nonce,
+            additional_hash=additional_hash,
+            non_closing_signature=non_closing_signature,
+            closing_signature=closing_signature,
+            log_details=log_details,
+        )
 
     def _close(
         self,
@@ -1701,11 +1630,10 @@ class TokenNetwork:
         # `channel_operations_lock` is used to serialize conflicting channel
         # operations. E.g. this close and a deposit or withdraw.
         with self.channel_operations_lock[partner]:
-            checking_block = self.client.get_checking_block()
-            gas_limit = self.client.estimate_gas(
+            estimated_transaction = self.client.estimate_gas(
                 self.proxy,
-                checking_block,
                 "closeChannel",
+                extra_log_details=log_details,
                 channel_identifier=channel_identifier,
                 non_closing_participant=partner,
                 closing_participant=self.node_address,
@@ -1716,24 +1644,12 @@ class TokenNetwork:
                 closing_signature=closing_signature,
             )
 
-            if gas_limit:
-                gas_limit = safe_gas_limit(
-                    gas_limit, self.metadata.gas_measurements["TokenNetwork.closeChannel"]
+            if estimated_transaction is not None:
+                estimated_transaction.estimated_gas = safe_gas_limit(
+                    estimated_transaction.estimated_gas,
+                    self.metadata.gas_measurements["TokenNetwork.closeChannel"],
                 )
-                log_details["gas_limit"] = gas_limit
-                transaction_hash = self.client.transact(
-                    self.proxy,
-                    "closeChannel",
-                    gas_limit,
-                    channel_identifier=channel_identifier,
-                    non_closing_participant=partner,
-                    closing_participant=self.node_address,
-                    balance_hash=balance_hash,
-                    nonce=nonce,
-                    additional_hash=additional_hash,
-                    non_closing_signature=non_closing_signature,
-                    closing_signature=closing_signature,
-                )
+                transaction_hash = transaction_hash = self.client.transact(estimated_transaction)
                 receipt = self.client.poll_transaction(transaction_hash)
                 failed_receipt = check_transaction_threw(receipt=receipt)
 
@@ -1753,7 +1669,7 @@ class TokenNetwork:
                     # `poll`ing waits for the transaction to be confirmed.
                     mining_block = failed_receipt["blockNumber"]
 
-                    if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                    if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
                         msg = (
                             "update transfer failed and all gas was used. Estimate gas "
                             "may have underestimated update transfer, or succeeded even "
@@ -1932,29 +1848,18 @@ class TokenNetwork:
                 )
                 raise RaidenRecoverableError(msg)
 
-        log_details = {
-            "contract": to_checksum_address(self.address),
-            "node": to_checksum_address(self.node_address),
-            "partner": to_checksum_address(partner),
-            "nonce": nonce,
-            "balance_hash": encode_hex(balance_hash),
-            "additional_hash": encode_hex(additional_hash),
-            "closing_signature": encode_hex(closing_signature),
-            "non_closing_signature": encode_hex(non_closing_signature),
-            "given_block_identifier": format_block_id(given_block_identifier),
-        }
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-        with log_transaction(log, "update_transfer", log_details):
-            self._update_transfer(
-                channel_identifier=channel_identifier,
-                partner=partner,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                closing_signature=closing_signature,
-                non_closing_signature=non_closing_signature,
-                log_details=log_details,
-            )
+        self._update_transfer(
+            channel_identifier=channel_identifier,
+            partner=partner,
+            balance_hash=balance_hash,
+            nonce=nonce,
+            additional_hash=additional_hash,
+            closing_signature=closing_signature,
+            non_closing_signature=non_closing_signature,
+            log_details=log_details,
+        )
 
     def _update_transfer(
         self,
@@ -1967,11 +1872,10 @@ class TokenNetwork:
         non_closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.client.estimate_gas(
+        estimated_transaction = self.client.estimate_gas(
             self.proxy,
-            checking_block,
             "updateNonClosingBalanceProof",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             closing_participant=partner,
             non_closing_participant=self.node_address,
@@ -1982,25 +1886,12 @@ class TokenNetwork:
             non_closing_signature=non_closing_signature,
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit,
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
                 self.metadata.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"],
             )
-            log_details["gas_limit"] = gas_limit
-            transaction_hash = self.client.transact(
-                self.proxy,
-                "updateNonClosingBalanceProof",
-                gas_limit,
-                channel_identifier=channel_identifier,
-                closing_participant=partner,
-                non_closing_participant=self.node_address,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                closing_signature=closing_signature,
-                non_closing_signature=non_closing_signature,
-            )
+            transaction_hash = self.client.transact(estimated_transaction)
 
             receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
@@ -2017,7 +1908,7 @@ class TokenNetwork:
                 # `poll`ing waits for the transaction to be confirmed.
                 mining_block = failed_receipt["blockNumber"]
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
                     msg = (
                         "update transfer failed and all gas was used. Estimate gas "
                         "may have underestimated update transfer, or succeeded even "
@@ -2222,23 +2113,18 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError(msg)
 
         log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "sender": to_checksum_address(sender),
-            "receiver": to_checksum_address(receiver),
             "pending_locks": pending_locks,
             "given_block_identifier": format_block_id(given_block_identifier),
         }
 
-        with log_transaction(log, "unlock", log_details):
-            self._unlock(
-                channel_identifier=channel_identifier,
-                sender=sender,
-                receiver=receiver,
-                pending_locks=pending_locks,
-                given_block_identifier=given_block_identifier,
-                log_details=log_details,
-            )
+        self._unlock(
+            channel_identifier=channel_identifier,
+            sender=sender,
+            receiver=receiver,
+            pending_locks=pending_locks,
+            given_block_identifier=given_block_identifier,
+            log_details=log_details,
+        )
 
     def _unlock(
         self,
@@ -2249,32 +2135,23 @@ class TokenNetwork:
         given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         leaves_packed = b"".join(pending_locks.locks)
-        gas_limit = self.client.estimate_gas(
+        estimated_transaction = self.client.estimate_gas(
             self.proxy,
-            checking_block,
             "unlock",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             receiver=receiver,
             sender=sender,
             locks=encode_hex(leaves_packed),
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
-            log_details["gas_limit"] = gas_limit
-
-            transaction_hash = self.client.transact(
-                self.proxy,
-                function_name="unlock",
-                startgas=gas_limit,
-                channel_identifier=channel_identifier,
-                receiver=receiver,
-                sender=sender,
-                locks=leaves_packed,
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas, UNLOCK_TX_GAS_LIMIT
             )
 
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
@@ -2285,13 +2162,13 @@ class TokenNetwork:
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
+                if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
                     msg = (
                         f"Unlock failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"unlock, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
+                        f"({estimated_transaction.estimated_gas}). Estimate gas "
+                        f"may have underestimated unlock, or succeeded even "
+                        f"though an assert is triggered, or the smart contract "
+                        f"code has an conditional assert."
                     )
                     raise RaidenUnrecoverableError(msg)
 
@@ -2436,32 +2313,18 @@ class TokenNetwork:
                     msg = "Partner balance hash does not match the on-chain value"
                     raise BrokenPreconditionError(msg)
 
-            log_details = {
-                "channel_identifier": channel_identifier,
-                "contract": to_checksum_address(self.address),
-                "node": to_checksum_address(self.node_address),
-                "our_address": to_checksum_address(self.node_address),
-                "transferred_amount": transferred_amount,
-                "locked_amount": locked_amount,
-                "locksroot": encode_hex(locksroot),
-                "partner": to_checksum_address(partner),
-                "partner_transferred_amount": partner_transferred_amount,
-                "partner_locked_amount": partner_locked_amount,
-                "partner_locksroot": encode_hex(partner_locksroot),
-                "given_block_identifier": format_block_id(given_block_identifier),
-            }
-            with log_transaction(log, "settle", log_details):
-                self._settle(
-                    channel_identifier=channel_identifier,
-                    transferred_amount=transferred_amount,
-                    locked_amount=locked_amount,
-                    locksroot=locksroot,
-                    partner=partner,
-                    partner_transferred_amount=partner_transferred_amount,
-                    partner_locked_amount=partner_locked_amount,
-                    partner_locksroot=partner_locksroot,
-                    log_details=log_details,
-                )
+            log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
+            self._settle(
+                channel_identifier=channel_identifier,
+                transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
+                locksroot=locksroot,
+                partner=partner,
+                partner_transferred_amount=partner_transferred_amount,
+                partner_locked_amount=partner_locked_amount,
+                partner_locksroot=partner_locksroot,
+                log_details=log_details,
+            )
 
     def _settle(
         self,
@@ -2475,7 +2338,6 @@ class TokenNetwork:
         partner_locksroot: Locksroot,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
 
         # The second participant transferred + locked amount must be higher
         our_maximum = transferred_amount + locked_amount
@@ -2504,27 +2366,21 @@ class TokenNetwork:
                 "participant2_locksroot": partner_locksroot,
             }
 
-        gas_limit = self.client.estimate_gas(
+        estimated_transaction = self.client.estimate_gas(
             self.proxy,
-            checking_block,
             "settleChannel",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             **kwargs,
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.settleChannel"]
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.settleChannel"],
             )
-            log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.client.transact(
-                self.proxy,
-                function_name="settleChannel",
-                startgas=gas_limit,
-                channel_identifier=channel_identifier,
-                **kwargs,
-            )
+            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 

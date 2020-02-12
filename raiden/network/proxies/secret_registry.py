@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 import gevent
 import structlog
@@ -12,14 +12,11 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.proxies.utils import log_transaction
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     Address,
-    Any,
     BlockNumber,
     BlockSpecification,
     Dict,
@@ -134,43 +131,34 @@ class SecretRegistry:
         # From here on the lock is not required. Context-switches will happen
         # for the gas estimation and the transaction, however the
         # synchronization data is limited to the open_secret_transactions
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "secrethashes": secrethashes_to_register,
-            "secrethashes_not_sent": secrethashes_not_sent,
-        }
+        if secrets_to_register:
+            log_details = {"secrethashes_not_sent": secrethashes_not_sent}
+            self._register_secret_batch(secrets_to_register, transaction_result, log_details)
 
-        with log_transaction(log, "register_secret_batch", log_details):
-            if secrets_to_register:
-                self._register_secret_batch(secrets_to_register, transaction_result, log_details)
-
-            gevent.joinall(wait_for, raise_error=True)
+        gevent.joinall(wait_for, raise_error=True)
 
     def _register_secret_batch(
         self,
         secrets_to_register: List[Secret],
         transaction_result: AsyncResult,
-        log_details: Dict[Any, Any],
+        log_details: Dict[str, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.client.estimate_gas(
-            self.proxy, checking_block, "registerSecretBatch", secrets_to_register
+
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy, "registerSecretBatch", log_details, secrets_to_register
         )
         receipt = None
         transaction_hash = None
         msg = None
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
             )
-            log_details["gas_limit"] = gas_limit
 
             try:
-                transaction_hash = self.client.transact(
-                    self.proxy, "registerSecretBatch", gas_limit, secrets_to_register
-                )
+                transaction_hash = self.client.transact(estimated_transaction)
                 receipt = self.client.poll_transaction(transaction_hash)
             except Exception as e:  # pylint: disable=broad-except
                 msg = f"Unexpected exception {e} at sending registerSecretBatch transaction."
@@ -185,7 +173,9 @@ class SecretRegistry:
         # Therefore the only reason for the transaction to fail is if there is
         # a bug.
         unrecoverable_error = (
-            gas_limit is None or receipt is None or receipt["status"] == RECEIPT_FAILURE_CODE
+            estimated_transaction is None
+            or receipt is None
+            or receipt["status"] == RECEIPT_FAILURE_CODE
         )
 
         exception: Union[RaidenRecoverableError, RaidenUnrecoverableError]
@@ -193,8 +183,8 @@ class SecretRegistry:
             # If the transaction was sent it must not fail. If this happened
             # some of our assumptions is broken therefore the error is
             # unrecoverable
-            if receipt is not None:
-                if receipt["gasUsed"] == gas_limit:
+            if estimated_transaction is not None and receipt is not None:
+                if receipt["gasUsed"] == estimated_transaction.estimated_gas:
                     # The transaction failed and all gas was used. This can
                     # happen because of:
                     #
@@ -242,7 +232,7 @@ class SecretRegistry:
             # Safety cannot be guaranteed under any of these cases, this error
             # is unrecoverable. *Note*: This assumes the ethereum client
             # takes into account the current transactions in the pool.
-            if gas_limit:
+            if estimated_transaction is not None:
                 assert msg, "Unexpected control flow, an exception should have been raised."
                 error = (
                     f"Sending the the transaction for registerSecretBatch "
@@ -263,12 +253,11 @@ class SecretRegistry:
             #
             # Either of these is a bug. The contract does not use
             # assert/revert, and the account should always be funded
-            assert gas_limit
             self.client.check_for_insufficient_eth(
                 transaction_name="registerSecretBatch",
                 transaction_executed=True,
-                required_gas=gas_limit,
-                block_identifier=checking_block,
+                required_gas=GAS_REQUIRED_PER_SECRET_IN_BATCH * len(secrets_to_register),
+                block_identifier=self.client.get_checking_block(),
             )
             error = "Call to registerSecretBatch couldn't be done"
 
