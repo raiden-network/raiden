@@ -3,7 +3,7 @@ import os
 import random
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, NamedTuple, Tuple
+from typing import Any, Dict, List, NamedTuple, Set, Tuple
 from uuid import UUID
 
 import filelock
@@ -719,18 +719,25 @@ class RaidenService(Runnable):
         # and try to DoS it, with the expectation that the victim would
         # forward the payment, but wouldn't be able to send a transaction to
         # the blockchain nor update a MS.
+
+        # Since several state_changes in one batch of state_changes can trigger
+        # the same PFSCapacityUpdate or MonitoringUpdate we want to iterate over
+        # all state changes to produce and send only unique messages. Assumption is
+        # that the latest related state_change defines the correct messages.
+        # Goal is to reduce messages.
+
+        monitoring_updates: Dict[CanonicalIdentifier, BalanceProofStateChange] = dict()
+        pfs_fee_updates: Set[CanonicalIdentifier] = set()
+        pfs_capacity_updates: Set[CanonicalIdentifier] = set()
+
         for state_change in state_changes:
             if self.config.services.monitoring_enabled and isinstance(
                 state_change, BalanceProofStateChange
             ):
-                update_monitoring_service_from_balance_proof(
-                    raiden=self,
-                    chain_state=old_state,
-                    new_balance_proof=state_change.balance_proof,
-                    non_closing_participant=self.address,
-                )
+                monitoring_updates[state_change.balance_proof.canonical_identifier] = state_change
 
             if isinstance(state_change, PFS_UPDATE_STATE_CHANGES):
+
                 update_fee_schedule = isinstance(
                     state_change,
                     (
@@ -740,23 +747,35 @@ class RaidenService(Runnable):
                         ReceiveWithdrawExpired,
                     ),
                 )
-
                 if isinstance(state_change, BalanceProofStateChange):
                     canonical_identifier = state_change.balance_proof.canonical_identifier
                 else:
                     canonical_identifier = state_change.canonical_identifier
 
-                send_pfs_update(
-                    raiden=self,
-                    canonical_identifier=canonical_identifier,
-                    update_fee_schedule=update_fee_schedule,
-                )
+                if update_fee_schedule:
+                    pfs_fee_updates.add(canonical_identifier)
+                else:
+                    pfs_capacity_updates.add(canonical_identifier)
 
         for event in raiden_event_list:
             if isinstance(event, PFS_UPDATE_EVENTS):
-                send_pfs_update(
-                    raiden=self, canonical_identifier=event.balance_proof.canonical_identifier
-                )
+                pfs_capacity_updates.add(event.balance_proof.canonical_identifier)
+
+        for monitoring_update in monitoring_updates.values():
+            update_monitoring_service_from_balance_proof(
+                raiden=self,
+                chain_state=old_state,
+                new_balance_proof=monitoring_update.balance_proof,
+                non_closing_participant=self.address,
+            )
+
+        for canonical_identifier in pfs_capacity_updates:
+            send_pfs_update(raiden=self, canonical_identifier=canonical_identifier)
+
+        for canonical_identifier in pfs_fee_updates:
+            send_pfs_update(
+                raiden=self, canonical_identifier=canonical_identifier, update_fee_schedule=True
+            )
 
         for state_change in state_changes:
             after_blockchain_statechange(self, state_change)
