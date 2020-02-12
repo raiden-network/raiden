@@ -1,8 +1,10 @@
+from typing import Dict
+
 from eth_utils import encode_hex
 
 from raiden.settings import GAS_LIMIT_HEX
 
-GENESIS_STUB = {
+GENESIS_STUB: Dict = {
     "config": {
         "ChainID": 0,
         "homesteadBlock": 0,

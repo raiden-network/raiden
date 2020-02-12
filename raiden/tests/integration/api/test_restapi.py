@@ -7,6 +7,8 @@ import gevent
 import grequests
 import pytest
 from eth_utils import (
+    decode_hex,
+    encode_hex,
     is_checksum_address,
     to_bytes,
     to_canonical_address,
@@ -44,7 +46,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import Address, FeeAmount, PaymentAmount, PaymentID, TokenAmount
+from raiden.utils.typing import Address, FeeAmount, PaymentAmount, PaymentID, Secret, TokenAmount
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -114,7 +116,7 @@ def assert_payment_secret_and_hash(response, payment):
     assert "secret" in response
     assert "secret_hash" in response
 
-    secret = to_bytes(hexstr=response["secret"])
+    secret = Secret(to_bytes(hexstr=response["secret"]))
     assert len(secret) == SECRET_LENGTH
     assert payment["amount"] == response["amount"]
 
@@ -1436,8 +1438,8 @@ def test_api_payments_with_resolver(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = to_hex(factories.make_secret())
-    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
+    secret = factories.make_secret()
+    secret_hash = sha256_secrethash(secret)
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -1458,7 +1460,11 @@ def test_api_payments_with_resolver(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret_hash": secret_hash},
+        json={
+            "amount": str(amount),
+            "identifier": str(identifier),
+            "secret_hash": encode_hex(secret_hash),
+        },
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
@@ -1473,7 +1479,7 @@ def test_api_payments_with_resolver(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret": secret},
+        json={"amount": str(amount), "identifier": str(identifier), "secret": encode_hex(secret)},
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
@@ -1481,8 +1487,10 @@ def test_api_payments_with_resolver(
 
     # payment with secret_hash where the resolver has the secret. Should work.
 
-    secret = "0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e"
-    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
+    secret = Secret(
+        decode_hex("0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e")
+    )
+    secret_hash = sha256_secrethash(secret)
 
     request = grequests.post(
         api_url_for(
@@ -1491,7 +1499,11 @@ def test_api_payments_with_resolver(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret_hash": secret_hash},
+        json={
+            "amount": str(amount),
+            "identifier": str(identifier),
+            "secret_hash": encode_hex(secret_hash),
+        },
     )
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response

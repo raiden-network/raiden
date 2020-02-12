@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 import gevent
 import structlog
+from eth_typing import HexStr
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import Semaphore
@@ -41,7 +42,7 @@ JSONResponse = Dict[str, Any]
 
 def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
     if user_id:
-        return AddressHex(user_id.split(":", 1)[0][1:])
+        return AddressHex(HexStr(user_id.split(":", 1)[0][1:]))
 
     return None
 

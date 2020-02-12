@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from eth_typing import URI
 from web3 import HTTPProvider, Web3
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, EthClient
@@ -47,7 +48,7 @@ def web3(
     host = "127.0.0.1"
     rpc_port = blockchain_rpc_ports[0]
     endpoint = f"http://{host}:{rpc_port}"
-    web3 = Web3(HTTPProvider(endpoint))
+    web3 = Web3(HTTPProvider(URI(endpoint)))
 
     assert len(blockchain_private_keys) == len(blockchain_rpc_ports)
     assert len(blockchain_private_keys) == len(blockchain_p2p_ports)

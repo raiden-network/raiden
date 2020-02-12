@@ -9,7 +9,15 @@ from marshmallow_polyfield import PolyField
 
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.utils.formatting import to_hex_address
-from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tuple
+from raiden.utils.typing import (
+    Address,
+    Any,
+    ChainID,
+    ChannelID,
+    Optional,
+    TokenNetworkAddress,
+    Tuple,
+)
 
 
 class IntegerToStringField(marshmallow.fields.Integer):
@@ -65,7 +73,9 @@ class QueueIdentifierField(marshmallow.fields.Field):
             chain_id_str, token_network_address_hex, channel_id_str = string.split("|")
             return CanonicalIdentifier(
                 chain_identifier=ChainID(int(chain_id_str)),
-                token_network_address=to_bytes(hexstr=token_network_address_hex),
+                token_network_address=TokenNetworkAddress(
+                    to_canonical_address(token_network_address_hex)
+                ),
                 channel_identifier=ChannelID(int(channel_id_str)),
             )
         except ValueError:
