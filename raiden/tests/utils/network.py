@@ -154,7 +154,7 @@ def payment_channel_open_and_deposit(
         token_network_address, block_identifier="latest"
     )
 
-    channel_identifier = token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = token_network_proxy.new_netting_channel(
         partner=app1.raiden.address,
         settle_timeout=settle_timeout,
         given_block_identifier=block_identifier,

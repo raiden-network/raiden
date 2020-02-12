@@ -60,7 +60,7 @@ def test_payment_channel_proxy_basics(
     )
     start_block = web3.eth.blockNumber
 
-    channel_identifier = token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = token_network_proxy.new_netting_channel(
         partner=partner, settle_timeout=TEST_SETTLE_TIMEOUT_MIN, given_block_identifier="latest"
     )
     assert channel_identifier is not None
@@ -159,7 +159,7 @@ def test_payment_channel_proxy_basics(
     )
     assert len(channel_events) == 4
 
-    new_channel_identifier = token_network_proxy.new_netting_channel(
+    new_channel_identifier, _, _ = token_network_proxy.new_netting_channel(
         partner=partner, settle_timeout=TEST_SETTLE_TIMEOUT_MIN, given_block_identifier="latest"
     )
     assert new_channel_identifier is not None

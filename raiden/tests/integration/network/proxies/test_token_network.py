@@ -1,7 +1,10 @@
 import random
 
+import gevent
 import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address
+from gevent.greenlet import Greenlet
+from gevent.queue import Queue
 
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
@@ -20,12 +23,14 @@ from raiden.exceptions import (
     SamePeerAddress,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
+from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_address
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import T_ChannelID
+from raiden.utils.typing import Set, T_ChannelID
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
@@ -59,7 +64,7 @@ def test_token_network_deposit_race(
         address=token_network_address, block_identifier="latest"
     )
     token_proxy.transfer(c1_client.address, 10)
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier="latest",
@@ -253,7 +258,7 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier="latest",
@@ -530,7 +535,7 @@ def test_token_network_proxy_update_transfer(
         address=token_network_address, block_identifier="latest"
     )
     # create a channel
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier="latest"
     )
     # deposit to the channel
@@ -740,7 +745,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         address=token_network_address, block_identifier="latest"
     )
     # create a channel and query the state at the current block hash
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier="latest"
     )
     block = c1_client.web3.eth.getBlock("latest")
@@ -800,7 +805,7 @@ def test_token_network_actions_at_pruned_blocks(
     assert initial_balance_c2 == initial_token_balance
     # create a channel
     settle_timeout = STATE_PRUNING_AFTER_BLOCKS + 10
-    channel_identifier = c1_token_network_proxy.new_netting_channel(
+    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=settle_timeout, given_block_identifier="latest"
     )
 
@@ -934,3 +939,39 @@ def test_token_network_actions_at_pruned_blocks(
     assert token_proxy.balance_of(c1_client.address) == (
         initial_balance_c1 + 0 - transferred_amount_c1
     )
+
+
+def test_concurrent_set_total_deposit(token_network_proxy: TokenNetwork) -> None:
+    CHANNEL_COUNT = 3
+    DEPOSIT_COUNT = 5
+    channels = Queue()
+
+    def open_channel() -> None:
+        partner = factories.make_address()
+        settle_timeout = 500
+        given_block_identifier = "latest"
+        channel_identifier, _, block_hash = token_network_proxy.new_netting_channel(
+            partner, settle_timeout, given_block_identifier
+        )
+        channels.put((channel_identifier, block_hash, partner))
+
+    channel_grenlets = {gevent.spawn(open_channel) for _ in range(CHANNEL_COUNT)}
+
+    deposit_greenlets = set()
+    for _ in range(CHANNEL_COUNT):
+        channel_identifier, block_hash, partner = channels.get()
+        for i in range(DEPOSIT_COUNT):
+            given_block_identifier = block_hash
+            total_deposit = i + 1
+
+            g = gevent.spawn(
+                token_network_proxy.set_total_deposit,
+                given_block_identifier,
+                channel_identifier,
+                total_deposit,
+                partner,
+            )
+            deposit_greenlets.add(g)
+
+    all_greenlets: Set[Greenlet] = channel_grenlets.union(deposit_greenlets)
+    gevent.joinall(set(all_greenlets), raise_error=True)
