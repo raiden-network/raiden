@@ -125,7 +125,9 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
 
 def parity_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
-    next_nonce_encoded = web3.manager.request_blocking("parity_nextNonce", [address])
+    next_nonce_encoded = web3.manager.request_blocking(
+        "parity_nextNonce", [to_checksum_address(address)]
+    )
     return Nonce(int(next_nonce_encoded, 16))
 
 
