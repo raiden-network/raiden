@@ -820,6 +820,7 @@ class JSONRPCClient:
             receipt,
         )
 
+    # FIXME: Rename
     def poll(self, transaction_hash: TransactionHash) -> Dict[str, Any]:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
