@@ -48,6 +48,7 @@ from raiden.utils.typing import (
     Any,
     BalanceHash,
     BlockExpiration,
+    BlockHash,
     BlockNumber,
     BlockSpecification,
     ChainID,
@@ -64,6 +65,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
     WithdrawAmount,
     typecheck,
 )
@@ -212,7 +214,7 @@ class TokenNetwork:
 
     def new_netting_channel(
         self, partner: Address, settle_timeout: int, given_block_identifier: BlockSpecification
-    ) -> ChannelID:
+    ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
         """ Creates a new channel in the TokenNetwork contract.
 
         Args:
@@ -294,7 +296,7 @@ class TokenNetwork:
 
     def _new_netting_channel(
         self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
-    ) -> ChannelID:
+    ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
         checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
             checking_block,
@@ -387,7 +389,7 @@ class TokenNetwork:
             block_identifier=encode_hex(receipt["blockHash"]),
         ).channel_identifier
 
-        return channel_identifier
+        return (channel_identifier, receipt["blockHash"], receipt["blockNumber"])
 
     def get_channel_identifier(
         self, participant1: Address, participant2: Address, block_identifier: BlockSpecification
