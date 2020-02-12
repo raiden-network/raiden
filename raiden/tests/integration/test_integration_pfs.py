@@ -1,11 +1,16 @@
 import pytest
+from eth_utils import keccak
 
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.messages.abstract import Message
+from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
+from raiden.messages.transfers import Unlock
+from raiden.settings import MediationFeeConfig
 from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.factories import make_transaction_hash
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
@@ -15,10 +20,18 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.tests.utils.transport import TestMatrixTransport
 from raiden.transfer import views
+from raiden.transfer.state import TransactionChannelDeposit
+from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
 from raiden.utils.typing import (
     List,
+    LockedAmount,
+    Locksroot,
+    MessageID,
+    Nonce,
     PaymentAmount,
     PaymentID,
+    Secret,
+    Signature,
     TokenAddress,
     TokenAmount,
     WithdrawAmount,
@@ -211,3 +224,138 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
     assert len(messages2) == 1
     assert len([x for x in messages2 if isinstance(x, PFSCapacityUpdate)]) == 1
     assert len([x for x in messages2 if isinstance(x, PFSFeeUpdate)]) == 0
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
+@pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
+def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raiden_network):
+    """
+    Tests that PFSCapacityUpdates and PFSFeeUpdates are being
+    sent only once with the most recent state change in a batch.
+    """
+    app0, app1 = raiden_network
+    chain_state = views.state_from_app(app0)
+
+    # There have been two PFSCapacityUpdates and two PFSFeeUpdates per channel per node
+    assert len(get_messages(app0)) == 4
+    # The mediator has two channels
+    assert len(get_messages(app1)) == 4
+
+    # Now we create two state_changes (Deposit) regarding the same channel
+    # and trigger handle_state_changes() of node0. The expected outcome
+    # is that only 1 PFSCapacityUpdate and 1 PFSFeeUpdate is being sent
+    # not one per state change
+    pfs_fee_update_1_of_app0 = get_messages(app0)[1]
+    assert isinstance(pfs_fee_update_1_of_app0, PFSFeeUpdate)
+    pfs_capacity_update_2_of_app0 = get_messages(app0)[2]
+    assert isinstance(pfs_capacity_update_2_of_app0, PFSCapacityUpdate)
+    canonical_identifier = pfs_fee_update_1_of_app0.canonical_identifier
+    new_total_deposit_1 = pfs_capacity_update_2_of_app0.other_capacity * 2
+
+    deposit_transaction_1 = TransactionChannelDeposit(
+        app1.raiden.address, TokenAmount(new_total_deposit_1), chain_state.block_number
+    )
+    channel_deposit_1 = ContractReceiveChannelDeposit(
+        transaction_hash=make_transaction_hash(),
+        canonical_identifier=canonical_identifier,
+        deposit_transaction=deposit_transaction_1,
+        block_number=chain_state.block_number,
+        block_hash=chain_state.block_hash,
+        fee_config=MediationFeeConfig(),
+    )
+
+    new_total_deposit_2 = new_total_deposit_1 * 2
+    deposit_transaction_2 = TransactionChannelDeposit(
+        app1.raiden.address, TokenAmount(new_total_deposit_2), chain_state.block_number
+    )
+
+    channel_deposit_2 = ContractReceiveChannelDeposit(
+        transaction_hash=make_transaction_hash(),
+        canonical_identifier=canonical_identifier,
+        deposit_transaction=deposit_transaction_2,
+        block_number=chain_state.block_number,
+        block_hash=chain_state.block_hash,
+        fee_config=MediationFeeConfig(),
+    )
+
+    state_changes = [channel_deposit_1, channel_deposit_2]
+
+    app0.raiden.handle_state_changes(state_changes=state_changes)
+
+    # Now we should see that app0 send 2 new messages,
+    # one PFSCapacityUpdate and one PFSFeeUpdate with
+    # the updated amount of the initial amount * 4
+    # so sending should only be triggered by the second state change
+
+    pfs_capacity_update_3_of_app0 = get_messages(app0)[4]
+    assert isinstance(pfs_capacity_update_3_of_app0, PFSCapacityUpdate)
+    assert len(get_messages(app0)) == 6
+    assert (
+        pfs_capacity_update_3_of_app0.other_capacity
+        == pfs_capacity_update_2_of_app0.updating_capacity * 4
+    )
+
+    # Now we want to test if this also works with a state_change
+    # that triggers only a PFSCapacityUpdate and no PFSFeeUpdate.
+    # So at the end we expect 1 more PFSCapacityUpdate in the room.
+
+    lock_secret_1 = keccak(b"test_end_state")
+    unlock_message_1 = Unlock(
+        chain_id=chain_state.chain_id,
+        message_identifier=MessageID(123132),
+        payment_identifier=PaymentID(1),
+        nonce=Nonce(2),
+        token_network_address=canonical_identifier.token_network_address,
+        channel_identifier=canonical_identifier.channel_identifier,
+        transferred_amount=TokenAmount(400),
+        locked_amount=LockedAmount(0),
+        locksroot=Locksroot(keccak(b"")),
+        secret=Secret(lock_secret_1),
+        signature=Signature(bytes(65)),
+    )
+    unlock_message_1.sign(app1.raiden.signer)
+    balance_proof_1 = balanceproof_from_envelope(unlock_message_1)
+
+    unlock_1 = ReceiveUnlock(
+        message_identifier=MessageID(5135),
+        secret=Secret(lock_secret_1),
+        balance_proof=balance_proof_1,
+        sender=balance_proof_1.sender,
+    )
+
+    lock_secret_2 = keccak(b"test_end_state_again")
+
+    unlock_message_2 = Unlock(
+        chain_id=chain_state.chain_id,
+        message_identifier=MessageID(223132),
+        payment_identifier=PaymentID(2),
+        nonce=Nonce(2),
+        token_network_address=canonical_identifier.token_network_address,
+        channel_identifier=canonical_identifier.channel_identifier,
+        transferred_amount=TokenAmount(500),
+        locked_amount=LockedAmount(0),
+        locksroot=Locksroot(keccak(b"")),
+        secret=Secret(lock_secret_2),
+        signature=Signature(bytes(65)),
+    )
+
+    unlock_message_2.sign(app1.raiden.signer)
+
+    balance_proof_2 = balanceproof_from_envelope(unlock_message_2)
+
+    unlock_2 = ReceiveUnlock(
+        message_identifier=MessageID(5135),
+        secret=Secret(lock_secret_2),
+        balance_proof=balance_proof_2,
+        sender=balance_proof_2.sender,
+    )
+
+    state_changes_2 = [unlock_1, unlock_2]
+
+    app0.raiden.handle_state_changes(state_changes=state_changes_2)
+
+    assert len(get_messages(app0)) == 7
+    assert len([x for x in get_messages(app0) if isinstance(x, PFSCapacityUpdate)]) == 4
