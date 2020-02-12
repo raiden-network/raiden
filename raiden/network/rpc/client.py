@@ -6,17 +6,21 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import gevent
 import structlog
 from eth_utils import decode_hex, encode_hex, is_bytes, is_checksum_address, to_canonical_address
+from eth_utils.toolz import assoc
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
 from web3 import Web3
+from web3._utils.contracts import (
+    encode_transaction_data,
+    find_matching_fn_abi,
+    prepare_transaction,
+)
+from web3._utils.empty import empty
 from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi, prepare_transaction
-from web3.utils.empty import empty
-from web3.utils.toolz import assoc
 
 from raiden.constants import (
     NO_STATE_QUERY_AFTER_BLOCKS,
@@ -65,7 +69,7 @@ def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpec
 
 def geth_assert_rpc_interfaces(web3: Web3) -> None:
     try:
-        web3.version.node
+        web3.clientVersion
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the web3 rpc interface "
@@ -91,7 +95,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
 
 def parity_assert_rpc_interfaces(web3: Web3) -> None:
     try:
-        web3.version.node
+        web3.clientVersion
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the web3 rpc interface "
@@ -419,15 +423,15 @@ def patched_contractfunction_estimateGas(
 def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     try:
         # install caching middleware
-        web3.middleware_stack.add(block_hash_cache_middleware)
+        web3.middleware_onion.add(block_hash_cache_middleware)
 
         # set gas price strategy
         web3.eth.setGasPriceStrategy(gas_price_strategy)
 
         # we use a PoA chain for smoketest, use this middleware to fix this
-        web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
     except ValueError:
-        # `middleware_stack.inject()` raises a value error if the same middleware is
+        # `middleware_onion.inject()` raises a value error if the same middleware is
         # injected twice. This happens with `eth-tester` setup where a single session
         # scoped web3 instance is used for all clients
         pass
@@ -552,7 +556,7 @@ class JSONRPCClient:
 
         monkey_patch_web3(web3, gas_price_strategy)
 
-        version = web3.version.node
+        version = web3.clientVersion
         supported, eth_node, _ = is_supported_client(version)
 
         if not supported:
@@ -575,7 +579,7 @@ class JSONRPCClient:
         self.default_block_num_confirmations = block_num_confirmations
 
         # Ask for the chain id only once and store it here
-        self.chain_id = ChainID(int(self.web3.version.network))
+        self.chain_id = ChainID(self.web3.eth.chainId)
 
         self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()

@@ -15,7 +15,7 @@ from raiden.utils.typing import Optional, Tuple
 
 def parse_geth_version(client_version: str) -> Optional[tuple]:
     if client_version.startswith("Geth/"):
-        # then this is a geth client version from web3.version.node
+        # then this is a geth client version from web3.clientVersion
         matches = re.search(r"/v(\d+\.\d+\.\d+)", client_version)
     else:
         # result of `geth version`
@@ -51,14 +51,14 @@ def support_check(
 
 
 def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient], Optional[str]]:
-    """Takes a client version string either from web3.version.node or from
+    """Takes a client version string either from `web3.clientVersion` or from
     `geth version` or `parity --version` and sees if it is supported.
 
     Returns a tuple with 3 elements:
     (supported_or_not, none_or_EthClient, none_or_our_version_str)
     """
     if client_version.startswith("Parity"):
-        # Parity has Parity// at web3.version.node and Parity/ prefix at parity --version
+        # Parity has Parity// at web3.clientVersion and Parity/ prefix at parity --version
         matches = re.search(r"/+v(\d+\.\d+\.\d+)", client_version)
         if matches is None:
             return False, None, None

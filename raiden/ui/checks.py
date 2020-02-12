@@ -55,7 +55,7 @@ def check_sql_version() -> None:
 
 def check_ethereum_client_is_supported(web3: Web3) -> None:
     try:
-        node_version = web3.version.node  # pylint: disable=no-member
+        node_version = web3.clientVersion  # pylint: disable=no-member-abc
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying ethereum node does not have the web3 rpc interface "
@@ -133,7 +133,7 @@ def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
     If they don't match, exits the program with an error. If they do adds it
     to the configuration and then returns it and whether it is a known network
     """
-    node_network_id = ChainID(int(web3.version.network))  # pylint: disable=no-member
+    node_network_id = ChainID(web3.eth.chainId)  # pylint: disable=no-member-abc
 
     if node_network_id != given_network_id:
         given_name = ID_TO_NETWORKNAME.get(given_network_id)

@@ -219,7 +219,7 @@ def setup_testchain(
 
     eth_rpc_endpoint = f"http://127.0.0.1:{rpc_port}"
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
-    web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+    web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     eth_nodes = [
         EthNodeDescription(
