@@ -58,7 +58,7 @@ from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, RoomID, Signature
+from raiden.utils.typing import Address, ChainID, MessageID, Signature
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -774,7 +774,7 @@ def sort_servers_closest(
 
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-    handle_member_join_callback: Callable[[RoomID], None],
+    handle_member_join_callback: Callable[[Room], None],
     servers: List[str],
     *args: Any,
     **kwargs: Any,
