@@ -90,6 +90,9 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
 
         # A user must join the room to create the room in the federated server
         room = client.join_room(room.aliases[0])
+
+        # Since #5892 `join_room()` only populates server-local aliases but we need all here
+        room.update_aliases()
         server_name = server.netloc
         alias = f"#{broadcast_room_name}:{server_name}"
 

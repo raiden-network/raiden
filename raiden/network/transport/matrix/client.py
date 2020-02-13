@@ -4,7 +4,7 @@ from datetime import datetime
 from functools import wraps
 from itertools import repeat
 from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 from uuid import UUID, uuid4
 
 import gevent
@@ -86,30 +86,39 @@ class Room(MatrixRoom):
             return f"<Room id={self.room_id!r} alias={self.canonical_alias!r}>"
         return f"<Room id={self.room_id!r} aliases={self.aliases!r}>"
 
-    def update_aliases(self) -> bool:
-        """ Get aliases information from room state
+    def update_local_aliases(self) -> bool:
+        """ Fetch server local aliases for the room.
+
+        This is an optimization over the general `update_aliases()` method which fetches the
+        entire room state (which can be large in Raiden) and then discards all non-alias events.
+
+        Unfortunately due to a limitation in the Matrix API it's not possible to query for all
+        aliases of a room. Only aliases for a specific server can be fetched, see:
+        https://github.com/matrix-org/synapse/issues/6908
+
+        Since in Raiden we always have server local aliases set, this method is sufficient for our
+        use case.
 
         Returns:
             boolean: True if the aliases changed, False if not
         """
+        server_name = urlparse(self.client.api.base_url).netloc
         changed = False
-        try:
-            response = self.client.api.get_room_state(self.room_id)
-        except MatrixRequestError:
-            return False
-        for chunk in response:
-            content = chunk.get("content")
-            if content:
-                if "aliases" in content:
-                    aliases = content["aliases"]
-                    if aliases != self.aliases:
-                        self.aliases = aliases
-                        changed = True
-                if chunk.get("type") == "m.room.canonical_alias":
-                    canonical_alias = content["alias"]
-                    if self.canonical_alias != canonical_alias:
-                        self.canonical_alias = canonical_alias
-                        changed = True
+        for event_type in ["m.room.aliases", "m.room.canonical_alias"]:
+            try:
+                response = self.client.api.get_room_state_type(
+                    self.room_id, event_type, server_name
+                )
+            except MatrixRequestError:
+                continue
+            if "aliases" in response:
+                if self.aliases != response["aliases"]:
+                    self.aliases = response["aliases"]
+                    changed = True
+            if "alias" in response:
+                if self.canonical_alias != response["alias"]:
+                    self.canonical_alias = response["alias"]
+                    changed = True
         if changed and self.aliases and not self.canonical_alias:
             self.canonical_alias = self.aliases[0]
         return changed
@@ -528,7 +537,7 @@ class GMatrixClient(MatrixClient):
             self.rooms[room_id] = Room(self, room_id)
         room = self.rooms[room_id]
         if not room.canonical_alias:
-            room.update_aliases()
+            room.update_local_aliases()
         return room
 
     def get_user_presence(self, user_id: str) -> Optional[str]:
