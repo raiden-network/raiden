@@ -1,6 +1,6 @@
 FROM python:3.7-stretch
 
-# these are defined in .travis.yml and passed here in the makefile
+# these are defined in .circleci/config.yml and passed here in the makefile
 ARG SOLC_URL_LINUX
 ARG GETH_URL_LINUX
 
@@ -24,7 +24,7 @@ ADD requirements/requirements.txt /tmp/
 WORKDIR /tmp
 
 
-RUN pip install -U pip setuptools pip-tools
+RUN pip install -U pip setuptools pip-tools wheel
 RUN pip-sync requirements.txt
 
 ADD . /raiden
