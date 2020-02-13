@@ -182,11 +182,7 @@ class Idle:
 
     def log(self) -> None:
         if not self.measurements:
-            log.debug(
-                "No idle data",
-                context_switches=self.context_switches,
-                measurements=self.measurements,
-            )
+            log.debug("No idle data", context_switches=self.context_switches)
             return
 
         is_blocking = (
@@ -204,7 +200,6 @@ class Idle:
             idled=self.idled,
             interval=self.running_interval,
             idle_pct=self.idled_pct,
-            measurements=self.measurements,
         )
 
     def __bool__(self) -> bool:
