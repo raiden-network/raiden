@@ -312,7 +312,6 @@ class RaidenService(Runnable):
             self.serialization_file = None
             self.db_lock = None
 
-        self.gas_reserve_lock = gevent.lock.Semaphore()
         self.payment_identifier_lock = gevent.lock.Semaphore()
 
         # A list is not hashable, so use tuple as key here

@@ -57,7 +57,7 @@ def _get_required_gas_estimate(
     return estimate
 
 
-def _get_required_gas_estimate_for_state(raiden: "RaidenService") -> int:
+def get_required_gas_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:
     num_opening_channels = 0
     num_opened_channels = 0
     num_closing_channels = 0
@@ -66,8 +66,11 @@ def _get_required_gas_estimate_for_state(raiden: "RaidenService") -> int:
     num_settled_channels = 0
 
     # Only use the token networks that have been instantiated. Instantiating
-    # the token networks here can have a high performance impacet for a token
-    # network registry with lots of registeres tokens.
+    # the token networks here has a very high performance impact for a registry
+    # with lots of tokens.
+    #
+    # The lock is being acquired to prevent chnages to the dictionary while
+    # iterating over it.
     with raiden.proxy_manager.token_network_creation_lock:
         num_opening_channels = sum(
             token_network.opening_channels_count
@@ -97,22 +100,13 @@ def _get_required_gas_estimate_for_state(raiden: "RaidenService") -> int:
 
     return _get_required_gas_estimate(
         gas_measurements=gas_measurements(raiden.contract_manager.contracts_version),
-        opening_channels=num_opening_channels,
+        opening_channels=num_opening_channels + channels_to_open,
         opened_channels=num_opened_channels,
         closing_channels=num_closing_channels,
         closed_channels=num_closed_channels,
         settling_channels=num_settling_channels,
         settled_channels=num_settled_channels,
     )
-
-
-def get_required_gas_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:
-    gas_estimate = _get_required_gas_estimate_for_state(raiden)
-    measurements = gas_measurements(raiden.contract_manager.contracts_version)
-    gas_estimate += _get_required_gas_estimate(
-        gas_measurements=measurements, new_channels=channels_to_open
-    )
-    return gas_estimate
 
 
 def get_reserve_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:

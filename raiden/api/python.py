@@ -493,35 +493,34 @@ class RaidenAPI:  # pragma: no unittest
                 f"(At blockhash: {confirmed_block_identifier.hex()})"
             )
 
-        with self.raiden.gas_reserve_lock:
-            has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
-                self.raiden, channels_to_open=1
+        has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
+            self.raiden, channels_to_open=1
+        )
+
+        if not has_enough_reserve:
+            raise InsufficientGasReserve(
+                "The account balance is below the estimated amount necessary to "
+                "finish the lifecycles of all active channels. A balance of at "
+                f"least {estimated_required_reserve} wei is required."
             )
 
-            if not has_enough_reserve:
-                raise InsufficientGasReserve(
-                    "The account balance is below the estimated amount necessary to "
-                    "finish the lifecycles of all active channels. A balance of at "
-                    f"least {estimated_required_reserve} wei is required."
-                )
-
-            try:
-                token_network.new_netting_channel(
-                    partner=partner_address,
-                    settle_timeout=settle_timeout,
-                    given_block_identifier=confirmed_block_identifier,
-                )
-            except DuplicatedChannelError:
-                log.info("partner opened channel first")
-            except RaidenRecoverableError:
-                # The channel may have been created in the pending block.
-                duplicated_channel = self.is_already_existing_channel(
-                    token_network_address=token_network_address, partner_address=partner_address
-                )
-                if duplicated_channel:
-                    log.info("Channel has already been opened")
-                else:
-                    raise
+        try:
+            token_network.new_netting_channel(
+                partner=partner_address,
+                settle_timeout=settle_timeout,
+                given_block_identifier=confirmed_block_identifier,
+            )
+        except DuplicatedChannelError:
+            log.info("partner opened channel first")
+        except RaidenRecoverableError:
+            # The channel may have been created in the pending block.
+            duplicated_channel = self.is_already_existing_channel(
+                token_network_address=token_network_address, partner_address=partner_address
+            )
+            if duplicated_channel:
+                log.info("Channel has already been opened")
+            else:
+                raise
 
         waiting.wait_for_newchannel(
             raiden=self.raiden,
