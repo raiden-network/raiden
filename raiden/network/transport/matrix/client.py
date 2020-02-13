@@ -26,7 +26,7 @@ from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.utils.typing import AddressHex, RoomID
+from raiden.utils.typing import AddressHex
 
 log = structlog.get_logger(__name__)
 
@@ -215,7 +215,7 @@ class GMatrixClient(MatrixClient):
     def __init__(
         self,
         handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-        handle_member_join_callback: Callable[[RoomID], None],
+        handle_member_join_callback: Callable[[Room], None],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -713,7 +713,7 @@ class GMatrixClient(MatrixClient):
 
                 # number of members changed. Verify validity of room
                 if room_members_count != len(room._members):
-                    self._handle_member_join_callback(room.room_id)
+                    self._handle_member_join_callback(room)
                 all_messages.append((room, sync_room["timeline"]["events"]))
 
                 for event in sync_room["ephemeral"]["events"]:

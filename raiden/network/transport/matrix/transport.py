@@ -982,8 +982,10 @@ class MatrixTransport(Runnable):
         room.invite_only = private_room
         self._set_room_id_for_address(address=peer_address, room_id=room_id)
 
-    def _handle_member_join(self, room_id: RoomID) -> None:
-        room = self._client.rooms[room_id]
+    def _handle_member_join(self, room: Room) -> None:
+        if self._is_broadcast_room(room):
+            return
+
         partner_addresses = self._extract_partner_addresses(room.get_joined_members())
 
         if len(partner_addresses) > 1:
