@@ -32,7 +32,7 @@ from typing import (
 import gevent
 import requests
 import structlog
-from eth_utils import is_checksum_address, to_canonical_address
+from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
 from gevent.event import AsyncResult, Event
 from gevent.greenlet import Greenlet
 from gevent.pool import Pool
@@ -725,8 +725,8 @@ def main() -> None:
             ]
             raiden_args.extend(chain.from_iterable(node.items()))
 
-            if not is_checksum_address(address):
-                raise ValueError(f"address {address} is not checksummed.")
+            # The REST interface uses checksummed address. Normalize it here.
+            address = to_checksum_address(address)
 
             nodedir = os.path.join(datadir, f"node_{pex(to_canonical_address(address))}")
             nodes_config.append(NodeConfig(raiden_args, interface, address, nodedir))
