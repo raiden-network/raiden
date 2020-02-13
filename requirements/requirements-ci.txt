@@ -5,7 +5,7 @@
 #    './deps compile' (for details see README)
 #
 alabaster==0.7.12
-altgraph==0.16.1          # via macholib, pyinstaller
+altgraph==0.16.1          # via pyinstaller
 aniso8601==7.0.0
 apipkg==1.5
 appdirs==1.4.3
@@ -160,7 +160,7 @@ sphinxcontrib-httpdomain==1.7.0
 sphinxcontrib-httpexample==0.10.3
 sphinxcontrib-images==0.8.0
 sphinxcontrib-websupport==1.1.2
-structlog==19.1.0
+structlog==20.1.0
 toml==0.10.0
 toolz==0.9.0
 traitlets==4.3.2

@@ -65,7 +65,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==4.24.3
 idna==2.8
 imagesize==1.1.0
-importlib-metadata==0.18  # via pluggy, pytest
+importlib-metadata==0.18  # via pluggy
 incremental==17.5.0       # via treq, twisted
 ipython-genutils==0.2.0
 ipython==4.2.1
@@ -154,7 +154,7 @@ sphinxcontrib-httpdomain==1.7.0
 sphinxcontrib-httpexample==0.10.3
 sphinxcontrib-images==0.8.0
 sphinxcontrib-websupport==1.1.2
-structlog==19.1.0
+structlog==20.1.0
 toml==0.10.0              # via black
 toolz==0.9.0
 traitlets==4.3.2
