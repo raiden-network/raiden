@@ -680,8 +680,9 @@ class JSONRPCClient:
     ) -> Optional[int]:
         """Estimate the gas necessary to run the transaction.
 
-        Returns `None` transaction would fail because it hit an assert/require,
-        or if the amount of gas required is larger than the block gas limit.
+        Returns `None` if the transaction would fail because it hit an
+        assert/require, or if the amount of gas required is larger than the
+        block gas limit.
         """
 
         fn = getattr(contract.functions, function)
