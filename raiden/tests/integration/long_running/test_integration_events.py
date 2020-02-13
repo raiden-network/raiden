@@ -66,7 +66,9 @@ def get_netting_channel_closed_events(
     closed_event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, ChannelEvent.CLOSED)
 
     topic_set = construct_event_topic_set(
-        event_abi=closed_event_abi, arguments={"channel_identifier": netting_channel_identifier}
+        event_abi=closed_event_abi,
+        abi_codec=proxy_manager.client.web3.codec,
+        arguments={"channel_identifier": netting_channel_identifier},
     )
 
     if len(topic_set) == 1 and is_list_like(topic_set[0]):
@@ -96,7 +98,9 @@ def get_netting_channel_deposit_events(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.DEPOSIT
     )
     topic_set = construct_event_topic_set(
-        event_abi=deposit_event_abi, arguments={"channel_identifier": netting_channel_identifier}
+        event_abi=deposit_event_abi,
+        abi_codec=proxy_manager.client.web3.codec,
+        arguments={"channel_identifier": netting_channel_identifier},
     )
 
     if len(topic_set) == 1 and is_list_like(topic_set[0]):
@@ -126,7 +130,9 @@ def get_netting_channel_settled_events(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.SETTLED
     )
     topic_set = construct_event_topic_set(
-        event_abi=settled_event_abi, arguments={"channel_identifier": netting_channel_identifier}
+        event_abi=settled_event_abi,
+        abi_codec=proxy_manager.client.web3.codec,
+        arguments={"channel_identifier": netting_channel_identifier},
     )
 
     if len(topic_set) == 1 and is_list_like(topic_set[0]):

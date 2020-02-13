@@ -14,7 +14,7 @@ def test_call_invalid_selector(deploy_client: JSONRPCClient) -> None:
     address = contract_proxy.address
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    data = decode_hex(get_transaction_data(contract_proxy.abi, "ret", None))
+    data = decode_hex(get_transaction_data(deploy_client.web3, contract_proxy.abi, "ret", None))
     next_byte = chr(data[0] + 1).encode()
     data_with_wrong_selector = next_byte + data[1:]
     call = deploy_client.web3.eth.call

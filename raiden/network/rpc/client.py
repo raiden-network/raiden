@@ -171,13 +171,15 @@ def check_address_has_code(
 
 
 def get_transaction_data(
-    abi: Dict, function_name: str, args: Any = None, kwargs: Any = None
+    web3: Web3, abi: Dict, function_name: str, args: Any = None, kwargs: Any = None
 ) -> str:
     """Get encoded transaction data"""
     args = args or list()
-    fn_abi = find_matching_fn_abi(abi, function_name, args=args, kwargs=kwargs)
+    fn_abi = find_matching_fn_abi(
+        abi=abi, abi_codec=web3.codec, fn_identifier=function_name, args=args, kwargs=kwargs
+    )
     return encode_transaction_data(
-        web3=None,
+        web3=web3,
         fn_identifier=function_name,
         contract_abi=abi,
         fn_abi=fn_abi,
@@ -731,7 +733,7 @@ class JSONRPCClient:
         self, contract: Contract, function_name: str, startgas: int, *args: Any, **kwargs: Any
     ) -> TransactionHash:
         data = get_transaction_data(
-            abi=contract.abi, function_name=function_name, args=args, kwargs=kwargs
+            web3=self.web3, abi=contract.abi, function_name=function_name, args=args, kwargs=kwargs
         )
 
         slot = self.get_next_transaction()
