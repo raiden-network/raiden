@@ -799,22 +799,13 @@ class TokenNetwork:
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
-                if queried_channel_identifier is None:
-                    msg = (
-                        f"There is no channel open between "
-                        f"{to_checksum_address(self.node_address)} and "
-                        f"{to_checksum_address(partner)} with the channel identifier "
-                        f"{channel_identifier}."
-                    )
-                    raise BrokenPreconditionError(msg)
-
                 if queried_channel_identifier != channel_identifier:
                     msg = (
                         f"There is a channel open between "
                         f"{to_checksum_address(self.node_address)} and "
-                        f"{to_checksum_address(partner)}. However on-chain "
-                        f"channel identifier {queried_channel_identifier} and the "
-                        f"provided id {channel_identifier} do not match."
+                        f"{to_checksum_address(partner)}. However the channel id "
+                        f"on-chain {queried_channel_identifier} and the provided "
+                        f"id {channel_identifier} do not match."
                     )
                     raise BrokenPreconditionError(msg)
 

@@ -328,6 +328,12 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
     assert isinstance(result.payment_done.get(), EventPaymentSentFailed)
 
 
+@pytest.mark.skip(
+    reason=(
+        "Missing synchronization, see "
+        "https://github.com/raiden-network/raiden/issues/4625#issuecomment-585672612"
+    )
+)
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
