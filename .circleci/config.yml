@@ -201,6 +201,7 @@ commands:
             pushd requirements
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
+            pip install git+https://github.com/raiden-network/scenario-player.git@master
       - save_cache:
           key: python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
@@ -214,6 +215,35 @@ commands:
           root: "~"
           paths:
           - venv-<< parameters.py-version >>-*
+
+  sp-smoketests:
+    description: |
+      Execute Smoketests to verify build. Installs the Scenario Player Master from github
+      and executes a smoketest scenario.
+      Requires the following variables be present in the context:
+       - SMOKETEST_NODE
+       - SMOKETEST_PW
+      Additionally, ether spent on smoketests is reclaimed right after smoketest execution passes.
+    steps:
+      - run:
+          name: Run smoketests
+          command: |
+            scenario_player \
+            run raiden/tests/scenarios/smoketests.yml \
+            --data-path=~/.raiden \
+            --chain goerli:https://${SMOKETEST_NODE} \
+            --keystore-file=.circleci/smoketest.keystore \
+            --password=${SMOKETEST_PW} \
+            --no-ui
+      - run:
+          name: Reclaim ether spent on smoketest
+          command: |
+            scenario_player reclaim-eth \
+            --data-path=~/.raiden \
+            --chain goerli:https://${SMOKETEST_NODE} \
+            --keystore-file=.circleci/smoketest.keystore \
+            --password=${SMOKETEST_PW} \
+            --min-age=0 \
 
 jobs:
   # This job exists to generate the `*.egg-info` metadata.
@@ -341,7 +371,7 @@ jobs:
       - run:
           name: Running Raiden Smoketest with << parameters.transport-layer >>, environment << parameters.environment-type >> on ethereum client << parameters.blockchain-type >>
           command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
-
+      - sp-smoketests
       - store_artifacts:
           path: /tmp/smoketest.log
           destination: smoketest-logs

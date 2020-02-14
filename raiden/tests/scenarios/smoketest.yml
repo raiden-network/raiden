@@ -1,0 +1,35 @@
+# Scenario Player Smoketest
+#
+# Start up the SP with default values, wait one second and tear down the
+# SP again.
+#
+# This is meant to be a minimal build integrity check whenever merging code, covering
+# parts of the code which have not been covered by unit or integration tests.
+#
+# It does **not** check validity of tasks.
+---
+version: 2
+
+settings:
+  services:
+    pfs:
+      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+    udc:
+      enable: true
+      token:
+        deposit: true
+        balance_per_node: 10
+
+token:
+  balance_min: 100
+
+nodes:
+  count: 3
+  raiden_version: latest
+  default_options:
+      environment-type: development
+
+scenario:
+  serial:
+    tasks:
+      - wait: 1
