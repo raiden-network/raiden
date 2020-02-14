@@ -71,7 +71,7 @@ def test_get_http_rtt_happy(requests_responses):
     requests_responses.add_callback(responses.GET, "http://url", callback=response)
 
     result = get_average_http_response_time(url="http://url", method="get", samples=3)
-    assert round(result[1], 2) == 0.10
+    assert 0.1 <= result[1] < 0.11  # exact answer is 0.1, but we have some overhead
 
 
 def test_get_http_rtt_ignore_failing(requests_responses):
