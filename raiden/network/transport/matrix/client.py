@@ -526,7 +526,7 @@ class GMatrixClient(MatrixClient):
         # afterwards.
         # As the runtime is evaluated in the subsequent run, we only run this
         # after the second iteration is finished.
-        if timeout_reached and self.sync_iteration > 2:
+        if timeout_reached:
             if IDLE:
                 IDLE.log()
 
