@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import rlp
 from eth_utils import keccak
 
+from raiden.messages.abstract import cached_property
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, List
 
@@ -11,7 +12,7 @@ from raiden.utils.typing import Address, List
 class RouteMetadata:
     route: List[Address]
 
-    @property
+    @cached_property
     def hash(self) -> bytes:
         return keccak(rlp.encode(self.route))
 
@@ -23,7 +24,7 @@ class RouteMetadata:
 class Metadata:
     routes: List[RouteMetadata]
 
-    @property
+    @cached_property
     def hash(self) -> bytes:
         return keccak(rlp.encode([r.hash for r in self.routes]))
 
