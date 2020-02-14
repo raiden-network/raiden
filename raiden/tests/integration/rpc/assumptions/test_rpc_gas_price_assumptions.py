@@ -82,7 +82,7 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
     startgas = safe_gas_limit(gas_estimate)
 
     txhash = deploy_client.transact(contract_proxy, "ret", startgas)
-    deploy_client.poll(txhash)
+    deploy_client.poll_transaction(txhash)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -112,7 +112,7 @@ def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCCli
 
     # Wait for the transaction to be mined (concurrent transactions are tested
     # by test_local_transaction_with_zero_gasprice_is_mined)
-    deploy_client.poll(txhash)
+    deploy_client.poll_transaction(txhash)
 
     # At this point `client_invalid_nonce` has a nonce that is `1` too low,
     # since a transaction was sent using `deploy_client` above and these two
@@ -150,7 +150,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     assert gas_estimate, "Gas estimation should not fail here"
 
     zerogas_txhash = deploy_client.transact(zero_gas_proxy, "ret", gas_estimate)
-    zerogas_receipt = deploy_client.poll(zerogas_txhash)
+    zerogas_receipt = deploy_client.poll_transaction(zerogas_txhash)
     zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_txhash)
 
     msg = "Even thought the transaction had a zero gas price, it is not removed from the pool"

@@ -19,7 +19,7 @@ def test_geth_request_pruned_data_raises_an_exception(deploy_client, web3):
         )
         startgas = safe_gas_limit(startgas)
         transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
-        return deploy_client.poll(transaction)
+        return deploy_client.poll_transaction(transaction)
 
     first_receipt = send_transaction()
     mined_block_number = first_receipt["blockNumber"]

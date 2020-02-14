@@ -21,7 +21,7 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     startgas = startgas * 2
 
     transaction = deploy_client.transact(contract_proxy, "ret", startgas)
-    receipt = deploy_client.poll(transaction)
+    receipt = deploy_client.poll_transaction(transaction)
 
     assert check_transaction_threw(receipt=receipt) is None, "must be empty"
 
@@ -37,12 +37,12 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     startgas = safe_gas_limit(22000)
 
     transaction = deploy_client.transact(contract_proxy, "fail_assert", startgas)
-    receipt = deploy_client.poll(transaction)
+    receipt = deploy_client.poll_transaction(transaction)
 
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 
     transaction = deploy_client.transact(contract_proxy, "fail_require", startgas)
-    receipt = deploy_client.poll(transaction)
+    receipt = deploy_client.poll_transaction(transaction)
 
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 
@@ -61,7 +61,7 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     startgas = safe_gas_limit(startgas) // 2
 
     transaction = deploy_client.transact(contract_proxy, "loop", startgas, 1000)
-    receipt = deploy_client.poll(transaction)
+    receipt = deploy_client.poll_transaction(transaction)
 
     assert check_transaction_threw(receipt=receipt), "must not be empty"
 

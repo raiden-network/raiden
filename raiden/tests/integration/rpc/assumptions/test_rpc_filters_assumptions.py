@@ -13,9 +13,9 @@ def test_filter_start_block_inclusive(deploy_client: JSONRPCClient) -> None:
     assert startgas
     startgas = safe_gas_limit(startgas)
     transaction_1 = deploy_client.transact(contract_proxy, "createEvent", startgas, 1)
-    deploy_client.poll(transaction_1)
+    deploy_client.poll_transaction(transaction_1)
     transaction_2 = deploy_client.transact(contract_proxy, "createEvent", startgas, 2)
-    deploy_client.poll(transaction_2)
+    deploy_client.poll_transaction(transaction_2)
 
     result_1 = deploy_client.get_filter_events(contract_proxy.address)
     block_number_events = get_list_of_block_numbers(result_1)
@@ -46,9 +46,9 @@ def test_filter_end_block_inclusive(deploy_client: JSONRPCClient) -> None:
     assert startgas
     startgas = safe_gas_limit(startgas)
     transaction_1 = deploy_client.transact(contract_proxy, "createEvent", startgas, 1)
-    deploy_client.poll(transaction_1)
+    deploy_client.poll_transaction(transaction_1)
     transaction_2 = deploy_client.transact(contract_proxy, "createEvent", startgas, 2)
-    deploy_client.poll(transaction_2)
+    deploy_client.poll_transaction(transaction_2)
 
     result_1 = deploy_client.get_filter_events(contract_proxy.address)
     block_number_events = get_list_of_block_numbers(result_1)

@@ -74,7 +74,7 @@ def call_minting_method(
         # that might fall through Contract.transact()'s exception handling.
         raise MintFailed(str(e))
 
-    receipt = client.poll(tx_hash)
+    receipt = client.poll_transaction(tx_hash)
     if check_transaction_threw(receipt=receipt):
         raise MintFailed(f"Call to contract method {method}: Transaction failed.")
 

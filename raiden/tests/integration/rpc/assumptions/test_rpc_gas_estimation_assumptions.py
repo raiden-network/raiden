@@ -75,8 +75,8 @@ def test_estimate_gas_defaults_to_pending(deploy_client: JSONRPCClient) -> None:
     assert second_gas, "gas estimation should not have failed"
     second_tx = deploy_client.transact(contract_proxy, "gas_increase_exponential", second_gas)
 
-    first_receipt = deploy_client.poll(first_tx)
-    second_receipt = deploy_client.poll(second_tx)
+    first_receipt = deploy_client.poll_transaction(first_tx)
+    second_receipt = deploy_client.poll_transaction(second_tx)
 
     assert second_receipt["gasLimit"] < deploy_client.get_block("latest")["gasLimit"]
     assert first_receipt["status"] != RECEIPT_FAILURE_CODE

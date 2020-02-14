@@ -227,7 +227,7 @@ class UserDeposit:
                 self.proxy, "init", gas_limit, monitoring_service_address, one_to_n_address
             )
 
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
@@ -437,7 +437,7 @@ class UserDeposit:
                 self.proxy, "deposit", gas_limit, beneficiary, total_deposit
             )
 
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:

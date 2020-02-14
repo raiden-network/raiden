@@ -100,7 +100,7 @@ class Token:
                         self.proxy, "approve", gas_limit, allowed_address, allowance
                     )
 
-                    receipt = self.client.poll(transaction_hash)
+                    receipt = self.client.poll_transaction(transaction_hash)
                     failed_receipt = check_transaction_threw(receipt=receipt)
 
                     if failed_receipt:
@@ -225,7 +225,7 @@ class Token:
                         self.proxy, "transfer", gas_limit, to_address, amount
                     )
 
-                    receipt = self.client.poll(transaction_hash)
+                    receipt = self.client.poll_transaction(transaction_hash)
                     # TODO: check Transfer event (issue: #2598)
                     failed_receipt = check_transaction_threw(receipt=receipt)
 

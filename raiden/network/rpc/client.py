@@ -807,7 +807,7 @@ class JSONRPCClient:
             startgas=self._gas_estimate_correction(contract_transaction["gas"]),
         )
 
-        receipt = self.poll(transaction_hash)
+        receipt = self.poll_transaction(transaction_hash)
         contract_address = receipt["contractAddress"]
 
         deployed_code = self.web3.eth.getCode(contract_address)
@@ -824,8 +824,7 @@ class JSONRPCClient:
             receipt,
         )
 
-    # FIXME: Rename
-    def poll(self, transaction_hash: TransactionHash) -> TxReceipt:
+    def poll_transaction(self, transaction_hash: TransactionHash) -> TxReceipt:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 

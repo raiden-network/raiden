@@ -117,7 +117,7 @@ class ServiceRegistry:
             msg = "ServiceRegistry.deposit transaction fails"
             raise RaidenUnrecoverableError(msg)
         transaction_hash = self.client.transact(self.proxy, "deposit", gas_limit, limit_amount)
-        receipt = self.client.poll(transaction_hash)
+        receipt = self.client.poll_transaction(transaction_hash)
         failed_receipt = check_transaction_threw(receipt=receipt)
         if failed_receipt:
             msg = "ServiceRegistry.deposit transaction failed"
@@ -148,7 +148,7 @@ class ServiceRegistry:
 
             log_details["gas_limit"] = gas_limit
             transaction_hash = self.client.transact(self.proxy, "setURL", gas_limit, url)
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
             if failed_receipt:
                 msg = f"URL {url} is invalid"

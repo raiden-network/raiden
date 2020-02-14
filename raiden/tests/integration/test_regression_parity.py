@@ -120,7 +120,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         )
         startgas = safe_gas_limit(startgas)
         transaction = deploy_client.transact(contract_proxy, "waste_storage", startgas, iterations)
-        deploy_client.poll(transaction)
+        deploy_client.poll_transaction(transaction)
 
     for _ in range(10):
         send_transaction()
