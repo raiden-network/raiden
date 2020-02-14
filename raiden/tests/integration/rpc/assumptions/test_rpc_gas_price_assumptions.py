@@ -1,6 +1,7 @@
 import gevent
 import pytest
 from web3 import HTTPProvider, Web3
+from web3.exceptions import TransactionNotFound
 
 from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
@@ -202,22 +203,28 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     while client.block_number() < target_block_number:
         gevent.sleep(0.5)
 
-    miner_zerogas_tx = miner_client.web3.eth.getTransaction(zerogas_txhash)
-    miner_zerogas_receipt = miner_client.web3.eth.getTransactionReceipt(zerogas_txhash)
+    try:
+        miner_zerogas_tx = miner_client.web3.eth.getTransaction(zerogas_txhash)
+        miner_zerogas_receipt = miner_client.web3.eth.getTransactionReceipt(zerogas_txhash)
+    except TransactionNotFound:
+        miner_zerogas_tx = None
+        miner_zerogas_receipt = None
 
     msg = "The transaction was discarded by the miner, there is no transaction and no receipt"
     assert miner_zerogas_tx is None, msg
     assert miner_zerogas_receipt is None, msg
 
     zerogas_tx = client.web3.eth.getTransaction(zerogas_txhash)
-    zerogas_receipt = client.web3.eth.getTransactionReceipt(zerogas_txhash)
-
     msg = (
         "The transaction was NOT discarded by the original node, because it is a local transaction"
     )
     assert zerogas_tx is not None, msg
 
-    zerogas_receipt = client.web3.eth.getTransactionReceipt(zerogas_txhash)
+    try:
+        zerogas_receipt = client.web3.eth.getTransactionReceipt(zerogas_txhash)
+    except TransactionNotFound:
+        zerogas_receipt = None
+
     msg = "The transaction does NOT have a receipt because the miner rejected it"
 
     if blockchain_type == "geth":
