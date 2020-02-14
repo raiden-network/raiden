@@ -354,7 +354,7 @@ class TokenNetwork:
                 participant2=partner,
                 settle_timeout=settle_timeout,
             )
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
             if failed_receipt:
                 failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
@@ -382,7 +382,7 @@ class TokenNetwork:
 
                 raise RaidenRecoverableError("Creating new channel failed.")
 
-        receipt = self.client.poll(transaction_hash)
+        receipt = self.client.poll_transaction(transaction_hash)
         channel_identifier: ChannelID = self._detail_channel(
             participant1=self.node_address,
             participant2=partner,
@@ -944,7 +944,7 @@ class TokenNetwork:
                 )
 
         if transaction_hash:
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
@@ -1414,7 +1414,7 @@ class TokenNetwork:
                 partner_signature=partner_signature,
                 participant_signature=participant_signature,
             )
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
@@ -1734,7 +1734,7 @@ class TokenNetwork:
                     non_closing_signature=non_closing_signature,
                     closing_signature=closing_signature,
                 )
-                receipt = self.client.poll(transaction_hash)
+                receipt = self.client.poll_transaction(transaction_hash)
                 failed_receipt = check_transaction_threw(receipt=receipt)
 
                 if failed_receipt:
@@ -2002,7 +2002,7 @@ class TokenNetwork:
                 non_closing_signature=non_closing_signature,
             )
 
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
@@ -2275,7 +2275,7 @@ class TokenNetwork:
                 locks=leaves_packed,
             )
 
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:
@@ -2525,7 +2525,7 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 **kwargs,
             )
-            receipt = self.client.poll(transaction_hash)
+            receipt = self.client.poll_transaction(transaction_hash)
             failed_receipt = check_transaction_threw(receipt=receipt)
 
             if failed_receipt:

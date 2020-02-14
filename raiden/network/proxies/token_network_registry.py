@@ -257,7 +257,7 @@ class TokenNetworkRegistry:
                 self.proxy, "createERC20TokenNetwork", gas_limit, **kwargs
             )
 
-            receipt = self.rpc_client.poll(transaction_hash)
+            receipt = self.rpc_client.poll_transaction(transaction_hash)
 
             if check_transaction_threw(receipt=receipt):
                 failed_at_blocknumber = receipt["blockNumber"]

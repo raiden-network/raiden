@@ -12,4 +12,4 @@ def burn_eth(rpc_client: JSONRPCClient, amount_to_leave: int = 0) -> None:
 
     slot = rpc_client.get_next_transaction()
     transaction_hash = slot.send_transaction(to=Address(HOP1), value=value, startgas=21000)
-    rpc_client.poll(transaction_hash)
+    rpc_client.poll_transaction(transaction_hash)
