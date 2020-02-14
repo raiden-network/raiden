@@ -59,7 +59,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TransactionHash,
 )
-from raiden_contracts.contract_manager import ContractManager
 from raiden_contracts.utils.type_aliases import ChainID
 
 log = structlog.get_logger(__name__)
@@ -210,20 +209,6 @@ def gas_price_for_fast_transaction(web3: Web3) -> int:
         price = int(web3.eth.gasPrice)
 
     return price
-
-
-def deploy_contract_web3(
-    contract_name: str,
-    deploy_client: "JSONRPCClient",
-    contract_manager: ContractManager,
-    constructor_arguments: Sequence = None,
-) -> Address:
-    contract_proxy, _ = deploy_client.deploy_single_contract(
-        contract_name=contract_name,
-        contract=contract_manager.get_contract(contract_name),
-        constructor_parameters=constructor_arguments,
-    )
-    return Address(to_canonical_address(contract_proxy.address))
 
 
 class ClientErrorInspectResult(Enum):
