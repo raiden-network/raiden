@@ -114,7 +114,10 @@ def deploy_smoketest_contracts(
     contract_manager: ContractManager,
     token_address: AddressHex,
 ) -> Dict[str, Address]:
-    client.web3.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
+    if client.eth_node is EthClient.GETH:
+        client.web3.geth.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
+    elif client.eth_node is EthClient.PARITY:
+        client.web3.parity.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
 
     secret_registry_address = deploy_contract_web3(
         contract_name=CONTRACT_SECRET_REGISTRY,
