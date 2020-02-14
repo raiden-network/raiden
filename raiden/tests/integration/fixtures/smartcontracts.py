@@ -12,7 +12,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetad
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork
-from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import MONITORING_REWARD
 from raiden.tests.utils.smartcontracts import deploy_token, deploy_tokens_and_fund_accounts
 from raiden.utils.keys import privatekey_to_address
@@ -104,12 +104,12 @@ def deploy_all_tokens_register_and_return_their_addresses(
 def deploy_secret_registry_and_return_address(
     deploy_client: JSONRPCClient, contract_manager: ContractManager
 ) -> Address:
-    address = deploy_contract_web3(
+    contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=CONTRACT_SECRET_REGISTRY,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
+        contract=contract_manager.get_contract(CONTRACT_SECRET_REGISTRY),
+        constructor_parameters=None,
     )
-    return address
+    return Address(to_canonical_address(contract_proxy.address))
 
 
 @pytest.fixture(name="service_registry_address")
@@ -133,13 +133,12 @@ def maybe_deploy_service_registry_and_return_address(
         1000,
         200 * SECONDS_PER_DAY,
     )
-    address = deploy_contract_web3(
+    contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=CONTRACT_SERVICE_REGISTRY,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
-        constructor_arguments=constructor_arguments,
+        contract=contract_manager.get_contract(CONTRACT_SERVICE_REGISTRY),
+        constructor_parameters=constructor_arguments,
     )
-    return address
+    return Address(to_canonical_address(contract_proxy.address))
 
 
 @pytest.fixture(name="user_deposit_address")
@@ -155,13 +154,12 @@ def deploy_user_deposit_and_return_address(
     if environment_type != Environment.DEVELOPMENT:
         return None
 
-    constructor_arguments = [token_proxy.address, UINT256_MAX]
-    user_deposit_address = deploy_contract_web3(
+    user_deposit_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=CONTRACT_USER_DEPOSIT,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
-        constructor_arguments=constructor_arguments,
+        contract=contract_manager.get_contract(CONTRACT_USER_DEPOSIT),
+        constructor_parameters=[token_proxy.address, UINT256_MAX],
     )
+    user_deposit_address = Address(to_canonical_address(user_deposit_proxy.address))
 
     user_deposit = proxy_manager.user_deposit(
         UserDepositAddress(user_deposit_address), block_identifier="latest"
@@ -191,15 +189,12 @@ def deploy_one_to_n_and_return_address(
     if environment_type != Environment.DEVELOPMENT:
         return None
 
-    constructor_arguments = [user_deposit_address, chain_id, service_registry_address]
-    one_to_n_address = deploy_contract_web3(
+    contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=CONTRACT_ONE_TO_N,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
-        constructor_arguments=constructor_arguments,
+        contract=contract_manager.get_contract(CONTRACT_ONE_TO_N),
+        constructor_parameters=[user_deposit_address, chain_id, service_registry_address],
     )
-
-    return one_to_n_address
+    return Address(to_canonical_address(contract_proxy.address))
 
 
 @pytest.fixture
@@ -242,14 +237,12 @@ def deploy_token_network_registry_and_return_address(
         max_token_networks,
     ]
 
-    address = deploy_contract_web3(
+    contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
-        constructor_arguments=constructor_arguments,
+        contract=contract_manager.get_contract(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        constructor_parameters=constructor_arguments,
     )
-
-    return TokenNetworkRegistryAddress(to_canonical_address(address))
+    return TokenNetworkRegistryAddress(to_canonical_address(contract_proxy.address))
 
 
 @pytest.fixture(name="token_network_proxy")

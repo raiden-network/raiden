@@ -27,7 +27,6 @@ from raiden.constants import (
     Environment,
 )
 from raiden.messages.transfers import LockedTransfer, Unlock
-from raiden.network.rpc.client import deploy_contract_web3
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
@@ -1633,12 +1632,12 @@ def test_register_token_mainnet(
     contract_manager,
 ):
     app0 = raiden_network[0]
-    new_token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_amount, 2, "raiden", "Rd"),
     )
+    new_token_address = Address(to_canonical_address(contract_proxy.address))
     register_request = grequests.put(
         api_url_for(
             api_server_test_instance,
@@ -1666,18 +1665,18 @@ def test_register_token(
     retry_timeout,
 ):
     app0 = raiden_network[0]
-    new_token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd1"),
+    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_amount, 2, "raiden", "Rd1"),
     )
-    other_token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd2"),
+    new_token_address = Address(to_canonical_address(contract_proxy.address))
+    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_amount, 2, "raiden", "Rd2"),
     )
+    other_token_address = Address(to_canonical_address(contract_proxy.address))
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
@@ -1746,12 +1745,12 @@ def test_register_token_without_balance(
     retry_timeout,
 ):
     app0 = raiden_network[0]
-    new_token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app0.raiden.rpc_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_amount, 2, "raiden", "Rd"),
+    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_amount, 2, "raiden", "Rd2"),
     )
+    new_token_address = Address(to_canonical_address(contract_proxy.address))
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.

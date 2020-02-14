@@ -13,11 +13,11 @@ from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
-from raiden.network.rpc.client import deploy_contract_web3
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
+    Address,
     AddressHex,
     Any,
     BlockTimeout,
@@ -193,12 +193,12 @@ class ConsoleTools:
             token_address_hex: the hex encoded address of the new token/token.
         """
         with gevent.Timeout(timeout):
-            token_address = deploy_contract_web3(
-                CONTRACT_HUMAN_STANDARD_TOKEN,
-                self._raiden.rpc_client,
-                contract_manager=self._raiden.contract_manager,
-                constructor_arguments=(initial_alloc, name, decimals, symbol),
+            contract_proxy, _ = self._raiden.rpc_client.deploy_single_contract(
+                contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+                contract=self._raiden.contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+                constructor_parameters=(initial_alloc, name, decimals, symbol),
             )
+            token_address = Address(to_canonical_address(contract_proxy.address))
 
         token_address_hex = to_hex_address(token_address)
         if auto_register:

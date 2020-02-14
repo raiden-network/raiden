@@ -25,7 +25,8 @@ from raiden.constants import (
     EthClient,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
-from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
+from raiden.network.proxies.user_deposit import UserDeposit
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
@@ -65,7 +66,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkRegistryAddress,
     Tuple,
-    UserDepositAddress,
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
@@ -107,7 +107,6 @@ def ensure_executable(cmd):
 
 def deploy_smoketest_contracts(
     client: JSONRPCClient,
-    proxy_manager: ProxyManager,
     chain_id: ChainID,
     contract_manager: ContractManager,
     token_address: AddressHex,
@@ -117,84 +116,100 @@ def deploy_smoketest_contracts(
     elif client.eth_node is EthClient.PARITY:
         client.web3.parity.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
 
-    secret_registry_address = deploy_contract_web3(
+    contract_proxy, _ = client.deploy_single_contract(
         contract_name=CONTRACT_SECRET_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
+        contract=contract_manager.get_contract(CONTRACT_SECRET_REGISTRY),
+        constructor_parameters=None,
     )
-    constructor_arguments = [
+    secret_registry_address = Address(to_canonical_address(contract_proxy.address))
+
+    secret_registry_constructor_arguments = (
         to_checksum_address(secret_registry_address),
         chain_id,
         TEST_SETTLE_TIMEOUT_MIN,
         TEST_SETTLE_TIMEOUT_MAX,
         UINT256_MAX,
-    ]
+    )
 
-    token_network_registry_address = deploy_contract_web3(
+    contract_proxy, _ = client.deploy_single_contract(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=constructor_arguments,
+        contract=contract_manager.get_contract(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        constructor_parameters=secret_registry_constructor_arguments,
     )
+    token_network_registry_address = Address(to_canonical_address(contract_proxy.address))
 
-    addresses = {
-        CONTRACT_SECRET_REGISTRY: secret_registry_address,
-        CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
-    }
-    service_registry_address = deploy_contract_web3(
+    service_registry_constructor_arguments = (
+        token_address,
+        EMPTY_ADDRESS,
+        int(500e18),
+        6,
+        5,
+        180 * SECONDS_PER_DAY,
+        1000,
+        200 * SECONDS_PER_DAY,
+    )
+    service_registry_contract, _ = client.deploy_single_contract(
         contract_name=CONTRACT_SERVICE_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=(
-            token_address,
-            EMPTY_ADDRESS,
-            int(500e18),
-            6,
-            5,
-            180 * SECONDS_PER_DAY,
-            1000,
-            200 * SECONDS_PER_DAY,
-        ),
+        contract=contract_manager.get_contract(CONTRACT_SERVICE_REGISTRY),
+        constructor_parameters=service_registry_constructor_arguments,
     )
-    addresses[CONTRACT_SERVICE_REGISTRY] = service_registry_address
+    service_registry_address = Address(to_canonical_address(service_registry_contract.address))
 
-    user_deposit_address = deploy_contract_web3(
+    user_deposit_contract, _ = client.deploy_single_contract(
         contract_name=CONTRACT_USER_DEPOSIT,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_address, UINT256_MAX),
+        contract=contract_manager.get_contract(CONTRACT_USER_DEPOSIT),
+        constructor_parameters=(token_address, UINT256_MAX),
     )
-    addresses[CONTRACT_USER_DEPOSIT] = user_deposit_address
+    user_deposit_address = Address(to_canonical_address(user_deposit_contract.address))
 
-    monitoring_service_address = deploy_contract_web3(
+    monitoring_service_contract, _ = client.deploy_single_contract(
         contract_name=CONTRACT_MONITORING_SERVICE,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=(
+        contract=contract_manager.get_contract(CONTRACT_MONITORING_SERVICE),
+        constructor_parameters=(
             token_address,
             service_registry_address,
             user_deposit_address,
             token_network_registry_address,
         ),
     )
-    addresses[CONTRACT_MONITORING_SERVICE] = monitoring_service_address
+    monitoring_service_address = Address(to_canonical_address(monitoring_service_contract.address))
 
-    one_to_n_address = deploy_contract_web3(
+    one_to_n_contract, _ = client.deploy_single_contract(
         contract_name=CONTRACT_ONE_TO_N,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=(user_deposit_address, chain_id, service_registry_address),
+        contract=contract_manager.get_contract(CONTRACT_ONE_TO_N),
+        constructor_parameters=(user_deposit_address, chain_id, service_registry_address),
     )
-    addresses[CONTRACT_ONE_TO_N] = one_to_n_address
+    one_to_n_address = Address(to_canonical_address(one_to_n_contract.address))
 
-    user_deposit_proxy = proxy_manager.user_deposit(
-        UserDepositAddress(user_deposit_address), block_identifier="latest"
+    proxy_manager = ProxyManager(
+        rpc_client=client,
+        contract_manager=contract_manager,
+        metadata=ProxyManagerMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
+        ),
+    )
+    user_deposit_proxy = UserDeposit(
+        jsonrpc_client=client,
+        user_deposit_address=user_deposit_contract.address,
+        contract_manager=contract_manager,
+        proxy_manager=proxy_manager,
+        block_identifier="latest",
     )
     user_deposit_proxy.init(
         monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
         one_to_n_address=OneToNAddress(one_to_n_address),
         given_block_identifier="latest",
     )
+
+    addresses = {
+        CONTRACT_SECRET_REGISTRY: secret_registry_address,
+        CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
+        CONTRACT_SERVICE_REGISTRY: service_registry_address,
+        CONTRACT_USER_DEPOSIT: user_deposit_address,
+        CONTRACT_MONITORING_SERVICE: monitoring_service_address,
+        CONTRACT_ONE_TO_N: one_to_n_address,
+    }
 
     return addresses
 
@@ -339,7 +354,6 @@ def setup_raiden(
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
-        proxy_manager=proxy_manager,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
         token_address=to_checksum_address(token.address),

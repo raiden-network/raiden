@@ -7,7 +7,7 @@ from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
-from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.typing import Address, Any, Dict, List, TokenAddress, TokenAmount, Tuple
 from raiden_contracts.contract_manager import ContractManager
@@ -22,15 +22,12 @@ def deploy_token(
     token_symbol: str,
     token_contract_name: str,
 ) -> Contract:
-    token_address = deploy_contract_web3(
+    contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=token_contract_name,
-        deploy_client=deploy_client,
-        contract_manager=contract_manager,
-        constructor_arguments=(initial_amount, decimals, token_name, token_symbol),
+        contract=contract_manager.get_contract(token_contract_name),
+        constructor_parameters=(initial_amount, decimals, token_name, token_symbol),
     )
-
-    contract_abi = contract_manager.get_contract_abi(token_contract_name)
-    return deploy_client.new_contract_proxy(abi=contract_abi, contract_address=token_address)
+    return contract_proxy
 
 
 def deploy_tokens_and_fund_accounts(
@@ -53,21 +50,19 @@ def deploy_tokens_and_fund_accounts(
     """
     result = list()
     for _ in range(number_of_tokens):
-        token_address = TokenAddress(
-            deploy_contract_web3(
-                contract_name=token_contract_name,
-                deploy_client=proxy_manager.client,
-                contract_manager=contract_manager,
-                constructor_arguments=(token_amount, 2, "raiden", "Rd"),
-            )
+        token_contract, _ = proxy_manager.client.deploy_single_contract(
+            contract_name=token_contract_name,
+            contract=contract_manager.get_contract(token_contract_name),
+            constructor_parameters=(token_amount, 2, "raiden", "Rd"),
         )
 
-        result.append(token_address)
+        result.append(token_contract.address)
+
+        token_proxy = proxy_manager.token(token_contract.address, "latest")
 
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
         for transfer_to in participants:
-            token_proxy = proxy_manager.token(token_address, "latest")
             token_proxy.transfer(
                 to_address=transfer_to, amount=TokenAmount(token_amount // len(participants))
             )

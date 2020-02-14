@@ -2,6 +2,7 @@ from typing import cast
 
 import gevent
 import pytest
+from eth_utils import to_canonical_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -20,7 +21,6 @@ from raiden.exceptions import (
     UnexpectedChannelState,
     UnknownTokenAddress,
 )
-from raiden.network.rpc.client import deploy_contract_web3
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
@@ -421,14 +421,12 @@ def test_participant_deposit_amount_must_be_smaller_than_the_limit(
     registry_address = app1.raiden.default_registry.address
 
     token_supply = 1_000_000
-    token_address = TokenAddress(
-        deploy_contract_web3(
-            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.rpc_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_supply, 2, "raiden", "Rd"),
-        )
+    contract_proxy, _ = app1.raiden.rpc_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_supply, 2, "raiden", "Rd"),
     )
+    token_address = TokenAddress(to_canonical_address(contract_proxy.address))
 
     api1 = RaidenAPI(app1.raiden)
 
@@ -513,14 +511,12 @@ def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
     registry_address = app1.raiden.default_registry.address
 
     token_supply = 1_000_000
-    token_address = TokenAddress(
-        deploy_contract_web3(
-            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=app1.raiden.rpc_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_supply, 2, "raiden", "Rd"),
-        )
+    contract_proxy, _ = app1.raiden.rpc_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_supply, 2, "raiden", "Rd"),
     )
+    token_address = TokenAddress(to_canonical_address(contract_proxy.address))
 
     # Wait until Raiden can start using the token contract.
     # Here, the block at which the contract was deployed should be confirmed by Raiden.

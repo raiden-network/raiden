@@ -2,11 +2,12 @@ import os
 
 import pytest
 from eth_typing import URI
+from eth_utils import to_canonical_address
 from web3 import HTTPProvider, Web3
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, EthClient
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
-from raiden.network.rpc.client import JSONRPCClient, deploy_contract_web3
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.eth_node import (
     AccountDescription,
     EthNodeDescription,
@@ -136,11 +137,9 @@ def blockchain_services(
 
 @pytest.fixture
 def unregistered_token(token_amount, deploy_client, contract_manager) -> TokenAddress:
-    return TokenAddress(
-        deploy_contract_web3(
-            CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(token_amount, 2, "raiden", "Rd"),
-        )
+    contract_proxy, _ = deploy_client.deploy_single_contract(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_amount, 2, "raiden", "Rd"),
     )
+    return TokenAddress(to_canonical_address(contract_proxy.address))
