@@ -451,14 +451,16 @@ class RaidenService(Runnable):
         assert self.ready_to_process_events, f"Event processing disable. node:{self!r}"
         assert self.blockchain_events
 
-        whitelist = self._get_initial_whitelist(chain_state)
+        health_check_list = self._get_initial_health_check_list(chain_state)
         log.debug(
-            "Initializing whitelists",
-            neighbour_nodes=[to_checksum_address(address) for address in whitelist],
+            "Initializing health checks",
+            neighbour_nodes=[to_checksum_address(address) for address in health_check_list],
             node=to_checksum_address(self.address),
         )
 
-        self.transport.start(raiden_service=self, prev_auth_data=None, health_check_list=whitelist)
+        self.transport.start(
+            raiden_service=self, prev_auth_data=None, health_check_list=health_check_list
+        )
 
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
@@ -1218,7 +1220,7 @@ class RaidenService(Runnable):
                     update_fee_schedule=True,
                 )
 
-    def _get_initial_whitelist(self, chain_state: ChainState) -> List[Address]:
+    def _get_initial_health_check_list(self, chain_state: ChainState) -> List[Address]:
         """ Fetch direct neighbors and mediated transfer targets on transport """
         neighbour_addresses: List[Address] = []
 
