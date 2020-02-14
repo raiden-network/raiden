@@ -507,7 +507,7 @@ class TransactionSlot:
             if to != b"":
                 transaction["to"] = to_checksum_address(to)
 
-            signed_txn = self._client.web3.eth.account.signTransaction(
+            signed_txn = self._client.web3.eth.account.sign_transaction(
                 transaction, self._client.privkey
             )
 
