@@ -413,11 +413,12 @@ jobs:
               fi
             done
 
-            tar czf /tmp/tests-logs.tar.gz $files
+            # For unknown reasons, this is not only tarred but also gzipped
+            tar cf /tmp/tests-logs.tar.gz $files
 
       - store_artifacts:
           path: /tmp/tests-logs.tar.gz
-          destination: tests-logs
+          destination: tests-logs.tar.gz
 
   finalize:
     parameters:
