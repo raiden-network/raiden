@@ -404,7 +404,7 @@ class MatrixTransport(Runnable):
     def start(  # type: ignore
         self,
         raiden_service: "RaidenService",
-        whitelist: List[Address],
+        health_check_list: List[Address],
         prev_auth_data: Optional[str],
     ) -> None:
         if not self._stop_event.ready():
@@ -440,7 +440,7 @@ class MatrixTransport(Runnable):
         self._initialize_first_sync()
         self._initialize_room_inventory()
         self._initialize_broadcast_rooms()
-        self._initialize_whitelist(whitelist)
+        self._initialize_health_check(health_check_list)
 
         broadcast_filter_id = self._client.create_sync_filter(
             not_rooms=self._broadcast_rooms.values()
@@ -557,27 +557,6 @@ class MatrixTransport(Runnable):
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
-    def whitelist(self, address: Address) -> None:
-        """Whitelist `address` to accept its messages."""
-        msg = (
-            "Whitelisting can only be done after the Matrix client has been "
-            "logged in. This is necessary because whitelisting will create "
-            "the Matrix room."
-        )
-        assert self._user_id, msg
-
-        self.log.debug("Whitelist", address=to_checksum_address(address))
-        self._address_mgr.add_address(address)
-
-        # Start the room creation early on. This reduces latency for channel
-        # partners, by removing the latency of creating the room on the first
-        # message.
-        #
-        # This does not reduce latency for target<->initiator communication,
-        # since the target may be the node with lower address, and therefore
-        # the node that has to create the room.
-        self._maybe_create_room_for_address(address)
-
     def get_user_ids_for_address(self, address: Address) -> Set[str]:
         address_hex = to_normalized_address(address)
         candidates = self._client.search_user_directory(address_hex)
@@ -594,17 +573,15 @@ class MatrixTransport(Runnable):
         return self._address_mgr.get_address_reachability(address)
 
     def async_start_health_check(self, node_address: Address) -> None:
-        """Start healthcheck (status monitoring) for a peer
-
-        It also whitelists the address to answer invites and listen for messages
+        """
+        Start healthcheck (status monitoring) for a peer
+        also starts listening for messages
+        Invites are accepted independently of healthchecking
         """
         self._healthcheck_queue.put(node_address)
 
     def immediate_health_check_for(self, node_address: Address) -> None:
-        """Start healthcheck (status monitoring) for a peer
-
-        It also whitelists the address to answer invites and listen for messages.
-        """
+        """ Start healthcheck (status monitoring) for a peer """
         is_health_information_available = (
             self._address_mgr.get_address_reachability(node_address)
             is not AddressReachability.UNKNOWN
@@ -617,7 +594,16 @@ class MatrixTransport(Runnable):
         else:
             self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
 
-            self.whitelist(node_address)
+            self._address_mgr.add_address(node_address)
+
+            # Start the room creation early on. This reduces latency for channel
+            # partners, by removing the latency of creating the room on the first
+            # message.
+            #
+            # This does not reduce latency for target<->initiator communication,
+            # since the target may be the node with lower address, and therefore
+            # the node that has to create the room.
+            self._maybe_create_room_for_address(node_address)
 
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
@@ -861,22 +847,25 @@ class MatrixTransport(Runnable):
                     client=self._client, broadcast_room_alias=broadcast_room_alias
                 )
 
-    def _initialize_whitelist(self, whitelist: List[Address]) -> None:
+    def _initialize_health_check(self, health_check_list: List[Address]) -> None:
         msg = (
-            "Whitelisting requires the Matrix client to be properly "
+            "Healthcheck requires the Matrix client to be properly "
             "authenticated, because this may create the private rooms."
         )
         assert self._user_id, msg
 
         msg = (
-            "Whitelisting must be initialized after the first sync, because "
+            "Healthcheck must be initialized after the first sync, because "
             "that fetches the existing rooms from the Matrix server, and "
-            "whitelist may create rooms."
+            "healthcheck may create rooms."
         )
         assert self._client.sync_iteration >= 1, msg
 
         pool = Pool(size=10)
-        greenlets = set(pool.apply_async(self.whitelist, [address]) for address in whitelist)
+        greenlets = set(
+            pool.apply_async(self.immediate_health_check_for, [address])
+            for address in health_check_list
+        )
         gevent.joinall(greenlets, raise_error=True)
 
     def _handle_invite(self, room_id: RoomID, state: dict) -> None:
