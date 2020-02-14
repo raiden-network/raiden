@@ -458,7 +458,7 @@ class RaidenService(Runnable):
             node=to_checksum_address(self.address),
         )
 
-        self.transport.start(raiden_service=self, prev_auth_data=None, whitelist=whitelist)
+        self.transport.start(raiden_service=self, prev_auth_data=None, health_check_list=whitelist)
 
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
