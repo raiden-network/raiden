@@ -371,7 +371,7 @@ jobs:
           name: Run smoketests
           command: |
             scenario_player \
-            run raiden/tests/scenarios/smoketests.yml \
+            run ~/raiden/raiden/tests/scenarios/smoketests.yml \
             --data-path=~/.raiden \
             --chain goerli:https://${SMOKETEST_NODE} \
             --keystore-file=.circleci/smoketest.keystore \
@@ -386,6 +386,8 @@ jobs:
             --keystore-file=.circleci/smoketest.keystore \
             --password=${SMOKETEST_PW} \
             --min-age=0 \
+            --no-ui
+
   test:
     parameters:
       <<: *parameter-templates
