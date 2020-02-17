@@ -965,6 +965,11 @@ workflows:
           requires:
             - lint-3.7
 
+      - sp-smoketests:
+          name: smoketest-3.7
+          requires:
+            - smoketest-matrix-development-parity-3.7
+
       - test:
           name: test-unit-3.7
           py-version: "3.7"
