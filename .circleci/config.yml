@@ -216,34 +216,6 @@ commands:
           paths:
           - venv-<< parameters.py-version >>-*
 
-  sp-smoketests:
-    description: |
-      Execute Smoketests to verify build. Installs the Scenario Player Master from github
-      and executes a smoketest scenario.
-      Requires the following variables be present in the context:
-       - SMOKETEST_NODE
-       - SMOKETEST_PW
-      Additionally, ether spent on smoketests is reclaimed right after smoketest execution passes.
-    steps:
-      - run:
-          name: Run smoketests
-          command: |
-            scenario_player \
-            run raiden/tests/scenarios/smoketests.yml \
-            --data-path=~/.raiden \
-            --chain goerli:https://${SMOKETEST_NODE} \
-            --keystore-file=.circleci/smoketest.keystore \
-            --password=${SMOKETEST_PW} \
-            --no-ui
-      - run:
-          name: Reclaim ether spent on smoketest
-          command: |
-            scenario_player reclaim-eth \
-            --data-path=~/.raiden \
-            --chain goerli:https://${SMOKETEST_NODE} \
-            --keystore-file=.circleci/smoketest.keystore \
-            --password=${SMOKETEST_PW} \
-            --min-age=0 \
 
 jobs:
   # This job exists to generate the `*.egg-info` metadata.
@@ -371,11 +343,46 @@ jobs:
       - run:
           name: Running Raiden Smoketest with << parameters.transport-layer >>, environment << parameters.environment-type >> on ethereum client << parameters.blockchain-type >>
           command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
-      - sp-smoketests
       - store_artifacts:
           path: /tmp/smoketest.log
           destination: smoketest-logs
 
+  sp-smoketests:
+    description: |
+      Execute Smoketests to verify build. Scenario Player should be on the `master`
+      branch of the github repository. Installation takes place during the
+      `prepare-python` command.
+      Requires the following variables be present in the context:
+       - SMOKETEST_NODE
+       - SMOKETEST_PW
+      Additionally, ether spent on smoketests is reclaimed right after smoketest execution passes.
+    executor:
+      name: docker
+      py-version: << parameters.py-version >>
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: Run smoketests
+          command: |
+            scenario_player \
+            run raiden/tests/scenarios/smoketests.yml \
+            --data-path=~/.raiden \
+            --chain goerli:https://${SMOKETEST_NODE} \
+            --keystore-file=.circleci/smoketest.keystore \
+            --password=${SMOKETEST_PW} \
+            --no-ui
+      - run:
+          name: Reclaim ether spent on smoketest
+          command: |
+            scenario_player reclaim-eth \
+            --data-path=~/.raiden \
+            --chain goerli:https://${SMOKETEST_NODE} \
+            --keystore-file=.circleci/smoketest.keystore \
+            --password=${SMOKETEST_PW} \
+            --min-age=0 \
   test:
     parameters:
       <<: *parameter-templates
@@ -736,6 +743,11 @@ workflows:
           blockchain-type: "parity"
           requires:
             - lint-3.7
+
+      - sp-smoketests:
+          name: smoketest-3.7
+          requires:
+            - smoketest-matrix-development-parity-3.7
 
       - test:
           name: test-unit-3.7
