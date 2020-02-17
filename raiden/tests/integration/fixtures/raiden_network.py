@@ -56,7 +56,7 @@ def routing_mode():
 def raiden_chain(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
-    one_to_n_address: OneToNAddress,
+    one_to_n_address: Optional[OneToNAddress],
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -75,6 +75,8 @@ def raiden_chain(
     monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
     logs_storage: str,
+    register_tokens: bool,
+    start_raiden_apps: bool,
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
@@ -125,15 +127,19 @@ def raiden_chain(
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
     blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
-    parallel_start_apps(raiden_apps)
+    if start_raiden_apps:
+        parallel_start_apps(raiden_apps)
 
-    exception = RuntimeError("`raiden_chain` fixture setup failed, token networks unavailable")
-    with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
-        wait_for_token_networks(
-            raiden_apps=raiden_apps,
-            token_network_registry_address=token_network_registry_address,
-            token_addresses=token_addresses,
-        )
+        if register_tokens:
+            exception = RuntimeError(
+                "`raiden_chain` fixture setup failed, token networks unavailable"
+            )
+            with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
+                wait_for_token_networks(
+                    raiden_apps=raiden_apps,
+                    token_network_registry_address=token_network_registry_address,
+                    token_addresses=token_addresses,
+                )
 
     app_channels = create_sequential_channels(raiden_apps, channels_per_node)
 
@@ -144,14 +150,15 @@ def raiden_chain(
         channel_settle_timeout=settle_timeout,
     )
 
-    exception = RuntimeError("`raiden_chain` fixture setup failed, nodes are unreachable")
-    with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
-        wait_for_channels(
-            app_channels=app_channels,
-            token_network_registry_address=blockchain_services.deploy_registry.address,
-            token_addresses=token_addresses,
-            deposit=deposit,
-        )
+    if start_raiden_apps:
+        exception = RuntimeError("`raiden_chain` fixture setup failed, nodes are unreachable")
+        with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
+            wait_for_channels(
+                app_channels=app_channels,
+                token_network_registry_address=blockchain_services.deploy_registry.address,
+                token_addresses=token_addresses,
+                deposit=deposit,
+            )
 
     yield raiden_apps
 
@@ -189,7 +196,7 @@ def resolvers(resolver_ports):
 def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
-    one_to_n_address: OneToNAddress,
+    one_to_n_address: Optional[OneToNAddress],
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -204,10 +211,11 @@ def raiden_network(
     local_matrix_servers: List[ParsedURL],
     blockchain_type: str,
     contracts_path: Path,
-    user_deposit_address: UserDepositAddress,
+    user_deposit_address: Optional[UserDepositAddress],
     monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
     logs_storage: str,
+    register_tokens: bool,
     start_raiden_apps: bool,
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
@@ -254,13 +262,16 @@ def raiden_network(
     if start_raiden_apps:
         parallel_start_apps(raiden_apps)
 
-        exception = RuntimeError("`raiden_chain` fixture setup failed, token networks unavailable")
-        with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
-            wait_for_token_networks(
-                raiden_apps=raiden_apps,
-                token_network_registry_address=token_network_registry_address,
-                token_addresses=token_addresses,
+        if register_tokens:
+            exception = RuntimeError(
+                "`raiden_chain` fixture setup failed, token networks unavailable"
             )
+            with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
+                wait_for_token_networks(
+                    raiden_apps=raiden_apps,
+                    token_network_registry_address=token_network_registry_address,
+                    token_addresses=token_addresses,
+                )
 
     app_channels = create_network_channels(raiden_apps, channels_per_node)
 

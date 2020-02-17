@@ -21,6 +21,9 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 from raiden_contracts.contract_manager import ContractManager
 
 
+# Disable the default tokens
+@pytest.mark.parametrize("number_of_tokens", [0])
+@pytest.mark.parametrize("register_tokens", [False])
 def test_token_network_registry(
     deploy_client: JSONRPCClient,
     contract_manager: ContractManager,
@@ -172,6 +175,8 @@ def test_token_network_registry_with_zero_token_address(
 
 
 @pytest.mark.parametrize("max_token_networks", [1])
+@pytest.mark.parametrize("number_of_tokens", [0])
+@pytest.mark.parametrize("register_tokens", [False])
 def test_token_network_registry_allows_the_last_slot_to_be_used(
     deploy_client, token_network_registry_address, contract_manager, token_contract_name
 ):

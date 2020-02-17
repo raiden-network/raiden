@@ -356,7 +356,7 @@ def create_apps(
     one_to_n_address: Optional[OneToNAddress],
     secret_registry_address: SecretRegistryAddress,
     service_registry_address: Optional[ServiceRegistryAddress],
-    user_deposit_address: UserDepositAddress,
+    user_deposit_address: Optional[UserDepositAddress],
     monitoring_service_contract_address: MonitoringServiceAddress,
     reveal_timeout: BlockTimeout,
     settle_timeout: BlockTimeout,
