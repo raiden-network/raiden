@@ -106,7 +106,7 @@ def assert_proper_response(response, status_code=HTTPStatus.OK):
         response is not None
         and response.status_code == status_code
         and response.headers["Content-Type"] == "application/json"
-    )
+    ), response.text
 
 
 def assert_payment_secret_and_hash(response, payment):
@@ -1021,7 +1021,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [2])
-@pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
+@pytest.mark.parametrize("environment_type", [Environment.PRODUCTION])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_tokens(api_server_test_instance: APIServer, blockchain_services, token_addresses):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
@@ -1040,7 +1040,6 @@ def test_api_tokens(api_server_test_instance: APIServer, blockchain_services, to
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CREATED)
 
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     settle_timeout = 1650
     channel_data_obj = {
         "partner_address": partner_address,
@@ -1655,6 +1654,7 @@ def test_register_token_mainnet(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("max_token_networks", [1])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
+@pytest.mark.parametrize("register_tokens", [False])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_register_token(
     api_server_test_instance,
