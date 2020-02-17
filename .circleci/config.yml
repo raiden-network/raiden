@@ -354,6 +354,8 @@ jobs:
        - SMOKETEST_NODE
        - SMOKETEST_PW
       Additionally, ether spent on smoketests is reclaimed right after smoketest execution passes.
+    parameters:
+      <<: *parameter-templates
     executor:
       name: docker
       py-version: << parameters.py-version >>
