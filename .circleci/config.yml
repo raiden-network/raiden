@@ -414,7 +414,7 @@ jobs:
             done
 
             # For unknown reasons, this is not only tarred but also gzipped
-            tar cf /tmp/tests-logs.tar.gz $files
+            tar cf /tmp/tests-logs.tar.gz "${files[@]}"
 
       - store_artifacts:
           path: /tmp/tests-logs.tar.gz
