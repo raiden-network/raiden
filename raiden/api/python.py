@@ -896,7 +896,9 @@ class RaidenAPI:  # pragma: no unittest
             token_network_registry_address=registry_address,
         )
         if token_address not in valid_tokens:
-            raise UnknownTokenAddress("Token address is not known.")
+            raise UnknownTokenAddress(
+                f"Token address {to_checksum_address(token_address)} is not known."
+            )
 
         chain_state = views.state_from_raiden(self.raiden)
         channels_to_close = views.filter_channels_by_partneraddress(
@@ -1069,7 +1071,9 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidBinaryAddress("token address is not valid.")
 
         if token_address not in views.get_token_identifiers(current_state, registry_address):
-            raise UnknownTokenAddress("Token address is not known.")
+            raise UnknownTokenAddress(
+                f"Token address {to_checksum_address(token_address)} is not known."
+            )
 
         if not is_binary_address(target):
             raise InvalidBinaryAddress("target address is not valid.")
@@ -1078,7 +1082,9 @@ class RaidenAPI:  # pragma: no unittest
             views.state_from_raiden(self.raiden), registry_address
         )
         if token_address not in valid_tokens:
-            raise UnknownTokenAddress("Token address is not known.")
+            raise UnknownTokenAddress(
+                f"Token address {to_checksum_address(token_address)} is not known."
+            )
 
         if secret is not None and not isinstance(secret, T_Secret):
             raise InvalidSecret("secret is not valid.")
@@ -1228,7 +1234,9 @@ class RaidenAPI:  # pragma: no unittest
         )
 
         if token_network_address is None:
-            raise UnknownTokenAddress("Token address is not known.")
+            raise UnknownTokenAddress(
+                f"Token address {to_checksum_address(token_address)} is not known."
+            )
 
         returned_events = blockchain_events.get_token_network_events(
             proxy_manager=self.raiden.proxy_manager,
@@ -1262,7 +1270,9 @@ class RaidenAPI:  # pragma: no unittest
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
         if token_network_address is None:
-            raise UnknownTokenAddress("Token address is not known.")
+            raise UnknownTokenAddress(
+                f"Token address {to_checksum_address(token_address)} is not known."
+            )
 
         channel_list = self.get_channel_list(
             registry_address=self.raiden.default_registry.address,
