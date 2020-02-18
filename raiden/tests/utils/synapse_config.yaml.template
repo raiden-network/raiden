@@ -93,6 +93,10 @@ password_providers:
   - module: 'raiden.tests.utils.transport.NoTLSFederationMonkeyPatchProvider'
     config:
       enabled: true
+  - module: 'raiden.tests.utils.transport.AdminUserAuthProvider'
+    config:
+      enabled: true
+      admin_credentials: {admin_credentials}
 
 # Whether to allow non server admins to create groups on this server
 enable_group_creation: false

@@ -22,13 +22,13 @@ from twisted.internet import defer
 from raiden.constants import Environment
 from raiden.messages.abstract import Message
 from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Iterable, Port, RoomID, Signature
+from raiden.utils.typing import Iterable, Port, Signature
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
 _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
@@ -38,13 +38,19 @@ SynapseConfig = Tuple[str, Path]
 SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
+def get_admin_credentials(server_name):
+    username = f"admin-{server_name}".replace(":", "-")
+    credentials = {"username": username, "password": "securepassword"}
+
+    return credentials
+
+
 def new_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-    handle_member_join_callback: Callable[[RoomID], None],
+    handle_member_join_callback: Callable[[Room], None],
     server: "ParsedURL",
 ) -> GMatrixClient:
     server_name = server.netloc
-
     signer = make_signer()
     username = str(to_normalized_address(signer.address))
     password = encode_hex(signer.sign(server_name.encode()))
@@ -59,7 +65,7 @@ def new_client(
     return client
 
 
-def ignore_member_join(_room_id: RoomID) -> None:
+def ignore_member_join(_room: Room) -> None:
     return None
 
 
@@ -69,7 +75,15 @@ def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
 
 def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
     client = new_client(ignore_messages, ignore_member_join, servers[0])
-    room = client.create_room(alias=broadcast_room_name, is_public=True)
+    admin_power_level = {"users": {client.user_id: 100}}
+    for server in servers:
+        admin_username = get_admin_credentials(server.netloc)["username"]
+        admin_user_id = f"@{admin_username}:{servers[0].netloc}"
+        admin_power_level["users"][admin_user_id] = 50
+
+    room = client.create_room(
+        alias=broadcast_room_name, is_public=True, power_level_content_override=admin_power_level
+    )
 
     for server in servers[1:]:
         client = new_client(ignore_messages, ignore_member_join, server)
@@ -118,6 +132,45 @@ class ParsedURL(str):
             return getattr(self._parsed, item)
         except AttributeError:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{item}'")
+
+
+class AdminUserAuthProvider:
+    __version__ = "0.1"
+
+    def __init__(self, config, account_handler):
+        self.account_handler = account_handler
+        self.log = logging.getLogger(__name__)
+        self.credentials = config["admin_credentials"]
+
+        msg = "Keys 'username' and 'password' expected in credentials."
+        assert "username" in self.credentials, msg
+        assert "password" in self.credentials, msg
+
+    @defer.inlineCallbacks
+    def check_password(self, user_id: str, password: str):
+        if not password:
+            self.log.error("No password provided, user=%r", user_id)
+            defer.returnValue(False)
+
+        username = user_id.partition(":")[0].strip("@")
+        if username == self.credentials["username"] and password == self.credentials["password"]:
+            self.log.info("Logging in well known admin user")
+            user_exists = yield self.account_handler.check_user_exists(user_id)
+            if not user_exists:
+                self.log.info("First well known admin user login, registering: user=%r", user_id)
+                user_id = yield self.account_handler.hs.get_registration_handler().register_user(
+                    localpart=username, admin=True
+                )
+                _, access_token = yield self.account_handler.register_device(user_id)
+                yield user_id, access_token
+            defer.returnValue(True)
+
+        self.log.error("Unknown user '%s', ignoring.", user_id)
+        defer.returnValue(False)
+
+    @staticmethod
+    def parse_config(config):
+        return config
 
 
 # Used from within synapse during tests
@@ -244,11 +297,15 @@ def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
         server_dir.mkdir(parents=True, exist_ok=True)
 
         server_name = f"localhost:{port}"
-
+        admin_credentials = get_admin_credentials(server_name)
         # Always overwrite config file to ensure we're not using a stale version
         config_file = server_dir.joinpath("synapse_config.yaml").resolve()
         config_template = _SYNAPSE_CONFIG_TEMPLATE.read_text()
-        config_file.write_text(config_template.format(server_dir=server_dir, port=port))
+        config_file.write_text(
+            config_template.format(
+                server_dir=server_dir, port=port, admin_credentials=admin_credentials
+            )
+        )
 
         tls_key_file = server_dir.joinpath(f"{server_name}.tls.crt")
 
