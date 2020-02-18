@@ -18,8 +18,14 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
 )
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.tests.utils.transport import ignore_member_join, ignore_messages, new_client
+from raiden.tests.utils.transport import (
+    get_admin_credentials,
+    ignore_member_join,
+    ignore_messages,
+    new_client,
+)
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
@@ -257,6 +263,72 @@ def test_assumption_matrix_returns_same_id_for_same_filter_payload(chain_id, loc
     # Try again and make sure the filter has the same ID
     second_sync_filter_id = client.create_sync_filter(not_rooms=[broadcast_room])
     assert first_sync_filter_id == second_sync_filter_id
+
+
+@pytest.mark.parametrize("number_of_transports", [3])
+@pytest.mark.parametrize("matrix_server_count", [1])
+def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
+    server_name = local_matrix_servers[0].netloc
+    admin_credentials = get_admin_credentials(server_name)
+    broadcast_room_name = make_room_alias(UNIT_CHAIN_ID, "discovery")
+    broadcast_room_alias = f"#{broadcast_room_name}:{server_name}"
+
+    transport0, transport1, transport2 = matrix_transports
+
+    raiden_service0 = MockRaidenService()
+    raiden_service1 = MockRaidenService()
+    # start transports to join broadcast rooms as normal users
+    transport0.start(raiden_service0, [], None)
+    transport1.start(raiden_service1, [], None)
+    # admin login using raiden.tests.utils.transport.AdminAuthProvider
+    admin_client = GMatrixClient(ignore_messages, ignore_member_join, local_matrix_servers[0])
+    admin_client.login(admin_credentials["username"], admin_credentials["password"], sync=False)
+    room_id = admin_client.join_room(broadcast_room_alias).room_id
+
+    # get members of room and filter not kickable users (power level 100)
+    def _get_joined_room_members():
+        membership_events = admin_client.api.get_room_members(room_id)["chunk"]
+        member_ids = [
+            event["state_key"]
+            for event in membership_events
+            if event["content"]["membership"] == "join"
+        ]
+        return set(member_ids)
+
+    members = _get_joined_room_members()
+    power_levels_event = admin_client.api.get_power_levels(room_id)
+    admin_user_ids = [key for key, value in power_levels_event["users"].items() if value >= 50]
+    non_admin_user_ids = [member for member in members if member not in admin_user_ids]
+    # transport0 and transport1 should still be in non_admin_user_ids
+    assert len(non_admin_user_ids) > 1
+    kick_user_id = non_admin_user_ids[0]
+
+    # kick one user
+    admin_client.api.kick_user(room_id, kick_user_id)
+
+    # Assert missing member
+    members_after_kick = _get_joined_room_members()
+    assert len(members_after_kick) == len(members) - 1
+    members_after_kick.add(kick_user_id)
+    assert members_after_kick == members
+
+    # check assumption that new user does not receive presence
+    raiden_service2 = MockRaidenService()
+
+    def local_presence_listener(event, event_id):  # pylint: disable=unused-argument
+        assert event["sender"] != kick_user_id
+
+    transport2._client.add_presence_listener(local_presence_listener)
+    transport2.start(raiden_service2, [], None)
+
+    transport2.stop()
+
+    # rejoin and assert that normal user cannot kick
+    kicked_transport = transport0 if transport0._user_id == kick_user_id else transport1
+    kicked_transport._client.join_room(broadcast_room_alias)
+
+    with pytest.raises(MatrixRequestError):
+        kicked_transport._client.api.kick_user(room_id, non_admin_user_ids[1])
 
 
 @pytest.mark.parametrize("number_of_transports", [20])

@@ -203,6 +203,27 @@ class GMatrixHttpApi(MatrixHttpApi):
         """ Perform GET /rooms/$room_id/state/$event_type/$state_key """
         return self._send("GET", f"/rooms/{room_id}/state/{event_type}/{state_key}")
 
+    def create_room(
+        self, alias: str = None, is_public: bool = False, invitees: List[str] = None, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Perform /createRoom
+        Args:
+            alias (str): Optional. The room alias name to set for this room.
+            is_public (bool): Optional. The public/private visibility.
+            invitees (list<str>): Optional. The list of user IDs to invite.
+            kwargs: (dict<str, any>) additional request parameters
+        """
+        content = kwargs
+        content["visibility"] = "public" if is_public else "private"
+        if alias:
+            content["room_alias_name"] = alias
+        if invitees:
+            content["invite"] = invitees
+        return self._send("POST", "/createRoom", content)
+
+    def get_presence(self, user_id: str) -> Dict[str, Any]:
+        return self._send("GET", f"/presence/{quote(user_id)}/status")
+
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
@@ -315,6 +336,7 @@ class GMatrixClient(MatrixClient):
             filter_response = self.api.create_filter(self.user_id, final_filter)
             filter_id = filter_response.get("filter_id")
             log.debug("Sync filter created", filter_id=filter_id, filter=final_filter)
+
         except MatrixRequestError as ex:
             raise TransportError(
                 f"Failed to create filter: {final_filter} for user {self.user_id}"
@@ -497,7 +519,26 @@ class GMatrixClient(MatrixClient):
         return room
 
     def get_user_presence(self, user_id: str) -> Optional[str]:
-        return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
+        return self.api.get_presence(user_id).get("presence")
+
+    def create_room(
+        self, alias: str = None, is_public: bool = False, invitees: List[str] = None, **kwargs: Any
+    ) -> MatrixRoom:
+        """ Create a new room on the homeserver.
+
+        Args:
+            alias (str): The canonical_alias of the room.
+            is_public (bool):  The public/private visibility of the room.
+            invitees (str[]): A set of user ids to invite into the room.
+
+        Returns:
+            Room
+
+        Raises:
+            MatrixRequestError
+        """
+        response = self.api.create_room(alias, is_public, invitees, **kwargs)
+        return self._mkroom(response["room_id"])
 
     def _sync(self, timeout_ms: int, latency_ms: int) -> None:
         """ Reimplements MatrixClient._sync """
