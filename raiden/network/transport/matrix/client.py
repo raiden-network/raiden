@@ -22,6 +22,7 @@ from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
+from raiden.network.transport.matrix.sync_progress import SyncProgress
 from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -269,14 +270,26 @@ class GMatrixClient(MatrixClient):
             user_agent=user_agent,
         )
         self.api.validate_certificate(valid_cert_check)
-        self.synced = gevent.event.Event()  # Set at the end of every sync, then cleared
+
         # Monotonically increasing id to ensure that presence updates are processed in order.
         self._presence_update_ids: Iterator[int] = itertools.count()
         self._worker_pool = gevent.pool.Pool(size=20)
         # Gets incremented every time a sync loop is completed. This is useful since the sync token
         # can remain constant over multiple loops (if no events occur).
-        self.sync_iteration = 0
+        self.sync_progress = SyncProgress(self.response_queue)
         self._sync_filter_id: Optional[int] = None
+
+    @property
+    def synced(self) -> Event:
+        return self.sync_progress.synced_event
+
+    @property
+    def processed(self) -> Event:
+        return self.sync_progress.processed_event
+
+    @property
+    def sync_iteration(self) -> int:
+        return self.sync_progress.sync_iteration
 
     def create_sync_filter(
         self,
@@ -425,7 +438,6 @@ class GMatrixClient(MatrixClient):
             self.listen_forever, timeout_ms, latency_ms, exception_handler
         )
         self.sync_worker.name = f"GMatrixClient.sync_worker user_id:{self.user_id}"
-
         self.message_worker = gevent.spawn(
             self._handle_message, self.response_queue, self.stop_event
         )
@@ -641,7 +653,7 @@ class GMatrixClient(MatrixClient):
             # saved in the queue, otherwise the data can be lost in a stop/start.
             self.response_queue.put((token, response, datetime.now()))
             self.sync_token = response["next_batch"]
-            self.sync_iteration += 1
+            self.sync_progress.set_synced(token)
 
     def _handle_message(
         self,
@@ -672,6 +684,7 @@ class GMatrixClient(MatrixClient):
             # potential of introducing latency.
             #
             # The Queue's iterator cannot be used because it defaults do `get`.
+            currently_queued_response_tokens = list()
             currently_queued_responses = list()
             for token, response, received_at in response_queue.queue.queue:
                 assert response is not None, "None is not a valid value for a Matrix response."
@@ -683,6 +696,7 @@ class GMatrixClient(MatrixClient):
                     current_size=len(response_queue),
                     processing_lag=datetime.now() - received_at,
                 )
+                currently_queued_response_tokens.append(token)
                 currently_queued_responses.append(response)
 
             time_before_processing = time.monotonic()
@@ -701,6 +715,8 @@ class GMatrixClient(MatrixClient):
             # at-least-once semantics.
             for _ in currently_queued_responses:
                 response_queue.get(block=False)
+
+            self.sync_progress.set_processed(currently_queued_response_tokens)
 
     def _handle_responses(
         self, currently_queued_responses: List[JSONResponse], first_sync: bool = False
@@ -770,9 +786,6 @@ class GMatrixClient(MatrixClient):
 
         if len(all_messages) > 0:
             self.handle_messages_callback(all_messages)
-
-        self.synced.set()
-        self.synced.clear()
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id
