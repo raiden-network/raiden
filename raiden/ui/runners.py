@@ -13,14 +13,13 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
+from raiden.ui.app import run_app
+from raiden.ui.config import dump_cmd_options, dump_module
+from raiden.utils.gevent import spawn_named
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import Port
-
-from ..utils.gevent import spawn_named
-from .app import run_app
-from .config import dump_cmd_options, dump_module
 
 log = structlog.get_logger(__name__)
 DOC_URL = "http://raiden-network.readthedocs.io/en/stable/rest_api.html"

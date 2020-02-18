@@ -172,7 +172,7 @@ def wait_for_room_with_address(transport: MatrixTransport, address: Address, tim
     with Timeout(timeout):
         room = transport._get_room_for_address(address)
         while room is None:
-            transport._client.synced.wait()
+            transport._client.processed.wait()
             room = transport._get_room_for_address(address)
 
 
@@ -1142,16 +1142,13 @@ def test_matrix_ignore_messages_in_broadcast_rooms(matrix_transports):
             gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5663")
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("matrix_sync_timeout", [5_000])  # Shorten sync timeout to prevent timeout
 @pytest.mark.parametrize(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
-def test_transport_does_not_receive_broadcast_rooms_updates(
-    matrix_transports, matrix_sync_timeout
-):
+def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     """ Ensure that matrix server-side filters take effect on sync for broadcast room content.
 
     The test sets up 3 transports where:
@@ -1178,7 +1175,10 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
             joined_rooms = response.get("rooms", {}).get("join", {})
             for joined_room in joined_rooms.values():
                 timeline_events = joined_room.get("timeline").get("events", [])
-                received_sync_events[name].extend(timeline_events)
+                message_events = [
+                    event for event in timeline_events if event["type"] == "m.room.message"
+                ]
+                received_sync_events[name].extend(message_events)
 
     # Replace the transport's handle_response method
     # Should be able to detect if sync delivered a message
@@ -1192,28 +1192,29 @@ def test_transport_does_not_receive_broadcast_rooms_updates(
     pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
     pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
 
+    # Get the sync helper to control flow of asynchronous syncs
+    sync_progress1 = transport1._client.sync_progress
+    sync_progress2 = transport2._client.sync_progress
+
     # Reset transport2 sync filter identifier so that
     # we can receive broadcast messages
-    sync_iteration_during_filter_reset2 = transport2._client.sync_iteration
     assert transport2._client._sync_filter_id is not None
-    transport2._client.set_sync_filter_id(None)
-    transport2._client.synced.wait()
+    transport2._client._sync_filter_id = None
+
+    # get the last sync tokens to control the processed state later
+    last_synced_token1 = sync_progress1.last_synced
+    # for T2 we need to make sure that the current sync used the filter reset -> wait()
+    last_synced_token2 = sync_progress2.synced_event.wait()[0]
     # Send another message to the broadcast room, if transport1 listens on the room it will
     # throw an exception
     message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
     message_text = MessageSerializer.serialize(message)
     pfs_broadcast_room_t0.send_text(message_text)
 
-    with Timeout(matrix_sync_timeout + 2):
-        # The transport needs to wait for sync request initiated AFTER the change of the filter
-        # Otherwise the filter does not become effective
-        while transport2._client.sync_iteration <= sync_iteration_during_filter_reset2 + 1:
-            gevent.joinall({transport2.greenlet}, timeout=0.1, raise_error=True)
-
-        # No filter changed for transport1 -> wait only for current sync
-        sync_iteration = transport1._client.sync_iteration
-        while sync_iteration == transport1._client.sync_iteration:
-            gevent.joinall({transport1.greenlet}, timeout=0.1, raise_error=True)
+    # wait for the current tokens to be processed + 1 additional sync
+    # this must be done because the message should be in the sync after the stored token
+    sync_progress1.wait_for_processed(last_synced_token1, 1)
+    sync_progress2.wait_for_processed(last_synced_token2, 1)
 
     # Transport2 should have received the message
     assert received_sync_events["t2"]
