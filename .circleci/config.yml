@@ -371,7 +371,7 @@ jobs:
           name: Run smoketests
           command: |
             scenario_player \
-            run ~/raiden/raiden/tests/scenarios/smoketests.yml \
+            run raiden/tests/scenarios/smoketest.yml \
             --data-path=~/.raiden \
             --chain goerli:https://${SMOKETEST_NODE} \
             --keystore-file=.circleci/smoketest.keystore \
