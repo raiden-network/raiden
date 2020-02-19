@@ -181,7 +181,7 @@ class RaidenConfig:
     services: ServiceConfig = ServiceConfig()
 
     transport_type: str = "matrix"
-    transport = MatrixTransportConfig(
+    transport: MatrixTransportConfig = MatrixTransportConfig(
         # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
         available_servers=[],
         # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
@@ -195,7 +195,7 @@ class RaidenConfig:
         sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
     )
 
-    rest_api = RestApiConfig()
+    rest_api: RestApiConfig = RestApiConfig()
 
     shutdown_timeout: int = DEFAULT_SHUTDOWN_TIMEOUT
     unrecoverable_error_should_crash: bool = False
