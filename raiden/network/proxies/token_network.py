@@ -882,9 +882,9 @@ class TokenNetwork:
             # estimation of an approve works concurrently with the mining of a
             # deposit. If the *exact* amount is used, the storage of the smart
             # contract will be set to `0` once the `deposit` is mined, this
-            # means the gas estimation of the concurrent `approve` will be mis
-            # by the 20_000 required by the `SSTORE` to change the value from
-            # `0`.
+            # means the gas estimation of an approve done before the deposit
+            # was mined will be off by the 20_000 required by the `SSTORE` to
+            # change the value back from `0`.
             allowance = TokenAmount(amount_to_deposit + 1)
             self.token.approve(allowed_address=Address(self.address), allowance=allowance)
 
