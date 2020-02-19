@@ -106,6 +106,8 @@ def logtime(msg: str, *args: Any, **kwargs: Any) -> Iterator[Dict[str, Any]]:
     start = time.monotonic()
     details: Dict[str, Any] = {}
 
+    log.info("Started: " + msg, *args, **kwargs, **details)
+
     yield details
 
     elapsed = time.monotonic() - start
