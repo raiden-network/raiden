@@ -118,9 +118,8 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
         msg = "The secrethashes of the pending transfers must be in the queue after a restart."
         assert secrethash in chain_state.payment_mapping.secrethashes_to_task, msg
 
-    timeout = block_offset_timeout(app1.raiden)
+    timeout = block_offset_timeout(app1.raiden, "Timeout waiting for balance update of app0")
     with watch_for_unlock_failures(*raiden_network), timeout:
-        timeout.exception_to_throw = ValueError("Timeout waiting for balance update of app0")
         waiting.wait_for_payment_balance(
             raiden=app0_restart.raiden,
             token_network_registry_address=token_network_registry_address,

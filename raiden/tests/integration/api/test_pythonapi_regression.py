@@ -4,7 +4,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.transfer import block_offset_timeout
+from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.utils.typing import PaymentAmount, PaymentID, TargetAddress
 
 
@@ -33,8 +33,8 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     amount = PaymentAmount(10)
     identifier = PaymentID(42)
     secret, secrethash = factories.make_secret_with_hash()
-    timeout = block_offset_timeout(app1.raiden)
-    with timeout:
+    timeout = block_offset_timeout(app1.raiden, "Transfer timed out.")
+    with watch_for_unlock_failures(*raiden_network), timeout:
         assert api1.transfer_and_wait(
             registry_address=registry_address,
             token_address=token_address,
@@ -44,7 +44,7 @@ def test_close_regression(raiden_network, deposit, token_addresses):
             secret=secret,
         )
         timeout.exception_to_throw = ValueError(
-            "Waiting for transfer received success in the WAL timed out"
+            "Waiting for transfer received success in the WAL timed out."
         )
         result = waiting.wait_for_received_transfer_result(
             raiden=app1.raiden,
