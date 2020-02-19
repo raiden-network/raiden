@@ -37,6 +37,7 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     MatrixTransportConfig,
     RaidenConfig,
+    RestApiConfig,
     ServiceConfig,
 )
 from raiden.ui.checks import (
@@ -71,7 +72,6 @@ from raiden.utils.typing import (
     Endpoint,
     FeeAmount,
     Optional,
-    Port,
     PrivateKey,
     ProportionalFeeAmount,
     TokenAddress,
@@ -174,6 +174,7 @@ def run_app(
     user_deposit_contract_address: Optional[UserDepositAddress],
     api_address: Endpoint,
     rpc: bool,
+    rpccorsdomain: str,
     sync_check: bool,
     console: bool,
     password_file: TextIO,
@@ -219,8 +220,17 @@ def run_app(
     api_host, api_port = split_endpoint(api_address)
 
     if not api_port:
-        api_port = Port(DEFAULT_HTTP_SERVER_PORT)
+        api_port = DEFAULT_HTTP_SERVER_PORT
 
+    domain_list = []
+    if rpccorsdomain:
+        if "," in rpccorsdomain:
+            for domain in rpccorsdomain.split(","):
+                domain_list.append(str(domain))
+        else:
+            domain_list.append(str(rpccorsdomain))
+
+    # Set up config
     fee_config = prepare_mediation_fee_config(
         cli_token_to_flat_fee=flat_fee,
         cli_token_to_proportional_fee=proportional_fee,
@@ -230,8 +240,6 @@ def run_app(
 
     config = RaidenConfig(chain_id=network_id, environment_type=environment_type)
     config.console = console
-    config.rpc = rpc
-    config.web_ui = rpc and web_ui
 
     config.blockchain.query_interval = blockchain_query_interval
 
@@ -243,10 +251,16 @@ def run_app(
     config.transport_type = transport
     config.transport.server = matrix_server
 
-    config.unrecoverable_error_should_crash = unrecoverable_error_should_crash
+    config.rest_api = RestApiConfig(
+        rest_api_enabled=rpc,
+        web_ui_enabled=rpc and web_ui,
+        cors_domain_list=domain_list,
+        eth_rpc_endpoint=eth_rpc_endpoint,
+        host=api_host,
+        port=api_port,
+    )
 
-    config.api_host = api_host
-    config.api_port = api_port
+    config.unrecoverable_error_should_crash = unrecoverable_error_should_crash
     config.resolver_endpoint = resolver_endpoint
 
     config.reveal_timeout = default_reveal_timeout

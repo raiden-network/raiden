@@ -9,17 +9,14 @@ from gevent.event import AsyncResult
 
 from raiden import constants, settings
 from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
 from raiden.log_config import configure_logging
 from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.ui.app import run_app
 from raiden.ui.config import dump_cmd_options, dump_module
 from raiden.utils.gevent import spawn_named
-from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import Port
 
 log = structlog.get_logger(__name__)
 DOC_URL = "http://raiden-network.readthedocs.io/en/stable/rest_api.html"
@@ -72,40 +69,6 @@ class NodeRunner:
         runnable_tasks: List[Runnable] = list()
 
         runnable_tasks.append(app.raiden)
-
-        domain_list = []
-        if self._options["rpccorsdomain"]:
-            if "," in self._options["rpccorsdomain"]:
-                for domain in self._options["rpccorsdomain"].split(","):
-                    domain_list.append(str(domain))
-            else:
-                domain_list.append(str(self._options["rpccorsdomain"]))
-
-        self.raiden_api = RaidenAPI(app.raiden)
-
-        if self._options["rpc"]:
-            rest_api = RestAPI(self.raiden_api)
-            (api_host, api_port) = split_endpoint(self._options["api_address"])
-
-            if not api_port:
-                api_port = Port(settings.DEFAULT_HTTP_SERVER_PORT)
-
-            api_server = APIServer(
-                rest_api,
-                config={"host": api_host, "port": api_port},
-                cors_domain_list=domain_list,
-                web_ui=self._options["web_ui"],
-                eth_rpc_endpoint=self._options["eth_rpc_endpoint"],
-            )
-            api_server.start()
-
-            url = f"http://{api_host}:{api_port}/"
-            print(
-                f"The Raiden API RPC server is now running at {url}.\n\n See "
-                f"the Raiden documentation for all available endpoints at\n "
-                f"{DOC_URL}"
-            )
-            runnable_tasks.append(api_server)
 
         if self._options["console"]:
             from raiden.ui.console import Console

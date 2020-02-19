@@ -18,6 +18,7 @@ from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.settings import RestApiConfig
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -32,6 +33,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,
+    Host,
     Iterator,
     List,
     Port,
@@ -66,7 +68,9 @@ def _url_for(apiserver: APIServer, endpoint: str, **kwargs) -> str:
 def start_apiserver(raiden_app: App, rest_api_port_number: Port) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api, config={"host": "localhost", "port": rest_api_port_number})
+    api_server = APIServer(
+        rest_api, config=RestApiConfig(host=Host("localhost"), port=rest_api_port_number)
+    )
 
     # required for url_for
     api_server.flask_app.config["SERVER_NAME"] = f"localhost:{rest_api_port_number}"

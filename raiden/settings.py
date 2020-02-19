@@ -34,7 +34,7 @@ GAS_LIMIT = 10 * 10 ** 6
 GAS_LIMIT_HEX = to_hex(GAS_LIMIT)
 GAS_PRICE = denoms.shannon * 20  # pylint: disable=no-member
 
-DEFAULT_HTTP_SERVER_PORT = 5001
+DEFAULT_HTTP_SERVER_PORT = Port(5001)
 
 DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF = 1
 DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL = 5.0
@@ -154,6 +154,18 @@ class BlockchainConfig:
 
 
 @dataclass
+class RestApiConfig:
+    rest_api_enabled: bool = True
+    web_ui_enabled: bool = False
+
+    cors_domain_list: List[str] = field(default_factory=list)
+    eth_rpc_endpoint: Optional[str] = None
+
+    host: Optional[Host] = None
+    port: Optional[Port] = None
+
+
+@dataclass
 class RaidenConfig:
     chain_id: ChainID
     environment_type: Environment
@@ -169,7 +181,7 @@ class RaidenConfig:
     services: ServiceConfig = ServiceConfig()
 
     transport_type: str = "matrix"
-    transport: MatrixTransportConfig = MatrixTransportConfig(
+    transport = MatrixTransportConfig(
         # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
         available_servers=[],
         # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
@@ -183,15 +195,12 @@ class RaidenConfig:
         sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
     )
 
+    rest_api = RestApiConfig()
+
     shutdown_timeout: int = DEFAULT_SHUTDOWN_TIMEOUT
     unrecoverable_error_should_crash: bool = False
 
-    rpc: bool = True
-    web_ui: bool = True
     console: bool = False
-
-    api_host: Optional[Host] = None
-    api_port: Optional[Port] = None
     resolver_endpoint: Optional[str] = None
 
     pfs_config: Optional[PFSConfig] = None

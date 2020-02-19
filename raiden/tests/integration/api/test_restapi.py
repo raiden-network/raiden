@@ -46,7 +46,15 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import Address, FeeAmount, PaymentAmount, PaymentID, Secret, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    FeeAmount,
+    PaymentAmount,
+    PaymentID,
+    Port,
+    Secret,
+    TokenAmount,
+)
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -2108,8 +2116,8 @@ def test_payment_events_endpoints(
     target1_address = app1.raiden.address
     target2_address = app2.raiden.address
 
-    app1_server = create_api_server(app1, 8575)
-    app2_server = create_api_server(app2, 8576)
+    app1_server = create_api_server(app1, Port(8575))
+    app2_server = create_api_server(app2, Port(8576))
 
     # app0 is sending tokens to target 1
     request = grequests.post(
@@ -2560,9 +2568,9 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     actual_fee = 1
     identifier = 42
 
-    initiator_server = create_api_server(initiator, 8575)
-    mediator_server = create_api_server(mediator, 8576)
-    target_server = create_api_server(target, 8577)
+    initiator_server = create_api_server(initiator, Port(8575))
+    mediator_server = create_api_server(mediator, Port(8576))
+    target_server = create_api_server(target, Port(8577))
 
     target.raiden.message_handler = target_wait = WaitForMessage()
     mediator.raiden.message_handler = mediator_wait = WaitForMessage()

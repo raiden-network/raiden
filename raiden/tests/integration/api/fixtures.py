@@ -4,7 +4,7 @@ import pytest
 from raiden.api.rest import APIServer
 from raiden.app import App
 from raiden.tests.integration.api.utils import create_api_server
-from raiden.utils.typing import Iterable, List
+from raiden.utils.typing import Iterable, List, Port
 
 
 # TODO: Figure out why this fixture can't work as session scoped
@@ -13,7 +13,7 @@ from raiden.utils.typing import Iterable, List
 #       been invoked.
 @pytest.fixture
 def api_server_test_instance(
-    raiden_network: List[App], rest_api_port_number: int
+    raiden_network: List[App], rest_api_port_number: Port
 ) -> Iterable[APIServer]:
     api_server = create_api_server(raiden_network[0], rest_api_port_number)
 

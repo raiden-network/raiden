@@ -14,7 +14,7 @@ from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import Port, TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 # we need to use fixture for the default values otherwise
@@ -286,7 +286,7 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
 
 
 @pytest.fixture
-def rest_api_port_number(port_generator):
+def rest_api_port_number(port_generator) -> Port:
     """ Unique port for the REST API server. """
     return next(port_generator)
 
