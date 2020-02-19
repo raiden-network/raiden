@@ -550,8 +550,7 @@ def test_channel_withdraw_expired(
     wait_for_unlock = bob_app.raiden.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
     )
-    transfer_timeout = block_offset_timeout(alice_app.raiden)
-    with transfer_timeout:
+    with block_offset_timeout(alice_app.raiden):
         wait_for_unlock.get()
         msg = (
             f"transfer from {to_checksum_address(alice_app.raiden.address)} "
@@ -566,7 +565,7 @@ def test_channel_withdraw_expired(
         total_withdraw=total_withdraw,
     )
 
-    with transfer_timeout:
+    with block_offset_timeout(bob_app.raiden):
         send_withdraw_confirmation_event.wait()
 
     # Make sure proper withdraw state is set in both channel states
