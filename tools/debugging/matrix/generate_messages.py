@@ -89,8 +89,8 @@ class LoggedUser:
 class Config:
     sender_matrix_server_url: str
     receiver_matrix_server_url: str
-    number_of_concurrent_chat_rooms: int = 5
-    number_of_concurrent_messages: int = 5
+    number_of_concurrent_chat_rooms: int
+    number_of_concurrent_messages: int
     number_of_users: int = field(init=False)
     number_of_parallel_messages: int = field(init=False)
 
@@ -236,8 +236,8 @@ def main() -> None:
     args = parser.parse_args()
     sender_matrix_server_url = args.server
     receiver_matrix_server_url = args.server2 or args.server
-    number_of_concurrent_chat_rooms = args.concurrent_messages
-    number_of_concurrent_messages = args.chat_rooms
+    number_of_concurrent_chat_rooms = args.chat_rooms
+    number_of_concurrent_messages = args.concurrent_messages
 
     config = Config(
         sender_matrix_server_url=sender_matrix_server_url,
