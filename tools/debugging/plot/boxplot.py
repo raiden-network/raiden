@@ -37,9 +37,6 @@ def configure_axes(axes):
     axes.xaxis.set_tick_params(which="major", rotation=90)
     axes.xaxis.set_tick_params(which="minor", rotation=90)
 
-    axes.set_xlabel("time")
-    axes.set_ylabel("RTT")
-
 
 timestamps = list()
 rtts = list()
@@ -59,6 +56,8 @@ histogram, x_data, y_data = numpy.histogram2d(timestamps, rtts, bins=[args.x_bin
 to_datetime = numpy.vectorize(datetime.datetime.fromtimestamp)
 
 axes = pyplot.gca()
+axes.set_xlabel(args.x)
+axes.set_ylabel(args.y)
 configure_axes(axes)
 
 axes.pcolor(to_datetime(x_data), y_data, histogram.T)
