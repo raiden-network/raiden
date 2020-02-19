@@ -1,10 +1,17 @@
 #!/usr/bin/env python
+from gevent import monkey  # isort:skip
+
+monkey.patch_all()  # isort:skip
+
 import argparse
 import os
 import time
 from dataclasses import dataclass
-from subprocess import Popen
 from typing import Iterator, List
+
+from gevent.event import Event
+
+from raiden.utils.nursery import Janitor, Nursery
 
 CWD = os.path.dirname(os.path.abspath(__file__))
 GENERATE_MESSAGES_SCRIPT = os.path.join(CWD, "generate_messages.py")
@@ -32,8 +39,7 @@ def batch_size(target: int, step: int) -> Iterator[int]:
         yield rest
 
 
-def run(config: Config, processes: List) -> None:
-
+def run(config: Config, nursery: Nursery) -> None:
     for i, qty_of_rooms in enumerate(
         batch_size(config.target_qty_of_chat_rooms, config.qty_of_new_rooms_per_iteration)
     ):
@@ -48,7 +54,8 @@ def run(config: Config, processes: List) -> None:
             config.sender_matrix_server_url,
             config.receiver_matrix_server_url,
         ]
-        processes.append(Popen(script_args))
+
+        nursery.exec_under_watch(script_args)
 
         time.sleep(config.wait_before_next_iteration)
 
@@ -88,17 +95,11 @@ def main() -> None:
         wait_before_next_iteration=args.wait_before_next_iteration,
     )
 
-    processes: List[Popen] = list()
+    stop = Event()
 
-    try:
-        run(config, processes)
-    finally:
-        for p in processes:
-            p.terminate()
-            stdout, stderr = p.communicate()
-
-            if stderr:
-                print(stderr)
+    with Janitor(stop) as nursery:
+        nursery.spawn_under_watch(run, config, nursery)
+        stop.get()
 
 
 if __name__ == "__main__":

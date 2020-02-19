@@ -1,39 +1,24 @@
 #!/usr/bin/env python
-from gevent import monkey  # isort:skip # noqa
+from gevent import monkey  # isort:skip
 
-monkey.patch_all()  # isort:skip # noqa
+monkey.patch_all()  # isort:skip
 
-import atexit
 import logging.config
 import os
 import os.path
 import signal
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
 from itertools import chain, count, product
 from time import time
-from types import TracebackType
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    NewType,
-    NoReturn,
-    Optional,
-    Set,
-    Type,
-)
+from typing import Callable, Dict, Iterable, Iterator, List, NewType, NoReturn, Optional
 
 import gevent
 import requests
 import structlog
 from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
-from gevent.event import AsyncResult, Event
+from gevent.event import Event
 from gevent.greenlet import Greenlet
 from gevent.pool import Pool
 from gevent.subprocess import DEVNULL, STDOUT, Popen
@@ -41,6 +26,7 @@ from greenlet import greenlet
 
 from raiden.network.utils import get_free_port
 from raiden.utils.formatting import pex
+from raiden.utils.nursery import Janitor, Nursery
 from raiden.utils.typing import Address, Host, Port, TokenAmount
 
 BaseURL = NewType("BaseURL", str)
@@ -88,7 +74,6 @@ log.setLevel("DEBUG")
 
 NO_ROUTE_ERROR = 409
 UNBUFERRED = 0
-STATUS_CODE_FOR_SUCCESS = 0
 FIRST_VALID_PAYMENT_ID = 1
 WAIT_FOR_SOCKET_TO_BE_AVAILABLE = 60
 
@@ -189,99 +174,6 @@ class StressTestPlan:
 class Transfer:
     from_to: InitiatorAndTarget
     amount: Amount
-
-
-class Nursery(ABC):
-    @abstractmethod
-    def track(self, process: Popen) -> None:
-        pass
-
-    @abstractmethod
-    def spawn_under_watch(self, function: Callable, *args: Any, **kargs: Any) -> Greenlet:
-        pass
-
-
-class Janitor:
-    """Tries to properly stop all subprocesses before quitting the script.
-
-    - This watches for the status of the subprocess, if the processes exits
-      with a non-zero error code then the failure is propagated.
-    - If for any reason this process is dying, then all the spawned processes
-      have to be killed in order for a proper clean up to happen.
-    """
-
-    def __init__(self, stop: Event) -> None:
-        self.stop = stop
-        self._processes: Set[Popen] = set()
-
-    def __enter__(self) -> Nursery:
-        # Registers an atexit callback in case the __exit__ doesn't get a
-        # chance to run. This happens when the Janitor is not used in the main
-        # greenlet, and its greenlet is not the one that is dying.
-        atexit.register(self._free_resources)
-
-        # Hide the nursery to require the context manager to be used. This
-        # leads to better behavior in the happy case since the exit handler is
-        # used.
-        janitor = self
-        stop = self.stop
-
-        class ProcessNursery(Nursery):
-            @staticmethod
-            def track(process: Popen) -> None:
-                janitor._processes.add(process)
-
-                def subprocess_stopped(result: AsyncResult) -> None:
-                    # Processes are expected to quit while the nursery is
-                    # active, remove them from the track list to clear memory
-                    janitor._processes.remove(process)
-
-                    # if the subprocess error'ed propagate the error.
-                    if result.get() != STATUS_CODE_FOR_SUCCESS:
-                        log.error("Raiden died! Bailing out.")
-                        stop.set()
-
-                process.result.rawlink(subprocess_stopped)
-
-            @staticmethod
-            def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
-                greenlet = gevent.spawn(function, *args, **kwargs)
-
-                # The Event.rawlink is executed inside the Hub thread, which
-                # does validation and *raises on blocking calls*, to go around
-                # this a new greenlet has to be spawned, that in turn will
-                # raise the exception.
-                def spawn_to_kill() -> None:
-                    gevent.spawn(greenlet.throw, gevent.GreenletExit())
-
-                stop.rawlink(lambda _stop: spawn_to_kill())
-                return greenlet
-
-        return ProcessNursery()
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
-        # Make sure to signal that we are exiting. This is a noop if the signal
-        # is set already (e.g. because a subprocess exited with a non-zero
-        # status code)
-        self.stop.set()
-
-        # Behave nicely if context manager's __exit__ is executed. This
-        # implements the expected behavior of a context manager, which will
-        # clear the resources when exiting.
-        atexit.unregister(self._free_resources)
-
-        self._free_resources()
-
-        return None
-
-    def _free_resources(self) -> None:
-        for p in self._processes:
-            p.send_signal(signal.SIGINT)
 
 
 def get_address(base_url: str) -> str:
