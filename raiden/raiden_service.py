@@ -14,6 +14,8 @@ from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 
 from raiden import routing
+from raiden.api.python import RaidenAPI
+from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import (
     ZERO_POLL_RESULT,
@@ -27,6 +29,7 @@ from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
+    DOC_URL,
     EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
@@ -278,6 +281,18 @@ class RaidenService(Runnable):
         self.message_handler = message_handler
         self.blockchain_events: Optional[BlockchainEvents] = None
 
+        self.raiden_api: Optional[RaidenAPI] = None
+        self.rest_api: Optional[RestAPI] = None
+        if config.rest_api.rest_api_enabled:
+            self.raiden_api = RaidenAPI(self)
+            self.rest_api = RestAPI(self.raiden_api)
+
+            self.api_server = APIServer(
+                rest_api=self.rest_api,
+                config=config.rest_api,
+                eth_rpc_endpoint=config.rest_api.eth_rpc_endpoint,
+            )
+
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
         self.greenlets: List[Greenlet] = list()
@@ -367,6 +382,8 @@ class RaidenService(Runnable):
         log.debug("Raiden Service started", node=to_checksum_address(self.address))
         super().start()
 
+        self._start_rest_api()
+
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
         self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
@@ -395,9 +412,13 @@ class RaidenService(Runnable):
         #
         # We need a timeout to prevent an endless loop from trying to
         # contact the disconnected client
+        if self.api_server is not None:
+            self.api_server.stop()
         self.transport.stop()
         self.alarm.stop()
 
+        if self.api_server is not None:
+            self.api_server.greenlet.join()
         self.transport.greenlet.join()
         self.alarm.greenlet.join()
 
@@ -652,6 +673,16 @@ class RaidenService(Runnable):
         """
         assert self.ready_to_process_events, f"Event processing disabled. node:{self!r}"
         self.alarm.start()
+
+    def _start_rest_api(self) -> None:
+        self.api_server.start()
+
+        url = f"http://{self.config.rest_api.host}:{self.config.rest_api.port}/"
+        print(
+            f"The Raiden API RPC server is now running at {url}.\n\n See "
+            f"the Raiden documentation for all available endpoints at\n "
+            f"{DOC_URL}"
+        )
 
     def _initialize_ready_to_process_events(self) -> None:
         """Mark the node as ready to start processing raiden events that may

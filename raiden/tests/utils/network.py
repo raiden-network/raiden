@@ -392,7 +392,6 @@ def create_apps(
             ),
             mediation_fees=MediationFeeConfig(),
             services=ServiceConfig(monitoring_enabled=False),
-            rpc=True,
             console=False,
             transport_type="matrix",
         )

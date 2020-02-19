@@ -91,6 +91,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     WithdrawMismatch,
 )
+from raiden.settings import RestApiConfig
 from raiden.transfer import channel, views
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
@@ -328,12 +329,7 @@ class APIServer(Runnable):  # pragma: no unittest
     _api_prefix = "/api/1"
 
     def __init__(
-        self,
-        rest_api: "RestAPI",
-        config: Dict[str, Any],
-        cors_domain_list: List[str] = None,
-        web_ui: bool = False,
-        eth_rpc_endpoint: str = None,
+        self, rest_api: "RestAPI", config: RestApiConfig, eth_rpc_endpoint: str = None
     ) -> None:
         super().__init__()
         if rest_api.version != 1:
@@ -341,8 +337,8 @@ class APIServer(Runnable):  # pragma: no unittest
         self._api_prefix = f"/api/v{rest_api.version}"
 
         flask_app = Flask(__name__)
-        if cors_domain_list:
-            CORS(flask_app, origins=cors_domain_list)
+        if config.cors_domain_list:
+            CORS(flask_app, origins=config.cors_domain_list)
 
         if eth_rpc_endpoint:
             if not eth_rpc_endpoint.startswith("http"):
@@ -377,13 +373,14 @@ class APIServer(Runnable):  # pragma: no unittest
         # or else, it'll replace it with a E500 response
         self.flask_app.config["PROPAGATE_EXCEPTIONS"] = True
 
-        if web_ui:
+        if config.web_ui_enabled:
             for route in ("/ui/<path:file_name>", "/ui", "/ui/", "/index.html", "/"):
                 self.flask_app.add_url_rule(
                     route, route, view_func=self._serve_webui, methods=("GET",)
                 )
 
-        self._is_raiden_running()
+        # FIXME: decide what to do with this
+        # self._is_raiden_running()
 
     def _is_raiden_running(self) -> None:
         # We cannot accept requests before the node has synchronized with the
@@ -449,8 +446,8 @@ class APIServer(Runnable):  # pragma: no unittest
     def start(self) -> None:
         log.debug(
             "REST API starting",
-            host=self.config["host"],
-            port=self.config["port"],
+            host=self.config.host,
+            port=self.config.port,
             node=to_checksum_address(self.rest_api.raiden_api.address),
         )
 
@@ -462,7 +459,7 @@ class APIServer(Runnable):  # pragma: no unittest
         # new WSGIServer is created on each start
         pool = gevent.pool.Pool()
         wsgiserver = WSGIServer(
-            (self.config["host"], self.config["port"]),
+            (self.config.host, self.config.port),
             self.flask_app,
             log=wsgi_log,
             error_log=wsgi_log,
@@ -473,15 +470,15 @@ class APIServer(Runnable):  # pragma: no unittest
             wsgiserver.init_socket()
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
-                raise APIServerPortInUseError(f"{self.config['host']}:{self.config['port']}")
+                raise APIServerPortInUseError(f"{self.config.host}:{self.config.port}")
             raise
 
         self.wsgiserver = wsgiserver
 
         log.debug(
             "REST API started",
-            host=self.config["host"],
-            port=self.config["port"],
+            host=self.config.host,
+            port=self.config.port,
             node=to_checksum_address(self.rest_api.raiden_api.address),
         )
 
@@ -490,8 +487,8 @@ class APIServer(Runnable):  # pragma: no unittest
     def stop(self) -> None:
         log.debug(
             "REST API stopping",
-            host=self.config["host"],
-            port=self.config["port"],
+            host=self.config.host,
+            port=self.config.port,
             node=to_checksum_address(self.rest_api.raiden_api.address),
         )
 
@@ -507,8 +504,8 @@ class APIServer(Runnable):  # pragma: no unittest
 
         log.debug(
             "REST API stopped",
-            host=self.config["host"],
-            port=self.config["port"],
+            host=self.config.host,
+            port=self.config.port,
             node=to_checksum_address(self.rest_api.raiden_api.address),
         )
 

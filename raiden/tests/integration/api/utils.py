@@ -6,6 +6,8 @@ import psutil
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
+from raiden.settings import RestApiConfig
+from raiden.utils.typing import Host, Port
 
 
 def wait_for_listening_port(
@@ -25,10 +27,12 @@ def wait_for_listening_port(
     raise RuntimeError(f"{port_number} is not bound")
 
 
-def create_api_server(raiden_app: App, port_number: int) -> APIServer:
+def create_api_server(raiden_app: App, port_number: Port) -> APIServer:
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api, config={"host": "localhost", "port": port_number})
+    api_server = APIServer(
+        rest_api, config=RestApiConfig(host=Host("localhost"), port=port_number)
+    )
     api_server.flask_app.config["SERVER_NAME"] = f"localhost:{port_number}"
     api_server.start()
 

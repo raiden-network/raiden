@@ -15,8 +15,6 @@ from web3.contract import Contract
 from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
-from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     EMPTY_ADDRESS,
@@ -44,7 +42,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.http import HTTPExecutor, split_endpoint
+from raiden.utils.http import HTTPExecutor
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -398,14 +396,10 @@ def run_smoketest(
     print_step("Starting Raiden")
 
     app = None
-    api_server = None
     try:
         app = run_app(**args)
-        raiden_api = RaidenAPI(app.raiden)
-        rest_api = RestAPI(raiden_api)
-        (api_host, api_port) = split_endpoint(args["api_address"])
-        api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
-        api_server.start()
+        raiden_api = app.raiden.raiden_api
+        assert raiden_api is not None  # for mypy
 
         block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
@@ -460,7 +454,7 @@ def run_smoketest(
         assert Balance(distributable) == channel_state.our_state.contract_balance
         assert channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
-        port_number = raiden_service.config.api_port
+        port_number = raiden_service.config.rest_api.port
         response = requests.get(f"http://localhost:{port_number}/api/v1/channels")
 
         assert response.status_code == HTTPStatus.OK
@@ -472,10 +466,6 @@ def run_smoketest(
         assert response_json[0]["state"] == "opened"
         assert int(response_json[0]["balance"]) > 0
     finally:
-        if api_server is not None:
-            api_server.stop()
-            api_server.greenlet.get()
-
         if app is not None:
             app.stop()
             app.raiden.greenlet.get()
