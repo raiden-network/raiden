@@ -283,6 +283,7 @@ class RaidenService(Runnable):
 
         self.raiden_api: Optional[RaidenAPI] = None
         self.rest_api: Optional[RestAPI] = None
+        self.api_server: Optional[APIServer] = None
         if config.rest_api.rest_api_enabled:
             self.raiden_api = RaidenAPI(self)
             self.rest_api = RestAPI(self.raiden_api)
@@ -675,14 +676,15 @@ class RaidenService(Runnable):
         self.alarm.start()
 
     def _start_rest_api(self) -> None:
-        self.api_server.start()
+        if self.api_server is not None:
+            self.api_server.start()
 
-        url = f"http://{self.config.rest_api.host}:{self.config.rest_api.port}/"
-        print(
-            f"The Raiden API RPC server is now running at {url}.\n\n See "
-            f"the Raiden documentation for all available endpoints at\n "
-            f"{DOC_URL}"
-        )
+            url = f"http://{self.config.rest_api.host}:{self.config.rest_api.port}/"
+            print(
+                f"The Raiden API RPC server is now running at {url}.\n\n See "
+                f"the Raiden documentation for all available endpoints at\n "
+                f"{DOC_URL}"
+            )
 
     def _initialize_ready_to_process_events(self) -> None:
         """Mark the node as ready to start processing raiden events that may

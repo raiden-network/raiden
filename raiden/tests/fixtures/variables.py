@@ -345,6 +345,12 @@ def skip_if_not_geth(blockchain_type):
 
 
 @pytest.fixture
-def start_raiden_apps():
+def start_raiden_apps() -> bool:
     """Determines if the raiden apps created at test setup should also be started"""
     return True
+
+
+@pytest.fixture
+def enable_rest_api() -> bool:
+    """Determines if the raiden apps created at test setup should also be started"""
+    return False
