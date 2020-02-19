@@ -570,41 +570,50 @@ class TransactionPending:
             # Geth Issue: https://github.com/ethereum/go-ethereum/issues/2586
             # Relevant web3 PR: https://github.com/ethereum/web3.py/pull/1046
             block_identifier = None
+
         try:
             estimated_gas = fn(*self.data.args, **self.data.kwargs).estimateGas(
                 transaction={"from": from_address}, block_identifier=block_identifier
             )
         except ValueError as err:
-            action = inspect_client_error(err, self.eth_node)
-            will_fail = action in (
+            estimated_gas = None
+            inspected_error = inspect_client_error(err, self.eth_node)
+
+            # These errors are expected to happen. For these errors instead of
+            # propagating the `ValueError` raised by web3 `None` is returned,
+            # this forces the caller to handle the error.
+            expected_error = inspected_error in (
                 ClientErrorInspectResult.INSUFFICIENT_FUNDS,
                 ClientErrorInspectResult.ALWAYS_FAIL,
             )
-            if will_fail:
-                return None
+            if not expected_error:
+                raise err
 
-            raise err
+        if estimated_gas is not None:
+            block = self.data.contract.web3.eth.getBlock("latest")
+            gas_price = gas_price_for_fast_transaction(self.data.contract.web3)
 
-        block = self.data.contract.web3.eth.getBlock("latest")
-        gas_price = gas_price_for_fast_transaction(self.data.contract.web3)
+            transaction_estimated = TransactionEstimated(
+                from_address=self.from_address,
+                eth_node=self.eth_node,
+                data=self.data,
+                extra_log_details=self.extra_log_details,
+                estimated_gas=safe_gas_limit(estimated_gas),
+                gas_price=gas_price,
+                approximate_block=(block["hash"], block["number"]),
+            )
 
-        transaction_estimated = TransactionEstimated(
-            from_address=self.from_address,
-            eth_node=self.eth_node,
-            data=self.data,
-            extra_log_details=self.extra_log_details,
-            estimated_gas=safe_gas_limit(estimated_gas),
-            gas_price=gas_price,
-            approximate_block=(block["hash"], block["number"]),
-        )
+            log.debug(
+                "Transaction gas estimated",
+                **transaction_estimated.to_log_details(),
+                node_gas_price=self.data.contract.web3.eth.gasPrice,
+            )
 
-        log.debug(
-            "Transaction gas estimated",
-            **transaction_estimated.to_log_details(),
-            node_gas_price=self.data.contract.web3.eth.gasPrice,
-        )
+            return transaction_estimated
+        else:
+            log.debug("Transaction gas estimation failed", **self.to_log_details())
 
-        return transaction_estimated
+            return None
 
 
 @dataclass
