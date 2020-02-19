@@ -87,7 +87,8 @@ class LoggedUser:
 
 @dataclass
 class Config:
-    matrix_server_url: str
+    sender_matrix_server_url: str
+    receiver_matrix_server_url: str
     number_of_concurrent_chat_rooms: int = 5
     number_of_concurrent_messages: int = 5
     number_of_users: int = field(init=False)
@@ -193,14 +194,18 @@ def init_clients_and_rooms(sender: LoggedUser, receiver: LoggedUser) -> Room:
 
 def messages_p2p(config: Config) -> None:
     login_pool = Pool(size=config.number_of_users)
-    users = list()
-    for logged_user in login_pool.imap(
-        new_user, repeat(config.matrix_server_url, config.number_of_users)
-    ):
-        users.append(logged_user)
+    number_of_senders = config.number_of_users // 2
+    number_of_receivers = config.number_of_users // 2
 
-    senders = users[: config.number_of_concurrent_chat_rooms]
-    receivers = users[config.number_of_concurrent_chat_rooms :]
+    # login senders and receivers concurrently
+    senders_users_results = login_pool.imap(
+        new_user, repeat(config.sender_matrix_server_url, times=number_of_senders)
+    )
+    receivers_users_results = login_pool.imap(
+        new_user, repeat(config.receiver_matrix_server_url, times=number_of_receivers)
+    )
+    senders = list(senders_users_results)
+    receivers = list(receivers_users_results)
 
     invite_pool = Pool(size=config.number_of_concurrent_chat_rooms)
     rooms = list(login_pool.imap(init_clients_and_rooms, senders, receivers))
@@ -214,23 +219,34 @@ def messages_p2p(config: Config) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("server")
-    parser.add_argument("log")
     parser.add_argument("--concurrent-messages", type=int, default=50)
     parser.add_argument("--chat-rooms", type=int, default=10)
+    parser.add_argument("logfile", help="File used to save the script logs.")
+    parser.add_argument("server", help="Matrix server used by the sender user.")
+    parser.add_argument(
+        "server2",
+        help=(
+            "If provided, the server used by the receiever, otherwise the same "
+            "server as the sender is used."
+        ),
+        default=None,
+        nargs="?",
+    )
 
     args = parser.parse_args()
-    matrix_server_url = args.server
+    sender_matrix_server_url = args.server
+    receiver_matrix_server_url = args.server2 or args.server
     number_of_concurrent_chat_rooms = args.concurrent_messages
     number_of_concurrent_messages = args.chat_rooms
 
     config = Config(
-        matrix_server_url=matrix_server_url,
+        sender_matrix_server_url=sender_matrix_server_url,
+        receiver_matrix_server_url=receiver_matrix_server_url,
         number_of_concurrent_chat_rooms=number_of_concurrent_chat_rooms,
         number_of_concurrent_messages=number_of_concurrent_messages,
     )
 
-    configure_logging(args.log)
+    configure_logging(args.logfile)
     messages_p2p(config)
 
 
