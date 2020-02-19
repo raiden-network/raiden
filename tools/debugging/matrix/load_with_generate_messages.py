@@ -9,8 +9,6 @@ import time
 from dataclasses import dataclass
 from typing import Iterator, List
 
-from gevent.event import Event
-
 from raiden.utils.nursery import Janitor, Nursery
 
 CWD = os.path.dirname(os.path.abspath(__file__))
@@ -95,11 +93,9 @@ def main() -> None:
         wait_before_next_iteration=args.wait_before_next_iteration,
     )
 
-    stop = Event()
-
-    with Janitor(stop) as nursery:
+    with Janitor() as nursery:
         nursery.spawn_under_watch(run, config, nursery)
-        stop.get()
+        nursery.wait(timeout=None)
 
 
 if __name__ == "__main__":
