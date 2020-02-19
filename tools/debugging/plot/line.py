@@ -34,9 +34,6 @@ def configure_axes(axes):
     axes.xaxis.set_tick_params(which="major", rotation=90)
     axes.xaxis.set_tick_params(which="minor", rotation=90)
 
-    axes.set_xlabel("time")
-    axes.set_ylabel("RTT")
-
 
 x_axis = list()
 y_axis = list()
@@ -53,6 +50,8 @@ for line in reader:
 
 
 axes = pyplot.gca()
+axes.set_xlabel(args.x)
+axes.set_ylabel(args.y)
 configure_axes(axes)
 pyplot.plot(x_axis, y_axis)
 
