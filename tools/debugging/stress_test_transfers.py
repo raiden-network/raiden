@@ -18,7 +18,6 @@ import gevent
 import requests
 import structlog
 from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
-from gevent.event import Event
 from gevent.greenlet import Greenlet
 from gevent.pool import Pool
 from gevent.subprocess import DEVNULL, STDOUT, Popen
@@ -211,7 +210,7 @@ def start_and_wait_for_server(
     process_args = node.args + ["--api-address", api_url]
     process = Popen(process_args, bufsize=UNBUFERRED, stdout=stdout, stderr=STDOUT)
 
-    nursery.track(process)
+    nursery.exec_under_watch(process)
 
     wait_for_address_endpoint(running_url, retry_timeout)
     return RunningNode(process, node, running_url)
@@ -423,7 +422,7 @@ def run_profiler(
         ]
         profiler = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
 
-        nursery.track(profiler)
+        nursery.exec_under_watch(profiler)
 
     return profiler_processes
 
@@ -520,26 +519,6 @@ def run_stress_test(
                 profiler.send_signal(signal.SIGINT)
 
 
-# TODO: cancel the spawn_later if `greenlet` exits normally.
-def force_quit(stop: Event, greenlet: greenlet, timeout: int) -> None:
-    """If the process does not stop because of the signal, kill it. This will
-    execute the `__exit__` handler that will do the cleanup.
-    """
-
-    def kill_greenlet(_stop: Event) -> None:
-        error = RuntimeError(
-            f"Greenlet {greenlet} had to be forcefully killed. This happened "
-            f"because there is a piece of code that is doing blocking IO and is "
-            f"not monitored by the 'stop' signal. To fix this the code doing the "
-            f"IO operations has to be executed inside a greenlet, and then the "
-            f"subgreenlet has to be linked to the stop signal with "
-            f"'signal.rawlink(greenlet.kill)'."
-        )
-        gevent.spawn_later(timeout, greenlet.throw, error)
-
-    stop.rawlink(kill_greenlet)
-
-
 def main() -> None:
     import argparse
     import configparser
@@ -634,10 +613,6 @@ def main() -> None:
     else:
         iteration_counter = iter(range(iterations))
 
-    stop = Event()
-
-    force_quit(stop, gevent.getcurrent(), timeout=5)
-
     # def stop_on_signal(sig=None, _frame=None):
     #     stop.set()
     # gevent.signal(signal.SIGQUIT, stop_on_signal)
@@ -650,14 +625,10 @@ def main() -> None:
     # Cleanup with the Janitor is not strictily necessary for the stress test,
     # since once can assume a bug happened and the state of the node is
     # inconsistent, however it is nice to have.
-    with Janitor(stop) as nursery:
+    with Janitor() as nursery:
         nodes_running = start_and_wait_for_all_servers(
             nursery, port_generator, nodes_config, retry_timeout
         )
-
-        # If any of the processes failed to startup
-        if stop.is_set():
-            return
 
         if args.wait_after_first_sync:
             print("All nodes are ready! Press Enter to continue and perform the stress tests.")
@@ -672,7 +643,8 @@ def main() -> None:
             profiler_data_directory,
         )
 
-        run_stress_test(nursery, nodes_running, test_config)
+        nursery.spawn_under_watch(run_stress_test, nursery, nodes_running, test_config)
+        nursery.wait(timeout=None)
 
 
 if __name__ == "__main__":

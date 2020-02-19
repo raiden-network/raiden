@@ -6,8 +6,9 @@ from typing import Any, Callable, List, Optional, Set, Type
 
 import gevent
 import structlog
+from gevent import Greenlet
 from gevent.event import AsyncResult, Event
-from gevent.greenlet import Greenlet
+from gevent.lock import Semaphore
 from gevent.subprocess import Popen
 
 log = structlog.get_logger(__name__)
@@ -23,6 +24,10 @@ class Nursery(ABC):
     def spawn_under_watch(self, function: Callable, *args: Any, **kargs: Any) -> Greenlet:
         pass
 
+    @abstractmethod
+    def wait(self, timeout: Optional[float]) -> None:
+        pass
+
 
 class Janitor:
     """Tries to properly stop all subprocesses before quitting the script.
@@ -33,9 +38,20 @@ class Janitor:
       have to be killed in order for a proper clean up to happen.
     """
 
-    def __init__(self, stop: Event) -> None:
-        self.stop = stop
+    def __init__(self) -> None:
+        self._stop = Event()
         self._processes: Set[Popen] = set()
+
+        # Important: It is very important to register any executed subprocess,
+        # otherwise no signal will be sent during shutdown and the subprocess
+        # will become orphan. To properly register the subprocesses it is very
+        # important to finish any pending call to `exec_under_watch` before
+        # exiting the `Janitor`, and if the exit does run, `exec_under_watch`
+        # must not start a new process.
+        #
+        # Note this only works if the greenlet that instantiated the Janitor
+        # itself has a chance to run.
+        self._stop_lock = Semaphore()
 
     def __enter__(self) -> Nursery:
         # Registers an atexit callback in case the __exit__ doesn't get a
@@ -47,40 +63,39 @@ class Janitor:
         # leads to better behavior in the happy case since the exit handler is
         # used.
         janitor = self
-        stop = self.stop
 
         class ProcessNursery(Nursery):
             @staticmethod
             def exec_under_watch(args: List[str]) -> None:
-                # Important: It is possible for the process to start shutting
-                # down after the Popen started but before it returned. If that
-                # happens and this code is executed inside a greenlet spawned
-                # with `spawn_under_watch` then a `GreenletExit` exception is
-                # raised here.
-                #
-                # To make sure the subprocess is properly cleared, exceptions
-                # have to be handled here.
-                try:
-                    process = Popen(args)
-                finally:
-                    janitor._processes.add(process)
+                def subprocess_stopped(result: AsyncResult) -> None:
+                    # Processes are expected to quit while the nursery is
+                    # active, remove them from the track list to clear memory
+                    janitor._processes.remove(process)
 
-                    def subprocess_stopped(result: AsyncResult) -> None:
-                        # Processes are expected to quit while the nursery is
-                        # active, remove them from the track list to clear memory
-                        janitor._processes.remove(process)
+                    # if the subprocess error'ed propagate the error.
+                    if result.get() != STATUS_CODE_FOR_SUCCESS:
+                        log.error("Proess died! Bailing out.")
 
-                        # if the subprocess error'ed propagate the error.
-                        if result.get() != STATUS_CODE_FOR_SUCCESS:
-                            log.error("Proess died! Bailing out.")
-                            stop.set()
+                        with janitor._stop_lock:
+                            janitor._stop.set()
 
-                    process.result.rawlink(subprocess_stopped)
+                with janitor._stop_lock:
+                    if janitor._stop.is_set():
+                        return
 
-                    # Fix race condition were the stop was set while the process
-                    # was started.
-                    if self.stop.is_set():
-                        process.send_signal(signal.SIGINT)
+                    # Important: `stop` may be set after Popen started, but before
+                    # it returned. If that happens `GreenletExit` exception is
+                    # raised here. In order to have proper cleared, exceptions have
+                    # to be handled and the process installed.
+                    try:
+                        process = Popen(args)
+                    finally:
+                        janitor._processes.add(process)
+
+                        process.result.rawlink(subprocess_stopped)
+
+                        if janitor._stop.is_set():
+                            process.send_signal(signal.SIGINT)
 
             @staticmethod
             def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
@@ -93,8 +108,12 @@ class Janitor:
                 def spawn_to_kill() -> None:
                     gevent.spawn(greenlet.throw, gevent.GreenletExit())
 
-                stop.rawlink(lambda _stop: spawn_to_kill())
+                janitor._stop.rawlink(lambda _stop: spawn_to_kill())
                 return greenlet
+
+            @staticmethod
+            def wait(timeout: Optional[float]) -> None:
+                janitor._stop.wait(timeout)
 
         return ProcessNursery()
 
@@ -104,17 +123,18 @@ class Janitor:
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
-        # Make sure to signal that we are exiting. This is a noop if the signal
-        # is set already (e.g. because a subprocess exited with a non-zero
-        # status code)
-        self.stop.set()
+        with self._stop_lock:
+            # Make sure to signal that we are exiting. This is a noop if the signal
+            # is set already (e.g. because a subprocess exited with a non-zero
+            # status code)
+            self._stop.set()
 
-        # Behave nicely if context manager's __exit__ is executed. This
-        # implements the expected behavior of a context manager, which will
-        # clear the resources when exiting.
-        atexit.unregister(self._free_resources)
+            # Behave nicely if context manager's __exit__ is executed. This
+            # implements the expected behavior of a context manager, which will
+            # clear the resources when exiting.
+            atexit.unregister(self._free_resources)
 
-        self._free_resources()
+            self._free_resources()
 
         return None
 
