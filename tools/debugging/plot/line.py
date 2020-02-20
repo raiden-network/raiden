@@ -13,8 +13,10 @@ parser.add_argument(
 parser.add_argument(
     "output", help="file name for the result image, filetype is inferred from this."
 )
-parser.add_argument("x")
-parser.add_argument("y")
+parser.add_argument(
+    "--x", help="If set, the name of the column to be used as the x axis", default=None
+)
+parser.add_argument("line", nargs="+")
 
 args = parser.parse_args()
 
@@ -35,24 +37,35 @@ def configure_axes(axes):
     axes.xaxis.set_tick_params(which="minor", rotation=90)
 
 
-x_axis = list()
-y_axis = list()
-
 if args.header:
     headers = args.header.split(",")
     reader = csv.DictReader(sys.stdin, fieldnames=headers)
 else:
     reader = csv.DictReader(sys.stdin)
 
-for line in reader:
-    x_axis.append(parse_datetime(line[args.x]))
-    y_axis.append(float(line[args.y]))
+lines = list(list() for _ in range(len(args.line)))
+
+if args.x:
+    x_axis = list()
+    for data in reader:
+        x_axis.append(parse_datetime(data[args.x]))
+
+        for pos, line in enumerate(args.line):
+            lines[pos].append(float(data[line]))
+else:
+    for data in reader:
+        for pos, line in enumerate(args.line):
+            lines[pos].append(float(data[line]))
+
+    x_axis = list(range(len(lines[0])))
 
 
 axes = pyplot.gca()
 axes.set_xlabel(args.x)
-axes.set_ylabel(args.y)
 configure_axes(axes)
-pyplot.plot(x_axis, y_axis)
 
+for line_name, line_data in zip(args.line, lines):
+    pyplot.plot(x_axis, line_data, label=line_name)
+
+pyplot.legend(loc=2)
 pyplot.savefig(args.output)
