@@ -7,6 +7,8 @@ import sys
 from matplotlib import dates, pyplot
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--width", default=1000, help="Configures width of the output in pixels.")
+parser.add_argument("--height", default=800, help="Configures height of the output in pixels.")
 parser.add_argument(
     "--header", help="If the csv does not have a header, use this to give a name to each column"
 )
@@ -47,6 +49,9 @@ else:
 for line in reader:
     x_axis.append(parse_datetime(line[args.x]))
     y_axis.append(float(line[args.y]))
+
+dpi = 60
+pyplot.figure(figsize=(args.width / dpi, args.height / dpi), dpi=dpi)
 
 axes = pyplot.gca()
 

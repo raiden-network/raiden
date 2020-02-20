@@ -8,6 +8,8 @@ import numpy
 from matplotlib import dates, pyplot
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--width", default=1000, help="Configures width of the output in pixels.")
+parser.add_argument("--height", default=800, help="Configures height of the output in pixels.")
 parser.add_argument("--x-bins", default=100, help="Configures the number of bins for the x axis.")
 parser.add_argument("--y-bins", default=25, help="Configures the number of bins for the y axis.")
 parser.add_argument(
@@ -54,6 +56,9 @@ for line in reader:
 
 histogram, x_data, y_data = numpy.histogram2d(timestamps, rtts, bins=[args.x_bins, args.y_bins])
 to_datetime = numpy.vectorize(datetime.datetime.fromtimestamp)
+
+dpi = 60
+pyplot.figure(figsize=(args.width / dpi, args.height / dpi), dpi=dpi)
 
 axes = pyplot.gca()
 axes.set_xlabel(args.x)
