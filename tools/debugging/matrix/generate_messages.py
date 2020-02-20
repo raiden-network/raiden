@@ -26,6 +26,15 @@ from raiden.utils.typing import Any, Dict, Iterator, RoomID
 
 log = structlog.get_logger(__name__)
 
+STARTED = "started: "
+FINISHED = "finished: "
+RECEIVED = "received: "
+
+INVITE = "invite"
+MESSAGE = "message"
+USER = "user"
+ROOM = "room"
+
 
 def configure_logging(log_path: str) -> None:
     processors = [
@@ -106,12 +115,12 @@ def logtime(msg: str, *args: Any, **kwargs: Any) -> Iterator[Dict[str, Any]]:
     start = time.monotonic()
     details: Dict[str, Any] = {}
 
-    log.info("Started: " + msg, *args, **kwargs, **details)
+    log.info(STARTED + msg, *args, **kwargs, **details)
 
     yield details
 
     elapsed = time.monotonic() - start
-    log.info(msg, elapsed=elapsed, *args, **kwargs, **details)
+    log.info(FINISHED + msg, elapsed=elapsed, *args, **kwargs, **details)
 
 
 def time_messages(sync_messages: MatrixSyncMessages) -> bool:
@@ -124,7 +133,7 @@ def time_messages(sync_messages: MatrixSyncMessages) -> bool:
                 data_encoded = message["content"]["body"]
                 data = json.loads(data_encoded)
                 elapsed = time.monotonic() - data["monotonic_start"]
-                log.debug("msg received", elapsed=elapsed)
+                log.debug(RECEIVED + MESSAGE, elapsed=elapsed)
 
     return True
 
@@ -144,9 +153,9 @@ def handle_and_time_invite(
     state: Dict,  # pylint: disable=unused-argument
 ) -> None:
     invite_elapsed = time.monotonic() - invite_start
-    log.debug("invite received", invite_elapsed=invite_elapsed)
+    log.debug(RECEIVED + INVITE, invite_elapsed=invite_elapsed)
 
-    with logtime("joinned room", room_id=room_id):
+    with logtime(ROOM, room_id=room_id):
         client.join_room(room_id_or_alias=room_id)
 
 
@@ -155,7 +164,7 @@ def send(room: Room) -> None:
         data = {"monotonic_start": time.monotonic()}
         data_encoded = json.dumps(data)
 
-        with logtime("new message sent", room_id=room.room_id):
+        with logtime(MESSAGE, room_id=room.room_id):
             room.send_text(data_encoded)
 
 
@@ -163,7 +172,7 @@ def new_user(matrix_server_url: str) -> LoggedUser:
     client = GMatrixClient(time_messages, ignore_member_join, matrix_server_url)
     signer = factories.make_signer()
 
-    with logtime("new user") as details:
+    with logtime(USER) as details:
         user = login(client, signer)
         details["user_id"] = user.user_id
 
@@ -173,9 +182,7 @@ def new_user(matrix_server_url: str) -> LoggedUser:
 def init_clients_and_rooms(sender: LoggedUser, receiver: LoggedUser) -> Room:
     invite_start = time.monotonic()
 
-    with logtime(
-        "new room", sender=sender.user.user_id, receiver=receiver.user.user_id
-    ) as details:
+    with logtime(ROOM, sender=sender.user.user_id, receiver=receiver.user.user_id) as details:
         sender_room = sender.client.create_room(
             None, invitees=[receiver.user.user_id], is_public=False
         )
