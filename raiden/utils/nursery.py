@@ -8,7 +8,7 @@ import gevent
 import structlog
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
-from gevent.lock import Semaphore
+from gevent.lock import RLock
 from gevent.subprocess import Popen
 
 log = structlog.get_logger(__name__)
@@ -42,6 +42,11 @@ class Janitor:
         self._stop = Event()
         self._processes: Set[Popen] = set()
 
+        # Lock to protect changes to `_stop` and `_processes`. The `_stop`
+        # synchronization is necessary to fix the race described bellow,
+        # `_processes` synchronization is necessary to avoid iteration over a
+        # changing container.
+        #
         # Important: It is very important to register any executed subprocess,
         # otherwise no signal will be sent during shutdown and the subprocess
         # will become orphan. To properly register the subprocesses it is very
@@ -51,7 +56,7 @@ class Janitor:
         #
         # Note this only works if the greenlet that instantiated the Janitor
         # itself has a chance to run.
-        self._stop_lock = Semaphore()
+        self._processes_lock = RLock()
 
     def __enter__(self) -> Nursery:
         # Registers an atexit callback in case the __exit__ doesn't get a
@@ -68,18 +73,17 @@ class Janitor:
             @staticmethod
             def exec_under_watch(args: List[str]) -> None:
                 def subprocess_stopped(result: AsyncResult) -> None:
-                    # Processes are expected to quit while the nursery is
-                    # active, remove them from the track list to clear memory
-                    janitor._processes.remove(process)
+                    with janitor._processes_lock:
+                        # Processes are expected to quit while the nursery is
+                        # active, remove them from the track list to clear memory
+                        janitor._processes.remove(process)
 
-                    # if the subprocess error'ed propagate the error.
-                    if result.get() != STATUS_CODE_FOR_SUCCESS:
-                        log.error("Proess died! Bailing out.")
-
-                        with janitor._stop_lock:
+                        # if the subprocess error'ed propagate the error.
+                        if result.get() != STATUS_CODE_FOR_SUCCESS:
+                            log.error("Proess died! Bailing out.")
                             janitor._stop.set()
 
-                with janitor._stop_lock:
+                with janitor._processes_lock:
                     if janitor._stop.is_set():
                         return
 
@@ -123,25 +127,26 @@ class Janitor:
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
-        with self._stop_lock:
+        with self._processes_lock:
             # Make sure to signal that we are exiting. This is a noop if the signal
             # is set already (e.g. because a subprocess exited with a non-zero
             # status code)
             self._stop.set()
+
+            self._free_resources()
 
             # Behave nicely if context manager's __exit__ is executed. This
             # implements the expected behavior of a context manager, which will
             # clear the resources when exiting.
             atexit.unregister(self._free_resources)
 
-            self._free_resources()
-
         return None
 
     def _free_resources(self) -> None:
-        for p in self._processes:
-            p.send_signal(signal.SIGINT)
+        with self._processes_lock:
+            for p in self._processes:
+                p.send_signal(signal.SIGINT)
 
-        for p in self._processes:
-            if p.wait() != STATUS_CODE_FOR_SUCCESS:
-                print("Process did not exit cleanly", p.communicate())
+            for p in self._processes:
+                if p.wait() != STATUS_CODE_FOR_SUCCESS:
+                    print("Process did not exit cleanly", p.communicate())
