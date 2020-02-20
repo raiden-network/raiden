@@ -46,15 +46,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import (
-    Address,
-    FeeAmount,
-    PaymentAmount,
-    PaymentID,
-    Port,
-    Secret,
-    TokenAmount,
-)
+from raiden.utils.typing import Address, FeeAmount, PaymentAmount, PaymentID, Secret, TokenAmount
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -194,9 +186,7 @@ def test_address_field():
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
-def test_payload_with_invalid_addresses(
-    api_server_test_instance: APIServer, rest_api_port_number: Port
-):
+def test_payload_with_invalid_addresses(api_server_test_instance: APIServer):
     """ Addresses require leading 0x in the payload. """
     invalid_address = "61c808d82a3ac53231750dadc13c777b59310bd9"
     channel_data_obj = {
@@ -212,7 +202,7 @@ def test_payload_with_invalid_addresses(
 
     url_without_prefix = (
         "http://localhost:{port}/api/v1/channels/ea674fdde714fd979de3edf0f56aa9716b898ec8"
-    ).format(port=rest_api_port_number)
+    ).format(port=api_server_test_instance.config.port)
 
     request = grequests.patch(
         url_without_prefix, json=dict(state=ChannelState.STATE_SETTLED.value)

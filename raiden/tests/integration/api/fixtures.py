@@ -2,7 +2,6 @@ import pytest
 
 from raiden.api.rest import APIServer
 from raiden.app import App
-
 from raiden.tests.integration.api.utils import prepare_api_server
 from raiden.utils.typing import List
 

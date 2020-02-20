@@ -37,7 +37,6 @@ def prepare_api_server(raiden_app: App) -> APIServer:
 
     # required for `url_for`
     api_server.flask_app.config["SERVER_NAME"] = f"localhost:{port}"
-    api_server.start()
 
     # Fixes flaky test, where requests are done prior to the server initializing
     # the listening socket.

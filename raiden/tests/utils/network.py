@@ -41,6 +41,7 @@ from raiden.utils.typing import (
     ChannelID,
     Host,
     Iterable,
+    Iterator,
     List,
     MonitoringServiceAddress,
     OneToNAddress,
@@ -371,7 +372,7 @@ def create_apps(
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
-    rest_api_port_number: Port,
+    port_generator: Iterator[Port],
 ) -> List[App]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -398,7 +399,7 @@ def create_apps(
             mediation_fees=MediationFeeConfig(),
             services=ServiceConfig(monitoring_enabled=False),
             rest_api=RestApiConfig(
-                rest_api_enabled=enable_rest_api, host=Host("localhost"), port=rest_api_port_number
+                rest_api_enabled=enable_rest_api, host=Host("localhost"), port=next(port_generator)
             ),
             console=False,
             transport_type="matrix",

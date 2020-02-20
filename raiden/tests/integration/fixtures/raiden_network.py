@@ -27,6 +27,7 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     Iterable,
+    Iterator,
     List,
     MonitoringServiceAddress,
     OneToNAddress,
@@ -78,7 +79,7 @@ def raiden_chain(
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
-    rest_api_port_number: Port,
+    port_generator: Iterator[Port],
 ) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
@@ -118,7 +119,7 @@ def raiden_chain(
         blockchain_query_interval=blockchain_query_interval,
         resolver_ports=resolver_ports,
         enable_rest_api=enable_rest_api,
-        rest_api_port_number=rest_api_port_number,
+        port_generator=port_generator,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
@@ -212,7 +213,7 @@ def raiden_network(
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
-    rest_api_port_number: Port,
+    port_generator: Iterator[Port],
 ) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -244,7 +245,7 @@ def raiden_network(
         blockchain_query_interval=blockchain_query_interval,
         resolver_ports=resolver_ports,
         enable_rest_api=enable_rest_api,
-        rest_api_port_number=rest_api_port_number,
+        port_generator=port_generator,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
