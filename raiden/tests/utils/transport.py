@@ -416,6 +416,8 @@ def matrix_server_starter(
 
 
 class TestMatrixTransport(MatrixTransport):
+    __test__ = False  # pytest should ignore this
+
     def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
         super().__init__(config, environment)
 
