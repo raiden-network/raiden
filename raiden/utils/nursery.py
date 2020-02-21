@@ -43,7 +43,7 @@ class Janitor:
         self._processes: Set[Popen] = set()
 
         # Lock to protect changes to `_stop` and `_processes`. The `_stop`
-        # synchronization is necessary to fix the race described bellow,
+        # synchronization is necessary to fix the race described below,
         # `_processes` synchronization is necessary to avoid iteration over a
         # changing container.
         #
@@ -80,7 +80,7 @@ class Janitor:
 
                         # if the subprocess error'ed propagate the error.
                         if result.get() != STATUS_CODE_FOR_SUCCESS:
-                            log.error("Proess died! Bailing out.")
+                            log.error("Process died! Bailing out.")
                             janitor._stop.set()
 
                 with janitor._processes_lock:
