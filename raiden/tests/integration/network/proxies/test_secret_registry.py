@@ -9,11 +9,11 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, SmartContractCall, TransactionEstimated
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.typing import BlockNumber, Dict, List, PrivateKey, Secret
+from raiden.utils.typing import BlockNumber, Dict, List, PrivateKey, Secret, TransactionHash
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -149,7 +149,12 @@ def test_concurrent_secret_registration(secret_registry_proxy: SecretRegistry, m
         count: Dict[Secret, int] = defaultdict(int)
         transact = secret_registry_proxy.client.transact
 
-        def count_how_many_times_a_secret_is_sent(transaction):
+        def count_how_many_times_a_secret_is_sent(
+            transaction: TransactionEstimated
+        ) -> TransactionHash:
+            assert isinstance(transaction.data, SmartContractCall)
+            assert isinstance(transaction.data.args, tuple)
+
             for secret in transaction.data.args[0]:
                 count[secret] += 1
                 msg = "All secrets must be registered, and they all must be registered only once"
