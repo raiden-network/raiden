@@ -6,8 +6,9 @@ from web3.exceptions import TransactionNotFound
 from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.tests.utils.eth_node import EthNodeDescription
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils.typing import Callable, Dict, GasPrice, List, Port, PrivateKey
+from raiden.utils.typing import Callable, Dict, GasPrice, List, PrivateKey
 
 
 def make_fixed_gas_price_strategy(gas_price: GasPrice) -> Callable:
@@ -164,13 +165,21 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
 
 @pytest.mark.parametrize("blockchain_number_of_nodes", [2])
 def test_remote_transaction_with_zero_gasprice_is_not_mined(
-    web3: Web3, deploy_key: PrivateKey, blockchain_rpc_ports: List[Port], blockchain_type: str
+    web3: Web3,
+    deploy_key: PrivateKey,
+    eth_nodes_configuration: List[EthNodeDescription],
+    blockchain_type: str,
 ) -> None:
     """ If the non-local transaction is sent with a gas price set to zero it is
     not mined.
     """
     host = "127.0.0.1"
-    miner_rpc_port, rpc_port = blockchain_rpc_ports
+
+    assert eth_nodes_configuration[0].miner
+    miner_rpc_port = eth_nodes_configuration[0].rpc_port
+
+    assert not eth_nodes_configuration[1].miner
+    rpc_port = eth_nodes_configuration[1].rpc_port
 
     miner_web3 = Web3(HTTPProvider(f"http://{host}:{miner_rpc_port}"))
     miner_client = JSONRPCClient(miner_web3, deploy_key)
