@@ -34,7 +34,7 @@ nodes:
     proportional-imbalance-fee:
       - "0x59105441977ecD9d805A4f5b060E34676F50F806"
       - 0
-    default-settle-timeout: 100
+    default-settle-timeout: 40
     default-reveal-timeout: 20
 
 # This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
@@ -60,7 +60,7 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## The MS reacts within the settle_timeout
-      - wait_blocks: 100
+      - wait_blocks: 40
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"
@@ -68,7 +68,6 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 100, but we've already waited 80 blocks, leaving 20 blocks
       ## To make sure the transactions gets mined in time, 10 additional blocks are added
       - wait_blocks: 10
       - assert_ms_claim: {channel_info_key: "MS Test Channel"}
