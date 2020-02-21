@@ -10,16 +10,13 @@ from gevent.event import AsyncResult
 from raiden import constants, settings
 from raiden.api.python import RaidenAPI
 from raiden.log_config import configure_logging
-from raiden.raiden_service import RaidenService
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.ui.app import run_app
 from raiden.ui.config import dump_cmd_options, dump_module
 from raiden.utils.gevent import spawn_named
-from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
 
 log = structlog.get_logger(__name__)
-DOC_URL = "http://raiden-network.readthedocs.io/en/stable/rest_api.html"
 
 
 class NodeRunner:
@@ -31,14 +28,6 @@ class NodeRunner:
     @property
     def welcome_string(self) -> str:
         return f"Welcome to Raiden, version {get_system_spec()['raiden']}!"
-
-    def _startup_hook(self) -> None:
-        """ Hook that is called after startup is finished. Intended for subclass usage. """
-        pass
-
-    def _shutdown_hook(self) -> None:
-        """ Hook that is called just before shutdown. Intended for subclass usage. """
-        pass
 
     def run(self) -> None:
         configure_logging(
@@ -66,9 +55,6 @@ class NodeRunner:
         app = run_app(**self._options)
 
         gevent_tasks: List[gevent.Greenlet] = list()
-        runnable_tasks: List[Runnable] = list()
-
-        runnable_tasks.append(app.raiden)
 
         if self._options["console"]:
             from raiden.ui.console import Console
@@ -99,8 +85,6 @@ class NodeRunner:
                 spawn_named("check_rdn_deposits", check_rdn_deposits, app.raiden, app.user_deposit)
             )
 
-        self._startup_hook()
-
         stop_event: AsyncResult[Optional[signal.Signals]]  # pylint: disable=no-member
         stop_event = AsyncResult()
 
@@ -112,25 +96,10 @@ class NodeRunner:
         gevent.signal.signal(signal.SIGINT, sig_set)  # pylint: disable=no-member
         gevent.signal.signal(signal.SIGPIPE, sig_set)  # pylint: disable=no-member
 
-        # Make sure RaidenService is the last service in the list.
-        runnable_tasks.reverse()
-
         # quit if any task exits, successfully or not
-        for runnable in runnable_tasks:
-            runnable.greenlet.link(stop_event)
-
+        app.raiden.greenlet.link(stop_event)
         for task in gevent_tasks:
             task.link(stop_event)
-
-        msg = (
-            "The RaidenService must be last service to stop, since the other "
-            "services depend on it to run. Without this it is not possible to have a "
-            "clean shutdown, e.g. the RestAPI must be stopped before "
-            "RaidenService, otherwise it is possible for a request to be "
-            "processed after the RaidenService was stopped and it will cause a "
-            "crash."
-        )
-        assert isinstance(runnable_tasks[-1], RaidenService), msg
 
         try:
             signal_received = stop_event.get()
@@ -138,16 +107,13 @@ class NodeRunner:
                 print("\r", end="")  # Reset cursor to overwrite a possibly printed "^C"
                 log.info(f"Signal received. Shutting down.", signal=signal_received)
         finally:
-            self._shutdown_hook()
-
             for task in gevent_tasks:
                 task.kill()
 
-            for task in runnable_tasks:
-                task.stop()
+            app.raiden.stop()
 
             gevent.joinall(
-                set(gevent_tasks + runnable_tasks), app.config.shutdown_timeout, raise_error=True
+                set(gevent_tasks + [app.raiden]), app.config.shutdown_timeout, raise_error=True
             )
 
             app.stop()
