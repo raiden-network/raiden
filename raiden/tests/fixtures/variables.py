@@ -1,17 +1,18 @@
 # pylint: disable=redefined-outer-name
 import random
 from enum import Enum
-from typing import Dict
+from typing import Dict, List
 
 import pytest
 from eth_typing import HexStr
 from eth_utils import keccak, remove_0x_prefix
 
-from raiden.constants import Environment
+from raiden.constants import Environment, EthClient
 from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
+from raiden.tests.utils.eth_node import EthNodeDescription
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
 from raiden.utils.typing import Iterator, Port, TokenAmount
@@ -220,7 +221,12 @@ def deploy_key(privatekey_seed):
 
 @pytest.fixture(scope="session")
 def blockchain_type(request) -> str:
-    return request.config.option.blockchain_type
+    blockchain_type = request.config.option.blockchain_type
+
+    if blockchain_type not in {client.value for client in EthClient}:
+        raise ValueError(f"unknown blockchain_type {blockchain_type}")
+
+    return blockchain_type
 
 
 @pytest.fixture
@@ -247,17 +253,6 @@ def blockchain_key_seed(request):
     return escape_for_format(request.node.name) + "cluster:{}"
 
 
-@pytest.fixture
-def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
-    """ The private keys for the each private chain node, not the same as the
-    raiden's private key.
-    """
-    return [
-        keccak(blockchain_key_seed.format(position).encode())
-        for position in range(blockchain_number_of_nodes)
-    ]
-
-
 @pytest.fixture(scope="session")
 def port_generator(request, worker_id) -> Iterator[Port]:
     """ count generator used to get a unique port number. """
@@ -270,19 +265,29 @@ def port_generator(request, worker_id) -> Iterator[Port]:
 
 
 @pytest.fixture
-def blockchain_rpc_ports(blockchain_number_of_nodes, port_generator):
-    """ A list of unique port numbers to be used by the blockchain nodes for
-    the json-rpc interface.
-    """
-    return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
+def eth_nodes_configuration(
+    blockchain_number_of_nodes,
+    blockchain_key_seed,
+    port_generator,
+    blockchain_type,
+    blockchain_extra_config,
+) -> List[EthNodeDescription]:
+    eth_nodes = list()
 
+    for position in range(blockchain_number_of_nodes):
+        key = keccak(blockchain_key_seed.format(position).encode())
+        eth_node = EthNodeDescription(
+            private_key=key,
+            rpc_port=next(port_generator),
+            p2p_port=next(port_generator),
+            miner=(position == 0),
+            extra_config=blockchain_extra_config,
+            blockchain_type=blockchain_type,
+        )
 
-@pytest.fixture
-def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
-    """ A list of unique port numbers to be used by the blockchain nodes for
-    the p2p protocol.
-    """
-    return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
+        eth_nodes.append(eth_node)
+
+    return eth_nodes
 
 
 @pytest.fixture

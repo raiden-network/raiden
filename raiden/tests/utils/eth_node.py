@@ -19,17 +19,7 @@ from raiden.utils.ethereum_clients import parse_geth_version
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.keys import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import (
-    Address,
-    Any,
-    ChainID,
-    Dict,
-    List,
-    NamedTuple,
-    Port,
-    PrivateKey,
-    TokenAmount,
-)
+from raiden.utils.typing import Address, Any, ChainID, Dict, List, NamedTuple, Port, TokenAmount
 
 log = structlog.get_logger(__name__)
 
@@ -39,7 +29,7 @@ _GETH_VERBOSITY_LEVEL = {"error": 1, "warn": 2, "info": 3, "debug": 4}
 
 
 class EthNodeDescription(NamedTuple):
-    private_key: PrivateKey
+    private_key: bytes
     rpc_port: Port
     p2p_port: Port
     miner: bool
@@ -223,7 +213,7 @@ def geth_keyfile(datadir: str, address: Address) -> str:
     return os.path.join(keystore, account)
 
 
-def eth_create_account_file(keyfile_path: str, privkey: PrivateKey) -> None:
+def eth_create_account_file(keyfile_path: str, privkey: bytes) -> None:
     keyfile_json = create_keyfile_json(privkey, bytes(DEFAULT_PASSPHRASE, "utf-8"))
 
     # Parity expects a string of length 32 here, but eth_keyfile does not pad
@@ -318,7 +308,7 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: in
 
 
 def eth_node_config(
-    node_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Any
+    node_pkey: bytes, p2p_port: Port, rpc_port: Port, **extra_config: Any
 ) -> Dict[str, Any]:
     address = privatekey_to_address(node_pkey)
     pub = privatekey_to_publickey(node_pkey).hex()

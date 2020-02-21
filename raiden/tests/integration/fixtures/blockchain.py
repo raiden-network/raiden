@@ -5,12 +5,11 @@ from eth_typing import URI
 from eth_utils import to_canonical_address
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, EthClient
+from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.eth_node import (
     AccountDescription,
-    EthNodeDescription,
     GenesisDescription,
     run_private_blockchain,
 )
@@ -25,47 +24,24 @@ from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
 @pytest.fixture
 def web3(
-    blockchain_p2p_ports,
-    blockchain_private_keys,
-    blockchain_rpc_ports,
-    blockchain_type,
-    blockchain_extra_config,
     deploy_key,
+    eth_nodes_configuration,
     private_keys,
     account_genesis_eth_balance,
     random_marker,
     tmpdir,
     chain_id,
     logs_storage,
+    blockchain_type,
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
     keys_to_fund = sorted(set(private_keys + [deploy_key]))
 
-    if blockchain_type not in {client.value for client in EthClient}:
-        raise ValueError(f"unknown blockchain_type {blockchain_type}")
-
     host = "127.0.0.1"
-    rpc_port = blockchain_rpc_ports[0]
+    rpc_port = eth_nodes_configuration[0].rpc_port
     endpoint = f"http://{host}:{rpc_port}"
     web3 = Web3(HTTPProvider(URI(endpoint)))
-
-    assert len(blockchain_private_keys) == len(blockchain_rpc_ports)
-    assert len(blockchain_private_keys) == len(blockchain_p2p_ports)
-
-    eth_nodes = [
-        EthNodeDescription(
-            private_key=key,
-            rpc_port=rpc,
-            p2p_port=p2p,
-            miner=(pos == 0),
-            extra_config=blockchain_extra_config,
-            blockchain_type=blockchain_type,
-        )
-        for pos, (key, rpc, p2p) in enumerate(
-            zip(blockchain_private_keys, blockchain_rpc_ports, blockchain_p2p_ports)
-        )
-    ]
 
     accounts_to_fund = [
         AccountDescription(privatekey_to_address(key), account_genesis_eth_balance)
@@ -83,7 +59,7 @@ def web3(
     )
     eth_node_runner = run_private_blockchain(
         web3=web3,
-        eth_nodes=eth_nodes,
+        eth_nodes=eth_nodes_configuration,
         base_datadir=base_datadir,
         log_dir=base_logdir,
         verbosity="info",
@@ -96,7 +72,7 @@ def web3(
 
 
 @pytest.fixture
-def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
+def deploy_client(deploy_key, web3, blockchain_type):
     if blockchain_type == "parity":
         return JSONRPCClient(web3, deploy_key, gas_estimate_correction=lambda gas: 2 * gas)
     return JSONRPCClient(web3, deploy_key)
