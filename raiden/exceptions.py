@@ -167,8 +167,7 @@ class InvalidPaymentIdentifier(RaidenError):
 
 
 class SamePeerAddress(RaidenError):
-    """ Raised when a user tries to create a channel where the address of both
-    peers is the same.
+    """ Raised when a user tries to perform an action that requires two different partners
     """
 
 

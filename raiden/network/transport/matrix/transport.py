@@ -1199,14 +1199,14 @@ class MatrixTransport(Runnable):
 
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        # The rooms creation is assymetric, only the node with the lower
+        # The rooms creation is asymmetric, only the node with the lower
         # address is responsible to create the room. This fixes race conditions
         # were the two nodes try to create a room with each other at the same
         # time, leading to communications problems if the nodes choose a
         # different room.
         #
         # This does not introduce a new attack vector, since not creating the
-        # room is the same as being unresponsible.
+        # room is the same as being unresponsive.
         room_creator_address = my_place_or_yours(
             our_address=self._raiden_service.address, partner_address=address
         )

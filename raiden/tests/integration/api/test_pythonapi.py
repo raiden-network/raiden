@@ -17,6 +17,7 @@ from raiden.exceptions import (
     InvalidBinaryAddress,
     InvalidSettleTimeout,
     RaidenRecoverableError,
+    SamePeerAddress,
     TokenNotRegistered,
     UnexpectedChannelState,
     UnknownTokenAddress,
@@ -844,3 +845,22 @@ def test_raidenapi_channel_lifecycle(
         },
         retry_timeout,
     )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [1])
+def test_same_addresses_for_payment(raiden_network, token_addresses):
+    app0, _ = raiden_network
+    api0 = RaidenAPI(app0.raiden)
+    registry_address = app0.raiden.default_registry.address
+    token_address = token_addresses[0]
+    address_of_app0 = app0.raiden.address
+
+    with pytest.raises(SamePeerAddress):
+        api0.transfer(
+            registry_address=registry_address,
+            token_address=token_address,
+            target=address_of_app0,
+            amount=PaymentAmount(0),
+        )
