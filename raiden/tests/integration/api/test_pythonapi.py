@@ -855,12 +855,11 @@ def test_same_addresses_for_payment(raiden_network, token_addresses):
     api0 = RaidenAPI(app0.raiden)
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    address_of_app0 = app0.raiden.address
 
     with pytest.raises(SamePeerAddress):
         api0.transfer(
             registry_address=registry_address,
             token_address=token_address,
-            target=address_of_app0,
-            amount=PaymentAmount(0),
+            target=app0.raiden.address,
+            amount=PaymentAmount(1),
         )
