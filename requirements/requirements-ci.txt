@@ -20,7 +20,7 @@ babel==2.7.0
 base58==2.0.0
 bcrypt==3.1.6
 black==19.3b0
-bleach==3.1.0
+bleach==3.1.1
 bump2version==0.5.10
 cachetools==3.1.1
 canonicaljson==1.1.4

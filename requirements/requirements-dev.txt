@@ -19,7 +19,7 @@ babel==2.7.0
 base58==2.0.0
 bcrypt==3.1.6             # via matrix-synapse
 black==19.3b0
-bleach==3.1.0             # via matrix-synapse, readme-renderer
+bleach==3.1.1             # via matrix-synapse, readme-renderer
 bump2version==0.5.10
 cachetools==3.1.1
 canonicaljson==1.1.4      # via matrix-synapse, signedjson
