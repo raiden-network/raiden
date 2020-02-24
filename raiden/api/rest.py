@@ -13,6 +13,7 @@ from flask import Flask, Request, Response, make_response, request, send_from_di
 from flask.json import jsonify
 from flask_cors import CORS
 from flask_restful import Api, abort
+from gevent.event import Event
 from gevent.pywsgi import WSGIServer
 from hexbytes import HexBytes
 from marshmallow import Schema
@@ -354,20 +355,21 @@ class APIServer(Runnable):  # pragma: no unittest
 
         restapi_setup_urls(flask_api_context, rest_api, URLS_V1)
 
+        self.stop_event = Event()
+
         self.config = config
         self.rest_api = rest_api
         self.flask_app = flask_app
         self.blueprint = blueprint
         self.flask_api_context = flask_api_context
+        self.wsgiserver: Optional[WSGIServer] = None
 
-        self.wsgiserver = None
         self.flask_app.register_blueprint(self.blueprint)
-
         self.flask_app.config["WEBUI_PATH"] = RAIDEN_WEBUI_PATH
 
         self.flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
         self.flask_app.register_error_handler(Exception, self.unhandled_exception)
-        self.flask_app.before_request(self._is_raiden_running)
+        self.flask_app.before_request(self._check_shutdown_before_handle_request)
 
         # needed so flask_restful propagates the exception to our error handler above
         # or else, it'll replace it with a E500 response
@@ -379,21 +381,15 @@ class APIServer(Runnable):  # pragma: no unittest
                     route, route, view_func=self._serve_webui, methods=("GET",)
                 )
 
-        # FIXME: decide what to do with this
-        # self._is_raiden_running()
+    def _check_shutdown_before_handle_request(self) -> Optional[Response]:
+        # We don't want to handle requestes when shutting down
+        # When the `before_request` hook returns a value, the request will not be processed further
+        if self.stop_event.is_set():
+            return api_error("Raiden API is stutting down", HTTPStatus.SERVICE_UNAVAILABLE)
 
-    def _is_raiden_running(self) -> None:
-        # We cannot accept requests before the node has synchronized with the
-        # blockchain, which is done during the call to RaidenService.start.
-        # Otherwise there is no guarantee that the node is in a valid state and
-        # that the actions are valid, e.g. deposit in a channel that has closed
-        # while the node was offline.
-        if not self.rest_api.raiden_api.raiden:
-            raise RuntimeError("The RaidenService must be started before the API can be used")
+        return None
 
-    def _serve_webui(
-        self, file_name: str = "index.html"
-    ) -> Response:  # pylint: disable=redefined-builtin
+    def _serve_webui(self, file_name: str = "index.html") -> Response:
         try:
             if not file_name:
                 raise NotFound
@@ -444,6 +440,8 @@ class APIServer(Runnable):  # pragma: no unittest
             raise
 
     def start(self) -> None:
+        self.stop_event.clear()
+
         log.debug(
             "REST API starting",
             host=self.config.host,
@@ -485,6 +483,9 @@ class APIServer(Runnable):  # pragma: no unittest
         super().start()
 
     def stop(self) -> None:
+        # Set event to prevent accepting new requests
+        self.stop_event.set()
+
         log.debug(
             "REST API stopping",
             host=self.config.host,
