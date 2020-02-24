@@ -1119,6 +1119,7 @@ class RestAPI:  # pragma: no unittest
             InvalidSecretHash,
             InvalidPaymentIdentifier,
             PaymentConflict,
+            SamePeerAddress,
             UnknownTokenAddress,
         ) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)

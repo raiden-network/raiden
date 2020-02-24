@@ -22,6 +22,7 @@ from raiden.exceptions import (
     InvalidSettleTimeout,
     InvalidTokenAddress,
     RaidenRecoverableError,
+    SamePeerAddress,
     TokenNetworkDeprecated,
     TokenNotRegistered,
     UnexpectedChannelState,
@@ -1058,6 +1059,9 @@ class RaidenAPI:  # pragma: no unittest
 
         if not isinstance(amount, int):  # pragma: no unittest
             raise InvalidAmount("Amount not a number")
+
+        if Address(target) == self.address:
+            raise SamePeerAddress("Address must be different than ours")
 
         if amount <= 0:
             raise InvalidAmount("Amount negative")
