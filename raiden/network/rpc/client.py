@@ -985,9 +985,6 @@ class JSONRPCClient:
     def new_contract_proxy(self, abi: ABI, contract_address: Address) -> Contract:
         return self.web3.eth.contract(abi=abi, address=contract_address)
 
-    def get_transaction_receipt(self, tx_hash: TransactionHash) -> Dict[str, Any]:
-        return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
-
     def deploy_single_contract(
         self,
         contract_name: str,
