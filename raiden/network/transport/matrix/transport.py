@@ -437,9 +437,8 @@ class MatrixTransport(Runnable):
             transport_uuid=str(self._uuid),
         )
 
-        self._initialize_first_sync()
-        self._initialize_room_inventory()
         self._initialize_broadcast_rooms()
+        self._initialize_first_sync()
         self._initialize_health_check(health_check_list)
 
         broadcast_filter_id = self._client.create_sync_filter(
@@ -742,15 +741,17 @@ class MatrixTransport(Runnable):
         # the messages themselves should not be processed because the room
         # callbacks are not installed yet (this is done below). The sync limit
         # prevents fetching the messages.
-        filter_id = self._client.create_sync_filter(limit=0)
+        filter_id = self._client.create_sync_filter(
+            not_rooms=self._broadcast_rooms.values(), limit=0
+        )
         prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
         self._client._sync(timeout_ms=0, latency_ms=30_000)
         self._client.set_sync_filter_id(prev_sync_filter_id)
+
         # Process the result from the sync executed above
         response_queue = self._client.response_queue
-
         pending_queue = []
         while len(response_queue) > 0:
             _, response, _ = response_queue.get()
@@ -759,39 +760,20 @@ class MatrixTransport(Runnable):
         assert all(
             pending_queue
         ), "The queue must only have Matrix responses. None and empty are invalid values."
-
         self._client._handle_responses(pending_queue, first_sync=True)
 
-    def _initialize_room_inventory(self) -> None:
-        msg = "The rooms can only be inventoried after the first sync."
-        assert self._client.sync_token, msg
-
-        msg = (
-            "The sync thread must not be started before the `_inventory_rooms` "
-            "is executed, the listener for the inventory rooms must be set up "
-            "before any messages can be processed."
-        )
-        assert self._client.sync_worker is None, msg
-        assert self._client.message_worker is None, msg
-        self.log.debug("Inventory rooms", rooms=self._client.rooms)
-
         for room in self._client.rooms.values():
-            room_aliases = set(room.aliases)
-            if room.canonical_alias:
-                room_aliases.add(room.canonical_alias)
-
-            for broadcast_alias in self._config.broadcast_rooms:
-                if broadcast_alias in room_aliases:
-                    self._broadcast_rooms[broadcast_alias] = room
-                    break
-
-            if not self._is_broadcast_room(room):
-                partner_address = self._extract_partner_addresses(room.get_joined_members())
-                # invalid rooms with multiple addresses should be left already
-                assert len(partner_address) <= 1
-                # should contain only one element which is the partner's address
-                if len(partner_address) == 1:
-                    self._set_room_id_for_address(partner_address[0], room.room_id)
+            partner_address = self._extract_partner_addresses(room.get_joined_members())
+            # invalid rooms with multiple addresses should be left already
+            msg = (
+                "rooms with multiple partners should be left instantly "
+                "after the join event arrives. "
+                "This should be handled by member_join_callback()"
+            )
+            assert len(partner_address) <= 1, msg
+            # should contain only one element which is the partner's address
+            if len(partner_address) == 1:
+                self._set_room_id_for_address(partner_address[0], room.room_id)
 
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
@@ -841,11 +823,10 @@ class MatrixTransport(Runnable):
             room_name = make_room_alias(self.chain_id, suffix)
             broadcast_room_alias = f"#{room_name}:{self._server_name}"
 
-            if room_name not in self._broadcast_rooms:
-                self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
-                self._broadcast_rooms[room_name] = join_broadcast_room(
-                    client=self._client, broadcast_room_alias=broadcast_room_alias
-                )
+            self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
+            self._broadcast_rooms[room_name] = join_broadcast_room(
+                client=self._client, broadcast_room_alias=broadcast_room_alias
+            )
 
     def _initialize_health_check(self, health_check_list: List[Address]) -> None:
         msg = (
@@ -937,6 +918,14 @@ class MatrixTransport(Runnable):
             join_rules_event = join_rules_events[0]
             private_room = join_rules_event["content"].get("join_rule") == "invite"
 
+        # Ignore the room if it is not private, since that can be an attack
+        # vector, e.g. secret reveal messages would be available to any user that
+        # knows the room id. (only private rooms are used since ce246af806)
+        # this also filters invites to broadcast rooms
+        if private_room is False:
+            self.log.debug("Invite: ignoring room since it is not private", room_id=room_id)
+            return
+
         room = None
         # try to join the room
         try:
@@ -953,13 +942,6 @@ class MatrixTransport(Runnable):
 
         assert room is not None, f"joining room {room} failed"
 
-        if self._is_broadcast_room(room):
-            # This shouldn't happen with well behaving nodes but we need to defend against it
-            # Since we already are a member of all broadcast rooms, the `join()` above is in
-            # effect a no-op
-            self.log.warning("Got invite to broadcast room, ignoring", inviting_user=user)
-            return
-
         self.log.debug(
             "Joined from invite",
             room_id=room_id,
@@ -973,7 +955,7 @@ class MatrixTransport(Runnable):
 
     def _handle_member_join(self, room: Room) -> None:
         if self._is_broadcast_room(room):
-            return
+            raise AssertionError("Broadcast room events should be filtered in syncs")
 
         partner_addresses = self._extract_partner_addresses(room.get_joined_members())
 
