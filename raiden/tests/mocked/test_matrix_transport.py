@@ -196,19 +196,6 @@ def room_with_members(mock_raiden_service, partner_config_for_room):
         ),
     ],
 )
-def test_unexpected_rooms_raise_assertion_error(mock_matrix: MatrixTransport, room_with_members):
-
-    room, should_leave = room_with_members
-    room.client = mock_matrix._client
-    mock_matrix._client.rooms[room.room_id] = room
-
-    # if an api happens a MatrixRequestError should be propagated and raising a TransportError
-    # This should only happen when a room is to be left
-    if should_leave:
-        with pytest.raises(AssertionError):
-            mock_matrix._initialize_room_inventory()
-
-
 @pytest.fixture
 def invite_state(signer, mock_matrix):
     invite_user = create_new_users_for_address(signer)[0]
@@ -227,6 +214,7 @@ def invite_state(signer, mock_matrix):
                 "content": {"membership": "invite"},
                 "type": "m.room.member",
             },
+            {"type": "m.room.join_rules", "content": {"join_rule": "invite"}},
             {
                 "content": {
                     "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
@@ -265,7 +253,6 @@ def test_reject_invite_of_invalid_room(
 
     with pytest.raises(AssertionError):
         mock_matrix._handle_invite(invalid_room_id, invite_state)
-
     assert leave_room_called
 
 

@@ -528,7 +528,9 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
     See: https://github.com/raiden-network/raiden-transport/issues/46
     """
     try:
-        return client.join_room(broadcast_room_alias)
+        room = client.join_room(broadcast_room_alias)
+        del client.rooms[room.room_id]
+        return room
     except MatrixRequestError:
         raise RaidenUnrecoverableError(
             f"Could not join broadcast room {broadcast_room_alias}. "

@@ -189,6 +189,7 @@ def test_assumption_federation_works_after_original_server_goes_down(
 
     user_federated_1, _ = create_logged_in_client(local_matrix_servers_with_executor[1][0])
     room_server1 = join_broadcast_room(user_federated_1, room_name_full)
+    user_federated_1.rooms[room_server1.room_id] = room_server1
     user_federated_1.start_listener_thread(
         timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
         latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
@@ -196,6 +197,7 @@ def test_assumption_federation_works_after_original_server_goes_down(
 
     user_federated_2, _ = create_logged_in_client(local_matrix_servers_with_executor[2][0])
     room_server2 = join_broadcast_room(user_federated_2, room_name_full)
+    user_federated_2.rooms[room_server2.room_id] = room_server2
     user_federated_2.start_listener_thread(
         timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
         latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
@@ -229,6 +231,7 @@ def test_assumption_federation_works_after_original_server_goes_down(
     # Send message from client 1, check that client 2 receives it
     received = {}
     room_server1.send_text("Message2")
+
     while not len(received) == 2:
         gevent.sleep(0.1)
 

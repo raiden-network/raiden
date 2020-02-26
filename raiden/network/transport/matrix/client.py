@@ -327,6 +327,8 @@ class GMatrixClient(MatrixClient):
         broadcast_room_filter: Dict[str, Dict] = {
             # Get all presence updates
             "presence": {"types": ["m.presence"]},
+            # filter account data
+            "account_data": {"not_types": ["*"]},
             # Ignore "message receipts" from all rooms
             "room": {"ephemeral": {"not_types": ["m.receipt"]}},
         }
@@ -780,7 +782,16 @@ class GMatrixClient(MatrixClient):
                 # number of members changed. Verify validity of room
                 if room_members_count != len(room._members):
                     self._handle_member_join_callback(room)
-                all_messages.append((room, sync_room["timeline"]["events"]))
+                all_messages.append(
+                    (
+                        room,
+                        [
+                            message
+                            for message in sync_room["timeline"]["events"]
+                            if message["type"] == "m.room.message"
+                        ],
+                    )
+                )
 
                 for event in sync_room["ephemeral"]["events"]:
                     event["room_id"] = room_id
