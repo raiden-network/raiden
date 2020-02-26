@@ -795,8 +795,8 @@ class TokenNetwork:
                 if channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
                         f"The channel was not opened at the provided block "
-                        f"({given_block_identifier}). This call should never have "
-                        f"been attempted."
+                        f"({format_block_id(given_block_identifier)}). This call "
+                        f"should never have been attempted."
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -1230,8 +1230,8 @@ class TokenNetwork:
                 if channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
                         f"The channel was not opened at the provided block "
-                        f"({given_block_identifier}). This call should never have "
-                        f"been attempted."
+                        f"({format_block_id(given_block_identifier)}). This call "
+                        f"should never have been attempted."
                     )
                     raise RaidenUnrecoverableError(msg)
 
@@ -1588,7 +1588,7 @@ class TokenNetwork:
             if onchain_channel_identifier != channel_identifier:
                 msg = (
                     f"The provided channel identifier does not match the value "
-                    f"on-chain at the provided block ({given_block_identifier}). "
+                    f"on-chain at the provided block ({format_block_id(given_block_identifier)}). "
                     f"This call should never have been attempted. "
                     f"provided_channel_identifier={channel_identifier}, "
                     f"onchain_channel_identifier={channel_onchain_detail.channel_identifier}"
@@ -1598,7 +1598,7 @@ class TokenNetwork:
             if channel_onchain_detail.state != ChannelState.OPENED:
                 msg = (
                     f"The channel was not open at the provided block "
-                    f"({given_block_identifier}). This call should never have "
+                    f"({format_block_id(given_block_identifier)}). This call should never have "
                     f"been attempted."
                 )
                 raise RaidenUnrecoverableError(msg)
@@ -1829,7 +1829,7 @@ class TokenNetwork:
             if channel_onchain_detail.state != ChannelState.CLOSED:
                 msg = (
                     f"The channel was not closed at the provided block "
-                    f"({given_block_identifier}). This call should never have "
+                    f"({format_block_id(given_block_identifier)}). This call should never have "
                     f"been attempted."
                 )
                 raise RaidenUnrecoverableError(msg)
@@ -2088,8 +2088,8 @@ class TokenNetwork:
             if channel_onchain_detail.state != ChannelState.SETTLED:
                 msg = (
                     f"The channel was not settled at the provided block "
-                    f"({given_block_identifier}). This call should never have "
-                    f"been attempted."
+                    f"({format_block_id(given_block_identifier)}). This call "
+                    f"should never have been attempted."
                 )
                 raise RaidenUnrecoverableError(msg)
 
@@ -2289,8 +2289,8 @@ class TokenNetwork:
                 if channel_onchain_detail.state != ChannelState.CLOSED:
                     msg = (
                         f"The channel was not closed at the provided block "
-                        f"({given_block_identifier}). This call should never have "
-                        f"been attempted."
+                        f"({format_block_id(given_block_identifier)}). This call "
+                        f"should never have been attempted."
                     )
                     raise BrokenPreconditionError(msg)
 
