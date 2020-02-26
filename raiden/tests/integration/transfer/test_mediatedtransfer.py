@@ -508,7 +508,8 @@ def test_mediated_transfer_with_fees(
     assert token_network_address
 
     def set_fee_schedule(app: App, other_app: App, fee_schedule: FeeScheduleState):
-        channel_state = views.get_channelstate_by_token_network_and_partner(  # type: ignore
+        assert token_network_address
+        channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=views.state_from_raiden(app.raiden),
             token_network_address=token_network_address,
             partner_address=other_app.raiden.address,
@@ -523,8 +524,9 @@ def test_mediated_transfer_with_fees(
         return error_msg, routes, uuid
 
     def assert_balances(expected_transferred_amounts=List[int]):
+        assert token_network_address
         for i, transferred_amount in enumerate(expected_transferred_amounts):
-            assert_synced_channel_state(  # type: ignore
+            assert_synced_channel_state(
                 token_network_address=token_network_address,
                 app0=apps[i],
                 balance0=deposit - transferred_amount,

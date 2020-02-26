@@ -262,19 +262,19 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
-def test_transfer_to_unknownchannel(raiden_network, token_addresses):
+def test_transfer_with_invalid_address_type(raiden_network, token_addresses):
     app0, _ = raiden_network
     token_address = token_addresses[0]
-    str_address = "\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1"
+    target_address = "\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1"
 
     # Enforce sandwich encoding. Calling `transfer` with a non binary address
     # raises an exception
     with pytest.raises(InvalidBinaryAddress):
-        RaidenAPI(app0.raiden).transfer(  # type: ignore
+        RaidenAPI(app0.raiden).transfer(
             app0.raiden.default_registry.address,
             token_address,
             PaymentAmount(10),
-            target=str_address,
+            target=target_address,  # type: ignore
             transfer_timeout=10,
         )
 

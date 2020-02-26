@@ -200,7 +200,7 @@ class TraceSampler:
         # Unregister the profiler in this order, otherwise we will have extra
         # measurements in the end
         sys.setprofile(None)
-        threading.setprofile(None)  # type: ignore
+        threading.setprofile(None)
         greenlet.settrace(self.previous_callback)  # pylint: disable=c-extension-no-member
 
         self.collector.stop()

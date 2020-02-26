@@ -20,7 +20,6 @@ def _serialize_statistics(statistics):
 class TraceProfiler:
     def __init__(self, datadir: str) -> None:
         self.datadir = datadir
-        self.timer = None
         self.profiling = True
 
         now = datetime.now()
@@ -31,9 +30,9 @@ class TraceProfiler:
 
         # Take snapshots at slower pace because the size of the samples is not
         # negligible, the de/serialization is slow and uses lots of memory.
-        self.timer = Timer(self.trace, interval=MINUTE * 5)
+        self.timer = Timer(self._trace, interval=MINUTE * 5)
 
-    def trace(self, signum: int, frame: FrameType) -> None:  # pylint: disable=unused-argument
+    def _trace(self, signum: int, frame: FrameType) -> None:  # pylint: disable=unused-argument
         """ Signal handler used to take snapshots of the running process. """
 
         # the last pending signal after trace_stop
@@ -57,5 +56,5 @@ class TraceProfiler:
         tracemalloc.stop()
         self.timer.stop()
         self.trace_stream.close()
-        self.trace_stream = None
-        self.timer = None
+        del self.trace_stream
+        del self.timer

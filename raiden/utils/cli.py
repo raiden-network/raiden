@@ -93,12 +93,12 @@ class CustomContextMixin:
         :param extra: extra keyword arguments forwarded to the context
                       constructor.
         """
-        for key, value in iter(self.context_settings.items()):
+        for key, value in iter(self.context_settings.items()):  # type: ignore
             if key not in extra:
                 extra[key] = value
-        ctx = Context(self, info_name=info_name, parent=parent, **extra)
+        ctx = Context(self, info_name=info_name, parent=parent, **extra)  # type: ignore
         with ctx.scope(cleanup=False):
-            self.parse_args(ctx, args)
+            self.parse_args(ctx, args)  # type: ignore
         return ctx
 
 
@@ -187,7 +187,7 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
 
 class GroupableOptionCommandGroup(CustomContextMixin, click.Group):
     def format_options(self, ctx, formatter):
-        GroupableOptionCommand.format_options(self, ctx, formatter)
+        GroupableOptionCommand.format_options(self, ctx, formatter)  # type: ignore
         self.format_commands(ctx, formatter)
 
     def command(self, *args, **kwargs):

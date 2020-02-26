@@ -52,8 +52,8 @@ marshmallow==3.4.0
 matrix-client==0.3.2
 mirakuru==2.1.2
 multiaddr==0.0.9          # via ipfshttpclient
-mypy-extensions==0.4.1    # via typing-inspect
 netaddr==0.7.19           # via multiaddr
+mypy-extensions==0.4.3    # via raiden-contracts, typing-inspect
 netifaces==0.10.9
 networkx==2.3
 objgraph==3.4.1
