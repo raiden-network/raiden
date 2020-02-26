@@ -5,7 +5,7 @@
 #    './deps compile' (for details see README)
 #
 alabaster==0.7.12
-altgraph==0.16.1          # via pyinstaller
+altgraph==0.16.1          # via macholib, pyinstaller
 aniso8601==7.0.0
 apipkg==1.5
 appdirs==1.4.3
@@ -78,6 +78,7 @@ jinja2==2.10.1
 jsonschema==3.2.0
 lazy-object-proxy==1.4.1
 lru-dict==1.1.6
+macholib==1.14            # via pyinstaller
 markupsafe==1.1.1
 marshmallow-dataclass==6.0.0
 marshmallow-enum==1.5.1
