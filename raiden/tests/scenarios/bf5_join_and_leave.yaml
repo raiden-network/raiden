@@ -115,6 +115,7 @@ scenario:
       - serial:
           name: "Make transfers to make sure that path finding works with join"
           tasks:
+            - wait: 200
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
             - transfer: {from: 3, to: 1, amount: 1_000_000_000_000_000, lock_timeout: 30}
             - transfer: {from: 3, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
