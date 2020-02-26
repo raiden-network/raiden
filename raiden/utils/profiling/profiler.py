@@ -351,7 +351,7 @@ def stop_profiler():
     # Unregister the profiler in this order, otherwise we will have extra
     # measurements in the end
     sys.setprofile(None)
-    threading.setprofile(None)  # type: ignore
+    threading.setprofile(None)
     greenlet.settrace(None)  # pylint: disable=no-member
 
 

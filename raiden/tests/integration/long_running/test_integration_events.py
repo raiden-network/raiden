@@ -31,6 +31,7 @@ from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
+from raiden.transfer.state import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
@@ -462,9 +463,11 @@ def test_secret_revealed_on_chain(
     # intercepting it and app2 has not received the updated balance proof
 
     # Close the channel. This must register the secret on chain
-    channel_close_event = ContractSendChannelClose(  # type: ignore
+    balance_proof = channel_state2_1.partner_state.balance_proof
+    assert isinstance(balance_proof, BalanceProofSignedState)
+    channel_close_event = ContractSendChannelClose(
         canonical_identifier=channel_state2_1.canonical_identifier,
-        balance_proof=channel_state2_1.partner_state.balance_proof,
+        balance_proof=balance_proof,
         triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber("latest"),
     )
     current_state = app2.raiden.wal.state_manager.current_state

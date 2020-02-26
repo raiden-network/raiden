@@ -89,9 +89,9 @@ mirakuru==2.1.2
 more-itertools==7.0.0     # via pytest
 msgpack==0.6.1            # via matrix-synapse
 multiaddr==0.0.9
-mypy-extensions==0.4.1
-mypy==0.720
 netaddr==0.7.19
+mypy-extensions==0.4.3
+mypy==0.761
 netifaces==0.10.9
 networkx==2.3
 objgraph==3.4.1
