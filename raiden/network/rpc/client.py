@@ -260,6 +260,10 @@ def inspect_client_error(
             if "known transaction:" in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_PENDING
 
+            # Seems to be a new message in geth 1.9.11
+            if "already know" in error["message"]:
+                return ClientErrorInspectResult.TRANSACTION_PENDING
+
             if "nonce too low" in error["message"]:
                 return ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED
 
