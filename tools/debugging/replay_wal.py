@@ -10,7 +10,6 @@ state changes until a channel is found with the provided token network address a
 The ignored state changes will still be applied, but they will just not be printed out.
 """
 import json
-import os
 import re
 from contextlib import closing
 from itertools import chain
@@ -200,7 +199,7 @@ def print_node_balances(
 
 
 def print_nl():
-    click.echo("-" * os.get_terminal_size()[0], nl=True)
+    click.echo("-" * click.get_terminal_size()[0], nl=True)
 
 
 def replay_wal(
