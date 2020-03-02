@@ -1,5 +1,8 @@
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract, get_list_of_block_numbers
+from raiden.utils.test_support.smartcontracts import (
+    deploy_rpc_test_contract,
+    get_list_of_block_numbers,
+)
 
 
 def test_filter_start_block_inclusive(deploy_client: JSONRPCClient) -> None:

@@ -11,7 +11,7 @@ from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
 from typing import Any, Callable, DefaultDict, Dict, Iterator, List, Tuple
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin
 
 import requests
 from eth_utils import encode_hex, to_normalized_address
@@ -26,6 +26,7 @@ from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMess
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
+from raiden.utils.formatting import ParsedURL
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Iterable, Port, Signature
@@ -48,7 +49,7 @@ def get_admin_credentials(server_name):
 def new_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
     handle_member_join_callback: Callable[[Room], None],
-    server: "ParsedURL",
+    server: ParsedURL,
 ) -> GMatrixClient:
     server_name = server.netloc
     signer = make_signer()
@@ -73,7 +74,7 @@ def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
     return True
 
 
-def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
+def setup_broadcast_room(servers: List[ParsedURL], broadcast_room_name: str) -> None:
     client = new_client(ignore_messages, ignore_member_join, servers[0])
     admin_power_level = {"users": {client.user_id: 100}}
     for server in servers:
@@ -114,27 +115,6 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
             "a ghost user in the broadcast room"
         )
         assert room.leave() is None, msg
-
-
-class ParsedURL(str):
-    """ A string subclass that allows direct access to the split components of a URL """
-
-    def __new__(cls, *args, **kwargs):
-        new = str.__new__(cls, *args, **kwargs)  # type: ignore
-        new._parsed = urlsplit(new)
-        return new
-
-    def __dir__(self):
-        return dir("") + dir(self._parsed)
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__}('{self}')>"
-
-    def __getattr__(self, item):
-        try:
-            return getattr(self._parsed, item)
-        except AttributeError:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{item}'")
 
 
 class AdminUserAuthProvider:

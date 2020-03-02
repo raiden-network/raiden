@@ -28,8 +28,14 @@ from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetad
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
-from raiden.tests.utils.eth_node import (
+from raiden.transfer import channel, views
+from raiden.transfer.state import ChannelState
+from raiden.ui.app import run_app
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.http import HTTPExecutor
+from raiden.utils.keys import privatekey_to_address
+from raiden.utils.test_support.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
+from raiden.utils.test_support.eth_node import (
     AccountDescription,
     EthNodeDescription,
     GenesisDescription,
@@ -38,13 +44,7 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.smartcontracts import deploy_token
-from raiden.transfer import channel, views
-from raiden.transfer.state import ChannelState
-from raiden.ui.app import run_app
-from raiden.utils.formatting import to_checksum_address
-from raiden.utils.http import HTTPExecutor
-from raiden.utils.keys import privatekey_to_address
+from raiden.utils.test_support.smartcontracts import deploy_token
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -96,7 +96,7 @@ TEST_PRIVKEY = PrivateKey(
 TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 
 
-def ensure_executable(cmd):
+def ensure_executable(cmd: str) -> None:
     """look for the given command and make sure it can be executed"""
     if not shutil.which(cmd):
         raise ValueError(
@@ -214,7 +214,7 @@ def deploy_smoketest_contracts(
     return addresses
 
 
-def get_private_key(keystore):
+def get_private_key(keystore: str) -> PrivateKey:
     accmgr = AccountManager(keystore)
     if not accmgr.accounts:
         raise RuntimeError("No Ethereum accounts found in the user's system")
@@ -314,15 +314,15 @@ def setup_testchain_for_smoketest(
 
 
 def setup_raiden(
-    transport,
-    matrix_server,
-    print_step,
-    contracts_version,
-    eth_client,
-    eth_rpc_endpoint,
-    web3,
-    base_datadir,
-    keystore,
+    transport: str,
+    matrix_server: str,
+    print_step: Callable,
+    contracts_version: str,
+    eth_client: EthClient,
+    eth_rpc_endpoint: str,
+    web3: Web3,
+    base_datadir: str,
+    keystore: str,
 ) -> Dict[str, Any]:
     print_step("Deploying Raiden contracts")
 

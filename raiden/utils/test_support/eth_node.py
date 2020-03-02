@@ -13,13 +13,24 @@ from eth_utils import encode_hex, remove_0x_prefix, to_normalized_address
 from pkg_resources import parse_version
 from web3 import Web3
 
-from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
-from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils.ethereum_clients import parse_geth_version
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.keys import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import Address, Any, ChainID, Dict, List, NamedTuple, Port, TokenAmount
+from raiden.utils.test_support.constants import DEFAULT_PASSPHRASE
+from raiden.utils.test_support.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
+from raiden.utils.typing import (
+    Address,
+    Any,
+    ChainID,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Port,
+    TokenAmount,
+    Tuple,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -265,7 +276,7 @@ def geth_generate_poa_genesis(
         json.dump(genesis, handler)
 
 
-def geth_init_datadir(datadir: str, genesis_path: str):
+def geth_init_datadir(datadir: str, genesis_path: str) -> None:
     """Initialize a clients datadir with our custom genesis block.
 
     Args:
@@ -403,7 +414,7 @@ def eth_run_nodes(
     verbosity: str,
     logdir: str,
 ) -> Iterator[List[JSONRPCExecutor]]:
-    def _validate_jsonrpc_result(result):
+    def _validate_jsonrpc_result(result: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         running_marker = result["extraData"][2 : len(random_marker) + 2]
         if running_marker != random_marker:
             return (

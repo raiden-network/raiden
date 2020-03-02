@@ -3,7 +3,7 @@ from eth_utils import decode_hex
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.network.rpc.client import JSONRPCClient, get_transaction_data
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
+from raiden.utils.test_support.smartcontracts import deploy_rpc_test_contract
 
 
 def test_call_invalid_selector(deploy_client: JSONRPCClient) -> None:

@@ -27,7 +27,7 @@ pytest.register_assert_rewrite("raiden.tests.utils.factories")
 pytest.register_assert_rewrite("raiden.tests.utils.messages")
 pytest.register_assert_rewrite("raiden.tests.utils.network")
 pytest.register_assert_rewrite("raiden.tests.utils.protocol")
-pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")
+pytest.register_assert_rewrite("raiden.utils.test_support.smartcontracts")
 pytest.register_assert_rewrite("raiden.tests.utils.smoketest")
 pytest.register_assert_rewrite("raiden.tests.utils.transfer")
 

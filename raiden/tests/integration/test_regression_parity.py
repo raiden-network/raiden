@@ -6,12 +6,12 @@ from raiden import waiting
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import wait_for_state_change
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.tests.utils.transfer import TransferState, get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils.packing import pack_signed_balance_proof
+from raiden.utils.test_support.smartcontracts import deploy_rpc_test_contract
 from raiden.utils.typing import PaymentAmount, PaymentID
 from raiden_contracts.constants import MessageTypeId
 

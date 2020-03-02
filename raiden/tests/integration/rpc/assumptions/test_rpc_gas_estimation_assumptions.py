@@ -2,7 +2,7 @@ import pytest
 
 from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
+from raiden.utils.test_support.smartcontracts import deploy_rpc_test_contract
 
 SSTORE_COST = 20000
 

@@ -5,7 +5,7 @@ import pytest
 from web3 import Web3
 
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
+from raiden.utils.test_support.smartcontracts import deploy_rpc_test_contract
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_geth")
 

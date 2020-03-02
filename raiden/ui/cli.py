@@ -737,15 +737,15 @@ def smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import (
+    from raiden.utils.test_support.smoketest import (
         setup_raiden,
         run_smoketest,
         setup_matrix_for_smoketest,
         setup_testchain_for_smoketest,
     )
-    from raiden.tests.utils.transport import make_requests_insecure, ParsedURL
+    from raiden.utils.formatting import ParsedURL
 
-    step_count = 8
+    step_count = 7
     step = 0
     stdout = sys.stdout
     raiden_stdout = StringIO()
@@ -764,7 +764,7 @@ def smoketest(
     else:
         report_file = report_path
 
-    make_requests_insecure()
+    # make_requests_insecure()
     urllib3.disable_warnings(InsecureRequestWarning)
 
     click.secho(f"Report file: {report_file}", fg="yellow")

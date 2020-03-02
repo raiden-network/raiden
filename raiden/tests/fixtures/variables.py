@@ -10,11 +10,11 @@ from eth_utils import keccak, remove_0x_prefix
 from raiden.constants import Environment, EthClient
 from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
-from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
-from raiden.tests.utils.eth_node import EthNodeDescription
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
+from raiden.utils.test_support.constants import DEFAULT_BALANCE
+from raiden.utils.test_support.eth_node import EthNodeDescription
 from raiden.utils.typing import Iterator, Port, TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 

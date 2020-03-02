@@ -9,8 +9,8 @@ from raiden.network.rpc.client import (
 )
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils.smart_contracts import safe_gas_limit
+from raiden.utils.test_support.smartcontracts import deploy_rpc_test_contract
 
 
 def test_transact_opcode(deploy_client: JSONRPCClient) -> None:

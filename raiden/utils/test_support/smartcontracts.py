@@ -1,6 +1,7 @@
 import os
 
 from solc import compile_files
+from web3 import Web3
 from web3.contract import Contract
 
 from raiden.network.pathfinding import get_random_pfs
@@ -8,7 +9,18 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import Any, Dict, List, TokenAmount, Tuple
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BlockNumber,
+    Dict,
+    List,
+    PrivateKey,
+    ServiceRegistryAddress,
+    TokenAmount,
+    Tuple,
+    Union,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -30,7 +42,10 @@ def deploy_token(
 
 
 def deploy_service_registry_and_set_urls(
-    private_keys, web3, contract_manager, service_registry_address
+    private_keys: List[PrivateKey],
+    web3: Web3,
+    contract_manager: ContractManager,
+    service_registry_address: ServiceRegistryAddress,
 ) -> Tuple[ServiceRegistry, List[str]]:
     urls = ["http://foo", "http://boo", "http://coo"]
     block_identifier = "latest"
@@ -88,7 +103,7 @@ def deploy_service_registry_and_set_urls(
     receipt = c1_client.poll_transaction(tx1_hash)
     assert not check_transaction_threw(receipt=receipt)
     assert c1_token_proxy.balance_of(c1_client.address) > 0
-    c1_token_proxy.approve(allowed_address=service_registry_address, allowance=c1_price)
+    c1_token_proxy.approve(allowed_address=Address(service_registry_address), allowance=c1_price)
     c1_service_proxy.deposit(block_identifier="latest", limit_amount=c1_price)
     c1_service_proxy.set_url(urls[0])
 
@@ -99,7 +114,7 @@ def deploy_service_registry_and_set_urls(
     receipt = c2_client.poll_transaction(tx2_hash)
     assert not check_transaction_threw(receipt=receipt)
     assert c2_token_proxy.balance_of(c2_client.address) > 0
-    c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
+    c2_token_proxy.approve(allowed_address=Address(service_registry_address), allowance=c2_price)
     c2_service_proxy.deposit(block_identifier="latest", limit_amount=c2_price)
     c2_service_proxy.set_url(urls[1])
 
@@ -110,10 +125,10 @@ def deploy_service_registry_and_set_urls(
     receipt = c3_client.poll_transaction(tx3_hash)
     assert not check_transaction_threw(receipt=receipt)
     assert c3_token_proxy.balance_of(c3_client.address) > 0
-    c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
+    c3_token_proxy.approve(allowed_address=Address(service_registry_address), allowance=c3_price)
     c3_service_proxy.deposit(block_identifier="latest", limit_amount=c3_price)
     c3_token_proxy.client.estimate_gas(c3_token_proxy.proxy, "mint", log_details, c3_price)
-    c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
+    c3_token_proxy.approve(allowed_address=Address(service_registry_address), allowance=c3_price)
     c3_service_proxy.set_url(urls[2])
 
     return c1_service_proxy, urls
@@ -147,7 +162,7 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     return compiled_contracts
 
 
-def deploy_rpc_test_contract(deploy_client: JSONRPCClient, name: str):
+def deploy_rpc_test_contract(deploy_client: JSONRPCClient, name: str) -> Tuple[Contract, Dict]:
     contract_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "smart_contracts", f"{name}.sol")
     )
@@ -161,7 +176,9 @@ def deploy_rpc_test_contract(deploy_client: JSONRPCClient, name: str):
     return contract_proxy, receipt
 
 
-def get_list_of_block_numbers(item):
+def get_list_of_block_numbers(
+    item: Union[List[Dict[str, Any]], Dict[str, Any]]
+) -> List[BlockNumber]:
     """ Creates a list of block numbers of the given list/single event"""
     if isinstance(item, list):
         return [element["blockNumber"] for element in item]

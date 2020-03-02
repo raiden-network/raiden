@@ -16,8 +16,8 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import MONITORING_REWARD
-from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.utils.keys import privatekey_to_address
+from raiden.utils.test_support.smartcontracts import deploy_token
 from raiden.utils.typing import (
     Address,
     Callable,

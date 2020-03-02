@@ -15,7 +15,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetad
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.factories import make_token_address
-from raiden.tests.utils.smartcontracts import deploy_token
+from raiden.utils.test_support.smartcontracts import deploy_token
 from raiden.utils.typing import TokenAddress, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 from raiden_contracts.contract_manager import ContractManager

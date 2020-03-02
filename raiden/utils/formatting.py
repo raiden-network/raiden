@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from eth_hash.auto import keccak
 from eth_typing import HexStr
 from eth_utils import (
@@ -13,6 +15,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     AddressTypes,
+    Any,
     BlockSpecification,
     ChecksumAddress,
     Iterable,
@@ -88,3 +91,24 @@ def format_block_id(block_id: BlockSpecification) -> str:
         return encode_hex(block_id)
 
     return str(block_id)
+
+
+class ParsedURL(str):
+    """ A string subclass that allows direct access to the split components of a URL """
+
+    def __new__(cls, *args, **kwargs):  # type: ignore
+        new = str.__new__(cls, *args, **kwargs)  # type: ignore
+        new._parsed = urlsplit(new)
+        return new
+
+    def __dir__(self) -> List[str]:
+        return dir("") + dir(self._parsed)
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}('{self}')>"
+
+    def __getattr__(self, item: str) -> Any:
+        try:
+            return getattr(self._parsed, item)
+        except AttributeError:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{item}'")

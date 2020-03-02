@@ -6,8 +6,8 @@ from web3.exceptions import TransactionNotFound
 from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.eth_node import EthNodeDescription
-from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
+from raiden.utils.test_support.eth_node import EthNodeDescription
+from raiden.utils.test_support.smartcontracts import deploy_rpc_test_contract
 from raiden.utils.typing import Callable, Dict, GasPrice, List, PrivateKey
 
 
