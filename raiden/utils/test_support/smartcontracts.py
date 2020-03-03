@@ -162,18 +162,27 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     return compiled_contracts
 
 
+class TestsNotIncludedInDistribution(Exception):
+    pass
+
+
 def deploy_rpc_test_contract(deploy_client: JSONRPCClient, name: str) -> Tuple[Contract, Dict]:
-    contract_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "smart_contracts", f"{name}.sol")
-    )
-    contracts = compile_files_cwd([contract_path])
-    contract_key = os.path.basename(contract_path) + ":" + name
+    try:
+        from raiden import tests
 
-    contract_proxy, receipt = deploy_client.deploy_single_contract(
-        contract_name=name, contract=contracts[contract_key]
-    )
+        contract_path = os.path.abspath(
+            os.path.join(os.path.dirname(tests.__file__), "smart_contracts", f"{name}.sol")
+        )
+        contracts = compile_files_cwd([contract_path])
+        contract_key = os.path.basename(contract_path) + ":" + name
 
-    return contract_proxy, receipt
+        contract_proxy, receipt = deploy_client.deploy_single_contract(
+            contract_name=name, contract=contracts[contract_key]
+        )
+
+        return contract_proxy, receipt
+    except ImportError:
+        raise TestsNotIncludedInDistribution("You need a full clone to run tests")
 
 
 def get_list_of_block_numbers(
