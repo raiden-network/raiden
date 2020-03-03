@@ -1,8 +1,10 @@
+import time
 from copy import copy
 from dataclasses import replace
 from unittest.mock import Mock, call, patch
 from uuid import UUID, uuid4
 
+import gevent
 import pytest
 import requests
 from eth_utils import is_checksum_address, is_hex, is_hex_address
@@ -931,3 +933,34 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
             token_network_address=query_paths_args["token_network_address"],
             url=query_paths_args["pfs_config"].info.url,
         )
+
+
+def test_two_parallel_queries(query_paths_args):
+    """ Test that only one IOU is being processed at a time. """
+
+    # We mock one query to last at least 0.2s
+    def mocked_json_response_with_sleep(**kwargs):  # pylint: disable=unused-argument
+        gevent.sleep(0.2)
+        return mocked_json_response()
+
+    # Now we start two function calls - query_path - in parallel
+    with patch("raiden.network.pathfinding.get_pfs_info") as mocked_pfs_info:
+        mocked_pfs_info.return_value = PFS_CONFIG.info
+
+        with patch.object(pathfinding, "create_current_iou"):
+
+            with patch.object(
+                pathfinding, "post_pfs_paths", side_effect=mocked_json_response_with_sleep
+            ):
+
+                query_1 = gevent.spawn(query_paths, **query_paths_args)
+                query_2 = gevent.spawn(query_paths, **query_paths_args)
+
+                before = time.monotonic()
+                gevent.joinall({query_1, query_2}, raise_error=True)
+                duration = time.monotonic() - before
+
+                # We expect the calls to happen sequentially, so one greenlet must wait for
+                # the other. If semaphore in raiden.network.pathfinding is bound to 2,
+                # the test fails
+                assert duration >= 0.4
