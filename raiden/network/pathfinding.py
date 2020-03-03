@@ -47,6 +47,7 @@ from raiden.utils.typing import (
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
+iou_semaphore = gevent.lock.BoundedSemaphore()
 
 
 @dataclass(frozen=True)
@@ -569,7 +570,6 @@ def query_paths(
     Send a request to the /paths endpoint of the PFS specified in service_config, and
     retry in case of a failed request if it makes sense.
     """
-
     payload = {
         "from": to_checksum_address(route_from),
         "to": to_checksum_address(route_to),
@@ -595,7 +595,7 @@ def query_paths(
         # semaphore in this primitive way limits the speed at which we can do
         # simultaneous transfers.
         # See https://github.com/raiden-network/raiden/issues/5647
-        with gevent.lock.Semaphore():
+        with iou_semaphore:
             if offered_fee > 0:
                 new_iou = create_current_iou(
                     pfs_config=pfs_config,
@@ -643,8 +643,14 @@ def query_paths(
                         )
                     if new_info.price > pfs_config.maximum_fee:
                         raise ServiceRequestFailed("PFS fees too high.")
-                    log.info(f"Pathfinding Service increased fees", new_price=new_info.price)
-                    pfs_config.info = new_info
+                    if new_info.price > pfs_config.info.price:
+                        log.info(f"Pathfinding Service increased fees", new_price=new_info.price)
+                        pfs_config.info = new_info
+                    else:
+                        log.error(
+                            f"Concurrent Pathfinding Service requests by same node",
+                            value=str(iou_semaphore),
+                        )
                 elif code == PFSError.NO_ROUTE_FOUND:
                     log.info(f"Pathfinding Service can not find a route: {error}.")
                     return list(), None
