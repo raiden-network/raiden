@@ -45,7 +45,6 @@ def raiden_testchain(
 
     with testchain_manager as testchain:
         result = setup_raiden(
-            transport="matrix",
             matrix_server=MATRIX_AUTO_SELECT_SERVER,
             print_step=lambda x: None,
             contracts_version=cli_tests_contracts_version,

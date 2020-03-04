@@ -314,7 +314,6 @@ def setup_testchain_for_smoketest(
 
 
 def setup_raiden(
-    transport,
     matrix_server,
     print_step,
     contracts_version,
@@ -385,7 +384,6 @@ def setup_raiden(
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
         "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
-        "transport": transport,
         "environment_type": Environment.DEVELOPMENT,
     }
 
