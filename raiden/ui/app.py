@@ -180,7 +180,6 @@ def run_app(
     password_file: TextIO,
     web_ui: bool,
     datadir: str,
-    transport: str,
     matrix_server: str,
     network_id: ChainID,
     environment_type: Environment,
@@ -248,7 +247,6 @@ def run_app(
     config.services.monitoring_enabled = enable_monitoring
     config.services.pathfinding_max_paths = pathfinding_max_paths
 
-    config.transport_type = transport
     config.transport.server = matrix_server
 
     config.rest_api = RestApiConfig(
@@ -357,12 +355,9 @@ def run_app(
         )
     )
 
-    if transport == "matrix":
-        matrix_transport = setup_matrix(
-            config.transport, config.services, environment_type, routing_mode
-        )
-    else:
-        raise RuntimeError(f'Unknown transport type "{transport}" given')
+    matrix_transport = setup_matrix(
+        config.transport, config.services, environment_type, routing_mode
+    )
 
     event_handler: EventHandler = RaidenEventHandler()
 

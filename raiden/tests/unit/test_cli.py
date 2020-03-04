@@ -56,10 +56,6 @@ def mock_raises(exception):
 
 
 def test_run_error_reporting(cli_runner, monkeypatch):
-    result = cli_runner(run, ["--transport", "udp"])
-    assert "Invalid value" in result.output and "--transport" in result.output
-    assert result.exit_code != 0
-
     caught_exceptions = {
         APIServerPortInUseError(): ReturnCode.PORT_ALREADY_IN_USE,
         ConfigurationError(): ReturnCode.CONFIGURATION_ERROR,
