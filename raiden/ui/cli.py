@@ -223,11 +223,6 @@ def options(func: Callable) -> Callable:
             is_flag=True,
         ),
         option(
-            "--showconfig",
-            help="Show all configuration values used to control Raiden's behavior",
-            is_flag=True,
-        ),
-        option(
             "--blockchain-query-interval",
             help="Time interval after which to check for new blocks (in seconds)",
             default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
