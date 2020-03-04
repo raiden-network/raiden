@@ -17,7 +17,7 @@ STATUS_CODE_FOR_SUCCESS = 0
 
 class Nursery(ABC):
     @abstractmethod
-    def exec_under_watch(self, process: Popen) -> None:
+    def exec_under_watch(self, process_args: List[str], **kwargs: Any) -> Optional[Popen]:
         pass
 
     @abstractmethod
@@ -71,7 +71,7 @@ class Janitor:
 
         class ProcessNursery(Nursery):
             @staticmethod
-            def exec_under_watch(args: List[str]) -> None:
+            def exec_under_watch(process_args: List[str], **kwargs: Any) -> Optional[Popen]:
                 def subprocess_stopped(result: AsyncResult) -> None:
                     with janitor._processes_lock:
                         # Processes are expected to quit while the nursery is
@@ -85,9 +85,9 @@ class Janitor:
 
                 with janitor._processes_lock:
                     if janitor._stop.is_set():
-                        return
+                        return None
 
-                    process = Popen(args)
+                    process = Popen(process_args, **kwargs)
                     janitor._processes.add(process)
                     process.result.rawlink(subprocess_stopped)
 
@@ -97,6 +97,8 @@ class Janitor:
                     # to be handled and the process installed.
                     if janitor._stop.is_set():
                         process.send_signal(signal.SIGINT)
+
+                    return process
 
             @staticmethod
             def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
