@@ -523,6 +523,17 @@ def options(func: Callable) -> Callable:
 def run(ctx: Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
+    if kwargs["config_file"]:
+        apply_config_file(run, kwargs, ctx)
+
+    configure_logging(
+        kwargs["log_config"],
+        log_json=kwargs["log_json"],
+        log_file=kwargs["log_file"],
+        disable_debug_logfile=kwargs["disable_debug_logfile"],
+        debug_log_file_path=kwargs["debug_logfile_path"],
+    )
+
     flamegraph = kwargs.pop("flamegraph", None)
     switch_tracing = kwargs.pop("switch_tracing", None)
     profiler = None
@@ -551,9 +562,6 @@ def run(ctx: Context, **kwargs: Any) -> None:
     if log_memory_usage_interval > 0:  # pragma: no cover
         memory_logger = MemoryLogger(log_memory_usage_interval)
         memory_logger.start()
-
-    if kwargs["config_file"]:
-        apply_config_file(run, kwargs, ctx)
 
     if ctx.invoked_subcommand is not None:
         # Pass parsed args on to subcommands.

@@ -8,7 +8,6 @@ from click import Context
 from gevent.event import AsyncResult
 
 from raiden.api.python import RaidenAPI
-from raiden.log_config import configure_logging
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.ui.app import run_app
 from raiden.utils.gevent import spawn_named
@@ -24,14 +23,6 @@ class NodeRunner:
         self.raiden_api: Optional[RaidenAPI] = None
 
     def run(self) -> None:
-        configure_logging(
-            self._options["log_config"],
-            log_json=self._options["log_json"],
-            log_file=self._options["log_file"],
-            disable_debug_logfile=self._options["disable_debug_logfile"],
-            debug_log_file_path=self._options["debug_logfile_path"],
-        )
-
         log.info("Starting Raiden", **get_system_spec())
 
         if self._options["config_file"]:
