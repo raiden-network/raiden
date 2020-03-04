@@ -56,6 +56,7 @@ from raiden.settings import (
     DEFAULT_SETTLE_TIMEOUT,
     RAIDEN_CONTRACT_VERSION,
 )
+from raiden.ui.runners import run_services
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
@@ -78,8 +79,6 @@ from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION
 from raiden_contracts.constants import ID_TO_NETWORKNAME, NETWORKNAME_TO_ID
-
-from .runners import NodeRunner
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
@@ -568,8 +567,6 @@ def run(ctx: Context, **kwargs: Any) -> None:
         ctx.obj = kwargs
         return
 
-    runner = NodeRunner(kwargs, ctx)
-
     raiden_version = get_system_spec()["raiden"]
     click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
 
@@ -620,7 +617,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
     try:
-        runner.run()
+        run_services(kwargs)
     except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as ex:
         click.secho(
             f"{ex}. Please make sure that this Raiden node is the "
