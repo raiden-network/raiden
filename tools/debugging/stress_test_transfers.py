@@ -198,7 +198,10 @@ def wait_for_address_endpoint(base_url: str, retry_timeout: int) -> str:
 
 def start_and_wait_for_server(
     nursery: Nursery, port_generator: Iterator[Port], node: NodeConfig, retry_timeout: int
-) -> RunningNode:
+) -> Optional[RunningNode]:
+    """Start the Raiden node and waits for the REST API to be available,
+    returns None if the script is being shutdown.
+    """
     # redirect the process output for debugging
     os.makedirs(os.path.expanduser(node.data_dir), exist_ok=True)
     stdout = open(os.path.join(node.data_dir, "stress_test.out"), "a")
@@ -208,12 +211,15 @@ def start_and_wait_for_server(
     running_url = URL(f"http://{api_url}")
 
     process_args = node.args + ["--api-address", api_url]
-    process = Popen(process_args, bufsize=UNBUFERRED, stdout=stdout, stderr=STDOUT)
+    process = nursery.exec_under_watch(
+        process_args, bufsize=UNBUFERRED, stdout=stdout, stderr=STDOUT
+    )
 
-    nursery.exec_under_watch(process)
+    if process is not None:
+        wait_for_address_endpoint(running_url, retry_timeout)
+        return RunningNode(process, node, running_url)
 
-    wait_for_address_endpoint(running_url, retry_timeout)
-    return RunningNode(process, node, running_url)
+    return None
 
 
 def start_and_wait_for_all_servers(
@@ -221,21 +227,35 @@ def start_and_wait_for_all_servers(
     port_generator: Iterator[Port],
     nodes_config: List[NodeConfig],
     retry_timeout: int,
-) -> List[RunningNode]:
+) -> Optional[List[RunningNode]]:
+    """Starts all nodes under the nursery, returns a list of `RunningNode`s or
+    None if the script is shuting down.
+    """
     greenlets = set(
         nursery.spawn_under_watch(
             start_and_wait_for_server, nursery, port_generator, node, retry_timeout
         )
         for node in nodes_config
     )
-    gevent.joinall(greenlets, raise_error=True)
-    running_nodes = [g.get() for g in greenlets]
-    return running_nodes
+
+    all_running_nodes = []
+    for g in gevent.joinall(greenlets, raise_error=True):
+        running_node = g.get()
+
+        if running_node is None:
+            return None
+
+        all_running_nodes.append(running_node)
+
+    return all_running_nodes
 
 
-def kill_restart_and_wait_for_server(
+def restart_and_wait_for_server(
     nursery: Nursery, port_generator: Iterator[Port], node: RunningNode, retry_timeout: int
-) -> RunningNode:
+) -> Optional[RunningNode]:
+    """Stop `RunningNode` and start it again under the nursery, returns None if
+    the script is shuting down.
+    """
     node.process.send_signal(signal.SIGINT)
 
     # Wait for the process to completely shutdown, this is necessary because
@@ -252,15 +272,27 @@ def restart_network(
     port_generator: Iterator[Port],
     running_nodes: List[RunningNode],
     retry_timeout: int,
-) -> List[RunningNode]:
-    greenlets = [
+) -> Optional[List[RunningNode]]:
+    """Stop all `RunningNode`s and start them again under the nursery, returns
+    None if the script is shuting down.
+    """
+    greenlets = set(
         nursery.spawn_under_watch(
-            kill_restart_and_wait_for_server, nursery, port_generator, node, retry_timeout
+            restart_and_wait_for_server, nursery, port_generator, node, retry_timeout
         )
         for node in running_nodes
-    ]
-    gevent.wait(greenlets)
-    return [g.get() for g in greenlets]
+    )
+
+    all_running_nodes = []
+    for g in gevent.joinall(greenlets, raise_error=True):
+        running_node = g.get()
+
+        if running_node is None:
+            return None
+
+        all_running_nodes.append(running_node)
+
+    return all_running_nodes
 
 
 def transfer_and_assert_successful(
@@ -511,9 +543,14 @@ def run_stress_test(
 
             # After each `do_transfers` the state of the system must be
             # reset, otherwise there is a bug in the planner or Raiden.
-            running_nodes = restart_network(
+            restarted_nodes = restart_network(
                 nursery, config.port_generator, running_nodes, config.retry_timeout
             )
+
+            if restarted_nodes is None:
+                return
+            else:
+                running_nodes = restarted_nodes
 
             for profiler in profiler_processes:
                 profiler.send_signal(signal.SIGINT)
@@ -547,7 +584,6 @@ def main() -> None:
     retry_timeout = 1
 
     nodes_config: List[NodeConfig] = list()
-    nodes_running: List[RunningNode] = list()
 
     token_address = config.defaults()["token-address"]
     if not is_checksum_address(token_address):
@@ -629,6 +665,9 @@ def main() -> None:
         nodes_running = start_and_wait_for_all_servers(
             nursery, port_generator, nodes_config, retry_timeout
         )
+
+        if nodes_running is None:
+            return
 
         if args.wait_after_first_sync:
             print("All nodes are ready! Press Enter to continue and perform the stress tests.")
