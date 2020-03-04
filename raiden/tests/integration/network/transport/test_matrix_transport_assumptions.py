@@ -125,8 +125,8 @@ def test_assumption_user_goes_offline_if_sync_is_not_called_within_35s(local_mat
     Assumption test to make sure the presence information changes as per the following rules:
     - Presence information is UNKNOWN for nodes that don't share a room.
     - A node is considered ONLINE if it has done a /sync call within the past
-      the timeout.
-    - Otherwise the is OFFLINE.
+      timeout.
+    - Otherwise the node is OFFLINE.
 
     If any of the above assumptions changes, then the Matrix transport has to
     be adjusted accordingly.
@@ -211,9 +211,9 @@ def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
     """A user presence does not change while a /sync is blocking.
 
     This assumption test makes sure a user is considered online while there is
-    one outstand /sync request. This is important because it guides the choice
-    of the `DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT` setting. Because the node is
-    considered online while the /sync is withstanding, then a large value is
+    one outstanding /sync request. This is important because it guides the
+    choice of the `DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT` setting. Because the
+    node is considered online while the /sync is pending, a large value is
     better to avoid unecessary load to the Matrix server.
     """
     # This is the interval in seconds which a client must perform /sync calls
@@ -248,7 +248,7 @@ def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
         with must_run_for_at_least(timeout_secs, msg):
             client1._sync(timeout_ms=LONG_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
 
-        assert len(client1.response_queue) == 1, "Matrix must *one* a valid response"
+        assert len(client1.response_queue) == 1, "Matrix must return *one* valid response"
 
     msg = "Client1 must not change presence state before LONG_TIMEOUT_MS."
     timeout_secs = (PRESENCE_TIMEOUT - 100) / 1_000
