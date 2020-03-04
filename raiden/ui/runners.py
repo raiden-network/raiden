@@ -23,10 +23,6 @@ class NodeRunner:
         self._ctx = ctx
         self.raiden_api: Optional[RaidenAPI] = None
 
-    @property
-    def welcome_string(self) -> str:
-        return f"Welcome to Raiden, version {get_system_spec()['raiden']}!"
-
     def run(self) -> None:
         configure_logging(
             self._options["log_config"],
