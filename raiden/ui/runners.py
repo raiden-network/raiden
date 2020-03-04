@@ -15,8 +15,6 @@ log = structlog.get_logger(__name__)
 
 
 def run_services(options: Dict[str, Any]) -> None:
-    log.info("Starting Raiden", **get_system_spec())
-
     if options["config_file"]:
         log.debug("Using config file", config_file=options["config_file"])
 
