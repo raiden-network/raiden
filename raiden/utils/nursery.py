@@ -87,19 +87,16 @@ class Janitor:
                     if janitor._stop.is_set():
                         return
 
+                    process = Popen(args)
+                    janitor._processes.add(process)
+                    process.result.rawlink(subprocess_stopped)
+
                     # Important: `stop` may be set after Popen started, but before
                     # it returned. If that happens `GreenletExit` exception is
                     # raised here. In order to have proper cleared, exceptions have
                     # to be handled and the process installed.
-                    try:
-                        process = Popen(args)
-                    finally:
-                        janitor._processes.add(process)
-
-                        process.result.rawlink(subprocess_stopped)
-
-                        if janitor._stop.is_set():
-                            process.send_signal(signal.SIGINT)
+                    if janitor._stop.is_set():
+                        process.send_signal(signal.SIGINT)
 
             @staticmethod
             def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
