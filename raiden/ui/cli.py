@@ -562,7 +562,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
     runner = NodeRunner(kwargs, ctx)
 
-    click.secho(runner.welcome_string, fg="green")
+    raiden_version = get_system_spec()["raiden"]
+    click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
+
     click.secho(
         textwrap.dedent(
             """\
