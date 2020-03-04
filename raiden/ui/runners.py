@@ -37,9 +37,6 @@ class NodeRunner:
         if self._options["config_file"]:
             log.debug("Using config file", config_file=self._options["config_file"])
 
-        self._start_services()
-
-    def _start_services(self) -> None:
         app = run_app(**self._options)
 
         gevent_tasks: List[gevent.Greenlet] = list()
