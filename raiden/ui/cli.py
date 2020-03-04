@@ -131,7 +131,6 @@ def options(func: Callable) -> Callable:
     # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
     # for every use
     options_ = [
-        option("--version", hidden=True, is_flag=True, allow_from_autoenv=False),
         option(
             "--datadir",
             help="Directory for storing raiden data.",
@@ -552,15 +551,6 @@ def run(ctx: Context, **kwargs: Any) -> None:
     if log_memory_usage_interval > 0:  # pragma: no cover
         memory_logger = MemoryLogger(log_memory_usage_interval)
         memory_logger.start()
-
-    if kwargs.pop("version", False):
-        click.echo(
-            click.style("Hint: Use ", fg="green")
-            + click.style(f"'{os.path.basename(sys.argv[0])} version'", fg="yellow")
-            + click.style(" instead", fg="green")
-        )
-        ctx.invoke(version, short=True)
-        return
 
     if kwargs["config_file"]:
         apply_config_file(run, kwargs, ctx)
