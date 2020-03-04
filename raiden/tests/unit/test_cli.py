@@ -16,8 +16,8 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
 )
-from raiden.ui.cli import ReturnCode, run
-from raiden.ui.runners import NodeRunner
+from raiden.ui import cli
+from raiden.ui.cli import ReturnCode
 from raiden.utils.ethereum_clients import is_supported_client
 
 
@@ -29,7 +29,7 @@ def cli_runner(tmp_path):
 
 
 def test_cli_version(cli_runner):
-    result = cli_runner(run, ["version"])
+    result = cli_runner(cli.run, ["version"])
     result_json = json.loads(result.output)
     result_expected_keys = {
         "raiden",
@@ -43,7 +43,7 @@ def test_cli_version(cli_runner):
     assert result_expected_keys == result_json.keys()
     assert result.exit_code == 0
 
-    result = cli_runner(run, ["--version"])
+    result = cli_runner(cli.run, ["--version"])
     assert "Hint: Use '" in result.output and "version' instead" in result.output
     assert result.exit_code == 0
 
@@ -72,8 +72,8 @@ def test_run_error_reporting(cli_runner, monkeypatch):
     }
 
     for exception, code in caught_exceptions.items():
-        monkeypatch.setattr(NodeRunner, "run", mock_raises(exception))
-        result = cli_runner(run, "--accept-disclaimer")
+        monkeypatch.setattr(cli, "run_services", mock_raises(exception))
+        result = cli_runner(cli.run, "--accept-disclaimer")
         assert result.exception.code == code
 
 
