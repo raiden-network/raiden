@@ -7,12 +7,10 @@ import structlog
 from click import Context
 from gevent.event import AsyncResult
 
-from raiden import constants, settings
 from raiden.api.python import RaidenAPI
 from raiden.log_config import configure_logging
 from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.ui.app import run_app
-from raiden.ui.config import dump_cmd_options, dump_module
 from raiden.utils.gevent import spawn_named
 from raiden.utils.system import get_system_spec
 
@@ -46,12 +44,6 @@ class NodeRunner:
         self._start_services()
 
     def _start_services(self) -> None:
-        if self._options["showconfig"]:
-            print("Configuration Dump:")
-            dump_cmd_options(self._options)
-            dump_module("settings", settings)
-            dump_module("constants", constants)
-
         app = run_app(**self._options)
 
         gevent_tasks: List[gevent.Greenlet] = list()
