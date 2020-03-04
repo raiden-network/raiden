@@ -68,7 +68,6 @@ from raiden.utils.cli import (
     group,
     option,
     option_group,
-    validate_option_dependencies,
 )
 from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
@@ -96,16 +95,6 @@ COMMUNICATION_ERROR = (
     f"'{{}}', this option can be "
     f"configured with the flag {ETH_RPC_CONFIG_OPTION}"
 )
-
-
-OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
-    "pathfinding-service-address": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-max-paths": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-max-fee": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-iou-timeout": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "enable-monitoring": [("transport", "matrix")],
-    "matrix-server": [("transport", "matrix")],
-}
 
 
 class ReturnCode(Enum):
@@ -199,14 +188,6 @@ def options(func: Callable) -> Callable:
             type=ADDRESS_TYPE,
         ),
         option("--console", help="Start the interactive raiden console", is_flag=True),
-        option(
-            "--transport",
-            help="Transport system to use.",
-            type=click.Choice(["matrix"]),
-            default="matrix",
-            show_default=True,
-            hidden=True,
-        ),
         option(
             ETH_NETWORKID_OPTION,
             help=(
@@ -589,14 +570,11 @@ def run(ctx: Context, **kwargs: Any) -> None:
     if kwargs["config_file"]:
         apply_config_file(run, kwargs, ctx)
 
-    validate_option_dependencies(run, ctx, kwargs, OPTION_DEPENDENCIES)
-
     if ctx.invoked_subcommand is not None:
         # Pass parsed args on to subcommands.
         ctx.obj = kwargs
         return
 
-    assert kwargs["transport"] == "matrix", "Invalid transport type. This should not happen."
     runner = NodeRunner(kwargs, ctx)
 
     click.secho(runner.welcome_string, fg="green")
@@ -752,12 +730,8 @@ def smoketest(
 
     assert ctx.parent, MYPY_ANNOTATION
     environment_type = ctx.parent.params["environment_type"]
-    transport = ctx.parent.params["transport"]
     disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
     matrix_server = ctx.parent.params["matrix_server"]
-
-    if transport != "matrix":
-        raise RuntimeError(f"Invalid transport type '{transport}'")
 
     if report_path is None:
         report_file = mktemp(suffix=".log")
@@ -834,7 +808,6 @@ def smoketest(
 
         with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
             result = setup_raiden(
-                transport=transport,
                 matrix_server=matrix_server,
                 print_step=print_step,
                 contracts_version=contracts_version,

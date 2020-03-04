@@ -340,7 +340,7 @@ jobs:
             set -x
       - run:
           name: Running Raiden Smoketest with << parameters.transport-layer >>, environment << parameters.environment-type >> on ethereum client << parameters.blockchain-type >>
-          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
+          command: raiden --environment-type=<< parameters.environment-type >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
 
       - store_artifacts:
           path: /tmp/smoketest.log
