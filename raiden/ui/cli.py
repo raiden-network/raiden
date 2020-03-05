@@ -1,34 +1,27 @@
-import contextlib
 import datetime
 import json
 import os
-import signal
 import sys
 import textwrap
 import traceback
 from enum import Enum
 from io import StringIO
-from subprocess import TimeoutExpired
-from tempfile import NamedTemporaryFile, mkdtemp, mktemp
-from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, Tuple
+from tempfile import NamedTemporaryFile, mktemp
+from typing import Any, AnyStr, Callable, Optional
 
 import click
 import filelock
 import structlog
 from click import Context
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
-from requests.packages import urllib3
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from urllib3.exceptions import ReadTimeoutError
 
 from raiden.accounts import KeystoreAuthenticationError, KeystoreFileNotFound
 from raiden.constants import (
-    DISCOVERY_DEFAULT_ROOM,
     FLAT_MED_FEE_MIN,
     IMBALANCE_MED_FEE_MAX,
     IMBALANCE_MED_FEE_MIN,
     MATRIX_AUTO_SELECT_SERVER,
-    PATH_FINDING_BROADCASTING_ROOM,
     PROPORTIONAL_MED_FEE_MAX,
     PROPORTIONAL_MED_FEE_MIN,
     Environment,
@@ -44,7 +37,6 @@ from raiden.exceptions import (
     ReplacementTransactionUnderpriced,
 )
 from raiden.log_config import configure_logging
-from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
@@ -54,7 +46,6 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_PATHS,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
-    RAIDEN_CONTRACT_VERSION,
 )
 from raiden.ui.runners import run_services
 from raiden.utils.cli import (
@@ -72,13 +63,12 @@ from raiden.utils.cli import (
 )
 from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.http import HTTPExecutor
 from raiden.utils.profiling.greenlets import SwitchMonitoring
 from raiden.utils.profiling.memory import MemoryLogger
 from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION
-from raiden_contracts.constants import ID_TO_NETWORKNAME, NETWORKNAME_TO_ID
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
@@ -707,15 +697,9 @@ def smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import (
-        setup_raiden,
-        run_smoketest,
-        setup_matrix_for_smoketest,
-        setup_testchain_for_smoketest,
-    )
-    from raiden.tests.utils.transport import make_requests_insecure, ParsedURL
+    from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest
 
-    step_count = 8
+    step_count = 7
     step = 0
     stdout = sys.stdout
     raiden_stdout = StringIO()
@@ -723,15 +707,11 @@ def smoketest(
     assert ctx.parent, MYPY_ANNOTATION
     environment_type = ctx.parent.params["environment_type"]
     disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
-    matrix_server = ctx.parent.params["matrix_server"]
 
     if report_path is None:
         report_file = mktemp(suffix=".log")
     else:
         report_file = report_path
-
-    make_requests_insecure()
-    urllib3.disable_warnings(InsecureRequestWarning)
 
     click.secho(f"Report file: {report_file}", fg="yellow")
 
@@ -766,53 +746,18 @@ def smoketest(
             file=stdout,
         )
 
-    contracts_version = RAIDEN_CONTRACT_VERSION
-
+    free_port_generator = get_free_port()
     try:
-        free_port_generator = get_free_port()
-        ethereum_nodes = None
-
-        datadir = mkdtemp()
-        testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
+        with setup_smoketest(
             eth_client=eth_client,
             print_step=print_step,
             free_port_generator=free_port_generator,
-            base_datadir=datadir,
-            base_logdir=datadir,
-        )
-        matrix_manager: ContextManager[
-            List[Tuple[ParsedURL, HTTPExecutor]]
-        ] = setup_matrix_for_smoketest(
-            print_step=print_step,
-            free_port_generator=free_port_generator,
-            broadcast_rooms_aliases=[
-                make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
-                make_room_alias(NETWORKNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
-            ],
-        )
-
-        # Do not redirect the stdout on a debug session, otherwise the REPL
-        # will also be redirected
-        if debug:
-            stdout_manager = contextlib.nullcontext()
-        else:
-            stdout_manager = contextlib.redirect_stdout(raiden_stdout)
-
-        with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
-            result = setup_raiden(
-                matrix_server=matrix_server,
-                print_step=print_step,
-                contracts_version=contracts_version,
-                eth_client=testchain["eth_client"],
-                eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
-                web3=testchain["web3"],
-                base_datadir=testchain["base_datadir"],
-                keystore=testchain["keystore"],
-            )
-
+            debug=debug,
+            stdout=raiden_stdout,
+            append_report=append_report,
+        ) as result:
             args = result["args"]
             contract_addresses = result["contract_addresses"]
-            ethereum_nodes = testchain["node_executors"]
             token = result["token"]
 
             port = next(free_port_generator)
@@ -821,9 +766,7 @@ def smoketest(
             args["environment_type"] = environment_type
 
             # Matrix server
-            # TODO: do we need more than one here?
-            first_server = server_urls[0]
-            args["matrix_server"] = first_server[0]
+            args["matrix_server"] = result["matrix_server_url"]
             args["one_to_n_contract_address"] = "0x" + "1" * 40
             args["routing_mode"] = RoutingMode.LOCAL
             args["flat_fee"] = ()
@@ -836,30 +779,12 @@ def smoketest(
                 else:
                     args[option_.name] = option_.default
 
-            try:
-                run_smoketest(
-                    print_step=print_step,
-                    args=args,
-                    contract_addresses=contract_addresses,
-                    token=token,
-                )
-            finally:
-                if ethereum_nodes:
-                    for node_executor in ethereum_nodes:
-                        node = node_executor.process
-                        node.send_signal(signal.SIGINT)
-
-                        try:
-                            node.wait(10)
-                        except TimeoutExpired:
-                            print_step("Ethereum node shutdown unclean, check log!", error=True)
-                            node.kill()
-
-                        if isinstance(node_executor.stdio, tuple):
-                            logfile = node_executor.stdio[1]
-                            logfile.flush()
-                            logfile.seek(0)
-                            append_report("Ethereum Node log output", logfile.read())
+            run_smoketest(
+                print_step=print_step,
+                args=args,
+                contract_addresses=contract_addresses,
+                token=token,
+            )
 
         append_report("Raiden Node stdout", raiden_stdout.getvalue())
 
