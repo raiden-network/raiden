@@ -1,9 +1,14 @@
 import json
+import contextlib
 import os
 import random
 import shutil
+import signal
 from contextlib import contextmanager
 from http import HTTPStatus
+from subprocess import TimeoutExpired
+from tempfile import mkdtemp
+from typing import IO, ContextManager
 
 import click
 import requests
@@ -17,8 +22,10 @@ from web3.middleware import geth_poa_middleware
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
+    DISCOVERY_DEFAULT_ROOM,
     EMPTY_ADDRESS,
     GENESIS_BLOCK_NUMBER,
+    PATH_FINDING_BROADCASTING_ROOM,
     SECONDS_PER_DAY,
     UINT256_MAX,
     Environment,
@@ -27,8 +34,10 @@ from raiden.constants import (
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
+
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.tests.utils.eth_node import (
     AccountDescription,
     EthNodeDescription,
@@ -39,6 +48,7 @@ from raiden.tests.utils.eth_node import (
     run_private_blockchain,
 )
 from raiden.tests.utils.smartcontracts import deploy_token
+from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
@@ -481,3 +491,83 @@ def run_smoketest(
         if app is not None:
             app.stop()
             app.raiden.greenlet.get()
+
+
+@contextmanager
+def setup_smoketest(
+    *,
+    eth_client: EthClient,
+    print_step: Callable,
+    free_port_generator: Iterator[Port],
+    debug: bool = False,
+    stdout: IO = None,
+    append_report: Callable = print,
+) -> Iterator[Dict[str, Any]]:
+    from raiden.tests.utils.smoketest import (
+        setup_raiden,
+        setup_matrix_for_smoketest,
+        setup_testchain_for_smoketest,
+    )
+
+    make_requests_insecure()
+
+    datadir = mkdtemp()
+    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
+        eth_client=eth_client,
+        print_step=print_step,
+        free_port_generator=free_port_generator,
+        base_datadir=datadir,
+        base_logdir=datadir,
+    )
+    matrix_manager: ContextManager[
+        List[Tuple[ParsedURL, HTTPExecutor]]
+    ] = setup_matrix_for_smoketest(
+        print_step=print_step,
+        free_port_generator=free_port_generator,
+        broadcast_rooms_aliases=[
+            make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
+            make_room_alias(NETWORKNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
+        ],
+    )
+
+    # Do not redirect the stdout on a debug session, otherwise the REPL
+    # will also be redirected
+    if debug:
+        stdout_manager = contextlib.nullcontext()
+    else:
+        assert stdout is not None
+        stdout_manager = contextlib.redirect_stdout(stdout)
+
+    with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
+        try:
+            smoketest_setup = setup_raiden(
+                matrix_server=server_urls[0][0],
+                print_step=print_step,
+                contracts_version=RAIDEN_CONTRACT_VERSION,
+                eth_client=testchain["eth_client"],
+                eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
+                web3=testchain["web3"],
+                base_datadir=testchain["base_datadir"],
+                keystore=testchain["keystore"],
+            )
+            smoketest_setup["node_executors"] = testchain["node_executors"]
+            smoketest_setup["matrix_server_url"] = server_urls[0][0]
+            ethereum_nodes = smoketest_setup["node_executors"]
+            assert all(ethereum_nodes)
+            yield smoketest_setup
+        finally:
+            if ethereum_nodes:
+                for node_executor in ethereum_nodes:
+                    node = node_executor.process
+                    if node is not None:
+                        node.send_signal(signal.SIGINT)
+                        try:
+                            node.wait(10)
+                        except TimeoutExpired:
+                            print_step("Ethereum node shutdown unclean, check log!", error=True)
+                            node.kill()
+                    if isinstance(node_executor.stdio, tuple):
+                        logfile = node_executor.stdio[1]
+                        logfile.flush()
+                        logfile.seek(0)
+                        append_report("Ethereum Node log output", logfile.read())

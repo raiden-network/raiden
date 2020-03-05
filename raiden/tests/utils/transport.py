@@ -16,6 +16,8 @@ from urllib.parse import urljoin, urlsplit
 import requests
 from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
+from requests.packages import urllib3
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from synapse.handlers.auth import AuthHandler
 from twisted.internet import defer
 
@@ -284,6 +286,7 @@ def make_requests_insecure():
     # Disable verification in requests by replacing the 'verify'
     # attribute with non-writable property that always returns `False`
     requests.Session.verify = property(lambda self: False, lambda self, val: None)  # type: ignore
+    urllib3.disable_warnings(InsecureRequestWarning)
 
 
 @contextmanager
