@@ -21,7 +21,7 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
-from raiden.tests.utils.transport import ParsedURL
+from raiden.utils.formatting import ParsedURL
 from raiden.utils.typing import (
     Address,
     BlockTimeout,

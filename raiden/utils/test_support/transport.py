@@ -24,11 +24,11 @@ from raiden.messages.abstract import Message
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
 from raiden.settings import MatrixTransportConfig
-from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.formatting import ParsedURL
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
+from raiden.utils.test_support import make_signer
 from raiden.utils.typing import Iterable, Port, Signature
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
@@ -39,7 +39,7 @@ SynapseConfig = Tuple[str, Path]
 SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
-def get_admin_credentials(server_name):
+def get_admin_credentials(server_name: str) -> Dict[str, str]:
     username = f"admin-{server_name}".replace(":", "-")
     credentials = {"username": username, "password": "securepassword"}
 
@@ -120,7 +120,7 @@ def setup_broadcast_room(servers: List[ParsedURL], broadcast_room_name: str) -> 
 class AdminUserAuthProvider:
     __version__ = "0.1"
 
-    def __init__(self, config, account_handler):
+    def __init__(self, config: Dict[str, Any], account_handler: Any):
         self.account_handler = account_handler
         self.log = logging.getLogger(__name__)
         self.credentials = config["admin_credentials"]
@@ -130,7 +130,7 @@ class AdminUserAuthProvider:
         assert "password" in self.credentials, msg
 
     @defer.inlineCallbacks
-    def check_password(self, user_id: str, password: str):
+    def check_password(self, user_id: str, password: str) -> Any:
         if not password:
             self.log.error("No password provided, user=%r", user_id)
             defer.returnValue(False)
@@ -152,7 +152,7 @@ class AdminUserAuthProvider:
         defer.returnValue(False)
 
     @staticmethod
-    def parse_config(config):
+    def parse_config(config: Dict[str, Any]) -> Dict[str, Any]:
         return config
 
 
@@ -162,14 +162,14 @@ class EthAuthProvider:
     _user_re = re.compile(r"^@(0x[0-9a-f]{40}):(.+)$")
     _password_re = re.compile(r"^0x[0-9a-f]{130}$")
 
-    def __init__(self, config, account_handler):
+    def __init__(self, config: Dict[str, Any], account_handler: Any):
         self.account_handler = account_handler
         self.config = config
         self.hs_hostname = self.account_handler.hs.hostname
         self.log = logging.getLogger(__name__)
 
     @defer.inlineCallbacks
-    def check_password(self, user_id, password):
+    def check_password(self, user_id: str, password: str) -> Any:
         if not password:
             self.log.error("no password provided, user=%r", user_id)
             defer.returnValue(False)
@@ -193,6 +193,7 @@ class EthAuthProvider:
             )
             defer.returnValue(False)
 
+        assert user_match
         user_addr_hex = user_match.group(1)
         user_addr = unhexlify(user_addr_hex[2:])
 
@@ -213,7 +214,7 @@ class EthAuthProvider:
         defer.returnValue(True)
 
     @staticmethod
-    def parse_config(config):
+    def parse_config(config: Dict[str, Any]) -> Dict[str, Any]:
         return config
 
 
@@ -232,7 +233,7 @@ class NoTLSFederationMonkeyPatchProvider:
     __version__ = "0.1"
 
     class NoTLSFactory:
-        def __new__(
+        def __new__(  # type: ignore
             cls, *args: List[Any], **kwargs: Dict[str, Any]  # pylint: disable=unused-argument
         ):
             return None
@@ -255,7 +256,7 @@ class NoTLSFederationMonkeyPatchProvider:
         return config
 
 
-def make_requests_insecure():
+def make_requests_insecure() -> None:
     """
     Prevent `requests` from performing TLS verification.
 

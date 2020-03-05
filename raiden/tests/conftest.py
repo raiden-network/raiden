@@ -41,7 +41,7 @@ from raiden.constants import (  # isort:skip
 from raiden.log_config import configure_logging  # isort:skip
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403  # isort:skip
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403  # isort:skip
-from raiden.tests.utils.transport import make_requests_insecure  # isort:skip
+from raiden.utils.test_support.transport import make_requests_insecure  # isort:skip
 from raiden.utils.cli import LogLevelConfigType  # isort:skip
 from raiden.utils.debugging import enable_gevent_monitoring_signal  # isort:skip
 from raiden.utils.ethereum_clients import is_supported_client  # isort:skip

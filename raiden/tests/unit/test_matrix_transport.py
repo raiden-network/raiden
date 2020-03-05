@@ -27,8 +27,8 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.tests.utils.factories import make_secret, make_signature, make_signer
-from raiden.tests.utils.transport import ignore_member_join, ignore_messages
 from raiden.utils.signer import recover
+from raiden.utils.test_support.transport import ignore_member_join, ignore_messages
 from raiden.utils.typing import MessageID
 
 

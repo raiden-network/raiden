@@ -7,8 +7,9 @@ from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.settings import DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT, MatrixTransportConfig
 from raiden.tests.fixtures.variables import TransportProtocol
-from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
+from raiden.utils.formatting import ParsedURL
 from raiden.utils.http import HTTPExecutor
+from raiden.utils.test_support.transport import generate_synapse_config, matrix_server_starter
 from raiden.utils.typing import Iterable, Optional, Tuple
 
 

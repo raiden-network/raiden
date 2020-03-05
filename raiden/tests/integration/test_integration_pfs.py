@@ -18,10 +18,10 @@ from raiden.tests.utils.transfer import (
     transfer,
     wait_assert,
 )
-from raiden.tests.utils.transport import TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.state import TransactionChannelDeposit
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
+from raiden.utils.test_support.transport import TestMatrixTransport
 from raiden.utils.typing import (
     List,
     LockedAmount,

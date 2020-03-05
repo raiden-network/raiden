@@ -20,15 +20,15 @@ from raiden.settings import (
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.tests.utils.transport import (
+from raiden.utils.formatting import to_hex_address
+from raiden.utils.http import HTTPExecutor
+from raiden.utils.signer import Signer
+from raiden.utils.test_support.transport import (
     get_admin_credentials,
     ignore_member_join,
     ignore_messages,
     new_client,
 )
-from raiden.utils.formatting import to_hex_address
-from raiden.utils.http import HTTPExecutor
-from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, List, Tuple
 
 # https://matrix.org/docs/spec/appendices#user-identifiers
@@ -283,7 +283,7 @@ def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
     # start transports to join broadcast rooms as normal users
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
-    # admin login using raiden.tests.utils.transport.AdminAuthProvider
+    # admin login using raiden.utils.test_support.transport.AdminAuthProvider
     admin_client = GMatrixClient(ignore_messages, ignore_member_join, local_matrix_servers[0])
     admin_client.login(admin_credentials["username"], admin_credentials["password"], sync=False)
     room_id = admin_client.join_room(broadcast_room_alias).room_id

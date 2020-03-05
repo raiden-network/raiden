@@ -27,11 +27,11 @@ from raiden.settings import (
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
-from raiden.tests.utils.transport import ParsedURL, TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
 from raiden.utils.formatting import to_checksum_address, to_hex_address
+from raiden.utils.test_support.transport import ParsedURL, TestMatrixTransport
 from raiden.utils.typing import (
     Address,
     BlockNumber,

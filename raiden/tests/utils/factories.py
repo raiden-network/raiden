@@ -1,5 +1,4 @@
 import random
-import string
 from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from hashlib import sha256
@@ -47,6 +46,7 @@ from raiden.utils.keys import privatekey_to_address
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
+from raiden.utils.test_support import make_bytes, make_privatekey_bin, make_signer
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     AdditionalHash,
@@ -96,6 +96,8 @@ GENERATE = "generate"
 
 K = TypeVar("K")
 V = TypeVar("V")
+
+make_signer = make_signer
 
 
 def _partial_dict(full_dict: Dict[K, V], *args) -> Dict[K, V]:
@@ -229,10 +231,6 @@ def make_message_identifier() -> MessageID:
     return MessageID(random.randint(0, UINT64_MAX))
 
 
-def make_bytes(length: int) -> bytes:
-    return bytes("".join(random.choice(string.printable) for _ in range(length)), encoding="utf-8")
-
-
 def make_32bytes() -> bytes:
     return make_bytes(32)
 
@@ -285,10 +283,6 @@ def make_block_hash() -> BlockHash:
     return BlockHash(make_bytes(32))
 
 
-def make_privatekey_bin() -> bin:
-    return make_bytes(32)
-
-
 def make_keccak_hash() -> Keccak256:
     return Keccak256(make_bytes(32))
 
@@ -335,11 +329,6 @@ def make_privkeys_ordered(count: int, reverse: bool = False) -> List[bytes]:
     """ Return ``count`` private keys ordered by their respective address """
     key_address_pairs = [make_privkey_address() for _ in range(count)]
     return [key for key, _ in sorted(key_address_pairs, key=itemgetter(1), reverse=reverse)]
-
-
-def make_signer() -> Signer:
-    privatekey = make_privatekey_bin()
-    return LocalSigner(privatekey)
 
 
 def make_hop_from_channel(channel_state: NettingChannelState = EMPTY) -> HopState:

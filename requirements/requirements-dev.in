@@ -40,6 +40,3 @@ coverage
 
 # Release
 bump2version
-
-# Test support
-matrix-synapse==1.5.1

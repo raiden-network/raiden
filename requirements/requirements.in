@@ -32,3 +32,6 @@ web3
 webargs
 typing_extensions
 objgraph
+
+# Smoketest support
+matrix-synapse==1.5.1

@@ -84,7 +84,7 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.tests.utils.transport import ParsedURL  # noqa: F401
+    from raiden.utils.formatting import ParsedURL  # noqa: F401
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_DEPOSIT_AMOUNT = TokenAmount(5)
@@ -286,7 +286,7 @@ def setup_matrix_for_smoketest(
     free_port_generator: Iterable[Port],
     broadcast_rooms_aliases: Iterable[str],
 ) -> Iterator[List[Tuple["ParsedURL", HTTPExecutor]]]:
-    from raiden.tests.utils.transport import matrix_server_starter
+    from raiden.utils.test_support.transport import matrix_server_starter
 
     print_step("Starting Matrix transport")
 
