@@ -173,7 +173,6 @@ commands:
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
-      - conditional-skip
       - config-path
       - restore_cache:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
@@ -277,7 +276,6 @@ jobs:
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
-      - conditional-skip
       - config-path
       - run:
           name: Validate CircleCI Config
