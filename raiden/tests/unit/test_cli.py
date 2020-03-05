@@ -43,10 +43,6 @@ def test_cli_version(cli_runner):
     assert result_expected_keys == result_json.keys()
     assert result.exit_code == 0
 
-    result = cli_runner(cli.run, ["--version"])
-    assert "Hint: Use '" in result.output and "version' instead" in result.output
-    assert result.exit_code == 0
-
 
 def mock_raises(exception):
     def f(*_, **__):

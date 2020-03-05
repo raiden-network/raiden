@@ -387,8 +387,8 @@ class GMatrixClient(MatrixClient):
                 Will be increased according to exponential backoff.
         """
         _bad_sync_timeout = bad_sync_timeout
-        self.should_listen = True
-        while self.should_listen:
+
+        while not self.stop_event.is_set():
             try:
                 # may be killed and raise exception from message_worker
                 self._sync(timeout_ms, latency_ms)
@@ -416,7 +416,7 @@ class GMatrixClient(MatrixClient):
                     node=node_address_from_userid(self.user_id),
                     user_id=self.user_id,
                 )
-                if self.should_listen:
+                if not self.stop_event.is_set():
                     gevent.sleep(_bad_sync_timeout)
                     _bad_sync_timeout = min(_bad_sync_timeout * 2, self.bad_sync_timeout_limit)
             except Exception as e:
@@ -441,8 +441,7 @@ class GMatrixClient(MatrixClient):
             exception_handler: Optional exception handler function which can
                 be used to handle exceptions in the caller thread.
         """
-        assert not self.should_listen and self.sync_worker is None, "Already running"
-        self.should_listen = True
+        assert self.sync_worker is None, "Already running"
         # Needs to be reset, otherwise we might run into problems when restarting
         self.last_sync = float("inf")
 
@@ -464,7 +463,6 @@ class GMatrixClient(MatrixClient):
         """ Kills sync_thread greenlet before joining it """
         # when stopping, `kill` will cause the `self.api.sync` call in _sync
         # to raise a connection error. This flag will ensure it exits gracefully then
-        self.should_listen = False
         self.stop_event.set()
 
         if self.sync_worker:
@@ -503,7 +501,6 @@ class GMatrixClient(MatrixClient):
     def stop(self) -> None:
         self.stop_listener_thread()
         self.sync_token = None
-        self.should_listen = False
         self.rooms: Dict[str, Room] = {}
         self._worker_pool.join(raise_error=True)
 
@@ -564,7 +561,7 @@ class GMatrixClient(MatrixClient):
         response = self.api.create_room(alias, is_public, invitees, **kwargs)
         return self._mkroom(response["room_id"])
 
-    def blocking_sync(self, timeout_ms: int, latency_ms: int, first_sync: bool) -> None:
+    def blocking_sync(self, timeout_ms: int, latency_ms: int) -> None:
         """Perform a /sync and process the response synchronously."""
         self._sync(timeout_ms=timeout_ms, latency_ms=latency_ms)
 
@@ -575,7 +572,7 @@ class GMatrixClient(MatrixClient):
 
         assert all(pending_queue), "Sync returned, None and empty are invalid values."
 
-        self._handle_responses(pending_queue, first_sync=first_sync)
+        self._handle_responses(pending_queue)
 
     def _sync(self, timeout_ms: int, latency_ms: int) -> None:
         """ Reimplements MatrixClient._sync """
@@ -696,13 +693,6 @@ class GMatrixClient(MatrixClient):
         while True:
             gevent.wait({response_queue, stop_event}, count=1)
 
-            if stop_event.is_set():
-                log.debug(
-                    "Handling worker exiting, stop is set",
-                    node=node_address_from_userid(self.user_id),
-                )
-                return
-
             # Iterating over the Queue and adding to a separated list to
             # implement delivery at-least-once semantics. At-most-once would
             # also be acceptable because of message retries, however it has the
@@ -724,6 +714,12 @@ class GMatrixClient(MatrixClient):
                 currently_queued_response_tokens.append(token)
                 currently_queued_responses.append(response)
 
+            if stop_event.is_set():
+                log.debug(
+                    "Handling worker exiting, stop is set",
+                    node=node_address_from_userid(self.user_id),
+                )
+                return
             time_before_processing = time.monotonic()
             self._handle_responses(currently_queued_responses)
             time_after_processing = time.monotonic()
@@ -743,18 +739,7 @@ class GMatrixClient(MatrixClient):
 
             self.sync_progress.set_processed(currently_queued_response_tokens)
 
-    def _handle_responses(
-        self, currently_queued_responses: List[JSONResponse], first_sync: bool = False
-    ) -> None:
-        # We must ignore the stop flag during first_sync
-        if not self.should_listen and not first_sync:
-            log.warning(
-                "Aborting handle response",
-                node=node_address_from_userid(self.user_id),
-                reason="Transport stopped",
-                user_id=self.user_id,
-            )
-            return
+    def _handle_responses(self, currently_queued_responses: List[JSONResponse]) -> None:
 
         all_messages: MatrixSyncMessages = []
         for response in currently_queued_responses:

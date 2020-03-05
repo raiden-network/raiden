@@ -380,12 +380,12 @@ class MatrixTransport(Runnable):
         self._started = False
         self._starting = False
 
-        self._stop_event = Event()
+        self._stop_event: Event = Event()
         self._stop_event.set()
         self._healthcheck_queue = NotifyingQueue()
 
         self._broadcast_event = Event()
-        self._prioritize_broadcast_messages = True
+        self._prioritize_broadcast_messages: bool = True
 
         self._invite_queue: List[Tuple[RoomID, dict]] = []
 
@@ -776,18 +776,14 @@ class MatrixTransport(Runnable):
         prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
-
         self._client.blocking_sync(
-            timeout_ms=self._config.sync_timeout,
-            latency_ms=self._config.sync_latency,
-            first_sync=True,
+            timeout_ms=self._config.sync_timeout, latency_ms=self._config.sync_latency
         )
-
         # Restore the filter to start fetching the messages
         self._client.set_sync_filter_id(prev_sync_filter_id)
 
         for room in self._client.rooms.values():
-            partner_address = self._extract_partner_addresses(room.get_joined_members())
+            partner_address = self._extract_addresses(room)
             # invalid rooms with multiple addresses should be left already
             msg = (
                 "rooms with multiple partners should be left instantly "
@@ -803,23 +799,13 @@ class MatrixTransport(Runnable):
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
 
-    def _extract_partner_addresses(self, members: List[User]) -> List[Address]:
-        assert self._raiden_service is not None, "_raiden_service not set"
-        joined_partner_addresses = set(validate_userid_signature(user) for user in members)
-
-        return [
-            address
-            for address in joined_partner_addresses
-            if address is not None and self._raiden_service.address != address
-        ]
-
     def _leave_unexpected_rooms(
         self, rooms_to_leave: List[Room], reason: str = "No reason given"
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
         for room in rooms_to_leave:
-            partners = self._extract_partner_addresses(room.get_joined_members())
+            partners = self._extract_addresses(room)
             self.log.warning(
                 "Leaving Room",
                 reason=reason,
@@ -872,6 +858,25 @@ class MatrixTransport(Runnable):
             for address in health_check_list
         )
         gevent.joinall(greenlets, raise_error=True)
+
+    def _extract_addresses(self, room: Room) -> List[Address]:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        joined_addresses = set(
+            validate_userid_signature(user) for user in room.get_joined_members()
+        )
+
+        return [address for address in joined_addresses if address != self._raiden_service.address]
+
+    def _has_multiple_partner_addresses(self, room: Room) -> bool:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        joined_addresses = set()
+        for user in room.get_joined_members():
+            address = validate_userid_signature(user)
+            if address != self._raiden_service.address:
+                joined_addresses.add(address)
+                if len(joined_addresses) > 1:
+                    return True
+        return False
 
     def _handle_invite(self, room_id: RoomID, state: dict) -> None:
         """Handle an invite request.
@@ -981,9 +986,7 @@ class MatrixTransport(Runnable):
         if self._is_broadcast_room(room):
             raise AssertionError("Broadcast room events should be filtered in syncs")
 
-        partner_addresses = self._extract_partner_addresses(room.get_joined_members())
-
-        if len(partner_addresses) > 1:
+        if self._has_multiple_partner_addresses(room):
             self._leave_unexpected_rooms(
                 [room], "Users from more than one address joined the room"
             )

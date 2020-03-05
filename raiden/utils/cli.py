@@ -6,11 +6,11 @@ from enum import EnumMeta
 from itertools import groupby
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Union
 
 import click
 import requests
-from click import BadParameter, Choice, MissingParameter
+from click import Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
