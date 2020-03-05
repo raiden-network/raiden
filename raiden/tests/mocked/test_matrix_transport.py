@@ -267,7 +267,6 @@ def test_leave_after_member_join(mock_matrix, room_with_members):
     user = create_new_users_for_address(make_signer())[0]
     room.client = mock_matrix._client
     mock_matrix._client.rooms[room.room_id] = room
-    mock_matrix._client.should_listen = True
 
     # response showing that user from another address joins the room
     response_list = list()

@@ -152,12 +152,8 @@ def test_assumption_user_goes_offline_if_sync_is_not_called_within_35s(local_mat
     client3, signer3 = create_logged_in_client(local_matrix_servers[0])
     client3.add_presence_listener(tracker3.presence_listener)
 
-    client1.blocking_sync(
-        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
-    client2.blocking_sync(
-        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
+    client1.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
+    client2.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
 
     msg = (
         "The client called sync but the nodes don't share a room, each node "
@@ -177,12 +173,8 @@ def test_assumption_user_goes_offline_if_sync_is_not_called_within_35s(local_mat
     client2.join_room(room.aliases[0])
     client3.join_room(room.aliases[0])
 
-    client1.blocking_sync(
-        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
-    client2.blocking_sync(
-        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
+    client1.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
+    client2.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
 
     msg = "All clients share a room, presence information must be available"
     assert tracker1.address_presence[signer1.address] == UserPresence.ONLINE, msg
@@ -199,9 +191,7 @@ def test_assumption_user_goes_offline_if_sync_is_not_called_within_35s(local_mat
     gevent.sleep(PRESENCE_TIMEOUT + CI_LATENCY)
 
     # Do a new sync, this time client1 must change status to offline
-    client2.blocking_sync(
-        timeout_ms=PRESENCE_TIMEOUT, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
+    client2.blocking_sync(timeout_ms=PRESENCE_TIMEOUT, latency_ms=SHORT_TIMEOUT_MS)
     assert tracker2.address_presence[signer1.address] == UserPresence.OFFLINE, msg
     assert tracker2.address_presence[signer2.address] == UserPresence.ONLINE, msg
     assert tracker2.address_presence[signer3.address] == UserPresence.OFFLINE, msg
@@ -236,12 +226,8 @@ def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
     room: Room = client1.create_room("test", is_public=True)
     client2.join_room(room.aliases[0])
 
-    client2.blocking_sync(
-        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
-    client1.blocking_sync(
-        timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-    )
+    client2.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
+    client1.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
 
     def long_polling():
         timeout_secs = (LONG_TIMEOUT_MS - 100) / 1_000
@@ -258,9 +244,7 @@ def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
         while long_running:
             gevent.sleep(1)
 
-            client2.blocking_sync(
-                timeout_ms=PRESENCE_TIMEOUT, latency_ms=SHORT_TIMEOUT_MS, first_sync=True
-            )
+            client2.blocking_sync(timeout_ms=PRESENCE_TIMEOUT, latency_ms=SHORT_TIMEOUT_MS)
             msg = "Client1 should be online while the sync is blocking"
             assert tracker2.address_presence[signer1.address] == UserPresence.ONLINE, msg
 
