@@ -214,6 +214,12 @@ def gas_price_for_fast_transaction(web3: Web3) -> int:
     return price
 
 
+class TransactionSlotState(Enum):
+    allocated = "allocated"
+    sent = "sent"
+    rejected = "rejected"
+
+
 class ClientErrorInspectResult(Enum):
     """Represents the action to follow after inspecting a client exception"""
 
@@ -753,10 +759,63 @@ class JSONRPCClient:
 
         return self.blockhash_from_blocknumber(confirmed_block_number)
 
-    def allocate_next_slot(
-        self, transaction: Union[TransactionEstimated, EthTransfer]
-    ) -> TransactionSlot:
+    def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
+        """Given a block number, query the chain to get its corresponding block hash"""
+        block = self.get_block(block_number)
+        return BlockHash(bytes(block["hash"]))
 
+    def can_query_state_for_block(self, block_identifier: BlockSpecification) -> bool:
+        """
+        Returns if the provided block identifier is safe enough to query chain
+        state for. If it's close to the state pruning blocks then state should
+        not be queried.
+        More info: https://github.com/raiden-network/raiden/issues/3566.
+        """
+        latest_block_number = self.block_number()
+        preconditions_block = self.web3.eth.getBlock(block_identifier)
+        preconditions_block_number = int(preconditions_block["number"])
+        difference = latest_block_number - preconditions_block_number
+        return difference < NO_STATE_QUERY_AFTER_BLOCKS
+
+    def balance(self, account: Address) -> TokenAmount:
+        """ Return the balance of the account of the given address. """
+        return self.web3.eth.getBalance(account, "pending")
+
+    def parity_get_pending_transaction_hash_by_nonce(
+        self, address: AddressHex, nonce: Nonce
+    ) -> Optional[TransactionHash]:
+        """Queries the local parity transaction pool and searches for a transaction.
+
+        Checks the local tx pool for a transaction from a particular address and for
+        a given nonce. If it exists it returns the transaction hash.
+        """
+        assert self.eth_node is EthClient.PARITY
+        # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
+        transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
+        log.debug("RETURNED TRANSACTIONS", transactions=transactions)
+        for tx in transactions:
+            address_match = tx["from"] == address
+            if address_match and int(tx["nonce"], 16) == nonce:
+                return tx["hash"]
+        return None
+
+    def estimate_gas(
+        self,
+        contract: Contract,
+        function: str,
+        extra_log_details: Dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[TransactionEstimated]:
+        pending = TransactionPending(
+            from_address=self.address,
+            data=SmartContractCall(contract, function, args, kwargs, value=0),
+            eth_node=self.eth_node,
+            extra_log_details=extra_log_details,
+        )
+        return pending.estimate_gas(self.get_checking_block())
+
+    def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionHash:
         # Exposing the JSONRPCClient with a nice name for the instance closure.
         client = self
 
@@ -785,7 +844,7 @@ class JSONRPCClient:
             # check for a duplicate transaction with the same nonce won't work due to
             # race conditions.
             _sent_lock: Semaphore = field(init=False, default_factory=Semaphore)
-            _sent: bool = field(init=False, default=False)
+            _sent: TransactionSlotState = field(init=False, default=TransactionSlotState.allocated)
 
             def __post_init__(self) -> None:
                 self.extra_log_details.setdefault("token", str(uuid4()))
@@ -815,10 +874,11 @@ class JSONRPCClient:
                 """ Locally sign the transaction and send it to the network. """
 
                 with self._sent_lock:
-                    if self._sent:
+                    if self._sent is not TransactionSlotState.allocated:
                         raise RaidenUnrecoverableError(
-                            f"A transaction for this slot has been sent already! "
-                            f"Reusing the nonce is a synchronization problem."
+                            f"A transaction for this slot has been already sent "
+                            f"or tried! Reusing the nonce is a synchronization "
+                            f"problem."
                         )
 
                     log_details = self.to_log_details()
@@ -877,7 +937,10 @@ class JSONRPCClient:
 
                     try:
                         tx_hash = client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+                        self._sent = TransactionSlotState.sent
                     except ValueError as e:
+                        self._sent = TransactionSlotState.rejected
+
                         action = inspect_client_error(e, self.eth_node)
 
                         if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
@@ -918,18 +981,24 @@ class JSONRPCClient:
 
                     log.debug("Transaction sent", **log_details, tx_hash=encode_hex(tx_hash))
 
-                    self._sent = True
-
                     return TransactionHash(tx_hash)
 
             def __del__(self) -> None:
-                if not self._sent:
+                not_sent = self._sent is TransactionSlotState.allocated
+
+                rejected = self._sent is TransactionSlotState.rejected
+                if not_sent or rejected:
+                    if not_sent:
+                        msg = f"Transaction with nonce {self.nonce} was sent!"
+                    else:
+                        msg = f"Transaction with nonce {self.nonce} was rejected!"
+
                     log_details = self.to_log_details()
-                    log.critical("Transaction not sent!", **log_details)
+                    log.critical(msg, **log_details)
+
                     raise RaidenUnrecoverableError(
-                        f"Transaction nonce {self.nonce} was not used! This "
-                        f"will result in nonce synchronization problems. "
-                        f"{log_details}."
+                        f"{msg} This will result in nonce synchronization "
+                        f"problems. {log_details}."
                     )
 
         with self._nonce_lock:
@@ -953,68 +1022,19 @@ class JSONRPCClient:
                     gas_price=transaction.gas_price,
                     nonce=self._available_nonce,
                 )
+
+            tx_hash = slot.send_transaction()
+
+            # Increase the `nonce` only after sending the transaction. This is
+            # necessary because the send itself can fail, e.g. because of an
+            # invalid value which leads to a `ValueError` or if the received
+            # node rejects the transaction. When this happens, the
+            # `_available_nonce` must not be incremented, since that may lead
+            # to holes in the account's transactions, effectivelly stalling all
+            # transactions until the spare nonce is used.
             self._available_nonce = Nonce(self._available_nonce + 1)
-            return slot
 
-    def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
-        """Given a block number, query the chain to get its corresponding block hash"""
-        block = self.get_block(block_number)
-        return BlockHash(bytes(block["hash"]))
-
-    def can_query_state_for_block(self, block_identifier: BlockSpecification) -> bool:
-        """
-        Returns if the provided block identifier is safe enough to query chain
-        state for. If it's close to the state pruning blocks then state should
-        not be queried.
-        More info: https://github.com/raiden-network/raiden/issues/3566.
-        """
-        latest_block_number = self.block_number()
-        preconditions_block = self.web3.eth.getBlock(block_identifier)
-        preconditions_block_number = int(preconditions_block["number"])
-        difference = latest_block_number - preconditions_block_number
-        return difference < NO_STATE_QUERY_AFTER_BLOCKS
-
-    def balance(self, account: Address) -> TokenAmount:
-        """ Return the balance of the account of the given address. """
-        return self.web3.eth.getBalance(account, "pending")
-
-    def parity_get_pending_transaction_hash_by_nonce(
-        self, address: AddressHex, nonce: Nonce
-    ) -> Optional[TransactionHash]:
-        """Queries the local parity transaction pool and searches for a transaction.
-
-        Checks the local tx pool for a transaction from a particular address and for
-        a given nonce. If it exists it returns the transaction hash.
-        """
-        assert self.eth_node is EthClient.PARITY
-        # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
-        transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
-        log.debug("RETURNED TRANSACTIONS", transactions=transactions)
-        for tx in transactions:
-            address_match = tx["from"] == address
-            if address_match and int(tx["nonce"], 16) == nonce:
-                return tx["hash"]
-        return None
-
-    def estimate_gas(
-        self,
-        contract: Contract,
-        function: str,
-        extra_log_details: Dict[str, Any],
-        *args: Any,
-        **kwargs: Any,
-    ) -> Optional[TransactionEstimated]:
-        pending = TransactionPending(
-            from_address=self.address,
-            data=SmartContractCall(contract, function, args, kwargs, value=0),
-            eth_node=self.eth_node,
-            extra_log_details=extra_log_details,
-        )
-        return pending.estimate_gas(self.get_checking_block())
-
-    def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionHash:
-        transaction_ready = self.allocate_next_slot(transaction)
-        return transaction_ready.send_transaction()
+            return tx_hash
 
     def new_contract_proxy(self, abi: ABI, contract_address: Address) -> Contract:
         return self.web3.eth.contract(abi=abi, address=contract_address)
