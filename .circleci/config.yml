@@ -344,6 +344,38 @@ jobs:
           path: /tmp/smoketest.log
           destination: smoketest-logs
 
+  scenario-player-integration-test:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
+    executor:
+      name: docker
+      py-version: << parameters.py-version >>
+
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: Checkout Scenario Player
+          command: |
+            git clone https://github.com/raiden-network/scenario-player.git
+      - run:
+          name: Install dependencies
+          command: |
+            make -C scenario-player install-dev
+      - run:
+          name: Run Unit Tests
+          command: |
+            make -C scenario-player unit-tests
+# TODO: enable after #491 https://github.com/raiden-network/scenario-player/issues/491
+#      - run:
+#          name: Run Smoketest
+#          command: |
+#            make -C scenario-player smoketest
+
   test:
     parameters:
       <<: *parameter-templates
@@ -574,7 +606,6 @@ jobs:
             git push --follow-tags
             popd
 
-
   deploy-digitalocean:
     parameters:
       py-version:
@@ -701,6 +732,12 @@ workflows:
           requires:
             - lint-3.7
 
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
+          requires:
+            - lint-3.7
+
       - test:
           name: test-unit-3.7
           py-version: "3.7"
@@ -735,6 +772,7 @@ workflows:
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
@@ -751,6 +789,7 @@ workflows:
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
@@ -914,6 +953,12 @@ workflows:
           requires:
             - lint-3.7
 
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
+          requires:
+            - lint-3.7
+
       - test:
           name: test-unit-3.7
           py-version: "3.7"
@@ -948,9 +993,11 @@ workflows:
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
+
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -964,6 +1011,7 @@ workflows:
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
