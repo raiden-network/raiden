@@ -90,8 +90,9 @@ def run_test_check_json_rpc_geth():
     # Test that patch version upgrades are not triggering the non-supported check
     g7, _, v7 = is_supported_client("Geth/v1.9.3-unstable-e9295163/linux-amd64/go1.9.1")
     g8, _, v8 = is_supported_client("Geth/v1.9.0-stable-52f24617/linux-amd64/go1.12.7")
+    g9, _, v9 = is_supported_client("Geth/v1.9.0-unstable-3d3e83ec-20190611/linux-amd64/go1.12.5")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3, g7, g8])
+    assert all([g1, g2, g3, g7, g8, g9])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.3"
     assert v2 == "1.7.2"
@@ -101,6 +102,7 @@ def run_test_check_json_rpc_geth():
     assert v6 == "999.999.999"
     assert v7 == "1.9.3"
     assert v8 == "1.9.0"
+    assert v9 == "1.9.0"
 
     b1, client, v1 = is_supported_client("Geth/v1.7.1-unstable-e9295163/linux-amd64/go1.9.1")
     b2, _, v2 = is_supported_client("Geth/v0.7.1-unstable-e9295163/linux-amd64/go1.9.1")

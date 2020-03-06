@@ -56,8 +56,11 @@ from raiden.utils.typing import (
     CompiledContract,
     Nonce,
     PrivateKey,
+    T_Address,
+    T_Nonce,
     TokenAmount,
     TransactionHash,
+    typecheck,
 )
 from raiden_contracts.utils.type_aliases import ChainID
 
@@ -484,6 +487,11 @@ class EthTransfer:
     value: int
     gas_price: int
 
+    def __post_init__(self) -> None:
+        typecheck(self.to_address, T_Address)
+        typecheck(self.gas_price, int)
+        typecheck(self.value, int)
+
     def to_log_details(self) -> Dict[str, Any]:
         return {"to_address": to_checksum_address(self.to_address), "value": self.value}
 
@@ -495,6 +503,11 @@ class SmartContractCall:
     args: Iterable[Any]
     kwargs: Dict[str, Any]
     value: int
+
+    def __post_init__(self) -> None:
+        typecheck(self.contract, Contract)
+        typecheck(self.function, str)
+        typecheck(self.value, int)
 
     def to_log_details(self) -> Dict[str, Any]:
         return {
@@ -525,6 +538,9 @@ class TransactionPending:
     def __post_init__(self) -> None:
         log.debug("Transaction created", **self.to_log_details())
         self.extra_log_details.setdefault("token", str(uuid4()))
+
+        typecheck(self.from_address, T_Address)
+        typecheck(self.data, SmartContractCall)
 
     def to_log_details(self) -> Dict[str, Any]:
         log_details = self.data.to_log_details()
@@ -617,6 +633,11 @@ class TransactionEstimated:
 
     def __post_init__(self) -> None:
         self.extra_log_details.setdefault("token", str(uuid4()))
+
+        typecheck(self.from_address, T_Address)
+        typecheck(self.data, (SmartContractCall, ByteCode))
+        typecheck(self.estimated_gas, int)
+        typecheck(self.gas_price, int)
 
     def to_log_details(self) -> Dict[str, Any]:
         log_details = self.data.to_log_details()
@@ -769,11 +790,18 @@ class JSONRPCClient:
             def __post_init__(self) -> None:
                 self.extra_log_details.setdefault("token", str(uuid4()))
 
+                typecheck(self.from_address, T_Address)
+                typecheck(self.data, (SmartContractCall, ByteCode, EthTransfer))
+                typecheck(self.startgas, int)
+                typecheck(self.gas_price, int)
+                typecheck(self.nonce, T_Nonce)
+
             def to_log_details(self) -> Dict[str, Any]:
                 log_details = self.data.to_log_details()
                 log_details.update(self.extra_log_details)
                 log_details.update(
                     {
+                        "node": to_checksum_address(client.address),
                         "from_address": to_checksum_address(self.from_address),
                         "eth_node": self.eth_node,
                         "startgas": self.startgas,
@@ -794,7 +822,6 @@ class JSONRPCClient:
                         )
 
                     log_details = self.to_log_details()
-                    log_details["node"] = to_checksum_address(client.address)
 
                     if isinstance(self.data, SmartContractCall):
                         function_call = self.data
@@ -897,9 +924,12 @@ class JSONRPCClient:
 
             def __del__(self) -> None:
                 if not self._sent:
+                    log_details = self.to_log_details()
+                    log.critical("Transaction not sent!", **log_details)
                     raise RaidenUnrecoverableError(
-                        f"Transaction nonce {self.nonce} was not used! "
-                        f"This will result in nonce synchronization problems."
+                        f"Transaction nonce {self.nonce} was not used! This "
+                        f"will result in nonce synchronization problems. "
+                        f"{log_details}."
                     )
 
         with self._nonce_lock:
