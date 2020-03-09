@@ -507,7 +507,7 @@ def test_retry_queue_does_not_resend_removed_messages(
     )
     retry_queue.enqueue(queue_identifier, [message])
 
-    # TODO: Fix the code bellow, the types are not matching.
+    # TODO: Fix the code below, the types are not matching.
     mock_matrix._queueids_to_queues[queue_identifier] = [message]  # type: ignore
 
     with retry_queue._lock:
