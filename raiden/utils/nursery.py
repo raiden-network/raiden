@@ -9,7 +9,7 @@ import structlog
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 from gevent.lock import RLock
-from gevent.subprocess import Popen
+from gevent.subprocess import Popen, TimeoutExpired
 
 log = structlog.get_logger(__name__)
 STATUS_CODE_FOR_SUCCESS = 0
@@ -38,7 +38,8 @@ class Janitor:
       have to be killed in order for a proper clean up to happen.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, stop_timeout: float = 20) -> None:
+        self.stop_timeout = stop_timeout
         self._stop = Event()
         self._processes: Set[Popen] = set()
 
@@ -72,6 +73,8 @@ class Janitor:
         class ProcessNursery(Nursery):
             @staticmethod
             def exec_under_watch(process_args: List[str], **kwargs: Any) -> Optional[Popen]:
+                assert not kwargs.get("shell", False), "Janitor does not work with shell=True"
+
                 def subprocess_stopped(result: AsyncResult) -> None:
                     with janitor._processes_lock:
                         # Processes are expected to quit while the nursery is
@@ -146,6 +149,19 @@ class Janitor:
             for p in self._processes:
                 p.send_signal(signal.SIGINT)
 
-            for p in self._processes:
-                if p.wait() != STATUS_CODE_FOR_SUCCESS:
-                    print("Process did not exit cleanly", p.communicate())
+            try:
+                for p in self._processes:
+                    exit_code = p.wait(timeout=self.stop_timeout)
+                    if exit_code != STATUS_CODE_FOR_SUCCESS:
+                        log.warning(
+                            "Process did not exit cleanly",
+                            exit_code=exit_code,
+                            communicate=p.communicate(),
+                        )
+            except TimeoutExpired:
+                log.warning(
+                    "Process did not stop in time. Sending SIGKILL to all remaining processes!",
+                    command=p.args,
+                )
+                for p in self._processes:
+                    p.send_signal(signal.SIGKILL)
