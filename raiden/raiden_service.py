@@ -111,6 +111,7 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     BlockNumber,
     BlockTimeout,
@@ -128,6 +129,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
+    typecheck,
 )
 from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
@@ -475,8 +477,12 @@ class RaidenService(Runnable):
             channel state and is necessary to reject new messages for closed
             channels.
         """
-        assert self.ready_to_process_events, f"Event processing disable. node:{self!r}"
-        assert self.blockchain_events
+        assert self.ready_to_process_events, f"Event processing disabled. node:{self!r}"
+        msg = (
+            "`self.blockchain_events` is `None`. "
+            "Seems like `_synchronize_with_blockchain` wasn't called before `_start_transport`."
+        )
+        assert self.blockchain_events is not None, msg
 
         health_check_list = self._get_initial_health_check_list(chain_state)
         log.debug(
@@ -865,7 +871,7 @@ class RaidenService(Runnable):
             This is spawning a new greenlet for /each/ transaction. It's
             therefore /required/ that there is *NO* order among these.
         """
-        assert isinstance(chain_state, ChainState)
+        typecheck(chain_state, ChainState)
 
         non_transaction_events = list()
         greenlets: List[Greenlet] = list()
@@ -1216,7 +1222,7 @@ class RaidenService(Runnable):
                     balance_proof = channel.partner_state.balance_proof
                     if not balance_proof:
                         continue
-                    assert isinstance(balance_proof, BalanceProofSignedState)
+                    assert isinstance(balance_proof, BalanceProofSignedState), MYPY_ANNOTATION
                     current_balance_proofs.append(balance_proof)
 
         log.debug(

@@ -125,7 +125,8 @@ class AccountManager:
             data = json.load(data_file)
 
         acc = Account(data, password, self.accounts[address])
-        assert acc.privkey is not None
+
+        assert acc.privkey is not None, f"Private key of account ({address}) not known."
         return acc.privkey
 
 
@@ -185,7 +186,7 @@ class Account:
         if "address" in self.keystore:
             self._address = Address(decode_hex(self.keystore["address"]))
         elif not self.locked:
-            assert self.privkey
+            assert self.privkey is not None, "`privkey` not set, maybe call `unlock` before."
             self._address = privatekey_to_address(self.privkey)
 
     @property
@@ -199,7 +200,7 @@ class Account:
     def pubkey(self) -> Optional[PublicKey]:
         """The account's public key or `None` if the account is locked"""
         if not self.locked:
-            assert self.privkey is not None
+            assert self.privkey is not None, "`privkey` not set, maybe call `unlock` before."
             return privatekey_to_publickey(self.privkey)
 
         return None

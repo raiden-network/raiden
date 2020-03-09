@@ -34,7 +34,7 @@ def channel_state_until_state_change(
     raiden: "RaidenService",
     canonical_identifier: CanonicalIdentifier,
     state_change_identifier: StateChangeID,
-) -> Optional[NettingChannelState]:  # pragma: no unittest
+) -> NettingChannelState:  # pragma: no unittest
     """ Go through WAL state changes until a certain balance hash is found. """
     assert raiden.wal, "Raiden has not been started yet"
 
@@ -54,7 +54,7 @@ def channel_state_until_state_change(
         chain_state=chain_state, canonical_identifier=canonical_identifier
     )
 
-    if not channel_state:
+    if channel_state is None:
         raise RaidenUnrecoverableError(
             f"Channel was not found before state_change {state_change_identifier}"
         )

@@ -81,7 +81,8 @@ def update_monitoring_service_from_balance_proof(
     )
     assert channel_state, msg
 
-    assert raiden.user_deposit is not None
+    msg = f"Monitoring is enabled but the `UserDeposit` contract is None."
+    assert raiden.user_deposit is not None, msg
     rei_balance = raiden.user_deposit.effective_balance(raiden.address, "latest")
     if rei_balance < MONITORING_REWARD:
         rdn_balance = to_rdn(rei_balance)
