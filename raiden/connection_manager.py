@@ -104,8 +104,13 @@ class ConnectionManager:  # pragma: no unittest
             chain_state, token_network_address
         )
 
-        assert token_network_state
-        assert token_network_registry
+        msg = f"Token network for address {to_checksum_address(token_network_address)} not found."
+        assert token_network_state, msg
+        msg = (
+            f"Token network registry for token network address "
+            f"{to_checksum_address(token_network_address)} not found."
+        )
+        assert token_network_registry, msg
 
         # TODO:
         # - Add timeout for transaction polling, used to overwrite the RaidenAPI

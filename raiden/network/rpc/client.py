@@ -48,6 +48,7 @@ from raiden.utils.keys import privatekey_to_address
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     ABI,
+    MYPY_ANNOTATION,
     Address,
     AddressHex,
     BlockHash,
@@ -170,7 +171,7 @@ def check_address_has_code(
 ) -> None:
     """ Checks that the given address contains code. """
     if is_bytes(given_block_identifier):
-        assert isinstance(given_block_identifier, bytes)
+        assert isinstance(given_block_identifier, bytes), MYPY_ANNOTATION
         block_hash = encode_hex(given_block_identifier)
         given_block_identifier = client.web3.eth.getBlock(block_hash).number
 
@@ -800,7 +801,11 @@ class JSONRPCClient:
         Checks the local tx pool for a transaction from a particular address and for
         a given nonce. If it exists it returns the transaction hash.
         """
-        assert self.eth_node is EthClient.PARITY
+        msg = {
+            "`parity` specific function must only be called when the client is parity. "
+            f"Client was {self.eth_node}."
+        }
+        assert self.eth_node is EthClient.PARITY, msg
         # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
         transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
         log.debug("RETURNED TRANSACTIONS", transactions=transactions)
@@ -1171,7 +1176,7 @@ class JSONRPCClient:
             is_transaction_mined = tx_receipt and tx_receipt.get("blockNumber") is not None
 
             if is_transaction_mined:
-                assert tx_receipt is not None
+                assert tx_receipt is not None, MYPY_ANNOTATION
                 confirmation_block = (
                     tx_receipt["blockNumber"] + self.default_block_num_confirmations
                 )

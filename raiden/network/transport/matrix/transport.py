@@ -142,7 +142,11 @@ class _RetryQueue(Runnable):
 
     def enqueue(self, queue_identifier: QueueIdentifier, messages: List[Message]) -> None:
         """ Enqueue a message to be sent, and notify main loop """
-        assert queue_identifier.recipient == self.receiver
+        msg = (
+            f"queue_identifier.recipient ({to_checksum_address(queue_identifier.recipient)}) "
+            f" must match self.receiver ({to_checksum_address(self.receiver)})."
+        )
+        assert queue_identifier.recipient == self.receiver, msg
 
         with self._lock:
             timeout_generator = timeout_exponential_backoff(
@@ -471,11 +475,11 @@ class MatrixTransport(Runnable):
         self._client.start_listener_thread(
             timeout_ms=self._config.sync_timeout, latency_ms=self._config.sync_latency
         )
-        assert isinstance(self._client.sync_worker, gevent.Greenlet)
+        assert isinstance(self._client.sync_worker, gevent.Greenlet), MYPY_ANNOTATION
         self._client.sync_worker.link_exception(self.on_error)
         self._client.sync_worker.link_value(on_success)
 
-        assert isinstance(self._client.message_worker, gevent.Greenlet)
+        assert isinstance(self._client.message_worker, gevent.Greenlet), MYPY_ANNOTATION
         self._client.message_worker.link_exception(self.on_error)
         self._client.message_worker.link_value(on_success)
         self.greenlets = [self._client.sync_worker, self._client.message_worker]
