@@ -250,12 +250,7 @@ class UserDeposit:
             token_address=token_address, block_identifier=given_block_identifier
         )
 
-        # To prevent concurrent transactions for token transfers where it is unknown if
-        # we have enough capacity for both, we acquire the lock
-        # for the token proxy. Example: A user deposit and a channel deposit
-        # for the same token.
-        with self.deposit_lock, token.token_lock:
-            # check preconditions
+        with self.deposit_lock:
             try:
                 previous_total_deposit = self.get_total_deposit(
                     address=beneficiary, block_identifier=given_block_identifier
@@ -341,13 +336,20 @@ class UserDeposit:
         amount_to_deposit: TokenAmount,
         log_details: Dict[str, Any],
     ) -> None:
-        token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+        # Make sure another `approve` transactions is not sent before the
+        # deposit, otherwise the value would be overwritten.
+        transaction_hash = None
+        with token.token_lock:
+            token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
-        estimated_transaction = self.client.estimate_gas(
-            self.proxy, "deposit", log_details, beneficiary, total_deposit
-        )
+            estimated_transaction = self.client.estimate_gas(
+                self.proxy, "deposit", log_details, beneficiary, total_deposit
+            )
 
-        if estimated_transaction is None:
+            if estimated_transaction is not None:
+                transaction_hash = self.client.transact(estimated_transaction)
+
+        if transaction_hash is None:
             failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
@@ -404,7 +406,6 @@ class UserDeposit:
             raise RaidenRecoverableError("Deposit failed of unknown reason")
 
         else:
-            transaction_hash = self.client.transact(estimated_transaction)
             receipt = self.client.poll_transaction(transaction_hash)
 
             if check_transaction_threw(receipt=receipt):
