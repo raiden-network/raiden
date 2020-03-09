@@ -984,22 +984,20 @@ class JSONRPCClient:
                     return TransactionHash(tx_hash)
 
             def __del__(self) -> None:
-                not_sent = self._sent is TransactionSlotState.allocated
+                if self._sent is TransactionSlotState.sent:
+                    return
 
-                rejected = self._sent is TransactionSlotState.rejected
-                if not_sent or rejected:
-                    if not_sent:
-                        msg = f"Transaction with nonce {self.nonce} was sent!"
-                    else:
-                        msg = f"Transaction with nonce {self.nonce} was rejected!"
+                if self._sent is TransactionSlotState.rejected:
+                    msg = f"Transaction with nonce {self.nonce} was rejected!"
+                else:
+                    msg = f"Transaction with nonce {self.nonce} was sent!"
 
-                    log_details = self.to_log_details()
-                    log.critical(msg, **log_details)
+                log_details = self.to_log_details()
+                log.critical(msg, **log_details)
 
-                    raise RaidenUnrecoverableError(
-                        f"{msg} This will result in nonce synchronization "
-                        f"problems. {log_details}."
-                    )
+                raise RaidenUnrecoverableError(
+                    f"{msg} This will result in nonce synchronization " f"problems. {log_details}."
+                )
 
         with self._nonce_lock:
             if isinstance(transaction, EthTransfer):
