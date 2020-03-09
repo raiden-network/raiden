@@ -148,6 +148,18 @@ def geth_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     return web3.eth.getTransactionCount(address, "pending")
 
 
+def discover_next_available_nonce(web3: Web3, eth_node: EthClient, address: Address) -> Nonce:
+    if eth_node is EthClient.PARITY:
+        parity_assert_rpc_interfaces(web3)
+        available_nonce = parity_discover_next_available_nonce(web3, address)
+
+    elif eth_node is EthClient.GETH:
+        geth_assert_rpc_interfaces(web3)
+        available_nonce = geth_discover_next_available_nonce(web3, address)
+
+    return available_nonce
+
+
 def check_address_has_code(
     client: "JSONRPCClient",
     address: Address,
@@ -703,18 +715,11 @@ class JSONRPCClient:
         version = web3.clientVersion
         supported, eth_node, _ = is_supported_client(version)
 
-        if not supported:
+        if not supported or eth_node is None:
             raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
 
         address = privatekey_to_address(privkey)
-
-        if eth_node is EthClient.PARITY:
-            parity_assert_rpc_interfaces(web3)
-            available_nonce = parity_discover_next_available_nonce(web3, address)
-
-        elif eth_node is EthClient.GETH:
-            geth_assert_rpc_interfaces(web3)
-            available_nonce = geth_discover_next_available_nonce(web3, address)
+        available_nonce = discover_next_available_nonce(web3, eth_node, address)
 
         self.eth_node = eth_node
         self.privkey = privkey
