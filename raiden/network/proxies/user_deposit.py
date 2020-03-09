@@ -19,8 +19,11 @@ from raiden.utils.typing import (
     Dict,
     MonitoringServiceAddress,
     OneToNAddress,
+    Optional,
     TokenAddress,
     TokenAmount,
+    TransactionHash,
+    Tuple,
     UserDepositAddress,
 )
 from raiden_contracts.constants import (
@@ -236,87 +239,6 @@ class UserDeposit:
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
 
-    def approve_and_deposit(
-        self,
-        beneficiary: Address,
-        total_deposit: TokenAmount,
-        given_block_identifier: BlockSpecification,
-    ) -> None:
-        """ Deposit provided amount into the user-deposit contract
-        to the beneficiary's account. """
-
-        token_address = self.token_address(given_block_identifier)
-        token = self.proxy_manager.token(
-            token_address=token_address, block_identifier=given_block_identifier
-        )
-
-        with self.deposit_lock:
-            try:
-                previous_total_deposit = self.get_total_deposit(
-                    address=beneficiary, block_identifier=given_block_identifier
-                )
-                current_balance = token.balance_of(
-                    address=self.node_address, block_identifier=given_block_identifier
-                )
-                whole_balance = self.whole_balance(block_identifier=given_block_identifier)
-                whole_balance_limit = self.whole_balance_limit(
-                    block_identifier=given_block_identifier
-                )
-            except ValueError:
-                # If 'given_block_identifier' has been pruned, we cannot perform the
-                # precondition checks but must still set the amount_to_deposit to a
-                # reasonable value.
-                previous_total_deposit = self.get_total_deposit(
-                    address=beneficiary, block_identifier=self.client.get_checking_block()
-                )
-                amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
-            except BadFunctionCallOutput:
-                raise_on_call_returned_empty(given_block_identifier)
-            else:
-                amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
-
-                if whole_balance + amount_to_deposit > UINT256_MAX:
-                    msg = (
-                        f"Current whole balance is {whole_balance}. "
-                        f"The new deposit of {amount_to_deposit} would lead to an overflow."
-                    )
-                    raise BrokenPreconditionError(msg)
-
-                if whole_balance + amount_to_deposit > whole_balance_limit:
-                    msg = (
-                        f"Current whole balance is {whole_balance}. "
-                        f"With the new deposit of {amount_to_deposit}, the deposit "
-                        f"limit of {whole_balance_limit} would be exceeded."
-                    )
-                    raise BrokenPreconditionError(msg)
-
-                if total_deposit <= previous_total_deposit:
-                    msg = (
-                        f"Current total deposit {previous_total_deposit} is already larger "
-                        f"than the requested total deposit amount {total_deposit}"
-                    )
-                    raise BrokenPreconditionError(msg)
-
-                if current_balance < amount_to_deposit:
-                    msg = (
-                        f"new_total_deposit - previous_total_deposit = {amount_to_deposit} "
-                        f"can not be larger than the available balance {current_balance}, "
-                        f"for token at address {to_checksum_address(token.address)}"
-                    )
-                    raise BrokenPreconditionError(msg)
-
-            log_details = {
-                "given_block_identifier": format_block_id(given_block_identifier),
-                "previous_total_deposit": previous_total_deposit,
-            }
-            self._approve_and_deposit(
-                beneficiary=beneficiary,
-                token=token,
-                total_deposit=total_deposit,
-                amount_to_deposit=amount_to_deposit,
-                log_details=log_details,
-            )
-
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
         balance = self.proxy.functions.effectiveBalance(address).call(
@@ -328,20 +250,30 @@ class UserDeposit:
 
         return balance
 
-    def _approve_and_deposit(
+    def deposit(
         self,
         beneficiary: Address,
-        token: Token,
         total_deposit: TokenAmount,
-        amount_to_deposit: TokenAmount,
-        log_details: Dict[str, Any],
+        given_block_identifier: BlockSpecification,
     ) -> None:
-        # Make sure another `approve` transactions is not sent before the
-        # deposit, otherwise the value would be overwritten.
-        transaction_hash = None
-        with token.token_lock:
-            token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+        """ Deposit provided amount into the user-deposit contract to the
+        beneficiary's account.
+        """
 
+        token_address = self.token_address(given_block_identifier)
+        token = self.proxy_manager.token(
+            token_address=token_address, block_identifier=given_block_identifier
+        )
+
+        with self.deposit_lock:
+            previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
+                beneficiary, total_deposit, given_block_identifier, token
+            )
+
+            log_details = {
+                "given_block_identifier": format_block_id(given_block_identifier),
+                "previous_total_deposit": previous_total_deposit,
+            }
             estimated_transaction = self.client.estimate_gas(
                 self.proxy, "deposit", log_details, beneficiary, total_deposit
             )
@@ -349,6 +281,120 @@ class UserDeposit:
             if estimated_transaction is not None:
                 transaction_hash = self.client.transact(estimated_transaction)
 
+            self._deposit_check_result(transaction_hash, token, total_deposit, amount_to_deposit)
+
+    def approve_and_deposit(
+        self,
+        beneficiary: Address,
+        total_deposit: TokenAmount,
+        given_block_identifier: BlockSpecification,
+    ) -> None:
+        """ Deposit provided amount into the user-deposit contract
+        to the beneficiary's account.
+
+        This function will also call approve with the *same* amount of tokens
+        for the deposit. Note that this will overwrite the existing value, so
+        large allowances are not useful when this method is used.
+        """
+
+        token_address = self.token_address(given_block_identifier)
+        token = self.proxy_manager.token(
+            token_address=token_address, block_identifier=given_block_identifier
+        )
+
+        with self.deposit_lock:
+            previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
+                beneficiary, total_deposit, given_block_identifier, token
+            )
+
+            log_details = {
+                "given_block_identifier": format_block_id(given_block_identifier),
+                "previous_total_deposit": previous_total_deposit,
+            }
+
+            # Make sure another `approve` transactions is not sent before the
+            # deposit, otherwise the value would be overwritten.
+            transaction_hash = None
+            with token.token_lock:
+                token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+
+                estimated_transaction = self.client.estimate_gas(
+                    self.proxy, "deposit", log_details, beneficiary, total_deposit
+                )
+
+                if estimated_transaction is not None:
+                    transaction_hash = self.client.transact(estimated_transaction)
+
+            self._deposit_check_result(transaction_hash, token, total_deposit, amount_to_deposit)
+
+    def _deposit_preconditions(
+        self,
+        beneficiary: Address,
+        total_deposit: TokenAmount,
+        given_block_identifier: BlockSpecification,
+        token: Token,
+    ) -> Tuple[TokenAmount, TokenAmount]:
+        try:
+            previous_total_deposit = self.get_total_deposit(
+                address=beneficiary, block_identifier=given_block_identifier
+            )
+            current_balance = token.balance_of(
+                address=self.node_address, block_identifier=given_block_identifier
+            )
+            whole_balance = self.whole_balance(block_identifier=given_block_identifier)
+            whole_balance_limit = self.whole_balance_limit(block_identifier=given_block_identifier)
+        except ValueError:
+            # If 'given_block_identifier' has been pruned, we cannot perform the
+            # precondition checks but must still set the amount_to_deposit to a
+            # reasonable value.
+            previous_total_deposit = self.get_total_deposit(
+                address=beneficiary, block_identifier=self.client.get_checking_block()
+            )
+            amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
+        except BadFunctionCallOutput:
+            raise_on_call_returned_empty(given_block_identifier)
+        else:
+            amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
+
+            if whole_balance + amount_to_deposit > UINT256_MAX:
+                msg = (
+                    f"Current whole balance is {whole_balance}. "
+                    f"The new deposit of {amount_to_deposit} would lead to an overflow."
+                )
+                raise BrokenPreconditionError(msg)
+
+            if whole_balance + amount_to_deposit > whole_balance_limit:
+                msg = (
+                    f"Current whole balance is {whole_balance}. "
+                    f"With the new deposit of {amount_to_deposit}, the deposit "
+                    f"limit of {whole_balance_limit} would be exceeded."
+                )
+                raise BrokenPreconditionError(msg)
+
+            if total_deposit <= previous_total_deposit:
+                msg = (
+                    f"Current total deposit {previous_total_deposit} is already larger "
+                    f"than the requested total deposit amount {total_deposit}"
+                )
+                raise BrokenPreconditionError(msg)
+
+            if current_balance < amount_to_deposit:
+                msg = (
+                    f"new_total_deposit - previous_total_deposit = {amount_to_deposit} "
+                    f"can not be larger than the available balance {current_balance}, "
+                    f"for token at address {to_checksum_address(token.address)}"
+                )
+                raise BrokenPreconditionError(msg)
+
+        return previous_total_deposit, amount_to_deposit
+
+    def _deposit_check_result(
+        self,
+        transaction_hash: Optional[TransactionHash],
+        token: Token,
+        total_deposit: TokenAmount,
+        amount_to_deposit: TokenAmount,
+    ) -> None:
         if transaction_hash is None:
             failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
