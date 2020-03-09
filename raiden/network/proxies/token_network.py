@@ -660,7 +660,7 @@ class TokenNetwork:
         ).deposit
         return deposit > 0
 
-    def set_total_deposit(
+    def approve_and_set_total_deposit(
         self,
         given_block_identifier: BlockSpecification,
         channel_identifier: ChannelID,
@@ -675,12 +675,12 @@ class TokenNetwork:
         it simplifies the analysis of bad behavior and the handling code of
         out-dated balance proofs.
 
-        Races to `set_total_deposit` are handled by the smart contract, where
+        Races to `approve_and_set_total_deposit` are handled by the smart contract, where
         largest total deposit wins. The end balance of the funding accounts is
         undefined. E.g.
 
-        - Acc1 calls set_total_deposit with 10 tokens
-        - Acc2 calls set_total_deposit with 13 tokens
+        - Acc1 calls approve_and_set_total_deposit with 10 tokens
+        - Acc2 calls approve_and_set_total_deposit with 13 tokens
 
         - If Acc2's transaction is mined first, then Acc1 token supply is left intact.
         - If Acc1's transaction is mined first, then Acc2 will only move 3 tokens.
@@ -840,7 +840,7 @@ class TokenNetwork:
                 "given_block_identifier": format_block_id(given_block_identifier),
             }
 
-            self._set_total_deposit(
+            self._approve_and_set_total_deposit(
                 channel_identifier=channel_identifier,
                 total_deposit=total_deposit,
                 previous_total_deposit=our_details.deposit,
@@ -848,7 +848,7 @@ class TokenNetwork:
                 log_details=log_details,
             )
 
-    def _set_total_deposit(
+    def _approve_and_set_total_deposit(
         self,
         channel_identifier: ChannelID,
         total_deposit: TokenAmount,

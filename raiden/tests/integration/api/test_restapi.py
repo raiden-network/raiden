@@ -584,9 +584,9 @@ def test_api_open_and_deposit_race(
 ):
     """Tests that a race for the same deposit from the API is handled properly
 
-    The proxy's set_total_deposit is raising a RaidenRecoverableError in case of
-    races. That needs to be properly handled and not allowed to bubble out of
-    the greenlet.
+    The proxy's approve_and_set_total_deposit is raising a
+    RaidenRecoverableError in case of races. That needs to be properly handled
+    and not allowed to bubble out of the greenlet.
 
     Regression test for https://github.com/raiden-network/raiden/issues/4937
     """

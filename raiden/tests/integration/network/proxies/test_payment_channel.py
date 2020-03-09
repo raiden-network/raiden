@@ -82,7 +82,9 @@ def test_payment_channel_proxy_basics(
     token_proxy.transfer(rpc_client.address, TokenAmount(initial_token_balance))
     assert token_proxy.balance_of(rpc_client.address) == initial_token_balance
     assert token_proxy.balance_of(partner) == 0
-    channel_proxy_1.set_total_deposit(total_deposit=TokenAmount(10), block_identifier="latest")
+    channel_proxy_1.approve_and_set_total_deposit(
+        total_deposit=TokenAmount(10), block_identifier="latest"
+    )
 
     # ChannelOpened, ChannelNewDeposit
     channel_events = get_all_netting_channel_events(
@@ -205,5 +207,7 @@ def test_payment_channel_proxy_basics(
         "This call should never have been attempted."
     )
     with pytest.raises(BrokenPreconditionError):
-        channel_proxy_1.set_total_deposit(total_deposit=TokenAmount(20), block_identifier="latest")
+        channel_proxy_1.approve_and_set_total_deposit(
+            total_deposit=TokenAmount(20), block_identifier="latest"
+        )
         pytest.fail(msg)

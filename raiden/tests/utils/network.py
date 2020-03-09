@@ -185,7 +185,7 @@ def payment_channel_open_and_deposit(
 
             # the payment channel proxy will call approve
             # token.approve(token_network_proxy.address, deposit)
-            payment_channel_proxy.set_total_deposit(
+            payment_channel_proxy.approve_and_set_total_deposit(
                 total_deposit=deposit, block_identifier="latest"
             )
 

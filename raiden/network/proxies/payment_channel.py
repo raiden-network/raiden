@@ -128,10 +128,10 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def set_total_deposit(
+    def approve_and_set_total_deposit(
         self, total_deposit: TokenAmount, block_identifier: BlockSpecification
     ) -> None:
-        self.token_network.set_total_deposit(
+        self.token_network.approve_and_set_total_deposit(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
             total_deposit=total_deposit,
