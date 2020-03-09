@@ -381,10 +381,10 @@ class APIServer(Runnable):  # pragma: no unittest
                 )
 
     def _check_shutdown_before_handle_request(self) -> Optional[Response]:
-        # We don't want to handle requestes when shutting down
+        # We don't want to handle requests when shutting down
         # When the `before_request` hook returns a value, the request will not be processed further
         if self.stop_event.is_set():
-            return api_error("Raiden API is stutting down", HTTPStatus.SERVICE_UNAVAILABLE)
+            return api_error("Raiden API is shutting down", HTTPStatus.SERVICE_UNAVAILABLE)
 
         return None
 
