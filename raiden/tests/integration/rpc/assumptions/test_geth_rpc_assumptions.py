@@ -4,8 +4,15 @@ import gevent
 import pytest
 from web3 import Web3
 
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import (
+    EthTransfer,
+    JSONRPCClient,
+    gas_price_for_fast_transaction,
+    geth_discover_next_available_nonce,
+)
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
+from raiden.utils.typing import Address
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_geth")
 
@@ -45,3 +52,32 @@ def test_geth_request_pruned_data_raises_an_exception(
 
     with pytest.raises(ValueError):
         contract_proxy.functions.get(1).call(block_identifier=pruned_block_number)
+
+
+def test_geth_discover_next_available_nonce_concurrent_transactions(
+    deploy_client: JSONRPCClient, skip_if_parity: bool  # pylint: disable=unused-argument
+) -> None:
+    """ Test that geth_discover_next_available nonce works correctly
+
+    Reproduced the problem seen here:
+    https://github.com/raiden-network/raiden/pull/3683#issue-264551799
+    """
+
+    def send_transaction(to: Address) -> None:
+        deploy_client.transact(
+            EthTransfer(
+                to_address=to,
+                value=0,
+                gas_price=gas_price_for_fast_transaction(deploy_client.web3),
+            )
+        )
+
+    greenlets = {gevent.spawn(send_transaction, to=make_address()) for _ in range(100)}
+    gevent.joinall(set(greenlets), raise_error=True)
+
+    nonce = geth_discover_next_available_nonce(
+        web3=deploy_client.web3, address=deploy_client.address
+    )
+    msg = "The nonce must increase exactly once per transaciton."
+    assert nonce == 100, msg
+    assert nonce == deploy_client._available_nonce, msg
