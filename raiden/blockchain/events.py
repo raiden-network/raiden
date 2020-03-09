@@ -419,7 +419,7 @@ class BlockchainEvents:
         # in the yellow paper, where each entry position matches the
         # originating block number. The top and mid layers are just an
         # optimization, in these layers each entry is composed of 16 blooms
-        # filters from the layer bellow.
+        # filters from the layer below.
         #
         # Each pair (`address`, `topic`) of a query is used to create one bloom
         # filter, these blooms are then used find candidate blocks through the

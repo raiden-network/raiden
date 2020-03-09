@@ -1023,7 +1023,7 @@ class RaidenService(Runnable):
             # be applied, and on a restart the node picks up from where it
             # left.
             #
-            # The approach used bellow is to dispatch the Block and the
+            # The approach used below is to dispatch the Block and the
             # blockchain events in a single transaction. This is the preferred
             # approach because it guarantees that no events will be missed and
             # it fixes race conditions on the value of the block number value,

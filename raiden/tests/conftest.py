@@ -78,7 +78,7 @@ def pytest_addoption(parser):
 
     # The goal here is to ensure the test runner will print something to the
     # stdout, this should be done frequently enough for the runner to /not/ get
-    # killed by the CI. The settings bellow are defined in such a way to
+    # killed by the CI. The settings below are defined in such a way to
     # guarantee that the test fails before the CI kill the runner.
     #
     # When something is printed depends on the verbosity used. If the tests are
@@ -95,7 +95,7 @@ def pytest_addoption(parser):
     # 6. test2.teardown
     #
     # From the start of step 3 until the end of step 5 there will be no output,
-    # which is a full test cycle. Because of this, the settings bellow are
+    # which is a full test cycle. Because of this, the settings below are
     # define in terms of their addition being smaller than the CI settings.
     #
     # Higher verbosities change the analysis above, however this is set for the

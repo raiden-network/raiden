@@ -102,7 +102,7 @@ def check_ethereum_confirmed_block_is_not_pruned(
     # - The decode function is called, and tries to access what it thinks is
     #   the latest_confirmed_block, but it is in reality `few_blocks` older.
     #
-    # This value bellow is the expected drift, that allows the decode function
+    # This value below is the expected drift, that allows the decode function
     # mentioned above to work properly.
     maximum_delay_to_process_a_block = 2
 

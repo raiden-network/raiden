@@ -382,7 +382,7 @@ def is_valid_channel_total_withdraw(channel_total_withdraw: TokenAmount) -> bool
         - The channel's withdraw must be in the range [0,channel_total_deposit].
 
     Because the `total_withdraw` must be in the range [0,channel_deposit], and
-    the maximum value for channel_deposit is UINT256, the overflow bellow must
+    the maximum value for channel_deposit is UINT256, the overflow below must
     never happen, otherwise there is a smart contract bug.
     """
     return channel_total_withdraw <= UINT256_MAX
@@ -2455,7 +2455,7 @@ def handle_channel_batch_unlock(
 
 
 def sanity_check(channel_state: NettingChannelState) -> None:
-    """Some of the checks bellow are tautologies for the current version of the
+    """Some of the checks below are tautologies for the current version of the
     codebase. However they are kept in there to check the constraints if/when
     the code changes.
     """

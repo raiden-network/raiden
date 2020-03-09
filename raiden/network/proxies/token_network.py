@@ -878,7 +878,7 @@ class TokenNetwork:
         # making the second deposit fail.
         estimated_transaction = None
         with self.token.token_lock:
-            # HACK: The hack bellow is necessary to make sure the gas
+            # HACK: The hack below is necessary to make sure the gas
             # estimation of an approve works concurrently with the mining of a
             # deposit. If the *exact* amount is used, the storage of the smart
             # contract will be set to `0` once the `deposit` is mined, this

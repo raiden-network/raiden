@@ -43,7 +43,7 @@ class SerializationBase:
 
 
 class DictSerializer(SerializationBase):
-    # TODO: Fix the type annotation bellow.
+    # TODO: Fix the type annotation below.
     # Any is too broad of a type, the real signature is `Union[Dict,
     # Dataclass]`, however, there is no base class available from the
     # dataclasses module that allows for such type annotation.
