@@ -236,7 +236,7 @@ class UserDeposit:
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
 
-    def deposit(
+    def approve_and_deposit(
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
@@ -314,7 +314,7 @@ class UserDeposit:
                 "given_block_identifier": format_block_id(given_block_identifier),
                 "previous_total_deposit": previous_total_deposit,
             }
-            self._deposit(
+            self._approve_and_deposit(
                 beneficiary=beneficiary,
                 token=token,
                 total_deposit=total_deposit,
@@ -333,7 +333,7 @@ class UserDeposit:
 
         return balance
 
-    def _deposit(
+    def _approve_and_deposit(
         self,
         beneficiary: Address,
         token: Token,

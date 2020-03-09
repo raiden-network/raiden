@@ -185,7 +185,7 @@ def transfer_user_deposit_tokens(
     user_deposit_deploy_result: Callable[[], UserDeposit], transfer_to: Address
 ) -> None:
     user_deposit_proxy = user_deposit_deploy_result()
-    user_deposit_proxy.deposit(
+    user_deposit_proxy.approve_and_deposit(
         beneficiary=transfer_to, total_deposit=MONITORING_REWARD, given_block_identifier="latest"
     )
 
