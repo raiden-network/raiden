@@ -642,7 +642,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
         name_or_id = ID_TO_NETWORKNAME.get(kwargs["network_id"], kwargs["network_id"])
         click.secho(
             f"FATAL: Another Raiden instance already running for account "
-            f"{address} on network id {name_or_id}",
+            f"{to_checksum_address(kwargs['address'])} on network id {name_or_id}",
             fg="red",
         )
         sys.exit(ReturnCode.CONFIGURATION_ERROR)

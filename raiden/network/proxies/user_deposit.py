@@ -1,6 +1,9 @@
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+
 import structlog
 from eth_utils import decode_hex, is_binary_address, to_canonical_address
-from gevent.lock import RLock
+from gevent.event import AsyncResult
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
@@ -17,6 +20,7 @@ from raiden.utils.typing import (
     Balance,
     BlockSpecification,
     Dict,
+    Iterator,
     MonitoringServiceAddress,
     OneToNAddress,
     Optional,
@@ -39,6 +43,17 @@ if TYPE_CHECKING:
 
 
 log = structlog.get_logger(__name__)
+
+
+def make_token_amount() -> TokenAmount:
+    """ Utility to satisfy the type checker. """
+    return TokenAmount(0)
+
+
+@dataclass
+class InflightDeposit:
+    total_deposit: TokenAmount = field(default_factory=make_token_amount)
+    async_result: AsyncResult = field(default_factory=AsyncResult)
 
 
 class UserDeposit:
@@ -75,7 +90,9 @@ class UserDeposit:
             contract_address=Address(user_deposit_address),
         )
 
-        self.deposit_lock = RLock()
+        # Keeps track of the current in-flight deposits, to avoid sending
+        # unecessary transactions.
+        self._inflight_deposits: Dict[Address, InflightDeposit] = dict()
 
     def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
         return TokenAddress(
@@ -256,20 +273,28 @@ class UserDeposit:
         total_deposit: TokenAmount,
         given_block_identifier: BlockSpecification,
     ) -> None:
-        """ Deposit provided amount into the user-deposit contract to the
-        beneficiary's account.
-        """
+        """ Increase the total deposit of the beneficiary's account to `total_deposit`. """
 
         token_address = self.token_address(given_block_identifier)
         token = self.proxy_manager.token(
             token_address=token_address, block_identifier=given_block_identifier
         )
 
-        with self.deposit_lock:
-            previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
-                beneficiary, total_deposit, given_block_identifier, token
-            )
+        previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
+            beneficiary, total_deposit, given_block_identifier, token
+        )
 
+        # The call to `_deposit_preconditions` makes sure the deposit was valid
+        # at block `given_block_identifier`, the check below is for another
+        # concurrent deposits, with a higher value. Since concurrent calls is
+        # not an error, just a race condition, just wait for the result of the
+        # other operation.
+        current_inflight = self._inflight_deposits.get(beneficiary)
+        if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
+            current_inflight.async_result.get()
+            return
+
+        with self._deposit_inflight(beneficiary, total_deposit):
             log_details = {
                 "given_block_identifier": format_block_id(given_block_identifier),
                 "previous_total_deposit": previous_total_deposit,
@@ -302,21 +327,29 @@ class UserDeposit:
             token_address=token_address, block_identifier=given_block_identifier
         )
 
-        with self.deposit_lock:
-            previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
-                beneficiary, total_deposit, given_block_identifier, token
-            )
+        previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
+            beneficiary, total_deposit, given_block_identifier, token
+        )
 
-            log_details = {
-                "given_block_identifier": format_block_id(given_block_identifier),
-                "previous_total_deposit": previous_total_deposit,
-            }
+        log_details = {
+            "given_block_identifier": format_block_id(given_block_identifier),
+            "previous_total_deposit": previous_total_deposit,
+        }
 
+        current_inflight = self._inflight_deposits.get(beneficiary)
+        if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
+            current_inflight.async_result.get()
+            return
+
+        with self._deposit_inflight(beneficiary, total_deposit):
             # Make sure another `approve` transactions is not sent before the
             # deposit, otherwise the value would be overwritten.
             transaction_hash = None
             with token.token_lock:
-                token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+                # HACK: Prevents gas estimation failures because of race
+                # conditions, for more details check `TokenNetwork.approve_and_set_total_deposit.
+                allowance = TokenAmount(amount_to_deposit + 1)
+                token.approve(allowed_address=Address(self.address), allowance=allowance)
 
                 estimated_transaction = self.client.estimate_gas(
                     self.proxy, "deposit", log_details, beneficiary, total_deposit
@@ -387,6 +420,31 @@ class UserDeposit:
                 raise BrokenPreconditionError(msg)
 
         return previous_total_deposit, amount_to_deposit
+
+    @contextmanager
+    def _deposit_inflight(
+        self, beneficiary: Address, total_deposit: TokenAmount
+    ) -> Iterator[None]:
+        """ Updates the `_inflight_deposits` dictionary to handle concurrent deposits.
+
+        Note: This must be called after `_deposit_preconditions`.
+        """
+        async_result = AsyncResult()
+        current_inflight = InflightDeposit(total_deposit, async_result)
+        self._inflight_deposits[beneficiary] = current_inflight
+
+        try:
+            yield
+        except Exception as e:
+            async_result.set_exception(e)
+            raise
+        else:
+            async_result.set_result(None)
+        finally:
+            # Clearing the dictionary is not strinctly necessary since the
+            # deposit is always increasing. But it is just nice to clear up the
+            # container.
+            del self._inflight_deposits[beneficiary]
 
     def _deposit_check_result(
         self,
