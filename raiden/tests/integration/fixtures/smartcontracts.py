@@ -396,7 +396,7 @@ def token_addresses_fixture(
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `deploy_client` and
     potentially pre-registered with the Raiden Registry.
-    The following arguments can control the behavior:
+    The following pytest arguments can control the behavior:
 
     Args:
         token_amount: the overall number of units minted per token
@@ -415,7 +415,7 @@ def secret_registry_address_fixture(
 
 @pytest.fixture(name="service_registry_address")
 def service_registry_address_fixture(
-    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts
+    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[ServiceRegistryAddress]:
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
     if services_smart_contracts:
@@ -425,7 +425,7 @@ def service_registry_address_fixture(
 
 @pytest.fixture(name="user_deposit_address")
 def user_deposit_address_fixture(
-    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts
+    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[UserDepositAddress]:
     """ Deploy UserDeposit and fund accounts with some balances """
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
@@ -438,7 +438,7 @@ def user_deposit_address_fixture(
 
 @pytest.fixture(name="one_to_n_address")
 def one_to_n_address_fixture(
-    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts
+    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[OneToNAddress]:
     """ Deploy OneToN contract and return the address """
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
@@ -480,7 +480,7 @@ def token_network_registry_address_fixture(
 
 @pytest.fixture(name="token_network_proxy")
 def token_network_proxy_fixture(
-    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts
+    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[TokenNetwork]:
 
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
