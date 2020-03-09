@@ -574,7 +574,7 @@ class RaidenAPI:  # pragma: no unittest
                 20 bytes long.
             RaidenUnrecoverableError: May happen for multiple reasons:
                 - During preconditions checks, if the channel was not open
-                  at the time of the set_total_deposit call.
+                  at the time of the approve_and_set_total_deposit call.
                 - If the transaction fails during gas estimation or
                   if a previous withdraw transaction with the same value
                    was already mined.
@@ -771,10 +771,8 @@ class RaidenAPI:  # pragma: no unittest
         if total_channel_deposit >= UINT256_MAX:
             raise DepositOverLimit("Deposit overflow")
 
-        # set_total_deposit calls approve
-        # token.approve(netcontract_address, addendum)
         try:
-            channel_proxy.set_total_deposit(
+            channel_proxy.approve_and_set_total_deposit(
                 total_deposit=total_deposit, block_identifier=blockhash
             )
         except RaidenRecoverableError as e:

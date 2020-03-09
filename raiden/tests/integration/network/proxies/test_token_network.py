@@ -71,14 +71,14 @@ def test_token_network_deposit_race(
     )
     assert channel_identifier is not None
 
-    c1_token_network_proxy.set_total_deposit(
+    c1_token_network_proxy.approve_and_set_total_deposit(
         given_block_identifier="latest",
         channel_identifier=channel_identifier,
         total_deposit=2,
         partner=c2_client.address,
     )
     with pytest.raises(BrokenPreconditionError):
-        c1_token_network_proxy.set_total_deposit(
+        c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
             total_deposit=1,
@@ -223,7 +223,7 @@ def test_token_network_proxy(
 
     msg = "Trying a deposit to an inexisting channel must fail."
     with pytest.raises(BrokenPreconditionError):
-        c1_token_network_proxy.set_total_deposit(
+        c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=100,
             total_deposit=1,
@@ -294,9 +294,9 @@ def test_token_network_proxy(
         is True
     )
 
-    msg = "set_total_deposit must fail if the amount exceed the account's balance"
+    msg = "approve_and_set_total_deposit must fail if the amount exceed the account's balance"
     with pytest.raises(BrokenPreconditionError):
-        c1_token_network_proxy.set_total_deposit(
+        c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
             total_deposit=initial_token_balance + 1,
@@ -304,9 +304,9 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    msg = "set_total_deposit must fail with a negative amount"
+    msg = "approve_and_set_total_deposit must fail with a negative amount"
     with pytest.raises(BrokenPreconditionError):
-        c1_token_network_proxy.set_total_deposit(
+        c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
             total_deposit=-1,
@@ -314,9 +314,9 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    msg = "set_total_deposit must fail with a zero amount"
+    msg = "approve_and_set_total_deposit must fail with a zero amount"
     with pytest.raises(BrokenPreconditionError):
-        c1_token_network_proxy.set_total_deposit(
+        c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
             total_deposit=0,
@@ -324,7 +324,7 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    c1_token_network_proxy.set_total_deposit(
+    c1_token_network_proxy.approve_and_set_total_deposit(
         given_block_identifier="latest",
         channel_identifier=channel_identifier,
         total_deposit=10,
@@ -442,7 +442,7 @@ def test_token_network_proxy(
     msg = "depositing to a closed channel must fail"
     match = "closed"
     with pytest.raises(RaidenRecoverableError, match=match):
-        c2_token_network_proxy.set_total_deposit(
+        c2_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier=blocknumber_prior_to_close,
             channel_identifier=channel_identifier,
             total_deposit=20,
@@ -494,7 +494,7 @@ def test_token_network_proxy(
 
     msg = "depositing to a settled channel must fail"
     with pytest.raises(BrokenPreconditionError):
-        c1_token_network_proxy.set_total_deposit(
+        c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
             total_deposit=10,
@@ -546,13 +546,13 @@ def test_token_network_proxy_update_transfer(
     assert initial_balance_c1 == initial_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.address)
     assert initial_balance_c2 == initial_balance
-    c1_token_network_proxy.set_total_deposit(
+    c1_token_network_proxy.approve_and_set_total_deposit(
         given_block_identifier="latest",
         channel_identifier=channel_identifier,
         total_deposit=10,
         partner=c2_client.address,
     )
-    c2_token_network_proxy.set_total_deposit(
+    c2_token_network_proxy.approve_and_set_total_deposit(
         given_block_identifier="latest",
         channel_identifier=channel_identifier,
         total_deposit=10,
@@ -714,7 +714,7 @@ def test_token_network_proxy_update_transfer(
 
     # Already settled
     with pytest.raises(BrokenPreconditionError) as exc:
-        c2_token_network_proxy.set_total_deposit(
+        c2_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier="latest",
             channel_identifier=channel_identifier,
             total_deposit=20,
@@ -814,7 +814,7 @@ def test_token_network_actions_at_pruned_blocks(
     c1_client.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
 
     # deposit with given block being pruned
-    c1_token_network_proxy.set_total_deposit(
+    c1_token_network_proxy.approve_and_set_total_deposit(
         given_block_identifier=pruned_number,
         channel_identifier=channel_identifier,
         total_deposit=2,
@@ -965,7 +965,7 @@ def test_concurrent_set_total_deposit(token_network_proxy: TokenNetwork) -> None
             total_deposit = i + 1
 
             g = gevent.spawn(
-                token_network_proxy.set_total_deposit,
+                token_network_proxy.approve_and_set_total_deposit,
                 given_block_identifier,
                 channel_identifier,
                 total_deposit,
