@@ -863,8 +863,8 @@ class TokenNetwork:
         # `setTotalDeposit` must be serialized. This is necessary otherwise
         # the deposit will fail.
         #
-        # Calls to approve and setTotalDeposit are serialized with the
-        # deposit_lock to avoid transaction failure, because with two
+        # Calls to `approve` and `setTotalDeposit` are serialized with the
+        # `deposit_lock` to avoid transaction failure, because with two
         # concurrent deposits, we may have the transactions executed in the
         # following order
         #
