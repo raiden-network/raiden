@@ -1,5 +1,5 @@
-import json
 import contextlib
+import json
 import os
 import random
 import shutil
@@ -34,10 +34,9 @@ from raiden.constants import (
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
-
-from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.tests.utils.eth_node import (
     AccountDescription,
     EthNodeDescription,
@@ -79,7 +78,7 @@ from raiden.utils.typing import (
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
-    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_CUSTOM_TOKEN,
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
@@ -359,7 +358,7 @@ def setup_raiden(
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
-        token_contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        token_contract_name=CONTRACT_CUSTOM_TOKEN,
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
@@ -503,11 +502,6 @@ def setup_smoketest(
     stdout: IO = None,
     append_report: Callable = print,
 ) -> Iterator[Dict[str, Any]]:
-    from raiden.tests.utils.smoketest import (
-        setup_raiden,
-        setup_matrix_for_smoketest,
-        setup_testchain_for_smoketest,
-    )
 
     make_requests_insecure()
 
