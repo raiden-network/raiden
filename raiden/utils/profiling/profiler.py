@@ -39,10 +39,7 @@ _state: Optional["GlobalState"] = None
 
 # PEP-0418
 #        perf_counter = It does include time elapsed during sleep and is system-wide.
-try:
-    clock = time.perf_counter  # pylint: disable=no-member
-except AttributeError:
-    clock = time.clock
+clock = time.perf_counter  # pylint: disable=no-member
 
 # info is used to store the function name/module/lineno
 # children is an OrderedDict with function id -> CallNode
