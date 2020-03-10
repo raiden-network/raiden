@@ -755,18 +755,14 @@ def smoketest(
             debug=debug,
             stdout=raiden_stdout,
             append_report=append_report,
-        ) as result:
-            args = result["args"]
-            contract_addresses = result["contract_addresses"]
-            token = result["token"]
-
+        ) as setup:
+            args = setup.args
             port = next(free_port_generator)
 
             args["api_address"] = f"localhost:{port}"
             args["environment_type"] = environment_type
 
             # Matrix server
-            args["matrix_server"] = result["matrix_server_url"]
             args["one_to_n_contract_address"] = "0x" + "1" * 40
             args["routing_mode"] = RoutingMode.LOCAL
             args["flat_fee"] = ()
@@ -779,12 +775,7 @@ def smoketest(
                 else:
                     args[option_.name] = option_.default
 
-            run_smoketest(
-                print_step=print_step,
-                args=args,
-                contract_addresses=contract_addresses,
-                token=token,
-            )
+            run_smoketest(print_step=print_step, setup=setup)
 
         append_report("Raiden Node stdout", raiden_stdout.getvalue())
 

@@ -54,9 +54,8 @@ def raiden_testchain(
             base_datadir=testchain["base_datadir"],
             keystore=testchain["keystore"],
         )
-        result["ethereum_nodes"] = testchain["node_executors"]
 
-        args = result["args"]
+        args = result.args
         # The setup of the testchain returns a TextIOWrapper but
         # for the tests we need a filename
         args["password_file"] = args["password_file"].name
