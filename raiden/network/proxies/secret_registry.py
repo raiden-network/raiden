@@ -6,13 +6,14 @@ from eth_utils import decode_hex, encode_hex, is_binary_address
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
-from raiden.constants import GAS_REQUIRED_PER_SECRET_IN_BATCH, RECEIPT_FAILURE_CODE
+from raiden.constants import GAS_REQUIRED_PER_SECRET_IN_BATCH
 from raiden.exceptions import (
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
@@ -150,6 +151,7 @@ class SecretRegistry:
         receipt = None
         transaction_hash = None
         msg = None
+        transaction_mined = None
 
         if estimated_transaction is not None:
             estimated_transaction.estimated_gas = safe_gas_limit(
@@ -158,8 +160,8 @@ class SecretRegistry:
             )
 
             try:
-                transaction_hash = self.client.transact(estimated_transaction)
-                receipt = self.client.poll_transaction(transaction_hash)
+                transaction_sent = self.client.transact(estimated_transaction)
+                transaction_mined = self.client.poll_transaction(transaction_sent)
             except Exception as e:  # pylint: disable=broad-except
                 msg = f"Unexpected exception {e} at sending registerSecretBatch transaction."
 
@@ -172,10 +174,8 @@ class SecretRegistry:
         # As of version `0.4.0` of the contract has *no* asserts or requires.
         # Therefore the only reason for the transaction to fail is if there is
         # a bug.
-        unrecoverable_error = (
-            estimated_transaction is None
-            or receipt is None
-            or receipt["status"] == RECEIPT_FAILURE_CODE
+        unrecoverable_error = transaction_mined is None or not was_transaction_successfully_mined(
+            transaction_mined
         )
 
         exception: Union[RaidenRecoverableError, RaidenUnrecoverableError]

@@ -18,9 +18,9 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import raise_on_call_returned_empty
+from raiden.network.proxies.utils import check_transaction_gas_used, raise_on_call_returned_empty
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.utils.formatting import format_block_id
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
@@ -244,10 +244,11 @@ class TokenNetworkRegistry:
                 self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"],
             )
 
-            transaction_hash = self.rpc_client.transact(estimated_transaction)
-            receipt = self.rpc_client.poll_transaction(transaction_hash)
+            transaction_sent = self.rpc_client.transact(estimated_transaction)
+            transaction_mined = self.rpc_client.poll_transaction(transaction_sent)
+            receipt = transaction_mined.receipt
 
-            if check_transaction_threw(receipt=receipt):
+            if not was_transaction_successfully_mined(transaction_mined):
                 failed_at_blocknumber = receipt["blockNumber"]
                 failed_at_blockhash = receipt["blockHash"]
 
@@ -294,15 +295,7 @@ class TokenNetworkRegistry:
                         "anymore."
                     )
 
-                if receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                    msg = (
-                        f"createERC20TokenNetwork failed and all gas was used "
-                        f"({estimated_transaction.estimated_gas}). Estimate gas "
-                        f"may have underestimated createERC20TokenNetwork, or "
-                        f"succeeded even though an assert is triggered, or the "
-                        f"smart contract code has an conditional assert."
-                    )
-                    raise RaidenRecoverableError(msg)
+                check_transaction_gas_used(transaction_mined)
 
                 check_address_has_code(
                     client=self.rpc_client,

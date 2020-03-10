@@ -10,8 +10,8 @@ from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import raise_on_call_returned_empty
-from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.client import JSONRPCClient, TransactionSent, check_address_has_code
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -26,7 +26,6 @@ from raiden.utils.typing import (
     Optional,
     TokenAddress,
     TokenAmount,
-    TransactionHash,
     Tuple,
     UserDepositAddress,
 )
@@ -223,11 +222,11 @@ class UserDeposit:
             raise RaidenRecoverableError("Deposit failed of unknown reason")
 
         else:
-            transaction_hash = self.client.transact(estimated_transaction)
-            receipt = self.client.poll_transaction(transaction_hash)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if check_transaction_threw(receipt=receipt):
-                failed_at_blocknumber = receipt["blockNumber"]
+            if not was_transaction_successfully_mined(transaction_mined):
+                failed_at_blocknumber = transaction_mined.receipt["blockNumber"]
 
                 existing_monitoring_service_address = self.monitoring_service_address(
                     block_identifier=failed_at_blocknumber
@@ -340,7 +339,7 @@ class UserDeposit:
         with self._deposit_inflight(beneficiary, total_deposit):
             # Make sure another `approve` transactions is not sent before the
             # deposit, otherwise the value would be overwritten.
-            transaction_hash = None
+            transaction_sent = None
             with token.token_lock:
                 # HACK: Prevents gas estimation failures because of race
                 # conditions, for more details check `TokenNetwork.approve_and_set_total_deposit.
@@ -352,9 +351,9 @@ class UserDeposit:
                 )
 
                 if estimated_transaction is not None:
-                    transaction_hash = self.client.transact(estimated_transaction)
+                    transaction_sent = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(transaction_hash, token, total_deposit, amount_to_deposit)
+            self._deposit_check_result(transaction_sent, token, total_deposit, amount_to_deposit)
 
     def _deposit_preconditions(
         self,
@@ -449,12 +448,12 @@ class UserDeposit:
 
     def _deposit_check_result(
         self,
-        transaction_hash: Optional[TransactionHash],
+        transaction_sent: Optional[TransactionSent],
         token: Token,
         total_deposit: TokenAmount,
         amount_to_deposit: TokenAmount,
     ) -> None:
-        if transaction_hash is None:
+        if transaction_sent is None:
             failed_at = self.client.get_block("latest")
             failed_at_blocknumber = failed_at["number"]
 
@@ -511,10 +510,10 @@ class UserDeposit:
             raise RaidenRecoverableError("Deposit failed of unknown reason")
 
         else:
-            receipt = self.client.poll_transaction(transaction_hash)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if check_transaction_threw(receipt=receipt):
-                failed_at_blocknumber = receipt["blockNumber"]
+            if not was_transaction_successfully_mined(transaction_mined):
+                failed_at_blocknumber = transaction_mined.receipt["blockNumber"]
 
                 latest_deposit = self.get_total_deposit(
                     address=self.node_address, block_identifier=failed_at_blocknumber

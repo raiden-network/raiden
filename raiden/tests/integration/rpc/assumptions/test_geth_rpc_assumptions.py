@@ -1,5 +1,3 @@
-from typing import Any, Dict
-
 import gevent
 import pytest
 from web3 import Web3
@@ -7,6 +5,7 @@ from web3 import Web3
 from raiden.network.rpc.client import (
     EthTransfer,
     JSONRPCClient,
+    TransactionMined,
     gas_price_for_fast_transaction,
     geth_discover_next_available_nonce,
 )
@@ -24,7 +23,7 @@ def test_geth_request_pruned_data_raises_an_exception(
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1
 
-    def send_transaction() -> Dict[str, Any]:
+    def send_transaction() -> TransactionMined:
         estimated_transaction = deploy_client.estimate_gas(
             contract_proxy, "waste_storage", {}, iterations
         )
@@ -32,7 +31,7 @@ def test_geth_request_pruned_data_raises_an_exception(
         transaction_hash = deploy_client.transact(estimated_transaction)
         return deploy_client.poll_transaction(transaction_hash)
 
-    first_receipt = send_transaction()
+    first_receipt = send_transaction().receipt
     mined_block_number = first_receipt["blockNumber"]
 
     while mined_block_number + 127 > web3.eth.blockNumber:

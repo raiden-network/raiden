@@ -9,7 +9,7 @@ from raiden.network.rpc.client import (
     discover_next_available_nonce,
     gas_price_for_fast_transaction,
 )
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
@@ -29,10 +29,9 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     assert estimated_transaction
     estimated_transaction.estimated_gas *= 2
 
-    transaction_hash = deploy_client.transact(estimated_transaction)
-    receipt = deploy_client.poll_transaction(transaction_hash)
-
-    assert check_transaction_threw(receipt=receipt) is None, "must be empty"
+    transaction_sent = deploy_client.transact(estimated_transaction)
+    transaction_mined = deploy_client.poll_transaction(transaction_sent)
+    assert was_transaction_successfully_mined(transaction_mined) is None, "must be empty"
 
 
 def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
@@ -58,10 +57,9 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
         gas_price=gas_price,
         approximate_block=(block["hash"], block["number"]),
     )
-    transaction_hash = deploy_client.transact(estimated_transaction_fail_assert)
-    receipt = deploy_client.poll_transaction(transaction_hash)
-
-    assert check_transaction_threw(receipt=receipt), "must not be empty"
+    transaction_fail_assert_sent = deploy_client.transact(estimated_transaction_fail_assert)
+    transaction_fail_assert_mined = deploy_client.poll_transaction(transaction_fail_assert_sent)
+    assert was_transaction_successfully_mined(transaction_fail_assert_mined), "must not be empty"
 
     estimated_transaction_fail_require = TransactionEstimated(
         from_address=address,
@@ -72,10 +70,9 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
         gas_price=gas_price,
         approximate_block=(block["hash"], block["number"]),
     )
-    transaction_hash = deploy_client.transact(estimated_transaction_fail_require)
-    receipt = deploy_client.poll_transaction(transaction_hash)
-
-    assert check_transaction_threw(receipt=receipt), "must not be empty"
+    transaction_fail_require_sent = deploy_client.transact(estimated_transaction_fail_require)
+    transaction_fail_require_mined = deploy_client.poll_transaction(transaction_fail_require_sent)
+    assert was_transaction_successfully_mined(transaction_fail_require_mined), "must not be empty"
 
 
 def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
@@ -90,10 +87,9 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     assert estimated_transaction
     estimated_transaction.estimated_gas //= 2
 
-    transaction = deploy_client.transact(estimated_transaction)
-    receipt = deploy_client.poll_transaction(transaction)
-
-    assert check_transaction_threw(receipt=receipt), "must not be empty"
+    transaction_sent = deploy_client.transact(estimated_transaction)
+    transaction_mined = deploy_client.poll_transaction(transaction_sent)
+    assert was_transaction_successfully_mined(transaction_mined) is None, "must be empty"
 
 
 def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_gas(

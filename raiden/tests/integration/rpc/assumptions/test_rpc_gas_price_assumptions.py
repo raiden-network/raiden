@@ -153,7 +153,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     assert estimated_transaction.gas_price == 0, "Test requires a gas_price of zero"
 
     zerogas_txhash = deploy_client.transact(estimated_transaction)
-    zerogas_receipt = deploy_client.poll_transaction(zerogas_txhash)
+    zerogas_receipt = deploy_client.poll_transaction(zerogas_txhash).receipt
     zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_txhash)
 
     msg = "Even thought the transaction had a zero gas price, it is not removed from the pool"

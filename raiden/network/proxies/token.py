@@ -4,8 +4,9 @@ from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenRecoverableError
+from raiden.network.proxies.utils import check_transaction_gas_used
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.utils.typing import (
     Address,
     Any,
@@ -92,22 +93,14 @@ class Token:
 
             if estimated_transaction is not None:
                 error_prefix = "Call to approve failed"
-                transaction_hash = self.client.transact(estimated_transaction)
-                receipt = self.client.poll_transaction(transaction_hash)
-                failed_receipt = check_transaction_threw(receipt=receipt)
+                transaction_sent = self.client.transact(estimated_transaction)
+                transaction_mined = self.client.poll_transaction(transaction_sent)
 
-                if failed_receipt:
+                if not was_transaction_successfully_mined(transaction_mined):
+                    failed_receipt = transaction_mined.receipt
                     failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
 
-                    if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                        msg = (
-                            f"approve failed and all gas was used "
-                            f"({estimated_transaction.estimated_gas}).  Estimate "
-                            f"gas may have underestimated approve, or succeeded "
-                            f"even though an assert is triggered, or the smart "
-                            f"contract code has a conditional assert."
-                        )
-                        raise RaidenRecoverableError(msg)
+                    check_transaction_gas_used(transaction_mined)
 
                     balance = self.balance_of(self.client.address, failed_at_blockhash)
                     if balance < allowance:
@@ -202,18 +195,20 @@ class Token:
             estimated_transaction = self.client.estimate_gas(
                 self.proxy, "transfer", log_details, to_address, amount
             )
-            failed_receipt = None
 
+            # TODO: check Transfer event (issue: #2598)
             if estimated_transaction is not None:
-                transaction_hash = self.client.transact(estimated_transaction)
+                transaction_sent = self.client.transact(estimated_transaction)
+                transaction_mined = self.client.poll_transaction(transaction_sent)
 
-                receipt = self.client.poll_transaction(transaction_hash)
-                # TODO: check Transfer event (issue: #2598)
-                failed_receipt = check_transaction_threw(receipt=receipt)
+            is_succesful = (
+                estimated_transaction is not None
+                and was_transaction_successfully_mined(transaction_mined)
+            )
 
-            if estimated_transaction is None or failed_receipt is not None:
-                if failed_receipt:
-                    failed_at_number = failed_receipt["blockNumber"]
+            if not is_succesful:
+                if not was_transaction_successfully_mined(transaction_mined):
+                    failed_at_number = transaction_mined.receipt["blockNumber"]
                 else:
                     failed_at_number = self.client.get_block("latest")["blockNumber"]
 

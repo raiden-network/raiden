@@ -1,21 +1,15 @@
 from typing import Any, Dict, Optional
 
 from raiden.constants import RECEIPT_FAILURE_CODE
+from raiden.network.rpc.client import TransactionMined
 
 
-def check_transaction_threw(receipt: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Check if the transaction threw/reverted or if it executed properly by reading
-       the transaction receipt.
-       Returns None in case of success and the transaction receipt if the
-       transaction's status indicator is 0x0.
-    """
-    if "status" not in receipt:
+def was_transaction_successfully_mined(transaction: TransactionMined) -> Optional[Dict[str, Any]]:
+    """ `True` if the transaction was successfully mined, `False` otherwise. """
+    if "status" not in transaction.receipt:
         # This should never happen. Raiden checks ethereum client for compatibility at startup
         raise AssertionError(
             "Transaction receipt does not contain a status field. Upgrade your client"
         )
 
-    if receipt["status"] == RECEIPT_FAILURE_CODE:
-        return receipt
-
-    return None
+    return transaction.receipt["status"] != RECEIPT_FAILURE_CODE

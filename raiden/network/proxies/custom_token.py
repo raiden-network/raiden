@@ -4,7 +4,7 @@ import structlog
 
 from raiden.network.proxies.exceptions import MintFailed
 from raiden.network.proxies.token import Token
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.utils.typing import Address, TokenAmount
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager
@@ -31,12 +31,10 @@ class CustomToken(Token):
         )
 
         if estimated_transaction is not None:
-            transaction_hash = self.client.transact(estimated_transaction)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
                 raise MintFailed(f"Mint failed.")
 
         else:
@@ -57,12 +55,10 @@ class CustomToken(Token):
         )
 
         if estimated_transaction is not None:
-            transaction_hash = self.client.transact(estimated_transaction)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
                 raise MintFailed(f"Call to contract method mintFor: Transaction failed.")
 
         else:

@@ -1,6 +1,6 @@
 import json
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from abc import ABC
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from uuid import uuid4
@@ -58,6 +58,7 @@ from raiden.utils.typing import (
     PrivateKey,
     T_Address,
     T_Nonce,
+    T_TransactionHash,
     TokenAmount,
     TransactionHash,
     typecheck,
@@ -224,12 +225,6 @@ def gas_price_for_fast_transaction(web3: Web3) -> int:
         price = int(web3.eth.gasPrice)
 
     return price
-
-
-class TransactionSlotState(Enum):
-    allocated = "allocated"
-    sent = "sent"
-    rejected = "rejected"
 
 
 class ClientErrorInspectResult(Enum):
@@ -674,17 +669,28 @@ class TransactionEstimated:
 # Type used to expose the attributes for type checking, the actual
 # implementation is hidden and can only be instantiated through the
 # JSONRPCClient, which ensures the nonces are used sequentially.
-class TransactionSlot(ABC):
+class TransactionSent(ABC):
     from_address: Address
     data: Union[SmartContractCall, ByteCode, EthTransfer]
     eth_node: Optional[EthClient]
+    extra_log_details: Dict[str, Any]
     startgas: int
     gas_price: int
     nonce: Nonce
+    transaction_hash: TransactionHash
 
-    @abstractmethod
-    def send_transaction(self) -> TransactionHash:
-        pass
+
+@dataclass
+class TransactionMined:
+    from_address: Address
+    data: Union[SmartContractCall, ByteCode, EthTransfer]
+    eth_node: Optional[EthClient]
+    extra_log_details: Dict[str, Any]
+    startgas: int
+    gas_price: int
+    nonce: Nonce
+    transaction_hash: TransactionHash
+    receipt: TxReceipt
 
 
 class JSONRPCClient:
@@ -820,23 +826,31 @@ class JSONRPCClient:
         )
         return pending.estimate_gas(self.get_checking_block())
 
-    def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionHash:
+    def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
+        """ Allocates an unique `nonce` and send the transaction to the blockchain.
+
+        This can fail for a few reasons:
+
+        - The account doesn't have sufficient Eth to pay for the gas.
+        - The gas price was too low.
+        - Another transaction with the same `nonce` was sent before. This may
+          happen because:
+          - Another application is using the same private key.
+          - The node restarted and the `nonce` recovered by
+            `discover_next_available_nonce` was too low, which can happend
+            because:
+            - The transactions currenlty in the pool are not taken into
+              account.
+            - There was a gap in the `nonce`s of the transaction in the pool,
+              once the gap is filled a `nonce` is reused. This is most likely a
+              bug.
+        """
+
         # Exposing the JSONRPCClient with a nice name for the instance closure.
         client = self
 
-        # The class is hidden in the method to force this method to be called,
-        # this is necesary to enforce the monotonicity of the `nonce`.
         @dataclass
-        class TransactionSlotImplementation(TransactionSlot):
-            """A poor's man linear type that will check at the runtime that a nonce is
-            used only once.
-
-            This is necessary to avoid problems with nonce synchronization. If a nonce
-            is not used then all subsequent transactions won't be mined, or if a nonce
-            is used more than once, only one transaction will succeed while all others
-            will fail, which is currently not supported by the Raiden node.
-            """
-
+        class TransactionSlot:
             from_address: Address
             data: Union[SmartContractCall, ByteCode, EthTransfer]
             eth_node: Optional[EthClient]
@@ -844,12 +858,6 @@ class JSONRPCClient:
             startgas: int
             gas_price: int
             nonce: Nonce
-
-            # Lock to protect the `_sent` attribute. This is necessary otherwise the
-            # check for a duplicate transaction with the same nonce won't work due to
-            # race conditions.
-            _sent_lock: Semaphore = field(init=False, default_factory=Semaphore)
-            _sent: TransactionSlotState = field(init=False, default=TransactionSlotState.allocated)
 
             def __post_init__(self) -> None:
                 self.extra_log_details.setdefault("token", str(uuid4()))
@@ -875,169 +883,188 @@ class JSONRPCClient:
                 )
                 return log_details
 
-            def send_transaction(self) -> TransactionHash:
-                """ Locally sign the transaction and send it to the network. """
+        # The class is hidden in the method to force this method to be called,
+        # this is necessary to enforce the monotonicity of the `nonce`.
+        @dataclass
+        class TransactionSentImplementation(TransactionSent):
+            from_address: Address
+            data: Union[SmartContractCall, ByteCode, EthTransfer]
+            eth_node: Optional[EthClient]
+            extra_log_details: Dict[str, Any]
+            startgas: int
+            gas_price: int
+            nonce: Nonce
+            transaction_hash: TransactionHash
 
-                with self._sent_lock:
-                    if self._sent is not TransactionSlotState.allocated:
-                        raise RaidenUnrecoverableError(
-                            f"A transaction for this slot has been already sent "
-                            f"or tried! Reusing the nonce is a synchronization "
-                            f"problem."
-                        )
+            def __post_init__(self) -> None:
+                self.extra_log_details.setdefault("token", str(uuid4()))
 
-                    log_details = self.to_log_details()
+                typecheck(self.from_address, T_Address)
+                typecheck(self.data, (SmartContractCall, ByteCode, EthTransfer))
+                typecheck(self.startgas, int)
+                typecheck(self.gas_price, int)
+                typecheck(self.nonce, T_Nonce)
+                typecheck(self.transaction_hash, T_TransactionHash)
 
-                    if isinstance(self.data, SmartContractCall):
-                        function_call = self.data
-                        data = get_transaction_data(
-                            web3=function_call.contract.web3,
-                            abi=function_call.contract.abi,
-                            function_name=function_call.function,
-                            args=function_call.args,
-                            kwargs=function_call.kwargs,
-                        )
-                        transaction = {
-                            "data": decode_hex(data),
-                            "gas": self.startgas,
-                            "nonce": self.nonce,
-                            "value": self.data.value,
-                            "to": to_checksum_address(function_call.contract.address),
-                            "gasPrice": self.gas_price,
-                        }
+            def to_log_details(self) -> Dict[str, Any]:
+                log_details = self.data.to_log_details()
+                log_details.update(self.extra_log_details)
+                log_details.update(
+                    {
+                        "node": to_checksum_address(client.address),
+                        "from_address": to_checksum_address(self.from_address),
+                        "eth_node": self.eth_node,
+                        "startgas": self.startgas,
+                        "gas_price": self.gas_price,
+                        "nonce": self.nonce,
+                        "transaction_hash": encode_hex(self.transaction_hash),
+                    }
+                )
+                return log_details
 
-                        error_msg = "Transaction to call smart contract function failed"
-                        log.debug(
-                            "Transaction to call smart contract function will be sent",
-                            **log_details,
-                        )
-                    elif isinstance(self.data, EthTransfer):
-                        transaction = {
-                            "to": to_checksum_address(self.data.to_address),
-                            "gas": self.startgas,
-                            "nonce": self.nonce,
-                            "value": self.data.value,
-                            "gasPrice": self.gas_price,
-                        }
+        try:
+            with self._nonce_lock:
+                # This value can only be updated after the transaction is sent, the
+                # lock has to be held until then.
+                available_nonce = self._available_nonce
 
-                        error_msg = "Transaction to transfer ether failed"
-                        log.debug("Transaction to transfer ether", **log_details)
-                    else:
-                        transaction = {
-                            "data": self.data.bytecode,
-                            "gas": self.startgas,
-                            "nonce": self.nonce,
-                            "value": 0,
-                            "gasPrice": self.gas_price,
-                        }
-
-                        error_msg = "Transaction to deploy smart contract failed"
-                        log.debug(
-                            "Transaction to deploy smart contract will be sent", **log_details
-                        )
-
-                    signed_txn = client.web3.eth.account.sign_transaction(
-                        transaction, client.privkey
+                # A EthTransfer doesn't need gas estimation, it should always
+                # use the `TRANSACTION_INTRINSIC_GAS`. This is why it has a
+                # special case.
+                if isinstance(transaction, EthTransfer):
+                    slot = TransactionSlot(
+                        from_address=self.address,
+                        eth_node=self.eth_node,
+                        data=transaction,
+                        extra_log_details={},
+                        startgas=TRANSACTION_INTRINSIC_GAS,
+                        gas_price=transaction.gas_price,
+                        nonce=available_nonce,
+                    )
+                else:
+                    slot = TransactionSlot(
+                        from_address=transaction.from_address,
+                        eth_node=transaction.eth_node,
+                        data=transaction.data,
+                        extra_log_details=transaction.extra_log_details,
+                        startgas=transaction.estimated_gas,
+                        gas_price=transaction.gas_price,
+                        nonce=available_nonce,
                     )
 
-                    try:
-                        tx_hash = client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
-                        self._sent = TransactionSlotState.sent
-                    except ValueError as e:
-                        self._sent = TransactionSlotState.rejected
+                log_details = slot.to_log_details()
 
-                        action = inspect_client_error(e, self.eth_node)
+                if isinstance(slot.data, SmartContractCall):
+                    function_call = slot.data
+                    data = get_transaction_data(
+                        web3=function_call.contract.web3,
+                        abi=function_call.contract.abi,
+                        function_name=function_call.function,
+                        args=function_call.args,
+                        kwargs=function_call.kwargs,
+                    )
+                    transaction_data = {
+                        "data": decode_hex(data),
+                        "gas": slot.startgas,
+                        "nonce": slot.nonce,
+                        "value": slot.data.value,
+                        "to": to_checksum_address(function_call.contract.address),
+                        "gasPrice": slot.gas_price,
+                    }
 
-                        if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
-                            reason = (
-                                "Transaction failed due to insufficient ETH balance. "
-                                "Please top up your ETH account."
-                            )
-                            log.critical(error_msg, **log_details, reason=reason)
-                            raise InsufficientEth(reason)
+                    log.debug(
+                        "Transaction to call smart contract function will be sent", **log_details
+                    )
+                elif isinstance(slot.data, EthTransfer):
+                    transaction_data = {
+                        "to": to_checksum_address(slot.data.to_address),
+                        "gas": slot.startgas,
+                        "nonce": slot.nonce,
+                        "value": slot.data.value,
+                        "gasPrice": slot.gas_price,
+                    }
 
-                        if action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
-                            reason = (
-                                "Transaction was rejected. This is potentially "
-                                "caused by the reuse of the previous transaction "
-                                "nonce as well as paying an amount of gas less than or "
-                                "equal to the previous transaction's gas amount"
-                            )
-                            log.critical(error_msg, **log_details, reason=reason)
-                            raise ReplacementTransactionUnderpriced(reason)
-
-                        if action in THE_NONCE_WAS_REUSED:
-                            # XXX: Add logic to check that it is the same transaction
-                            # (instead of relying on the error message), and instead of
-                            # raising an unrecoverable error proceed as normal with the
-                            # polling.
-                            #
-                            # This was previously done, but removed by #4909, and for it to
-                            # be finished #2088 has to be implemented.
-                            reason = (
-                                "Transaction rejected because the nonce has been already mined."
-                            )
-                            log.critical(error_msg, **log_details, reason=reason)
-                            raise EthereumNonceTooLow(reason)
-
-                        reason = f"Unexpected error in underlying Ethereum node: {str(e)}"
-                        log.critical(error_msg, **log_details, reason=reason)
-                        raise RaidenUnrecoverableError(reason)
-
-                    log.debug("Transaction sent", **log_details, tx_hash=encode_hex(tx_hash))
-
-                    return TransactionHash(tx_hash)
-
-            def __del__(self) -> None:
-                if self._sent is TransactionSlotState.sent:
-                    return
-
-                if self._sent is TransactionSlotState.rejected:
-                    msg = f"Transaction with nonce {self.nonce} was rejected!"
+                    log.debug("Transaction to transfer ether will be sent", **log_details)
                 else:
-                    msg = f"Transaction with nonce {self.nonce} was sent!"
+                    transaction_data = {
+                        "data": slot.data.bytecode,
+                        "gas": slot.startgas,
+                        "nonce": slot.nonce,
+                        "value": 0,
+                        "gasPrice": slot.gas_price,
+                    }
 
-                log_details = self.to_log_details()
-                log.critical(msg, **log_details)
+                    log.debug("Transaction to deploy smart contract will be sent", **log_details)
 
-                raise RaidenUnrecoverableError(
-                    f"{msg} This will result in nonce synchronization " f"problems. {log_details}."
+                signed_txn = client.web3.eth.account.sign_transaction(
+                    transaction_data, client.privkey
                 )
+                tx_hash = client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
 
-        with self._nonce_lock:
-            if isinstance(transaction, EthTransfer):
-                slot = TransactionSlotImplementation(
-                    from_address=self.address,
-                    eth_node=self.eth_node,
-                    data=transaction,
-                    extra_log_details={},
-                    startgas=TRANSACTION_INTRINSIC_GAS,
-                    gas_price=transaction.gas_price,
-                    nonce=self._available_nonce,
-                )
+                # Increase the `nonce` only after sending the transaction. This
+                # is necessary because the send itself can fail, e.g. because
+                # of an invalid value which leads to a `ValueError` or if the
+                # received node rejects the transaction. When this happens, the
+                # `_available_nonce` must not be incremented, since that may
+                # lead to gaps in the account's transactions, effectivelly
+                # stalling all transactions until the spare nonce is used.
+                self._available_nonce = Nonce(self._available_nonce + 1)
+
+        except ValueError as e:
+            if isinstance(slot.data, SmartContractCall):
+                error_msg = "Transaction to deploy smart contract failed"
+            elif isinstance(slot.data, EthTransfer):
+                error_msg = "Transaction to transfer ether failed"
             else:
-                slot = TransactionSlotImplementation(
-                    from_address=transaction.from_address,
-                    eth_node=transaction.eth_node,
-                    data=transaction.data,
-                    extra_log_details=transaction.extra_log_details,
-                    startgas=transaction.estimated_gas,
-                    gas_price=transaction.gas_price,
-                    nonce=self._available_nonce,
+                error_msg = "Transaction to call smart contract function failed"
+
+            action = inspect_client_error(e, self.eth_node)
+
+            if action == ClientErrorInspectResult.INSUFFICIENT_FUNDS:
+                reason = (
+                    "Transaction failed due to insufficient ETH balance. "
+                    "Please top up your ETH account."
                 )
+                log.critical(error_msg, **log_details, reason=reason)
+                raise InsufficientEth(reason)
 
-            tx_hash = slot.send_transaction()
+            if action == ClientErrorInspectResult.TRANSACTION_UNDERPRICED:
+                reason = (
+                    "Transaction was rejected. This is potentially "
+                    "caused by the reuse of the previous transaction "
+                    "nonce as well as paying an amount of gas less than or "
+                    "equal to the previous transaction's gas amount"
+                )
+                log.critical(error_msg, **log_details, reason=reason)
+                raise ReplacementTransactionUnderpriced(reason)
 
-            # Increase the `nonce` only after sending the transaction. This is
-            # necessary because the send itself can fail, e.g. because of an
-            # invalid value which leads to a `ValueError` or if the received
-            # node rejects the transaction. When this happens, the
-            # `_available_nonce` must not be incremented, since that may lead
-            # to holes in the account's transactions, effectivelly stalling all
-            # transactions until the spare nonce is used.
-            self._available_nonce = Nonce(self._available_nonce + 1)
+            if action in THE_NONCE_WAS_REUSED:
+                # XXX: Add logic to check if the transactions are the same, and
+                # if they are, instead of raising an unrecoverable error
+                # proceed as normal.
+                #
+                # This was previously done, but removed by #4909, and for it to
+                # be finished #2088 has to be implemented.
+                reason = "Transaction rejected because the nonce has been already mined."
+                log.critical(error_msg, **log_details, reason=reason)
+                raise EthereumNonceTooLow(reason)
 
-            return tx_hash
+            reason = f"Unexpected error in underlying Ethereum node: {str(e)}"
+            log.critical(error_msg, **log_details, reason=reason)
+            raise RaidenUnrecoverableError(reason)
+
+        transaction_sent = TransactionSentImplementation(
+            from_address=slot.from_address,
+            eth_node=slot.eth_node,
+            data=slot.data,
+            extra_log_details=slot.extra_log_details,
+            startgas=TRANSACTION_INTRINSIC_GAS,
+            gas_price=slot.gas_price,
+            nonce=slot.nonce,
+            transaction_hash=TransactionHash(tx_hash),
+        )
+        log.debug("Transaction sent", **transaction_sent.to_log_details())
+        return transaction_sent
 
     def new_contract_proxy(self, abi: ABI, contract_address: Address) -> Contract:
         return self.web3.eth.contract(abi=abi, address=contract_address)
@@ -1076,9 +1103,9 @@ class JSONRPCClient:
             approximate_block=(block["hash"], block["number"]),
         )
 
-        transaction_hash = self.transact(transaction)
-        receipt = self.poll_transaction(transaction_hash)
-        contract_address = to_canonical_address(receipt["contractAddress"])
+        transaction_sent = self.transact(transaction)
+        transaction_mined = self.poll_transaction(transaction_sent)
+        contract_address = to_canonical_address(transaction_mined.receipt["contractAddress"])
 
         deployed_code = self.web3.eth.getCode(contract_address)
 
@@ -1091,10 +1118,10 @@ class JSONRPCClient:
 
         return (
             self.new_contract_proxy(abi=contract["abi"], contract_address=contract_address),
-            receipt,
+            transaction_mined.receipt,
         )
 
-    def poll_transaction(self, transaction_hash: TransactionHash) -> TxReceipt:
+    def poll_transaction(self, transaction_sent: TransactionSent) -> TransactionMined:
         """ Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 
@@ -1111,10 +1138,7 @@ class JSONRPCClient:
         Args:
             transaction_hash: Transaction hash that we are waiting for.
         """
-        if len(transaction_hash) != 32:
-            raise ValueError("transaction_hash must be a 32 byte hash")
-
-        transaction_hash_hex = encode_hex(transaction_hash)
+        transaction_hash_hex = encode_hex(transaction_sent.transaction_hash)
 
         while True:
             tx_receipt: Optional[TxReceipt] = None
@@ -1155,7 +1179,18 @@ class JSONRPCClient:
 
                 is_transaction_confirmed = block_number >= confirmation_block
                 if is_transaction_confirmed:
-                    return tx_receipt
+                    transaction_mined = TransactionMined(
+                        from_address=transaction_sent.from_address,
+                        data=transaction_sent.data,
+                        eth_node=transaction_sent.eth_node,
+                        extra_log_details=transaction_sent.extra_log_details,
+                        startgas=transaction_sent.startgas,
+                        gas_price=transaction_sent.gas_price,
+                        nonce=transaction_sent.nonce,
+                        transaction_hash=transaction_sent.transaction_hash,
+                        receipt=tx_receipt,
+                    )
+                    return transaction_mined
 
             gevent.sleep(1.0)
 

@@ -1,8 +1,6 @@
-from typing import Any, Dict
-
 import pytest
 
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, TransactionMined
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
@@ -25,7 +23,7 @@ def test_parity_request_pruned_data_raises_an_exception(deploy_client: JSONRPCCl
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1000
 
-    def send_transaction() -> Dict[str, Any]:
+    def send_transaction() -> TransactionMined:
         estimated_transaction = deploy_client.estimate_gas(
             contract_proxy, "waste_storage", {}, iterations
         )
@@ -33,7 +31,7 @@ def test_parity_request_pruned_data_raises_an_exception(deploy_client: JSONRPCCl
         transaction = deploy_client.transact(estimated_transaction)
         return deploy_client.poll_transaction(transaction)
 
-    first_receipt = send_transaction()
+    first_receipt = send_transaction().receipt
     pruned_block_number = first_receipt["blockNumber"]
 
     for _ in range(10):
