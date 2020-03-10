@@ -566,3 +566,21 @@ def setup_smoketest(
                         logfile.flush()
                         logfile.seek(0)
                         append_report("Ethereum Node log output", logfile.read())
+
+
+@contextmanager
+def step_printer(step_count, stdout):
+    step = 0
+
+    def print_step(description: str, error: bool = False) -> None:
+        nonlocal step
+        step += 1
+        click.echo(
+            "{} {}".format(
+                click.style(f"[{step}/{step_count}]", fg="blue"),
+                click.style(description, fg="green" if not error else "red"),
+            ),
+            file=stdout,
+        )
+
+    yield print_step
