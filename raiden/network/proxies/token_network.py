@@ -27,11 +27,12 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.utils import (
+    check_transaction_gas_used,
     get_channel_participants_from_open_event,
     raise_on_call_returned_empty,
 )
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState
@@ -332,10 +333,11 @@ class TokenNetwork:
                 estimated_transaction.estimated_gas,
                 self.metadata.gas_measurements["TokenNetwork.openChannel"],
             )
-            transaction_hash = self.client.transact(estimated_transaction)
-            receipt = self.client.poll_transaction(transaction_hash)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
+            receipt = transaction_mined.receipt
 
-            if check_transaction_threw(receipt=receipt):
+            if not was_transaction_successfully_mined(transaction_mined):
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
                 existing_channel_identifier = self.get_channel_identifier_or_none(
                     participant1=self.node_address,
@@ -361,7 +363,6 @@ class TokenNetwork:
 
                 raise RaidenRecoverableError("Creating new channel failed.")
 
-        receipt = self.client.poll_transaction(transaction_hash)
         channel_identifier: ChannelID = self._detail_channel(
             participant1=self.node_address,
             participant2=partner,
@@ -903,10 +904,11 @@ class TokenNetwork:
                 estimated_transaction.estimated_gas,
                 self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
             )
-            transaction_hash = self.client.transact(estimated_transaction)
-            receipt = self.client.poll_transaction(transaction_hash)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if check_transaction_threw(receipt=receipt):
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
                 # Because the gas estimation succeeded it is known that:
                 # - The channel id was correct, i.e. this node and partner are
                 #   participants of the chanenl with id `channel_identifier`.
@@ -917,15 +919,7 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
                 failed_at_blocknumber = receipt["blockNumber"]
 
-                if receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                    msg = (
-                        f"setTotalDeposit failed and all gas was used "
-                        f"({estimated_transaction.estimated_gas}). Estimate gas "
-                        f"may have underestimated setTotalDeposit, or succeeded "
-                        f"even though an assert is triggered, or the smart "
-                        f"contract code has an conditional assert."
-                    )
-                    raise RaidenRecoverableError(msg)
+                check_transaction_gas_used(transaction_mined)
 
                 safety_deprecation_switch = self.safety_deprecation_switch(
                     block_identifier=failed_at_blockhash
@@ -1353,29 +1347,21 @@ class TokenNetwork:
                 self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
             )
 
-            transaction_hash = self.client.transact(estimated_transaction)
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was open.
                 # - The total withdraw amount increased.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
 
-                if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                    msg = (
-                        f"update transfer failed and all gas was used "
-                        f"({estimated_transaction.estimated_gas}). Estimate gas "
-                        f"may have underestimated update transfer, or succeeded "
-                        f"even though an assert is triggered, or the smart "
-                        f"contract code has an conditional assert."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                check_transaction_gas_used(transaction_mined)
 
                 # Query the current state to check for transaction races
                 detail = self._detail_channel(
@@ -1649,11 +1635,11 @@ class TokenNetwork:
                     estimated_transaction.estimated_gas,
                     self.metadata.gas_measurements["TokenNetwork.closeChannel"],
                 )
-                transaction_hash = transaction_hash = self.client.transact(estimated_transaction)
-                receipt = self.client.poll_transaction(transaction_hash)
-                failed_receipt = check_transaction_threw(receipt=receipt)
+                transaction_sent = self.client.transact(estimated_transaction)
+                transaction_mined = self.client.poll_transaction(transaction_sent)
 
-                if failed_receipt:
+                if not was_transaction_successfully_mined(transaction_mined):
+                    receipt = transaction_mined.receipt
                     # Because the gas estimation succeeded it is known that:
                     # - The channel existed.
                     # - The channel was at the state open.
@@ -1667,16 +1653,9 @@ class TokenNetwork:
 
                     # These checks do not have problems with race conditions because
                     # `poll`ing waits for the transaction to be confirmed.
-                    mining_block = failed_receipt["blockNumber"]
+                    mining_block = receipt["blockNumber"]
 
-                    if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                        msg = (
-                            "update transfer failed and all gas was used. Estimate gas "
-                            "may have underestimated update transfer, or succeeded even "
-                            "though an assert is triggered, or the smart contract code "
-                            "has an conditional assert."
-                        )
-                        raise RaidenUnrecoverableError(msg)
+                    check_transaction_gas_used(transaction_mined)
 
                     partner_details = self._detail_participant(
                         channel_identifier=channel_identifier,
@@ -1891,12 +1870,11 @@ class TokenNetwork:
                 estimated_transaction.estimated_gas,
                 self.metadata.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"],
             )
-            transaction_hash = self.client.transact(estimated_transaction)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
                 # Because the gas estimation succeeded it is known that:
                 # - The channel existed.
                 # - The channel was at the state closed.
@@ -1906,16 +1884,9 @@ class TokenNetwork:
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
-                mining_block = failed_receipt["blockNumber"]
+                mining_block = receipt["blockNumber"]
 
-                if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                    msg = (
-                        "update transfer failed and all gas was used. Estimate gas "
-                        "may have underestimated update transfer, or succeeded even "
-                        "though an assert is triggered, or the smart contract code "
-                        "has an conditional assert."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                check_transaction_gas_used(transaction_mined)
 
                 # Query the current state to check for transaction races
                 channel_data = self._detail_channel(
@@ -2151,26 +2122,17 @@ class TokenNetwork:
                 estimated_transaction.estimated_gas, UNLOCK_TX_GAS_LIMIT
             )
 
-            transaction_hash = self.client.transact(estimated_transaction)
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was settled.
                 # - The channel had pending locks on-chain for that participant.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                if failed_receipt["cumulativeGasUsed"] == estimated_transaction.estimated_gas:
-                    msg = (
-                        f"Unlock failed and all gas was used "
-                        f"({estimated_transaction.estimated_gas}). Estimate gas "
-                        f"may have underestimated unlock, or succeeded even "
-                        f"though an assert is triggered, or the smart contract "
-                        f"code has an conditional assert."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                check_transaction_gas_used(transaction_mined)
 
                 # Query the current state to check for transaction races
                 sender_details = self._detail_participant(
@@ -2380,13 +2342,13 @@ class TokenNetwork:
                 self.metadata.gas_measurements["TokenNetwork.settleChannel"],
             )
 
-            transaction_hash = self.client.transact(estimated_transaction)
-            receipt = self.client.poll_transaction(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if failed_receipt:
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
 
                 self.client.check_for_insufficient_eth(
                     transaction_name="settleChannel",

@@ -7,7 +7,7 @@ from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.utils.typing import (
     Address,
     Any,
@@ -119,10 +119,10 @@ class ServiceRegistry:
             msg = "ServiceRegistry.deposit transaction fails"
             raise RaidenUnrecoverableError(msg)
 
-        transaction_hash = self.client.transact(estimated_transaction)
-        receipt = self.client.poll_transaction(transaction_hash)
-        failed_receipt = check_transaction_threw(receipt=receipt)
-        if failed_receipt:
+        transaction_sent = self.client.transact(estimated_transaction)
+        transaction_mined = self.client.poll_transaction(transaction_sent)
+
+        if not was_transaction_successfully_mined(transaction_mined):
             msg = "ServiceRegistry.deposit transaction failed"
             raise RaidenUnrecoverableError(msg)
 
@@ -145,9 +145,9 @@ class ServiceRegistry:
             msg = f"URL {url} is invalid"
             raise RaidenUnrecoverableError(msg)
 
-        transaction_hash = self.client.transact(estimated_transaction)
-        receipt = self.client.poll_transaction(transaction_hash)
-        failed_receipt = check_transaction_threw(receipt=receipt)
-        if failed_receipt:
+        transaction_sent = self.client.transact(estimated_transaction)
+        transaction_mined = self.client.poll_transaction(transaction_sent)
+
+        if not was_transaction_successfully_mined(transaction_mined):
             msg = f"URL {url} is invalid"
             raise RaidenUnrecoverableError(msg)
