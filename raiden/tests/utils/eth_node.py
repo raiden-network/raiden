@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 from contextlib import ExitStack, contextmanager
-from datetime import datetime
 from typing import ContextManager, Iterator
 
 import gevent
@@ -202,15 +201,10 @@ def geth_keystore(datadir: str) -> str:
     return os.path.join(datadir, "keystore")
 
 
-def geth_keyfile(datadir: str, address: Address) -> str:
+def geth_keyfile(datadir: str) -> str:
     keystore = geth_keystore(datadir)
     os.makedirs(keystore, exist_ok=True)
-
-    address_hex = remove_0x_prefix(encode_hex(address))
-    broken_iso_8601 = datetime.now().isoformat().replace(":", "-")
-    account = f"UTC--{broken_iso_8601}000Z--{address_hex}"
-
-    return os.path.join(keystore, account)
+    return os.path.join(keystore, "keyfile")
 
 
 def eth_create_account_file(keyfile_path: str, privkey: bytes) -> None:
@@ -522,7 +516,7 @@ def run_private_blockchain(
         for config in nodes_configuration:
             if config.get("mine"):
                 datadir = eth_node_to_datadir(config["address"], base_datadir)
-                keyfile_path = geth_keyfile(datadir, config["address"])
+                keyfile_path = geth_keyfile(datadir)
                 eth_create_account_file(keyfile_path, config["nodekey"])
 
     elif blockchain_type == "parity":
