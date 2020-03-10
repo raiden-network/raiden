@@ -317,3 +317,8 @@ class PendingTransfersResourceByTokenAndPartnerAddress(BaseResource):
     @if_api_available
     def get(self, token_address: TokenAddress, partner_address: Address) -> Response:
         return self.rest_api.get_pending_transfers(token_address, partner_address)
+
+
+class StatusResource(BaseResource):
+    def get(self) -> Response:
+        return self.rest_api.get_status()
