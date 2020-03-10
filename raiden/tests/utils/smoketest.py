@@ -6,9 +6,10 @@ import shutil
 import signal
 from contextlib import contextmanager
 from http import HTTPStatus
+from pathlib import Path
 from subprocess import TimeoutExpired
 from tempfile import mkdtemp
-from typing import IO, ContextManager
+from typing import IO, ContextManager, NamedTuple
 
 import click
 import requests
@@ -322,16 +323,22 @@ def setup_testchain_for_smoketest(
         yield ctx
 
 
+class RaidenTestSetup(NamedTuple):
+    args: Dict[str, Any]
+    token: Contract
+    contract_addresses: Dict[str, Address]
+
+
 def setup_raiden(
-    matrix_server,
-    print_step,
+    matrix_server: str,
+    print_step: Callable,
     contracts_version,
-    eth_client,
-    eth_rpc_endpoint,
-    web3,
-    base_datadir,
-    keystore,
-) -> Dict[str, Any]:
+    eth_client: EthClient,
+    eth_rpc_endpoint: str,
+    web3: Web3,
+    base_datadir: Path,
+    keystore: Path,
+) -> RaidenTestSetup:
     print_step("Deploying Raiden contracts")
 
     if eth_client is EthClient.PARITY:
@@ -405,20 +412,15 @@ def setup_raiden(
         current_block = client.block_number()
         sleep(0.5)
 
-    return {"args": args, "contract_addresses": contract_addresses, "token": token}
+    return RaidenTestSetup(args=args, token=token, contract_addresses=contract_addresses)
 
 
-def run_smoketest(
-    print_step: Callable,
-    args: Dict[str, Any],
-    contract_addresses: Dict[str, Address],
-    token: Contract,
-) -> None:
+def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
     print_step("Starting Raiden")
 
     app = None
     try:
-        app = run_app(**args)
+        app = run_app(**setup.args)
         raiden_api = app.raiden.raiden_api
         assert raiden_api is not None  # for mypy
 
@@ -430,20 +432,20 @@ def run_smoketest(
 
         raiden_api.channel_open(
             registry_address=TokenNetworkRegistryAddress(
-                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+                setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
-            token_address=TokenAddress(to_canonical_address(token.address)),
+            token_address=TokenAddress(to_canonical_address(setup.token.address)),
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
         )
         raiden_api.set_total_channel_deposit(
             registry_address=TokenNetworkRegistryAddress(
-                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+                setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
-            token_address=TokenAddress(to_canonical_address(token.address)),
+            token_address=TokenAddress(to_canonical_address(setup.token.address)),
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
-        token_addresses = [to_checksum_address(token.address)]
+        token_addresses = [to_checksum_address(setup.token.address)]
 
         print_step("Running smoketest")
 
@@ -501,7 +503,7 @@ def setup_smoketest(
     debug: bool = False,
     stdout: IO = None,
     append_report: Callable = print,
-) -> Iterator[Dict[str, Any]]:
+) -> Iterator[RaidenTestSetup]:
 
     make_requests_insecure()
 
@@ -534,7 +536,7 @@ def setup_smoketest(
 
     with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
         try:
-            smoketest_setup = setup_raiden(
+            raiden_setup = setup_raiden(
                 matrix_server=server_urls[0][0],
                 print_step=print_step,
                 contracts_version=RAIDEN_CONTRACT_VERSION,
@@ -544,11 +546,10 @@ def setup_smoketest(
                 base_datadir=testchain["base_datadir"],
                 keystore=testchain["keystore"],
             )
-            smoketest_setup["node_executors"] = testchain["node_executors"]
-            smoketest_setup["matrix_server_url"] = server_urls[0][0]
-            ethereum_nodes = smoketest_setup["node_executors"]
+            ethereum_nodes = testchain["node_executors"]
             assert all(ethereum_nodes)
-            yield smoketest_setup
+
+            yield raiden_setup
         finally:
             if ethereum_nodes:
                 for node_executor in ethereum_nodes:
