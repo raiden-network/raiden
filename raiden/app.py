@@ -1,5 +1,6 @@
 import structlog
 
+from raiden.api.rest import APIServer
 from raiden.constants import BLOCK_ID_LATEST, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.message_handler import MessageHandler
@@ -36,6 +37,7 @@ class App:  # pylint: disable=too-few-public-methods
         message_handler: MessageHandler,
         routing_mode: RoutingMode,
         user_deposit: UserDeposit = None,
+        api_server: APIServer = None,
     ):
         raiden = RaidenService(
             rpc_client=rpc_client,
@@ -52,6 +54,7 @@ class App:  # pylint: disable=too-few-public-methods
             routing_mode=routing_mode,
             config=config,
             user_deposit=user_deposit,
+            api_server=api_server,
         )
 
         # check that the settlement timeout fits the limits of the contract

@@ -9,9 +9,11 @@ from eth_utils import is_address, to_canonical_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
+from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
 from raiden.constants import (
     BLOCK_ID_LATEST,
+    DOC_URL,
     GENESIS_BLOCK_NUMBER,
     MATRIX_AUTO_SELECT_SERVER,
     MONITORING_BROADCASTING_ROOM,
@@ -167,6 +169,21 @@ def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
     return f"{scheme}{eth_rpc_endpoint}"
 
 
+def start_api_server(config: RestApiConfig, eth_rpc_endpoint: str) -> APIServer:
+    api = RestAPI()
+    api_server = APIServer(rest_api=api, config=config, eth_rpc_endpoint=eth_rpc_endpoint)
+    api_server.start()
+
+    url = f"http://{config.host}:{config.port}/"
+    print(
+        f"The Raiden API RPC server is now running at {url}.\n\n See "
+        f"the Raiden documentation for all available endpoints at\n "
+        f"{DOC_URL}"
+    )
+
+    return api_server
+
+
 def run_app(
     address: Address,
     keystore_path: str,
@@ -294,6 +311,10 @@ def run_app(
         ),
     )
 
+    api_server: Optional[APIServer] = None
+    if config.rest_api.rest_api_enabled:
+        api_server = start_api_server(config.rest_api, eth_rpc_endpoint)
+
     if sync_check:
         check_synced(rpc_client)
 
@@ -406,6 +427,7 @@ def run_app(
         message_handler=message_handler,
         routing_mode=routing_mode,
         user_deposit=services_bundle.user_deposit,
+        api_server=api_server,
     )
 
     raiden_app.start()

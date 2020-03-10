@@ -30,7 +30,6 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
     BLOCK_ID_LATEST,
-    DOC_URL,
     EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
@@ -260,6 +259,7 @@ class RaidenService(Runnable):
         routing_mode: RoutingMode,
         config: RaidenConfig,
         user_deposit: UserDeposit = None,
+        api_server: Optional[APIServer] = None,
     ) -> None:
         super().__init__()
         self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
@@ -289,18 +289,13 @@ class RaidenService(Runnable):
         self.message_handler = message_handler
         self.blockchain_events: Optional[BlockchainEvents] = None
 
+        self.api_server: Optional[APIServer] = api_server
         self.raiden_api: Optional[RaidenAPI] = None
         self.rest_api: Optional[RestAPI] = None
-        self.api_server: Optional[APIServer] = None
-        if config.rest_api.rest_api_enabled:
+        if isinstance(api_server, APIServer):
             self.raiden_api = RaidenAPI(self)
-            self.rest_api = RestAPI(self.raiden_api)
-
-            self.api_server = APIServer(
-                rest_api=self.rest_api,
-                config=config.rest_api,
-                eth_rpc_endpoint=config.rest_api.eth_rpc_endpoint,
-            )
+            self.rest_api = api_server.rest_api
+            self.rest_api.raiden_api = self.raiden_api
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
@@ -391,7 +386,7 @@ class RaidenService(Runnable):
         log.debug("Raiden Service started", node=to_checksum_address(self.address))
         super().start()
 
-        self._start_rest_api()
+        self._set_rest_api_service_available()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
@@ -688,16 +683,10 @@ class RaidenService(Runnable):
         assert self.ready_to_process_events, f"Event processing disabled. node:{self!r}"
         self.alarm.start()
 
-    def _start_rest_api(self) -> None:
+    def _set_rest_api_service_available(self) -> None:
         if self.api_server is not None:
-            self.api_server.start()
-
-            url = f"http://{self.config.rest_api.host}:{self.config.rest_api.port}/"
-            print(
-                f"The Raiden API RPC server is now running at {url}.\n\n See "
-                f"the Raiden documentation for all available endpoints at\n "
-                f"{DOC_URL}"
-            )
+            self.api_server.rest_api.set_available()
+            print("Synchronization complete, REST API services now available.")
 
     def _initialize_ready_to_process_events(self) -> None:
         """Mark the node as ready to start processing raiden events that may
