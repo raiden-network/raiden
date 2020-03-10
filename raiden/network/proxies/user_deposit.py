@@ -45,14 +45,9 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
-def make_token_amount() -> TokenAmount:
-    """ Utility to satisfy the type checker. """
-    return TokenAmount(0)
-
-
 @dataclass
 class InflightDeposit:
-    total_deposit: TokenAmount = field(default_factory=make_token_amount)
+    total_deposit: TokenAmount = field(default_factory=lambda: TokenAmount(0))
     async_result: AsyncResult = field(default_factory=AsyncResult)
 
 
@@ -303,6 +298,7 @@ class UserDeposit:
                 self.proxy, "deposit", log_details, beneficiary, total_deposit
             )
 
+            transaction_hash = None
             if estimated_transaction is not None:
                 transaction_hash = self.client.transact(estimated_transaction)
 
@@ -441,10 +437,15 @@ class UserDeposit:
         else:
             async_result.set_result(None)
         finally:
-            # Clearing the dictionary is not strinctly necessary since the
+            # Clearing the dictionary is not strictly necessary since the
             # deposit is always increasing. But it is just nice to clear up the
             # container.
-            del self._inflight_deposits[beneficiary]
+            #
+            # When two transactions are in the flight, only the one for the
+            # highest `total_deposit` should clear the container.
+            stored_inflight = self._inflight_deposits.get(beneficiary)
+            if stored_inflight == current_inflight:
+                del self._inflight_deposits[beneficiary]
 
     def _deposit_check_result(
         self,
