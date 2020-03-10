@@ -1,5 +1,4 @@
 import errno
-import json
 import logging
 import socket
 from hashlib import sha256
@@ -9,7 +8,7 @@ import gevent
 import gevent.pool
 import structlog
 from eth_utils import encode_hex
-from flask import Flask, Request, Response, make_response, request, send_from_directory, url_for
+from flask import Flask, Request, Response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
 from flask_restful import Api, abort
@@ -25,6 +24,7 @@ from werkzeug.routing import BaseConverter
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.api.objects import AddressList, PartnersPerTokenList
 from raiden.api.python import RaidenAPI
+from raiden.api.rest_utils import api_error, api_response
 from raiden.api.v1.encoding import (
     AddressListSchema,
     ChannelStateSchema,
@@ -130,19 +130,6 @@ from raiden.utils.typing import (
 
 log = structlog.get_logger(__name__)
 
-ERROR_STATUS_CODES = [
-    HTTPStatus.FORBIDDEN,
-    HTTPStatus.CONFLICT,
-    HTTPStatus.REQUEST_TIMEOUT,
-    HTTPStatus.PAYMENT_REQUIRED,
-    HTTPStatus.BAD_REQUEST,
-    HTTPStatus.NOT_FOUND,
-    HTTPStatus.NOT_IMPLEMENTED,
-    HTTPStatus.INTERNAL_SERVER_ERROR,
-    HTTPStatus.SERVICE_UNAVAILABLE,
-]
-
-
 URLS_V1 = [
     ("/address", AddressResource),
     ("/version", VersionResource),
@@ -192,33 +179,6 @@ URLS_V1 = [
     ("/_debug/raiden_events", RaidenInternalEventsResource),
     ("/_testing/tokens/<hexaddress:token_address>/mint", MintTokenResource, "tokensmintresource"),
 ]
-
-
-def api_response(result: Any, status_code: HTTPStatus = HTTPStatus.OK) -> Response:
-    if status_code == HTTPStatus.NO_CONTENT:
-        assert not result, "Provided 204 response with non-zero length response"
-        data = ""
-    else:
-        data = json.dumps(result)
-
-    log.debug("Request successful", response=result, status_code=status_code)
-    response = make_response(
-        (data, status_code, {"mimetype": "application/json", "Content-Type": "application/json"})
-    )
-    return response
-
-
-def api_error(errors: Any, status_code: HTTPStatus) -> Response:
-    assert status_code in ERROR_STATUS_CODES, "Programming error, unexpected error status code"
-    log.error("Error processing request", errors=errors, status_code=status_code)
-    response = make_response(
-        (
-            json.dumps(dict(errors=errors)),
-            status_code,
-            {"mimetype": "application/json", "Content-Type": "application/json"},
-        )
-    )
-    return response
 
 
 @parser.error_handler
@@ -365,6 +325,7 @@ class APIServer(Runnable):  # pragma: no unittest
         self.blueprint = blueprint
         self.flask_api_context = flask_api_context
         self.wsgiserver: Optional[WSGIServer] = None
+        self.available: bool = False
 
         self.flask_app.register_blueprint(self.blueprint)
         self.flask_app.config["WEBUI_PATH"] = RAIDEN_WEBUI_PATH
@@ -444,12 +405,7 @@ class APIServer(Runnable):  # pragma: no unittest
     def start(self) -> None:
         self.stop_event.clear()
 
-        log.debug(
-            "REST API starting",
-            host=self.config.host,
-            port=self.config.port,
-            node=to_checksum_address(self.rest_api.raiden_api.address),
-        )
+        log.debug("REST API starting", host=self.config.host, port=self.config.port)
 
         # WSGI expects an stdlib logger. With structlog there's conflict of
         # method names. Rest unhandled exception will be re-raised here:
@@ -475,12 +431,7 @@ class APIServer(Runnable):  # pragma: no unittest
 
         self.wsgiserver = wsgiserver
 
-        log.debug(
-            "REST API started",
-            host=self.config.host,
-            port=self.config.port,
-            node=to_checksum_address(self.rest_api.raiden_api.address),
-        )
+        log.debug("REST API started", host=self.config.host, port=self.config.port)
 
         super().start()
 
@@ -492,7 +443,7 @@ class APIServer(Runnable):  # pragma: no unittest
             "REST API stopping",
             host=self.config.host,
             port=self.config.port,
-            node=to_checksum_address(self.rest_api.raiden_api.address),
+            node=self.rest_api.checksum_address,
         )
 
         if self.wsgiserver is not None:
@@ -509,7 +460,7 @@ class APIServer(Runnable):  # pragma: no unittest
             "REST API stopped",
             host=self.config.host,
             port=self.config.port,
-            node=to_checksum_address(self.rest_api.raiden_api.address),
+            node=self.rest_api.checksum_address,
         )
 
     def unhandled_exception(self, exception: Exception) -> Response:
@@ -517,7 +468,7 @@ class APIServer(Runnable):  # pragma: no unittest
         log.critical(
             "Unhandled exception when processing endpoint request",
             exc_info=True,
-            node=to_checksum_address(self.rest_api.raiden_api.address),
+            node=self.rest_api.checksum_address,
         )
         self.greenlet.kill(exception)
         return api_error([str(exception)], HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -532,8 +483,10 @@ class RestAPI:  # pragma: no unittest
 
     version = 1
 
-    def __init__(self, raiden_api: RaidenAPI) -> None:
-        self.raiden_api = raiden_api
+    def __init__(self, raiden_api: RaidenAPI = None) -> None:
+        self.raiden_api_optional = raiden_api
+        self.available = raiden_api is not None
+
         self.channel_schema = ChannelStateSchema()
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
@@ -542,8 +495,24 @@ class RestAPI:  # pragma: no unittest
         self.received_success_payment_schema = EventPaymentReceivedSuccessSchema()
         self.failed_payment_schema = EventPaymentSentFailedSchema()
 
+    @property
+    def checksum_address(self) -> Optional[str]:
+        if self.raiden_api is not None:
+            return to_checksum_address(self.raiden_api.address)
+        else:
+            return None
+
+    @property
+    def raiden_api(self) -> RaidenAPI:
+        assert isinstance(self.raiden_api_optional, RaidenAPI)
+        return self.raiden_api_optional
+
+    @raiden_api.setter
+    def raiden_api(self, raiden_api: RaidenAPI) -> None:
+        self.raiden_api_optional = raiden_api
+
     def get_our_address(self) -> Response:
-        return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
+        return api_response(result=dict(our_address=self.checksum_address))
 
     @classmethod
     def get_raiden_version(self) -> Response:
@@ -569,7 +538,7 @@ class RestAPI:  # pragma: no unittest
         )
         log.debug(
             "Registering token",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
@@ -603,7 +572,7 @@ class RestAPI:  # pragma: no unittest
 
         log.debug(
             "Minting token",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             token_address=to_checksum_address(token_address),
             to=to_checksum_address(to),
             value=value,
@@ -627,7 +596,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Opening channel",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             partner_address=to_checksum_address(partner_address),
             token_address=to_checksum_address(token_address),
@@ -695,7 +664,7 @@ class RestAPI:  # pragma: no unittest
             # make initial deposit
             log.debug(
                 "Depositing to new channel",
-                node=to_checksum_address(self.raiden_api.address),
+                node=self.checksum_address,
                 registry_address=to_checksum_address(registry_address),
                 token_address=to_checksum_address(token_address),
                 partner_address=to_checksum_address(partner_address),
@@ -736,7 +705,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Connecting to token network",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             funds=funds,
@@ -763,7 +732,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Leaving token network",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
@@ -780,7 +749,7 @@ class RestAPI:  # pragma: no unittest
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
             "Getting connection managers info",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
         )
         connection_managers = dict()
@@ -830,7 +799,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting channel list",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=optional_address_to_string(token_address),
             partner_address=optional_address_to_string(partner_address),
@@ -848,7 +817,7 @@ class RestAPI:  # pragma: no unittest
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> Response:
         log.debug(
             "Getting token list",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
         )
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
@@ -863,7 +832,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting token network for token",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             token_address=to_checksum_address(token_address),
         )
         token_network_address = self.raiden_api.get_token_network_address_for_token_address(
@@ -885,7 +854,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting network events",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             from_block=from_block,
             to_block=to_block,
@@ -907,7 +876,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting token network blockchain events",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             token_address=to_checksum_address(token_address),
             from_block=from_block,
             to_block=to_block,
@@ -931,7 +900,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting payment history",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             token_address=optional_address_to_string(token_address),
             target_address=optional_address_to_string(target_address),
             limit=limit,
@@ -965,7 +934,7 @@ class RestAPI:  # pragma: no unittest
             else:
                 log.warning(
                     "Unexpected event",
-                    node=to_checksum_address(self.raiden_api.address),
+                    node=self.checksum_address,
                     unexpected_event=event.wrapped_event,
                 )
 
@@ -993,7 +962,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting channel blockchain events",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             token_address=to_checksum_address(token_address),
             partner_address=optional_address_to_string(partner_address),
             from_block=from_block,
@@ -1020,7 +989,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting channel",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             partner_address=to_checksum_address(partner_address),
@@ -1041,7 +1010,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Getting partners by token",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
@@ -1083,7 +1052,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Initiating payment",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
@@ -1132,7 +1101,7 @@ class RestAPI:  # pragma: no unittest
 
         assert isinstance(result, EventPaymentSentSuccess), MYPY_ANNOTATION
         payment = {
-            "initiator_address": self.raiden_api.address,
+            "initiator_address": self.checksum_address,
             "registry_address": registry_address,
             "token_address": token_address,
             "target_address": target_address,
@@ -1152,7 +1121,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Depositing to channel",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
             total_deposit=total_deposit,
@@ -1197,7 +1166,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Withdrawing from channel",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
             total_withdraw=total_withdraw,
@@ -1236,7 +1205,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Set channel reveal timeout",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             channel_identifier=channel_state.identifier,
             reveal_timeout=reveal_timeout,
         )
@@ -1271,7 +1240,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Closing channel",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
         )
@@ -1308,7 +1277,7 @@ class RestAPI:  # pragma: no unittest
     ) -> Response:
         log.debug(
             "Patching channel",
-            node=to_checksum_address(self.raiden_api.address),
+            node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             partner_address=to_checksum_address(partner_address),
@@ -1439,3 +1408,10 @@ class RestAPI:  # pragma: no unittest
             )
         except (ChannelNotFound, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
+
+    def set_available(self, available: bool = True) -> None:
+        if self.raiden_api is None and available:
+            log.error("RaidenAPI not initialized, cannot set API availability to true.")
+            available = False
+        self.available = available
+        log.debug("REST API availability changed.", available=available)
