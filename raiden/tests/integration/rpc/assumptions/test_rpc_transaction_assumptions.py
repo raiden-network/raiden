@@ -31,7 +31,7 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
 
     transaction_sent = deploy_client.transact(estimated_transaction)
     transaction_mined = deploy_client.poll_transaction(transaction_sent)
-    assert was_transaction_successfully_mined(transaction_mined) is None, "must be empty"
+    assert was_transaction_successfully_mined(transaction_mined), "Transaction must be succesfull"
 
 
 def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
@@ -59,7 +59,8 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     )
     transaction_fail_assert_sent = deploy_client.transact(estimated_transaction_fail_assert)
     transaction_fail_assert_mined = deploy_client.poll_transaction(transaction_fail_assert_sent)
-    assert was_transaction_successfully_mined(transaction_fail_assert_mined), "must not be empty"
+    msg = "Transaction must have failed"
+    assert not was_transaction_successfully_mined(transaction_fail_assert_mined), msg
 
     estimated_transaction_fail_require = TransactionEstimated(
         from_address=address,
@@ -72,7 +73,8 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     )
     transaction_fail_require_sent = deploy_client.transact(estimated_transaction_fail_require)
     transaction_fail_require_mined = deploy_client.poll_transaction(transaction_fail_require_sent)
-    assert was_transaction_successfully_mined(transaction_fail_require_mined), "must not be empty"
+    msg = "Transaction must have failed"
+    assert not was_transaction_successfully_mined(transaction_fail_require_mined), msg
 
 
 def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
@@ -89,7 +91,8 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
 
     transaction_sent = deploy_client.transact(estimated_transaction)
     transaction_mined = deploy_client.poll_transaction(transaction_sent)
-    assert was_transaction_successfully_mined(transaction_mined) is None, "must be empty"
+    msg = "Transaction must be succesfull"
+    assert not was_transaction_successfully_mined(transaction_mined), msg
 
 
 def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_gas(

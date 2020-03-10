@@ -152,9 +152,9 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     assert estimated_transaction, "Gas estimation should not fail here"
     assert estimated_transaction.gas_price == 0, "Test requires a gas_price of zero"
 
-    zerogas_txhash = deploy_client.transact(estimated_transaction)
-    zerogas_receipt = deploy_client.poll_transaction(zerogas_txhash).receipt
-    zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_txhash)
+    zerogas_transaction_sent = deploy_client.transact(estimated_transaction)
+    zerogas_receipt = deploy_client.poll_transaction(zerogas_transaction_sent).receipt
+    zerogas_tx = deploy_client.web3.eth.getTransaction(zerogas_transaction_sent.transaction_hash)
 
     msg = "Even thought the transaction had a zero gas price, it is not removed from the pool"
     assert zerogas_tx is not None, msg
@@ -204,7 +204,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     estimated_transaction = client.estimate_gas(zero_gas_proxy, "ret", {})
     assert estimated_transaction, "Gas estimation should not fail here"
 
-    zerogas_txhash = client.transact(estimated_transaction)
+    zerogas_transaction_sent = client.transact(estimated_transaction)
 
     # wait for how many blocks it took to mine the deployment, since this is a
     # private chain, if the new transaction will be mined it should be roughly
@@ -214,8 +214,12 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
         gevent.sleep(0.5)
 
     try:
-        miner_zerogas_tx = miner_client.web3.eth.getTransaction(zerogas_txhash)
-        miner_zerogas_receipt = miner_client.web3.eth.getTransactionReceipt(zerogas_txhash)
+        miner_zerogas_tx = miner_client.web3.eth.getTransaction(
+            zerogas_transaction_sent.transaction_hash
+        )
+        miner_zerogas_receipt = miner_client.web3.eth.getTransactionReceipt(
+            zerogas_transaction_sent.transaction_hash
+        )
     except TransactionNotFound:
         miner_zerogas_tx = None
         miner_zerogas_receipt = None
@@ -224,14 +228,16 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     assert miner_zerogas_tx is None, msg
     assert miner_zerogas_receipt is None, msg
 
-    zerogas_tx = client.web3.eth.getTransaction(zerogas_txhash)
+    zerogas_tx = client.web3.eth.getTransaction(zerogas_transaction_sent.transaction_hash)
     msg = (
         "The transaction was NOT discarded by the original node, because it is a local transaction"
     )
     assert zerogas_tx is not None, msg
 
     try:
-        zerogas_receipt = client.web3.eth.getTransactionReceipt(zerogas_txhash)
+        zerogas_receipt = client.web3.eth.getTransactionReceipt(
+            zerogas_transaction_sent.transaction_hash
+        )
     except TransactionNotFound:
         zerogas_receipt = None
 
