@@ -54,6 +54,7 @@ from raiden.api.v1.resources import (
     PendingTransfersResourceByTokenAndPartnerAddress,
     RaidenInternalEventsResource,
     RegisterTokenResource,
+    StatusResource,
     TokensResource,
     VersionResource,
     create_blueprint,
@@ -162,6 +163,7 @@ URLS_V1 = [
         PendingTransfersResourceByTokenAndPartnerAddress,
         "pending_transfers_resource_by_token_and_partner",
     ),
+    ("/status", StatusResource),
     ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
     ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
     (
@@ -1408,6 +1410,13 @@ class RestAPI:  # pragma: no unittest
             )
         except (ChannelNotFound, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
+
+    def get_status(self) -> Response:
+        if self.available:
+            return api_response(result=dict(status="ready"))
+        else:
+            result = dict(status="syncing")
+            return api_response(result=result, status_code=HTTPStatus.SERVICE_UNAVAILABLE)
 
     def set_available(self, available: bool = True) -> None:
         if self.raiden_api is None and available:
