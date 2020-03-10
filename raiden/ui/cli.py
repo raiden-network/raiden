@@ -697,11 +697,8 @@ def smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest
+    from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest, step_printer
 
-    step_count = 7
-    step = 0
-    stdout = sys.stdout
     raiden_stdout = StringIO()
 
     assert ctx.parent, MYPY_ANNOTATION
@@ -735,49 +732,39 @@ def smoketest(
     append_report("Raiden version", json.dumps(get_system_spec()))
     append_report("Raiden log")
 
-    def print_step(description: str, error: bool = False) -> None:
-        nonlocal step
-        step += 1
-        click.echo(
-            "{} {}".format(
-                click.style(f"[{step}/{step_count}]", fg="blue"),
-                click.style(description, fg="green" if not error else "red"),
-            ),
-            file=stdout,
-        )
-
     free_port_generator = get_free_port()
     try:
-        with setup_smoketest(
-            eth_client=eth_client,
-            print_step=print_step,
-            free_port_generator=free_port_generator,
-            debug=debug,
-            stdout=raiden_stdout,
-            append_report=append_report,
-        ) as setup:
-            args = setup.args
-            port = next(free_port_generator)
+        with step_printer(step_count=7, stdout=sys.stdout) as print_step:
+            with setup_smoketest(
+                eth_client=eth_client,
+                print_step=print_step,
+                free_port_generator=free_port_generator,
+                debug=debug,
+                stdout=raiden_stdout,
+                append_report=append_report,
+            ) as setup:
+                args = setup.args
+                port = next(free_port_generator)
 
-            args["api_address"] = f"localhost:{port}"
-            args["environment_type"] = environment_type
+                args["api_address"] = f"localhost:{port}"
+                args["environment_type"] = environment_type
 
-            # Matrix server
-            args["one_to_n_contract_address"] = "0x" + "1" * 40
-            args["routing_mode"] = RoutingMode.LOCAL
-            args["flat_fee"] = ()
-            args["proportional_fee"] = ()
-            args["proportional_imbalance_fee"] = ()
+                # Matrix server
+                args["one_to_n_contract_address"] = "0x" + "1" * 40
+                args["routing_mode"] = RoutingMode.LOCAL
+                args["flat_fee"] = ()
+                args["proportional_fee"] = ()
+                args["proportional_imbalance_fee"] = ()
 
-            for option_ in run.params:
-                if option_.name in args.keys():
-                    args[option_.name] = option_.process_value(ctx, args[option_.name])
-                else:
-                    args[option_.name] = option_.default
+                for option_ in run.params:
+                    if option_.name in args.keys():
+                        args[option_.name] = option_.process_value(ctx, args[option_.name])
+                    else:
+                        args[option_.name] = option_.default
 
-            run_smoketest(print_step=print_step, setup=setup)
+                run_smoketest(print_step=print_step, setup=setup)
 
-        append_report("Raiden Node stdout", raiden_stdout.getvalue())
+            append_report("Raiden Node stdout", raiden_stdout.getvalue())
 
     except:  # noqa pylint: disable=bare-except
         if debug:
