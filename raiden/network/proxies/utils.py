@@ -161,7 +161,7 @@ def check_transaction_gas_used(transaction: TransactionMined) -> None:
             msg = f"Deploying {contract_name} failed because all the gas was used!"
         else:
             assert isinstance(transaction.data, EthTransfer)
-            msg = f"EthTransfer  ailed!"
+            msg = f"EthTransfer failed!"
 
         # Keeping this around just in case the wrong value from the receipt is
         # used (Previously the `cumulativeGasUsed` was used, which was
