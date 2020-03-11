@@ -395,13 +395,13 @@ class GMatrixClient(MatrixClient):
                 _bad_sync_timeout = bad_sync_timeout
             except MatrixRequestError as e:
                 log.warning(
-                    "A MatrixRequestError occured during sync.",
+                    "A MatrixRequestError occurred during sync.",
                     node=node_address_from_userid(self.user_id),
                     user_id=self.user_id,
                 )
                 if e.code >= 500:
                     log.warning(
-                        "Problem occured serverside. Waiting",
+                        "Problem occurred serverside. Waiting",
                         node=node_address_from_userid(self.user_id),
                         user_id=self.user_id,
                         wait_for=_bad_sync_timeout,
@@ -412,7 +412,7 @@ class GMatrixClient(MatrixClient):
                     raise
             except MatrixHttpLibError:
                 log.exception(
-                    "A MatrixHttpLibError occured during sync.",
+                    "A MatrixHttpLibError occurred during sync.",
                     node=node_address_from_userid(self.user_id),
                     user_id=self.user_id,
                 )
