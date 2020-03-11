@@ -558,8 +558,10 @@ Channel Management
    :reqjson int total_withdraw: The increased total withdraw
    :reqjson int reveal_timeout: The new reveal timeout value
 
-.. note::
-      For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
+   .. note::
+      For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_.
+      This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH.
+      This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
    **Example Response**:
 
@@ -765,11 +767,12 @@ Payments
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
-.. note::
+   .. note::
       This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
-      However, this does not necessarily mean that querying the balance from the target node, immediately after the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
+      However, this does not necessarily mean that querying the balance from the target node, immediately after
+      the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
 
-To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
+   To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
 
    **Example Request**:
 
@@ -804,7 +807,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
 
 
-.. http:get:: /api/v1/payments/(token_address)/(target_address)
+.. http:get:: /api/(version)/payments/(token_address)/(target_address)
 
      Query the payment history. This includes successful (EventPaymentSentSuccess) and failed (EventPaymentSentFailed) sent payments as well as received payments (EventPaymentReceivedSuccess).
      ``token_address`` and ``target_address`` are optional and will filter the list of events accordingly.
