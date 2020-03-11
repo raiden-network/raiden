@@ -70,6 +70,7 @@ setup(
     package_data={"raiden": ["py.typed"]},
     license="MIT",
     zip_safe=False,
+    include_package_data=True,
     long_description_content_type="text/markdown",
     keywords="raiden",
     classifiers=[
