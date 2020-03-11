@@ -107,7 +107,7 @@ def write_stack_trace(ex: Exception) -> None:
     with file as traceback_file:
         traceback.print_exc(file=traceback_file)
         click.secho(
-            f"FATAL: An unexpected exception occured. "
+            f"FATAL: An unexpected exception occurred. "
             f"A traceback has been written to {traceback_file.name}\n"
             f"{ex}",
             fg="red",
