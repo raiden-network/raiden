@@ -138,7 +138,7 @@ class DisplayNameCache:
                     try:
                         user.get_display_name()
                     except MatrixRequestError:
-                        return
+                        raise TransportError("Could not get 'display_name' for user")
 
                 if user.displayname is not None:
                     self.userid_to_displayname[user.user_id] = user.displayname
