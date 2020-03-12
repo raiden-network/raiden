@@ -128,3 +128,14 @@ def wait_for_sync(rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: flo
         wait_for_sync_blockcypher(rpc_client, tolerance, sleep)
 
     wait_for_sync_rpc_api(rpc_client, tolerance, sleep)
+
+
+def blocks_to_sync(rpc_client: JSONRPCClient) -> BlockTimeout:
+    result = rpc_client.web3.eth.syncing
+
+    if result is False:
+        return BlockTimeout(0)
+    else:
+        current_block = rpc_client.block_number()
+        highest_block = result["highestBlock"]
+        return highest_block - current_block

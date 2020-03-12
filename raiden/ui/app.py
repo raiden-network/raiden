@@ -170,8 +170,10 @@ def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> URI:
     return URI(f"{scheme}{eth_rpc_endpoint}")
 
 
-def start_api_server(config: RestApiConfig, eth_rpc_endpoint: str) -> APIServer:
-    api = RestAPI()
+def start_api_server(
+    rpc_client: JSONRPCClient, config: RestApiConfig, eth_rpc_endpoint: str
+) -> APIServer:
+    api = RestAPI(rpc_client=rpc_client)
     api_server = APIServer(rest_api=api, config=config, eth_rpc_endpoint=eth_rpc_endpoint)
     api_server.start()
 
@@ -314,7 +316,9 @@ def run_app(
 
     api_server: Optional[APIServer] = None
     if config.rest_api.rest_api_enabled:
-        api_server = start_api_server(config.rest_api, eth_rpc_endpoint)
+        api_server = start_api_server(
+            rpc_client=rpc_client, config=config.rest_api, eth_rpc_endpoint=eth_rpc_endpoint
+        )
 
     if sync_check:
         check_synced(rpc_client)

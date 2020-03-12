@@ -93,6 +93,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     WithdrawMismatch,
 )
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import RestApiConfig
 from raiden.transfer import channel, views
 from raiden.transfer.events import (
@@ -101,6 +102,7 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.state import ChannelState, NettingChannelState
+from raiden.ui.sync import blocks_to_sync
 from raiden.utils.formatting import optional_address_to_string, to_checksum_address
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
@@ -485,7 +487,8 @@ class RestAPI:  # pragma: no unittest
 
     version = 1
 
-    def __init__(self, raiden_api: RaidenAPI = None) -> None:
+    def __init__(self, raiden_api: RaidenAPI = None, rpc_client: JSONRPCClient = None) -> None:
+        self.rpc_client_optional = rpc_client
         self.raiden_api_optional = raiden_api
         self.available = raiden_api is not None
 
@@ -503,6 +506,11 @@ class RestAPI:  # pragma: no unittest
             return to_checksum_address(self.raiden_api.address)
         else:
             return None
+
+    @property
+    def rpc_client(self) -> JSONRPCClient:
+        assert isinstance(self.rpc_client_optional, JSONRPCClient)
+        return self.rpc_client_optional
 
     @property
     def raiden_api(self) -> RaidenAPI:
@@ -1415,8 +1423,11 @@ class RestAPI:  # pragma: no unittest
         if self.available:
             return api_response(result=dict(status="ready"))
         else:
-            result = dict(status="syncing")
-            return api_response(result=result, status_code=HTTPStatus.SERVICE_UNAVAILABLE)
+            to_sync = blocks_to_sync(self.rpc_client)
+            if to_sync > 0:
+                return api_response(result=dict(status="syncing", blocks_to_sync=to_sync))
+            else:
+                return api_response(result=dict(status="unavailable"))
 
     def set_available(self, available: bool = True) -> None:
         if self.raiden_api is None and available:
