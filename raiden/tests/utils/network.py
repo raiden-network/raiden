@@ -31,6 +31,7 @@ from raiden.tests.utils.transport import ParsedURL, TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
+from raiden.ui.app import start_api_server
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.typing import (
     Address,
@@ -444,6 +445,12 @@ def create_apps(
         hold_handler = HoldRaidenEventHandler(raiden_event_handler)
         message_handler = WaitForMessage()
 
+        api_server = None
+        if enable_rest_api:
+            api_server = start_api_server(
+                rpc_client=proxy_manager.client, config=config.rest_api, eth_rpc_endpoint="bla"
+            )
+
         app = App(
             config=config,
             rpc_client=proxy_manager.client,
@@ -459,6 +466,7 @@ def create_apps(
             message_handler=message_handler,
             user_deposit=user_deposit,
             routing_mode=routing_mode,
+            api_server=api_server,
         )
         apps.append(app)
 
