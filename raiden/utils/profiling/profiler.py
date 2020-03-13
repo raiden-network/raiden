@@ -78,7 +78,7 @@ def ensure_call(curr, call):
 
 def ensure_thread_state(target, frame):
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     if target not in _state:
         frame = frame
@@ -267,7 +267,7 @@ class ThreadState:
 
 def thread_profiler(frame, event, arg):
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     now = clock()  # measure once and reuse it
 
@@ -301,7 +301,7 @@ def thread_profiler(frame, event, arg):
 
 def greenlet_profiler(event, args):
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     if event in ("switch", "throw"):  # both events are in the target context
         now = clock()
@@ -326,7 +326,7 @@ def greenlet_profiler(event, args):
 
 def start_profiler():
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     _state = GlobalState()
 
@@ -548,7 +548,7 @@ def print_thread_profile(thread_state):
 
 def print_merged():
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     merged = merge_threadstates(*_state.values())
     print_info_tree(filter_fast(merged))
@@ -556,7 +556,7 @@ def print_merged():
 
 def print_all_threads():
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     for thread_state in _state.values():
         print_thread_profile(thread_state)

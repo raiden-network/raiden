@@ -214,7 +214,8 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidBinaryAddress("Expected binary address format for partner in get_channel")
 
         channel_list = self.get_channel_list(registry_address, token_address, partner_address)
-        assert len(channel_list) <= 1
+        msg = f"Found {len(channel_list)} channels, but expected 0 or 1."
+        assert len(channel_list) <= 1, msg
 
         if not channel_list:
             msg = (
@@ -990,11 +991,10 @@ class RaidenAPI:  # pragma: no unittest
 
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> List[TokenAddress]:
         """Returns a list of tokens the node knows about"""
-        tokens_list = views.get_token_identifiers(
+        return views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
             token_network_registry_address=registry_address,
         )
-        return tokens_list
 
     def get_token_network_address_for_token_address(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
