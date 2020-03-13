@@ -17,6 +17,7 @@ from raiden.utils.typing import (
     NoReturn,
     Optional,
     Tuple,
+    typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
@@ -160,7 +161,7 @@ def check_transaction_gas_used(transaction: TransactionMined) -> None:
             contract_name = transaction.data.contract_name
             msg = f"Deploying {contract_name} failed because all the gas was used!"
         else:
-            assert isinstance(transaction.data, EthTransfer)
+            typecheck(transaction.data, EthTransfer)
             msg = f"EthTransfer failed!"
 
         # Keeping this around just in case the wrong value from the receipt is

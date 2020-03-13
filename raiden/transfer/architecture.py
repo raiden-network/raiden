@@ -270,16 +270,17 @@ class StateManager(Generic[ST]):
         for state_change in state_changes:
             iteration = self.state_transition(next_state, state_change)
 
-            assert isinstance(iteration, TransitionResult)
-            assert all(isinstance(e, Event) for e in iteration.events)
-            assert isinstance(iteration.new_state, State)
+            typecheck(iteration, TransitionResult)
+            for e in iteration.events:
+                typecheck(e, Event)
+            typecheck(iteration.new_state, State)
 
             # Skipping the copy because this value is internal
             events.append(iteration.events)
             next_state = iteration.new_state
 
+        assert next_state is not None, "State transition did not yield new state"
         self.current_state = next_state
-        assert next_state is not None
 
         return iteration.new_state, events
 

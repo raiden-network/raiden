@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 def hash_balance_data(
     transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
 ) -> BalanceHash:
-    assert locksroot != b""
-    assert len(locksroot) == 32
+    assert locksroot != b"", "Can't hash empty locksroot"
+    assert len(locksroot) == 32, "Locksroot has wrong length"
     if transferred_amount == 0 and locked_amount == 0 and locksroot == LOCKSROOT_OF_NO_LOCKS:
         return BalanceHash(EMPTY_HASH)
 

@@ -12,6 +12,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
 )
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     TYPE_CHECKING,
     Address,
     BlockHash,
@@ -418,7 +419,7 @@ def secret_from_transfer_task(
     transfer_task: TransferTask, secrethash: SecretHash
 ) -> Optional[Secret]:
     """Return the secret for the transfer, None on ABSENT_SECRET."""
-    assert isinstance(transfer_task, InitiatorTask)
+    assert isinstance(transfer_task, InitiatorTask), MYPY_ANNOTATION
 
     transfer_state = transfer_task.manager_state.initiator_transfers.get(secrethash)
 
