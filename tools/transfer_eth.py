@@ -23,8 +23,8 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file) -> None:
     with open(keystore_file, "r") as keystore:
         account = Account(json.load(keystore), password, keystore_file)
 
-    assert account.privkey
-    assert account.address
+    assert account.privkey, "Could not decode keystore file: wrong password"
+    assert account.address, "Could not decode keystore file: no 'address' field found"
     print("Using account:", to_checksum_address(account.address))
 
     client = JSONRPCClient(

@@ -165,7 +165,8 @@ def get_contractreceivechannelbatchunlock_data_from_event(
     locksroot = args["locksroot"]
 
     token_network_state = views.get_token_network_by_address(chain_state, token_network_address)
-    assert token_network_state is not None
+    msg = f"Could not find token network for address {to_checksum_address(token_network_address)}"
+    assert token_network_state is not None, msg
 
     if participant1 == chain_state.our_address:
         partner = participant2

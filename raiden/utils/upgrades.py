@@ -46,7 +46,8 @@ def get_file_version(db_path: Path) -> int:
 def get_db_version(db_filename: Path) -> int:
     """Return the version value stored in the db"""
 
-    assert os.path.exists(db_filename)
+    msg = f"Path '{db_filename}' expected, but not found"
+    assert os.path.exists(db_filename), msg
 
     # Perform a query directly through SQL rather than using
     # storage.get_version()

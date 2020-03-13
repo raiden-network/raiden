@@ -106,6 +106,7 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
 from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     Any,
     BlockSpecification,
@@ -124,6 +125,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     WithdrawAmount,
     cast,
+    typecheck,
 )
 
 log = structlog.get_logger(__name__)
@@ -836,7 +838,8 @@ class RestAPI:  # pragma: no unittest
         raiden_service_result = self.raiden_api.get_channel_list(
             registry_address, token_address, partner_address
         )
-        assert isinstance(raiden_service_result, list)
+        typecheck(raiden_service_result, list)
+
         result = [
             self.channel_schema.dump(channel_schema) for channel_schema in raiden_service_result
         ]
@@ -849,7 +852,8 @@ class RestAPI:  # pragma: no unittest
             registry_address=to_checksum_address(registry_address),
         )
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
-        assert isinstance(raiden_service_result, list)
+        typecheck(raiden_service_result, list)
+
         tokens_list = AddressList(raiden_service_result)
         result = self.address_list_schema.dump(tokens_list)
         return api_response(result=result)
@@ -971,7 +975,7 @@ class RestAPI:  # pragma: no unittest
     def get_raiden_internal_events_with_timestamps(
         self, limit: Optional[int], offset: Optional[int]
     ) -> Response:
-        assert self.raiden_api.raiden.wal
+        assert self.raiden_api.raiden.wal, "Raiden Service has to be initialized"
         events = [
             str(e)
             for e in self.raiden_api.raiden.wal.storage.get_events_with_timestamps(
@@ -1126,7 +1130,7 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        assert isinstance(result, EventPaymentSentSuccess)
+        assert isinstance(result, EventPaymentSentSuccess), MYPY_ANNOTATION
         payment = {
             "initiator_address": self.raiden_api.address,
             "registry_address": registry_address,
