@@ -169,7 +169,7 @@ class RouteState(State):
 
     @property
     def next_hop_address(self) -> Address:
-        assert len(self.route) >= 1
+        assert len(self.route) >= 1, "Route has no next hop"
         return self.route[1]
 
     def __repr__(self) -> str:

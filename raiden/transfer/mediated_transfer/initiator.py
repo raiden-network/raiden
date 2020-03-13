@@ -240,13 +240,9 @@ def try_new_route(
     )
 
     for reachable_route_state in reachable_route_states:
-        forward_channel_id = reachable_route_state.forward_channel_id
-
-        candidate_channel_state = forward_channel_id and channelidentifiers_to_channels.get(
-            forward_channel_id
-        )
-
-        assert isinstance(candidate_channel_state, NettingChannelState)
+        candidate_channel_state = channelidentifiers_to_channels[
+            reachable_route_state.forward_channel_id
+        ]
 
         amount_with_fee = calculate_safe_amount_with_fee(
             payment_amount=transfer_description.amount,
@@ -293,7 +289,7 @@ def try_new_route(
         initiator_state = None
 
     else:
-        assert channel_state is not None
+        assert channel_state is not None, "We must have a channel_state if we have a route_state"
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
@@ -304,7 +300,6 @@ def try_new_route(
             route_state=route_state,
             route_states=reachable_route_states,
         )
-        assert lockedtransfer_event
 
         initiator_state = InitiatorTransferState(
             route=route_state,
@@ -326,7 +321,9 @@ def send_lockedtransfer(
     route_states: List[RouteState],
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel. """
-    assert channel_state.token_network_address == transfer_description.token_network_address
+    assert (
+        channel_state.token_network_address == transfer_description.token_network_address
+    ), "token_network_address mismatch"
 
     lock_expiration = channel.get_safe_initial_expiration(
         block_number, channel_state.reveal_timeout, transfer_description.lock_timeout

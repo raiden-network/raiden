@@ -78,6 +78,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Union,
+    typecheck,
 )
 
 # All State changes that are subdispatched as token network actions
@@ -436,10 +437,6 @@ def maybe_add_tokennetwork(
         mapping[token_network_address] = token_network_registry_address
 
 
-def sanity_check(iteration: TransitionResult[ChainState]) -> None:
-    assert isinstance(iteration.new_state, ChainState)
-
-
 def inplace_delete_message_queue(
     chain_state: ChainState,
     state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
@@ -582,9 +579,9 @@ def handle_action_change_node_network_state(
     chain_state.nodeaddresses_to_networkstates[node_address] = network_state
 
     for secrethash, subtask in list(chain_state.payment_mapping.secrethashes_to_task.items()):
-        # This assert would not have been needed if token_network_address, a common attribute
+        # This typecheck would not have been needed if token_network_address, a common attribute
         # for all TransferTasks was part of the TransferTasks superclass.
-        assert isinstance(subtask, (InitiatorTask, MediatorTask, TargetTask))
+        typecheck(subtask, (InitiatorTask, MediatorTask, TargetTask))
         result = subdispatch_mediatortask(
             chain_state=chain_state,
             state_change=state_change,
@@ -1149,6 +1146,6 @@ def state_transition(
     iteration = handle_state_change(chain_state, state_change)
 
     update_queues(iteration, state_change)
-    sanity_check(iteration)
+    typecheck(iteration.new_state, ChainState)
 
     return iteration

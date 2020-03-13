@@ -116,6 +116,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
+    typecheck,
 )
 
 if TYPE_CHECKING:
@@ -1251,7 +1252,8 @@ def get_lock(
         if partial_unlock:
             lock = partial_unlock.lock
 
-    assert isinstance(lock, HashTimeLockState) or lock is None
+    if lock is not None:
+        typecheck(lock, HashTimeLockState)
     return lock
 
 
@@ -1321,7 +1323,7 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: SecretHash) -> None
     Note:
         This won't change the pending locks!
     """
-    assert is_lock_pending(end_state, secrethash)
+    assert is_lock_pending(end_state, secrethash), "Lock must be pending"
 
     _del_unclaimed_lock(end_state, secrethash)
 
@@ -1622,7 +1624,9 @@ def events_for_close(
 
         balance_proof = channel_state.partner_state.balance_proof
         # silence mypy: partner's balance proofs should be signed
-        assert balance_proof is None or isinstance(balance_proof, BalanceProofSignedState)
+        assert balance_proof is None or isinstance(
+            balance_proof, BalanceProofSignedState
+        ), "BP is not signed"
 
         close_event = ContractSendChannelClose(
             canonical_identifier=channel_state.canonical_identifier,
@@ -2240,7 +2244,7 @@ def handle_block(
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
-    assert state_change.block_number == block_number
+    assert state_change.block_number == block_number, "Block number mismatch"
 
     events: List[Event] = list()
 
@@ -2295,8 +2299,7 @@ def handle_channel_closed(
         )
         if call_update:
             expiration = BlockExpiration(state_change.block_number + channel_state.settle_timeout)
-            # silence mypy: partner's balance proof is always signed
-            assert isinstance(balance_proof, BalanceProofSignedState)
+            assert isinstance(balance_proof, BalanceProofSignedState), MYPY_ANNOTATION
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
@@ -2465,7 +2468,7 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     previous = WithdrawAmount(0)
     for total_withdraw, withdraw_state in our_state.withdraws_pending.items():
         assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
-        assert total_withdraw == withdraw_state.total_withdraw
+        assert total_withdraw == withdraw_state.total_withdraw, "Total withdraw mismatch"
         previous = withdraw_state.total_withdraw
 
     our_balance = get_balance(our_state, partner_state)
@@ -2502,9 +2505,12 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     # Because of overflow checks, it is possible for the distributable amount
     # to be lower than the available balance, therefore the sanity check has to
     # be lower-than instead of equal-to
-    assert our_distributable + our_locked <= our_balance
-    assert partner_distributable + partner_locked <= partner_balance
-
+    assert (
+        our_distributable + our_locked <= our_balance
+    ), "distributable + locked must not exceed balance (own)"
+    assert (
+        partner_distributable + partner_locked <= partner_balance
+    ), "distributable + locked must not exceed balance (partner)"
     our_locksroot = compute_locksroot(our_state.pending_locks)
     partner_locksroot = compute_locksroot(partner_state.pending_locks)
 

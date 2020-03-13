@@ -68,6 +68,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     cast,
+    typecheck,
 )
 
 STATE_SECRET_KNOWN = (
@@ -102,9 +103,9 @@ def is_safe_to_wait(
     """
     # reveal timeout will not ever be larger than the lock_expiration otherwise
     # the expected block_number is negative
-    assert block_number > 0
-    assert reveal_timeout > 0
-    assert lock_expiration > reveal_timeout
+    assert block_number > 0, "block_number must be larger than zero"
+    assert reveal_timeout > 0, "reveal_timeout must be larger than zero"
+    assert lock_expiration > reveal_timeout, "lock_expiration must be larger than reveal_timeout"
 
     lock_timeout = lock_expiration - block_number
 
@@ -279,13 +280,15 @@ def sanity_check(
         (pair.payer_state for pair in state.transfers_pair),
     )
     if any(state in STATE_TRANSFER_PAID for state in all_transfers_states):
-        assert state.secret is not None
+        assert state.secret is not None, "Mediator's state must have secret"
 
     # the "transitivity" for these values is checked below as part of
     # almost_equal check
     if state.transfers_pair:
         first_pair = state.transfers_pair[0]
-        assert state.secrethash == first_pair.payer_transfer.lock.secrethash
+        assert (
+            state.secrethash == first_pair.payer_transfer.lock.secrethash
+        ), "Secret hash mismatch"
 
     for pair in state.transfers_pair:
         payee_channel = get_payee_channel(
@@ -298,12 +301,12 @@ def sanity_check(
 
         assert is_send_transfer_almost_equal(
             send_channel=payee_channel, send=pair.payee_transfer, received=pair.payer_transfer
-        )
-        assert pair.payer_state in pair.valid_payer_states
-        assert pair.payee_state in pair.valid_payee_states
+        ), "Payee and payer transfers are too different"
+        assert pair.payer_state in pair.valid_payer_states, "payer_state not in valid payer states"
+        assert pair.payee_state in pair.valid_payee_states, "payee_state not in valid payee states"
 
     for original, refund in zip(state.transfers_pair[:-1], state.transfers_pair[1:]):
-        assert original.payee_address == refund.payer_address
+        assert original.payee_address == refund.payer_address, "payee/payer address mismatch"
         payer_channel = get_payer_channel(
             channelidentifiers_to_channels=channelidentifiers_to_channels, transfer_pair=refund
         )
@@ -316,7 +319,7 @@ def sanity_check(
         transfer_received = refund.payer_transfer
         assert is_send_transfer_almost_equal(
             send_channel=payer_channel, send=transfer_sent, received=transfer_received
-        )
+        ), "Payee and payer transfers are too different (refund)"
 
     if state.waiting_transfer and state.transfers_pair:
         last_transfer_pair = state.transfers_pair[-1]
@@ -331,7 +334,7 @@ def sanity_check(
 
             assert is_send_transfer_almost_equal(
                 send_channel=payee_channel, send=transfer_sent, received=transfer_received
-            )
+            ), "Payee and payer transfers are too different (waiting transfer)"
 
 
 def clear_if_finalized(
@@ -412,8 +415,8 @@ def forward_transfer_pair(
     if not safe_to_use_channel:
         return None, []
 
-    assert payee_channel.settle_timeout >= lock_timeout
-    assert payee_channel.token_address == payer_transfer.token
+    assert payee_channel.settle_timeout >= lock_timeout, "settle_timeout must be >= lock_timeout"
+    assert payee_channel.token_address == payer_transfer.token, "token_address mismatch"
 
     route_states = routes.prune_route_table(
         route_states=route_state_table, selected_route=route_state
@@ -430,7 +433,6 @@ def forward_transfer_pair(
         secrethash=payer_transfer.lock.secrethash,
         route_states=route_states,
     )
-    assert lockedtransfer_event
     mediated_events: List[Event] = [lockedtransfer_event]
 
     # create transfer pair
@@ -775,7 +777,7 @@ def events_for_balanceproof(
         if should_send_balanceproof_to_payee:
             # At this point we are sure that payee_channel exists due to the
             # payee_channel_open check above. So let mypy know about this
-            assert payee_channel
+            assert payee_channel, MYPY_ANNOTATION
             payee_channel = cast(NettingChannelState, payee_channel)
             pair.payee_state = "payee_balance_proof"
 
@@ -941,7 +943,9 @@ def events_to_remove_expired_locks(
         secrethash = mediator_state.secrethash
         lock: Union[None, LockType] = None
         if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
-            assert secrethash not in channel_state.our_state.secrethashes_to_unlockedlocks
+            assert (
+                secrethash not in channel_state.our_state.secrethashes_to_unlockedlocks
+            ), "Locks for secrethash are already unlocked"
             lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
         elif secrethash in channel_state.our_state.secrethashes_to_unlockedlocks:
             lock = channel_state.our_state.secrethashes_to_unlockedlocks.get(secrethash)
@@ -1040,7 +1044,9 @@ def mediate_transfer(
     send a refund back to the payer, allowing the payer to try a different
     route.
     """
-    assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
+    assert (
+        payer_channel.partner_state.address == payer_transfer.balance_proof.sender
+    ), "Transfer must be signed by sender"
 
     transfer_pair: Optional[MediationPairState] = None
     mediated_events: List[Event] = list()
@@ -1076,7 +1082,7 @@ def mediate_transfer(
             break
 
     if transfer_pair is None:
-        assert not mediated_events
+        assert not mediated_events, "Without new transfer, we must not cause events (forward)"
 
         if state.transfers_pair:
             original_pair = state.transfers_pair[0]
@@ -1093,7 +1099,7 @@ def mediate_transfer(
             mediated_events = list()
 
     if transfer_pair is None:
-        assert not mediated_events
+        assert not mediated_events, "Without new transfer, we must not cause events"
         mediated_events = list()
         state.waiting_transfer = WaitingTransferState(payer_transfer)
 
@@ -1616,7 +1622,7 @@ def state_transition(
 
     # this is the place for paranoia
     if iteration.new_state is not None:
-        assert isinstance(iteration.new_state, MediatorTransferState)
+        typecheck(iteration.new_state, MediatorTransferState)
         sanity_check(iteration.new_state, channelidentifiers_to_channels)
 
     return clear_if_finalized(iteration, channelidentifiers_to_channels)
