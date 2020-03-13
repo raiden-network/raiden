@@ -18,16 +18,16 @@ packaging==19.0           # via sphinx
 pygments==2.4.2           # via sphinx
 pyparsing==2.4.0          # via packaging
 pytz==2019.1              # via babel
-releases==1.6.1
+releases==1.6.1           # via -r requirements-docs.in
 requests==2.22.0          # via sphinx, sphinxcontrib-images
 semantic-version==2.6.0   # via releases
 six==1.12.0               # via astunparse, packaging, sphinx, sphinxcontrib-httpdomain
 snowballstemmer==1.2.1    # via sphinx
-sphinx-rtd-theme==0.4.3
-sphinx==1.7.9
-sphinxcontrib-httpdomain==1.7.0
-sphinxcontrib-httpexample==0.10.3
-sphinxcontrib-images==0.8.0
+sphinx-rtd-theme==0.4.3   # via -r requirements-docs.in
+sphinx==1.7.9             # via -r requirements-docs.in, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinxcontrib-httpdomain==1.7.0  # via -r requirements-docs.in, sphinxcontrib-httpexample
+sphinxcontrib-httpexample==0.10.3  # via -r requirements-docs.in
+sphinxcontrib-images==0.8.0  # via -r requirements-docs.in
 sphinxcontrib-websupport==1.1.2  # via sphinx
 urllib3==1.25.3           # via requests
 wheel==0.33.4             # via astunparse
