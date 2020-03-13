@@ -95,6 +95,7 @@ def _run_pip_compile(
     if not upgrade_packages:
         upgrade_packages = set()
 
+    working_path = Path.cwd()
     source_path = SOURCE_PATHS[source_name]
     target_path = TARGET_PATHS[source_name]
 
@@ -116,6 +117,9 @@ def _run_pip_compile(
 
     dry_run_cmd = ["--dry-run"] if dry_run else []
 
+    # We use a relative path for the source file because of
+    # https://github.com/raiden-network/raiden/pull/5987#discussion_r392145782 and
+    # https://github.com/jazzband/pip-tools/issues/1084
     command = [
         pip_compile_exe,
         "--verbose" if verbose else "--quiet",
@@ -125,7 +129,7 @@ def _run_pip_compile(
         *upgrade_all_cmd,
         "--output-file",
         str(target_path),
-        str(source_path),
+        str(source_path.relative_to(working_path)),
     ]
     print(f"Compiling {source_path.name}...", end="")
     sys.stdout.flush()
