@@ -1,4 +1,5 @@
 -r requirements-dev.txt
 
 pyinstaller>=3.6
+macholib  # only required on MacOS, but we want to have the same list of deps across all systems
 s3cmd
