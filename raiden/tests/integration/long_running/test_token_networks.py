@@ -4,7 +4,6 @@ import pytest
 from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
-from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import channel, views
@@ -61,29 +60,6 @@ def saturated_count(connection_managers, registry_address, token_address):
         is_manager_saturated(manager, registry_address, token_address)
         for manager in connection_managers
     ].count(True)
-
-
-def estimate_blocktime(rpc_client: JSONRPCClient, oldest: int = 256) -> float:
-    """Calculate a blocktime estimate based on some past blocks.
-    Args:
-        oldest: delta in block numbers to go back.
-    Return:
-        average block time in seconds
-    """
-    last_block_number = rpc_client.block_number()
-    # around genesis block there is nothing to estimate
-    if last_block_number < 1:
-        return 15
-    # if there are less than `oldest` blocks available, start at block 1
-    if last_block_number < oldest:
-        interval = (last_block_number - 1) or 1
-    else:
-        interval = last_block_number - oldest
-    assert interval > 0
-    last_timestamp = rpc_client.get_block(last_block_number)["timestamp"]
-    first_timestamp = rpc_client.get_block(last_block_number - interval)["timestamp"]
-    delta = last_timestamp - first_timestamp
-    return delta / interval
 
 
 # TODO: add test scenarios for
