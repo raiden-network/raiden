@@ -8,6 +8,7 @@ import gevent
 import structlog
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
+from gevent.greenlet import SpawnedLink
 from gevent.lock import RLock
 from gevent.subprocess import Popen, TimeoutExpired
 
@@ -92,7 +93,14 @@ class Janitor:
 
                     process = Popen(process_args, **kwargs)
                     janitor._processes.add(process)
-                    process.result.rawlink(subprocess_stopped)
+
+                    # `rawlink`s are executed from within the hub, the problem
+                    # is that locks can not be acquire at that point.
+                    # SpawnedLink creates a new greenlet to run the callback to
+                    # circumvent that.
+                    callback = SpawnedLink(subprocess_stopped)
+
+                    process.result.rawlink(callback)
 
                     # Important: `stop` may be set after Popen started, but before
                     # it returned. If that happens `GreenletExit` exception is
