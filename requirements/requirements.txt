@@ -31,13 +31,11 @@ flask-cors==3.0.8         # via -r requirements.in
 flask-restful==0.3.7      # via -r requirements.in
 flask==1.0.3              # via -r requirements.in, flask-cors, flask-restful
 gevent==1.5a3             # via -r requirements.in
-gnureadline==8.0.0        # via ipython
 graphviz==0.13.2          # via objgraph
 greenlet==0.4.15          # via gevent
 guppy3==3.0.9             # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
-importlib-metadata==1.5.0  # via jsonschema
 ipfshttpclient==0.4.12    # via web3
 ipython-genutils==0.2.0   # via traitlets
 ipython==4.2.1            # via -r requirements.in
@@ -62,7 +60,7 @@ parsimonious==0.8.1       # via eth-abi
 pexpect==4.7.0            # via ipython
 pickleshare==0.7.5        # via ipython
 protobuf==3.11.3          # via web3
-psutil==5.6.3             # via -r requirements.in, mirakuru
+psutil==5.6.6             # via -r requirements.in, mirakuru
 ptyprocess==0.6.0         # via pexpect
 py-ecc==1.4.7             # via raiden-contracts
 py-geth==2.1.0            # via -r requirements.in
@@ -84,7 +82,7 @@ six==1.12.0               # via attrdict, flask-cors, flask-restful, ipfshttpcli
 structlog==19.1.0         # via -r requirements.in
 toolz==0.9.0              # via cytoolz
 traitlets==4.3.2          # via ipython
-typing-extensions==3.7.4.1  # via -r requirements.in, web3
+typing-extensions==3.7.4.1  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
@@ -92,7 +90,6 @@ web3==5.5.1               # via -r requirements.in, raiden-contracts
 webargs==5.3.1            # via -r requirements.in
 websockets==8.1           # via web3
 werkzeug==0.15.4          # via flask
-zipp==2.2.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
