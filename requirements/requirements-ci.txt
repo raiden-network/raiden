@@ -58,7 +58,6 @@ flask-restful==0.3.7      # via -r requirements-dev.txt
 flask==1.0.3              # via -r requirements-dev.txt, flask-cors, flask-restful
 frozendict==1.2           # via -r requirements-dev.txt, canonicaljson, matrix-synapse
 gevent==1.5a3             # via -r requirements-dev.txt, grequests
-gnureadline==8.0.0        # via -r requirements-dev.txt, ipython
 graphviz==0.13.2          # via -r requirements-dev.txt, objgraph
 greenlet==0.4.15          # via -r requirements-dev.txt, gevent
 grequests==0.3.0          # via -r requirements-dev.txt
@@ -68,7 +67,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==4.24.3        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==1.5.0  # via -r requirements-dev.txt, jsonschema, pluggy, pytest
+importlib-metadata==1.5.0  # via -r requirements-dev.txt, pluggy
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
@@ -79,7 +78,7 @@ jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, 
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in, pyinstaller
+macholib==1.14            # via -r requirements-ci.in
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
@@ -109,7 +108,7 @@ pip-tools==4.5.1          # via -r requirements-dev.txt
 pluggy==0.12.0            # via -r requirements-dev.txt, pytest
 prometheus-client==0.3.1  # via -r requirements-dev.txt, matrix-synapse
 protobuf==3.11.3          # via -r requirements-dev.txt, web3
-psutil==5.6.3             # via -r requirements-dev.txt, matrix-synapse, mirakuru
+psutil==5.6.6             # via -r requirements-dev.txt, matrix-synapse, mirakuru
 ptyprocess==0.6.0         # via -r requirements-dev.txt, pexpect
 py-ecc==1.4.7             # via -r requirements-dev.txt, raiden-contracts
 py-geth==2.1.0            # via -r requirements-dev.txt
@@ -172,7 +171,7 @@ traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==19.2.1      # via -r requirements-dev.txt, matrix-synapse, treq
 typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, mypy
-typing-extensions==3.7.4.1  # via -r requirements-dev.txt, matrix-synapse, mypy, web3
+typing-extensions==3.7.4.1  # via -r requirements-dev.txt, matrix-synapse, mypy
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests

@@ -57,7 +57,6 @@ flask-restful==0.3.7      # via -r requirements.txt
 flask==1.0.3              # via -r requirements.txt, flask-cors, flask-restful
 frozendict==1.2           # via canonicaljson, matrix-synapse
 gevent==1.5a3             # via -r requirements.txt, grequests
-gnureadline==8.0.0        # via -r requirements.txt, ipython
 graphviz==0.13.2          # via -r requirements.txt, objgraph
 greenlet==0.4.15          # via -r requirements.txt, gevent
 grequests==0.3.0          # via -r requirements-dev.in
@@ -67,7 +66,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==4.24.3        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.5.0  # via -r requirements.txt, jsonschema, pluggy, pytest
+importlib-metadata==1.5.0  # via pluggy
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -107,7 +106,7 @@ pip-tools==4.5.1          # via -r requirements-dev.in
 pluggy==0.12.0            # via pytest
 prometheus-client==0.3.1  # via matrix-synapse
 protobuf==3.11.3          # via -r requirements.txt, web3
-psutil==5.6.3             # via -r requirements.txt, matrix-synapse, mirakuru
+psutil==5.6.6             # via -r requirements.txt, matrix-synapse, mirakuru
 ptyprocess==0.6.0         # via -r requirements.txt, pexpect
 py-ecc==1.4.7             # via -r requirements.txt, raiden-contracts
 py-geth==2.1.0            # via -r requirements.txt
@@ -166,7 +165,7 @@ traitlets==4.3.2          # via -r requirements.txt, ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==19.2.1      # via matrix-synapse, treq
 typed-ast==1.4.0          # via astroid, mypy
-typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy, web3
+typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
@@ -180,7 +179,7 @@ werkzeug==0.15.4          # via -r requirements.txt, flask
 wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
-zipp==2.2.0               # via -r requirements.txt, importlib-metadata
+zipp==2.2.0               # via importlib-metadata
 zope.interface==4.6.0     # via twisted
 
 # The following packages are considered to be unsafe in a requirements file:
