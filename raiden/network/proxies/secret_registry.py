@@ -151,7 +151,6 @@ class SecretRegistry:
         estimated_transaction = self.client.estimate_gas(
             self.proxy, "registerSecretBatch", log_details, secrets_to_register
         )
-        receipt = None
         transaction_hash = None
         msg = None
         transaction_mined = None
@@ -186,8 +185,10 @@ class SecretRegistry:
             # If the transaction was sent it must not fail. If this happened
             # some of our assumptions is broken therefore the error is
             # unrecoverable
-            if estimated_transaction is not None and receipt is not None:
-                if receipt["gasUsed"] == estimated_transaction.estimated_gas:
+            if transaction_mined is not None:
+                receipt = transaction_mined.receipt
+
+                if receipt["gasUsed"] == transaction_mined.startgas:
                     # The transaction failed and all gas was used. This can
                     # happen because of:
                     #
