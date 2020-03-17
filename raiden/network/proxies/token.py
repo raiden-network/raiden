@@ -7,7 +7,7 @@ from raiden.exceptions import RaidenRecoverableError
 from raiden.network.rpc.client import (
     JSONRPCClient,
     check_address_has_code,
-    check_transaction_gas_used,
+    check_transaction_failure,
     was_transaction_successfully_mined,
 )
 from raiden.utils.typing import (
@@ -103,7 +103,7 @@ class Token:
                     failed_receipt = transaction_mined.receipt
                     failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
 
-                    check_transaction_gas_used(transaction_mined)
+                    check_transaction_failure(transaction_mined, self.client)
 
                     balance = self.balance_of(self.client.address, failed_at_blockhash)
                     if balance < allowance:

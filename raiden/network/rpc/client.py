@@ -7,7 +7,14 @@ from uuid import uuid4
 
 import gevent
 import structlog
-from eth_utils import decode_hex, encode_hex, is_bytes, is_checksum_address, to_canonical_address
+from eth_utils import (
+    decode_hex,
+    encode_hex,
+    is_bytes,
+    is_checksum_address,
+    to_canonical_address,
+    to_hex,
+)
 from eth_utils.toolz import assoc
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
@@ -39,6 +46,7 @@ from raiden.exceptions import (
     EthereumNonceTooLow,
     EthNodeInterfaceError,
     InsufficientEth,
+    RaidenError,
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
 )
@@ -69,6 +77,9 @@ from raiden_contracts.utils.type_aliases import ChainID
 
 log = structlog.get_logger(__name__)
 
+GETH_REQUIRE_OPCODE = "Missing opcode 0xfe"
+PARITY_REQUIRE_ERROR = "Bad instruction"
+
 
 def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpecification) -> None:
     """Checks that the from/to blocks passed onto log calls contain only appropriate types"""
@@ -78,7 +89,7 @@ def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpec
     assert is_valid_to, "event log to block can be integer or latest,pending, earliest"
 
 
-def check_transaction_gas_used(transaction: "TransactionMined") -> None:
+def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCClient") -> None:
     """ Raise an exception if the transaction consumed all the gas. """
 
     if was_transaction_successfully_mined(transaction):
@@ -87,33 +98,92 @@ def check_transaction_gas_used(transaction: "TransactionMined") -> None:
     receipt = transaction.receipt
     gas_used = receipt["gasUsed"]
 
+    # Transactions were `gas_used` is lower than `startgas` did hit an assert.
+    # These errors have to be further checked by the caller.
     if gas_used >= transaction.startgas:
-        if isinstance(transaction.data, SmartContractCall):
-            smart_contract_function = transaction.data.function
 
-            # This error happened multiple times, it deserves a refresher on
-            # frequent reasons why it may happen:
-            msg = (
-                f"`{smart_contract_function}` failed and all gas was used "
-                f"({gas_used}). This can happen for a few reasons: "
-                f"1. The smart contract code may have an assert inside an if "
-                f"statement, at the time of gas estimation the condition was false, "
-                f"but another transaction changed the state of the smart contrat "
-                f"making the condition true. 2. The call to "
-                f"`{smart_contract_function}` executes an opcode with variable gas, "
-                f"at the time of gas estimation the cost was low, but another "
-                f"transaction changed the environment so that the new cost is high. "
-                f"This is particularly problematic storage is set to `0`, since the "
-                f"cost of a `SSTORE` increases 4 times. 3. The cost of the function "
-                f"varies with external state, if the cost increases because of "
-                f"another transaction the transaction can fail."
-            )
-        elif isinstance(transaction.data, ByteCode):
-            contract_name = transaction.data.contract_name
-            msg = f"Deploying {contract_name} failed because all the gas was used!"
+        failed_with_require = client.transaction_failed_with_a_require(
+            transaction.transaction_hash
+        )
+        if failed_with_require is True:
+            if isinstance(transaction.data, SmartContractCall):
+                smart_contract_function = transaction.data.function
+                msg = (
+                    f"`{smart_contract_function}` failed because of a require. "
+                    f"This looks like a bug in the smart contract."
+                )
+            elif isinstance(transaction.data, ByteCode):
+                contract_name = transaction.data.contract_name
+                msg = (
+                    f"Deploying {contract_name} failed with a require, this "
+                    f"looks like a error detection or compiler bug!"
+                )
+            else:
+                typecheck(transaction.data, EthTransfer)
+                msg = (
+                    "EthTransfer failed with a require. This looks like a bug "
+                    "in the detection code or in the client reporting!"
+                )
+        elif failed_with_require is False:
+            if isinstance(transaction.data, SmartContractCall):
+                smart_contract_function = transaction.data.function
+                msg = (
+                    f"`{smart_contract_function}` failed and all gas was used "
+                    f"({gas_used}), but the last opcode was *not* a failed "
+                    f"`require`. This can happen for a few reasons: 1. The smart "
+                    f"contract code may have an assert inside an if statement, at "
+                    f"the time of gas estimation the condition was false, but "
+                    f"another transaction changed the state of the smart contrat "
+                    f"making the condition true. 2. The call to "
+                    f"`{smart_contract_function}` executes an opcode with "
+                    f"variable gas, at the time of gas estimation the cost was "
+                    f"low, but another transaction changed the environment so "
+                    f"that the new cost is high.  This is particularly "
+                    f"problematic storage is set to `0`, since the cost of a "
+                    f"`SSTORE` increases 4 times. 3. The cost of the function "
+                    f"varies with external state, if the cost increases because "
+                    f"of another transaction the transaction can fail."
+                )
+            elif isinstance(transaction.data, ByteCode):
+                contract_name = transaction.data.contract_name
+                msg = (
+                    f"Deploying {contract_name} failed because all gas was used, "
+                    f"this looks like a gas estimation bug!"
+                )
+            else:
+                typecheck(transaction.data, EthTransfer)
+                msg = f"EthTransfer failed!"
+
         else:
-            typecheck(transaction.data, EthTransfer)
-            msg = f"EthTransfer failed!"
+            # Couldn't determine if a require was hit because the debug
+            # interfaces were not enabled.
+            if isinstance(transaction.data, SmartContractCall):
+                smart_contract_function = transaction.data.function
+
+                # This error happened multiple times, it deserves a refresher on
+                # frequent reasons why it may happen:
+                msg = (
+                    f"`{smart_contract_function}` failed and all gas was used "
+                    f"({gas_used}). This can happen for a few reasons: "
+                    f"1. The smart contract code may have an assert inside an if "
+                    f"statement, at the time of gas estimation the condition was false, "
+                    f"but another transaction changed the state of the smart contrat "
+                    f"making the condition true. 2. The call to "
+                    f"`{smart_contract_function}` executes an opcode with variable gas, "
+                    f"at the time of gas estimation the cost was low, but another "
+                    f"transaction changed the environment so that the new cost is high. "
+                    f"This is particularly problematic storage is set to `0`, since the "
+                    f"cost of a `SSTORE` increases 4 times. 3. The cost of the function "
+                    f"varies with external state, if the cost increases because of "
+                    f"another transaction the transaction can fail. 4. There is a bug in the"
+                    f"smart contract and a `require` condition failed."
+                )
+            elif isinstance(transaction.data, ByteCode):
+                contract_name = transaction.data.contract_name
+                msg = f"Deploying {contract_name} failed because all the gas was used!"
+            else:
+                typecheck(transaction.data, EthTransfer)
+                msg = f"EthTransfer failed!"
 
         # Keeping this around just in case the wrong value from the receipt is
         # used (Previously the `cumulativeGasUsed` was used, which was
@@ -124,7 +194,9 @@ def check_transaction_gas_used(transaction: "TransactionMined") -> None:
                 "transaction startgas!." + msg
             )
 
-        raise RaidenUnrecoverableError(msg)
+        # This cannot be a unrecoverable in general, since transactions to
+        # external smart contracts may fail.
+        raise RaidenError(msg)
 
 
 def was_transaction_successfully_mined(
@@ -1176,7 +1248,7 @@ class JSONRPCClient:
         contract_address = to_canonical_address(transaction_mined.receipt["contractAddress"])
 
         if not was_transaction_successfully_mined(transaction_mined):
-            check_transaction_gas_used(transaction_mined)
+            check_transaction_failure(transaction_mined, self)
 
             raise RuntimeError(
                 f"Deployment of {contract_name} failed! Most likely a require "
@@ -1339,3 +1411,39 @@ class JSONRPCClient:
             gevent.sleep(retry_timeout)
 
         return current_block
+
+    def transaction_failed_with_a_require(
+        self, transaction_hash: TransactionHash
+    ) -> Optional[bool]:
+        """ Tries to determine if the transaction with `transaction_hash`
+        failed because of a `require` expression.
+        """
+
+        if self.eth_node == EthClient.GETH:
+            try:
+                trace = self.web3.manager.request_blocking(
+                    "debug_traceTransaction", [to_hex(transaction_hash), {}]
+                )
+            except ValueError:
+                # `debug` API is not enabled, return `None` since the failing
+                # reason is unknown.
+                return None
+
+            return trace.structLogs[-1].op == GETH_REQUIRE_OPCODE
+
+        if self.eth_node == EthClient.PARITY:
+            try:
+                response = self.web3.manager.request_blocking(
+                    "trace_replayTransaction", [to_hex(transaction_hash), ["trace"]]
+                )
+            except ValueError:
+                # `traces` API is not enabled, return `None` since the failing
+                # reason is unknown.
+                return None
+
+            # The manual tests only had a single trace, this may not be always correct.
+            first_trace = response.trace[0]
+
+            return first_trace["error"] == PARITY_REQUIRE_ERROR
+
+        return None

@@ -129,7 +129,7 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
         [
             "--rpc",
             "--rpcapi",
-            "eth,net,web3,personal",
+            "eth,net,web3,personal,debug",
             "--rpcaddr",
             "127.0.0.1",
             "--networkid",
@@ -176,7 +176,7 @@ def parity_to_cmd(
 
     cmd.extend(
         [
-            "--jsonrpc-apis=eth,net,web3,parity,personal",
+            "--jsonrpc-apis=eth,net,web3,parity,personal,traces",
             "--jsonrpc-interface=127.0.0.1",
             "--no-discovery",
             "--no-ws",
