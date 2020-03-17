@@ -242,13 +242,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
         zerogas_receipt = None
 
     msg = "The transaction does NOT have a receipt because the miner rejected it"
-
-    if blockchain_type == "geth":
-        assert zerogas_receipt is None, msg
-    elif blockchain_type == "parity":
-        assert zerogas_receipt["blockNumber"] is None, msg
-    else:
-        raise RuntimeError(f"Unknown blockchain_type {blockchain_type}")
+    assert zerogas_receipt is None, msg
 
 
 def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
