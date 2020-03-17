@@ -8,8 +8,8 @@ from raiden.network.rpc.client import (
     TransactionEstimated,
     discover_next_available_nonce,
     gas_price_for_fast_transaction,
+    was_transaction_successfully_mined,
 )
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract

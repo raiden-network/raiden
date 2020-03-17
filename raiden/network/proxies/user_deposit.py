@@ -10,8 +10,12 @@ from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import raise_on_call_returned_empty
-from raiden.network.rpc.client import JSONRPCClient, TransactionSent, check_address_has_code
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    TransactionSent,
+    check_address_has_code,
+    was_transaction_successfully_mined,
+)
 from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.typing import (
     TYPE_CHECKING,

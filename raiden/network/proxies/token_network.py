@@ -27,12 +27,15 @@ from raiden.exceptions import (
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
 from raiden.network.proxies.utils import (
-    check_transaction_gas_used,
     get_channel_participants_from_open_event,
     raise_on_call_returned_empty,
 )
-from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    check_address_has_code,
+    check_transaction_gas_used,
+    was_transaction_successfully_mined,
+)
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState

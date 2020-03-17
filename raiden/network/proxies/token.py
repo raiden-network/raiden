@@ -4,9 +4,12 @@ from gevent.lock import RLock
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenRecoverableError
-from raiden.network.proxies.utils import check_transaction_gas_used
-from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    check_address_has_code,
+    check_transaction_gas_used,
+    was_transaction_successfully_mined,
+)
 from raiden.utils.typing import (
     Address,
     Any,
