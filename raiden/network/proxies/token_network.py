@@ -33,7 +33,7 @@ from raiden.network.proxies.utils import (
 from raiden.network.rpc.client import (
     JSONRPCClient,
     check_address_has_code,
-    check_transaction_gas_used,
+    check_transaction_failure,
     was_transaction_successfully_mined,
 )
 from raiden.transfer.channel import compute_locksroot
@@ -922,7 +922,7 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
                 failed_at_blocknumber = receipt["blockNumber"]
 
-                check_transaction_gas_used(transaction_mined)
+                check_transaction_failure(transaction_mined, self.client)
 
                 safety_deprecation_switch = self.safety_deprecation_switch(
                     block_identifier=failed_at_blockhash
@@ -1364,7 +1364,7 @@ class TokenNetwork:
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
                 failed_at_blocknumber = receipt["blockNumber"]
 
-                check_transaction_gas_used(transaction_mined)
+                check_transaction_failure(transaction_mined, self.client)
 
                 # Query the current state to check for transaction races
                 detail = self._detail_channel(
@@ -1658,7 +1658,7 @@ class TokenNetwork:
                     # `poll`ing waits for the transaction to be confirmed.
                     mining_block = receipt["blockNumber"]
 
-                    check_transaction_gas_used(transaction_mined)
+                    check_transaction_failure(transaction_mined, self.client)
 
                     partner_details = self._detail_participant(
                         channel_identifier=channel_identifier,
@@ -1889,7 +1889,7 @@ class TokenNetwork:
                 # `poll`ing waits for the transaction to be confirmed.
                 mining_block = receipt["blockNumber"]
 
-                check_transaction_gas_used(transaction_mined)
+                check_transaction_failure(transaction_mined, self.client)
 
                 # Query the current state to check for transaction races
                 channel_data = self._detail_channel(
@@ -2135,7 +2135,7 @@ class TokenNetwork:
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                check_transaction_gas_used(transaction_mined)
+                check_transaction_failure(transaction_mined, self.client)
 
                 # Query the current state to check for transaction races
                 sender_details = self._detail_participant(

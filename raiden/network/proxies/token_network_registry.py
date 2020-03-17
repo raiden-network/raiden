@@ -22,7 +22,7 @@ from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import (
     JSONRPCClient,
     check_address_has_code,
-    check_transaction_gas_used,
+    check_transaction_failure,
     was_transaction_successfully_mined,
 )
 from raiden.utils.formatting import format_block_id
@@ -299,7 +299,7 @@ class TokenNetworkRegistry:
                         "anymore."
                     )
 
-                check_transaction_gas_used(transaction_mined)
+                check_transaction_failure(transaction_mined, self.rpc_client)
 
                 check_address_has_code(
                     client=self.rpc_client,
