@@ -617,19 +617,19 @@ class MatrixTransport(Runnable):
 
             self._address_mgr.add_address(node_address)
 
-            # Start the room creation early on. This reduces latency for channel
-            # partners, by removing the latency of creating the room on the first
-            # message.
-            #
-            # This does not reduce latency for target<->initiator communication,
-            # since the target may be the node with lower address, and therefore
-            # the node that has to create the room.
-            self._maybe_create_room_for_address(node_address)
+        # Start the room creation early on. This reduces latency for channel
+        # partners, by removing the latency of creating the room on the first
+        # message.
+        #
+        # This does not reduce latency for target<->initiator communication,
+        # since the target may be the node with lower address, and therefore
+        # the node that has to create the room.
+        self._maybe_create_room_for_address(node_address)
 
-            # Ensure network state is updated in case we already know about the user presences
-            # representing the target node
-            user_ids = self.get_user_ids_for_address(node_address)
-            self._address_mgr.track_address_presence(node_address, user_ids)
+        # Ensure network state is updated in case we already know about the user presences
+        # representing the target node
+        user_ids = self.get_user_ids_for_address(node_address)
+        self._address_mgr.track_address_presence(node_address, user_ids)
 
     def _health_check_worker(self) -> None:
         """ Worker to process healthcheck requests. """
