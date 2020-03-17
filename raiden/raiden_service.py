@@ -924,8 +924,7 @@ class RaidenService(Runnable):
         these cases the healthcheck will be started by
         `_start_transport`.
         """
-        if self.transport:
-            self.transport.async_start_health_check(node_address)
+        self.transport.async_start_health_check(node_address)
 
     def immediate_health_check_for(self, node_address: Address) -> None:
         """Start health checking `node_address`.
@@ -935,8 +934,7 @@ class RaidenService(Runnable):
         these cases the healthcheck will be started by
         `_start_transport`.
         """
-        if self.transport:
-            self.transport.immediate_health_check_for(node_address)
+        self.transport.immediate_health_check_for(node_address)
 
     def _callback_new_block(self, latest_block: Dict) -> None:
         """Called once a new block is detected by the alarm task.
