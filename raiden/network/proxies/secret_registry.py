@@ -12,8 +12,11 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    check_address_has_code,
+    was_transaction_successfully_mined,
+)
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (

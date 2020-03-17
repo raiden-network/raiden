@@ -6,8 +6,11 @@ from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
-from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    check_address_has_code,
+    was_transaction_successfully_mined,
+)
 from raiden.utils.typing import (
     Address,
     Any,

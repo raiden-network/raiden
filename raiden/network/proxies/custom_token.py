@@ -4,7 +4,7 @@ import structlog
 
 from raiden.network.proxies.exceptions import MintFailed
 from raiden.network.proxies.token import Token
-from raiden.network.rpc.transactions import was_transaction_successfully_mined
+from raiden.network.rpc.client import was_transaction_successfully_mined
 from raiden.utils.typing import Address, TokenAmount
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager

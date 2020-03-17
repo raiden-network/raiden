@@ -29,6 +29,7 @@ from web3.types import TxReceipt
 from raiden.constants import (
     NO_STATE_QUERY_AFTER_BLOCKS,
     NULL_ADDRESS_CHECKSUM,
+    RECEIPT_FAILURE_CODE,
     TRANSACTION_INTRINSIC_GAS,
     EthClient,
 )
@@ -75,6 +76,68 @@ def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpec
     assert is_valid_from, "event log from block can be integer or latest,pending, earliest"
     is_valid_to = isinstance(to_block, int) or isinstance(to_block, str)
     assert is_valid_to, "event log to block can be integer or latest,pending, earliest"
+
+
+def check_transaction_gas_used(transaction: "TransactionMined") -> None:
+    """ Raise an exception if the transaction consumed all the gas. """
+
+    if was_transaction_successfully_mined(transaction):
+        return
+
+    receipt = transaction.receipt
+    gas_used = receipt["gasUsed"]
+
+    if gas_used >= transaction.startgas:
+        if isinstance(transaction.data, SmartContractCall):
+            smart_contract_function = transaction.data.function
+
+            # This error happened multiple times, it deserves a refresher on
+            # frequent reasons why it may happen:
+            msg = (
+                f"`{smart_contract_function}` failed and all gas was used "
+                f"({gas_used}). This can happen for a few reasons: "
+                f"1. The smart contract code may have an assert inside an if "
+                f"statement, at the time of gas estimation the condition was false, "
+                f"but another transaction changed the state of the smart contrat "
+                f"making the condition true. 2. The call to "
+                f"`{smart_contract_function}` executes an opcode with variable gas, "
+                f"at the time of gas estimation the cost was low, but another "
+                f"transaction changed the environment so that the new cost is high. "
+                f"This is particularly problematic storage is set to `0`, since the "
+                f"cost of a `SSTORE` increases 4 times. 3. The cost of the function "
+                f"varies with external state, if the cost increases because of "
+                f"another transaction the transaction can fail."
+            )
+        elif isinstance(transaction.data, ByteCode):
+            contract_name = transaction.data.contract_name
+            msg = f"Deploying {contract_name} failed because all the gas was used!"
+        else:
+            typecheck(transaction.data, EthTransfer)
+            msg = f"EthTransfer failed!"
+
+        # Keeping this around just in case the wrong value from the receipt is
+        # used (Previously the `cumulativeGasUsed` was used, which was
+        # incorrect).
+        if gas_used > transaction.startgas:
+            msg = (
+                "The receipt `gasUsed` reported in the receipt is higher than the "
+                "transaction startgas!." + msg
+            )
+
+        raise RaidenUnrecoverableError(msg)
+
+
+def was_transaction_successfully_mined(
+    transaction: "TransactionMined"
+) -> Optional[Dict[str, Any]]:
+    """ `True` if the transaction was successfully mined, `False` otherwise. """
+    if "status" not in transaction.receipt:
+        # This should never happen. Raiden checks ethereum client for compatibility at startup
+        raise AssertionError(
+            "Transaction receipt does not contain a status field. Upgrade your client"
+        )
+
+    return transaction.receipt["status"] != RECEIPT_FAILURE_CODE
 
 
 def geth_assert_rpc_interfaces(web3: Web3) -> None:
@@ -1063,7 +1126,7 @@ class JSONRPCClient:
             eth_node=slot.eth_node,
             data=slot.data,
             extra_log_details=slot.extra_log_details,
-            startgas=TRANSACTION_INTRINSIC_GAS,
+            startgas=slot.startgas,
             gas_price=slot.gas_price,
             nonce=slot.nonce,
             transaction_hash=TransactionHash(tx_hash),
@@ -1112,13 +1175,22 @@ class JSONRPCClient:
         transaction_mined = self.poll_transaction(transaction_sent)
         contract_address = to_canonical_address(transaction_mined.receipt["contractAddress"])
 
+        if not was_transaction_successfully_mined(transaction_mined):
+            check_transaction_gas_used(transaction_mined)
+
+            raise RuntimeError(
+                f"Deployment of {contract_name} failed! Most likely a require "
+                f"from the constructor was not satisfied, or there is a "
+                f"compiler bug."
+            )
+
         deployed_code = self.web3.eth.getCode(contract_address)
 
         if not deployed_code:
-            raise RuntimeError(
-                "Deployment of {} failed. Contract address has no code, check gas usage.".format(
-                    contract_name
-                )
+            raise RaidenUnrecoverableError(
+                f"Contract deployment of {contract_name} was successfull but "
+                f"address has no code! This is likely a bug in the ethereum "
+                f"client."
             )
 
         return (
