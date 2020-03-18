@@ -7,6 +7,7 @@ from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import channel, views
+from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.state import ChannelState
 from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, TokenAmount
 
@@ -336,3 +337,41 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
             funds=TokenAmount(100),
             initial_channel_target=target_channels_num,
         )
+
+
+@pytest.mark.xfail(reason="https://github.com/raiden-network/raiden/issues/5918")
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("channels_per_node", [0])
+def test_transfer_after_connect_works(raiden_network, token_addresses):
+    """
+    Test that payments work after joining a channel. This makes sure that the
+    connection manager does not leave any partners in a half-healthchecked
+    state that causes problems during payments.
+
+    Test for https://github.com/raiden-network/raiden/issues/5918
+    """
+    registry_address = raiden_network[0].raiden.default_registry.address
+    token_address = token_addresses[0]
+    app0, app1, app2 = raiden_network
+    api0 = RaidenAPI(app0.raiden)
+    api1 = RaidenAPI(app1.raiden)
+
+    # Open channel between node0 and node2 to not run into the bootstrapping
+    # case when joining the token network
+    api0.channel_open(registry_address, token_address, app2.raiden.address)
+
+    api1.token_network_connect(
+        registry_address=registry_address,
+        token_address=token_address,
+        funds=TokenAmount(100),
+        initial_channel_target=2,
+    )
+
+    payment_result = api1.transfer_and_wait(
+        registry_address=registry_address,
+        token_address=token_address,
+        amount=PaymentAmount(1),
+        target=app0.raiden.address,
+    ).payment_done.get()
+    assert isinstance(payment_result, EventPaymentSentSuccess)
