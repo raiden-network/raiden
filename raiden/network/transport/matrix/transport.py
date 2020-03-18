@@ -590,8 +590,7 @@ class MatrixTransport(Runnable):
     def force_check_address_reachability(self, address: Address) -> AddressReachability:
         """Force checks an address's reachability bypassing the whitelisting"""
         user_ids = self.get_user_ids_for_address(address)
-        self._address_mgr.track_address_presence(address, user_ids)
-        return self._address_mgr.get_address_reachability(address)
+        return self._address_mgr.get_reachability_from_matrix(user_ids)
 
     def async_start_health_check(self, node_address: Address) -> None:
         """
