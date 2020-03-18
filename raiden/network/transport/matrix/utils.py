@@ -322,6 +322,19 @@ class UserAddressManager:
 
         self._maybe_address_reachability_changed(address)
 
+    def get_reachability_from_matrix(self, user_ids: Iterable[str]) -> AddressReachability:
+        """ Get the current reachability without any side effects
+
+        Since his does not even do any caching, don't use it for the normal
+        communication between participants in a channel.
+        """
+        for uid in user_ids:
+            presence = self._fetch_user_presence(uid)
+            if USER_PRESENCE_TO_ADDRESS_REACHABILITY[presence] == AddressReachability.REACHABLE:
+                return AddressReachability.REACHABLE
+
+        return AddressReachability.UNREACHABLE
+
     def _maybe_address_reachability_changed(self, address: Address) -> None:
         # A Raiden node may have multiple Matrix users, this happens when
         # Raiden roams from a Matrix server to another. This loop goes over all
