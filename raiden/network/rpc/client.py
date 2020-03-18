@@ -843,7 +843,6 @@ class JSONRPCClient:
         web3: Web3,
         privkey: Optional[PrivateKey],
         gas_price_strategy: Callable = rpc_gas_price_strategy,
-        gas_estimate_correction: Callable = lambda gas: gas,
         block_num_confirmations: int = 0,
     ) -> None:
         if privkey is None or len(privkey) != 32:
@@ -874,7 +873,6 @@ class JSONRPCClient:
 
         self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()
-        self._gas_estimate_correction = gas_estimate_correction
 
         log.debug(
             "JSONRPCClient created",
@@ -1232,13 +1230,17 @@ class JSONRPCClient:
 
         block = self.get_block("latest")
 
+        # Sometimes eth_estimateGas returns wrong values for contract deployments
+        # Add a margin of 10%
+        # See https://github.com/raiden-network/raiden/issues/5994
+        gas_with_margin = int(contract_transaction["gas"] * 1.1)
         gas_price = gas_price_for_fast_transaction(self.web3)
         transaction = TransactionEstimated(
             from_address=self.address,
             data=constructor_call,
             eth_node=self.eth_node,
             extra_log_details={},
-            estimated_gas=self._gas_estimate_correction(contract_transaction["gas"]),
+            estimated_gas=gas_with_margin,
             gas_price=gas_price,
             approximate_block=(block["hash"], block["number"]),
         )

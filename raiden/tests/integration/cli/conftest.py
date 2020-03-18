@@ -48,7 +48,6 @@ def raiden_testchain(
             matrix_server=MATRIX_AUTO_SELECT_SERVER,
             print_step=lambda x: None,
             contracts_version=cli_tests_contracts_version,
-            eth_client=testchain["eth_client"],
             eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
             web3=testchain["web3"],
             base_datadir=testchain["base_datadir"],

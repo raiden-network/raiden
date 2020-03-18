@@ -333,7 +333,6 @@ def setup_raiden(
     matrix_server: str,
     print_step: Callable,
     contracts_version,
-    eth_client: EthClient,
     eth_rpc_endpoint: str,
     web3: Web3,
     base_datadir: Path,
@@ -341,12 +340,7 @@ def setup_raiden(
 ) -> RaidenTestSetup:
     print_step("Deploying Raiden contracts")
 
-    if eth_client is EthClient.PARITY:
-        client = JSONRPCClient(
-            web3, get_private_key(keystore), gas_estimate_correction=lambda gas: gas * 2
-        )
-    else:
-        client = JSONRPCClient(web3, get_private_key(keystore))
+    client = JSONRPCClient(web3, get_private_key(keystore))
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
     proxy_manager = ProxyManager(
@@ -540,7 +534,6 @@ def setup_smoketest(
                 matrix_server=server_urls[0][0],
                 print_step=print_step,
                 contracts_version=RAIDEN_CONTRACT_VERSION,
-                eth_client=testchain["eth_client"],
                 eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
                 web3=testchain["web3"],
                 base_datadir=testchain["base_datadir"],
