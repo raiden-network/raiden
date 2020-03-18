@@ -20,6 +20,7 @@ from raiden.network.rpc.client import (
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     BlockNumber,
     BlockSpecification,
@@ -151,7 +152,6 @@ class SecretRegistry:
         estimated_transaction = self.client.estimate_gas(
             self.proxy, "registerSecretBatch", log_details, secrets_to_register
         )
-        transaction_hash = None
         msg = None
         transaction_mined = None
 
@@ -271,7 +271,8 @@ class SecretRegistry:
 
         # The local **MUST** transaction_result be set before waiting for the
         # other results, otherwise we have a dead-lock
-        transaction_result.set(transaction_hash)
+        assert transaction_mined is not None, MYPY_ANNOTATION
+        transaction_result.set(transaction_mined.transaction_hash)
 
     def get_secret_registration_block_by_secrethash(
         self, secrethash: SecretHash, block_identifier: BlockSpecification
