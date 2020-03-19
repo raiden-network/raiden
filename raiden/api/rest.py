@@ -509,12 +509,14 @@ class RestAPI:  # pragma: no unittest
 
     @property
     def rpc_client(self) -> JSONRPCClient:
-        assert isinstance(self.rpc_client_optional, JSONRPCClient)
+        msg = "rpc_client accessed but not initialized."
+        assert isinstance(self.rpc_client_optional, JSONRPCClient), msg
         return self.rpc_client_optional
 
     @property
     def raiden_api(self) -> RaidenAPI:
-        assert isinstance(self.raiden_api_optional, RaidenAPI)
+        msg = "raiden_api accessed but not initialized"
+        assert isinstance(self.raiden_api_optional, RaidenAPI), msg
         return self.raiden_api_optional
 
     @raiden_api.setter
