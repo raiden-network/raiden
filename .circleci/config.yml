@@ -39,11 +39,11 @@ templates:
       type: string
 
   default-environment: &default-environment
-    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.12-b6f1c8dc.tar.gz'
-    GETH_MD5_LINUX: '4397bf4ce6df7eb641ca6759367427dd'
-    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.12-b6f1c8dc.tar.gz'
-    GETH_MD5_MACOS: '56b2ceadb30767fb1673e3fc73e5301e'
-    GETH_VERSION: '1.9.12'
+    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.11-6a62fe39.tar.gz'
+    GETH_MD5_LINUX: '6b226753430e33edf983c5581b52d6d1'
+    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.11-6a62fe39.tar.gz'
+    GETH_MD5_MACOS: '4214a7c45690fa54c4533fec27e3e83e'
+    GETH_VERSION: '1.9.11'
     PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.7.2/x86_64-unknown-linux-gnu/parity'
     PARITY_SHA256_LINUX: 'fe992f0c9b229a4406e82b9ff6d388f4acb4d6ce2782cb79b7bc379e7965ae34'
     PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.7.2/x86_64-apple-darwin/parity'
