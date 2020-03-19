@@ -462,27 +462,7 @@ class MatrixTransport(Runnable):
         self._initialize_broadcast_rooms()
         self._initialize_first_sync()
         self._initialize_health_check(health_check_list)
-
-        broadcast_filter_id = self._client.create_sync_filter(
-            not_rooms=self._broadcast_rooms.values()
-        )
-        self._client.set_sync_filter_id(broadcast_filter_id)
-
-        def on_success(greenlet: gevent.Greenlet) -> None:
-            if greenlet in self.greenlets:
-                self.greenlets.remove(greenlet)
-
-        self._client.start_listener_thread(
-            timeout_ms=self._config.sync_timeout, latency_ms=self._config.sync_latency
-        )
-        assert isinstance(self._client.sync_worker, gevent.Greenlet), MYPY_ANNOTATION
-        self._client.sync_worker.link_exception(self.on_error)
-        self._client.sync_worker.link_value(on_success)
-
-        assert isinstance(self._client.message_worker, gevent.Greenlet), MYPY_ANNOTATION
-        self._client.message_worker.link_exception(self.on_error)
-        self._client.message_worker.link_value(on_success)
-        self.greenlets = [self._client.sync_worker, self._client.message_worker]
+        self._initialize_sync()
 
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
@@ -832,14 +812,60 @@ class MatrixTransport(Runnable):
         msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
         assert self._user_id, msg
 
-        for suffix in self._config.broadcast_rooms:
-            room_name = make_room_alias(self.chain_id, suffix)
-            broadcast_room_alias = f"#{room_name}:{self._server_name}"
+        pool = Pool(size=10)
 
-            self.log.debug("Joining broadcast room", broadcast_room_alias=broadcast_room_alias)
-            self._broadcast_rooms[room_name] = join_broadcast_room(
-                client=self._client, broadcast_room_alias=broadcast_room_alias
+        def _join_broadcast_room(transport: MatrixTransport, room_name: str) -> None:
+            broadcast_room_alias = f"#{room_name}:{transport._server_name}"
+            transport.log.debug(
+                "Joining broadcast room", broadcast_room_alias=broadcast_room_alias
             )
+            transport._broadcast_rooms[room_name] = join_broadcast_room(
+                client=transport._client, broadcast_room_alias=broadcast_room_alias
+            )
+
+        for suffix in self._config.broadcast_rooms:
+            alias_prefix = make_room_alias(self.chain_id, suffix)
+
+            if alias_prefix not in self._broadcast_rooms:
+                pool.apply_async(_join_broadcast_room, args=(self, alias_prefix))
+
+        pool.join(raise_error=True)
+
+    def _initialize_sync(self) -> None:
+        msg = "_initialize_sync requires the GMatrixClient to be properly authenticated."
+        assert self._user_id, msg
+
+        msg = "The sync thread must not be started twice"
+        assert self._client.sync_worker is None, msg
+        assert self._client.message_worker is None, msg
+
+        msg = (
+            "The node must have joined the broadcast rooms before starting the "
+            "sync thread, since that is necessary to properly generate the "
+            "filters."
+        )
+        assert self._broadcast_rooms, msg
+
+        broadcast_filter_id = self._client.create_sync_filter(
+            not_rooms=self._broadcast_rooms.values()
+        )
+        self._client.set_sync_filter_id(broadcast_filter_id)
+
+        def on_success(greenlet: gevent.Greenlet) -> None:
+            if greenlet in self.greenlets:
+                self.greenlets.remove(greenlet)
+
+        self._client.start_listener_thread(
+            timeout_ms=self._config.sync_timeout, latency_ms=self._config.sync_latency
+        )
+        assert isinstance(self._client.sync_worker, gevent.Greenlet), MYPY_ANNOTATION
+        self._client.sync_worker.link_exception(self.on_error)
+        self._client.sync_worker.link_value(on_success)
+
+        assert isinstance(self._client.message_worker, gevent.Greenlet), MYPY_ANNOTATION
+        self._client.message_worker.link_exception(self.on_error)
+        self._client.message_worker.link_value(on_success)
+        self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
     def _initialize_health_check(self, health_check_list: List[Address]) -> None:
         msg = (
@@ -987,7 +1013,11 @@ class MatrixTransport(Runnable):
 
     def _handle_member_join(self, room: Room) -> None:
         if self._is_broadcast_room(room):
-            raise AssertionError("Broadcast room events should be filtered in syncs")
+            raise AssertionError(
+                f"Broadcast room events should be filtered in syncs: {room.aliases}."
+                f"Joined Broadcast Rooms: {list(self._broadcast_rooms.keys())}"
+                f"Should be joined to: {self._config.broadcast_rooms}"
+            )
 
         if self._has_multiple_partner_addresses(room):
             self._leave_unexpected_rooms(
@@ -1211,7 +1241,7 @@ class MatrixTransport(Runnable):
 
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        # The rooms creation is asymmetric, only the node with the lower
+        # The rooms creation is asymetric, only the node with the lower
         # address is responsible to create the room. This fixes race conditions
         # were the two nodes try to create a room with each other at the same
         # time, leading to communications problems if the nodes choose a
