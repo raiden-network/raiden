@@ -104,21 +104,22 @@ class Room(MatrixRoom):
         """
         server_name = urlparse(self.client.api.base_url).netloc
         changed = False
-        for event_type in ["m.room.aliases", "m.room.canonical_alias"]:
-            try:
-                response = self.client.api.get_room_state_type(
-                    self.room_id, event_type, server_name
-                )
-            except MatrixRequestError:
-                continue
-            if "aliases" in response:
-                if self.aliases != response["aliases"]:
-                    self.aliases = response["aliases"]
-                    changed = True
-            if "alias" in response:
-                if self.canonical_alias != response["alias"]:
-                    self.canonical_alias = response["alias"]
-                    changed = True
+
+        try:
+            response = self.client.api.get_room_state_type(
+                self.room_id, "m.room.aliases", server_name
+            )
+        except MatrixRequestError:
+            return False
+
+        if "aliases" in response:
+            if self.aliases != response["aliases"]:
+                self.aliases = response["aliases"]
+                changed = True
+        if "alias" in response:
+            if self.canonical_alias != response["alias"]:
+                self.canonical_alias = response["alias"]
+                changed = True
         if changed and self.aliases and not self.canonical_alias:
             self.canonical_alias = self.aliases[0]
         return changed
