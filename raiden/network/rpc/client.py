@@ -1233,7 +1233,7 @@ class JSONRPCClient:
         # Sometimes eth_estimateGas returns wrong values for contract deployments
         # Add a margin of 10%
         # See https://github.com/raiden-network/raiden/issues/5994
-        gas_with_margin = int(contract_transaction["gas"] * 1.1)
+        gas_with_margin = int(contract_transaction["gas"] * 1.5)
         gas_price = gas_price_for_fast_transaction(self.web3)
         transaction = TransactionEstimated(
             from_address=self.address,
