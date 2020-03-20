@@ -12,6 +12,7 @@ from raiden.api.v1.encoding import (
     PaymentSchema,
     RaidenEventsRequestSchema,
 )
+from raiden.constants import BLOCK_SPEC_LATEST
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
@@ -123,7 +124,7 @@ class BlockchainEventsNetworkResource(BaseResource):
     @use_kwargs(get_schema, locations=("query",))
     def get(self, from_block: BlockSpecification, to_block: BlockSpecification) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or "latest"
+        to_block = to_block or BLOCK_SPEC_LATEST
 
         return self.rest_api.get_blockchain_events_network(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
@@ -144,7 +145,7 @@ class BlockchainEventsTokenResource(BaseResource):
         to_block: BlockSpecification,
     ) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or "latest"
+        to_block = to_block or BLOCK_SPEC_LATEST
 
         return self.rest_api.get_blockchain_events_token_network(
             token_address=token_address, from_block=from_block, to_block=to_block
@@ -164,7 +165,7 @@ class ChannelBlockchainEventsResource(BaseResource):
         to_block: BlockSpecification = None,
     ) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or "latest"
+        to_block = to_block or BLOCK_SPEC_LATEST
 
         return self.rest_api.get_blockchain_events_channel(
             token_address=token_address,

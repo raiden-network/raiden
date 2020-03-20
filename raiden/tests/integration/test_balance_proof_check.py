@@ -2,7 +2,7 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import BLOCK_SPEC_LATEST, EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -58,7 +58,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     # stop app1 - the test uses token_network_contract now
     app1.stop()
     token_network_contract = app1.raiden.proxy_manager.token_network(
-        token_network_address, "latest"
+        token_network_address, BLOCK_SPEC_LATEST
     )
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
@@ -83,7 +83,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         additional_hash=EMPTY_HASH,
         non_closing_signature=EMPTY_SIGNATURE,
         closing_signature=closing_signature,
-        given_block_identifier="latest",
+        given_block_identifier=BLOCK_SPEC_LATEST,
     )
     waiting.wait_for_settle(
         raiden=app0.raiden,

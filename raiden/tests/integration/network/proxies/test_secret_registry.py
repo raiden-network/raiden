@@ -5,7 +5,7 @@ import pytest
 from web3 import Web3
 
 from raiden.blockchain.events import get_secret_registry_events
-from raiden.constants import GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
+from raiden.constants import BLOCK_SPEC_LATEST, GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
@@ -43,7 +43,7 @@ def secret_registry_batch_happy_path(
         assert secret_registered, "All secrets from the batch must be registered"
 
         block = secret_registry_proxy.get_secret_registration_block_by_secrethash(
-            secrethash=secrethash, block_identifier="latest"
+            secrethash=secrethash, block_identifier=BLOCK_SPEC_LATEST
         )
         msg = "Block number reported by the proxy and the event must match"
         assert block == secret_registered["block_number"], msg
@@ -64,10 +64,10 @@ def test_register_secret_happy_path(
     secrethash_unregistered = sha256_secrethash(secret_unregistered)
 
     assert not secret_registry_proxy.is_secret_registered(
-        secrethash=secrethash, block_identifier="latest"
+        secrethash=secrethash, block_identifier=BLOCK_SPEC_LATEST
     ), "Test setup is invalid, secret must be unknown"
     assert not secret_registry_proxy.is_secret_registered(
-        secrethash=secrethash_unregistered, block_identifier="latest"
+        secrethash=secrethash_unregistered, block_identifier=BLOCK_SPEC_LATEST
     ), "Test setup is invalid, secret must be unknown"
 
     secret_registry_proxy.client.wait_until_block(BlockNumber(STATE_PRUNING_AFTER_BLOCKS + 1))
@@ -100,7 +100,7 @@ def test_register_secret_happy_path(
     assert secret_registered, msg
 
     registered_block = secret_registry_proxy.get_secret_registration_block_by_secrethash(
-        secrethash=secrethash, block_identifier="latest"
+        secrethash=secrethash, block_identifier=BLOCK_SPEC_LATEST
     )
     msg = (
         "Block height returned by the SecretRegistry.get_secret_registration_block_by_secrethash "
@@ -109,7 +109,7 @@ def test_register_secret_happy_path(
     assert secret_registered["block_number"] == registered_block, msg
 
     block = secret_registry_proxy.get_secret_registration_block_by_secrethash(
-        secrethash=secrethash_unregistered, block_identifier="latest"
+        secrethash=secrethash_unregistered, block_identifier=BLOCK_SPEC_LATEST
     )
     assert block is None, "The secret that was not registered must not change block height!"
 

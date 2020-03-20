@@ -3,6 +3,7 @@ import pytest
 
 from raiden.api.python import RaidenAPI
 from raiden.app import App
+from raiden.constants import BLOCK_SPEC_LATEST
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
@@ -319,7 +320,7 @@ def test_different_view_of_last_bp_during_unlock(
         views.state_from_app(app0), token_network_registry_address, token_address
     )
     assert token_network_address
-    token_proxy = app0.raiden.proxy_manager.token(token_address, "latest")
+    token_proxy = app0.raiden.proxy_manager.token(token_address, BLOCK_SPEC_LATEST)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 

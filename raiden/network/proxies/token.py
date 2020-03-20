@@ -2,7 +2,7 @@ import structlog
 from eth_utils import encode_hex, is_binary_address
 from gevent.lock import RLock
 
-from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
+from raiden.constants import BLOCK_SPEC_LATEST, GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenRecoverableError
 from raiden.network.rpc.client import (
     JSONRPCClient,
@@ -126,7 +126,7 @@ class Token:
                     )
 
             else:
-                failed_at = self.client.get_block("latest")
+                failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
                 failed_at_blockhash = encode_hex(failed_at["hash"])
                 failed_at_blocknumber = failed_at["number"]
 
@@ -156,13 +156,13 @@ class Token:
                 )
 
     def balance_of(
-        self, address: Address, block_identifier: BlockSpecification = "latest"
+        self, address: Address, block_identifier: BlockSpecification = BLOCK_SPEC_LATEST
     ) -> Balance:
         """ Return the balance of `address`. """
         return self.proxy.functions.balanceOf(address).call(block_identifier=block_identifier)
 
     def total_supply(
-        self, block_identifier: BlockSpecification = "latest"
+        self, block_identifier: BlockSpecification = BLOCK_SPEC_LATEST
     ) -> Optional[TokenAmount]:
         """ Return the total supply of the token at the given block identifier.
 
@@ -213,7 +213,7 @@ class Token:
                 if not was_transaction_successfully_mined(transaction_mined):
                     failed_at_number = transaction_mined.receipt["blockNumber"]
                 else:
-                    failed_at_number = self.client.get_block("latest")["blockNumber"]
+                    failed_at_number = self.client.get_block(BLOCK_SPEC_LATEST)["blockNumber"]
 
                 failed_at_hash = encode_hex(
                     self.client.blockhash_from_blocknumber(failed_at_number)

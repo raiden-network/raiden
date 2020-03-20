@@ -11,6 +11,7 @@ from web3 import HTTPProvider, Web3
 from raiden.accounts import AccountManager
 from raiden.app import App
 from raiden.constants import (
+    BLOCK_SPEC_LATEST,
     GENESIS_BLOCK_NUMBER,
     MATRIX_AUTO_SELECT_SERVER,
     MONITORING_BROADCASTING_ROOM,
@@ -311,7 +312,7 @@ def run_app(
         deployed_addresses = load_deployment_addresses_from_udc(
             proxy_manager=proxy_manager,
             user_deposit_address=user_deposit_contract_address,
-            block_identifier="latest",
+            block_identifier=BLOCK_SPEC_LATEST,
         )
     else:
         deployed_addresses = load_deployment_addresses_from_contracts(contracts=contracts)

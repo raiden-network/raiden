@@ -5,7 +5,13 @@ from eth_utils import is_binary_address
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
+from raiden.constants import (
+    BLOCK_SPEC_LATEST,
+    GENESIS_BLOCK_NUMBER,
+    NULL_ADDRESS_BYTES,
+    UINT64_MAX,
+    UINT256_MAX,
+)
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositMismatch,
@@ -1190,7 +1196,7 @@ class RaidenAPI:  # pragma: no unittest
         self,
         registry_address: TokenNetworkRegistryAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         events = blockchain_events.get_token_network_registry_events(
             proxy_manager=self.raiden.proxy_manager,
@@ -1207,7 +1213,7 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_address: TokenAddress,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         """Returns a list of blockchain events corresponding to the token_address."""
 
@@ -1245,7 +1251,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_address: Address = None,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress(

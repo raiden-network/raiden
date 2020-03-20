@@ -6,7 +6,7 @@ from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from gevent.event import AsyncResult
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
+from raiden.constants import BLOCK_SPEC_LATEST, EMPTY_ADDRESS, UINT256_MAX
 from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import raise_on_call_returned_empty
@@ -193,7 +193,7 @@ class UserDeposit:
         )
 
         if estimated_transaction is None:
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blocknumber = failed_at["number"]
 
             self.client.check_for_insufficient_eth(
@@ -458,7 +458,7 @@ class UserDeposit:
         amount_to_deposit: TokenAmount,
     ) -> None:
         if transaction_sent is None:
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blocknumber = failed_at["number"]
 
             self.client.check_for_insufficient_eth(

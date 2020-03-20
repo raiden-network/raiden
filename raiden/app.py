@@ -1,6 +1,6 @@
 import structlog
 
-from raiden.constants import RoutingMode
+from raiden.constants import BLOCK_SPEC_LATEST, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.message_handler import MessageHandler
 from raiden.network.proxies.proxy_manager import ProxyManager
@@ -55,8 +55,8 @@ class App:  # pylint: disable=too-few-public-methods
         )
 
         # check that the settlement timeout fits the limits of the contract
-        settlement_timeout_min = default_registry.settlement_timeout_min("latest")
-        settlement_timeout_max = default_registry.settlement_timeout_max("latest")
+        settlement_timeout_min = default_registry.settlement_timeout_min(BLOCK_SPEC_LATEST)
+        settlement_timeout_max = default_registry.settlement_timeout_max(BLOCK_SPEC_LATEST)
         invalid_settle_timeout = (
             config.settle_timeout < settlement_timeout_min
             or config.settle_timeout > settlement_timeout_max

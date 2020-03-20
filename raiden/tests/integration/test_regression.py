@@ -3,7 +3,7 @@ import pytest
 from eth_utils import keccak
 
 from raiden.app import App
-from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import BLOCK_SPEC_LATEST, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
@@ -223,7 +223,7 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
     """Register secret transaction must not be sent if the secret is already registered"""
     # pylint: disable=protected-access
 
-    secret_registry = proxy_manager.secret_registry(secret_registry_address, "latest")
+    secret_registry = proxy_manager.secret_registry(secret_registry_address, BLOCK_SPEC_LATEST)
 
     secret = keccak(b"test_regression_register_secret_once")
     secret_registry.register_secret(secret=secret)

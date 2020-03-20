@@ -13,7 +13,7 @@ from raiden.blockchain.events import (
     get_token_network_events,
     get_token_network_registry_events,
 )
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import BLOCK_SPEC_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
@@ -63,7 +63,7 @@ def get_netting_channel_closed_events(
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:
     closed_event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, ChannelEvent.CLOSED)
 
@@ -94,7 +94,7 @@ def get_netting_channel_deposit_events(
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:
     deposit_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.DEPOSIT
@@ -126,7 +126,7 @@ def get_netting_channel_settled_events(
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:
     settled_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.SETTLED
@@ -256,10 +256,12 @@ def test_query_events(
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
-    token_network_address = app0.raiden.default_registry.get_token_network(token_address, "latest")
+    token_network_address = app0.raiden.default_registry.get_token_network(
+        token_address, BLOCK_SPEC_LATEST
+    )
 
     assert token_network_address
-    manager0 = app0.raiden.proxy_manager.token_network(token_network_address, "latest")
+    manager0 = app0.raiden.proxy_manager.token_network(token_network_address, BLOCK_SPEC_LATEST)
 
     channelcount0 = views.total_token_network_channels(
         views.state_from_app(app0), registry_address, token_address
@@ -468,7 +470,9 @@ def test_secret_revealed_on_chain(
     channel_close_event = ContractSendChannelClose(
         canonical_identifier=channel_state2_1.canonical_identifier,
         balance_proof=balance_proof,
-        triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber("latest"),
+        triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber(
+            BLOCK_SPEC_LATEST
+        ),
     )
     current_state = app2.raiden.wal.state_manager.current_state
     app2.raiden.raiden_event_handler.on_raiden_events(
