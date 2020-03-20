@@ -6,6 +6,7 @@ from web3._utils.events import get_event_data
 from web3._utils.filters import construct_event_filter_params
 
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Any,
@@ -40,7 +41,7 @@ def get_filter_args_for_specific_event_from_channel(
     _, event_filter_params = construct_event_filter_params(
         event_abi=event_abi,
         abi_codec=ABI_CODEC,
-        contract_address=token_network_address,
+        contract_address=to_checksum_address(token_network_address),
         argument_filters={"channel_identifier": channel_identifier},
         fromBlock=from_block,
         toBlock=to_block,

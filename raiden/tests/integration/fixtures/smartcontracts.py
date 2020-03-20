@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import gevent
 import pytest
+from eth_utils import to_canonical_address
 from gevent import Greenlet
 from web3.contract import Contract
 
@@ -81,7 +82,9 @@ def deploy_secret_registry(
         constructor_parameters=None,
     )
 
-    return proxy_manager.secret_registry(contract.address, receipt["blockNumber"])
+    return proxy_manager.secret_registry(
+        SecretRegistryAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+    )
 
 
 def deploy_token_network_registry(
@@ -107,7 +110,9 @@ def deploy_token_network_registry(
         ],
     )
 
-    return proxy_manager.token_network_registry(contract.address, receipt["blockNumber"])
+    return proxy_manager.token_network_registry(
+        TokenNetworkRegistryAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+    )
 
 
 def register_token(
@@ -118,7 +123,7 @@ def register_token(
     token_contract = token_deploy_result()
 
     return token_network_registry_proxy.add_token(
-        token_address=token_contract.address,
+        token_address=TokenAddress(to_canonical_address(token_contract.address)),
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
         given_block_identifier=token_contract.web3.eth.blockNumber,
@@ -147,7 +152,9 @@ def deploy_service_registry(
         ),
     )
 
-    return proxy_manager.service_registry(contract.address, receipt["blockNumber"])
+    return proxy_manager.service_registry(
+        ServiceRegistryAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+    )
 
 
 def deploy_one_to_n(
@@ -169,7 +176,9 @@ def deploy_one_to_n(
             service_registry_proxy.address,
         ],
     )
-    return proxy_manager.one_to_n(contract.address, receipt["blockNumber"])
+    return proxy_manager.one_to_n(
+        OneToNAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+    )
 
 
 def deploy_user_deposit(
@@ -184,7 +193,9 @@ def deploy_user_deposit(
         contract=contract_manager.get_contract(CONTRACT_USER_DEPOSIT),
         constructor_parameters=[token_contract.address, UINT256_MAX],
     )
-    return proxy_manager.user_deposit(contract.address, receipt["blockNumber"])
+    return proxy_manager.user_deposit(
+        UserDepositAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+    )
 
 
 def transfer_user_deposit_tokens(
@@ -205,7 +216,9 @@ def fund_node(
     amount: TokenAmount,
 ) -> None:
     token_contract = token_result()
-    token_proxy = proxy_manager.token(token_contract.address, BLOCK_ID_LATEST)
+    token_proxy = proxy_manager.token(
+        TokenAddress(to_canonical_address(token_contract.address)), BLOCK_ID_LATEST
+    )
     token_proxy.transfer(to_address=to_address, amount=amount)
 
 
@@ -411,7 +424,10 @@ def token_addresses_fixture(
         number_of_tokens: the number of token instances
         register_tokens: controls if tokens will be registered with raiden Registry
     """
-    return [token.address for token in deploy_smart_contract_bundle_concurrently.token_contracts]
+    return [
+        TokenAddress(to_canonical_address(token.address))
+        for token in deploy_smart_contract_bundle_concurrently.token_contracts
+    ]
 
 
 @pytest.fixture(name="secret_registry_address")

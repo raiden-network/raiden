@@ -543,7 +543,7 @@ def estimate_gas_for_function(
 ) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     estimate_transaction = prepare_transaction(
-        address=address,
+        address=to_checksum_address(address),
         web3=web3,
         fn_identifier=fn_identifier,
         contract_abi=contract_abi,
@@ -664,7 +664,7 @@ class SmartContractCall:
     def to_log_details(self) -> Dict[str, Any]:
         return {
             "function_name": self.function,
-            "to_address": to_checksum_address(self.contract.address),
+            "to_address": self.contract.address,
             "args": self.args,
             "kwargs": self.kwargs,
             "value": self.value,
@@ -1111,7 +1111,7 @@ class JSONRPCClient:
                         "gas": slot.startgas,
                         "nonce": slot.nonce,
                         "value": slot.data.value,
-                        "to": to_checksum_address(function_call.contract.address),
+                        "to": function_call.contract.address,
                         "gasPrice": slot.gas_price,
                     }
 
