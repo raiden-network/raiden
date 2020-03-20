@@ -488,9 +488,8 @@ class RestAPI:  # pragma: no unittest
     version = 1
 
     def __init__(self, raiden_api: RaidenAPI = None, rpc_client: JSONRPCClient = None) -> None:
-        self.rpc_client_optional = rpc_client
-        self.raiden_api_optional = raiden_api
-        self.available = raiden_api is not None
+        self._rpc_client = rpc_client
+        self._raiden_api = raiden_api
 
         self.channel_schema = ChannelStateSchema()
         self.address_list_schema = AddressListSchema()
@@ -501,27 +500,26 @@ class RestAPI:  # pragma: no unittest
         self.failed_payment_schema = EventPaymentSentFailedSchema()
 
     @property
-    def checksum_address(self) -> Optional[str]:
-        if self.raiden_api is not None:
-            return to_checksum_address(self.raiden_api.address)
-        else:
-            return None
+    def rpc_client(self) -> JSONRPCClient:
+        assert self._rpc_client is not None, "rpc_client accessed but not initialized."
+        return self._rpc_client
 
     @property
-    def rpc_client(self) -> JSONRPCClient:
-        msg = "rpc_client accessed but not initialized."
-        assert isinstance(self.rpc_client_optional, JSONRPCClient), msg
-        return self.rpc_client_optional
+    def checksum_address(self) -> Optional[str]:
+        return to_checksum_address(self.raiden_api.address) if self.available else None
 
     @property
     def raiden_api(self) -> RaidenAPI:
-        msg = "raiden_api accessed but not initialized"
-        assert isinstance(self.raiden_api_optional, RaidenAPI), msg
-        return self.raiden_api_optional
+        assert self._raiden_api is not None, "raiden_api accessed but not initialized"
+        return self._raiden_api
 
     @raiden_api.setter
     def raiden_api(self, raiden_api: RaidenAPI) -> None:
-        self.raiden_api_optional = raiden_api
+        self._raiden_api = raiden_api
+
+    @property
+    def available(self) -> bool:
+        return self._raiden_api is not None
 
     def get_our_address(self) -> Response:
         return api_response(result=dict(our_address=self.checksum_address))
@@ -1430,10 +1428,3 @@ class RestAPI:  # pragma: no unittest
                 return api_response(result=dict(status="syncing", blocks_to_sync=to_sync))
             else:
                 return api_response(result=dict(status="unavailable"))
-
-    def set_available(self, available: bool = True) -> None:
-        if self.raiden_api is None and available:
-            log.error("RaidenAPI not initialized, cannot set API availability to true.")
-            available = False
-        self.available = available
-        log.debug("REST API availability changed.", available=available)
