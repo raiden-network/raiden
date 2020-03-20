@@ -45,7 +45,7 @@ def clear_if_finalized(
     state = cast(InitiatorPaymentState, iteration.new_state)
 
     if state is None:
-        return iteration
+        return iteration  # type: ignore
 
     if len(state.initiator_transfers) == 0:
         return TransitionResult(None, iteration.events)

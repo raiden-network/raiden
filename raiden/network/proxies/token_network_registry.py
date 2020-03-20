@@ -378,7 +378,7 @@ class TokenNetworkRegistry:
             if token_network_address is None:
                 msg = "createERC20TokenNetwork succeeded but token network address is Null"
                 raise RaidenUnrecoverableError(msg)
-        else:
+        else:  # `estimated_transaction` is None
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
             failed_at = self.rpc_client.get_block("latest")
@@ -442,12 +442,7 @@ class TokenNetworkRegistry:
                 given_block_identifier=failed_at_blocknumber,
             )
 
-            if estimated_transaction is not None:
-                required_gas = estimated_transaction.estimated_gas
-            else:
-                required_gas = self.gas_measurements[
-                    "TokenNetworkRegistry createERC20TokenNetwork"
-                ]
+            required_gas = self.gas_measurements["TokenNetworkRegistry createERC20TokenNetwork"]
 
             self.rpc_client.check_for_insufficient_eth(
                 transaction_name="createERC20TokenNetwork",

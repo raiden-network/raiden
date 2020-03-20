@@ -349,7 +349,7 @@ def clear_if_finalized(
     state = cast(MediatorTransferState, iteration.new_state)
 
     if state is None:
-        return iteration
+        return iteration  # type: ignore
 
     # Only clear the task if all channels have the lock cleared.
     secrethash = state.secrethash
