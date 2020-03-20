@@ -31,6 +31,7 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     BlockIdentifier,
+    BlockNumber,
     Dict,
     SecretRegistryAddress,
     T_TargetAddress,
@@ -253,7 +254,7 @@ class TokenNetworkRegistry:
             receipt = transaction_mined.receipt
 
             if not was_transaction_successfully_mined(transaction_mined):
-                failed_at_blocknumber = receipt["blockNumber"]
+                failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
                 failed_at_blockhash = receipt["blockHash"]
 
                 max_token_networks = self.get_max_token_networks(

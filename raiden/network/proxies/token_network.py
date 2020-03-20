@@ -1655,7 +1655,7 @@ class TokenNetwork:
 
                     # These checks do not have problems with race conditions because
                     # `poll`ing waits for the transaction to be confirmed.
-                    mining_block = receipt["blockNumber"]
+                    mining_block = BlockNumber(receipt["blockNumber"])
 
                     check_transaction_failure(transaction_mined, self.client)
 
@@ -1886,7 +1886,7 @@ class TokenNetwork:
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
-                mining_block = receipt["blockNumber"]
+                mining_block = BlockNumber(receipt["blockNumber"])
 
                 check_transaction_failure(transaction_mined, self.client)
 
@@ -2350,7 +2350,7 @@ class TokenNetwork:
             if not was_transaction_successfully_mined(transaction_mined):
                 receipt = transaction_mined.receipt
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
-                failed_at_blocknumber = receipt["blockNumber"]
+                failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
 
                 self.client.check_for_insufficient_eth(
                     transaction_name="settleChannel",

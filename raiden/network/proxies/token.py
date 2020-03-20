@@ -15,6 +15,7 @@ from raiden.utils.typing import (
     Any,
     Balance,
     BlockIdentifier,
+    BlockNumber,
     Dict,
     List,
     Optional,
@@ -211,19 +212,19 @@ class Token:
 
             if not is_succesful:
                 if not was_transaction_successfully_mined(transaction_mined):
-                    failed_at_number = transaction_mined.receipt["blockNumber"]
+                    failed_at_block_number = BlockNumber(transaction_mined.receipt["blockNumber"])
                 else:
-                    failed_at_number = self.client.get_block(BLOCK_ID_LATEST)["blockNumber"]
+                    failed_at_block_number = self.client.get_block(BLOCK_ID_LATEST)["blockNumber"]
 
                 failed_at_hash = encode_hex(
-                    self.client.blockhash_from_blocknumber(failed_at_number)
+                    self.client.blockhash_from_blocknumber(failed_at_block_number)
                 )
 
                 self.client.check_for_insufficient_eth(
                     transaction_name="transfer",
                     transaction_executed=False,
                     required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,
-                    block_identifier=failed_at_number,
+                    block_identifier=failed_at_block_number,
                 )
 
                 balance = self.balance_of(self.client.address, failed_at_hash)
