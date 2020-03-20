@@ -58,7 +58,7 @@ from raiden.api.v1.resources import (
     VersionResource,
     create_blueprint,
 )
-from raiden.constants import BLOCK_SPEC_LATEST, GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
+from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -881,7 +881,7 @@ class RestAPI:  # pragma: no unittest
         self,
         registry_address: TokenNetworkRegistryAddress,
         from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> Response:
         log.debug(
             "Getting network events",
@@ -903,7 +903,7 @@ class RestAPI:  # pragma: no unittest
         self,
         token_address: TokenAddress,
         from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> Response:
         log.debug(
             "Getting token network blockchain events",
@@ -989,7 +989,7 @@ class RestAPI:  # pragma: no unittest
         token_address: TokenAddress,
         partner_address: Address = None,
         from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> Response:
         log.debug(
             "Getting channel blockchain events",

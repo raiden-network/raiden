@@ -5,7 +5,7 @@ from web3._utils.abi import build_default_registry, filter_by_type
 from web3._utils.events import get_event_data
 from web3._utils.filters import construct_event_filter_params
 
-from raiden.constants import BLOCK_SPEC_LATEST, GENESIS_BLOCK_NUMBER
+from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.utils.typing import (
     ABI,
     Any,
@@ -29,7 +29,7 @@ def get_filter_args_for_specific_event_from_channel(
     event_name: str,
     contract_manager: ContractManager,
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
+    to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> Dict[str, Any]:
     """ Return the filter params for a specific event of a given channel. """
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
@@ -54,7 +54,7 @@ def get_filter_args_for_all_events_from_channel(
     channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
+    to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> Dict[str, Any]:
     """ Return the filter params for all events of a given channel. """
 

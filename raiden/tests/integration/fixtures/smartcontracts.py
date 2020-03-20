@@ -6,7 +6,7 @@ from gevent import Greenlet
 from web3.contract import Contract
 
 from raiden.constants import (
-    BLOCK_SPEC_LATEST,
+    BLOCK_ID_LATEST,
     EMPTY_ADDRESS,
     SECONDS_PER_DAY,
     UINT256_MAX,
@@ -194,7 +194,7 @@ def transfer_user_deposit_tokens(
     user_deposit_proxy.approve_and_deposit(
         beneficiary=transfer_to,
         total_deposit=MONITORING_REWARD,
-        given_block_identifier=BLOCK_SPEC_LATEST,
+        given_block_identifier=BLOCK_ID_LATEST,
     )
 
 
@@ -205,7 +205,7 @@ def fund_node(
     amount: TokenAmount,
 ) -> None:
     token_contract = token_result()
-    token_proxy = proxy_manager.token(token_contract.address, BLOCK_SPEC_LATEST)
+    token_proxy = proxy_manager.token(token_contract.address, BLOCK_ID_LATEST)
     token_proxy.transfer(to_address=to_address, amount=amount)
 
 
@@ -361,14 +361,14 @@ def deploy_smart_contract_bundle_concurrently(
         utility_token_contract = utility_token_deploy_greenlet.get()
 
         utility_token_proxy = Token(
-            deploy_client, utility_token_contract.address, contract_manager, BLOCK_SPEC_LATEST
+            deploy_client, utility_token_contract.address, contract_manager, BLOCK_ID_LATEST
         )
 
         utility_token_network_proxy: Optional[TokenNetwork] = None
         if register_tokens:
             utility_token_network_address = register_utility_token_grenlet.get()
             utility_token_network_proxy = proxy_manager.token_network(
-                utility_token_network_address, BLOCK_SPEC_LATEST
+                utility_token_network_address, BLOCK_ID_LATEST
             )
 
         services_smart_contracts = ServicesSmartContracts(
@@ -475,7 +475,7 @@ def secret_registry_proxy_fixture(
         jsonrpc_client=deploy_client,
         secret_registry_address=secret_registry_address,
         contract_manager=contract_manager,
-        block_identifier=BLOCK_SPEC_LATEST,
+        block_identifier=BLOCK_ID_LATEST,
     )
 
 

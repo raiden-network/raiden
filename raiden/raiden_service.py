@@ -29,7 +29,7 @@ from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
-    BLOCK_SPEC_LATEST,
+    BLOCK_ID_LATEST,
     DOC_URL,
     EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
@@ -1415,7 +1415,7 @@ class RaidenService(Runnable):
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
         secret_registered = self.default_secret_registry.is_secret_registered(
-            secrethash=secrethash, block_identifier=BLOCK_SPEC_LATEST
+            secrethash=secrethash, block_identifier=BLOCK_ID_LATEST
         )
         if secret_registered:
             raise RaidenUnrecoverableError(

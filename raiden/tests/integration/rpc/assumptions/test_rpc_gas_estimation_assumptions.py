@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.constants import BLOCK_SPEC_LATEST, RECEIPT_FAILURE_CODE
+from raiden.constants import BLOCK_ID_LATEST, RECEIPT_FAILURE_CODE
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 
@@ -29,7 +29,7 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
 
-    latest_block_hash = deploy_client.blockhash_from_blocknumber(BLOCK_SPEC_LATEST)
+    latest_block_hash = deploy_client.blockhash_from_blocknumber(BLOCK_ID_LATEST)
     current_gas_limit = deploy_client.get_block(latest_block_hash)["gasLimit"]
 
     # This number of iterations is an over estimation to accomodate for races,
@@ -79,7 +79,7 @@ def test_estimate_gas_defaults_to_pending(deploy_client: JSONRPCClient) -> None:
     first_receipt = deploy_client.poll_transaction(first_tx).receipt
     second_receipt = deploy_client.poll_transaction(second_tx).receipt
 
-    assert second_receipt["gasLimit"] < deploy_client.get_block(BLOCK_SPEC_LATEST)["gasLimit"]
+    assert second_receipt["gasLimit"] < deploy_client.get_block(BLOCK_ID_LATEST)["gasLimit"]
     assert first_receipt["status"] != RECEIPT_FAILURE_CODE
     assert second_receipt["status"] != RECEIPT_FAILURE_CODE
 
