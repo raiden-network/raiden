@@ -16,8 +16,8 @@ from raiden.utils.typing import (
     BlockchainEvent,
     BlockGasLimit,
     BlockHash,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     ChainID,
     ChannelID,
     Dict,
@@ -95,7 +95,7 @@ ZERO_POLL_RESULT = PollResult(
 )
 
 
-def verify_block_number(number: BlockSpecification, argname: str) -> None:
+def verify_block_number(number: BlockIdentifier, argname: str) -> None:
     if isinstance(number, int) and (number < 0 or number > UINT64_MAX):
         raise InvalidBlockNumberInput(
             "Provided block number {} for {} is invalid. Has to be in the range "
@@ -108,8 +108,8 @@ def get_contract_events(
     abi: ABI,
     contract_address: Address,
     topics: Optional[List[str]],
-    from_block: BlockSpecification,
-    to_block: BlockSpecification,
+    from_block: BlockIdentifier,
+    to_block: BlockIdentifier,
 ) -> List[Dict]:
     """ Query the blockchain for all events of the smart contract at
     `contract_address` that match the filters `topics`, `from_block`, and
@@ -136,8 +136,8 @@ def get_token_network_registry_events(
     token_network_registry_address: TokenNetworkRegistryAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
@@ -155,8 +155,8 @@ def get_token_network_events(
     token_network_address: TokenNetworkAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the ChannelManagerContract at `token_address`. """
 
@@ -175,8 +175,8 @@ def get_all_netting_channel_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of a NettingChannelContract. """
 
@@ -203,8 +203,8 @@ def get_secret_registry_events(
     secret_registry_address: SecretRegistryAddress,
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of a SecretRegistry contract. """
 

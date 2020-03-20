@@ -62,7 +62,7 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     Any,
-    BlockSpecification,
+    BlockIdentifier,
     BlockTimeout,
     ChannelID,
     Dict,
@@ -379,7 +379,7 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_network_address: TokenNetworkAddress,
         partner_address: Address,
-        block_identifier: Optional[BlockSpecification] = None,
+        block_identifier: Optional[BlockIdentifier] = None,
     ) -> bool:
         proxy_manager = self.raiden.proxy_manager
         proxy = proxy_manager.address_to_token_network[token_network_address]
@@ -1195,8 +1195,8 @@ class RaidenAPI:  # pragma: no unittest
     def get_blockchain_events_network(
         self,
         registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         events = blockchain_events.get_token_network_registry_events(
             proxy_manager=self.raiden.proxy_manager,
@@ -1212,8 +1212,8 @@ class RaidenAPI:  # pragma: no unittest
     def get_blockchain_events_token_network(
         self,
         token_address: TokenAddress,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         """Returns a list of blockchain events corresponding to the token_address."""
 
@@ -1250,8 +1250,8 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_address: TokenAddress,
         partner_address: Address = None,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress(

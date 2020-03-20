@@ -8,7 +8,7 @@ from raiden.utils.typing import (
     Address,
     BalanceHash,
     BlockExpiration,
-    BlockSpecification,
+    BlockIdentifier,
     BlockTimeout,
     ChannelID,
     LockedAmount,
@@ -62,7 +62,7 @@ class PaymentChannel:
         """ Returns the address of the token for the channel. """
         return self.token_network.token_address()
 
-    def detail(self, block_identifier: BlockSpecification) -> ChannelDetails:
+    def detail(self, block_identifier: BlockIdentifier) -> ChannelDetails:
         """ Returns the channel details. """
         return self.token_network.detail(
             participant1=self.participant1,
@@ -92,7 +92,7 @@ class PaymentChannel:
         )
         return event["args"]["settle_timeout"]
 
-    def opened(self, block_identifier: BlockSpecification) -> bool:
+    def opened(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is opened. """
         return self.token_network.channel_is_opened(
             participant1=self.participant1,
@@ -101,7 +101,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def closed(self, block_identifier: BlockSpecification) -> bool:
+    def closed(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is closed. """
         return self.token_network.channel_is_closed(
             participant1=self.participant1,
@@ -110,7 +110,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def settled(self, block_identifier: BlockSpecification) -> bool:
+    def settled(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is settled. """
         return self.token_network.channel_is_settled(
             participant1=self.participant1,
@@ -119,7 +119,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def can_transfer(self, block_identifier: BlockSpecification) -> bool:
+    def can_transfer(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns True if the channel is opened and the node has deposit in it. """
         return self.token_network.can_transfer(
             participant1=self.participant1,
@@ -129,7 +129,7 @@ class PaymentChannel:
         )
 
     def approve_and_set_total_deposit(
-        self, total_deposit: TokenAmount, block_identifier: BlockSpecification
+        self, total_deposit: TokenAmount, block_identifier: BlockIdentifier
     ) -> None:
         self.token_network.approve_and_set_total_deposit(
             given_block_identifier=block_identifier,
@@ -144,7 +144,7 @@ class PaymentChannel:
         participant_signature: Signature,
         partner_signature: Signature,
         expiration_block: BlockExpiration,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         self.token_network.set_total_withdraw(
             given_block_identifier=block_identifier,
@@ -164,7 +164,7 @@ class PaymentChannel:
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
         closing_signature: Signature,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ Closes the channel using the provided balance proof, and our closing signature. """
         self.token_network.close(
@@ -185,7 +185,7 @@ class PaymentChannel:
         additional_hash: AdditionalHash,
         partner_signature: Signature,
         signature: Signature,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
@@ -204,7 +204,7 @@ class PaymentChannel:
         sender: Address,
         receiver: Address,
         pending_locks: PendingLocksState,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
@@ -222,7 +222,7 @@ class PaymentChannel:
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ Settles the channel. """
         self.token_network.settle(

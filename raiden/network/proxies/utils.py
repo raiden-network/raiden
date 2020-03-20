@@ -9,8 +9,8 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.formatting import format_block_id
 from raiden.utils.typing import (
     Address,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     ChannelID,
     Locksroot,
     NoReturn,
@@ -63,7 +63,7 @@ def get_onchain_locksroots(
     canonical_identifier: CanonicalIdentifier,
     participant1: Address,
     participant2: Address,
-    block_identifier: BlockSpecification,
+    block_identifier: BlockIdentifier,
 ) -> Tuple[Locksroot, Locksroot]:
     """Return the locksroot for `participant1` and `participant2` at
     `block_identifier`.
@@ -112,7 +112,7 @@ def get_onchain_locksroots(
     return our_locksroot, partner_locksroot
 
 
-def raise_on_call_returned_empty(given_block_identifier: BlockSpecification) -> NoReturn:
+def raise_on_call_returned_empty(given_block_identifier: BlockIdentifier) -> NoReturn:
     """Format a message and raise RaidenUnrecoverableError."""
     # We know that the given address has code because this is checked
     # in the constructor

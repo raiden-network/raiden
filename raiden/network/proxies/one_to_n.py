@@ -2,7 +2,7 @@ import structlog
 from eth_utils import decode_hex, is_binary_address
 
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.utils.typing import Address, BlockSpecification, OneToNAddress
+from raiden.utils.typing import Address, BlockIdentifier, OneToNAddress
 from raiden_contracts.constants import CONTRACT_ONE_TO_N
 from raiden_contracts.contract_manager import ContractManager
 
@@ -15,7 +15,7 @@ class OneToN:
         jsonrpc_client: JSONRPCClient,
         one_to_n_address: OneToNAddress,
         contract_manager: ContractManager,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ):
         if not is_binary_address(one_to_n_address):
             raise ValueError("Expected binary address for monitoring service")

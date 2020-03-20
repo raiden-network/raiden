@@ -38,7 +38,7 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     Balance,
-    BlockSpecification,
+    BlockIdentifier,
     ChannelID,
     Dict,
     List,
@@ -62,8 +62,8 @@ def get_netting_channel_closed_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:
     closed_event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, ChannelEvent.CLOSED)
 
@@ -93,8 +93,8 @@ def get_netting_channel_deposit_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:
     deposit_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.DEPOSIT
@@ -125,8 +125,8 @@ def get_netting_channel_settled_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:
     settled_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.SETTLED

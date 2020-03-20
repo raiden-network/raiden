@@ -13,7 +13,7 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     AddressTypes,
-    BlockSpecification,
+    BlockIdentifier,
     ChecksumAddress,
     Iterable,
     List,
@@ -81,7 +81,7 @@ def to_hex_address(address: AddressTypes) -> AddressHex:
     return AddressHex(HexStr("0x" + address.hex()))
 
 
-def format_block_id(block_id: BlockSpecification) -> str:
+def format_block_id(block_id: BlockIdentifier) -> str:
     """ Formats a block identifier to a string. """
     # Got a block hash
     if isinstance(block_id, T_BlockHash):

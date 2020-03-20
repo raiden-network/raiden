@@ -78,9 +78,6 @@ BlockHash = Hash32
 
 T_BlockNumber = int
 
-# TODO: remove alias
-BlockSpecification = BlockIdentifier
-
 # A relative number of blocks
 T_BlockTimeout = int
 BlockTimeout = NewType("BlockTimeout", T_BlockTimeout)

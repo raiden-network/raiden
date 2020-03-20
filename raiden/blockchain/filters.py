@@ -10,7 +10,7 @@ from raiden.utils.typing import (
     ABI,
     Any,
     BlockchainEvent,
-    BlockSpecification,
+    BlockIdentifier,
     ChannelID,
     Dict,
     TokenNetworkAddress,
@@ -28,8 +28,8 @@ def get_filter_args_for_specific_event_from_channel(
     channel_identifier: ChannelID,
     event_name: str,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> Dict[str, Any]:
     """ Return the filter params for a specific event of a given channel. """
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
@@ -53,8 +53,8 @@ def get_filter_args_for_all_events_from_channel(
     token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
 ) -> Dict[str, Any]:
     """ Return the filter params for all events of a given channel. """
 

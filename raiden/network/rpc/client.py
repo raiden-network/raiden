@@ -63,8 +63,8 @@ from raiden.utils.typing import (
     Address,
     AddressHex,
     BlockHash,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     CompiledContract,
     Nonce,
     PrivateKey,
@@ -83,7 +83,7 @@ GETH_REQUIRE_OPCODE = "Missing opcode 0xfe"
 PARITY_REQUIRE_ERROR = "Bad instruction"
 
 
-def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpecification) -> None:
+def logs_blocks_sanity_check(from_block: BlockIdentifier, to_block: BlockIdentifier) -> None:
     """Checks that the from/to blocks passed onto log calls contain only appropriate types"""
     is_valid_from = isinstance(from_block, int) or isinstance(from_block, str)
     assert is_valid_from, "event log from block can be integer or latest,pending, earliest"
@@ -303,7 +303,7 @@ def check_address_has_code(
     client: "JSONRPCClient",
     address: Address,
     contract_name: str,
-    given_block_identifier: BlockSpecification,
+    given_block_identifier: BlockIdentifier,
     expected_code: bytes = None,
 ) -> None:
     """ Checks that the given address contains code. """
@@ -479,7 +479,7 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
 
 
 def patched_web3_eth_estimate_gas(
-    self: Any, transaction: Dict[str, Any], block_identifier: BlockSpecification = None
+    self: Any, transaction: Dict[str, Any], block_identifier: BlockIdentifier = None
 ) -> int:
     """ Temporary workaround until next web3.py release (5.X.X)
 
@@ -509,7 +509,7 @@ def patched_web3_eth_estimate_gas(
 
 
 def patched_web3_eth_call(
-    self: Any, transaction: Dict[str, Any], block_identifier: BlockSpecification = None
+    self: Any, transaction: Dict[str, Any], block_identifier: BlockIdentifier = None
 ) -> HexBytes:
     if "from" not in transaction and is_checksum_address(self.defaultAccount):
         transaction = assoc(transaction, "from", self.defaultAccount)
@@ -536,7 +536,7 @@ def estimate_gas_for_function(
     transaction: Dict[str, Any] = None,
     contract_abi: Dict[str, Any] = None,
     fn_abi: Dict[str, Any] = None,
-    block_identifier: BlockSpecification = None,
+    block_identifier: BlockIdentifier = None,
     *args: Any,
     **kwargs: Any,
 ) -> int:
@@ -565,7 +565,7 @@ def estimate_gas_for_function(
 
 
 def patched_contractfunction_estimateGas(
-    self: Any, transaction: Dict[str, Any] = None, block_identifier: BlockSpecification = None
+    self: Any, transaction: Dict[str, Any] = None, block_identifier: BlockIdentifier = None
 ) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
@@ -702,7 +702,7 @@ class TransactionPending:
         return log_details
 
     def estimate_gas(
-        self, block_identifier: Optional[BlockSpecification]
+        self, block_identifier: Optional[BlockIdentifier]
     ) -> Optional["TransactionEstimated"]:
         """Estimate the gas and price necessary to run the transaction.
 
@@ -894,7 +894,7 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def get_block(self, block_identifier: BlockSpecification) -> Dict[str, Any]:
+    def get_block(self, block_identifier: BlockIdentifier) -> Dict[str, Any]:
         """Given a block number, query the chain to get its corresponding block hash"""
         return self.web3.eth.getBlock(block_identifier)
 
@@ -906,12 +906,12 @@ class JSONRPCClient:
 
         return self.blockhash_from_blocknumber(confirmed_block_number)
 
-    def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
+    def blockhash_from_blocknumber(self, block_number: BlockIdentifier) -> BlockHash:
         """Given a block number, query the chain to get its corresponding block hash"""
         block = self.get_block(block_number)
         return BlockHash(bytes(block["hash"]))
 
-    def can_query_state_for_block(self, block_identifier: BlockSpecification) -> bool:
+    def can_query_state_for_block(self, block_identifier: BlockIdentifier) -> bool:
         """
         Returns if the provided block identifier is safe enough to query chain
         state for. If it's close to the state pruning blocks then state should
@@ -1351,8 +1351,8 @@ class JSONRPCClient:
         self,
         contract_address: Address,
         topics: List[str] = None,
-        from_block: BlockSpecification = 0,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = 0,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> List[Dict]:
         """ Get events for the given query. """
         logs_blocks_sanity_check(from_block, to_block)
@@ -1370,7 +1370,7 @@ class JSONRPCClient:
         transaction_name: str,
         transaction_executed: bool,
         required_gas: int,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ After estimate gas failure checks if our address has enough balance.
 
@@ -1393,14 +1393,14 @@ class JSONRPCClient:
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
             raise InsufficientEth(msg)
 
-    def get_checking_block(self) -> BlockSpecification:
+    def get_checking_block(self) -> BlockIdentifier:
         """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
         In parity doing any call() with the 'pending' block no longer falls back
         to the latest if no pending block is found but throws a mistaken error.
         Until that bug is fixed we need to enforce special behaviour for parity
         and use the latest block for checking.
         """
-        checking_block: BlockSpecification = BLOCK_SPEC_PENDING
+        checking_block: BlockIdentifier = BLOCK_SPEC_PENDING
         if self.eth_node is EthClient.PARITY:
             checking_block = BLOCK_SPEC_LATEST
         return checking_block

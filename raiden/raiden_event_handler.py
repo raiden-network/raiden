@@ -75,7 +75,7 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     TYPE_CHECKING,
     Address,
-    BlockSpecification,
+    BlockIdentifier,
     Dict,
     List,
     Nonce,
@@ -110,7 +110,7 @@ def unlock(
     end_state: NettingChannelEndState,
     sender: Address,
     receiver: Address,
-    given_block_identifier: BlockSpecification,
+    given_block_identifier: BlockIdentifier,
 ) -> None:  # pragma: no unittest
     pending_locks = get_batch_unlock(end_state)
     assert pending_locks, "pending lock set is missing"

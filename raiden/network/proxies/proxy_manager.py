@@ -18,8 +18,8 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     ChannelID,
     Dict,
     EVMBytecode,
@@ -111,7 +111,7 @@ class ProxyManager:
         self._monitoring_service_creation_lock = Semaphore()
         self._one_to_n_creation_lock = Semaphore()
 
-    def token(self, token_address: TokenAddress, block_identifier: BlockSpecification) -> Token:
+    def token(self, token_address: TokenAddress, block_identifier: BlockIdentifier) -> Token:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
@@ -128,7 +128,7 @@ class ProxyManager:
         return self.address_to_token[token_address]
 
     def custom_token(
-        self, token_address: TokenAddress, block_identifier: BlockSpecification
+        self, token_address: TokenAddress, block_identifier: BlockIdentifier
     ) -> CustomToken:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
@@ -146,7 +146,7 @@ class ProxyManager:
         return self.address_to_custom_token[token_address]
 
     def token_network_registry(
-        self, address: TokenNetworkRegistryAddress, block_identifier: BlockSpecification
+        self, address: TokenNetworkRegistryAddress, block_identifier: BlockIdentifier
     ) -> TokenNetworkRegistry:
 
         with self._token_network_registry_creation_lock:
@@ -177,7 +177,7 @@ class ProxyManager:
         return self.address_to_token_network_registry[address]
 
     def token_network(
-        self, address: TokenNetworkAddress, block_identifier: BlockSpecification
+        self, address: TokenNetworkAddress, block_identifier: BlockIdentifier
     ) -> TokenNetwork:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
@@ -209,7 +209,7 @@ class ProxyManager:
         return self.address_to_token_network[address]
 
     def secret_registry(
-        self, address: SecretRegistryAddress, block_identifier: BlockSpecification
+        self, address: SecretRegistryAddress, block_identifier: BlockIdentifier
     ) -> SecretRegistry:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
@@ -226,7 +226,7 @@ class ProxyManager:
         return self.address_to_secret_registry[address]
 
     def service_registry(
-        self, address: ServiceRegistryAddress, block_identifier: BlockSpecification
+        self, address: ServiceRegistryAddress, block_identifier: BlockIdentifier
     ) -> ServiceRegistry:
         with self._service_registry_creation_lock:
             if address not in self.address_to_service_registry:
@@ -240,7 +240,7 @@ class ProxyManager:
         return self.address_to_service_registry[address]
 
     def payment_channel(
-        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockSpecification
+        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockIdentifier
     ) -> PaymentChannel:
 
         token_network_address = canonical_identifier.token_network_address
@@ -267,7 +267,7 @@ class ProxyManager:
         return self.identifier_to_payment_channel[dict_key]
 
     def user_deposit(
-        self, address: UserDepositAddress, block_identifier: BlockSpecification
+        self, address: UserDepositAddress, block_identifier: BlockIdentifier
     ) -> UserDeposit:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
@@ -285,7 +285,7 @@ class ProxyManager:
         return self.address_to_user_deposit[address]
 
     def monitoring_service(
-        self, address: MonitoringServiceAddress, block_identifier: BlockSpecification
+        self, address: MonitoringServiceAddress, block_identifier: BlockIdentifier
     ) -> MonitoringService:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
@@ -301,7 +301,7 @@ class ProxyManager:
 
         return self.address_to_monitoring_service[address]
 
-    def one_to_n(self, address: OneToNAddress, block_identifier: BlockSpecification) -> OneToN:
+    def one_to_n(self, address: OneToNAddress, block_identifier: BlockIdentifier) -> OneToN:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 

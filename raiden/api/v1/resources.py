@@ -17,7 +17,7 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     Any,
-    BlockSpecification,
+    BlockIdentifier,
     BlockTimeout,
     PaymentAmount,
     PaymentID,
@@ -122,7 +122,7 @@ class BlockchainEventsNetworkResource(BaseResource):
     get_schema = BlockchainEventsRequestSchema()
 
     @use_kwargs(get_schema, locations=("query",))
-    def get(self, from_block: BlockSpecification, to_block: BlockSpecification) -> Response:
+    def get(self, from_block: BlockIdentifier, to_block: BlockIdentifier) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or BLOCK_SPEC_LATEST
 
@@ -139,10 +139,7 @@ class BlockchainEventsTokenResource(BaseResource):
 
     @use_kwargs(get_schema, locations=("query",))
     def get(
-        self,
-        token_address: TokenAddress,
-        from_block: BlockSpecification,
-        to_block: BlockSpecification,
+        self, token_address: TokenAddress, from_block: BlockIdentifier, to_block: BlockIdentifier
     ) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or BLOCK_SPEC_LATEST
@@ -161,8 +158,8 @@ class ChannelBlockchainEventsResource(BaseResource):
         self,
         token_address: TokenAddress,
         partner_address: Address = None,
-        from_block: BlockSpecification = None,
-        to_block: BlockSpecification = None,
+        from_block: BlockIdentifier = None,
+        to_block: BlockIdentifier = None,
     ) -> Response:
         from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
         to_block = to_block or BLOCK_SPEC_LATEST
