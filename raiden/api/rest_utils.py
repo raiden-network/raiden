@@ -54,10 +54,10 @@ def if_api_available(method: Callable) -> Callable:
     """ Decorator for resource methods which only work if the API is fully available. """
 
     def decorated(self, *args, **kwargs):  # type: ignore
-        if self.rest_api.available:
-            return method(self, *args, **kwargs)
-        else:
+        if not self.rest_api.available:
             msg = "Service unavailable. Try again later."
             return api_error(msg, HTTPStatus.SERVICE_UNAVAILABLE)
+
+        return method(self, *args, **kwargs)
 
     return decorated

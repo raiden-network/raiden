@@ -292,10 +292,9 @@ class RaidenService(Runnable):
         self.api_server: Optional[APIServer] = api_server
         self.raiden_api: Optional[RaidenAPI] = None
         self.rest_api: Optional[RestAPI] = None
-        if isinstance(api_server, APIServer):
+        if api_server is not None:
             self.raiden_api = RaidenAPI(self)
             self.rest_api = api_server.rest_api
-            self.rest_api.raiden_api = self.raiden_api
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
@@ -684,8 +683,9 @@ class RaidenService(Runnable):
         self.alarm.start()
 
     def _set_rest_api_service_available(self) -> None:
-        if self.api_server is not None:
-            self.api_server.rest_api.set_available()
+        if self.raiden_api:
+            assert self.rest_api, "api enabled in config but self.rest_api not initialized"
+            self.rest_api.raiden_api = self.raiden_api
             print("Synchronization complete, REST API services now available.")
 
     def _initialize_ready_to_process_events(self) -> None:
