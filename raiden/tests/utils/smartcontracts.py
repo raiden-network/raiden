@@ -3,6 +3,7 @@ import os
 from solc import compile_files
 from web3.contract import Contract
 
+from raiden.constants import BLOCK_SPEC_LATEST
 from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.custom_token import CustomToken
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -32,7 +33,7 @@ def deploy_service_registry_and_set_urls(
     private_keys, web3, contract_manager, service_registry_address
 ) -> Tuple[ServiceRegistry, List[str]]:
     urls = ["http://foo", "http://boo", "http://coo"]
-    block_identifier = "latest"
+    block_identifier = BLOCK_SPEC_LATEST
     c1_client = JSONRPCClient(web3, private_keys[0])
     c1_service_proxy = ServiceRegistry(
         jsonrpc_client=c1_client,
@@ -75,30 +76,32 @@ def deploy_service_registry_and_set_urls(
     )
 
     # Test that getting a random service for an empty registry returns None
-    pfs_address = get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=TokenAmount(1))
+    pfs_address = get_random_pfs(
+        c1_service_proxy, BLOCK_SPEC_LATEST, pathfinding_max_fee=TokenAmount(1)
+    )
     assert pfs_address is None
 
     log_details: Dict[str, Any] = {}
     # Test that setting the urls works
-    c1_price = c1_service_proxy.current_price(block_identifier="latest")
+    c1_price = c1_service_proxy.current_price(block_identifier=BLOCK_SPEC_LATEST)
     c1_token_proxy.mint_for(c1_price, c1_client.address)
     assert c1_token_proxy.balance_of(c1_client.address) > 0
     c1_token_proxy.approve(allowed_address=service_registry_address, allowance=c1_price)
-    c1_service_proxy.deposit(block_identifier="latest", limit_amount=c1_price)
+    c1_service_proxy.deposit(block_identifier=BLOCK_SPEC_LATEST, limit_amount=c1_price)
     c1_service_proxy.set_url(urls[0])
 
-    c2_price = c2_service_proxy.current_price(block_identifier="latest")
+    c2_price = c2_service_proxy.current_price(block_identifier=BLOCK_SPEC_LATEST)
     c2_token_proxy.mint_for(c2_price, c2_client.address)
     assert c2_token_proxy.balance_of(c2_client.address) > 0
     c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
-    c2_service_proxy.deposit(block_identifier="latest", limit_amount=c2_price)
+    c2_service_proxy.deposit(block_identifier=BLOCK_SPEC_LATEST, limit_amount=c2_price)
     c2_service_proxy.set_url(urls[1])
 
-    c3_price = c3_service_proxy.current_price(block_identifier="latest")
+    c3_price = c3_service_proxy.current_price(block_identifier=BLOCK_SPEC_LATEST)
     c3_token_proxy.mint_for(c3_price, c3_client.address)
     assert c3_token_proxy.balance_of(c3_client.address) > 0
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
-    c3_service_proxy.deposit(block_identifier="latest", limit_amount=c3_price)
+    c3_service_proxy.deposit(block_identifier=BLOCK_SPEC_LATEST, limit_amount=c3_price)
     c3_token_proxy.client.estimate_gas(c3_token_proxy.proxy, "mint", log_details, c3_price)
     c3_token_proxy.approve(allowed_address=service_registry_address, allowance=c3_price)
     c3_service_proxy.set_url(urls[2])

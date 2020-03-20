@@ -4,7 +4,7 @@ import structlog
 from eth_utils import decode_hex, encode_hex, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.constants import NULL_ADDRESS_BYTES
+from raiden.constants import BLOCK_SPEC_LATEST, NULL_ADDRESS_BYTES
 from raiden.exceptions import (
     AddressWithoutCode,
     BrokenPreconditionError,
@@ -109,7 +109,7 @@ class TokenNetworkRegistry:
         The limits apply for version 0.13.0 and above of raiden-contracts,
         since instantiation also takes the limits as constructor arguments.
         """
-        if given_block_identifier == "latest":
+        if given_block_identifier == BLOCK_SPEC_LATEST:
             raise ValueError(
                 'Calling a proxy with "latest" is usually wrong because '
                 "the result of the precondition check is not precisely predictable."
@@ -381,7 +381,7 @@ class TokenNetworkRegistry:
         else:  # `estimated_transaction` is None
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.rpc_client.get_block("latest")
+            failed_at = self.rpc_client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash_bytes = failed_at["hash"]
             failed_at_blockhash = encode_hex(failed_at_blockhash_bytes)
             failed_at_blocknumber = failed_at["number"]

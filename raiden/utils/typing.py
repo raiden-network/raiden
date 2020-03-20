@@ -2,8 +2,14 @@ from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, List, NewType, Tuple, Type, Union
 
-from eth_typing import Address, HexAddress
+from eth_typing import (  # NOQA pylint:disable=unused-import
+    Address,
+    BlockNumber,
+    Hash32,
+    HexAddress,
+)
 from typing_extensions import Literal
+from web3.types import BlockIdentifier, Nonce  # NOQA pylint:disable=unused-import
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
@@ -12,7 +18,6 @@ from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-
 )
 
 from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
-
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -67,11 +72,14 @@ BalanceHash = NewType("BalanceHash", T_BalanceHash)
 T_BlockGasLimit = int
 BlockGasLimit = NewType("BlockGasLimit", T_BlockGasLimit)
 
+# TODO: remove alias
 T_BlockHash = bytes
-BlockHash = NewType("BlockHash", T_BlockHash)
+BlockHash = Hash32
 
 T_BlockNumber = int
-BlockNumber = NewType("BlockNumber", T_BlockNumber)
+
+# TODO: remove alias
+BlockSpecification = BlockIdentifier
 
 # A relative number of blocks
 T_BlockTimeout = int
@@ -93,7 +101,6 @@ T_MessageID = int
 MessageID = NewType("MessageID", T_MessageID)
 
 T_Nonce = int
-Nonce = NewType("Nonce", T_Nonce)
 
 T_AdditionalHash = bytes
 AdditionalHash = NewType("AdditionalHash", T_AdditionalHash)
@@ -187,8 +194,6 @@ EncodedData = NewType("EncodedData", T_EncodedData)
 
 T_WithdrawAmount = int
 WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
-
-BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
 
 NodeNetworkStateMap = Dict[Address, "NetworkState"]
 

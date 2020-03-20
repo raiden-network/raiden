@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 import click
 from eth_utils import to_canonical_address
 
-from raiden.constants import Environment, RoutingMode
+from raiden.constants import BLOCK_SPEC_LATEST, Environment, RoutingMode
 from raiden.exceptions import (
     AddressWithoutCode,
     AddressWrongContract,
@@ -58,7 +58,9 @@ class RaidenBundle:
     secret_registry: SecretRegistry
 
     def __post_init__(self) -> None:
-        secret_registry_address = self.token_network_registry.get_secret_registry_address("latest")
+        secret_registry_address = self.token_network_registry.get_secret_registry_address(
+            BLOCK_SPEC_LATEST
+        )
         if secret_registry_address != self.secret_registry.address:
             click.secho(
                 f"Secret registry address linked with the token network registry "
@@ -76,7 +78,7 @@ class ServicesBundle:
     one_to_n: Optional[OneToN]
 
     def __post_init__(self) -> None:
-        block_identifier = "latest"
+        block_identifier = BLOCK_SPEC_LATEST
         user_deposit_address = self.user_deposit.address
         token_address = self.user_deposit.token_address(block_identifier)
 
@@ -210,7 +212,7 @@ def load_deployment_addresses_from_udc(
     """Given a user deposit address, this function returns the list of contract addresses
     which are used as services which are bound to the user deposit contract deployed.
     """
-    block_identifier = "latest"
+    block_identifier = BLOCK_SPEC_LATEST
     user_deposit = proxy_manager.user_deposit(
         UserDepositAddress(to_canonical_address(user_deposit_address)),
         block_identifier=block_identifier,
@@ -274,7 +276,7 @@ def raiden_bundle_from_contracts_deployment(
 
     for contractname, address, constructor in contractname_address:
         try:
-            proxy = constructor(address, block_identifier="latest")  # type: ignore
+            proxy = constructor(address, block_identifier=BLOCK_SPEC_LATEST)  # type: ignore
         except ContractCodeMismatch as e:
             handle_contract_code_mismatch(e)
         except AddressWithoutCode:
@@ -344,7 +346,7 @@ def services_bundle_from_contracts_deployment(
 
     for contractname, address, constructor in contractname_address:
         try:
-            proxy = constructor(address, block_identifier="latest")
+            proxy = constructor(address, block_identifier=BLOCK_SPEC_LATEST)
         except ContractCodeMismatch as e:
             handle_contract_code_mismatch(e)
         except AddressWithoutCode:

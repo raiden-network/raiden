@@ -11,7 +11,7 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
-from raiden.constants import UINT256_MAX
+from raiden.constants import BLOCK_SPEC_LATEST, UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
@@ -230,19 +230,21 @@ class ConsoleTools:
         registry_address = TokenNetworkRegistryAddress(to_canonical_address(registry_address_hex))
         token_address = TokenAddress(to_canonical_address(token_address_hex))
 
-        registry = self._raiden.proxy_manager.token_network_registry(registry_address, "latest")
+        registry = self._raiden.proxy_manager.token_network_registry(
+            registry_address, BLOCK_SPEC_LATEST
+        )
 
         token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            given_block_identifier="latest",
+            given_block_identifier=BLOCK_SPEC_LATEST,
         )
         waiting.wait_for_token_network(
             self._raiden, registry.address, token_address, retry_timeout
         )
 
-        return self._raiden.proxy_manager.token_network(token_network_address, "latest")
+        return self._raiden.proxy_manager.token_network(token_network_address, BLOCK_SPEC_LATEST)
 
     def open_channel_with_funding(
         self,

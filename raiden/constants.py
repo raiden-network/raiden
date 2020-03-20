@@ -12,6 +12,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     ChainID,
+    Literal,
     Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
@@ -170,6 +171,9 @@ MATRIX_AUTO_SELECT_SERVER = "auto"
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
 EMPTY_ADDRESS = b"\0" * 20
+
+BLOCK_SPEC_LATEST: Literal["latest"] = "latest"
+BLOCK_SPEC_PENDING: Literal["pending"] = "pending"
 
 
 # Keep in sync with .circleci/config.yaml

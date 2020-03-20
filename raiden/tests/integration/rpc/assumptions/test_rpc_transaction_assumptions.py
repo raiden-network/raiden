@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.constants import TRANSACTION_INTRINSIC_GAS
+from raiden.constants import BLOCK_SPEC_LATEST, TRANSACTION_INTRINSIC_GAS
 from raiden.exceptions import InsufficientEth
 from raiden.network.rpc.client import (
     JSONRPCClient,
@@ -46,7 +46,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     estimated_gas = safe_gas_limit(22000)
     gas_price = gas_price_for_fast_transaction(deploy_client.web3)
 
-    block = deploy_client.get_block("latest")
+    block = deploy_client.get_block(BLOCK_SPEC_LATEST)
 
     estimated_transaction_fail_assert = TransactionEstimated(
         from_address=address,

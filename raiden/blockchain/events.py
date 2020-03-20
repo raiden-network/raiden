@@ -7,7 +7,7 @@ from web3 import Web3
 
 from raiden.blockchain.exceptions import UnknownRaidenEventType
 from raiden.blockchain.filters import decode_event, get_filter_args_for_all_events_from_channel
-from raiden.constants import EMPTY_HASH, GENESIS_BLOCK_NUMBER, UINT64_MAX
+from raiden.constants import BLOCK_SPEC_LATEST, EMPTY_HASH, GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.utils.typing import (
@@ -137,7 +137,7 @@ def get_token_network_registry_events(
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
@@ -156,7 +156,7 @@ def get_token_network_events(
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of the ChannelManagerContract at `token_address`. """
 
@@ -176,7 +176,7 @@ def get_all_netting_channel_events(
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of a NettingChannelContract. """
 
@@ -204,7 +204,7 @@ def get_secret_registry_events(
     contract_manager: ContractManager,
     events: Optional[List[str]] = ALL_EVENTS,
     from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    to_block: BlockSpecification = BLOCK_SPEC_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
     """ Helper to get all events of a SecretRegistry contract. """
 

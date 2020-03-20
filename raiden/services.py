@@ -1,7 +1,7 @@
 import structlog
 
 from raiden import constants
-from raiden.constants import RoutingMode
+from raiden.constants import BLOCK_SPEC_LATEST, RoutingMode
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.settings import MONITORING_REWARD
@@ -83,7 +83,7 @@ def update_monitoring_service_from_balance_proof(
 
     msg = f"Monitoring is enabled but the `UserDeposit` contract is None."
     assert raiden.user_deposit is not None, msg
-    rei_balance = raiden.user_deposit.effective_balance(raiden.address, "latest")
+    rei_balance = raiden.user_deposit.effective_balance(raiden.address, BLOCK_SPEC_LATEST)
     if rei_balance < MONITORING_REWARD:
         rdn_balance = to_rdn(rei_balance)
         rdn_reward = to_rdn(MONITORING_REWARD)

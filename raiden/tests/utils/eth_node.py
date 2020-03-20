@@ -12,6 +12,7 @@ from eth_utils import encode_hex, remove_0x_prefix, to_normalized_address
 from pkg_resources import parse_version
 from web3 import Web3
 
+from raiden.constants import BLOCK_SPEC_LATEST
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils.ethereum_clients import parse_geth_version
@@ -293,7 +294,7 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: in
     addresses = {to_checksum_address(account) for account in accounts_addresses}
     for _ in range(retries):
         for address in addresses.copy():
-            if web3.eth.getBalance(address, "latest") > 0:
+            if web3.eth.getBalance(address, BLOCK_SPEC_LATEST) > 0:
                 addresses.remove(address)
         gevent.sleep(1)
 

@@ -1,5 +1,6 @@
 from eth_utils import to_canonical_address
 
+from raiden.constants import BLOCK_SPEC_LATEST
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils.keys import privatekey_to_address
@@ -14,7 +15,7 @@ def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager)
         jsonrpc_client=other_client,
         token_address=to_canonical_address(token_proxy.proxy.address),
         contract_manager=contract_manager,
-        block_identifier="latest",
+        block_identifier=BLOCK_SPEC_LATEST,
     )
 
     # send some funds from deployer to generated address
@@ -25,6 +26,6 @@ def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager)
     token_proxy.approve(address, allow_funds)
     assert allow_funds == token_proxy.proxy.functions.allowance(
         deploy_client.address, address
-    ).call(block_identifier="latest")
+    ).call(block_identifier=BLOCK_SPEC_LATEST)
     other_token_proxy.transfer(deploy_client.address, transfer_funds)
     assert token_proxy.balance_of(address) == 0

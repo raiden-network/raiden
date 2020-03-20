@@ -4,7 +4,7 @@ from gevent import joinall
 from gevent.pool import Pool
 
 from raiden import routing
-from raiden.constants import ABSENT_SECRET
+from raiden.constants import ABSENT_SECRET, BLOCK_SPEC_LATEST
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
 from raiden.messages.synchronization import Delivered, Processed
@@ -321,7 +321,7 @@ class MessageHandler:
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
         registered = raiden.default_secret_registry.is_secret_registered(
-            secrethash=secrethash, block_identifier="latest"
+            secrethash=secrethash, block_identifier=BLOCK_SPEC_LATEST
         )
         if registered:
             log.warning(

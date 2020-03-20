@@ -3,7 +3,12 @@ from unittest.mock import patch
 import pytest
 from eth_utils import is_same_address, to_canonical_address, to_normalized_address
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
+from raiden.constants import (
+    BLOCK_SPEC_LATEST,
+    GENESIS_BLOCK_NUMBER,
+    NULL_ADDRESS_BYTES,
+    UINT256_MAX,
+)
 from raiden.exceptions import (
     AddressWithoutCode,
     InvalidToken,
@@ -45,9 +50,18 @@ def test_token_network_registry(
         token_network_registry_address, block_identifier=confirmed_block_identifier
     )
 
-    assert token_network_registry_proxy.settlement_timeout_min("latest") == TEST_SETTLE_TIMEOUT_MIN
-    assert token_network_registry_proxy.settlement_timeout_max("latest") == TEST_SETTLE_TIMEOUT_MAX
-    assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 0
+    assert (
+        token_network_registry_proxy.settlement_timeout_min(BLOCK_SPEC_LATEST)
+        == TEST_SETTLE_TIMEOUT_MIN
+    )
+    assert (
+        token_network_registry_proxy.settlement_timeout_max(BLOCK_SPEC_LATEST)
+        == TEST_SETTLE_TIMEOUT_MAX
+    )
+    assert (
+        token_network_registry_proxy.get_token_network_created(block_identifier=BLOCK_SPEC_LATEST)
+        == 0
+    )
 
     bad_token_address = make_token_address()
 
@@ -92,7 +106,10 @@ def test_token_network_registry(
         given_block_identifier=preblockhash,
     )
     assert token_network_address is not None
-    assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 1
+    assert (
+        token_network_registry_proxy.get_token_network_created(block_identifier=BLOCK_SPEC_LATEST)
+        == 1
+    )
 
     # Re-registering the same token should fail with a recoverable error
     # because it is a race condition.
@@ -107,21 +124,34 @@ def test_token_network_registry(
     logs = token_network_registry_proxy.filter_token_added_events()
     assert is_same_address(logs[0]["args"]["token_address"], test_token.address)
     assert is_same_address(logs[0]["args"]["token_network_address"], token_network_address)
-    assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
+    assert (
+        token_network_registry_proxy.get_token_network(bad_token_address, BLOCK_SPEC_LATEST)
+        is None
+    )
 
-    result_address = token_network_registry_proxy.get_token_network(test_token_address, "latest")
+    result_address = token_network_registry_proxy.get_token_network(
+        test_token_address, BLOCK_SPEC_LATEST
+    )
 
     assert result_address
     assert to_normalized_address(result_address) == to_normalized_address(token_network_address)
 
     with pytest.raises(ValueError):
-        assert token_network_registry_proxy.get_token_network(None, "latest")  # type: ignore
+        assert token_network_registry_proxy.get_token_network(
+            None, BLOCK_SPEC_LATEST  # type: ignore
+        )
 
     # These are not registered token addresses
-    assert token_network_registry_proxy.get_token_network(bad_token_address, "latest") is None
-    assert token_network_registry_proxy.get_token_network(test_token_address, "latest") is not None
+    assert (
+        token_network_registry_proxy.get_token_network(bad_token_address, BLOCK_SPEC_LATEST)
+        is None
+    )
+    assert (
+        token_network_registry_proxy.get_token_network(test_token_address, BLOCK_SPEC_LATEST)
+        is not None
+    )
     address = token_network_registry_proxy.get_token_network(
-        TokenAddress(token_network_address), "latest"
+        TokenAddress(token_network_address), BLOCK_SPEC_LATEST
     )
     assert address is None
 
@@ -144,7 +174,7 @@ def test_token_network_registry_max_token_networks(
         block_identifier=confirmed_block_identifier,
     )
     assert (
-        token_network_registry_proxy.get_max_token_networks(block_identifier="latest")
+        token_network_registry_proxy.get_max_token_networks(block_identifier=BLOCK_SPEC_LATEST)
         == UINT256_MAX
     )
 
@@ -194,7 +224,10 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
         token_network_registry_address, block_identifier=confirmed_block_identifier
     )
 
-    assert token_network_registry_proxy.get_token_network_created(block_identifier="latest") == 0
+    assert (
+        token_network_registry_proxy.get_token_network_created(block_identifier=BLOCK_SPEC_LATEST)
+        == 0
+    )
 
     test_token = deploy_token(
         deploy_client=deploy_client,

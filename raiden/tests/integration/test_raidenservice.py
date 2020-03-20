@@ -6,6 +6,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import (
+    BLOCK_SPEC_LATEST,
     DISCOVERY_DEFAULT_ROOM,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
@@ -58,7 +59,7 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     )
     app0.raiden.proxy_manager.client.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.rpc_client.get_block(block_identifier="latest")
+    latest_block = app0.raiden.rpc_client.get_block(block_identifier=BLOCK_SPEC_LATEST)
     app0.raiden._callback_new_block(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
@@ -161,7 +162,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PFS,  # not private mode, otherwise no PFS updates are queued
         user_deposit=app0.raiden.proxy_manager.user_deposit(
-            user_deposit_address, block_identifier="latest"
+            user_deposit_address, block_identifier=BLOCK_SPEC_LATEST
         ),
     )
     restart_node(app0_restart)

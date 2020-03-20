@@ -7,7 +7,7 @@ from eth_utils import keccak
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
-from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
+from raiden.constants import BLOCK_SPEC_LATEST, EMPTY_SIGNATURE, UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages.transfers import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.messages.withdraw import WithdrawExpired
@@ -323,7 +323,7 @@ def test_batch_unlock(
     assert is_channel_registered(alice_app, bob_app, canonical_identifier)
     assert is_channel_registered(bob_app, alice_app, canonical_identifier)
 
-    token_proxy = alice_app.raiden.proxy_manager.token(token_address, "latest")
+    token_proxy = alice_app.raiden.proxy_manager.token(token_address, BLOCK_SPEC_LATEST)
     alice_initial_balance = token_proxy.balance_of(alice_app.raiden.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
@@ -388,7 +388,7 @@ def test_batch_unlock(
     # Alternatives would be to hold the unlock messages, or to stop and restart
     # the apps after the channel is closed.
     secret_registry_proxy = alice_app.raiden.proxy_manager.secret_registry(
-        secret_registry_address, block_identifier="latest"
+        secret_registry_address, block_identifier=BLOCK_SPEC_LATEST
     )
     secret_registry_proxy.register_secret(secret=secret)
 
@@ -464,7 +464,7 @@ def test_channel_withdraw(raiden_network, token_addresses, deposit, retry_timeou
     )
     assert token_network_address
 
-    token_proxy = bob_app.raiden.proxy_manager.token(token_address, "latest")
+    token_proxy = bob_app.raiden.proxy_manager.token(token_address, BLOCK_SPEC_LATEST)
     bob_initial_balance = token_proxy.balance_of(bob_app.raiden.address)
 
     message_handler = WaitForMessage()
@@ -623,7 +623,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     deposit0 = deposit
     deposit1 = deposit
 
-    token_proxy = app0.raiden.proxy_manager.token(token_address, "latest")
+    token_proxy = app0.raiden.proxy_manager.token(token_address, BLOCK_SPEC_LATEST)
     initial_balance0 = token_proxy.balance_of(address0)
     initial_balance1 = token_proxy.balance_of(address1)
     identifier = 1
@@ -670,7 +670,8 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     current_block = app0.raiden.rpc_client.block_number()
 
     netting_channel = app1.raiden.proxy_manager.payment_channel(
-        canonical_identifier=channelstate_0_1.canonical_identifier, block_identifier="latest"
+        canonical_identifier=channelstate_0_1.canonical_identifier,
+        block_identifier=BLOCK_SPEC_LATEST,
     )
 
     # The transfer locksroot must not contain the unlocked lock, the
@@ -746,7 +747,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     app1.raiden.proxy_manager.client.wait_until_block(target_block_number=lock_expiration)
 
     assert app1.raiden.default_secret_registry.is_secret_registered(
-        secrethash=secrethash, block_identifier="latest"
+        secrethash=secrethash, block_identifier=BLOCK_SPEC_LATEST
     )
 
 
@@ -864,7 +865,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     assert token_network_address
 
     channel0 = get_channelstate(app0, app1, token_network_address)
-    token_proxy = app0.raiden.proxy_manager.token(channel0.token_address, "latest")
+    token_proxy = app0.raiden.proxy_manager.token(channel0.token_address, BLOCK_SPEC_LATEST)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 

@@ -11,6 +11,7 @@ from pkg_resources import parse_version
 from web3 import Web3
 
 from raiden.constants import (
+    BLOCK_SPEC_LATEST,
     CHECK_GAS_RESERVE_INTERVAL,
     CHECK_NETWORK_ID_INTERVAL,
     CHECK_RDN_MIN_DEPOSIT_INTERVAL,
@@ -102,7 +103,7 @@ def check_rdn_deposits(
 ) -> None:  # pragma: no unittest
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
-        rei_balance = user_deposit_proxy.effective_balance(raiden.address, "latest")
+        rei_balance = user_deposit_proxy.effective_balance(raiden.address, BLOCK_SPEC_LATEST)
         rdn_balance = to_rdn(rei_balance)
         if rei_balance < MIN_REI_THRESHOLD:
             click.secho(
@@ -189,7 +190,7 @@ class AlarmTask(Runnable):
     def loop_until_stop(self) -> None:
         sleep_time = self.sleep_time
         while self._stop_event and self._stop_event.wait(sleep_time) is not True:
-            latest_block = self.rpc_client.get_block(block_identifier="latest")
+            latest_block = self.rpc_client.get_block(block_identifier=BLOCK_SPEC_LATEST)
 
             self._maybe_run_callbacks(latest_block)
 

@@ -7,6 +7,7 @@ from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import (
+    BLOCK_SPEC_LATEST,
     EMPTY_BALANCE_HASH,
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
@@ -295,7 +296,7 @@ class TokenNetwork:
         )
 
         if estimated_transaction is None:
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -777,7 +778,7 @@ class TokenNetwork:
                     channel_identifier=channel_identifier,
                     detail_for=self.node_address,
                     partner=partner,
-                    block_identifier="latest",
+                    block_identifier=BLOCK_SPEC_LATEST,
                 )
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
@@ -1040,7 +1041,7 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -1430,7 +1431,7 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -1678,7 +1679,7 @@ class TokenNetwork:
 
                 # The latest block can not be used reliably because of reorgs,
                 # therefore every call using this block has to handle pruned data.
-                failed_at = self.client.get_block("latest")
+                failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
                 failed_at_blockhash = encode_hex(failed_at["hash"])
                 failed_at_blocknumber = failed_at["number"]
 
@@ -1968,7 +1969,7 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -2155,7 +2156,7 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -2440,7 +2441,7 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_SPEC_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
