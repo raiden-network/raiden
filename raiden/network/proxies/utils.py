@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from eth_utils import decode_hex
 
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.constants import BLOCK_SPEC_LATEST
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.formatting import format_block_id
@@ -34,7 +34,7 @@ def get_channel_participants_from_open_event(
 ) -> Optional[Tuple[Address, Address]]:
     # For this check it is perfectly fine to use a `latest` block number.
     # Because the filter is looking just for the OPENED event.
-    to_block = BLOCK_SPEC_LATEST
+    to_block = BLOCK_ID_LATEST
 
     filter_args = get_filter_args_for_specific_event_from_channel(
         token_network_address=token_network.address,

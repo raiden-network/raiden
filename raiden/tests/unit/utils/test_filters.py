@@ -5,7 +5,7 @@ from raiden.blockchain.filters import (
     get_filter_args_for_all_events_from_channel,
     get_filter_args_for_specific_event_from_channel,
 )
-from raiden.constants import BLOCK_SPEC_LATEST
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.tests.utils import factories
 
 
@@ -23,7 +23,7 @@ def test_get_filter_args(contract_manager):
     assert to_int(hexstr=event_filter_params["topics"][1]) == channel_identifier
     assert event_filter_params["address"] == token_network_address
     assert event_filter_params["fromBlock"] == 0
-    assert event_filter_params["toBlock"] == BLOCK_SPEC_LATEST
+    assert event_filter_params["toBlock"] == BLOCK_ID_LATEST
 
     with pytest.raises(ValueError):
         # filter argument generation checks if event type is known

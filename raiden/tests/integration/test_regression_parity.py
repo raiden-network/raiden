@@ -3,7 +3,7 @@ from typing import cast
 import pytest
 
 from raiden import waiting
-from raiden.constants import BLOCK_SPEC_LATEST
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import wait_for_state_change
@@ -72,7 +72,7 @@ def test_locksroot_loading_during_channel_settle_handling(
     )
 
     channel = app0.raiden.proxy_manager.payment_channel(
-        channel_state.canonical_identifier, block_identifier=BLOCK_SPEC_LATEST
+        channel_state.canonical_identifier, block_identifier=BLOCK_ID_LATEST
     )
     balance_proof = channel_state.partner_state.balance_proof
     assert balance_proof
@@ -133,7 +133,7 @@ def test_locksroot_loading_during_channel_settle_handling(
     )
 
     channel = app0.raiden.proxy_manager.payment_channel(
-        channel_state.canonical_identifier, BLOCK_SPEC_LATEST
+        channel_state.canonical_identifier, BLOCK_ID_LATEST
     )
 
     # make sure the block was pruned

@@ -34,8 +34,8 @@ from web3.middleware import geth_poa_middleware
 from web3.types import TxReceipt
 
 from raiden.constants import (
-    BLOCK_SPEC_LATEST,
-    BLOCK_SPEC_PENDING,
+    BLOCK_ID_LATEST,
+    BLOCK_ID_PENDING,
     NO_STATE_QUERY_AFTER_BLOCKS,
     NULL_ADDRESS_CHECKSUM,
     RECEIPT_FAILURE_CODE,
@@ -284,7 +284,7 @@ def parity_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
 
 def geth_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
-    return web3.eth.getTransactionCount(address, BLOCK_SPEC_PENDING)
+    return web3.eth.getTransactionCount(address, BLOCK_ID_PENDING)
 
 
 def discover_next_available_nonce(web3: Web3, eth_node: EthClient, address: Address) -> Nonce:
@@ -746,7 +746,7 @@ class TransactionPending:
                 raise err
 
         if estimated_gas is not None:
-            block = self.data.contract.web3.eth.getBlock(BLOCK_SPEC_LATEST)
+            block = self.data.contract.web3.eth.getBlock(BLOCK_ID_LATEST)
             gas_price = gas_price_for_fast_transaction(self.data.contract.web3)
 
             transaction_estimated = TransactionEstimated(
@@ -926,7 +926,7 @@ class JSONRPCClient:
 
     def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
-        return self.web3.eth.getBalance(account, BLOCK_SPEC_PENDING)
+        return self.web3.eth.getBalance(account, BLOCK_ID_PENDING)
 
     def parity_get_pending_transaction_hash_by_nonce(
         self, address: AddressHex, nonce: Nonce
@@ -1230,7 +1230,7 @@ class JSONRPCClient:
         contract_transaction = contract_object.constructor(*ctor_parameters).buildTransaction()
         constructor_call = ByteCode(contract_name, contract_transaction["data"])
 
-        block = self.get_block(BLOCK_SPEC_LATEST)
+        block = self.get_block(BLOCK_ID_LATEST)
 
         # Sometimes eth_estimateGas returns wrong values for contract deployments
         # Add a margin of 10%
@@ -1352,7 +1352,7 @@ class JSONRPCClient:
         contract_address: Address,
         topics: List[str] = None,
         from_block: BlockIdentifier = 0,
-        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[Dict]:
         """ Get events for the given query. """
         logs_blocks_sanity_check(from_block, to_block)
@@ -1400,9 +1400,9 @@ class JSONRPCClient:
         Until that bug is fixed we need to enforce special behaviour for parity
         and use the latest block for checking.
         """
-        checking_block: BlockIdentifier = BLOCK_SPEC_PENDING
+        checking_block: BlockIdentifier = BLOCK_ID_PENDING
         if self.eth_node is EthClient.PARITY:
-            checking_block = BLOCK_SPEC_LATEST
+            checking_block = BLOCK_ID_LATEST
         return checking_block
 
     def wait_until_block(

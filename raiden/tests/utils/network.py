@@ -9,7 +9,7 @@ from web3 import Web3
 
 from raiden import waiting
 from raiden.app import App
-from raiden.constants import BLOCK_SPEC_LATEST, GENESIS_BLOCK_NUMBER, Environment, RoutingMode
+from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, Environment, RoutingMode
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -91,10 +91,10 @@ def check_channel(
         channel_identifier=channel_identifier,
     )
     netcontract1 = app1.raiden.proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier, block_identifier=BLOCK_SPEC_LATEST
+        canonical_identifier=canonical_identifier, block_identifier=BLOCK_ID_LATEST
     )
     netcontract2 = app2.raiden.proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier, block_identifier=BLOCK_SPEC_LATEST
+        canonical_identifier=canonical_identifier, block_identifier=BLOCK_ID_LATEST
     )
 
     # Check a valid settle timeout was used, the netting contract has an
@@ -103,11 +103,11 @@ def check_channel(
     assert settle_timeout == netcontract2.settle_timeout()
 
     if deposit_amount > 0:
-        assert netcontract1.can_transfer(BLOCK_SPEC_LATEST)
-        assert netcontract2.can_transfer(BLOCK_SPEC_LATEST)
+        assert netcontract1.can_transfer(BLOCK_ID_LATEST)
+        assert netcontract2.can_transfer(BLOCK_ID_LATEST)
 
-    app1_details = netcontract1.detail(BLOCK_SPEC_LATEST)
-    app2_details = netcontract2.detail(BLOCK_SPEC_LATEST)
+    app1_details = netcontract1.detail(BLOCK_ID_LATEST)
+    app2_details = netcontract2.detail(BLOCK_ID_LATEST)
 
     assert (
         app1_details.participants_data.our_details.address
@@ -149,13 +149,13 @@ def payment_channel_open_and_deposit(
     if app0.raiden.wal:
         block_identifier = views.get_confirmed_blockhash(app0.raiden)
     else:
-        block_identifier = BLOCK_SPEC_LATEST
+        block_identifier = BLOCK_ID_LATEST
     token_network_address = app0.raiden.default_registry.get_token_network(
         token_address=token_address, block_identifier=block_identifier
     )
     assert token_network_address, "request a channel for an unregistered token"
     token_network_proxy = app0.raiden.proxy_manager.token_network(
-        token_network_address, block_identifier=BLOCK_SPEC_LATEST
+        token_network_address, block_identifier=BLOCK_ID_LATEST
     )
 
     channel_identifier, _, _ = token_network_proxy.new_netting_channel(
@@ -173,9 +173,9 @@ def payment_channel_open_and_deposit(
         )
         for app in [app0, app1]:
             # Use each app's own chain because of the private key / local signing
-            token = app.raiden.proxy_manager.token(token_address, BLOCK_SPEC_LATEST)
+            token = app.raiden.proxy_manager.token(token_address, BLOCK_ID_LATEST)
             payment_channel_proxy = app.raiden.proxy_manager.payment_channel(
-                canonical_identifier=canonical_identifier, block_identifier=BLOCK_SPEC_LATEST
+                canonical_identifier=canonical_identifier, block_identifier=BLOCK_ID_LATEST
             )
 
             # This check can succeed and the deposit still fail, if channels are
@@ -186,7 +186,7 @@ def payment_channel_open_and_deposit(
             # the payment channel proxy will call approve
             # token.approve(token_network_proxy.address, deposit)
             payment_channel_proxy.approve_and_set_total_deposit(
-                total_deposit=deposit, block_identifier=BLOCK_SPEC_LATEST
+                total_deposit=deposit, block_identifier=BLOCK_ID_LATEST
             )
 
             # Balance must decrease by at least but not exactly `deposit` amount,
@@ -419,22 +419,22 @@ def create_apps(
             config.resolver_endpoint = f"http://localhost:{resolver_port}"
 
         registry = proxy_manager.token_network_registry(
-            token_network_registry_address, block_identifier=BLOCK_SPEC_LATEST
+            token_network_registry_address, block_identifier=BLOCK_ID_LATEST
         )
         secret_registry = proxy_manager.secret_registry(
-            secret_registry_address, block_identifier=BLOCK_SPEC_LATEST
+            secret_registry_address, block_identifier=BLOCK_ID_LATEST
         )
 
         service_registry = None
         if service_registry_address:
             service_registry = proxy_manager.service_registry(
-                service_registry_address, block_identifier=BLOCK_SPEC_LATEST
+                service_registry_address, block_identifier=BLOCK_ID_LATEST
             )
 
         user_deposit = None
         if user_deposit_address:
             user_deposit = proxy_manager.user_deposit(
-                user_deposit_address, block_identifier=BLOCK_SPEC_LATEST
+                user_deposit_address, block_identifier=BLOCK_ID_LATEST
             )
 
         # Use `TestMatrixTransport` that saves sent messages for assertions in tests
@@ -491,7 +491,7 @@ def jsonrpc_services(
     web3: Web3,
     contract_manager: ContractManager,
 ) -> BlockchainServices:
-    block_identifier = BLOCK_SPEC_LATEST
+    block_identifier = BLOCK_ID_LATEST
     secret_registry = proxy_manager.secret_registry(
         secret_registry_address, block_identifier=block_identifier
     )

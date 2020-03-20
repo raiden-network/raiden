@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.constants import BLOCK_SPEC_LATEST
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.exceptions import SamePeerAddress
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import views
@@ -21,15 +21,15 @@ def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
     assert not current_chanels
 
     token_network_address = app0.raiden.default_registry.get_token_network(
-        token_address, BLOCK_SPEC_LATEST
+        token_address, BLOCK_ID_LATEST
     )
     token_network0 = app0.raiden.proxy_manager.token_network(
-        token_network_address, BLOCK_SPEC_LATEST
+        token_network_address, BLOCK_ID_LATEST
     )
 
     with pytest.raises(SamePeerAddress):
         token_network0.new_netting_channel(
             partner=app0.raiden.address,
             settle_timeout=settle_timeout,
-            given_block_identifier=BLOCK_SPEC_LATEST,
+            given_block_identifier=BLOCK_ID_LATEST,
         )

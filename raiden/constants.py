@@ -172,8 +172,8 @@ MATRIX_AUTO_SELECT_SERVER = "auto"
 # global queue
 EMPTY_ADDRESS = b"\0" * 20
 
-BLOCK_SPEC_LATEST: Literal["latest"] = "latest"
-BLOCK_SPEC_PENDING: Literal["pending"] = "pending"
+BLOCK_ID_LATEST: Literal["latest"] = "latest"
+BLOCK_ID_PENDING: Literal["pending"] = "pending"
 
 
 # Keep in sync with .circleci/config.yaml

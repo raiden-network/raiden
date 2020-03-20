@@ -23,7 +23,7 @@ from web3.middleware import geth_poa_middleware
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
-    BLOCK_SPEC_LATEST,
+    BLOCK_ID_LATEST,
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_ADDRESS,
     GENESIS_BLOCK_NUMBER,
@@ -205,12 +205,12 @@ def deploy_smoketest_contracts(
         user_deposit_address=user_deposit_contract.address,
         contract_manager=contract_manager,
         proxy_manager=proxy_manager,
-        block_identifier=BLOCK_SPEC_LATEST,
+        block_identifier=BLOCK_ID_LATEST,
     )
     user_deposit_proxy.init(
         monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
         one_to_n_address=OneToNAddress(one_to_n_address),
-        given_block_identifier=BLOCK_SPEC_LATEST,
+        given_block_identifier=BLOCK_ID_LATEST,
     )
 
     addresses = {

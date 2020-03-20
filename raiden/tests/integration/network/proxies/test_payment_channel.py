@@ -3,7 +3,7 @@ from web3 import Web3
 
 from raiden.blockchain.events import get_all_netting_channel_events
 from raiden.constants import (
-    BLOCK_SPEC_LATEST,
+    BLOCK_ID_LATEST,
     EMPTY_BALANCE_HASH,
     EMPTY_MESSAGE_HASH,
     EMPTY_SIGNATURE,
@@ -57,14 +57,14 @@ def test_payment_channel_proxy_basics(
         ),
     )
     token_network_proxy = proxy_manager.token_network(
-        address=token_network_address, block_identifier=BLOCK_SPEC_LATEST
+        address=token_network_address, block_identifier=BLOCK_ID_LATEST
     )
     start_block = web3.eth.blockNumber
 
     channel_identifier, _, _ = token_network_proxy.new_netting_channel(
         partner=partner,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
-        given_block_identifier=BLOCK_SPEC_LATEST,
+        given_block_identifier=BLOCK_ID_LATEST,
     )
     assert channel_identifier is not None
 
@@ -74,11 +74,11 @@ def test_payment_channel_proxy_basics(
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
-        block_identifier=BLOCK_SPEC_LATEST,
+        block_identifier=BLOCK_ID_LATEST,
     )
 
     assert channel_proxy_1.channel_identifier == channel_identifier
-    assert channel_proxy_1.opened(BLOCK_SPEC_LATEST) is True
+    assert channel_proxy_1.opened(BLOCK_ID_LATEST) is True
 
     # Test deposit
     initial_token_balance = 100
@@ -86,7 +86,7 @@ def test_payment_channel_proxy_basics(
     assert token_proxy.balance_of(rpc_client.address) == initial_token_balance
     assert token_proxy.balance_of(partner) == 0
     channel_proxy_1.approve_and_set_total_deposit(
-        total_deposit=TokenAmount(10), block_identifier=BLOCK_SPEC_LATEST
+        total_deposit=TokenAmount(10), block_identifier=BLOCK_ID_LATEST
     )
 
     # ChannelOpened, ChannelNewDeposit
@@ -119,9 +119,9 @@ def test_payment_channel_proxy_basics(
         additional_hash=EMPTY_MESSAGE_HASH,
         non_closing_signature=EMPTY_SIGNATURE,
         closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
-        block_identifier=BLOCK_SPEC_LATEST,
+        block_identifier=BLOCK_ID_LATEST,
     )
-    assert channel_proxy_1.closed(BLOCK_SPEC_LATEST) is True
+    assert channel_proxy_1.closed(BLOCK_ID_LATEST) is True
     # ChannelOpened, ChannelNewDeposit, ChannelClosed
     channel_events = get_all_netting_channel_events(
         proxy_manager=proxy_manager,
@@ -150,9 +150,9 @@ def test_payment_channel_proxy_basics(
         partner_transferred_amount=TokenAmount(0),
         partner_locked_amount=LockedAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
-        block_identifier=BLOCK_SPEC_LATEST,
+        block_identifier=BLOCK_ID_LATEST,
     )
-    assert channel_proxy_1.settled(BLOCK_SPEC_LATEST) is True
+    assert channel_proxy_1.settled(BLOCK_ID_LATEST) is True
     # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
     channel_events = get_all_netting_channel_events(
         proxy_manager=proxy_manager,
@@ -167,7 +167,7 @@ def test_payment_channel_proxy_basics(
     new_channel_identifier, _, _ = token_network_proxy.new_netting_channel(
         partner=partner,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
-        given_block_identifier=BLOCK_SPEC_LATEST,
+        given_block_identifier=BLOCK_ID_LATEST,
     )
     assert new_channel_identifier is not None
 
@@ -177,11 +177,11 @@ def test_payment_channel_proxy_basics(
             token_network_address=token_network_address,
             channel_identifier=new_channel_identifier,
         ),
-        block_identifier=BLOCK_SPEC_LATEST,
+        block_identifier=BLOCK_ID_LATEST,
     )
 
     assert channel_proxy_2.channel_identifier == new_channel_identifier
-    assert channel_proxy_2.opened(BLOCK_SPEC_LATEST) is True
+    assert channel_proxy_2.opened(BLOCK_ID_LATEST) is True
 
     msg = "The channel was already closed, the second call must fail"
     with pytest.raises(RaidenRecoverableError):
@@ -203,7 +203,7 @@ def test_payment_channel_proxy_basics(
             additional_hash=EMPTY_MESSAGE_HASH,
             non_closing_signature=EMPTY_SIGNATURE,
             closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
-            block_identifier=BLOCK_SPEC_LATEST,
+            block_identifier=BLOCK_ID_LATEST,
         )
         pytest.fail(msg)
 
@@ -213,6 +213,6 @@ def test_payment_channel_proxy_basics(
     )
     with pytest.raises(BrokenPreconditionError):
         channel_proxy_1.approve_and_set_total_deposit(
-            total_deposit=TokenAmount(20), block_identifier=BLOCK_SPEC_LATEST
+            total_deposit=TokenAmount(20), block_identifier=BLOCK_ID_LATEST
         )
         pytest.fail(msg)

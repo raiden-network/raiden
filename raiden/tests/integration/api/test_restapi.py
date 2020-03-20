@@ -20,7 +20,7 @@ from flask import url_for
 from raiden.api.rest import APIServer
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import (
-    BLOCK_SPEC_LATEST,
+    BLOCK_ID_LATEST,
     GENESIS_BLOCK_NUMBER,
     NULL_ADDRESS_HEX,
     SECRET_LENGTH,
@@ -2073,11 +2073,11 @@ def test_api_deposit_limit(
     token_address = token_addresses[0]
 
     registry = proxy_manager.token_network_registry(
-        token_network_registry_address, BLOCK_SPEC_LATEST
+        token_network_registry_address, BLOCK_ID_LATEST
     )
-    token_network_address = registry.get_token_network(token_address, BLOCK_SPEC_LATEST)
-    token_network = proxy_manager.token_network(token_network_address, BLOCK_SPEC_LATEST)
-    deposit_limit = token_network.channel_participant_deposit_limit(BLOCK_SPEC_LATEST)
+    token_network_address = registry.get_token_network(token_address, BLOCK_ID_LATEST)
+    token_network = proxy_manager.token_network(token_network_address, BLOCK_ID_LATEST)
+    deposit_limit = token_network.channel_participant_deposit_limit(BLOCK_ID_LATEST)
 
     # let's create a new channel and deposit exactly the limit amount
     first_partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"

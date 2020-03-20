@@ -5,7 +5,7 @@ import structlog
 from eth_utils import encode_hex, to_hex
 
 from raiden.constants import (
-    BLOCK_SPEC_LATEST,
+    BLOCK_ID_LATEST,
     EMPTY_BALANCE_HASH,
     EMPTY_MESSAGE_HASH,
     EMPTY_SIGNATURE,
@@ -675,7 +675,7 @@ class RaidenEventHandler(EventHandler):
             participants_details = token_network_proxy.detail_participants(
                 participant1=payment_channel.participant1,
                 participant2=payment_channel.participant2,
-                block_identifier=BLOCK_SPEC_LATEST,
+                block_identifier=BLOCK_ID_LATEST,
                 channel_identifier=channel_settle_event.channel_identifier,
             )
 
