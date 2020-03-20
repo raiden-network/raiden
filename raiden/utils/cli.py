@@ -111,7 +111,7 @@ class UsesDefaultValueOptionMixin(click.Option):
         This is then used in ``apply_config_file()`` to establish precedence between values given
         via the config file and the cli.
         """
-        if value is None and self.prompt is not None and not ctx.resilient_parsing:
+        if value is None and self.prompt is not None and not ctx.resilient_parsing:  # type: ignore
             return self.prompt_for_value(ctx)
 
         value = self.process_value(ctx, value)

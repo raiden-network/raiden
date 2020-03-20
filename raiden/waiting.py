@@ -541,21 +541,27 @@ def wait_for_received_transfer_result(
                 and state_change.secrethash == secrethash
             )
             if registered_onchain:
-                state_change_with_transfer = get_state_change_with_transfer_by_secrethash(
+                state_change_record = get_state_change_with_transfer_by_secrethash(
                     raiden.wal.storage, secrethash
                 )
+                assert state_change_record is not None, "Could not find state change for screthash"
                 msg = "Expected ActionInitMediator/ActionInitTarget not found in state changes."
                 expected_types = (ActionInitMediator, ActionInitTarget)
-                assert isinstance(state_change_with_transfer, expected_types), msg
-                transfer = state_change_with_transfer.data.transfer
+                assert isinstance(state_change_record.data, expected_types), msg
 
-                if raiden.get_block_number() <= transfer.lock.expiration:
+                transfer = None
+                if isinstance(state_change_record.data, ActionInitMediator):
+                    transfer = state_change_record.data.from_transfer
+                if isinstance(state_change_record.data, ActionInitTarget):
+                    transfer = state_change_record.data.transfer
+
+                if transfer is not None and raiden.get_block_number() <= transfer.lock.expiration:
                     return TransferWaitResult.SECRET_REGISTERED_ONCHAIN
 
         log.debug("wait_for_transfer_result", **log_details)
         gevent.sleep(retry_timeout)
 
-    return result
+    return result  # type: ignore
 
 
 def wait_for_withdraw_complete(

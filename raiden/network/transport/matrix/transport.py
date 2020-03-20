@@ -1282,7 +1282,7 @@ class MatrixTransport(Runnable):
                 "Fetching room members", room=room, partner_address=to_checksum_address(address)
             )
 
-            def partner_joined(fetched_members: List[User]) -> bool:
+            def partner_joined(fetched_members: Optional[List[User]]) -> bool:
                 if fetched_members is None:
                     return False
                 return any(member.user_id in partner_user_ids for member in fetched_members)

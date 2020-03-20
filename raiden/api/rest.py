@@ -1076,7 +1076,7 @@ class RestAPI:  # pragma: no unittest
         token_address: TokenAddress,
         target_address: TargetAddress,
         amount: PaymentAmount,
-        identifier: PaymentID,
+        identifier: Optional[PaymentID],
         secret: Secret,
         secret_hash: SecretHash,
         lock_timeout: BlockTimeout,

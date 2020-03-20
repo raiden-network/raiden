@@ -179,7 +179,7 @@ def run_app(
     console: bool,
     password_file: TextIO,
     web_ui: bool,
-    datadir: str,
+    datadir: Optional[str],
     matrix_server: str,
     network_id: ChainID,
     environment_type: Environment,

@@ -29,7 +29,7 @@ class PFSCapacityUpdate(SignedMessage):
 
     def __post_init__(self) -> None:
         if self.signature is None:
-            self.signature = EMPTY_SIGNATURE
+            self.signature = EMPTY_SIGNATURE  # type: ignore
 
     @classmethod
     def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSCapacityUpdate":
@@ -84,7 +84,7 @@ class PFSFeeUpdate(SignedMessage):
 
     def __post_init__(self) -> None:
         if self.signature is None:
-            self.signature = EMPTY_SIGNATURE
+            self.signature = EMPTY_SIGNATURE  # type: ignore
 
     def _data_to_sign(self) -> bytes:
         return (

@@ -488,7 +488,7 @@ class UserAddressManager:
     @property
     def log(self) -> BoundLoggerLazyProxy:
         if self._log:
-            return self._log
+            return self._log  # type: ignore
 
         context = self._log_context or {}
 
