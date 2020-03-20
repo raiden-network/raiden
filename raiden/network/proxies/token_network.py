@@ -53,8 +53,8 @@ from raiden.utils.typing import (
     BalanceHash,
     BlockExpiration,
     BlockHash,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     ChainID,
     ChannelID,
     Dict,
@@ -141,7 +141,7 @@ class TokenNetwork:
         contract_manager: ContractManager,
         proxy_manager: "ProxyManager",
         metadata: TokenNetworkMetadata,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         if not is_binary_address(metadata.address):
             raise ValueError("Expected binary address format for token nework")
@@ -191,9 +191,7 @@ class TokenNetwork:
         """ Return the token of this manager. """
         return self._token_address
 
-    def channel_participant_deposit_limit(
-        self, block_identifier: BlockSpecification
-    ) -> TokenAmount:
+    def channel_participant_deposit_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
         """ Return the deposit limit of a channel participant. """
         return TokenAmount(
             self.proxy.functions.channel_participant_deposit_limit().call(
@@ -201,7 +199,7 @@ class TokenNetwork:
             )
         )
 
-    def token_network_deposit_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
+    def token_network_deposit_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
         """ Return the token of this manager. """
         return TokenAmount(
             self.proxy.functions.token_network_deposit_limit().call(
@@ -209,13 +207,13 @@ class TokenNetwork:
             )
         )
 
-    def safety_deprecation_switch(self, block_identifier: BlockSpecification) -> bool:
+    def safety_deprecation_switch(self, block_identifier: BlockIdentifier) -> bool:
         return self.proxy.functions.safety_deprecation_switch().call(
             block_identifier=block_identifier
         )
 
     def new_netting_channel(
-        self, partner: Address, settle_timeout: int, given_block_identifier: BlockSpecification
+        self, partner: Address, settle_timeout: int, given_block_identifier: BlockIdentifier
     ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
         """ Creates a new channel in the TokenNetwork contract.
 
@@ -376,7 +374,7 @@ class TokenNetwork:
         return (channel_identifier, receipt["blockHash"], receipt["blockNumber"])
 
     def get_channel_identifier(
-        self, participant1: Address, participant2: Address, block_identifier: BlockSpecification
+        self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier
     ) -> ChannelID:
         """Return the channel identifier for the opened channel among
         `(participant1, participant2)`.
@@ -407,7 +405,7 @@ class TokenNetwork:
         return channel_identifier
 
     def get_channel_identifier_or_none(
-        self, participant1: Address, participant2: Address, block_identifier: BlockSpecification
+        self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier
     ) -> Optional[ChannelID]:
         """ Returns the channel identifier if an open channel exists, else None. """
         try:
@@ -424,7 +422,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         detail_for: Address,
         partner: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> ParticipantDetails:
         """ Returns a dictionary with the channel participant information. """
         raise_if_invalid_address_pair(detail_for, partner)
@@ -448,7 +446,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ChannelData:
         """ Returns a ChannelData instance with the channel specific information.
@@ -488,7 +486,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ParticipantsDetails:
         """ Returns a ParticipantsDetails instance with the participants'
@@ -534,7 +532,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ChannelDetails:
         """ Returns a ChannelDetails instance with all the details of the
@@ -582,7 +580,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
@@ -601,7 +599,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
@@ -620,7 +618,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
@@ -639,7 +637,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
@@ -667,7 +665,7 @@ class TokenNetwork:
 
     def approve_and_set_total_deposit(
         self,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
         total_deposit: TokenAmount,
         partner: Address,
@@ -1175,7 +1173,7 @@ class TokenNetwork:
 
     def set_total_withdraw(
         self,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
         expiration_block: BlockExpiration,
@@ -1495,7 +1493,7 @@ class TokenNetwork:
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
         closing_signature: Signature,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Close the channel using the provided balance proof.
 
@@ -1726,7 +1724,7 @@ class TokenNetwork:
         additional_hash: AdditionalHash,
         closing_signature: Signature,
         non_closing_signature: Signature,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         if balance_hash is EMPTY_BALANCE_HASH:
             raise RaidenUnrecoverableError("update_transfer called with an empty balance_hash")
@@ -2033,7 +2031,7 @@ class TokenNetwork:
         sender: Address,
         receiver: Address,
         pending_locks: PendingLocksState,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         if not pending_locks:
             raise ValueError("unlock cannot be done without pending locks")
@@ -2107,7 +2105,7 @@ class TokenNetwork:
         sender: Address,
         receiver: Address,
         pending_locks: PendingLocksState,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         log_details: Dict[Any, Any],
     ) -> None:
         leaves_packed = b"".join(pending_locks.locks)
@@ -2205,7 +2203,7 @@ class TokenNetwork:
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         # `channel_operations_lock` is used to serialize conflicting channel
         # operations. E.g. this settle and a channel open.

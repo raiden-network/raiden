@@ -22,8 +22,8 @@ from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     Dict,
     Optional,
     Secret,
@@ -43,7 +43,7 @@ class SecretRegistry:
         jsonrpc_client: JSONRPCClient,
         secret_registry_address: SecretRegistryAddress,
         contract_manager: ContractManager,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         if not is_binary_address(secret_registry_address):
             raise ValueError("Expected binary address format for secret registry")
@@ -275,7 +275,7 @@ class SecretRegistry:
         transaction_result.set(transaction_mined.transaction_hash)
 
     def get_secret_registration_block_by_secrethash(
-        self, secrethash: SecretHash, block_identifier: BlockSpecification
+        self, secrethash: SecretHash, block_identifier: BlockIdentifier
     ) -> Optional[BlockNumber]:
         """Return the block number at which the secret for `secrethash` was
         registered, None if the secret was never registered.
@@ -295,7 +295,7 @@ class SecretRegistry:
         return result
 
     def is_secret_registered(
-        self, secrethash: SecretHash, block_identifier: BlockSpecification
+        self, secrethash: SecretHash, block_identifier: BlockIdentifier
     ) -> bool:
         """True if the secret for `secrethash` is registered at `block_identifier`.
 

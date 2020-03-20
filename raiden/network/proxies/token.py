@@ -14,7 +14,7 @@ from raiden.utils.typing import (
     Address,
     Any,
     Balance,
-    BlockSpecification,
+    BlockIdentifier,
     Dict,
     List,
     Optional,
@@ -36,7 +36,7 @@ class Token:
         jsonrpc_client: JSONRPCClient,
         token_address: TokenAddress,
         contract_manager: ContractManager,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         proxy = jsonrpc_client.new_contract_proxy(
             self.abi(contract_manager), Address(token_address)
@@ -66,7 +66,7 @@ class Token:
         return contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
 
     def allowance(
-        self, owner: Address, spender: Address, block_identifier: BlockSpecification
+        self, owner: Address, spender: Address, block_identifier: BlockIdentifier
     ) -> TokenAmount:
         return TokenAmount(
             self.proxy.functions.allowance(owner, spender).call(block_identifier=block_identifier)
@@ -156,13 +156,13 @@ class Token:
                 )
 
     def balance_of(
-        self, address: Address, block_identifier: BlockSpecification = BLOCK_SPEC_LATEST
+        self, address: Address, block_identifier: BlockIdentifier = BLOCK_SPEC_LATEST
     ) -> Balance:
         """ Return the balance of `address`. """
         return self.proxy.functions.balanceOf(address).call(block_identifier=block_identifier)
 
     def total_supply(
-        self, block_identifier: BlockSpecification = BLOCK_SPEC_LATEST
+        self, block_identifier: BlockIdentifier = BLOCK_SPEC_LATEST
     ) -> Optional[TokenAmount]:
         """ Return the total supply of the token at the given block identifier.
 

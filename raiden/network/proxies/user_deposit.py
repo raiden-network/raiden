@@ -22,7 +22,7 @@ from raiden.utils.typing import (
     Address,
     Any,
     Balance,
-    BlockSpecification,
+    BlockIdentifier,
     Dict,
     Iterator,
     MonitoringServiceAddress,
@@ -61,7 +61,7 @@ class UserDeposit:
         user_deposit_address: UserDepositAddress,
         contract_manager: ContractManager,
         proxy_manager: "ProxyManager",
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         if not is_binary_address(user_deposit_address):
             raise ValueError("Expected binary address format for token nework")
@@ -92,7 +92,7 @@ class UserDeposit:
         # unecessary transactions.
         self._inflight_deposits: Dict[Address, InflightDeposit] = dict()
 
-    def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
+    def token_address(self, block_identifier: BlockIdentifier) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
                 self.proxy.functions.token().call(block_identifier=block_identifier)
@@ -100,7 +100,7 @@ class UserDeposit:
         )
 
     def monitoring_service_address(
-        self, block_identifier: BlockSpecification
+        self, block_identifier: BlockIdentifier
     ) -> MonitoringServiceAddress:
         return MonitoringServiceAddress(
             to_canonical_address(
@@ -108,7 +108,7 @@ class UserDeposit:
             )
         )
 
-    def one_to_n_address(self, block_identifier: BlockSpecification) -> OneToNAddress:
+    def one_to_n_address(self, block_identifier: BlockIdentifier) -> OneToNAddress:
         return OneToNAddress(
             to_canonical_address(
                 self.proxy.functions.one_to_n_address().call(block_identifier=block_identifier)
@@ -116,16 +116,16 @@ class UserDeposit:
         )
 
     def get_total_deposit(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ) -> TokenAmount:
         return self.proxy.functions.balances(address).call(block_identifier=block_identifier)
 
-    def whole_balance(self, block_identifier: BlockSpecification) -> TokenAmount:
+    def whole_balance(self, block_identifier: BlockIdentifier) -> TokenAmount:
         return TokenAmount(
             self.proxy.functions.whole_balance().call(block_identifier=block_identifier)
         )
 
-    def whole_balance_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
+    def whole_balance_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
         return TokenAmount(
             self.proxy.functions.whole_balance_limit().call(block_identifier=block_identifier)
         )
@@ -134,7 +134,7 @@ class UserDeposit:
         self,
         monitoring_service_address: MonitoringServiceAddress,
         one_to_n_address: OneToNAddress,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Initialize the UserDeposit contract with MS and OneToN addresses """
         check_address_has_code(
@@ -254,7 +254,7 @@ class UserDeposit:
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
 
-    def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
+    def effective_balance(self, address: Address, block_identifier: BlockIdentifier) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
         balance = self.proxy.functions.effectiveBalance(address).call(
             block_identifier=block_identifier
@@ -269,7 +269,7 @@ class UserDeposit:
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Increase the total deposit of the beneficiary's account to `total_deposit`. """
 
@@ -311,7 +311,7 @@ class UserDeposit:
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Deposit provided amount into the user-deposit contract
         to the beneficiary's account.
@@ -363,7 +363,7 @@ class UserDeposit:
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         token: Token,
     ) -> Tuple[TokenAmount, TokenAmount]:
         try:

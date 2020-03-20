@@ -14,7 +14,7 @@ from raiden.network.rpc.client import (
 from raiden.utils.typing import (
     Address,
     Any,
-    BlockSpecification,
+    BlockIdentifier,
     Dict,
     Optional,
     ServiceRegistryAddress,
@@ -33,7 +33,7 @@ class ServiceRegistry:
         jsonrpc_client: JSONRPCClient,
         service_registry_address: ServiceRegistryAddress,
         contract_manager: ContractManager,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ):
         if not is_binary_address(service_registry_address):
             raise ValueError("Expected binary address for service registry")
@@ -60,7 +60,7 @@ class ServiceRegistry:
         self.node_address = self.client.address
 
     def ever_made_deposits(
-        self, block_identifier: BlockSpecification, index: int
+        self, block_identifier: BlockIdentifier, index: int
     ) -> Optional[Address]:
         """Get one of the addresses that have ever made a deposit."""
         try:
@@ -75,13 +75,13 @@ class ServiceRegistry:
         except BadFunctionCallOutput:
             return None
 
-    def ever_made_deposits_len(self, block_identifier: BlockSpecification) -> int:
+    def ever_made_deposits_len(self, block_identifier: BlockIdentifier) -> int:
         """Get the number of addresses that have ever made a deposit"""
         result = self.proxy.functions.everMadeDepositsLen().call(block_identifier=block_identifier)
         return result
 
     def has_valid_registration(
-        self, block_identifier: BlockSpecification, service_address: Address
+        self, block_identifier: BlockIdentifier, service_address: Address
     ) -> Optional[bool]:
         try:
             result = self.proxy.functions.hasValidRegistration(service_address).call(
@@ -92,7 +92,7 @@ class ServiceRegistry:
         return result
 
     def get_service_url(
-        self, block_identifier: BlockSpecification, service_address: Address
+        self, block_identifier: BlockIdentifier, service_address: Address
     ) -> Optional[str]:
         """Gets the URL of a service by address. If does not exist return None"""
         result = self.proxy.functions.urls(service_address).call(block_identifier=block_identifier)
@@ -100,18 +100,18 @@ class ServiceRegistry:
             return None
         return result
 
-    def current_price(self, block_identifier: BlockSpecification) -> TokenAmount:
+    def current_price(self, block_identifier: BlockIdentifier) -> TokenAmount:
         """Gets the currently required deposit amount."""
         return self.proxy.functions.currentPrice().call(block_identifier=block_identifier)
 
-    def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
+    def token_address(self, block_identifier: BlockIdentifier) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
                 self.proxy.functions.token().call(block_identifier=block_identifier)
             )
         )
 
-    def deposit(self, block_identifier: BlockSpecification, limit_amount: TokenAmount) -> None:
+    def deposit(self, block_identifier: BlockIdentifier, limit_amount: TokenAmount) -> None:
         """Makes a deposit to create or extend a registration"""
         extra_log_details = {"given_block_identifier": block_identifier}
         estimated_transaction = self.client.estimate_gas(

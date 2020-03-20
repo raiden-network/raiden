@@ -4,7 +4,7 @@ from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.utils.typing import (
     Address,
-    BlockSpecification,
+    BlockIdentifier,
     MonitoringServiceAddress,
     ServiceRegistryAddress,
     TokenAddress,
@@ -22,7 +22,7 @@ class MonitoringService:
         jsonrpc_client: JSONRPCClient,
         monitoring_service_address: MonitoringServiceAddress,
         contract_manager: ContractManager,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ):
         if not is_binary_address(monitoring_service_address):
             raise ValueError("Expected binary address for monitoring service")
@@ -49,7 +49,7 @@ class MonitoringService:
         self.node_address = self.client.address
 
     def token_network_registry_address(
-        self, block_identifier: BlockSpecification
+        self, block_identifier: BlockIdentifier
     ) -> TokenNetworkRegistryAddress:
         return TokenNetworkRegistryAddress(
             to_canonical_address(
@@ -59,7 +59,7 @@ class MonitoringService:
             )
         )
 
-    def token_address(self, block_identifier: BlockSpecification) -> TokenAddress:
+    def token_address(self, block_identifier: BlockIdentifier) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
                 self.proxy.functions.token().call(block_identifier=block_identifier)
@@ -67,7 +67,7 @@ class MonitoringService:
         )
 
     def service_registry_address(
-        self, block_identifier: BlockSpecification
+        self, block_identifier: BlockIdentifier
     ) -> ServiceRegistryAddress:
         return ServiceRegistryAddress(
             to_canonical_address(

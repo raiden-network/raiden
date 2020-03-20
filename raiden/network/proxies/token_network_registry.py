@@ -30,7 +30,7 @@ from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
-    BlockSpecification,
+    BlockIdentifier,
     Dict,
     SecretRegistryAddress,
     T_TargetAddress,
@@ -56,7 +56,7 @@ class TokenNetworkRegistry:
         rpc_client: JSONRPCClient,
         metadata: SmartContractMetadata,
         proxy_manager: "ProxyManager",
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
 
         check_address_has_code(
@@ -80,7 +80,7 @@ class TokenNetworkRegistry:
         self.proxy = proxy
 
     def get_token_network(
-        self, token_address: TokenAddress, block_identifier: BlockSpecification
+        self, token_address: TokenAddress, block_identifier: BlockIdentifier
     ) -> Optional[TokenNetworkAddress]:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
@@ -102,7 +102,7 @@ class TokenNetworkRegistry:
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> TokenNetworkAddress:
         """
         Register token of `token_address` with the token network.
@@ -522,11 +522,11 @@ class TokenNetworkRegistry:
 
         return events
 
-    def get_chain_id(self, block_identifier: BlockSpecification) -> int:
+    def get_chain_id(self, block_identifier: BlockIdentifier) -> int:
         return self.proxy.functions.chain_id().call(block_identifier=block_identifier)
 
     def get_secret_registry_address(
-        self, block_identifier: BlockSpecification
+        self, block_identifier: BlockIdentifier
     ) -> SecretRegistryAddress:
         return SecretRegistryAddress(
             to_canonical_address(
@@ -536,32 +536,32 @@ class TokenNetworkRegistry:
             )
         )
 
-    def get_deprecation_executor(self, block_identifier: BlockSpecification) -> Address:
+    def get_deprecation_executor(self, block_identifier: BlockIdentifier) -> Address:
         return Address(
             to_canonical_address(
                 self.proxy.functions.deprecation_executor().call(block_identifier=block_identifier)
             )
         )
 
-    def settlement_timeout_min(self, block_identifier: BlockSpecification) -> int:
+    def settlement_timeout_min(self, block_identifier: BlockIdentifier) -> int:
         """ Returns the minimal settlement timeout for the token network registry. """
         return self.proxy.functions.settlement_timeout_min().call(
             block_identifier=block_identifier
         )
 
-    def settlement_timeout_max(self, block_identifier: BlockSpecification) -> int:
+    def settlement_timeout_max(self, block_identifier: BlockIdentifier) -> int:
         """ Returns the maximal settlement timeout for the token network registry. """
         return self.proxy.functions.settlement_timeout_max().call(
             block_identifier=block_identifier
         )
 
-    def get_token_network_created(self, block_identifier: BlockSpecification) -> int:
+    def get_token_network_created(self, block_identifier: BlockIdentifier) -> int:
         """ Returns the number of TokenNetwork contracts created so far in the
         token network registry.
         """
         return self.proxy.functions.token_network_created().call(block_identifier=block_identifier)
 
-    def get_max_token_networks(self, block_identifier: BlockSpecification) -> int:
+    def get_max_token_networks(self, block_identifier: BlockIdentifier) -> int:
         """ Returns the maximal number of TokenNetwork contracts that the
         token network registry.
         """

@@ -109,7 +109,7 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     Any,
-    BlockSpecification,
+    BlockIdentifier,
     BlockTimeout,
     Dict,
     Endpoint,
@@ -880,8 +880,8 @@ class RestAPI:  # pragma: no unittest
     def get_blockchain_events_network(
         self,
         registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> Response:
         log.debug(
             "Getting network events",
@@ -902,8 +902,8 @@ class RestAPI:  # pragma: no unittest
     def get_blockchain_events_token_network(
         self,
         token_address: TokenAddress,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> Response:
         log.debug(
             "Getting token network blockchain events",
@@ -988,8 +988,8 @@ class RestAPI:  # pragma: no unittest
         self,
         token_address: TokenAddress,
         partner_address: Address = None,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = BLOCK_SPEC_LATEST,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_SPEC_LATEST,
     ) -> Response:
         log.debug(
             "Getting channel blockchain events",

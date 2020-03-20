@@ -18,8 +18,8 @@ from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     ChannelID,
     Dict,
     Optional,
@@ -75,12 +75,12 @@ class MockProxyManager:
         self.mocked_addresses = mocked_addresses or dict()
 
     def payment_channel(
-        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockSpecification
+        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockIdentifier
     ):  # pylint: disable=unused-argument
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
     def token_network_registry(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ):  # pylint: disable=no-self-use,unused-argument
         registry = Mock(address=address)
         registry.get_secret_registry_address.return_value = self.mocked_addresses.get(
@@ -89,12 +89,12 @@ class MockProxyManager:
         return registry
 
     def secret_registry(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ):  # pylint: disable=no-self-use, unused-argument
         return Mock(address=address)
 
     def user_deposit(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ):  # pylint: disable=unused-argument, no-self-use
         user_deposit = Mock()
         user_deposit.monitoring_service_address.return_value = self.mocked_addresses.get(
@@ -108,7 +108,7 @@ class MockProxyManager:
         return user_deposit
 
     def service_registry(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ):  # pylint: disable=unused-argument, no-self-use
         service_registry = Mock()
         service_registry.address = self.mocked_addresses.get("ServiceRegistry", bytes(20))
@@ -116,7 +116,7 @@ class MockProxyManager:
         return service_registry
 
     def one_to_n(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ):  # pylint: disable=unused-argument, no-self-use
         one_to_n = Mock()
         one_to_n.address = self.mocked_addresses.get("MonitoringService", bytes(20))
@@ -124,7 +124,7 @@ class MockProxyManager:
         return one_to_n
 
     def monitoring_service(
-        self, address: Address, block_identifier: BlockSpecification
+        self, address: Address, block_identifier: BlockIdentifier
     ):  # pylint: disable=unused-argument, no-self-use
         monitoring_service = Mock()
         monitoring_service.address = self.mocked_addresses.get("MonitoringService", bytes(20))
@@ -277,7 +277,7 @@ class MockEth:
         self.chain_id = chain_id
 
     def getBlock(  # pylint: disable=unused-argument, no-self-use
-        self, block_identifier: BlockSpecification
+        self, block_identifier: BlockIdentifier
     ) -> Dict:
         return {
             "number": 42,

@@ -24,7 +24,7 @@ from raiden.ui.checks import DeploymentAddresses, check_pfs_configuration, check
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
-    BlockSpecification,
+    BlockIdentifier,
     Callable,
     ChainID,
     List,
@@ -207,7 +207,7 @@ def load_deployment_addresses_from_contracts(contracts: Dict[str, Any]) -> Deplo
 def load_deployment_addresses_from_udc(
     proxy_manager: ProxyManager,
     user_deposit_address: UserDepositAddress,
-    block_identifier: BlockSpecification,
+    block_identifier: BlockIdentifier,
 ) -> DeploymentAddresses:
     """Given a user deposit address, this function returns the list of contract addresses
     which are used as services which are bound to the user deposit contract deployed.

@@ -34,8 +34,8 @@ from raiden.transfer.views import state_from_raiden
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.typing import (
     Address,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     BlockTimeout,
     ChainID,
     ChannelID,
@@ -145,7 +145,7 @@ def payment_channel_open_and_deposit(
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
 
-    block_identifier: BlockSpecification
+    block_identifier: BlockIdentifier
     if app0.raiden.wal:
         block_identifier = views.get_confirmed_blockhash(app0.raiden)
     else:

@@ -27,8 +27,8 @@ from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import (
     Address,
     Any,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     BlockTimeout,
     ChainID,
     Dict,
@@ -180,7 +180,7 @@ def get_pfs_info(url: str) -> PFSInfo:
 def get_valid_pfs_url(
     service_registry: ServiceRegistry,
     index_in_service_registry: int,
-    block_identifier: BlockSpecification,
+    block_identifier: BlockIdentifier,
     pathfinding_max_fee: TokenAmount,
 ) -> Optional[str]:
     """Returns the URL for the PFS identified by the given index
@@ -217,7 +217,7 @@ def get_valid_pfs_url(
 
 def get_random_pfs(
     service_registry: ServiceRegistry,
-    block_identifier: BlockSpecification,
+    block_identifier: BlockIdentifier,
     pathfinding_max_fee: TokenAmount,
 ) -> Optional[str]:
     """Selects a random PFS from service_registry.
