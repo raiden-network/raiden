@@ -22,6 +22,7 @@ from raiden.ui.sync import wait_for_sync
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     ChainID,
     Dict,
     List,
@@ -107,7 +108,7 @@ def check_ethereum_confirmed_block_is_not_pruned(
     maximum_delay_to_process_a_block = 2
 
     minimum_available_history = confirmation_blocks + maximum_delay_to_process_a_block
-    target_confirmed_block = unconfirmed_block_number - minimum_available_history
+    target_confirmed_block = BlockNumber(unconfirmed_block_number - minimum_available_history)
 
     try:
         # Using the secret registry is arbitrary, any proxy with an `eth_call`

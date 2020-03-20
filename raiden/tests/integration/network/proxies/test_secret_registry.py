@@ -74,7 +74,7 @@ def test_register_secret_happy_path(
 
     with pytest.raises(NoStateForBlockIdentifier):
         secret_registry_proxy.is_secret_registered(
-            secrethash=secrethash_unregistered, block_identifier=0
+            secrethash=secrethash_unregistered, block_identifier=BlockNumber(0)
         )
 
     secret_registry_proxy.register_secret(secret=secret)

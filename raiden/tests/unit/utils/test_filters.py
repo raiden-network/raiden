@@ -7,6 +7,7 @@ from raiden.blockchain.filters import (
 )
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.tests.utils import factories
+from raiden.utils.typing import BlockNumber
 
 
 def test_get_filter_args(contract_manager):
@@ -39,8 +40,8 @@ def test_get_filter_args(contract_manager):
         channel_identifier=channel_identifier,
         event_name="ChannelOpened",
         contract_manager=contract_manager,
-        from_block=100,
-        to_block=200,
+        from_block=BlockNumber(100),
+        to_block=BlockNumber(200),
     )
 
     assert event_filter_params["topics"][0] is not None

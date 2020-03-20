@@ -39,6 +39,7 @@ from raiden.utils.typing import (
     Address,
     Balance,
     BlockIdentifier,
+    BlockNumber,
     ChannelID,
     Dict,
     List,
@@ -293,8 +294,8 @@ def test_query_events(
             token_network_registry_address=app0.raiden.default_registry.address,
             contract_manager=contract_manager,
             events=ALL_EVENTS,
-            from_block=999999998,
-            to_block=999999999,
+            from_block=BlockNumber(999999998),
+            to_block=BlockNumber(999999999),
         )
         assert not events
 
@@ -330,8 +331,8 @@ def test_query_events(
             token_network_address=manager0.address,
             contract_manager=contract_manager,
             events=ALL_EVENTS,
-            from_block=999999998,
-            to_block=999999999,
+            from_block=BlockNumber(999999998),
+            to_block=BlockNumber(999999999),
         )
         assert not events
 

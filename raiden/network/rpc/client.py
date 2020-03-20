@@ -31,11 +31,12 @@ from web3.eth import Eth
 from web3.exceptions import TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.types import TxReceipt
+from web3.types import BlockData, TxReceipt
 
 from raiden.constants import (
     BLOCK_ID_LATEST,
     BLOCK_ID_PENDING,
+    GENESIS_BLOCK_NUMBER,
     NO_STATE_QUERY_AFTER_BLOCKS,
     NULL_ADDRESS_CHECKSUM,
     RECEIPT_FAILURE_CODE,
@@ -894,15 +895,17 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def get_block(self, block_identifier: BlockIdentifier) -> Dict[str, Any]:
+    def get_block(self, block_identifier: BlockIdentifier) -> BlockData:
         """Given a block number, query the chain to get its corresponding block hash"""
         return self.web3.eth.getBlock(block_identifier)
 
     def get_confirmed_blockhash(self) -> BlockHash:
         """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
-        confirmed_block_number = self.web3.eth.blockNumber - self.default_block_num_confirmations
+        confirmed_block_number = BlockNumber(
+            self.web3.eth.blockNumber - self.default_block_num_confirmations
+        )
         if confirmed_block_number < 0:
-            confirmed_block_number = 0
+            confirmed_block_number = BlockNumber(0)
 
         return self.blockhash_from_blocknumber(confirmed_block_number)
 
@@ -1351,7 +1354,7 @@ class JSONRPCClient:
         self,
         contract_address: Address,
         topics: List[str] = None,
-        from_block: BlockIdentifier = 0,
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
         to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[Dict]:
         """ Get events for the given query. """
