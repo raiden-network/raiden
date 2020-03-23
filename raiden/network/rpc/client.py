@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import gevent
 import structlog
+from eth_typing import HexStr
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -636,14 +637,14 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         pass
 
     # Temporary until next web3.py release (5.X.X)
-    ContractFunction.estimateGas = patched_contractfunction_estimateGas
-    Eth.estimateGas = patched_web3_eth_estimate_gas
+    ContractFunction.estimateGas = patched_contractfunction_estimateGas  # type: ignore
+    Eth.estimateGas = patched_web3_eth_estimate_gas  # type: ignore
 
     # Patch call() to achieve same behaviour between parity and geth
     # At the moment geth returns '' for reverted/thrown transactions.
     # Parity raises a value error. Raiden assumes the return of an empty
     # string so we have to make parity behave like geth
-    Eth.call = patched_web3_eth_call
+    Eth.call = patched_web3_eth_call  # type: ignore
 
 
 @dataclass
@@ -1381,7 +1382,7 @@ class JSONRPCClient:
                     "fromBlock": from_block,
                     "toBlock": to_block,
                     "address": contract_address,
-                    "topics": topics,
+                    "topics": topics,  # type: ignore
                 }
             )
         )
