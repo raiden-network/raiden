@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import structlog
-from eth_utils import decode_hex, encode_hex, to_canonical_address
+from eth_utils import decode_hex, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import BLOCK_ID_LATEST, NULL_ADDRESS_BYTES
@@ -25,7 +25,7 @@ from raiden.network.rpc.client import (
     check_transaction_failure,
     was_transaction_successfully_mined,
 )
-from raiden.utils.formatting import format_block_id
+from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -255,7 +255,6 @@ class TokenNetworkRegistry:
 
             if not was_transaction_successfully_mined(transaction_mined):
                 failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
-                failed_at_blockhash = receipt["blockHash"]
 
                 max_token_networks = self.get_max_token_networks(
                     block_identifier=failed_at_blocknumber
@@ -293,9 +292,9 @@ class TokenNetworkRegistry:
                     # code is external.
                     raise RaidenRecoverableError(
                         "Token disappeared! The address "
-                        "{to_checksum_address(token_address)} did have code at "
-                        "block {log_details['given_block_identifier']}, however "
-                        "at block {failed_at_blocknumber} when the registration "
+                        f"{to_checksum_address(token_address)} did have code at "
+                        f"block {log_details['given_block_identifier']}, however "
+                        f"at block {failed_at_blocknumber} when the registration "
                         "transaction was mined the address didn't have code "
                         "anymore."
                     )
@@ -382,10 +381,9 @@ class TokenNetworkRegistry:
         else:  # `estimated_transaction` is None
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.rpc_client.get_block(BLOCK_ID_LATEST)
-            failed_at_blockhash_bytes = failed_at["hash"]
-            failed_at_blockhash = encode_hex(failed_at_blockhash_bytes)
-            failed_at_blocknumber = failed_at["number"]
+            failed_at_block = self.rpc_client.get_block(BLOCK_ID_LATEST)
+            failed_at_blockhash = failed_at_block["hash"].hex()
+            failed_at_blocknumber = failed_at_block["number"]
 
             max_token_networks = self.get_max_token_networks(
                 block_identifier=failed_at_blocknumber

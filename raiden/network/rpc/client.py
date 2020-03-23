@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import gevent
 import structlog
-from eth_typing import HexStr
 from eth_utils import (
     decode_hex,
     encode_hex,

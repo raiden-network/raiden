@@ -371,7 +371,11 @@ class TokenNetwork:
             block_identifier=encode_hex(receipt["blockHash"]),
         ).channel_identifier
 
-        return channel_identifier, receipt["blockHash"], BlockNumber(receipt["blockNumber"])
+        return (
+            channel_identifier,
+            BlockHash(receipt["blockHash"]),
+            BlockNumber(receipt["blockNumber"]),
+        )
 
     def get_channel_identifier(
         self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier

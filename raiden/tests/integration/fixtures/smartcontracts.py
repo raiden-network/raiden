@@ -58,7 +58,7 @@ RED_EYES_PER_TOKEN_NETWORK_LIMIT = TokenAmount(int(250 * 10 ** 18))
 
 @dataclass
 class ServicesSmartContracts:
-    utility_token_proxy: Contract
+    utility_token_proxy: Token
     utility_token_network_proxy: Optional[TokenNetwork]
     one_to_n_proxy: OneToN
     user_deposit_proxy: UserDeposit
