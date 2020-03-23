@@ -59,7 +59,7 @@ from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, MessageID, Signature
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
 cached_deserialize = lru_cache()(MessageSerializer.deserialize)
@@ -850,7 +850,7 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
     """Given a chain_id and any number of suffixes (broadcast room names, pair of addresses),
     compose and return the canonical room name for raiden network
 
-    network name from raiden_contracts.constants.ID_TO_NETWORKNAME is used for name, if available,
+    network name from raiden_contracts.constants.ID_TO_CHAINNAME is used for name, if available,
     else numeric id
     Params:
         chain_id: numeric blockchain id for that room, as raiden rooms are per-chain specific
@@ -859,7 +859,7 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
         Qualified full room name. e.g.:
             make_room_alias(3, 'discovery') == 'raiden_ropsten_discovery'
     """
-    network_name = ID_TO_NETWORKNAME.get(chain_id, str(chain_id))
+    network_name = ID_TO_CHAINNAME.get(chain_id, str(chain_id))
     return ROOM_NAME_SEPARATOR.join([ROOM_NAME_PREFIX, network_name, *suffixes])
 
 

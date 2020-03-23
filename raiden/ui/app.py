@@ -80,7 +80,7 @@ from raiden.utils.typing import (
     Tuple,
     UserDepositAddress,
 )
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import ID_TO_CHAINNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -353,7 +353,7 @@ def run_app(
     print(f"Raiden is running in {environment_type.value.lower()} mode")
     print(
         "\nYou are connected to the '{}' network and the DB path is: {}".format(
-            ID_TO_NETWORKNAME.get(network_id, network_id), database_path
+            ID_TO_CHAINNAME.get(network_id, network_id), database_path
         )
     )
 
