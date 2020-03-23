@@ -67,7 +67,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==4.24.3        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==1.5.0  # via -r requirements-dev.txt, pluggy
+importlib-metadata==1.5.0  # via -r requirements-dev.txt, jsonschema, pluggy, pytest
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
@@ -78,7 +78,7 @@ jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, 
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in
+macholib==1.14            # via -r requirements-ci.in, pyinstaller
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
@@ -141,7 +141,7 @@ python-magic==0.4.15      # via s3cmd
 pytoml==0.1.20            # via -r requirements-dev.txt
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
-raiden-contracts==0.36.1  # via -r requirements-dev.txt
+raiden-contracts==0.36.2  # via -r requirements-dev.txt
 raiden-webui==0.11.0      # via -r requirements-dev.txt
 readme-renderer==24.0     # via -r requirements-dev.txt
 releases==1.6.1           # via -r requirements-dev.txt
@@ -171,13 +171,13 @@ traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==19.2.1      # via -r requirements-dev.txt, matrix-synapse, treq
 typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, mypy
-typing-extensions==3.7.4.1  # via -r requirements-dev.txt, matrix-synapse, mypy
+typing-extensions==3.7.4.1  # via -r requirements-dev.txt, matrix-synapse, mypy, web3
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
 varint==1.0.2             # via -r requirements-dev.txt, multiaddr
 wcwidth==0.1.7            # via -r requirements-dev.txt, pytest
-web3==5.5.1               # via -r requirements-dev.txt, raiden-contracts
+web3==5.7.0               # via -r requirements-dev.txt, raiden-contracts
 webargs==5.3.1            # via -r requirements-dev.txt
 webencodings==0.5.1       # via -r requirements-dev.txt, bleach
 websockets==8.1           # via -r requirements-dev.txt, web3
@@ -185,7 +185,7 @@ werkzeug==0.15.4          # via -r requirements-dev.txt, flask
 wheel==0.33.4             # via -r requirements-dev.txt, astunparse
 wmctrl==0.3               # via -r requirements-dev.txt, pdbpp
 wrapt==1.11.1             # via -r requirements-dev.txt, astroid
-zipp==2.2.0               # via -r requirements-dev.txt, importlib-metadata
+zipp==3.1.0               # via -r requirements-dev.txt, importlib-metadata
 zope.interface==4.6.0     # via -r requirements-dev.txt, twisted
 
 # The following packages are considered to be unsafe in a requirements file:

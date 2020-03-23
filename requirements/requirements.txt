@@ -36,6 +36,7 @@ greenlet==0.4.15          # via gevent
 guppy3==3.0.9             # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
+importlib-metadata==1.5.0  # via jsonschema
 ipfshttpclient==0.4.12    # via web3
 ipython-genutils==0.2.0   # via traitlets
 ipython==4.2.1            # via -r requirements.in
@@ -71,7 +72,7 @@ pyrsistent==0.15.7        # via jsonschema
 pysha3==1.0.2             # via -r requirements.in
 pytoml==0.1.20            # via -r requirements.in
 pytz==2019.1              # via flask-restful
-raiden-contracts==0.36.1  # via -r requirements.in
+raiden-contracts==0.36.2  # via -r requirements.in
 raiden-webui==0.11.0      # via -r requirements.in
 requests==2.22.0          # via -r requirements.in, ipfshttpclient, matrix-client, web3
 rlp==1.1.0                # via eth-account, eth-rlp, raiden-contracts
@@ -82,14 +83,15 @@ six==1.12.0               # via attrdict, flask-cors, flask-restful, ipfshttpcli
 structlog==19.1.0         # via -r requirements.in
 toolz==0.9.0              # via cytoolz
 traitlets==4.3.2          # via ipython
-typing-extensions==3.7.4.1  # via -r requirements.in
+typing-extensions==3.7.4.1  # via -r requirements.in, web3
 typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
-web3==5.5.1               # via -r requirements.in, raiden-contracts
+web3==5.7.0               # via -r requirements.in, raiden-contracts
 webargs==5.3.1            # via -r requirements.in
 websockets==8.1           # via web3
 werkzeug==0.15.4          # via flask
+zipp==3.1.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
