@@ -53,7 +53,6 @@ class Room(MatrixRoom):
     def __init__(self, client: "GMatrixClient", room_id: str) -> None:
         super().__init__(client, room_id)
         self._members: Dict[str, User] = {}
-        self.canonical_alias: str
         self.aliases: List[str]
 
     def get_joined_members(self, force_resync: bool = False) -> List[User]:
@@ -82,8 +81,6 @@ class Room(MatrixRoom):
         self._members.pop(user_id, None)
 
     def __repr__(self) -> str:
-        if self.canonical_alias:
-            return f"<Room id={self.room_id!r} alias={self.canonical_alias!r}>"
         return f"<Room id={self.room_id!r} aliases={self.aliases!r}>"
 
     def update_local_aliases(self) -> bool:
@@ -116,12 +113,6 @@ class Room(MatrixRoom):
             if self.aliases != response["aliases"]:
                 self.aliases = response["aliases"]
                 changed = True
-        if "alias" in response:
-            if self.canonical_alias != response["alias"]:
-                self.canonical_alias = response["alias"]
-                changed = True
-        if changed and self.aliases and not self.canonical_alias:
-            self.canonical_alias = self.aliases[0]
         return changed
 
 
@@ -536,7 +527,7 @@ class GMatrixClient(MatrixClient):
         if room_id not in self.rooms:
             self.rooms[room_id] = Room(self, room_id)
         room = self.rooms[room_id]
-        if not room.canonical_alias:
+        if not room.aliases:
             room.update_local_aliases()
         return room
 
