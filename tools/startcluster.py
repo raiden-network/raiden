@@ -5,7 +5,7 @@ from signal import SIGINT, SIGTERM, Signals, signal
 from types import FrameType
 from typing import ContextManager
 
-from eth_typing import HexStr
+from eth_typing import URI, HexStr
 from eth_utils import keccak, remove_0x_prefix
 from web3 import HTTPProvider, Web3
 
@@ -19,7 +19,7 @@ from raiden.tests.utils.eth_node import (
 from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import ChainID, List, Port, PrivateKey, TokenAmount
-from raiden_contracts.constants import NETWORKNAME_TO_ID
+from raiden_contracts.constants import CHAINNAME_TO_ID
 
 NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10
@@ -59,14 +59,14 @@ def main() -> None:
 
         geth_nodes.append(description)
 
-    rpc_endpoint = f"http://127.0.0.1:{START_RPCPORT}"
+    rpc_endpoint = URI(f"http://127.0.0.1:{START_RPCPORT}")
     web3 = Web3(HTTPProvider(rpc_endpoint))
 
     random_marker = remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
     genesis_description = GenesisDescription(
         prefunded_accounts=DEFAULT_ACCOUNTS,
         random_marker=random_marker,
-        chain_id=ChainID(NETWORKNAME_TO_ID["smoketest"]),
+        chain_id=ChainID(CHAINNAME_TO_ID["smoketest"]),
     )
     private_chain: ContextManager[List[JSONRPCExecutor]] = run_private_blockchain(
         web3=web3,

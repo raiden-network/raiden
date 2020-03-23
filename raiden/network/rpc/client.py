@@ -570,7 +570,7 @@ def estimate_gas_for_function(
         gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
     except ValueError as e:
         if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
-            gas_estimate = None
+            gas_estimate = Wei(0)
         else:
             # else the error is not denoting estimate gas failure and is something else
             raise e
@@ -1268,7 +1268,10 @@ class JSONRPCClient:
 
         transaction_sent = self.transact(transaction)
         transaction_mined = self.poll_transaction(transaction_sent)
-        contract_address = to_canonical_address(transaction_mined.receipt["contractAddress"])
+
+        maybe_contract_address = transaction_mined.receipt["contractAddress"]
+        assert maybe_contract_address is not None, "'contractAddress' not set in receipt"
+        contract_address = to_canonical_address(maybe_contract_address)
 
         if not was_transaction_successfully_mined(transaction_mined):
             check_transaction_failure(transaction_mined, self)
