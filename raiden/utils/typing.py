@@ -44,8 +44,6 @@ def typecheck(value: Any, expected: Union[Type, Tuple[Type, ...]]) -> None:
         raise ValueError(f"Expected a value of type {expected}, got value of type {type(value)}")
 
 
-BlockchainEvent = Dict[str, Any]
-
 T_EVMBytecode = bytes
 EVMBytecode = NewType("EVMBytecode", T_EVMBytecode)
 
