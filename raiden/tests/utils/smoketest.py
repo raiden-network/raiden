@@ -77,6 +77,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkRegistryAddress,
     Tuple,
+    UserDepositAddress,
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
@@ -202,7 +203,9 @@ def deploy_smoketest_contracts(
     )
     user_deposit_proxy = UserDeposit(
         jsonrpc_client=client,
-        user_deposit_address=user_deposit_contract.address,
+        user_deposit_address=UserDepositAddress(
+            to_canonical_address(user_deposit_contract.address)
+        ),
         contract_manager=contract_manager,
         proxy_manager=proxy_manager,
         block_identifier=BLOCK_ID_LATEST,
@@ -366,7 +369,7 @@ def setup_raiden(
         client=client,
         chain_id=CHAINNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
-        token_address=to_checksum_address(token.address),
+        token_address=token.address,
     )
     confirmed_block_identifier = client.get_confirmed_blockhash()
     registry = proxy_manager.token_network_registry(
@@ -440,7 +443,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
-        token_addresses = [to_checksum_address(setup.token.address)]
+        token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
 
         print_step("Running smoketest")
 
