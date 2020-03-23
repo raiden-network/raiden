@@ -1,4 +1,5 @@
 import pytest
+from eth_typing import URI
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from web3 import HTTPProvider, Web3
 
@@ -15,7 +16,7 @@ def test_connection_issues() -> None:
     # This is a comcast utility agent that is unlikely to be running. The numbe
     # was chosen with. `sum(ord(c) for c in 'random')`
 
-    web3 = Web3(HTTPProvider("http://localhost:641"))
+    web3 = Web3(HTTPProvider(URI("http://localhost:641")))
 
     with pytest.raises(RequestsConnectionError):
         JSONRPCClient(web3=web3, privkey=make_privatekey_bin())

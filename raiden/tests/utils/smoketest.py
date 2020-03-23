@@ -13,7 +13,7 @@ from typing import IO, ContextManager, NamedTuple
 
 import click
 import requests
-from eth_typing import HexStr
+from eth_typing import URI, HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
@@ -244,7 +244,7 @@ def setup_testchain(
     rpc_port = next(free_port_generator)
     p2p_port = next(free_port_generator)
 
-    eth_rpc_endpoint = f"http://127.0.0.1:{rpc_port}"
+    eth_rpc_endpoint = URI(f"http://127.0.0.1:{rpc_port}")
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
     web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
