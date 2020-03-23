@@ -44,7 +44,7 @@ from raiden_contracts.constants import (
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
-    ID_TO_NETWORKNAME,
+    ID_TO_CHAINNAME,
 )
 from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
@@ -152,7 +152,7 @@ def load_deployed_contracts_data(config: RaidenConfig, network_id: ChainID) -> D
 
     config.contracts_path = contracts_precompiled_path(contracts_version)
 
-    if network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[network_id] != "smoketest":
+    if network_id in ID_TO_CHAINNAME and ID_TO_CHAINNAME[network_id] != "smoketest":
         deployment_data = get_contracts_deployment_info(
             chain_id=network_id, version=contracts_version
         )

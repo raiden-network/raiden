@@ -80,6 +80,7 @@ from raiden.utils.typing import (
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
+    CHAINNAME_TO_ID,
     CONTRACT_CUSTOM_TOKEN,
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
@@ -87,7 +88,6 @@ from raiden_contracts.constants import (
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
-    NETWORKNAME_TO_ID,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
@@ -263,7 +263,7 @@ def setup_testchain(
     genesis_description = GenesisDescription(
         prefunded_accounts=[AccountDescription(TEST_ACCOUNT_ADDRESS, DEFAULT_BALANCE)],
         random_marker=random_marker,
-        chain_id=NETWORKNAME_TO_ID["smoketest"],
+        chain_id=CHAINNAME_TO_ID["smoketest"],
     )
 
     datadir = eth_node_to_datadir(privatekey_to_address(TEST_PRIVKEY), base_datadir)
@@ -364,7 +364,7 @@ def setup_raiden(
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
-        chain_id=NETWORKNAME_TO_ID["smoketest"],
+        chain_id=CHAINNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
         token_address=to_checksum_address(token.address),
     )
@@ -391,7 +391,7 @@ def setup_raiden(
         "gas_price": "fast",
         "keystore_path": keystore,
         "matrix_server": matrix_server,
-        "network_id": str(NETWORKNAME_TO_ID["smoketest"]),
+        "network_id": str(CHAINNAME_TO_ID["smoketest"]),
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
         "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
@@ -516,8 +516,8 @@ def setup_smoketest(
         print_step=print_step,
         free_port_generator=free_port_generator,
         broadcast_rooms_aliases=[
-            make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
-            make_room_alias(NETWORKNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
+            make_room_alias(CHAINNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
+            make_room_alias(CHAINNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
         ],
     )
 

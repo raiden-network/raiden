@@ -33,7 +33,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     UserDepositAddress,
 )
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
 
@@ -137,8 +137,8 @@ def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
     node_network_id = ChainID(web3.eth.chainId)
 
     if node_network_id != given_network_id:
-        given_name = ID_TO_NETWORKNAME.get(given_network_id)
-        network_name = ID_TO_NETWORKNAME.get(node_network_id)
+        given_name = ID_TO_CHAINNAME.get(given_network_id)
+        network_name = ID_TO_CHAINNAME.get(node_network_id)
 
         given_description = f'{given_name or "Unknown"} (id {given_network_id})'
         network_description = f'{network_name or "Unknown"} (id {node_network_id})'
@@ -160,7 +160,7 @@ def check_raiden_environment(network_id: ChainID, environment_type: Environment)
     )
     if warn:
         raise RaidenError(
-            f"The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, "
+            f"The chosen network ({ID_TO_CHAINNAME[network_id]}) is not a testnet, "
             f'but the "development" environment was selected.\n'
             f"This crashes the node often. Please start again with a safe environment setting "
             f"(--environment-type production)."

@@ -68,7 +68,7 @@ from raiden.utils.profiling.memory import MemoryLogger
 from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
@@ -639,7 +639,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
         click.secho(str(e), fg="red")
         sys.exit(ReturnCode.CONFIGURATION_ERROR)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(kwargs["network_id"], kwargs["network_id"])
+        name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
         click.secho(
             f"FATAL: Another Raiden instance already running for account "
             f"{to_checksum_address(kwargs['address'])} on network id {name_or_id}",

@@ -18,7 +18,7 @@ from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_p
 
 from raiden.exceptions import ConfigurationError, InvalidChecksummedAddress
 from raiden.utils.formatting import address_checksum_and_decode
-from raiden_contracts.constants import NETWORKNAME_TO_ID
+from raiden_contracts.constants import CHAINNAME_TO_ID
 
 CONTEXT_KEY_DEFAULT_OPTIONS = "raiden.options_using_default"
 LOG_CONFIG_OPTION_NAME = "log_config"
@@ -267,7 +267,7 @@ class NetworkChoiceType(click.Choice):
                 self.fail(f"invalid numeric network id: {value}", param, ctx)
         else:
             network_name = super().convert(value, param, ctx)
-            return NETWORKNAME_TO_ID[network_name]
+            return CHAINNAME_TO_ID[network_name]
 
 
 class EnumChoiceType(Choice):
