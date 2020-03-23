@@ -27,6 +27,7 @@ from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     Callable,
     ChainID,
     List,
@@ -83,7 +84,8 @@ def deploy_secret_registry(
     )
 
     return proxy_manager.secret_registry(
-        SecretRegistryAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+        SecretRegistryAddress(to_canonical_address(contract.address)),
+        BlockNumber(receipt["blockNumber"]),
     )
 
 
@@ -111,7 +113,8 @@ def deploy_token_network_registry(
     )
 
     return proxy_manager.token_network_registry(
-        TokenNetworkRegistryAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+        TokenNetworkRegistryAddress(to_canonical_address(contract.address)),
+        BlockNumber(receipt["blockNumber"]),
     )
 
 
@@ -153,7 +156,8 @@ def deploy_service_registry(
     )
 
     return proxy_manager.service_registry(
-        ServiceRegistryAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+        ServiceRegistryAddress(to_canonical_address(contract.address)),
+        BlockNumber(receipt["blockNumber"]),
     )
 
 
@@ -177,7 +181,7 @@ def deploy_one_to_n(
         ],
     )
     return proxy_manager.one_to_n(
-        OneToNAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+        OneToNAddress(to_canonical_address(contract.address)), BlockNumber(receipt["blockNumber"])
     )
 
 
@@ -194,7 +198,8 @@ def deploy_user_deposit(
         constructor_parameters=[token_contract.address, UINT256_MAX],
     )
     return proxy_manager.user_deposit(
-        UserDepositAddress(to_canonical_address(contract.address)), receipt["blockNumber"]
+        UserDepositAddress(to_canonical_address(contract.address)),
+        BlockNumber(receipt["blockNumber"]),
     )
 
 
