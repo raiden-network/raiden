@@ -2,6 +2,7 @@ import json
 import sys
 from itertools import count
 from json import JSONDecodeError
+from typing import Mapping
 
 import gevent
 import pkg_resources
@@ -10,7 +11,7 @@ from requests.exceptions import RequestException
 
 import raiden
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils.typing import BlockNumber, BlockTimeout, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, BlockNumber, BlockTimeout, Optional
 from raiden_contracts.utils.type_aliases import ChainID
 
 
@@ -81,15 +82,16 @@ def wait_for_sync_rpc_api(
     rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: float
 ) -> None:
     def is_synced(rpc_client: JSONRPCClient) -> bool:
-        result = rpc_client.web3.eth.syncing
+        sync_status = rpc_client.web3.eth.syncing
 
         # the node is synchronized
-        if result is False:
+        if sync_status is False:
             return True
 
-        current_block = rpc_client.block_number()
-        highest_block = result["highestBlock"]
+        assert isinstance(sync_status, Mapping), MYPY_ANNOTATION
+        highest_block = sync_status["highestBlock"]
 
+        current_block = rpc_client.block_number()
         if highest_block - current_block > tolerance:
             return False
 
