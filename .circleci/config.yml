@@ -326,6 +326,9 @@ jobs:
       name: docker
       py-version: << parameters.py-version >>
 
+    environment:
+      RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
+
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
