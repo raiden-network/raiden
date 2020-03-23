@@ -7,6 +7,7 @@ from web3._utils.filters import construct_event_filter_params
 from web3.types import EventData, FilterParams, LogReceipt
 
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import ABI, BlockIdentifier, ChannelID, TokenNetworkAddress
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
@@ -33,7 +34,7 @@ def get_filter_args_for_specific_event_from_channel(
     _, event_filter_params = construct_event_filter_params(
         event_abi=event_abi,
         abi_codec=ABI_CODEC,
-        contract_address=token_network_address,
+        contract_address=to_checksum_address(token_network_address),
         argument_filters={"channel_identifier": channel_identifier},
         fromBlock=from_block,
         toBlock=to_block,
@@ -80,6 +81,8 @@ def decode_event(abi: ABI, event_log: LogReceipt) -> EventData:
     """
     event_id = event_log["topics"][0]
     events = filter_by_type("event", abi)
-    topic_to_event_abi = {event_abi_to_log_topic(event_abi): event_abi for event_abi in events}
+    topic_to_event_abi = {
+        event_abi_to_log_topic(event_abi): event_abi for event_abi in events  # type: ignore
+    }
     event_abi = topic_to_event_abi[event_id]
     return get_event_data(ABI_CODEC, event_abi, event_log)

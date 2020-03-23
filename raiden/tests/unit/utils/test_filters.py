@@ -7,6 +7,7 @@ from raiden.blockchain.filters import (
 )
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.tests.utils import factories
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import BlockNumber
 
 
@@ -22,7 +23,7 @@ def test_get_filter_args(contract_manager):
 
     assert event_filter_params["topics"][0] is None
     assert to_int(hexstr=event_filter_params["topics"][1]) == channel_identifier
-    assert event_filter_params["address"] == token_network_address
+    assert event_filter_params["address"] == to_checksum_address(token_network_address)
     assert event_filter_params["fromBlock"] == 0
     assert event_filter_params["toBlock"] == BLOCK_ID_LATEST
 
@@ -46,6 +47,6 @@ def test_get_filter_args(contract_manager):
 
     assert event_filter_params["topics"][0] is not None
     assert to_int(hexstr=event_filter_params["topics"][1]) == channel_identifier
-    assert event_filter_params["address"] == token_network_address
+    assert event_filter_params["address"] == to_checksum_address(token_network_address)
     assert event_filter_params["fromBlock"] == 100
     assert event_filter_params["toBlock"] == 200
