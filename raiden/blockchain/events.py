@@ -4,6 +4,7 @@ import structlog
 from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
 from web3 import Web3
+from web3.types import RPCEndpoint
 
 from raiden.blockchain.exceptions import UnknownRaidenEventType
 from raiden.blockchain.filters import decode_event, get_filter_args_for_all_events_from_channel
@@ -552,7 +553,7 @@ class BlockchainEvents:
             # - It sets an unique request identifier, not strictly necessary.
             # - To avoid another abstraction to query the Ethereum client.
             blockchain_events: List[BlockchainEvent] = self.web3.manager.request_blocking(
-                "eth_getLogs", [filter_params]
+                RPCEndpoint("eth_getLogs"), [filter_params]
             )
 
             log.debug(

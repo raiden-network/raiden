@@ -31,7 +31,16 @@ from web3.eth import Eth
 from web3.exceptions import TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.types import ABIFunction, BlockData, FilterParams, LogReceipt, TxParams, TxReceipt, Wei
+from web3.types import (
+    ABIFunction,
+    BlockData,
+    FilterParams,
+    LogReceipt,
+    RPCEndpoint,
+    TxParams,
+    TxReceipt,
+    Wei,
+)
 
 from raiden.constants import (
     BLOCK_ID_LATEST,
@@ -265,7 +274,7 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
     try:
-        web3.manager.request_blocking("parity_nextNonce", [NULL_ADDRESS_CHECKSUM])
+        web3.manager.request_blocking(RPCEndpoint("parity_nextNonce"), [NULL_ADDRESS_CHECKSUM])
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the parity rpc interface "
@@ -276,7 +285,7 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
 def parity_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
     next_nonce_encoded = web3.manager.request_blocking(
-        "parity_nextNonce", [to_checksum_address(address)]
+        RPCEndpoint("parity_nextNonce"), [to_checksum_address(address)]
     )
     return Nonce(int(next_nonce_encoded, 16))
 
@@ -494,7 +503,7 @@ def patched_web3_eth_estimate_gas(
         params = [transaction, block_identifier]
 
     try:
-        result = self.web3.manager.request_blocking("eth_estimateGas", params)
+        result = self.web3.manager.request_blocking(RPCEndpoint("eth_estimateGas"), params)
     except ValueError as e:
         if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
             result = None
@@ -517,7 +526,9 @@ def patched_web3_eth_call(
         block_identifier = self.defaultBlock
 
     try:
-        result = self.web3.manager.request_blocking("eth_call", [transaction, block_identifier])
+        result = self.web3.manager.request_blocking(
+            RPCEndpoint("eth_call"), [transaction, block_identifier]
+        )
     except ValueError as e:
         if check_value_error_for_parity(e, ParityCallType.CALL):
             result = ""
@@ -943,7 +954,9 @@ class JSONRPCClient:
         }
         assert self.eth_node is EthClient.PARITY, msg
         # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
-        transactions = self.web3.manager.request_blocking("parity_allTransactions", [])
+        transactions = self.web3.manager.request_blocking(
+            RPCEndpoint("parity_allTransactions"), []
+        )
         log.debug("RETURNED TRANSACTIONS", transactions=transactions)
         for tx in transactions:
             address_match = tx["from"] == address
@@ -1429,7 +1442,7 @@ class JSONRPCClient:
         if self.eth_node == EthClient.GETH:
             try:
                 trace = self.web3.manager.request_blocking(
-                    "debug_traceTransaction", [to_hex(transaction_hash), {}]
+                    RPCEndpoint("debug_traceTransaction"), [to_hex(transaction_hash), {}]
                 )
             except ValueError:
                 # `debug` API is not enabled, return `None` since the failing
@@ -1441,7 +1454,7 @@ class JSONRPCClient:
         if self.eth_node == EthClient.PARITY:
             try:
                 response = self.web3.manager.request_blocking(
-                    "trace_replayTransaction", [to_hex(transaction_hash), ["trace"]]
+                    RPCEndpoint("trace_replayTransaction"), [to_hex(transaction_hash), ["trace"]]
                 )
             except ValueError:
                 # `traces` API is not enabled, return `None` since the failing
