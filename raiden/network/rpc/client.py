@@ -318,7 +318,7 @@ def check_address_has_code(
     if is_bytes(given_block_identifier):
         assert isinstance(given_block_identifier, bytes), MYPY_ANNOTATION
         block_hash = encode_hex(given_block_identifier)
-        given_block_identifier = client.web3.eth.getBlock(block_hash).number
+        given_block_identifier = client.web3.eth.getBlock(block_hash)["number"]
 
     result = client.web3.eth.getCode(address, given_block_identifier)
 
@@ -359,7 +359,11 @@ def gas_price_for_fast_transaction(web3: Web3) -> int:
         # but both strategies that we are using (time-based and rpc-based) don't make
         # use of this argument. It is therefore safe to not provide it at the moment.
         # This needs to be reevaluated if we use different gas price strategies
-        price = int(web3.eth.generateGasPrice())
+        maybe_price = web3.eth.generateGasPrice()
+        if maybe_price is not None:
+            price = int(maybe_price)
+        else:
+            price = int(web3.eth.gasPrice)
     except AttributeError:  # workaround for Infura gas strategy key error
         # As per https://github.com/raiden-network/raiden/issues/3201
         # we can sporadically get an AtttributeError here. If that happens
@@ -552,7 +556,7 @@ def estimate_gas_for_function(
 ) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     estimate_transaction = prepare_transaction(
-        address=address,
+        address=to_checksum_address(address),
         web3=web3,
         fn_identifier=fn_identifier,
         contract_abi=contract_abi,
@@ -579,9 +583,9 @@ def patched_contractfunction_estimateGas(
 ) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
-        estimate_gas_transaction: Dict[str, Any] = {}
+        estimate_gas_transaction: TxParams = {}
     else:
-        estimate_gas_transaction = dict(**transaction)
+        estimate_gas_transaction = transaction
 
     if "data" in estimate_gas_transaction:
         raise ValueError("Cannot set data in estimateGas transaction")
@@ -673,7 +677,7 @@ class SmartContractCall:
     def to_log_details(self) -> Dict[str, Any]:
         return {
             "function_name": self.function,
-            "to_address": to_checksum_address(self.contract.address),
+            "to_address": self.contract.address,
             "args": self.args,
             "kwargs": self.kwargs,
             "value": self.value,
@@ -766,7 +770,7 @@ class TransactionPending:
                 extra_log_details=self.extra_log_details,
                 estimated_gas=safe_gas_limit(estimated_gas),
                 gas_price=gas_price,
-                approximate_block=(block["hash"], BlockNumber(block["number"])),
+                approximate_block=(BlockHash(block["hash"]), BlockNumber(block["number"])),
             )
 
             log.debug(
@@ -936,9 +940,10 @@ class JSONRPCClient:
         difference = latest_block_number - preconditions_block_number
         return difference < NO_STATE_QUERY_AFTER_BLOCKS
 
+    # FIXME: shouldn't return `TokenAmount`
     def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
-        return self.web3.eth.getBalance(account, BLOCK_ID_PENDING)
+        return TokenAmount(self.web3.eth.getBalance(account, BLOCK_ID_PENDING))
 
     def parity_get_pending_transaction_hash_by_nonce(
         self, address: AddressHex, nonce: Nonce
@@ -1122,7 +1127,7 @@ class JSONRPCClient:
                         "gas": slot.startgas,
                         "nonce": slot.nonce,
                         "value": slot.data.value,
-                        "to": to_checksum_address(function_call.contract.address),
+                        "to": function_call.contract.address,
                         "gasPrice": slot.gas_price,
                     }
 
@@ -1228,7 +1233,7 @@ class JSONRPCClient:
         contract_name: str,
         contract: CompiledContract,
         constructor_parameters: Sequence = None,
-    ) -> Tuple[Contract, Dict]:
+    ) -> Tuple[Contract, TxReceipt]:
         """
         Deploy a single solidity contract without dependencies.
 
@@ -1258,7 +1263,7 @@ class JSONRPCClient:
             extra_log_details={},
             estimated_gas=gas_with_margin,
             gas_price=gas_price,
-            approximate_block=(block["hash"], block["number"]),
+            approximate_block=(BlockHash(block["hash"]), block["number"]),
         )
 
         transaction_sent = self.transact(transaction)
