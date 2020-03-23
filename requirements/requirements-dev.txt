@@ -163,7 +163,7 @@ toml==0.10.0              # via black
 toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via -r requirements.txt, ipython
 treq==18.6.0              # via matrix-synapse
-twisted[tls]==19.2.1      # via matrix-synapse, treq
+twisted[tls]==20.3.0      # via matrix-synapse, treq
 typed-ast==1.4.0          # via astroid, mypy
 typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy, web3
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
