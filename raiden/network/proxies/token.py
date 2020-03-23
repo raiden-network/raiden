@@ -214,7 +214,7 @@ class Token:
                 if not was_transaction_successfully_mined(transaction_mined):
                     failed_at_block_number = BlockNumber(transaction_mined.receipt["blockNumber"])
                 else:
-                    failed_at_block_number = self.client.get_block(BLOCK_ID_LATEST)["blockNumber"]
+                    failed_at_block_number = self.client.get_block(BLOCK_ID_LATEST)["number"]
 
                 failed_at_hash = encode_hex(
                     self.client.blockhash_from_blocknumber(failed_at_block_number)
