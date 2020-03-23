@@ -4,7 +4,7 @@ import structlog
 from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
 from web3 import Web3
-from web3.types import RPCEndpoint
+from web3.types import LogReceipt, RPCEndpoint
 
 from raiden.blockchain.exceptions import UnknownRaidenEventType
 from raiden.blockchain.filters import decode_event, get_filter_args_for_all_events_from_channel
@@ -14,7 +14,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.utils.typing import (
     ABI,
     Address,
-    BlockchainEvent,
+    Any,
     BlockGasLimit,
     BlockHash,
     BlockIdentifier,
@@ -73,7 +73,7 @@ class DecodedEvent:
     block_hash: BlockHash
     transaction_hash: TransactionHash
     originating_contract: Address
-    event_data: BlockchainEvent
+    event_data: Dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -193,7 +193,7 @@ def get_all_netting_channel_events(
         proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
-        filter_args["topics"],
+        filter_args["topics"],  # type: ignore
         from_block,
         to_block,
     )
@@ -220,7 +220,7 @@ def get_secret_registry_events(
 
 
 def decode_raiden_event_to_internal(
-    abi: ABI, chain_id: ChainID, log_event: BlockchainEvent
+    abi: ABI, chain_id: ChainID, log_event: LogReceipt
 ) -> DecodedEvent:
     """Enforce the sandwich encoding. Converts the JSON RPC/web3 data types
     to the internal representation.
@@ -238,13 +238,13 @@ def decode_raiden_event_to_internal(
 
     # copy the attribute dict because that data structure is immutable
     data = dict(decoded_event)
-    args = dict(data["args"])
+    args = dict(decoded_event["args"])
 
     data["args"] = args
     # translate from web3's to raiden's name convention
-    data["block_number"] = log_event.pop("blockNumber")
-    data["transaction_hash"] = log_event.pop("transactionHash")
-    data["block_hash"] = bytes(log_event.pop("blockHash"))
+    data["block_number"] = log_event["blockNumber"]
+    data["transaction_hash"] = log_event["transactionHash"]
+    data["block_hash"] = bytes(log_event["blockHash"])
 
     assert data["block_number"], "The event must have the block_number"
     assert data["transaction_hash"], "The event must have the transaction hash field"
@@ -279,9 +279,9 @@ def decode_raiden_event_to_internal(
         chain_id=chain_id,
         originating_contract=to_canonical_address(log_event["address"]),
         event_data=data,
-        block_number=data["block_number"],
-        block_hash=data["block_hash"],
-        transaction_hash=data["transaction_hash"],
+        block_number=log_event["blockNumber"],
+        block_hash=BlockHash(log_event["blockHash"]),
+        transaction_hash=TransactionHash(log_event["transactionHash"]),
     )
 
 
@@ -494,7 +494,7 @@ class BlockchainEvents:
             return PollResult(
                 polled_block_number=to_block,
                 polled_block_hash=BlockHash(bytes(latest_confirmed_block["hash"])),
-                polled_block_gas_limit=latest_confirmed_block["gasLimit"],
+                polled_block_gas_limit=BlockGasLimit(latest_confirmed_block["gasLimit"]),
                 events=decoded_result,
             )
 
@@ -552,7 +552,7 @@ class BlockchainEvents:
             # Using web3 because:
             # - It sets an unique request identifier, not strictly necessary.
             # - To avoid another abstraction to query the Ethereum client.
-            blockchain_events: List[BlockchainEvent] = self.web3.manager.request_blocking(
+            blockchain_events: List[LogReceipt] = self.web3.manager.request_blocking(
                 RPCEndpoint("eth_getLogs"), [filter_params]
             )
 
@@ -587,7 +587,7 @@ class BlockchainEvents:
 
         return result
 
-    def event_to_abi(self, event: BlockchainEvent) -> ABI:
+    def event_to_abi(self, event: LogReceipt) -> ABI:
         address = to_canonical_address(event["address"])
         return self._address_to_filters[address].abi
 

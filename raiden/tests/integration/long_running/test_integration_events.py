@@ -1,6 +1,6 @@
 import gevent
 import pytest
-from eth_utils import is_list_like, keccak
+from eth_utils import keccak
 from web3._utils.events import construct_event_topic_set
 
 from raiden import waiting
@@ -74,16 +74,11 @@ def get_netting_channel_closed_events(
         arguments={"channel_identifier": netting_channel_identifier},
     )
 
-    if len(topic_set) == 1 and is_list_like(topic_set[0]):
-        topics = topic_set[0]
-    else:
-        topics = topic_set
-
     return get_contract_events(
         proxy_manager=proxy_manager,
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         contract_address=Address(token_network_address),
-        topics=topics,
+        topics=topic_set,  # type: ignore
         from_block=from_block,
         to_block=to_block,
     )
@@ -106,16 +101,11 @@ def get_netting_channel_deposit_events(
         arguments={"channel_identifier": netting_channel_identifier},
     )
 
-    if len(topic_set) == 1 and is_list_like(topic_set[0]):
-        topics = topic_set[0]
-    else:
-        topics = topic_set
-
     return get_contract_events(
         proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
-        topics,
+        topic_set,  # type: ignore
         from_block,
         to_block,
     )
@@ -138,16 +128,11 @@ def get_netting_channel_settled_events(
         arguments={"channel_identifier": netting_channel_identifier},
     )
 
-    if len(topic_set) == 1 and is_list_like(topic_set[0]):
-        topics = topic_set[0]
-    else:
-        topics = topic_set
-
     return get_contract_events(
         proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
-        topics,
+        topic_set,  # type: ignore
         from_block,
         to_block,
     )
