@@ -371,7 +371,7 @@ class TokenNetwork:
             block_identifier=encode_hex(receipt["blockHash"]),
         ).channel_identifier
 
-        return (channel_identifier, receipt["blockHash"], receipt["blockNumber"])
+        return channel_identifier, receipt["blockHash"], BlockNumber(receipt["blockNumber"])
 
     def get_channel_identifier(
         self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier
@@ -919,7 +919,7 @@ class TokenNetwork:
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
                 failed_at_blockhash = encode_hex(receipt["blockHash"])
-                failed_at_blocknumber = receipt["blockNumber"]
+                failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
 
                 check_transaction_failure(transaction_mined, self.client)
 

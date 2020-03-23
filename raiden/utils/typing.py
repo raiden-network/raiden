@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import TYPE_CHECKING, Any, Dict, List, NewType, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, NewType, Tuple, Type, Union
 
 from eth_typing import (  # NOQA pylint:disable=unused-import
     Address,
@@ -9,7 +9,7 @@ from eth_typing import (  # NOQA pylint:disable=unused-import
     HexAddress,
 )
 from typing_extensions import Literal
-from web3.types import BlockIdentifier, Nonce  # NOQA pylint:disable=unused-import
+from web3.types import ABI, BlockIdentifier, Nonce  # NOQA pylint:disable=unused-import
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
@@ -44,7 +44,6 @@ def typecheck(value: Any, expected: Union[Type, Tuple[Type, ...]]) -> None:
         raise ValueError(f"Expected a value of type {expected}, got value of type {type(value)}")
 
 
-ABI = List[Dict[str, Any]]
 BlockchainEvent = Dict[str, Any]
 
 T_EVMBytecode = bytes
