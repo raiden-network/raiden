@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import click
 import gevent
@@ -9,6 +9,7 @@ from eth_utils import to_hex
 from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
+from web3.types import BlockData
 
 from raiden.constants import (
     BLOCK_ID_LATEST,
@@ -194,7 +195,7 @@ class AlarmTask(Runnable):
 
             self._maybe_run_callbacks(latest_block)
 
-    def _maybe_run_callbacks(self, latest_block: Dict[str, Any]) -> None:
+    def _maybe_run_callbacks(self, latest_block: BlockData) -> None:
         """ Run the callbacks if there is at least one new block.
 
         The callbacks are executed only if there is a new block, otherwise the

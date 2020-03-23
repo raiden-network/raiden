@@ -31,7 +31,7 @@ from web3.eth import Eth
 from web3.exceptions import TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.types import BlockData, TxReceipt
+from web3.types import ABIFunction, BlockData, FilterParams, LogReceipt, TxParams, TxReceipt, Wei
 
 from raiden.constants import (
     BLOCK_ID_LATEST,
@@ -202,9 +202,7 @@ def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCC
         raise RaidenError(msg)
 
 
-def was_transaction_successfully_mined(
-    transaction: "TransactionMined"
-) -> Optional[Dict[str, Any]]:
+def was_transaction_successfully_mined(transaction: "TransactionMined") -> bool:
     """ `True` if the transaction was successfully mined, `False` otherwise. """
     if "status" not in transaction.receipt:
         # This should never happen. Raiden checks ethereum client for compatibility at startup
@@ -329,7 +327,7 @@ def check_address_has_code(
 
 
 def get_transaction_data(
-    web3: Web3, abi: Dict, function_name: str, args: Any = None, kwargs: Any = None
+    web3: Web3, abi: ABI, function_name: str, args: Any = None, kwargs: Any = None
 ) -> str:
     """Get encoded transaction data"""
     args = args or list()
@@ -480,8 +478,8 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
 
 
 def patched_web3_eth_estimate_gas(
-    self: Any, transaction: Dict[str, Any], block_identifier: BlockIdentifier = None
-) -> int:
+    self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
+) -> Wei:
     """ Temporary workaround until next web3.py release (5.X.X)
 
     Current master of web3.py has this implementation already:
@@ -533,10 +531,10 @@ def patched_web3_eth_call(
 def estimate_gas_for_function(
     address: Address,
     web3: Web3,
-    fn_identifier: str = None,
-    transaction: Dict[str, Any] = None,
-    contract_abi: Dict[str, Any] = None,
-    fn_abi: Dict[str, Any] = None,
+    fn_identifier: str,
+    transaction: TxParams = None,
+    contract_abi: ABI = None,
+    fn_abi: ABIFunction = None,
     block_identifier: BlockIdentifier = None,
     *args: Any,
     **kwargs: Any,
@@ -566,7 +564,7 @@ def estimate_gas_for_function(
 
 
 def patched_contractfunction_estimateGas(
-    self: Any, transaction: Dict[str, Any] = None, block_identifier: BlockIdentifier = None
+    self: Any, transaction: TxParams = None, block_identifier: BlockIdentifier = None
 ) -> int:
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
@@ -757,7 +755,7 @@ class TransactionPending:
                 extra_log_details=self.extra_log_details,
                 estimated_gas=safe_gas_limit(estimated_gas),
                 gas_price=gas_price,
-                approximate_block=(block["hash"], block["number"]),
+                approximate_block=(block["hash"], BlockNumber(block["number"])),
             )
 
             log.debug(
@@ -1356,16 +1354,18 @@ class JSONRPCClient:
         topics: List[str] = None,
         from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
         to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
+    ) -> List[LogReceipt]:
         """ Get events for the given query. """
         logs_blocks_sanity_check(from_block, to_block)
         return self.web3.eth.getLogs(
-            {
-                "fromBlock": from_block,
-                "toBlock": to_block,
-                "address": contract_address,
-                "topics": topics,
-            }
+            FilterParams(
+                {
+                    "fromBlock": from_block,
+                    "toBlock": to_block,
+                    "address": contract_address,
+                    "topics": topics,
+                }
+            )
         )
 
     def check_for_insufficient_eth(

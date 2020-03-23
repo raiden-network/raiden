@@ -1,20 +1,13 @@
 import structlog
 from eth_abi.codec import ABICodec
-from eth_utils import decode_hex, event_abi_to_log_topic
+from eth_utils import event_abi_to_log_topic
 from web3._utils.abi import build_default_registry, filter_by_type
 from web3._utils.events import get_event_data
 from web3._utils.filters import construct_event_filter_params
+from web3.types import EventData, FilterParams, LogReceipt
 
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
-from raiden.utils.typing import (
-    ABI,
-    Any,
-    BlockchainEvent,
-    BlockIdentifier,
-    ChannelID,
-    Dict,
-    TokenNetworkAddress,
-)
+from raiden.utils.typing import ABI, BlockIdentifier, ChannelID, TokenNetworkAddress
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
@@ -30,7 +23,7 @@ def get_filter_args_for_specific_event_from_channel(
     contract_manager: ContractManager,
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
     to_block: BlockIdentifier = BLOCK_ID_LATEST,
-) -> Dict[str, Any]:
+) -> FilterParams:
     """ Return the filter params for a specific event of a given channel. """
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
 
@@ -55,7 +48,7 @@ def get_filter_args_for_all_events_from_channel(
     contract_manager: ContractManager,
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
     to_block: BlockIdentifier = BLOCK_ID_LATEST,
-) -> Dict[str, Any]:
+) -> FilterParams:
     """ Return the filter params for all events of a given channel. """
 
     event_filter_params = get_filter_args_for_specific_event_from_channel(
@@ -75,22 +68,18 @@ def get_filter_args_for_all_events_from_channel(
     return event_filter_params
 
 
-def decode_event(abi: ABI, log: BlockchainEvent) -> Dict[str, Any]:
+def decode_event(abi: ABI, event_log: LogReceipt) -> EventData:
     """ Helper function to unpack event data using a provided ABI
 
     Args:
         abi: The ABI of the contract, not the ABI of the event
-        log: The raw event data
+        event_log: The raw event data
 
     Returns:
         The decoded event
     """
-    if isinstance(log["topics"][0], str):
-        log["topics"][0] = decode_hex(log["topics"][0])
-    elif isinstance(log["topics"][0], int):
-        log["topics"][0] = decode_hex(hex(log["topics"][0]))
-    event_id = log["topics"][0]
+    event_id = event_log["topics"][0]
     events = filter_by_type("event", abi)
     topic_to_event_abi = {event_abi_to_log_topic(event_abi): event_abi for event_abi in events}
     event_abi = topic_to_event_abi[event_id]
-    return get_event_data(ABI_CODEC, event_abi, log)
+    return get_event_data(ABI_CODEC, event_abi, event_log)

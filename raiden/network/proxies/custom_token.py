@@ -1,11 +1,11 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import structlog
 
 from raiden.network.proxies.exceptions import MintFailed
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import was_transaction_successfully_mined
-from raiden.utils.typing import Address, TokenAmount
+from raiden.utils.typing import ABI, Address, TokenAmount
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -14,7 +14,7 @@ log = structlog.get_logger(__name__)
 
 class CustomToken(Token):
     @staticmethod
-    def abi(contract_manager: ContractManager) -> List[Dict[str, Any]]:
+    def abi(contract_manager: ContractManager) -> ABI:
         """Overwrittable by subclasses to change the proxies ABI."""
         return contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN)
 

@@ -11,13 +11,13 @@ from raiden.network.rpc.client import (
     was_transaction_successfully_mined,
 )
 from raiden.utils.typing import (
+    ABI,
     Address,
     Any,
     Balance,
     BlockIdentifier,
     BlockNumber,
     Dict,
-    List,
     Optional,
     TokenAddress,
     TokenAmount,
@@ -62,7 +62,7 @@ class Token:
         self.token_lock: RLock = RLock()
 
     @staticmethod
-    def abi(contract_manager: ContractManager) -> List[Dict[str, Any]]:
+    def abi(contract_manager: ContractManager) -> ABI:
         """Overwrittable by subclasses to change the proxies ABI."""
         return contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
 

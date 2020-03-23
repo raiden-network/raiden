@@ -23,6 +23,7 @@ from raiden.utils.typing import (
     Any,
     Balance,
     BlockIdentifier,
+    BlockNumber,
     Dict,
     Iterator,
     MonitoringServiceAddress,
@@ -230,7 +231,7 @@ class UserDeposit:
             transaction_mined = self.client.poll_transaction(transaction_sent)
 
             if not was_transaction_successfully_mined(transaction_mined):
-                failed_at_blocknumber = transaction_mined.receipt["blockNumber"]
+                failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
 
                 existing_monitoring_service_address = self.monitoring_service_address(
                     block_identifier=failed_at_blocknumber
@@ -517,7 +518,7 @@ class UserDeposit:
             transaction_mined = self.client.poll_transaction(transaction_sent)
 
             if not was_transaction_successfully_mined(transaction_mined):
-                failed_at_blocknumber = transaction_mined.receipt["blockNumber"]
+                failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
 
                 latest_deposit = self.get_total_deposit(
                     address=self.node_address, block_identifier=failed_at_blocknumber
