@@ -718,6 +718,15 @@ workflows:
             - lint-3.7
 
       - smoketest:
+          name: smoketest-matrix-production-parity-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "production"
+          blockchain-type: "parity"
+          requires:
+            - lint-3.7
+
+      - smoketest:
           name: smoketest-matrix-development-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -773,6 +782,7 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - scenario-player-integration-test
@@ -790,6 +800,7 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - scenario-player-integration-test
@@ -939,6 +950,15 @@ workflows:
             - lint-3.7
 
       - smoketest:
+          name: smoketest-matrix-production-parity-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "production"
+          blockchain-type: "parity"
+          requires:
+            - lint-3.7
+
+      - smoketest:
           name: smoketest-matrix-development-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -994,6 +1014,7 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - scenario-player-integration-test
@@ -1012,6 +1033,7 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
             - scenario-player-integration-test
