@@ -131,11 +131,13 @@ def wait_for_sync(rpc_client: JSONRPCClient, tolerance: BlockTimeout, sleep: flo
 
 
 def blocks_to_sync(rpc_client: JSONRPCClient) -> BlockTimeout:
-    result = rpc_client.web3.eth.syncing
+    sync_status = rpc_client.web3.eth.syncing
 
-    if result is False:
+    if sync_status is False:
         return BlockTimeout(0)
-    else:
-        current_block = rpc_client.block_number()
-        highest_block = result["highestBlock"]
-        return highest_block - current_block
+
+    assert isinstance(sync_status, Mapping), MYPY_ANNOTATION
+    highest_block = sync_status["highestBlock"]
+
+    current_block = rpc_client.block_number()
+    return highest_block - current_block
