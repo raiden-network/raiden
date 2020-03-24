@@ -6,7 +6,6 @@ from flask import Response, make_response
 
 from raiden.utils.typing import Any, Callable
 
-
 log = structlog.get_logger(__name__)
 
 

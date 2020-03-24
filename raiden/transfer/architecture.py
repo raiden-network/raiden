@@ -32,8 +32,8 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_Keccak256,
     T_LockedAmount,
+    T_Locksroot,
     T_Signature,
     T_TokenAmount,
     TokenAmount,
@@ -310,7 +310,7 @@ class BalanceProofUnsignedState(State):
         typecheck(self.nonce, int)
         typecheck(self.transferred_amount, T_TokenAmount)
         typecheck(self.locked_amount, T_TokenAmount)
-        typecheck(self.locksroot, T_Keccak256)
+        typecheck(self.locksroot, T_Locksroot)
 
         if self.nonce <= 0:
             raise ValueError("nonce cannot be zero or negative")
@@ -368,8 +368,8 @@ class BalanceProofSignedState(State):
         typecheck(self.nonce, int)
         typecheck(self.transferred_amount, T_TokenAmount)
         typecheck(self.locked_amount, T_LockedAmount)
-        typecheck(self.locksroot, T_Keccak256)
-        typecheck(self.message_hash, T_Keccak256)
+        typecheck(self.locksroot, T_Locksroot)
+        typecheck(self.message_hash, bytes)
         typecheck(self.signature, T_Signature)
         typecheck(self.sender, T_Address)
 

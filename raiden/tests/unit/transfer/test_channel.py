@@ -285,8 +285,8 @@ def test_is_valid_balanceproof_signature():
 def test_get_secret():
     secret1 = factories.make_secret()
     secret2 = factories.make_secret()
-    secrethash3 = factories.make_keccak_hash()
-    secrethash4 = factories.make_keccak_hash()
+    secrethash3 = factories.make_secret_hash()
+    secrethash4 = factories.make_secret_hash()
 
     lock_state = HashTimeLockState(amount=10, expiration=10, secrethash=factories.UNIT_SECRETHASH)
     end_state = factories.create(factories.NettingChannelEndStateProperties())
@@ -352,25 +352,25 @@ def test_get_batch_unlock_gain():
     channel_state.our_state = replace(
         channel_state.our_state,
         secrethashes_to_lockedlocks={
-            factories.make_keccak_hash(): make_hash_time_lock_state(1),
-            factories.make_keccak_hash(): make_hash_time_lock_state(2),
+            factories.make_secret_hash(): make_hash_time_lock_state(1),
+            factories.make_secret_hash(): make_hash_time_lock_state(2),
         },
         secrethashes_to_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(4)
+            factories.make_secret_hash(): make_unlock_partial_proof_state(4)
         },
         secrethashes_to_onchain_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(8)
+            factories.make_secret_hash(): make_unlock_partial_proof_state(8)
         },
     )
     channel_state.partner_state = replace(
         channel_state.partner_state,
-        secrethashes_to_lockedlocks={factories.make_keccak_hash(): make_hash_time_lock_state(16)},
+        secrethashes_to_lockedlocks={factories.make_secret_hash(): make_hash_time_lock_state(16)},
         secrethashes_to_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(32)
+            factories.make_secret_hash(): make_unlock_partial_proof_state(32)
         },
         secrethashes_to_onchain_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(64),
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(128),
+            factories.make_secret_hash(): make_unlock_partial_proof_state(64),
+            factories.make_secret_hash(): make_unlock_partial_proof_state(128),
         },
     )
     unlock_gain = get_batch_unlock_gain(channel_state)
