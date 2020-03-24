@@ -64,7 +64,6 @@ from raiden.utils.typing import (
     Dict,
     FeeAmount,
     InitiatorAddress,
-    Keccak256,
     List,
     Locksroot,
     MessageID,
@@ -287,10 +286,6 @@ def make_block_hash() -> BlockHash:
 
 def make_privatekey_bin() -> bin:
     return make_bytes(32)
-
-
-def make_keccak_hash() -> Keccak256:
-    return Keccak256(make_bytes(32))
 
 
 def make_secret(i: int = EMPTY) -> Secret:

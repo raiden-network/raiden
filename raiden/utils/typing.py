@@ -138,9 +138,6 @@ RaidenProtocolVersion = NewType("RaidenProtocolVersion", T_RaidenProtocolVersion
 T_RaidenDBVersion = int
 RaidenDBVersion = NewType("RaidenDBVersion", T_RaidenDBVersion)
 
-T_Keccak256 = bytes
-Keccak256 = NewType("Keccak256", T_Keccak256)
-
 T_TargetAddress = bytes
 TargetAddress = NewType("TargetAddress", T_TargetAddress)
 

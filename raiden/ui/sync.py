@@ -140,4 +140,4 @@ def blocks_to_sync(rpc_client: JSONRPCClient) -> BlockTimeout:
     highest_block = sync_status["highestBlock"]
 
     current_block = rpc_client.block_number()
-    return highest_block - current_block
+    return BlockTimeout(highest_block - current_block)
