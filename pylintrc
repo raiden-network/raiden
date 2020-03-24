@@ -30,6 +30,8 @@ disable=all
 enable=
     assert-message,
     bad-except-order,
+    del-method-used,
+    exception-in-del,
     expression-not-assigned,
     gevent-joinall,
     gevent-group-join,
