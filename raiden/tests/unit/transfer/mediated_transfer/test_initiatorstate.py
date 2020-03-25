@@ -963,7 +963,6 @@ def test_init_with_maximum_pending_transfers_exceeded():
 
 def test_handle_offchain_secretreveal():
     setup = setup_initiator_tests()
-
     secret_reveal = ReceiveSecretReveal(
         secret=UNIT_SECRET, sender=setup.channel.partner_state.address
     )
@@ -974,6 +973,7 @@ def test_handle_offchain_secretreveal():
         state_change=secret_reveal,
         channel_state=setup.channel,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
@@ -997,6 +997,7 @@ def test_handle_offchain_emptyhash_secret():
         state_change=secret_reveal,
         channel_state=setup.channel,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
     secrethash = factories.UNIT_TRANSFER_DESCRIPTION.secrethash
     assert len(iteration.events) == 0
@@ -1241,6 +1242,7 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
 
     assert len(iteration.events) == 3
@@ -1272,6 +1274,7 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
 
     assert search_for_item(iteration.events, SendUnlock, {}) is None
@@ -1329,6 +1332,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         state_change=state_change,
         channelidentifiers_to_channels=channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
     initiator_task = get_transfer_at_index(setup.current_state, 0)
     secrethash = initiator_task.transfer_description.secrethash

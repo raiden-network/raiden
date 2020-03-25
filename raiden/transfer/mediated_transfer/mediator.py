@@ -788,6 +788,7 @@ def events_for_balanceproof(
                 payment_identifier=pair.payee_transfer.payment_identifier,
                 secret=secret,
                 secrethash=secrethash,
+                block_number=block_number,
             )
 
             unlock_success = EventUnlockSuccess(

@@ -1467,6 +1467,7 @@ def create_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     lock: HashTimeLockState,
+    block_number: BlockNumber,
 ) -> SendUnlockAndPendingLocksState:
     our_state = channel_state.our_state
 
@@ -1475,6 +1476,15 @@ def create_unlock(
 
     msg = "caller must make sure the channel is open"
     assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
+
+    expired = is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock.expiration,
+    )
+    msg = "caller must make sure the lock is not expired"
+    assert not expired, msg
 
     our_balance_proof = our_state.balance_proof
     msg = "the lock is pending, it must be in the pending locks"
@@ -1598,12 +1608,13 @@ def send_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     secrethash: SecretHash,
+    block_number: BlockNumber,
 ) -> SendUnlock:
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock, "caller must ensure the lock exists"
 
     unlock, pending_locks = create_unlock(
-        channel_state, message_identifier, payment_identifier, secret, lock
+        channel_state, message_identifier, payment_identifier, secret, lock, block_number
     )
 
     channel_state.our_state.balance_proof = unlock.balance_proof

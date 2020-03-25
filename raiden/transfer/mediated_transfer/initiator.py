@@ -99,6 +99,7 @@ def events_for_unlock_lock(
     secret: Secret,
     secrethash: SecretHash,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> List[Event]:
     """ Unlocks the lock offchain, and emits the events for the successful payment. """
     # next hop learned the secret, unlock the token locally and send the
@@ -112,6 +113,7 @@ def events_for_unlock_lock(
         payment_identifier=transfer_description.payment_identifier,
         secret=secret,
         secrethash=secrethash,
+        block_number=block_number,
     )
 
     payment_sent_success = EventPaymentSentSuccess(
@@ -425,6 +427,7 @@ def handle_offchain_secretreveal(
     state_change: ReceiveSecretReveal,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ Once the next hop proves it knows the secret, the initiator can unlock
     the mediated transfer.
@@ -441,13 +444,22 @@ def handle_offchain_secretreveal(
     sent_by_partner = state_change.sender == channel_state.partner_state.address
     is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
-    if valid_reveal and is_channel_open and sent_by_partner:
+    lock = initiator_state.transfer.lock
+    expired = channel.is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock.expiration,
+    )
+
+    if valid_reveal and is_channel_open and sent_by_partner and not expired:
         events = events_for_unlock_lock(
             initiator_state=initiator_state,
             channel_state=channel_state,
             secret=state_change.secret,
             secrethash=state_change.secrethash,
             pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
         iteration = TransitionResult(None, events)
     else:
@@ -462,6 +474,7 @@ def handle_onchain_secretreveal(
     state_change: ContractReceiveSecretReveal,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ When a secret is revealed on-chain all nodes learn the secret.
 
@@ -489,13 +502,22 @@ def handle_onchain_secretreveal(
             secret_reveal_block_number=state_change.block_number,
         )
 
-    if is_lock_unlocked and is_channel_open:
+    lock = initiator_state.transfer.lock
+    expired = channel.is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock.expiration,
+    )
+
+    if is_lock_unlocked and is_channel_open and not expired:
         events = events_for_unlock_lock(
             initiator_state,
             channel_state,
             state_change.secret,
             state_change.secrethash,
             pseudo_random_generator,
+            block_number,
         )
         iteration = TransitionResult(None, events)
     else:
@@ -510,6 +532,7 @@ def state_transition(
     state_change: StateChange,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
@@ -524,12 +547,12 @@ def state_transition(
     elif type(state_change) == ReceiveSecretReveal:
         assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_offchain_secretreveal(
-            initiator_state, state_change, channel_state, pseudo_random_generator
+            initiator_state, state_change, channel_state, pseudo_random_generator, block_number
         )
     elif type(state_change) == ContractReceiveSecretReveal:
         assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_onchain_secretreveal(
-            initiator_state, state_change, channel_state, pseudo_random_generator
+            initiator_state, state_change, channel_state, pseudo_random_generator, block_number
         )
     else:
         iteration = TransitionResult(initiator_state, list())
