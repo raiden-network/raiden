@@ -32,6 +32,7 @@ enable=
     bad-except-order,
     expression-not-assigned,
     gevent-joinall,
+    gevent-group-join,
     import-self,
     inconsistent-return-statements,
     no-member,
