@@ -10,6 +10,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.state import ChannelState
 from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, TokenAmount
+from raiden.waiting import wait_for_block
 
 
 def wait_for_transaction(receiver, registry_address, token_address, sender_address):
@@ -359,6 +360,11 @@ def test_transfer_after_connect_works(raiden_network, token_addresses):
     # Open channel between node0 and node2 to not run into the bootstrapping
     # case when joining the token network
     api0.channel_open(registry_address, token_address, app2.raiden.address)
+    # Make sure that app1 processed the block where channel open
+    # happened. Otherwise the test becomes flaky because it does not see
+    # potential participants in the network
+    current_block = app0.raiden.get_block_number()
+    wait_for_block(app1.raiden, current_block, 1)
 
     api1.token_network_connect(
         registry_address=registry_address,
