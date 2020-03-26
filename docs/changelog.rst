@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc3`
 * :feature:`5281` Add a /status endpoint; start the API earlier and return 503 SERVICE UNAVAILABLE during the initial sync.
 * :feature:`4588` Remove the echo_node subcommand of the command line interface.
 * :bug:`5779` Handle the API exception when no further token networks can be registered by returning 403 FORBIDDEN.
