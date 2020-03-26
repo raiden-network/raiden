@@ -3,10 +3,10 @@
 SCENARIO_REMOTE_URL_1="root@scenario-player.ci.raiden.network"
 SCENARIO_REMOTE_URL_2="root@scenario-player2.ci.raiden.network"
 
-### STYLES: IGNORE
 COLUMNS=$(/usr/bin/tput cols)
 RESET=$(/usr/bin/tput init)
 BOLD=$(/usr/bin/tput bold)
+DIR="$(dirname "$(readlink -f "$0")")"
 
 function print_bold {
     echo -e "${BOLD}$1${RESET}"
@@ -15,7 +15,6 @@ function print_bold {
 function separator {
     printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
 }
-###
 
 function display_usage {
     echo "This script does the following:"
@@ -44,11 +43,16 @@ SCENARIOS_DIR="$DESTINATION_DIR"/scenarios
 
 function download_service_logs {
     sources=()
+
     for file in "$@"; do
-        sources+=("root@services-dev.raiden.network:/home/services/${file}")
+        if [[ ! -e "${DESTINATION_DIR}/${file}" ]]; then
+            sources+=("root@services-dev.raiden.network:/home/services/${file}")
+        fi
     done
 
-    scp "${sources[@]}" "${DESTINATION_DIR}"
+    if [[ "${#sources[@]}" -gt 0 ]]; then
+        scp "${sources[@]}" "${DESTINATION_DIR}"
+    fi
 }
 
 function download_server_logs {
@@ -57,21 +61,19 @@ function download_server_logs {
     (
         cd "${SCENARIOS_DIR}"
 
-        ssh "$current_server" '
-        cd /var/lib/scenario-player;
-        source env.sh
+        # The echo is used to remove the newline character
+        local_files=$(echo $(ls))
 
-        cd /data/scenario-player/scenarios;
-        for scenario_path in "$SCENARIOS_DIR"/ci/"$SP"/*.yaml; do
-            scenario_file=$(basename "$scenario_path")
-            scenario=${scenario_file//.yaml}
-
-            run=$(cat "${scenario}"/run_number.txt)
-
-            find "$scenario"/node_"$run"_*
-            ls "$scenario"/scenario-player-run* -1 -t | head -1
-        done | tar zcf - -T -
-        ' | tar zxf -
+        # `ssh` will execute `bash` on the remote, with the flags `-s -` bash
+        # will read the commands from the `stdin`, and the arguments
+        # `$local_files` are passed as position arguments to the script.
+        #
+        # This allows the remote to filter out files that have already been
+        # downloaded.
+        cat $DIR/sp_download_scenario_logs.sh \
+            | ssh "$current_server" bash -s - "$local_files" \
+            | pv \
+            | tar zxf -
     )
 }
 
@@ -103,16 +105,14 @@ function search_for_failures {
     done;
 }
 
-[ ! -d "$DESTINATION_DIR" ] && {
-    mkdir -p "${SCENARIOS_DIR}"
+mkdir -p "${SCENARIOS_DIR}"
 
-    print_bold "Downloading services logs"
-    download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
+print_bold "Downloading services logs"
+download_service_logs ms-goerli-backup.gz ms-goerli.gz msrc-goerli-backup.gz msrc-goerli.gz pfs-goerli-with-fee.gz pfs-goerli.gz
 
-    print_bold "Downloading scenarios list"
-    download_server_logs $SCENARIO_REMOTE_URL_1
-    download_server_logs $SCENARIO_REMOTE_URL_2
-}
+print_bold "Downloading scenarios list"
+download_server_logs $SCENARIO_REMOTE_URL_1
+download_server_logs $SCENARIO_REMOTE_URL_2
 
 # search_for_failures expects the logs to be compressed
 find "${SCENARIOS_DIR}" -type f -iname '*.log' | xargs gzip -q
