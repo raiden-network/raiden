@@ -737,10 +737,6 @@ class SQLiteStorage:
         self.conn.close()
         del self.conn
 
-    def __del__(self) -> None:
-        if hasattr(self, "conn"):
-            raise RuntimeError("The database connection was not closed.")
-
     def __enter__(self) -> "SQLiteStorage":
         return self
 
