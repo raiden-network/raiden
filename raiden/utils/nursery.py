@@ -84,7 +84,7 @@ class Janitor:
 
                         # if the subprocess error'ed propagate the error.
                         if result.get() != STATUS_CODE_FOR_SUCCESS:
-                            log.error("Process died! Bailing out.")
+                            log.error("Process died! Bailing out.", args=process.args)
                             janitor._stop.set()
 
                 with janitor._processes_lock:
