@@ -778,7 +778,6 @@ def events_for_balanceproof(
             # At this point we are sure that payee_channel exists due to the
             # payee_channel_open check above. So let mypy know about this
             assert payee_channel, MYPY_ANNOTATION
-            payee_channel = cast(NettingChannelState, payee_channel)
             pair.payee_state = "payee_balance_proof"
 
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
