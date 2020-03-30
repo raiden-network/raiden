@@ -6,7 +6,7 @@ settings:
   chain: any
   services:
     pfs:
-      url: https://pfs-goerli.services-dev.raiden.network
+      url: {{ pfs_without_fee }}
     udc:
       enable: true
       token:
