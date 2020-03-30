@@ -3,7 +3,6 @@ version: 2
 settings:
   # Gas price to use, either `fast`, `medium` or an integer (in gwei)
   gas_price: "fast"
-  chain: any
   services:
     pfs:
       url: {{ pfs_with_fee }}
@@ -27,7 +26,6 @@ nodes:
 
   default_options:
     gas-price: fast
-    environment-type: development
     routing-mode: pfs
     pathfinding-max-fee: 100
     enable-monitoring: true
@@ -42,33 +40,33 @@ nodes:
     0:
       matrix-server: {{ matrix_servers[0] }}
     1:
-      {{ matrix_servers[1] }}
+      matrix-server: {{ matrix_servers[1] }}
     2:
-      {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[2] }}
     3:
-      {{ matrix_servers[3] }}
+      matrix-server: {{ matrix_servers[3] }}
     4:
       matrix-server: {{ matrix_servers[0] }}
     5:
-      {{ matrix_servers[1] }}
+      matrix-server: {{ matrix_servers[1] }}
     6:
-      {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[2] }}
     7:
-      {{ matrix_servers[3] }}
+      matrix-server: {{ matrix_servers[3] }}
     8:
       matrix-server: {{ matrix_servers[0] }}
     9:
-      {{ matrix_servers[1] }}
+      matrix-server: {{ matrix_servers[1] }}
     10:
-      {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[2] }}
     11:
-      {{ matrix_servers[3] }}
+      matrix-server: {{ matrix_servers[3] }}
     12:
       matrix-server: {{ matrix_servers[0] }}
     13:
-      {{ matrix_servers[1] }}
+      matrix-server: {{ matrix_servers[1] }}
     14:
-      {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[2] }}
 
 # This is the bf7 scenario. It tests long paths. There are a total of 15 nodes in the scenario.
 # A topology with deposits in both directions are created as [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]

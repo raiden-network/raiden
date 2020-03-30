@@ -2,7 +2,6 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: any
   services:
     pfs:
       url: {{ pfs_with_fee }}
@@ -22,7 +21,6 @@ nodes:
 
   default_options:
     gas-price: fast
-    environment-type: development
     routing-mode: pfs
     # Only use one path per call to make sure the expected one is used
     pathfinding-max-paths: 1
