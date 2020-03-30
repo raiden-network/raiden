@@ -2,7 +2,6 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: any
   services:
     pfs:
       url: {{ pfs_with_fee }}
@@ -25,7 +24,6 @@ nodes:
 
   default_options:
     gas-price: fast
-    environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
@@ -42,11 +40,11 @@ nodes:
     0:
       matrix-server: {{ matrix_servers[0] }}
     1:
-      {{ matrix_servers[1] }}
+      matrix-server: {{ matrix_servers[1] }}
     2:
-      {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[2] }}
     3:
-      {{ matrix_servers[3] }}
+      matrix-server: {{ matrix_servers[3] }}
     4:
       matrix-server: {{ matrix_servers[0] }}
 

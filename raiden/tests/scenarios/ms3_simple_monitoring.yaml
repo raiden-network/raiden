@@ -3,7 +3,6 @@ version: 2
 settings:
   gas_price: "fast"
   # Adapt to chain used
-  chain: any
   services:
     pfs:
       url: {{ pfs_without_fee }}
@@ -26,7 +25,6 @@ nodes:
 
   default_options:
     gas-price: fast
-    environment-type: development
     enable-monitoring: true
     proportional-fee:
       - "0x59105441977ecD9d805A4f5b060E34676F50F806"

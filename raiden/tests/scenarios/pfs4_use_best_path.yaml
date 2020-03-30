@@ -2,7 +2,6 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: any
   services:
     pfs:
       url: {{ pfs_with_fee }}
@@ -21,7 +20,6 @@ nodes:
 
   default_options:
     gas-price: fast
-    environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 1
     pathfinding-max-fee: 100

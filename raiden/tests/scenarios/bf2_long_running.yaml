@@ -2,7 +2,6 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: goerli
   services:
     pfs:
       url: {{ pfs_with_fee }}
@@ -25,7 +24,6 @@ nodes:
   enable-monitoring: false
   default_options:
     gas-price: fast
-    environment-type: development
     default-settle-timeout: 40
     default-reveal-timeout: 20
     proportional-fee:
