@@ -5,7 +5,7 @@ settings:
   chain: any
   services:
     pfs:
-      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
@@ -42,13 +42,13 @@ nodes:
 
   node_options:
     0:
-      matrix-server: https://transport01.raiden.network
+      matrix-server: {{ matrix_servers[0] }}
     1:
-      matrix-server: https://transport02.raiden.network
+      {{ matrix_servers[1] }}
     2:
-      matrix-server: https://transport03.raiden.network
+      {{ matrix_servers[2] }}
     3:
-      matrix-server: https://transport04.raiden.network
+      {{ matrix_servers[3] }}
 
 # This is the BF5 scenario. It sets up a simple topology of two nodes and then uses
 # `join_network` to add more nodes to the network. It tests that nodes can join the network
