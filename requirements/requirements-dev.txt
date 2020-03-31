@@ -19,7 +19,7 @@ babel==2.7.0              # via -r requirements-docs.txt, sphinx
 base58==2.0.0             # via -r requirements.txt, multiaddr
 bcrypt==3.1.6             # via matrix-synapse
 black==19.3b0             # via -r requirements-dev.in
-bleach==3.1.2             # via matrix-synapse, readme-renderer
+bleach==3.1.4             # via matrix-synapse, readme-renderer
 bump2version==0.5.10      # via -r requirements-dev.in
 cachetools==3.1.1         # via -r requirements.txt
 canonicaljson==1.1.4      # via matrix-synapse, signedjson
@@ -66,7 +66,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==4.24.3        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.5.0  # via -r requirements.txt, jsonschema, pluggy, pytest
+importlib-metadata==1.5.0  # via -r requirements.txt, pluggy
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -165,7 +165,7 @@ traitlets==4.3.2          # via -r requirements.txt, ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
 typed-ast==1.4.0          # via astroid, mypy
-typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy, signedjson, web3
+typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
