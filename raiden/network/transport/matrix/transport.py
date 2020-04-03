@@ -775,7 +775,7 @@ class MatrixTransport(Runnable):
             )
             assert len(partner_address) <= 1, msg
             # should contain only one element which is the partner's address
-            if len(partner_address) == 1:
+            if len(partner_address) == 1 and partner_address[0] is not None:
                 self._set_room_id_for_address(partner_address[0], room.room_id)
 
             self.log.debug(
@@ -787,14 +787,20 @@ class MatrixTransport(Runnable):
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
+        def to_string_representation(partner: Optional[Address]) -> str:
+            if partner is not None:
+                return to_checksum_address(partner)
+            else:
+                return "NoAddressUser"
+
         for room in rooms_to_leave:
-            partners = self._extract_addresses(room)
+            partners: List[Optional[Address]] = self._extract_addresses(room)
             self.log.warning(
                 "Leaving Room",
                 reason=reason,
                 room_aliases=room.aliases,
                 room_id=room.room_id,
-                partners=[to_checksum_address(partner) for partner in partners],
+                partners=[to_string_representation(partner) for partner in partners],
             )
             try:
                 self.retry_api_call(room.leave)
@@ -802,9 +808,9 @@ class MatrixTransport(Runnable):
                 raise TransportError(f"could not leave room due to MatrixRequestError") from ex
 
             # update address_to_room_ids (remove room_id for address)
-            for partner in partners:
-                address_to_room_ids = self._get_room_ids_for_address(partner)
-                self._address_to_room_ids[partner] = [
+            for valid_partner in [partner for partner in partners if partner is not None]:
+                address_to_room_ids = self._get_room_ids_for_address(valid_partner)
+                self._address_to_room_ids[valid_partner] = [
                     room_id for room_id in address_to_room_ids if room_id != room.room_id
                 ]
 
@@ -888,7 +894,13 @@ class MatrixTransport(Runnable):
         )
         gevent.joinall(greenlets, raise_error=True)
 
-    def _extract_addresses(self, room: Room) -> List[Address]:
+    """
+    returns list of address of room members.
+    If address can not be extracted due to false displayname
+    it will include None in the list
+    """
+
+    def _extract_addresses(self, room: Room) -> List[Optional[Address]]:
         assert self._raiden_service is not None, "_raiden_service not set"
         joined_addresses = set(
             validate_userid_signature(user) for user in room.get_joined_members()
@@ -903,7 +915,8 @@ class MatrixTransport(Runnable):
             address = validate_userid_signature(user)
             if address != self._raiden_service.address:
                 joined_addresses.add(address)
-                if len(joined_addresses) > 1:
+                # if address is None it means a false displayname, should leave
+                if len(joined_addresses) > 1 or address is None:
                     return True
         return False
 
