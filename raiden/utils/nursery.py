@@ -83,14 +83,17 @@ class Janitor:
                         janitor._processes.remove(process)
 
                         # if the subprocess error'ed propagate the error.
-                        exit_code = result.get()
-                        if exit_code != STATUS_CODE_FOR_SUCCESS:
-                            log.error(
-                                "Process died! Bailing out.",
-                                args=process.args,
-                                exit_code=exit_code,
-                            )
-                            exception = SystemExit(exit_code)
+                        try:
+                            exit_code = result.get()
+                            if exit_code != STATUS_CODE_FOR_SUCCESS:
+                                log.error(
+                                    "Process died! Bailing out.",
+                                    args=process.args,
+                                    exit_code=exit_code,
+                                )
+                                exception = SystemExit(exit_code)
+                                janitor._stop.set_exception(exception)
+                        except Exception as exception:
                             janitor._stop.set_exception(exception)
 
                 with janitor._processes_lock:
@@ -155,8 +158,8 @@ class Janitor:
             # clear the resources when exiting.
             atexit.unregister(self._free_resources)
 
-        log.debug(f"Exiting {self._stop.get()}")
-        return self._stop.get()
+        self._stop.get()
+        return None
 
     def _free_resources(self) -> None:
         with self._processes_lock:

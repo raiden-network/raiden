@@ -30,3 +30,9 @@ def test_nursery_dectect_exit_code_process():
         with Janitor() as nursery:
             p = nursery.exec_under_watch(die_os(timeout=2))
             gevent.joinall({p}, raise_error=True, count=1)
+
+
+def test_nursery_detects_failing_popen():
+    with pytest.raises(FileNotFoundError):
+        with Janitor() as nursery:
+            nursery.exec_under_watch(["nota_valid_program"])
