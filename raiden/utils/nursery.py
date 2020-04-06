@@ -7,7 +7,7 @@ from typing import Any, Callable, List, Optional, Set, Type
 import gevent
 import structlog
 from gevent import Greenlet
-from gevent.event import AsyncResult, Event
+from gevent.event import AsyncResult
 from gevent.greenlet import SpawnedLink
 from gevent.lock import RLock
 from gevent.subprocess import Popen, TimeoutExpired
@@ -41,7 +41,7 @@ class Janitor:
 
     def __init__(self, stop_timeout: float = 20) -> None:
         self.stop_timeout = stop_timeout
-        self._stop = Event()
+        self._stop = AsyncResult()
         self._processes: Set[Popen] = set()
 
         # Lock to protect changes to `_stop` and `_processes`. The `_stop`
@@ -83,12 +83,18 @@ class Janitor:
                         janitor._processes.remove(process)
 
                         # if the subprocess error'ed propagate the error.
-                        if result.get() != STATUS_CODE_FOR_SUCCESS:
-                            log.error("Process died! Bailing out.", args=process.args)
-                            janitor._stop.set()
+                        exit_code = result.get()
+                        if exit_code != STATUS_CODE_FOR_SUCCESS:
+                            log.error(
+                                "Process died! Bailing out.",
+                                args=process.args,
+                                exit_code=exit_code,
+                            )
+                            exception = SystemExit(exit_code)
+                            janitor._stop.set_exception(exception)
 
                 with janitor._processes_lock:
-                    if janitor._stop.is_set():
+                    if janitor._stop.ready():
                         return None
 
                     process = Popen(process_args, **kwargs)
@@ -106,7 +112,7 @@ class Janitor:
                     # it returned. If that happens `GreenletExit` exception is
                     # raised here. In order to have proper cleared, exceptions have
                     # to be handled and the process installed.
-                    if janitor._stop.is_set():
+                    if janitor._stop.ready():
                         process.send_signal(signal.SIGINT)
 
                     return process
@@ -141,7 +147,8 @@ class Janitor:
             # Make sure to signal that we are exiting. This is a noop if the signal
             # is set already (e.g. because a subprocess exited with a non-zero
             # status code)
-            self._stop.set()
+            if not self._stop.done():
+                self._stop.set()
 
             self._free_resources()
 
@@ -150,7 +157,8 @@ class Janitor:
             # clear the resources when exiting.
             atexit.unregister(self._free_resources)
 
-        return None
+        log.debug(f"Exiting {self._stop.get()}")
+        return self._stop.get()
 
     def _free_resources(self) -> None:
         with self._processes_lock:
