@@ -144,9 +144,7 @@ class Janitor:
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
         with self._processes_lock:
-            # Make sure to signal that we are exiting. This is a noop if the signal
-            # is set already (e.g. because a subprocess exited with a non-zero
-            # status code)
+            # Make sure to signal that we are exiting.
             if not self._stop.done():
                 self._stop.set()
 
