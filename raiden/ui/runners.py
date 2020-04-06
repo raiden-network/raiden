@@ -58,7 +58,26 @@ def run_services(options: Dict[str, Any]) -> None:
     gevent.signal.signal(signal.SIGQUIT, sig_set)  # pylint: disable=no-member
     gevent.signal.signal(signal.SIGTERM, sig_set)  # pylint: disable=no-member
     gevent.signal.signal(signal.SIGINT, sig_set)  # pylint: disable=no-member
-    gevent.signal.signal(signal.SIGPIPE, sig_set)  # pylint: disable=no-member
+
+    # The SIGPIPE handler should not be installed. It is handled by the python
+    # runtime, and an exception will be raised at the call site that triggered
+    # the error.
+    #
+    # The default SIGPIPE handler set by the libc will terminate the process
+    # [4]. However, the CPython interpreter changes the handler to IGN [3].
+    # This allows for error reporting by the system calls that write to files.
+    # Because of this, calling `send` to a closed socket will return an `EPIPE`
+    # error [2], the error is then converted to an exception [5,6].
+    #
+    # 1 - https://github.com/python/cpython/blob/3.8/Modules/socketmodule.c#L4088
+    # 2 - http://man7.org/linux/man-pages/man2/send.2.html
+    # 3 - https://github.com/python/cpython/blob/3.8/Python/pylifecycle.c#L2306-L2307
+    # 4 - https://www.gnu.org/software/libc/manual/html_node/Operation-Error-Signals.html
+    # 5 - https://github.com/python/cpython/blob/3.8/Modules/socketmodule.c#L836-L838
+    # 6 - https://github.com/python/cpython/blob/3.8/Modules/socketmodule.c#L627-L628
+    # 7 - https://docs.python.org/3/library/signal.html#note-on-sigpipe
+    #
+    # gevent.signal.signal(signal.SIGPIPE, sig_set)  # pylint: disable=no-member
 
     # quit if any task exits, successfully or not
     app.raiden.greenlet.link(stop_event)
