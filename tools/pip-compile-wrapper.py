@@ -5,7 +5,7 @@ Helper utility to compile / upgrade requirements files from templates.
 This only manages dependencies between requirements sources.
 The actual compiling is delegated to ``pip-compile`` from the ``pip-tools` package.
 
-NOTE: This utility must only use stdlib imports in order to be runnable even
+NOTE: This utility *must only* use stdlib imports in order to be runnable even
       before the dev requirements are installed.
 """
 
@@ -77,6 +77,7 @@ def _run_pip_compile(
     upgrade_packages: Optional[Set[str]] = None,
     verbose: bool = False,
     dry_run: bool = False,
+    pre: bool = False,
 ) -> None:
     """ Run pip-compile with the given parameters
 
@@ -117,6 +118,8 @@ def _run_pip_compile(
 
     dry_run_cmd = ["--dry-run"] if dry_run else []
 
+    pre_cmd = ["--pre"] if pre else []
+
     # We use a relative path for the source file because of
     # https://github.com/raiden-network/raiden/pull/5987#discussion_r392145782 and
     # https://github.com/jazzband/pip-tools/issues/1084
@@ -124,6 +127,7 @@ def _run_pip_compile(
         pip_compile_exe,
         "--verbose" if verbose else "--quiet",
         *dry_run_cmd,
+        *pre_cmd,
         "--no-index",
         *upgrade_packages_cmd,
         *upgrade_all_cmd,
@@ -136,7 +140,9 @@ def _run_pip_compile(
     if verbose:
         print(f"\nRunning command: {' '.join(shlex.quote(c) for c in command)}")
     env = os.environ.copy()
-    env["CUSTOM_COMPILE_COMMAND"] = "'./deps compile' (for details see README)"
+    env[
+        "CUSTOM_COMPILE_COMMAND"
+    ] = "'requirements/deps compile' (for details see requirements/README)"
     process = subprocess.run(
         command, capture_output=(not verbose), cwd=str(source_path.parent), env=env
     )
@@ -251,7 +257,10 @@ def compile_source(
 
 
 def upgrade_source(
-    upgrade_package_names: Set[str], verbose: bool = False, dry_run: bool = False
+    upgrade_package_names: Set[str],
+    verbose: bool = False,
+    dry_run: bool = False,
+    pre: bool = False,
 ) -> None:
     packages_to_sources = _get_sources_for_packages(upgrade_package_names, TargetType.ALL)
 
@@ -277,7 +286,11 @@ def upgrade_source(
         print(f"Upgrading package(s):\n  - {_newline.join(package_names)}")
         for source_name in _resolve_deps(source_names):
             _run_pip_compile(
-                source_name, upgrade_packages=package_names, verbose=verbose, dry_run=dry_run
+                source_name,
+                upgrade_packages=package_names,
+                verbose=verbose,
+                dry_run=dry_run,
+                pre=pre,
             )
 
 
@@ -302,6 +315,12 @@ def main() -> None:
             "Optionally specify package names to upgrade only those."
         ),
     )
+    upgrade_parser.add_argument(
+        "--pre",
+        action="store_true",
+        default=False,
+        help="Use pre-release versions of packages if available.",
+    )
     upgrade_parser.add_argument("packages", metavar="package", nargs="*")
 
     parsed = parser.parse_args()
@@ -318,7 +337,17 @@ def main() -> None:
                 sys.exit(1)
             compile_source(upgrade_all=True, verbose=parsed.verbose, dry_run=parsed.dry_run)
         else:
-            upgrade_source(packages, verbose=parsed.verbose, dry_run=parsed.dry_run)
+            if parsed.pre:
+                print(
+                    "Warning: Using the '--pre' option can cause unintended upgrades to "
+                    "prerelease versions of unrelated packages. This is due to constraints in the "
+                    "underlying tools (pip-compile / pip) that don't currently allow constraining "
+                    "pre-releases to only specific packages.\n"
+                    "Please carefully inspect the generated output files!"
+                )
+            upgrade_source(
+                packages, verbose=parsed.verbose, dry_run=parsed.dry_run, pre=parsed.pre
+            )
 
 
 if __name__ == "__main__":
