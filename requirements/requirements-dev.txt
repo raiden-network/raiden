@@ -66,7 +66,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==4.24.3        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.5.0  # via -r requirements.txt, pluggy
+importlib-metadata==1.5.0  # via -r requirements.txt, jsonschema, pluggy, pytest
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -136,7 +136,7 @@ pytest==5.3.5             # via -r requirements-dev.in, pytest-forked, pytest-ra
 pytoml==0.1.20            # via -r requirements.txt
 pytz==2019.1              # via -r requirements-docs.txt, -r requirements.txt, babel, flask-restful
 pyyaml==5.1.1             # via matrix-synapse
-raiden-contracts==v0.37.0-beta  # via -r requirements.txt
+raiden-contracts==0.37.0b2  # via -r requirements.txt
 raiden-webui==0.11.0      # via -r requirements.txt
 readme-renderer==24.0     # via -r requirements-dev.in
 releases==1.6.1           # via -r requirements-docs.txt
@@ -165,7 +165,7 @@ traitlets==4.3.2          # via -r requirements.txt, ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
 typed-ast==1.4.0          # via astroid, mypy
-typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy, signedjson
+typing-extensions==3.7.4.1  # via -r requirements.txt, matrix-synapse, mypy, signedjson, web3
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
