@@ -160,7 +160,7 @@ def get_best_routes(
             f"the requested transfer."
         )
         if error_direct is not None:
-            error_msg += "direct channel {error_direct}."
+            error_msg += f"direct channel {error_direct}."
 
         log.warning(
             "None of the existing channels could be used to complete the transfer",
