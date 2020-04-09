@@ -14,11 +14,11 @@
 - [Repositories](#repositories)
 - [Contact](#contact)
 
-The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
+The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It's complementary to the Ethereum Blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
 
->**INFO:** The Raiden client and smart contracts have been [released for mainnet](https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c) with a limited alpha release of the Raiden Network in December 2018.
+>**INFO:** The Raiden client and smart contracts have been [released for Mainnet](https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c) with a limited alpha release of the Raiden Network in December 2018.
 
-The Raiden Network is an infrastructure layer on top of the Ethereum blockchain. While the basic idea is simple, the underlying protocol is quite complex and the implementation non-trivial. Nonetheless the technicalities can be abstracted away, such that developers can interface with a rather simple API to build scalable decentralized applications based on the Raiden Network.
+The Raiden Network is an infrastructure layer on top of the Ethereum Blockchain. While the basic idea is simple, the underlying protocol is quite complex and the implementation non-trivial. Nonetheless the technicalities can be abstracted away, such that developers can interface with a rather simple API to build scalable decentralized applications based on the Raiden Network.
 
 [![Raiden in a Nutshell](https://user-images.githubusercontent.com/35398162/59496225-46c18300-8e91-11e9-9253-1465f5fd5985.PNG)](https://youtu.be/R1tIy1XgdPw)
 
@@ -61,19 +61,19 @@ Read the [tentative specification for the Raiden Network](https://raiden-network
 ## Repositories
 The Raiden Network is getting created with a set of tools, which are maintained in different repositories.
 ### Core
-- The [solidity smart contracts, librairies and deployment tools](https://github.com/raiden-network/raiden-contracts) are used to bootstrap a Raiden Network on an Ethereum Chain.
+- The [solidity smart contracts, libraries and deployment tools](https://github.com/raiden-network/raiden-contracts) are used to bootstrap a Raiden Network on an Ethereum Chain.
 
 - The Raiden Python client within the current repository is used to manage payment channels and to make token transfers.
 
 - A [configured matrix server](https://github.com/raiden-network/raiden-transport) joins a federation of Matrix servers which is used as the transport layer for the Raiden Network. 
 
 - The [Service repository](https://github.com/raiden-network/raiden-services) contains the code for following services:
-    - The Monitoring Service watches open payment channels when the user is not online. 
+    - The Monitoring Service watches open payment channels when the user is not on-line. 
     - The Pathfinding service supports users in finding the cheapest or shortest way to route a payment through the network.
     
 - The [Light Client repository](https://github.com/raiden-network/light-client) contains the code for following applications:
     - The Raiden Light Client SDK is a Raiden Network compatible client written in JavaScript/Typescript.
-    - The Raiden dApp is a reference implementation of the Raiden Light Client SDK.
+    - The Raiden DApp is a reference implementation of the Raiden Light Client SDK.
 
 ### Tools
 - The [Raiden WebUI](https://github.com/raiden-network/webui) is Raiden Web User Inteface to manage channels and make token transfers.
@@ -84,13 +84,13 @@ The Raiden Network is getting created with a set of tools, which are maintained 
 
 - The [Scenario Player](https://github.com/raiden-network/scenario-player) is an integration testing tool for the Raiden contracts, the Raiden client and the services.
 
-- The [Workshop Scripts](https://github.com/raiden-network/workshop) enable workshop fascilitators to easily host a Raiden Workshop.
+- The [Workshop Scripts](https://github.com/raiden-network/workshop) enable workshop facilitators to easily host a Raiden Workshop.
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-Also have a look at the [Raiden Development Guide](./CONTRIBUTING.md) and the [Raiden Developer Onboarding Guide](https://raiden-network.readthedocs.io/en/stable/onboarding.html) for more info.
+Also have a look at the [Raiden Development Guide](./CONTRIBUTING.md) and the [Raiden Developer On-boarding Guide](https://raiden-network.readthedocs.io/en/stable/onboarding.html) for more info.
 
 ## License
 
