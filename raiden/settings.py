@@ -47,9 +47,10 @@ DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT = 60_000
 # - The Raiden node might not be able to process the messages immediately
 DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY = 15_000
 DEFAULT_MATRIX_KNOWN_SERVERS = {
+    # FIXME, XXX: Change to new mainet known servers file after mainnet testing is done!
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
-        "/master/known_servers.main.yaml"
+        "/master/known_servers.main.test.yaml"
     ),
     Environment.DEVELOPMENT: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
