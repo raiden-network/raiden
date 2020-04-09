@@ -607,7 +607,19 @@ def run(ctx: Context, **kwargs: Any) -> None:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
     try:
-        run_services(kwargs)
+        try:
+            run_services(kwargs)
+        finally:  # pragma: no cover
+            # teardown order is important because of side-effects, both the
+            # switch_monitor and profiler could use the tracing api, for the
+            # teardown code to work correctly the teardown has to be done in the
+            # reverse order of the initialization.
+            if switch_monitor is not None:
+                switch_monitor.stop()
+            if memory_logger is not None:
+                memory_logger.stop()
+            if profiler is not None:
+                profiler.stop()
     except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as ex:
         click.secho(
             f"{ex}. Please make sure that this Raiden node is the "
@@ -649,17 +661,6 @@ def run(ctx: Context, **kwargs: Any) -> None:
     except Exception as ex:
         write_stack_trace(ex)
         sys.exit(ReturnCode.FATAL)
-    finally:  # pragma: no cover
-        # teardown order is important because of side-effects, both the
-        # switch_monitor and profiler could use the tracing api, for the
-        # teardown code to work correctly the teardown has to be done in the
-        # reverse order of the initialization.
-        if switch_monitor is not None:
-            switch_monitor.stop()
-        if memory_logger is not None:
-            memory_logger.stop()
-        if profiler is not None:
-            profiler.stop()
 
 
 # List of available options, used by the scenario player
