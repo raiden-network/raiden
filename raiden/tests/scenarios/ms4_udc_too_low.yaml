@@ -32,7 +32,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: 40
+    default-settle-timeout: {{ settlement_timeout_min }}
     default-reveal-timeout: 20
 
 ## This scenario tests that the MS does not kick in, if the node requesting monitoring does
@@ -81,7 +81,7 @@ scenario:
           name: "Wait for MS to not react"
           tasks:
             # The MS reacts within the settle_timeout
-            - wait_blocks: 40
+            - wait_blocks: {{ settlement_timeout_min }}
             # Note that 0 events are expected
             - assert_events:
                 contract_name: "TokenNetwork"

@@ -32,7 +32,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: 40
+    default-settle-timeout: {{ settlement_timeout_min }}
     default-reveal-timeout: 20
 
 # This is the MS3 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
@@ -74,8 +74,8 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 40 blocks, but we already waited 22 blocks.
-      ## Add 10 blocks as safety margin: 18 + 10 = 28
-      - wait_blocks: 28
+      ## We already waited 22 blocks, so we can subtract that from the settlement_timeout_min.
+      ## Add 10 blocks as safety margin.
+      - wait_blocks: {{ settlement_timeout_min - 22 + 10 }}
       # will fail for now since channel was closed by node1.
       - assert_ms_claim: {channel_info_key: "MS Test Channel", must_claim: False}
