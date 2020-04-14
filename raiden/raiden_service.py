@@ -656,7 +656,7 @@ class RaidenService(Runnable):
             contract_manager=self.contract_manager,
             last_fetched_block=last_block_number,
             event_filters=filters,
-            max_number_of_blocks_to_poll=BlockNumber(100_000),
+            max_number_of_blocks_to_poll=BlockNumber(1_000),
         )
 
         latest_block_num = self.rpc_client.block_number()
