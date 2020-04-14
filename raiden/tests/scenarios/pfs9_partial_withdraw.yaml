@@ -12,7 +12,7 @@ settings:
         balance_per_node: 5000
 
 token:
-  address: "0x59105441977ecD9d805A4f5b060E34676F50F806"
+  address: "{{ transfer_token }}"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
@@ -27,10 +27,10 @@ nodes:
     pathfinding-max-fee: 100
     enable-monitoring: true
     proportional-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 0
 
 ## This is the PFS9 scenario. It aims to make sure that the PFS reacts correctly to balance updates

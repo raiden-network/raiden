@@ -30,10 +30,10 @@ nodes:
     pathfinding-max-fee: 100
     enable-monitoring: true
     proportional-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 0
     default-settle-timeout: 40
     default-reveal-timeout: 20
