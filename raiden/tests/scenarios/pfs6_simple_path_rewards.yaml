@@ -22,7 +22,7 @@ nodes:
     gas-price: fast
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     proportional-fee:
       - "{{ transfer_token }}"
       - 0
@@ -56,7 +56,7 @@ scenario:
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 409}
             - wait_blocks: 1
             - assert_pfs_history: {source: 3, target: 0, request_count: 1}
-            - assert_pfs_iou: {source: 3, amount: 100}
+            - assert_pfs_iou: {source: 3, amount: {{ pfs_fee }}}
             - assert_pfs_iou: {source: 2, iou_exists: false}
 
       - parallel:
@@ -83,7 +83,7 @@ scenario:
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - wait_blocks: 1
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}
-            - assert_pfs_iou: {source: 3, amount: 200}
+            - assert_pfs_iou: {source: 3, amount: {{ 2 * pfs_fee }}}
             - assert_pfs_iou: {source: 2, iou_exists: false}
             - assert_pfs_iou: {source: 1, iou_exists: false}
             - assert_pfs_iou: {source: 0, iou_exists: false}
@@ -93,15 +93,15 @@ scenario:
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - wait: 10
             - assert_pfs_history: {source: 0, target: 3, request_count: 1}
-            - assert_pfs_iou: {source: 0, amount: 100}
+            - assert_pfs_iou: {source: 0, amount: {{ pfs_fee }}}
             - assert_pfs_iou: {source: 1, iou_exists: false}
             - assert_pfs_iou: {source: 2, iou_exists: false}
-            - assert_pfs_iou: {source: 3, amount: 200}
+            - assert_pfs_iou: {source: 3, amount: {{ 2 * pfs_fee }}}
 
             - transfer: {from: 2, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - wait: 10
             - assert_pfs_history: {source: 2, target: 0, request_count: 1}
-            - assert_pfs_iou: {source: 2, amount: 100}
+            - assert_pfs_iou: {source: 2, amount: {{ pfs_fee }}}
 
       - serial:
           name: "Assert on all channel balances after transfers"

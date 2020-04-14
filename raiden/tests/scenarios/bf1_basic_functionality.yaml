@@ -26,7 +26,7 @@ nodes:
     gas-price: fast
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     enable-monitoring: true
     proportional-fee:
       - "{{ transfer_token }}"
@@ -121,9 +121,9 @@ scenario:
             # Add a wait until all ious are processed correctly
             - wait: 100
             - assert_pfs_history: {source: 3, target: 0, request_count: 10}
-            - assert_pfs_iou: {source: 3, amount: 1000}
+            - assert_pfs_iou: {source: 3, amount: {{ 10 * pfs_fee }} }
             - assert_pfs_history: {source: 1, target: 4, request_count: 10}
-            - assert_pfs_iou: {source: 1, amount: 1000}
+            - assert_pfs_iou: {source: 1, amount: {{ 10 * pfs_fee }} }
             # Make sure that a mediating node has not used the PFS
             - assert_pfs_iou: {source: 2, iou_exists: false}
       - serial:
