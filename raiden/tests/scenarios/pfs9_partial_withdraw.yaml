@@ -24,7 +24,7 @@ nodes:
     routing-mode: pfs
     # PFS only returns one path to make sure that the best one available is returned
     pathfinding-max-paths: 1
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     enable-monitoring: true
     proportional-fee:
       - "{{ transfer_token }}"
@@ -88,7 +88,7 @@ scenario:
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
 
             # Check that IOU is created
-            - assert_pfs_iou: {source: 0, amount: 100}
+            - assert_pfs_iou: {source: 0, amount: {{ pfs_fee }}}
       - serial:
           name: "Check that shortest path was used"
           tasks:
@@ -128,7 +128,7 @@ scenario:
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 500_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
 
             # Check that IOU is created
-            - assert_pfs_iou: {source: 0, amount: 200}
+            - assert_pfs_iou: {source: 0, amount: {{ 2 * pfs_fee }}}
       - serial:
           name: "Check that the [0, 1, 2, 3] path was used"
           tasks:

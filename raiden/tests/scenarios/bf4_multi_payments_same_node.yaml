@@ -24,7 +24,7 @@ nodes:
     gas-price: fast
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     enable-monitoring: true
     proportional-fee:
       - "{{ transfer_token }}"

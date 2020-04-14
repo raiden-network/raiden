@@ -24,7 +24,7 @@ nodes:
     gas-price: fast
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     proportional-fee:
       - "{{ transfer_token }}"
       - 0
@@ -90,7 +90,7 @@ scenario:
           name: "Check that IOUs exist after the payments"
           tasks:
             # Add a wait until all ious are processed correctly
-            - assert_pfs_iou: {source: 0, amount: 10000}
+            - assert_pfs_iou: {source: 0, amount: {{ 100 * pfs_fee }}}
             - assert_pfs_history:
                 source: 0
                 target: 3
