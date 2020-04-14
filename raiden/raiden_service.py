@@ -301,7 +301,6 @@ class RaidenService(Runnable):
         self.greenlets: List[Greenlet] = list()
 
         self.last_log_time = datetime.now()
-        self.last_log_block = BlockNumber(0)
 
         self.contract_manager = ContractManager(config.contracts_path)
         self.wal: Optional[WriteAheadLog] = None
@@ -599,12 +598,12 @@ class RaidenService(Runnable):
         state_change_qty = self.wal.storage.count_state_changes()
         self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
 
-    def _log_sync_progress(self, to_block: BlockNumber) -> None:
+    def _log_sync_progress(self, current_block: BlockNumber, target_block: BlockNumber) -> None:
         """Print a message if there are many blocks to be fetched, or if the
         time in-between polls is high.
         """
         now = datetime.now()
-        blocks_to_sync = to_block - self.last_log_block
+        blocks_to_sync = target_block - current_block
         elapsed = (now - self.last_log_time).total_seconds()
 
         if blocks_to_sync > 100 or elapsed > 15.0:
@@ -612,12 +611,10 @@ class RaidenService(Runnable):
                 "Synchronizing blockchain events",
                 blocks_to_sync=blocks_to_sync,
                 blocks_per_second=blocks_to_sync / elapsed,
-                to_block=to_block,
+                to_block=target_block,
                 elapsed=elapsed,
             )
             self.last_log_time = now
-
-        self.last_log_block = to_block
 
     def _synchronize_with_blockchain(self) -> None:
         """Prepares the alarm task callback and synchronize with the blockchain
@@ -988,7 +985,7 @@ class RaidenService(Runnable):
         sync_start = datetime.now()
 
         while self.blockchain_events.last_fetched_block < target_block_number:
-            self._log_sync_progress(target_block_number)
+            self._log_sync_progress(self.blockchain_events.last_fetched_block, target_block_number)
 
             poll_result = self.blockchain_events.fetch_logs_in_batch(target_block_number)
             pendingtokenregistration: Dict[
