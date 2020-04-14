@@ -5,7 +5,7 @@ settings:
   # Adapt to chain used
   services:
     pfs:
-      url: {{ pfs_without_fee }}
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
