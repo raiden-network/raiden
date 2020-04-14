@@ -11,7 +11,7 @@ settings:
         deposit: true
 
 token:
-  address: "0x59105441977ecD9d805A4f5b060E34676F50F806"
+  address: "{{ transfer_token }}"
   balance_min: 100_000_000_000_000_000_000
   balance_fund: 100_000_000_000_000_000_000
 
@@ -25,13 +25,13 @@ nodes:
     pathfinding-max-paths: 5
     pathfinding-max-fee: 100
     flat-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 0
     proportional-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x59105441977ecD9d805A4f5b060E34676F50F806"
+      - "{{ transfer_token }}"
       - 10_000  # 1% imbalance fee on channel balance
     no-cap-mediation-fees: true
 
