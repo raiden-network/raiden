@@ -2,6 +2,11 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc6`
+* :bug:`6072` Always return valid JSON on the config endpoint, even when the REST API is starting.
+* :bug:`6067` Workaround gevent's bug on wait for single elements.
+* :bug:`6066` Workaround slow speed of geth on mainnet for eth_getLogs.
+
 * :release:`0.200.0-rc3`
 * :feature:`5281` Add a /status endpoint; start the API earlier and return 503 SERVICE UNAVAILABLE during the initial sync.
 * :feature:`4588` Remove the echo_node subcommand of the command line interface.
