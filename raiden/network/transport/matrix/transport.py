@@ -13,7 +13,7 @@ from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock
 from gevent.pool import Pool
-from gevent.queue import JoinableQueue
+from gevent.queue import Empty, JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
@@ -612,14 +612,29 @@ class MatrixTransport(Runnable):
 
     def _health_check_worker(self) -> None:
         """ Worker to process healthcheck requests. """
-        while True:
-            gevent.wait({self._healthcheck_queue, self._stop_event}, count=1)
+        # Instead of busy-looping on the queue, this code used to use
+        #
+        #    gevent.wait({self._healthcheck_queue, self._stop_event}, count=1)
+        #
+        # Due to https://github.com/gevent/gevent/issues/1540 this caused AssertionErrors to be
+        # printed during startup since, as soon as a node has open channels, the healthcheck
+        # queue's internal event will always be already set before the first wait call here.
+        #
+        # Investigating this issue did suggest that apart from the exception printed on stderr
+        # this seemed to have no other negative effects. However to make sure we changed the code
+        # to it's current form.
+        #
+        # FIXME: Once the linked gevent bug has been fixed remove the busy loop and switch back to
+        #        using `wait()` and remove the comment above.
 
+        while True:
+            try:
+                self.immediate_health_check_for(self._healthcheck_queue.get(timeout=0.25))
+            except Empty:
+                pass
             if self._stop_event.is_set():
                 self.log.debug("Health check worker exiting, stop is set")
                 return
-
-            self.immediate_health_check_for(self._healthcheck_queue.get())
 
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         """Queue messages to be sent.

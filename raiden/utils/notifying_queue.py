@@ -46,4 +46,4 @@ class NotifyingQueue(Event, Generic[T]):
         return result
 
     def __repr__(self) -> str:
-        return f"NotifyingQueue(num_items={len(self.queue)})"
+        return f"NotifyingQueue(id={id(self)}, num_items={len(self.queue)})"
