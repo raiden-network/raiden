@@ -915,13 +915,12 @@ class MatrixTransport(Runnable):
         )
         gevent.joinall(greenlets, raise_error=True)
 
-    """
-    returns list of address of room members.
-    If address can not be extracted due to false displayname
-    it will include None in the list
-    """
-
     def _extract_addresses(self, room: Room) -> List[Optional[Address]]:
+        """
+        returns list of address of room members.
+        If address can not be extracted due to false displayname
+        it will include None in the list
+        """
         assert self._raiden_service is not None, "_raiden_service not set"
         joined_addresses = set(
             validate_userid_signature(user) for user in room.get_joined_members()
