@@ -329,7 +329,6 @@ class APIServer(Runnable):  # pragma: no unittest
         self.blueprint = blueprint
         self.flask_api_context = flask_api_context
         self.wsgiserver: Optional[WSGIServer] = None
-        self.available: bool = False
 
         self.flask_app.register_blueprint(self.blueprint)
         self.flask_app.config["WEBUI_PATH"] = RAIDEN_WEBUI_PATH
@@ -391,7 +390,12 @@ class APIServer(Runnable):  # pragma: no unittest
             else:
                 response = send_from_directory(self.flask_app.config["WEBUI_PATH"], file_name)
         except (NotFound, AssertionError):
-            response = send_from_directory(self.flask_app.config["WEBUI_PATH"], "index.html")
+            if file_name.endswith(".json"):
+                response = api_error(
+                    "Service unavailable, try again later", HTTPStatus.SERVICE_UNAVAILABLE
+                )
+            else:
+                response = send_from_directory(self.flask_app.config["WEBUI_PATH"], "index.html")
         return response
 
     def _run(self) -> None:  # type: ignore
@@ -525,7 +529,7 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=dict(our_address=self.checksum_address))
 
     @classmethod
-    def get_raiden_version(self) -> Response:
+    def get_raiden_version(cls) -> Response:
         return api_response(result=dict(version=get_system_spec()["raiden"]))
 
     def register_token(
