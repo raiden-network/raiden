@@ -228,7 +228,11 @@ def run_app(
         datadir = os.path.join(os.path.expanduser("~"), ".raiden")
 
     account_manager = AccountManager(keystore_path)
-    web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
+    web3 = Web3(
+        HTTPProvider(
+            rpc_normalized_endpoint(eth_rpc_endpoint), request_kwargs={"timeout": (10, 30)}
+        )
+    )
 
     check_sql_version()
     check_ethereum_has_accounts(account_manager)
