@@ -2,6 +2,9 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc7`
+* :bug:`6077` Fix missing requirement to build macOS binaries
+
 * :release:`0.200.0-rc6`
 * :bug:`6072` Always return valid JSON on the config endpoint, even when the REST API is starting.
 * :bug:`6067` Workaround gevent's bug on wait for single elements.
