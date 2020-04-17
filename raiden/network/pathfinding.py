@@ -533,7 +533,9 @@ def post_pfs_paths(
         error_code = info["error_code"] = response_json.get("error_code", 0)
 
         if PFSError.is_iou_rejected(error_code):
-            raise ServiceRequestIOURejected(error, error_code)
+            raise ServiceRequestIOURejected(
+                error, error_code, error_details=response_json.get("error_details")
+            )
 
         raise ServiceRequestFailed(error, info)
 
@@ -625,7 +627,9 @@ def query_paths(
                 )
             except ServiceRequestIOURejected as error:
                 code = error.error_code
-                log.debug("Pathfinding Service rejected IOU", error=error)
+                log.debug(
+                    "Pathfinding Service rejected IOU", error=error, details=error.error_details
+                )
 
                 if retries == 0 or code in (
                     PFSError.WRONG_IOU_RECIPIENT,
