@@ -28,8 +28,21 @@ from raiden.transfer.events import (
     ContractSendChannelWithdraw,
     ContractSendSecretReveal,
     SendMessageEvent,
+    SendProcessed,
+    SendWithdrawConfirmation,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import QueueIdentifier
+from raiden.transfer.mediated_transfer.events import (
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+    SendSecretRequest,
+    SendSecretReveal,
+    SendUnlock,
+)
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -107,22 +120,15 @@ def transfer_task_schema_deserialization(
     task_dict: Dict[str, Any], parent: Dict[str, Any]
 ) -> Optional[Schema]:
     # pylint: disable=unused-argument
-    # Avoid cyclic dependencies
     task_type = task_dict.get("_type")
     if task_type is None:
         return None
 
     if task_type.endswith("InitiatorTask"):
-        from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-
         return SchemaCache.get_or_create_schema(InitiatorTask)
     if task_type.endswith("MediatorTask"):
-        from raiden.transfer.mediated_transfer.tasks import MediatorTask
-
         return SchemaCache.get_or_create_schema(MediatorTask)
     if task_type.endswith("TargetTask"):
-        from raiden.transfer.mediated_transfer.tasks import TargetTask
-
         return SchemaCache.get_or_create_schema(TargetTask)
 
     return None
@@ -153,48 +159,24 @@ def message_event_schema_deserialization(
         return None
 
     if message_type.endswith("SendLockExpired"):
-        from raiden.transfer.mediated_transfer.events import SendLockExpired
-
         return SchemaCache.get_or_create_schema(SendLockExpired)
     elif message_type.endswith("SendLockedTransfer"):
-        from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-
         return SchemaCache.get_or_create_schema(SendLockedTransfer)
     elif message_type.endswith("SendSecretReveal"):
-        from raiden.transfer.mediated_transfer.events import SendSecretReveal
-
         return SchemaCache.get_or_create_schema(SendSecretReveal)
     elif message_type.endswith("SendUnlock"):
-        from raiden.transfer.mediated_transfer.events import SendUnlock
-
         return SchemaCache.get_or_create_schema(SendUnlock)
     elif message_type.endswith("SendSecretRequest"):
-        from raiden.transfer.mediated_transfer.events import SendSecretRequest
-
         return SchemaCache.get_or_create_schema(SendSecretRequest)
     elif message_type.endswith("SendRefundTransfer"):
-        from raiden.transfer.mediated_transfer.events import SendRefundTransfer
-
         return SchemaCache.get_or_create_schema(SendRefundTransfer)
-
     elif message_type.endswith("SendWithdrawRequest"):
-        from raiden.transfer.events import SendWithdrawRequest
-
         return SchemaCache.get_or_create_schema(SendWithdrawRequest)
-
     elif message_type.endswith("SendWithdrawConfirmation"):
-        from raiden.transfer.events import SendWithdrawConfirmation
-
         return SchemaCache.get_or_create_schema(SendWithdrawConfirmation)
-
     elif message_type.endswith("SendWithdrawExpired"):
-        from raiden.transfer.events import SendWithdrawExpired
-
         return SchemaCache.get_or_create_schema(SendWithdrawExpired)
-
     elif message_type.endswith("SendProcessed"):
-        from raiden.transfer.events import SendProcessed
-
         return SchemaCache.get_or_create_schema(SendProcessed)
 
     return None
