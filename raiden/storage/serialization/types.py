@@ -1,10 +1,8 @@
 from random import Random
 
 import networkx
-from marshmallow import Schema
 from marshmallow_dataclass import _native_to_marshmallow
 
-from raiden.storage.serialization.cache import SchemaCache
 from raiden.storage.serialization.fields import (
     AddressField,
     BytesField,
@@ -46,7 +44,6 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask,
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
-    Any,
     BalanceHash,
     BlockExpiration,
     BlockGasLimit,
@@ -55,7 +52,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     ChannelID,
-    Dict,
     EncodedData,
     FeeAmount,
     InitiatorAddress,
@@ -111,98 +107,6 @@ MESSAGE_NAME_TO_QUALIFIED_NAME = {
 }
 
 
-def serialization_schema_selector(obj: Any, parent: Any) -> Schema:
-    # pylint: disable=unused-argument
-    return SchemaCache.get_or_create_schema(obj.__class__)
-
-
-def transfer_task_schema_deserialization(
-    task_dict: Dict[str, Any], parent: Dict[str, Any]
-) -> Optional[Schema]:
-    # pylint: disable=unused-argument
-    task_type = task_dict.get("_type")
-    if task_type is None:
-        return None
-
-    if task_type.endswith("InitiatorTask"):
-        return SchemaCache.get_or_create_schema(InitiatorTask)
-    if task_type.endswith("MediatorTask"):
-        return SchemaCache.get_or_create_schema(MediatorTask)
-    if task_type.endswith("TargetTask"):
-        return SchemaCache.get_or_create_schema(TargetTask)
-
-    return None
-
-
-def balance_proof_schema_deserialization(
-    balance_proof_dict: Dict[str, Any], parent: Dict[str, Any]
-) -> Optional[Schema]:
-    # pylint: disable=unused-argument
-    bp_type = balance_proof_dict.get("_type")
-    if bp_type is None:
-        return None
-
-    if bp_type.endswith("UnsignedState"):
-        return SchemaCache.get_or_create_schema(BalanceProofUnsignedState)
-    elif bp_type.endswith("SignedState"):
-        return SchemaCache.get_or_create_schema(BalanceProofSignedState)
-
-    return None
-
-
-def message_event_schema_deserialization(
-    message_event_dict: Dict[str, Any], parent: Dict[str, Any]
-) -> Optional[Schema]:
-    # pylint: disable=unused-argument
-    message_type = message_event_dict.get("_type")
-    if message_type is None:
-        return None
-
-    if message_type.endswith("SendLockExpired"):
-        return SchemaCache.get_or_create_schema(SendLockExpired)
-    elif message_type.endswith("SendLockedTransfer"):
-        return SchemaCache.get_or_create_schema(SendLockedTransfer)
-    elif message_type.endswith("SendSecretReveal"):
-        return SchemaCache.get_or_create_schema(SendSecretReveal)
-    elif message_type.endswith("SendUnlock"):
-        return SchemaCache.get_or_create_schema(SendUnlock)
-    elif message_type.endswith("SendSecretRequest"):
-        return SchemaCache.get_or_create_schema(SendSecretRequest)
-    elif message_type.endswith("SendRefundTransfer"):
-        return SchemaCache.get_or_create_schema(SendRefundTransfer)
-    elif message_type.endswith("SendWithdrawRequest"):
-        return SchemaCache.get_or_create_schema(SendWithdrawRequest)
-    elif message_type.endswith("SendWithdrawConfirmation"):
-        return SchemaCache.get_or_create_schema(SendWithdrawConfirmation)
-    elif message_type.endswith("SendWithdrawExpired"):
-        return SchemaCache.get_or_create_schema(SendWithdrawExpired)
-    elif message_type.endswith("SendProcessed"):
-        return SchemaCache.get_or_create_schema(SendProcessed)
-
-    return None
-
-
-class_of_contract_send_event_classname = {
-    cls.__name__: cls
-    for cls in [
-        ContractSendChannelWithdraw,
-        ContractSendChannelClose,
-        ContractSendChannelSettle,
-        ContractSendChannelUpdateTransfer,
-        ContractSendSecretReveal,
-    ]
-}
-
-
-def contract_send_event_deserialization(
-    contract_send_event: Dict[str, Any], parent: Dict[str, Any]
-) -> Schema:
-    # pylint: disable=unused-argument
-    type_ = contract_send_event["_type"].split(".")[-1]
-
-    return SchemaCache.get_or_create_schema(class_of_contract_send_event_classname[type_])
-
-
 _native_to_marshmallow.update(
     {
         # Addresses
@@ -249,27 +153,36 @@ _native_to_marshmallow.update(
         ChainID: IntegerToStringField,
         ChannelID: IntegerToStringField,
         # Polymorphic fields
-        TransferTask: CallablePolyField(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=transfer_task_schema_deserialization,
-        ),
+        TransferTask: CallablePolyField(allowed_classes=[InitiatorTask, MediatorTask, TargetTask]),
         Union[BalanceProofUnsignedState, BalanceProofSignedState]: CallablePolyField(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=balance_proof_schema_deserialization,
+            allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState]
         ),
         Optional[Union[BalanceProofUnsignedState, BalanceProofSignedState]]: CallablePolyField(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=balance_proof_schema_deserialization,
-            allow_none=True,
+            allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState], allow_none=True
         ),
         SendMessageEvent: CallablePolyField(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=message_event_schema_deserialization,
+            allowed_classes=[
+                SendLockExpired,
+                SendLockedTransfer,
+                SendSecretReveal,
+                SendUnlock,
+                SendSecretRequest,
+                SendRefundTransfer,
+                SendWithdrawRequest,
+                SendWithdrawConfirmation,
+                SendWithdrawExpired,
+                SendProcessed,
+            ],
             allow_none=True,
         ),
         ContractSendEvent: CallablePolyField(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=contract_send_event_deserialization,
+            allowed_classes=[
+                ContractSendChannelWithdraw,
+                ContractSendChannelClose,
+                ContractSendChannelSettle,
+                ContractSendChannelUpdateTransfer,
+                ContractSendSecretReveal,
+            ],
             allow_none=False,
         ),
         # QueueIdentifier (Special case)

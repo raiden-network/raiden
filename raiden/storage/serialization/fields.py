@@ -1,12 +1,14 @@
 import json
 from random import Random
-from typing import Callable
+from typing import Dict, Iterable
 
 import marshmallow
 import networkx
 from eth_utils import to_bytes, to_canonical_address, to_hex
+from marshmallow import Schema
 from marshmallow_polyfield import PolyField
 
+from raiden.storage.serialization.cache import SchemaCache
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
@@ -130,19 +132,21 @@ class PRNGField(marshmallow.fields.Field):
 
 
 class CallablePolyField(PolyField):
-    def __init__(
-        self,
-        serialization_schema_selector: Callable = None,
-        deserialization_schema_selector: Callable = None,
-        many: bool = False,
-        **metadata: Any,
-    ):
-        super().__init__(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=deserialization_schema_selector,
-            many=many,
-            **metadata,
-        )
+    def __init__(self, allowed_classes: Iterable[type], many: bool = False, **metadata: Any):
+        super().__init__(many=many, **metadata)
+        self._class_of_classname = {cls.__name__: cls for cls in allowed_classes}
+
+    @staticmethod
+    def serialization_schema_selector(obj: Any, parent: Any) -> Schema:
+        # pylint: disable=unused-argument
+        return SchemaCache.get_or_create_schema(obj.__class__)
+
+    def deserialization_schema_selector(
+        self, deserializable_dict: Dict[str, Any], parent: Dict[str, Any]
+    ) -> Schema:
+        # pylint: disable=unused-argument
+        type_ = deserializable_dict["_type"].split(".")[-1]
+        return SchemaCache.get_or_create_schema(self._class_of_classname[type_])
 
     def __call__(self, **metadata: Any) -> "CallablePolyField":
         self.metadata = metadata
