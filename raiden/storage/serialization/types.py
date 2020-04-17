@@ -98,9 +98,9 @@ MESSAGE_NAME_TO_QUALIFIED_NAME = {
 }
 
 
-def transfer_task_schema_serialization(task: TransferTask, parent: Any) -> Schema:
+def serialization_schema_selector(obj: Any, parent: Any) -> Schema:
     # pylint: disable=unused-argument
-    return SchemaCache.get_or_create_schema(task.__class__)
+    return SchemaCache.get_or_create_schema(obj.__class__)
 
 
 def transfer_task_schema_deserialization(
@@ -128,13 +128,6 @@ def transfer_task_schema_deserialization(
     return None
 
 
-def balance_proof_schema_serialization(
-    balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState], parent: Any
-) -> Schema:
-    # pylint: disable=unused-argument
-    return SchemaCache.get_or_create_schema(balance_proof.__class__)
-
-
 def balance_proof_schema_deserialization(
     balance_proof_dict: Dict[str, Any], parent: Dict[str, Any]
 ) -> Optional[Schema]:
@@ -149,11 +142,6 @@ def balance_proof_schema_deserialization(
         return SchemaCache.get_or_create_schema(BalanceProofSignedState)
 
     return None
-
-
-def message_event_schema_serialization(message_event: SendMessageEvent, parent: Any) -> Schema:
-    # pylint: disable=unused-argument
-    return SchemaCache.get_or_create_schema(message_event.__class__)
 
 
 def message_event_schema_deserialization(
@@ -210,13 +198,6 @@ def message_event_schema_deserialization(
         return SchemaCache.get_or_create_schema(SendProcessed)
 
     return None
-
-
-def contract_send_event_serialization(
-    contract_send_event: ContractSendEvent, parent: Any
-) -> Schema:
-    # pylint: disable=unused-argument
-    return SchemaCache.get_or_create_schema(contract_send_event.__class__)
 
 
 class_of_contract_send_event_classname = {
@@ -287,25 +268,25 @@ _native_to_marshmallow.update(
         ChannelID: IntegerToStringField,
         # Polymorphic fields
         TransferTask: CallablePolyField(
-            serialization_schema_selector=transfer_task_schema_serialization,
+            serialization_schema_selector=serialization_schema_selector,
             deserialization_schema_selector=transfer_task_schema_deserialization,
         ),
         Union[BalanceProofUnsignedState, BalanceProofSignedState]: CallablePolyField(
-            serialization_schema_selector=balance_proof_schema_serialization,
+            serialization_schema_selector=serialization_schema_selector,
             deserialization_schema_selector=balance_proof_schema_deserialization,
         ),
         Optional[Union[BalanceProofUnsignedState, BalanceProofSignedState]]: CallablePolyField(
-            serialization_schema_selector=balance_proof_schema_serialization,
+            serialization_schema_selector=serialization_schema_selector,
             deserialization_schema_selector=balance_proof_schema_deserialization,
             allow_none=True,
         ),
         SendMessageEvent: CallablePolyField(
-            serialization_schema_selector=message_event_schema_serialization,
+            serialization_schema_selector=serialization_schema_selector,
             deserialization_schema_selector=message_event_schema_deserialization,
             allow_none=True,
         ),
         ContractSendEvent: CallablePolyField(
-            serialization_schema_selector=contract_send_event_serialization,
+            serialization_schema_selector=serialization_schema_selector,
             deserialization_schema_selector=contract_send_event_deserialization,
             allow_none=False,
         ),
