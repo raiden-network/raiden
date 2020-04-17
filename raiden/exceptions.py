@@ -9,6 +9,41 @@ What do you want from this file?
     you are not supposed to catch the exception.  Instead, use one of the
     existing uncaught exceptions: RaidenUnrecoverableError or BrokenPreconditionError.
 """
+import enum
+from typing import Any, Dict, List
+
+
+@enum.unique
+class PFSError(enum.IntEnum):
+    """ Error codes as returned by the PFS.
+
+    Defined in the pathfinding_service.exceptions module in
+    https://github.com/raiden-network/raiden-services
+    """
+
+    # TODO: link to PFS spec as soon as the error codes are added there.
+
+    # 20xx - General
+    INVALID_REQUEST = 2000
+    INVALID_SIGNATURE = 2001
+    REQUEST_OUTDATED = 2002
+
+    # 21xx - IOU errors
+    BAD_IOU = 2100
+    MISSING_IOU = 2101
+    WRONG_IOU_RECIPIENT = 2102
+    IOU_EXPIRED_TOO_EARLY = 2103
+    INSUFFICIENT_SERVICE_PAYMENT = 2104
+    IOU_ALREADY_CLAIMED = 2105
+    USE_THIS_IOU = 2106
+    DEPOSIT_TOO_LOW = 2107
+
+    # 22xx - Routing
+    NO_ROUTE_FOUND = 2201
+
+    @staticmethod
+    def is_iou_rejected(error_code: int) -> bool:
+        return error_code >= 2100 and error_code < 2200
 
 
 class RaidenError(Exception):
@@ -309,13 +344,36 @@ class ServiceRequestFailed(RaidenError):
     """ Raised when a request to one of the raiden services fails. """
 
 
-class ServiceRequestIOURejected(ServiceRequestFailed):
-    """ Raised when a service request fails due to a problem with the iou. """
+class PFSReturnedError(ServiceRequestFailed):
+    """ The PFS responded with a json message containing an error """
 
-    def __init__(self, message: str, error_code: int, error_details: dict) -> None:
-        super().__init__(f"{message} ({error_code})")
+    def __init__(self, message: str, error_code: int, error_details: Dict[str, Any]) -> None:
+        args: List[Any] = [f"{message} ({error_code})"]
+        if error_details:
+            args.append(error_details)
+        super().__init__(*args)
+
+        self.message = error_code
         self.error_code = error_code
         self.error_details = error_details
+
+    @classmethod
+    def from_response(cls, response_json: Dict[str, Any]) -> "PFSReturnedError":
+        # TODO: Use marshmallow to deserialize the message fields. Otherwise we
+        # can't guarantee that the variables have the right type, causing bad
+        # error handling.
+        error_params = dict(
+            message=response_json.get("errors", ""),
+            error_code=response_json.get("error_code", 0),
+            error_details=response_json.get("error_details"),
+        )
+        if PFSError.is_iou_rejected(error_params["error_code"]):
+            return ServiceRequestIOURejected(**error_params)
+        return cls(**error_params)
+
+
+class ServiceRequestIOURejected(PFSReturnedError):
+    """ Raised when a service request fails due to a problem with the iou. """
 
 
 class UndefinedMediationFee(RaidenError):
