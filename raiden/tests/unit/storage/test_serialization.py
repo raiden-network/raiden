@@ -15,13 +15,21 @@ from raiden.storage.serialization.fields import (
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SerializedSQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.events import (
+    ContractSendChannelClose,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import QueueIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.state_change import ActionInitChain
-from raiden.utils.typing import BlockExpiration, BlockNumber, ChainID, Nonce, WithdrawAmount
+from raiden.utils.typing import (
+    BlockExpiration,
+    BlockNumber,
+    ChainID,
+    Nonce,
+    TokenNetworkAddress,
+    WithdrawAmount,
+)
 
 
 def assert_roundtrip(field, value):
@@ -143,4 +151,31 @@ def test_restore_queueids_to_queues(chain_state, netting_channel_state):
 
     deserialized_chain_state = JSONSerializer.deserialize(serialized_chain_state)
 
+    assert chain_state == deserialized_chain_state
+
+
+def test_serialize_contract_send_subclass(chain_state):
+    """ Serializing must preserve class
+
+    Regression test for https://github.com/raiden-network/raiden/issues/6075
+    """
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=ChainID(1),
+        token_network_address=TokenNetworkAddress(factories.make_address()),
+        channel_identifier=factories.make_channel_identifier(),
+    )
+    chain_state.pending_transactions = [
+        ContractSendChannelClose(
+            canonical_identifier=canonical_identifier,
+            triggered_by_block_hash=factories.make_block_hash(),
+            balance_proof=None,
+        )
+    ]
+
+    serialized_chain_state = JSONSerializer.serialize(chain_state)
+    deserialized_chain_state = JSONSerializer.deserialize(serialized_chain_state)
+    assert (
+        chain_state.pending_transactions[0].__class__.__name__
+        == deserialized_chain_state.pending_transactions[0].__class__.__name__
+    )
     assert chain_state == deserialized_chain_state

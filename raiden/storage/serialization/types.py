@@ -18,9 +18,17 @@ from raiden.storage.serialization.fields import (
 from raiden.transfer.architecture import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+    ContractSendEvent,
     TransferTask,
 )
-from raiden.transfer.events import SendMessageEvent
+from raiden.transfer.events import (
+    ContractSendChannelClose,
+    ContractSendChannelSettle,
+    ContractSendChannelUpdateTransfer,
+    ContractSendChannelWithdraw,
+    ContractSendSecretReveal,
+    SendMessageEvent,
+)
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
     AdditionalHash,
@@ -204,6 +212,34 @@ def message_event_schema_deserialization(
     return None
 
 
+def contract_send_event_serialization(
+    contract_send_event: ContractSendEvent, parent: Any
+) -> Schema:
+    # pylint: disable=unused-argument
+    return SchemaCache.get_or_create_schema(contract_send_event.__class__)
+
+
+class_of_contract_send_event_classname = {
+    cls.__name__: cls
+    for cls in [
+        ContractSendChannelWithdraw,
+        ContractSendChannelClose,
+        ContractSendChannelSettle,
+        ContractSendChannelUpdateTransfer,
+        ContractSendSecretReveal,
+    ]
+}
+
+
+def contract_send_event_deserialization(
+    contract_send_event: Dict[str, Any], parent: Dict[str, Any]
+) -> Schema:
+    # pylint: disable=unused-argument
+    type_ = contract_send_event["_type"].split(".")[-1]
+
+    return SchemaCache.get_or_create_schema(class_of_contract_send_event_classname[type_])
+
+
 _native_to_marshmallow.update(
     {
         # Addresses
@@ -267,6 +303,11 @@ _native_to_marshmallow.update(
             serialization_schema_selector=message_event_schema_serialization,
             deserialization_schema_selector=message_event_schema_deserialization,
             allow_none=True,
+        ),
+        ContractSendEvent: CallablePolyField(
+            serialization_schema_selector=contract_send_event_serialization,
+            deserialization_schema_selector=contract_send_event_deserialization,
+            allow_none=False,
         ),
         # QueueIdentifier (Special case)
         QueueIdentifier: QueueIdentifierField,
