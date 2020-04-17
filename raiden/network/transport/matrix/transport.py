@@ -291,7 +291,11 @@ class _RetryQueue(Runnable):
                 self.transport._send_raw(self.receiver, message_batch)
 
     def _run(self) -> None:  # type: ignore
-        msg = f"_RetryQueue started before transport._raiden_service is set"
+        msg = (
+            """_RetryQueue started before transport._raiden_service is set. """
+            """_RetryQueue should not be started before transport.start() is called"""
+        )
+
         assert self.transport._raiden_service is not None, msg
         self.greenlet.name = (
             f"RetryQueue "
@@ -522,8 +526,10 @@ class MatrixTransport(Runnable):
             if retrier:
                 retrier.notify()
 
-        # Wait for retriers to exit, then discard them
-        gevent.wait({r.greenlet for r in self._address_to_retrier.values()})
+        # Wait for retriers which already started to exit, then discard them
+        # Retriers which have not been started yet just get discarded
+        # In the meanwhile no other retriers should be started since stop_event is set
+        gevent.wait({r.greenlet for r in self._address_to_retrier.values() if r.greenlet})
         self._address_to_retrier = {}
 
         self._address_mgr.stop()
@@ -1162,11 +1168,8 @@ class MatrixTransport(Runnable):
         if retrier is None or retrier.greenlet.ready():
             retrier = _RetryQueue(transport=self, receiver=receiver)
             self._address_to_retrier[receiver] = retrier
-            # Always start the _RetryQueue, otherwise `stop` will block forever
-            # waiting for the corresponding gevent.Greenlet to complete. This
-            # has no negative side-effects if the transport has stopped because
-            # the retrier itself checks the transport running state.
-            retrier.start()
+            if not self._stop_event.ready():
+                retrier.start()
             # ``Runnable.start()`` may re-create the internal greenlet
             retrier.greenlet.link_exception(self.on_error)
         return retrier
