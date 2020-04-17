@@ -312,9 +312,10 @@ class ServiceRequestFailed(RaidenError):
 class ServiceRequestIOURejected(ServiceRequestFailed):
     """ Raised when a service request fails due to a problem with the iou. """
 
-    def __init__(self, message: str, error_code: int) -> None:
+    def __init__(self, message: str, error_code: int, error_details: dict) -> None:
         super().__init__(f"{message} ({error_code})")
         self.error_code = error_code
+        self.error_details = error_details
 
 
 class UndefinedMediationFee(RaidenError):
