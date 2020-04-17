@@ -2,7 +2,6 @@ import json
 import random
 from dataclasses import dataclass
 from datetime import datetime
-from enum import IntEnum, unique
 from uuid import UUID
 
 import click
@@ -18,7 +17,13 @@ from raiden.constants import (
     ZERO_TOKENS,
     RoutingMode,
 )
-from raiden.exceptions import RaidenError, ServiceRequestFailed, ServiceRequestIOURejected
+from raiden.exceptions import (
+    PFSError,
+    PFSReturnedError,
+    RaidenError,
+    ServiceRequestFailed,
+    ServiceRequestIOURejected,
+)
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
 from raiden.utils.formatting import to_checksum_address
@@ -110,39 +115,6 @@ class IOU:
             data["signature"] = to_hex(self.signature)
 
         return data
-
-
-@unique
-class PFSError(IntEnum):
-    """ Error codes as returned by the PFS.
-
-    Defined in the pathfinding_service.exceptions module in
-    https://github.com/raiden-network/raiden-services
-    """
-
-    # TODO: link to PFS spec as soon as the error codes are added there.
-
-    # 20xx - General
-    INVALID_REQUEST = 2000
-    INVALID_SIGNATURE = 2001
-    REQUEST_OUTDATED = 2002
-
-    # 21xx - IOU errors
-    BAD_IOU = 2100
-    MISSING_IOU = 2101
-    WRONG_IOU_RECIPIENT = 2102
-    IOU_EXPIRED_TOO_EARLY = 2103
-    INSUFFICIENT_SERVICE_PAYMENT = 2104
-    IOU_ALREADY_CLAIMED = 2105
-    USE_THIS_IOU = 2106
-    DEPOSIT_TOO_LOW = 2107
-
-    # 22xx - Routing
-    NO_ROUTE_FOUND = 2201
-
-    @staticmethod
-    def is_iou_rejected(error_code: int) -> bool:
-        return error_code >= 2100 and error_code < 2200
 
 
 MAX_PATHS_QUERY_ATTEMPTS = 2
@@ -517,7 +489,6 @@ def post_pfs_paths(
         )
 
     if response.status_code != 200:
-        info = {"http_error": response.status_code}
         try:
             response_json = get_response_json(response)
         except ValueError:
@@ -526,18 +497,11 @@ def post_pfs_paths(
                 response=response,
             )
             raise ServiceRequestFailed(
-                "Pathfinding Service returned error code (malformed json in response)", info
+                "Pathfinding Service returned error code (malformed json in response)",
+                {"http_error": response.status_code},
             )
 
-        error = info["error"] = response_json.get("errors")
-        error_code = info["error_code"] = response_json.get("error_code", 0)
-
-        if PFSError.is_iou_rejected(error_code):
-            raise ServiceRequestIOURejected(
-                error, error_code, error_details=response_json.get("error_details")
-            )
-
-        raise ServiceRequestFailed(error, info)
+        raise PFSReturnedError.from_response(response_json)
 
     try:
         response_json = get_response_json(response)
