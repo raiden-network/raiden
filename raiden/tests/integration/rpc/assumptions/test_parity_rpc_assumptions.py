@@ -1,6 +1,7 @@
 import pytest
+from eth_utils import to_canonical_address
 
-from raiden.network.rpc.client import JSONRPCClient, TransactionMined
+from raiden.network.rpc.client import JSONRPCClient, TransactionMined, check_address_has_code
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
@@ -42,3 +43,11 @@ def test_parity_request_pruned_data_raises_an_exception(deploy_client: JSONRPCCl
 
     with pytest.raises(ValueError):
         contract_proxy.functions.get(1).call(block_identifier=pruned_block_number)
+
+    with pytest.raises(ValueError):
+        check_address_has_code(
+            deploy_client,
+            to_canonical_address(contract_proxy.address),
+            "RpcWithStorageTest",
+            given_block_identifier=pruned_block_number,
+        )

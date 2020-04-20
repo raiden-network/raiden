@@ -8,7 +8,7 @@ from web3.exceptions import BadFunctionCallOutput
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
 from raiden.network.rpc.client import (
     JSONRPCClient,
-    check_address_has_code,
+    check_address_has_code_handle_pruned_block,
     was_transaction_successfully_mined,
 )
 from raiden.utils.typing import (
@@ -39,7 +39,7 @@ class ServiceRegistry:
             raise ValueError("Expected binary address for service registry")
 
         self.contract_manager = contract_manager
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=jsonrpc_client,
             address=Address(service_registry_address),
             contract_name=CONTRACT_SERVICE_REGISTRY,

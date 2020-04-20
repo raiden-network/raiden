@@ -14,7 +14,7 @@ from raiden.exceptions import (
 )
 from raiden.network.rpc.client import (
     JSONRPCClient,
-    check_address_has_code,
+    check_address_has_code_handle_pruned_block,
     was_transaction_successfully_mined,
 )
 from raiden.utils.secrethash import sha256_secrethash
@@ -49,7 +49,7 @@ class SecretRegistry:
             raise ValueError("Expected binary address format for secret registry")
 
         self.contract_manager = contract_manager
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=jsonrpc_client,
             address=Address(secret_registry_address),
             contract_name=CONTRACT_SECRET_REGISTRY,

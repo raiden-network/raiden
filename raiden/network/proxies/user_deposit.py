@@ -13,7 +13,7 @@ from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import (
     JSONRPCClient,
     TransactionSent,
-    check_address_has_code,
+    check_address_has_code_handle_pruned_block,
     was_transaction_successfully_mined,
 )
 from raiden.utils.formatting import format_block_id, to_checksum_address
@@ -67,7 +67,7 @@ class UserDeposit:
         if not is_binary_address(user_deposit_address):
             raise ValueError("Expected binary address format for token nework")
 
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=jsonrpc_client,
             address=Address(user_deposit_address),
             contract_name=CONTRACT_USER_DEPOSIT,
@@ -138,7 +138,7 @@ class UserDeposit:
         given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Initialize the UserDeposit contract with MS and OneToN addresses """
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=self.client,
             address=Address(monitoring_service_address),
             contract_name=CONTRACT_MONITORING_SERVICE,
@@ -147,7 +147,7 @@ class UserDeposit:
             ),
             given_block_identifier=given_block_identifier,
         )
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=self.client,
             address=Address(one_to_n_address),
             contract_name=CONTRACT_ONE_TO_N,

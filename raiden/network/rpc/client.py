@@ -314,7 +314,23 @@ def check_address_has_code(
     given_block_identifier: BlockIdentifier,
     expected_code: bytes = None,
 ) -> None:
-    """ Checks that the given address contains code. """
+    """ Checks that the given address contains code.
+
+    Use this function to detect errors prior to sending transactions, which is
+    faster to interact and easier to debug. These are the problem that can be
+    prevented:
+
+    - Ensure the target address indeed has code. Otherwise transaction would
+      fail to execute.
+    - Ensure the smart contract exists for the expected time frame. This can be
+      important to verify the metadata is correct, which is necessary to reduce
+      the range which events are queried, and also to detect bugs were a piece
+      of code tries to interact with a smart contract that has not finished
+      deploying.
+    - If possible, check the bytecode of the target smart contract. This is
+      important because it will validate the smart contract ABI (assuming the
+      metadata is correct). Invalid ABI lead to subtle hard to debug bugs.
+    """
     if is_bytes(given_block_identifier):
         assert isinstance(given_block_identifier, bytes), MYPY_ANNOTATION
         block_hash = encode_hex(given_block_identifier)
@@ -333,6 +349,26 @@ def check_address_has_code(
         raise ContractCodeMismatch(
             f"[{contract_name}]Address {to_checksum_address(address)} has wrong code."
         )
+
+
+def check_address_has_code_handle_pruned_block(
+    client: "JSONRPCClient",
+    address: Address,
+    contract_name: str,
+    given_block_identifier: BlockIdentifier,
+    expected_code: bytes = None,
+) -> None:
+    """ Checks that the given address contains code.
+
+    If `given_block_identifier` points to a pruned block, fallbacks to use
+    `latest` instead.
+    """
+    try:
+        check_address_has_code(
+            client, address, contract_name, given_block_identifier, expected_code
+        )
+    except ValueError:
+        check_address_has_code(client, address, contract_name, "latest", expected_code)
 
 
 def get_transaction_data(

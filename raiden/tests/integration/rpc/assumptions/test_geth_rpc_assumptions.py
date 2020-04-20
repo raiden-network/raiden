@@ -1,11 +1,13 @@
 import gevent
 import pytest
+from eth_utils import to_canonical_address
 from web3 import Web3
 
 from raiden.network.rpc.client import (
     EthTransfer,
     JSONRPCClient,
     TransactionMined,
+    check_address_has_code,
     gas_price_for_fast_transaction,
     geth_discover_next_available_nonce,
 )
@@ -51,6 +53,14 @@ def test_geth_request_pruned_data_raises_an_exception(
 
     with pytest.raises(ValueError):
         contract_proxy.functions.get(1).call(block_identifier=pruned_block_number)
+
+    with pytest.raises(ValueError):
+        check_address_has_code(
+            deploy_client,
+            to_canonical_address(contract_proxy.address),
+            "RpcWithStorageTest",
+            given_block_identifier=pruned_block_number,
+        )
 
 
 def test_geth_discover_next_available_nonce_concurrent_transactions(
