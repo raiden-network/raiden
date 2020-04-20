@@ -253,7 +253,7 @@ def configure_pfs_or_exit(
         )
         if maybe_pfs_url is None:
             raise RaidenError(
-                "No registered pathfinding service is running and basic routing is not used."
+                "Can not find any registered pathfinding service and basic routing is not used."
             )
         else:
             pfs_url = maybe_pfs_url
