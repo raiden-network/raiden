@@ -21,7 +21,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import (
     JSONRPCClient,
-    check_address_has_code,
+    check_address_has_code_handle_pruned_block,
     check_transaction_failure,
     was_transaction_successfully_mined,
 )
@@ -60,7 +60,7 @@ class TokenNetworkRegistry:
         block_identifier: BlockIdentifier,
     ) -> None:
 
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=rpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -301,7 +301,7 @@ class TokenNetworkRegistry:
 
                 check_transaction_failure(transaction_mined, self.rpc_client)
 
-                check_address_has_code(
+                check_address_has_code_handle_pruned_block(
                     client=self.rpc_client,
                     address=Address(secret_registry_address),
                     contract_name=CONTRACT_SECRET_REGISTRY,
@@ -429,7 +429,7 @@ class TokenNetworkRegistry:
                     "anymore."
                 )
 
-            check_address_has_code(
+            check_address_has_code_handle_pruned_block(
                 client=self.rpc_client,
                 address=Address(secret_registry_address),
                 contract_name=CONTRACT_SECRET_REGISTRY,

@@ -6,7 +6,7 @@ from raiden.constants import BLOCK_ID_LATEST, GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import RaidenRecoverableError
 from raiden.network.rpc.client import (
     JSONRPCClient,
-    check_address_has_code,
+    check_address_has_code_handle_pruned_block,
     check_transaction_failure,
     was_transaction_successfully_mined,
 )
@@ -46,7 +46,7 @@ class Token:
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
 
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             jsonrpc_client,
             Address(token_address),
             "Token",

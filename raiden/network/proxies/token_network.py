@@ -33,7 +33,7 @@ from raiden.network.proxies.utils import (
 )
 from raiden.network.rpc.client import (
     JSONRPCClient,
-    check_address_has_code,
+    check_address_has_code_handle_pruned_block,
     check_transaction_failure,
     was_transaction_successfully_mined,
 )
@@ -146,7 +146,7 @@ class TokenNetwork:
         if not is_binary_address(metadata.address):
             raise ValueError("Expected binary address format for token nework")
 
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=jsonrpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK,

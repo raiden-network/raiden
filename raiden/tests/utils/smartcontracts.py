@@ -2,6 +2,7 @@ import os
 
 from solc import compile_files
 from web3.contract import Contract
+from web3.types import TxReceipt
 
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.network.pathfinding import get_random_pfs
@@ -137,7 +138,9 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     return compiled_contracts
 
 
-def deploy_rpc_test_contract(deploy_client: JSONRPCClient, name: str):
+def deploy_rpc_test_contract(
+    deploy_client: JSONRPCClient, name: str
+) -> Tuple[Contract, TxReceipt]:
     contract_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "smart_contracts", f"{name}.sol")
     )
