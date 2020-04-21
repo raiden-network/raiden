@@ -1,16 +1,27 @@
+import time
 from dataclasses import dataclass
+from typing import Tuple
 
 import structlog
 from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
+from requests.exceptions import ReadTimeout
 from web3 import Web3
 from web3.types import LogReceipt, RPCEndpoint
 
-from raiden.blockchain.exceptions import UnknownRaidenEventType
+from raiden.blockchain.exceptions import EthGetLogsTimeout, UnknownRaidenEventType
 from raiden.blockchain.filters import decode_event, get_filter_args_for_all_events_from_channel
-from raiden.constants import BLOCK_ID_LATEST, EMPTY_HASH, GENESIS_BLOCK_NUMBER, UINT64_MAX
+from raiden.blockchain.utils import BlockBatchSizeAdjuster
+from raiden.constants import (
+    BLOCK_ID_LATEST,
+    ETH_GET_LOGS_THRESHOLD_FAST,
+    ETH_GET_LOGS_THRESHOLD_SLOW,
+    GENESIS_BLOCK_NUMBER,
+    UINT64_MAX,
+)
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.proxies.proxy_manager import ProxyManager
+from raiden.settings import BlockBatchSizeConfig
 from raiden.utils.typing import (
     ABI,
     Address,
@@ -86,14 +97,6 @@ class PollResult:
     polled_block_hash: BlockHash
     polled_block_gas_limit: BlockGasLimit
     events: List[DecodedEvent]
-
-
-ZERO_POLL_RESULT = PollResult(
-    polled_block_number=GENESIS_BLOCK_NUMBER,
-    polled_block_hash=EMPTY_HASH,
-    polled_block_gas_limit=BlockGasLimit(0),
-    events=[],
-)
 
 
 def verify_block_number(number: BlockIdentifier, argname: str) -> None:
@@ -348,13 +351,13 @@ class BlockchainEvents:
         contract_manager: ContractManager,
         last_fetched_block: BlockNumber,
         event_filters: List[SmartContractEvents],
-        max_number_of_blocks_to_poll: BlockNumber,
+        block_batch_size_config: BlockBatchSizeConfig,
     ) -> None:
         self.web3 = web3
         self.chain_id = chain_id
         self.last_fetched_block = last_fetched_block
-        self.max_number_of_blocks_to_poll = max_number_of_blocks_to_poll
         self.contract_manager = contract_manager
+        self.block_batch_size_adjuster = BlockBatchSizeAdjuster(block_batch_size_config)
 
         # This lock is used to add a new smart contract to the list of polled
         # smart contracts. The crucial optimization done by this class is to
@@ -382,19 +385,26 @@ class BlockchainEvents:
             event.contract_address: event for event in event_filters
         }
 
-    def fetch_logs_in_batch(self, target_block_number: BlockNumber) -> PollResult:
+    def fetch_logs_in_batch(self, target_block_number: BlockNumber) -> Optional[PollResult]:
         """Poll the smart contract events for a limited number of blocks to
         avoid read timeouts (issue #3558).
 
-        The block `target_block_number` will not be reached if it is more than
-        `self.max_number_of_blocks_to_poll` blocks away. To ensure the target
-        is reached keep calling `fetch_logs_in_batch` until
-        `PollResult.polled_block_number` is the same as `target_block_number`.
+        The block ``target_block_number`` will not be reached if it is more than
+        ``self.block_batch_size_adjuster.batch_size`` blocks away. To ensure the
+        target is reached keep calling ``fetch_logs_in_batch`` until
+        ``PollResult.polled_block_number`` is the same as ``target_block_number``.
 
         This function will make sure that the block range for the queries is
         not too big, this is necessary because it may take a long time for an
         Ethereum node to process the request, which will result in read
         timeouts (issue #3558).
+
+        The block batch size is adjusted dynamically based on the request
+        processing duration (see ``_query_and_track()``, issue #5538).
+        If the request times out the batch size is decreased and ``None``
+        is returned.
+        If the batch size falls below the lower threshold an exception is raised
+        by the ``BlockBatchSizeAdjuster``.
 
         This will also group the queries as an optimization for a healthy node
         (issue #4872). This is enforced by the design of the datastructures,
@@ -455,6 +465,7 @@ class BlockchainEvents:
         # effect it is the same thing as sending multiple requests, one after
         # the other. The only benefit here would be to save the requests
         # round-trip time.
+
         with self._filters_lock:
             # Skip the last fetched block, since the ranges are inclusive the
             # same block will be fetched twice which could result in duplicate
@@ -462,10 +473,10 @@ class BlockchainEvents:
             from_block = BlockNumber(self.last_fetched_block + 1)
 
             # Limit the range of blocks fetched, this limits the size of
-            # the scan done by the target node and ensures the response
-            # will not time out.
+            # the scan done by the target node. The batch size is adjusted
+            # below depending on the response time of the node.
             to_block = BlockNumber(
-                min(from_block + self.max_number_of_blocks_to_poll, target_block_number)
+                min(from_block + self.block_batch_size_adjuster.batch_size, target_block_number)
             )
 
             # Sending a single request for all the smart contract addresses
@@ -485,7 +496,34 @@ class BlockchainEvents:
             # clients, the rationale is to reduce the number of loops that
             # go through lots of elements).
 
-            decoded_result = self._query_and_track(from_block, to_block)
+            try:
+                decoded_result, request_duration = self._query_and_track(from_block, to_block)
+            except EthGetLogsTimeout:
+                # The request timed out - this typically means the node wasn't able to process
+                # the requested batch size fast enough.
+                # Decrease the batch size and let the higher layer retry.
+                log.debug("Timeout while fetching blocks, decreasing batch size")
+                self.block_batch_size_adjuster.decrease()
+                return None
+
+            can_use_bigger_batches = (
+                target_block_number - from_block > self.block_batch_size_adjuster.batch_size
+            )
+            # Adjust block batch size depending on request duration.
+            # To reduce oscillating the batch size is kept constant for request durations
+            # between ``ETH_GET_LOGS_THRESHOLD_FAST`` and ``ETH_GET_LOGS_THRESHOLD_SLOW``.
+            if request_duration < ETH_GET_LOGS_THRESHOLD_FAST:
+                # The request was fast, increase batch size
+                if can_use_bigger_batches:
+                    # But only if we actually need bigger batches. This prevents the batch
+                    # size from ballooning towards the maximum after the initial sync is done
+                    # since then typically only one block is fetched at a time which is usually
+                    # fast.
+                    self.block_batch_size_adjuster.increase()
+            elif request_duration > ETH_GET_LOGS_THRESHOLD_SLOW:
+                # The request is taking longer than the 'slow' threshold - decrease
+                # the batch size
+                self.block_batch_size_adjuster.decrease()
 
             latest_confirmed_block = self.web3.eth.getBlock(to_block)
 
@@ -500,7 +538,7 @@ class BlockchainEvents:
 
     def _query_and_track(
         self, from_block: BlockNumber, to_block: BlockNumber
-    ) -> List[DecodedEvent]:
+    ) -> Tuple[List[DecodedEvent], float]:
         """Query the blockchain up to `to_block` and create the filters for the
         smart contracts deployed during the current batch.
 
@@ -533,6 +571,7 @@ class BlockchainEvents:
         """
         filters_to_query: Iterable[SmartContractEvents]
 
+        request_duration: float = 0
         result: List[DecodedEvent] = []
         filters_to_query = self._address_to_filters.values()
 
@@ -549,17 +588,27 @@ class BlockchainEvents:
 
             log.debug("StatelessFilter: querying new entries", filter_params=filter_params)
 
-            # Using web3 because:
-            # - It sets an unique request identifier, not strictly necessary.
-            # - To avoid another abstraction to query the Ethereum client.
-            blockchain_events: List[LogReceipt] = self.web3.manager.request_blocking(
-                RPCEndpoint("eth_getLogs"), [filter_params]
-            )
+            try:
+                start = time.monotonic()
+                # Using web3 because:
+                # - It sets an unique request identifier, not strictly necessary.
+                # - To avoid another abstraction to query the Ethereum client.
+                blockchain_events: List[LogReceipt] = self.web3.manager.request_blocking(
+                    RPCEndpoint("eth_getLogs"), [filter_params]
+                )
+                request_duration = time.monotonic() - start
+            except ReadTimeout as ex:
+                # The request timed out while waiting for a response (as opposed to a
+                # ConnectTimeout).
+                # This will usually be caused by overloading of the target eth node but can also
+                # happen due to network conditions.
+                raise EthGetLogsTimeout() from ex
 
             log.debug(
                 "StatelessFilter: fetched new entries",
                 filter_params=filter_params,
                 blockchain_events=blockchain_events,
+                request_duration=request_duration,
             )
 
             if blockchain_events:
@@ -585,7 +634,7 @@ class BlockchainEvents:
             else:
                 filters_to_query = []
 
-        return result
+        return result, request_duration
 
     def event_to_abi(self, event: LogReceipt) -> ABI:
         address = to_canonical_address(event["address"])

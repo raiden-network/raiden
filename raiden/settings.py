@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from eth_typing import BlockNumber
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
@@ -148,10 +149,19 @@ class ServiceConfig:
     monitoring_enabled: bool = False
 
 
+@dataclass(frozen=True)
+class BlockBatchSizeConfig:
+    min: BlockNumber = BlockNumber(5)
+    warn_threshold: BlockNumber = BlockNumber(50)
+    initial: BlockNumber = BlockNumber(1_000)
+    max: BlockNumber = BlockNumber(100_000)
+
+
 @dataclass
 class BlockchainConfig:
     confirmation_blocks: BlockTimeout = DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     query_interval: float = DEFAULT_BLOCKCHAIN_QUERY_INTERVAL
+    block_batch_size_config: BlockBatchSizeConfig = BlockBatchSizeConfig()
 
 
 @dataclass

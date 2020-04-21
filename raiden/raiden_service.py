@@ -18,7 +18,6 @@ from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import (
-    ZERO_POLL_RESULT,
     BlockchainEvents,
     SmartContractEvents,
     secret_registry_events,
@@ -656,7 +655,7 @@ class RaidenService(Runnable):
             contract_manager=self.contract_manager,
             last_fetched_block=last_block_number,
             event_filters=filters,
-            max_number_of_blocks_to_poll=BlockNumber(1_000),
+            block_batch_size_config=self.config.blockchain.block_batch_size_config,
         )
 
         latest_block_num = self.rpc_client.block_number()
@@ -982,8 +981,11 @@ class RaidenService(Runnable):
             f"alarm task is started. node:{self!r}"
         )
         assert self.blockchain_events, msg
-
-        poll_result = ZERO_POLL_RESULT
+        log.debug(
+            "Poll until target",
+            target=target_block_number,
+            last_fetched_block=self.blockchain_events.last_fetched_block,
+        )
 
         sync_start = datetime.now()
 
@@ -991,6 +993,10 @@ class RaidenService(Runnable):
             self._log_sync_progress(target_block_number)
 
             poll_result = self.blockchain_events.fetch_logs_in_batch(target_block_number)
+            if poll_result is None:
+                # No blocks could be fetched (due to timeout), retry
+                continue
+
             pendingtokenregistration: Dict[
                 TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
             ] = dict()
