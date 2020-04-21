@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import structlog
 from eth_utils import decode_hex, is_binary_address, to_canonical_address
 from gevent.event import AsyncResult
+from gevent.threading import Lock
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import BLOCK_ID_LATEST, EMPTY_ADDRESS, UINT256_MAX
@@ -12,6 +13,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import (
     JSONRPCClient,
+    TransactionMined,
     TransactionSent,
     check_address_has_code_handle_pruned_block,
     was_transaction_successfully_mined,
@@ -55,6 +57,12 @@ class InflightDeposit:
     async_result: AsyncResult = field(default_factory=AsyncResult)
 
 
+@dataclass(frozen=True)
+class WithdrawPlan:
+    withdraw_amount: TokenAmount
+    withdraw_block: BlockNumber
+
+
 class UserDeposit:
     def __init__(
         self,
@@ -93,6 +101,10 @@ class UserDeposit:
         # unecessary transactions.
         self._inflight_deposits: Dict[Address, InflightDeposit] = dict()
 
+        # Don't allow concurrent withdraw_plan and withdraw calls.
+        # This simplifies the precondition checks.
+        self._withdraw_lock = Lock()
+
     def token_address(self, block_identifier: BlockIdentifier) -> TokenAddress:
         return TokenAddress(
             to_canonical_address(
@@ -129,6 +141,20 @@ class UserDeposit:
     def whole_balance_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
         return TokenAmount(
             self.proxy.functions.whole_balance_limit().call(block_identifier=block_identifier)
+        )
+
+    def get_withdraw_delay(self) -> BlockNumber:
+        return BlockNumber(self.proxy.functions.withdraw_delay().call())
+
+    def get_withdraw_plan(
+        self, withdrawer_address: Address, block_identifier: BlockIdentifier
+    ) -> WithdrawPlan:
+        withdraw_amount, withdraw_block = self.proxy.functions.withdraw_plans(
+            withdrawer_address
+        ).call(block_identifier=block_identifier)
+        return WithdrawPlan(
+            withdraw_amount=TokenAmount(withdraw_amount),
+            withdraw_block=BlockNumber(withdraw_block),
         )
 
     def init(
@@ -360,6 +386,61 @@ class UserDeposit:
 
             self._deposit_check_result(transaction_sent, token, total_deposit, amount_to_deposit)
 
+    def plan_withdraw(
+        self, amount: TokenAmount, given_block_identifier: BlockIdentifier
+    ) -> BlockNumber:
+        """ Announce that you plan to withdraw tokens from the UserDeposit contract
+
+        Returns the block number at which the withdraw is ready.
+        """
+        self._plan_withdraw_preconditions(amount, given_block_identifier)
+
+        # Simplify our lives by disallowing concurrent plan_withdraw / withdraw calls
+        with self._withdraw_lock:
+            estimated_transaction = self.client.estimate_gas(
+                self.proxy, "planWithdraw", {}, amount
+            )
+            transaction_sent = None
+            if estimated_transaction is not None:
+                transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self._plan_withdraw_check_result(
+                transaction_sent=transaction_sent, amount_to_plan_withdraw=amount
+            )
+
+        assert transaction_mined is not None, "_plan_withdraw_check_result returned None"
+
+        return BlockNumber(transaction_mined.receipt["blockNumber"] + self.get_withdraw_delay())
+
+    def withdraw(self, amount: TokenAmount, given_block_identifier: BlockIdentifier) -> None:
+        """ Withdraw tokens from UDC, requires a mature withdraw plan"""
+
+        token_address = self.token_address(given_block_identifier)
+        token = self.proxy_manager.token(
+            token_address=token_address, block_identifier=given_block_identifier
+        )
+
+        self._withdraw_preconditions(
+            amount_to_withdraw=amount, given_block_identifier=given_block_identifier
+        )
+
+        previous_token_balance = TokenAmount(
+            token.balance_of(self.node_address, given_block_identifier)
+        )
+
+        # Simplify our lives by disallowing concurrent plan_withdraw / withdraw calls
+        with self._withdraw_lock:
+            estimated_transaction = self.client.estimate_gas(self.proxy, "withdraw", {}, amount)
+
+            transaction_sent = None
+            if estimated_transaction is not None:
+                transaction_sent = self.client.transact(estimated_transaction)
+            self._withdraw_check_result(
+                transaction_sent=transaction_sent,
+                amount_to_withdraw=amount,
+                token=token,
+                previous_token_balance=previous_token_balance,
+            )
+
     def _deposit_preconditions(
         self,
         beneficiary: Address,
@@ -577,3 +658,161 @@ class UserDeposit:
                     raise RaidenRecoverableError(msg)
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
+
+    def _plan_withdraw_preconditions(
+        self, amount_to_plan_withdraw: TokenAmount, given_block_identifier: BlockIdentifier
+    ) -> None:
+        """ Check if a WithdrawPlan for the given amount can be created. """
+        if amount_to_plan_withdraw <= 0:
+            raise BrokenPreconditionError("Planned withdraw amount must be greater than zero.")
+
+        try:
+            current_balance = self.get_total_deposit(
+                address=self.node_address, block_identifier=given_block_identifier
+            )
+        except ValueError:
+            # If `given_block_identifier` has been pruned we can't perform the check
+            return
+        except BadFunctionCallOutput:
+            raise_on_call_returned_empty(given_block_identifier)
+
+        if current_balance < amount_to_plan_withdraw:
+            raise BrokenPreconditionError(
+                f"Can't create WithdrawPlan for amount {amount_to_plan_withdraw}, "
+                f"it exceeds the current balance of {current_balance}."
+            )
+
+    def _withdraw_preconditions(
+        self, amount_to_withdraw: TokenAmount, given_block_identifier: BlockIdentifier
+    ) -> None:
+        try:
+            withdraw_plan = self.get_withdraw_plan(
+                withdrawer_address=self.node_address, block_identifier=given_block_identifier
+            )
+            whole_balance = self.whole_balance(block_identifier=given_block_identifier)
+        except ValueError:
+            # If 'given_block_identifier' has been pruned, we can't perform the check
+            return
+        except BadFunctionCallOutput:
+            raise_on_call_returned_empty(given_block_identifier)
+
+        if amount_to_withdraw > withdraw_plan.withdraw_amount:
+            raise BrokenPreconditionError(
+                f"Can't withdraw {amount_to_withdraw}, "
+                f"current withdraw plan only allows for {withdraw_plan.withdraw_amount}."
+            )
+
+        given_block_number = self.client.get_block(given_block_identifier)["number"]
+
+        if withdraw_plan.withdraw_block > given_block_number:
+            raise BrokenPreconditionError(
+                f"Can't withdraw at block {given_block_number}. "
+                f"The current withdraw plan requires block number {withdraw_plan.withdraw_block}."
+            )
+
+        if whole_balance - amount_to_withdraw < 0:
+            raise BrokenPreconditionError(
+                f"The current whole balance is {whole_balance}. "
+                f"The withdraw of {amount_to_withdraw} would lead to an underflow."
+            )
+
+    def _plan_withdraw_check_result(
+        self, transaction_sent: Optional[TransactionSent], amount_to_plan_withdraw: TokenAmount
+    ) -> Optional[TransactionMined]:
+        if transaction_sent is None:
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
+            failed_at_blocknumber = failed_at["number"]
+
+            self.client.check_for_insufficient_eth(
+                transaction_name="planWithdraw",
+                transaction_executed=False,
+                required_gas=self.gas_measurements["UserDeposit.planWithdraw"],
+                block_identifier=failed_at_blocknumber,
+            )
+            raise RaidenRecoverableError(
+                "Plan withdraw transaction failed to be sent for an unknown reason."
+            )
+
+        transaction_mined = self.client.poll_transaction(transaction_sent)
+
+        if not was_transaction_successfully_mined(transaction_mined):
+            if amount_to_plan_withdraw <= 0:
+                raise RaidenRecoverableError(
+                    f"Planned withdraw amount was <= 0: {amount_to_plan_withdraw}."
+                )
+
+            failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
+
+            current_balance = self.get_total_deposit(
+                address=self.node_address, block_identifier=failed_at_blocknumber
+            )
+
+            if current_balance < amount_to_plan_withdraw:
+                raise RaidenRecoverableError(
+                    f"Couldn't plan withdraw because planned amount "
+                    f"{amount_to_plan_withdraw} exceeded current balance of {current_balance}."
+                )
+
+            raise RaidenRecoverableError("Plan withdraw failed for an unknown reason.")
+
+        return transaction_mined
+
+    def _withdraw_check_result(
+        self,
+        transaction_sent: Optional[TransactionSent],
+        amount_to_withdraw: TokenAmount,
+        token: Token,
+        previous_token_balance: TokenAmount,
+    ) -> None:
+        if transaction_sent is None:
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
+            failed_at_blocknumber = failed_at["number"]
+
+            self.client.check_for_insufficient_eth(
+                transaction_name="withdraw",
+                transaction_executed=False,
+                required_gas=self.gas_measurements["UserDeposit.withdraw"],
+                block_identifier=failed_at_blocknumber,
+            )
+            raise RaidenRecoverableError(
+                "Withdraw transaction failed to be sent for an unknown reason."
+            )
+
+        transaction_mined = self.client.poll_transaction(transaction_sent)
+
+        if not was_transaction_successfully_mined(transaction_mined):
+            failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
+
+            withdraw_plan = self.get_withdraw_plan(
+                withdrawer_address=self.node_address, block_identifier=failed_at_blocknumber
+            )
+            whole_balance = self.whole_balance(block_identifier=failed_at_blocknumber)
+
+            if amount_to_withdraw > withdraw_plan.withdraw_amount:
+                raise RaidenRecoverableError(
+                    f"Couldn't withdraw {amount_to_withdraw}, "
+                    f"current withdraw plan only allows for {withdraw_plan.withdraw_amount}."
+                )
+
+            if withdraw_plan.withdraw_block > failed_at_blocknumber:
+                raise RaidenRecoverableError(
+                    f"Couldn't withdraw at block {failed_at_blocknumber}. "
+                    f"The current withdraw plan requires block number "
+                    f"{withdraw_plan.withdraw_block}."
+                )
+
+            if whole_balance - amount_to_withdraw < 0:
+                raise RaidenRecoverableError(
+                    f"The current whole balance is {whole_balance}. "
+                    f"The withdraw of {amount_to_withdraw} would have lead to an underflow."
+                )
+
+            current_token_balance = TokenAmount(
+                token.balance_of(self.node_address, block_identifier=failed_at_blocknumber)
+            )
+            # FIXME: This seems fishy. The token balance could have an unexpected value for
+            #        unrelated reasons (e.g. concurrent token transfers via transferFrom).
+            if current_token_balance != previous_token_balance + amount_to_withdraw:
+                raise RaidenRecoverableError(f"Token transfer during withdraw failed.")
+
+            raise RaidenRecoverableError("Withdraw failed for an unknown reason.")

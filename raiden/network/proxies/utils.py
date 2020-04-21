@@ -72,6 +72,6 @@ def raise_on_call_returned_empty(given_block_identifier: BlockIdentifier) -> NoR
         f"Either the given address is for a different smart contract, "
         f"or the contract was not yet deployed at the block "
         f"{format_block_id(given_block_identifier)}. Either way this call "
-        f"should never happened."
+        f"should never have happened."
     )
     raise RaidenUnrecoverableError(msg)
