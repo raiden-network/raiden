@@ -189,6 +189,30 @@ class Token:
             We assume there to be sufficient balance as a precondition if
             this is called, so that is not checked as a precondition here.
         """
+
+        def check_for_insufficient_token_balance(block_number: BlockNumber) -> None:
+
+            failed_at_hash = encode_hex(self.client.blockhash_from_blocknumber(block_number))
+            self.client.check_for_insufficient_eth(
+                transaction_name="transfer",
+                transaction_executed=False,
+                required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,
+                block_identifier=block_number,
+            )
+
+            balance = self.balance_of(self.client.address, failed_at_hash)
+            if balance < amount:
+                msg = (
+                    f"Call to transfer will fail. Your balance of {balance} is "
+                    f"below the required amount of {amount}."
+                )
+                if balance == 0:
+                    msg += (
+                        " Note: The balance was 0, which may also happen if the contract "
+                        "is not a valid ERC20 token (balanceOf method missing)."
+                    )
+                raise RaidenRecoverableError(msg)
+
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
         # There are no direct calls to this method in any event handler,
@@ -200,53 +224,24 @@ class Token:
                 self.proxy, "transfer", log_details, to_address, amount
             )
 
-            # TODO: check Transfer event (issue: #2598)
             if estimated_transaction is not None:
+                # TODO: check Transfer event (issue: #2598)
                 transaction_sent = self.client.transact(estimated_transaction)
                 transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            is_succesful = (
-                estimated_transaction is not None
-                and was_transaction_successfully_mined(transaction_mined)
-            )
+                if was_transaction_successfully_mined(transaction_mined):
+                    return
 
-            if not is_succesful:
-                if not was_transaction_successfully_mined(transaction_mined):
-                    failed_at_block_number = BlockNumber(transaction_mined.receipt["blockNumber"])
-                else:
-                    failed_at_block_number = self.client.get_block(BLOCK_ID_LATEST)["number"]
-
-                failed_at_hash = encode_hex(
-                    self.client.blockhash_from_blocknumber(failed_at_block_number)
+                failed_at_block_number = BlockNumber(transaction_mined.receipt["blockNumber"])
+                check_for_insufficient_token_balance(failed_at_block_number)
+                raise RaidenRecoverableError(
+                    "Call to transfer failed for unknown reason. Please make sure the "
+                    "contract is a valid ERC20 token."
                 )
-
-                self.client.check_for_insufficient_eth(
-                    transaction_name="transfer",
-                    transaction_executed=False,
-                    required_gas=GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL,
-                    block_identifier=failed_at_block_number,
+            else:
+                failed_at_block_number = self.client.get_block(BLOCK_ID_LATEST)["number"]
+                check_for_insufficient_token_balance(failed_at_block_number)
+                raise RaidenRecoverableError(
+                    "Call to transfer will fail. Gas estimation failed for unknown "
+                    "reason. Please make sure the contract is a valid ERC20 token."
                 )
-
-                balance = self.balance_of(self.client.address, failed_at_hash)
-                if balance < amount:
-                    msg = (
-                        f"Call to transfer will fail. Your balance of {balance} is "
-                        f"below the required amount of {amount}."
-                    )
-                    if balance == 0:
-                        msg += (
-                            " Note: The balance was 0, which may also happen if the contract "
-                            "is not a valid ERC20 token (balanceOf method missing)."
-                        )
-                    raise RaidenRecoverableError(msg)
-
-                if estimated_transaction is None:
-                    raise RaidenRecoverableError(
-                        "Call to transfer will fail. Gas estimation failed for unknown "
-                        "reason. Please make sure the contract is a valid ERC20 token."
-                    )
-                else:
-                    raise RaidenRecoverableError(
-                        "Call to transfer failed for unknown reason. Please make sure the "
-                        "contract is a valid ERC20 token."
-                    )
