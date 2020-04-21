@@ -2,6 +2,13 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc8`
+* :feature:`5338` The number of blocks queried for events is now dynamically adjusted. This is necessary to prevent timeouts because the Ethereum client is overloaded.
+* :bug:`6082` Small bug fix, use of undefined variable.
+* :bug:`6083` Weakened byte code check to prevent errors with client pruning.
+* :bug:`6071` Fixed transport race condition which prevented a node to restart after a failure.
+* :bug:`6075` Fixed serialization problem for pending transactions.
+
 * :release:`0.200.0-rc7`
 * :bug:`6077` Fix missing requirement to build macOS binaries
 
