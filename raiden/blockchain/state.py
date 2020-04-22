@@ -72,7 +72,7 @@ def get_contractreceivechannelsettled_data_from_event(
     proxy_manager: ProxyManager,
     chain_state: ChainState,
     event: DecodedEvent,
-    latest_confirmed_block: BlockNumber,
+    current_confirmed_head: BlockNumber,
 ) -> Optional[ChannelSettleState]:
     data = event.event_data
     token_network_address = TokenNetworkAddress(event.originating_contract)
@@ -131,7 +131,7 @@ def get_contractreceivechannelsettled_data_from_event(
             canonical_identifier=channel_state.canonical_identifier,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
-            block_identifier=latest_confirmed_block,
+            block_identifier=current_confirmed_head,
         )
 
     return ChannelSettleState(canonical_identifier, our_locksroot, partner_locksroot)

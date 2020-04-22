@@ -2,8 +2,8 @@
 
 All fuctions that map an event to a state change must be side-effect free. If
 any additional data is necessary, either from the database or the blockchain
-itself. an utility should be added to raiden.blockchain.state, and then called
-by blockchainevent_to_statechange.
+itself, an utility should be added to `raiden.blockchain.state`, and then
+called by `blockchainevent_to_statechange`.
 """
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -340,7 +340,7 @@ def contractreceivechannelbatchunlock_from_event(
 def blockchainevent_to_statechange(
     raiden: "RaidenService",
     event: DecodedEvent,
-    latest_confirmed_block: BlockNumber,
+    current_confirmed_head: BlockNumber,
     pendingtokenregistration: Dict[
         TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
     ],
@@ -410,7 +410,7 @@ def blockchainevent_to_statechange(
             proxy_manager=proxy_manager,
             chain_state=chain_state,
             event=event,
-            latest_confirmed_block=latest_confirmed_block,
+            current_confirmed_head=current_confirmed_head,
         )
 
         if channel_settle_state:

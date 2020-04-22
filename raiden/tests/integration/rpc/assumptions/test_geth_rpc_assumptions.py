@@ -63,6 +63,56 @@ def test_geth_request_pruned_data_raises_an_exception(
         )
 
 
+def test_geth_request_block_data_does_not_raise_an_exception(
+    deploy_client: JSONRPCClient, web3: Web3
+) -> None:
+    """ Interacting with a pruned block through eth_getBlock does not raise.
+
+    If this assumptions tests fails the `BlockchainEvents` has to be fixed.
+    Currently it assumes that it can fetch metadata about any block, namely the
+    block number / hash / gas limit.
+    """
+    contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
+    iterations = 1
+
+    def send_transaction() -> TransactionMined:
+        estimated_transaction = deploy_client.estimate_gas(
+            contract_proxy, "waste_storage", {}, iterations
+        )
+        assert estimated_transaction
+        transaction_hash = deploy_client.transact(estimated_transaction)
+        return deploy_client.poll_transaction(transaction_hash)
+
+    first_receipt = send_transaction().receipt
+    mined_block_number = first_receipt["blockNumber"]
+
+    while mined_block_number + 127 > web3.eth.blockNumber:
+        gevent.sleep(0.5)
+
+    # geth keeps the latest 128 blocks before pruning. Unfortunately, this can
+    # not be configured to speed this test up.
+    # According to the geth devs if we run a PoA chain (clique, dev mode) and
+    # HEAD-127 doesn't contain any transactions, then the state of HEAD-127 will
+    # be the same as HEAD-128, so it will still be referenced and not deleted.
+    # So for this test we mine a transaction, wait for mined + 127 block and then
+    # query the previous block which should be pruned
+
+    pruned_block_number = mined_block_number - 1
+
+    # Make sure pruning happened, otherwise the test below is not useful.
+    with pytest.raises(ValueError):
+        contract_proxy.functions.const().call(block_identifier=pruned_block_number)
+
+    latest_confirmed_block = deploy_client.web3.eth.getBlock(pruned_block_number)
+
+    msg = (
+        "getBlock did not return the expected metadata for a pruned block "
+        "`BlockchainEvents` code has to be adjusted"
+    )
+    assert latest_confirmed_block["hash"], msg
+    assert latest_confirmed_block["gasLimit"], msg
+
+
 def test_geth_discover_next_available_nonce_concurrent_transactions(
     deploy_client: JSONRPCClient, skip_if_parity: bool  # pylint: disable=unused-argument
 ) -> None:
