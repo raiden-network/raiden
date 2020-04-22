@@ -4,6 +4,7 @@ import random
 import time
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List, NamedTuple, Set, Tuple, cast
 from uuid import UUID
 
@@ -13,6 +14,7 @@ import structlog
 from eth_utils import is_binary_address, to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
+from web3.types import BlockData
 
 from raiden import routing
 from raiden.api.python import RaidenAPI
@@ -238,6 +240,35 @@ class PaymentStatus(NamedTuple):
 
     def matches(self, token_network_address: TokenNetworkAddress, amount: PaymentAmount) -> bool:
         return token_network_address == self.token_network_address and amount == self.amount
+
+
+class SyncTimeout:
+    """ Helper to determine if the sync should halt or continue.
+
+    The goal of this helper is to stop synching before the block
+    `current_confirmed_head` is pruned, otherwise JSON-RPC requests will start
+    to fail.
+    """
+
+    def __init__(self, current_confirmed_head: BlockNumber, timeout: float) -> None:
+        self.sync_start = datetime.now()
+        self.timeout = timeout
+        self.current_confirmed_head = current_confirmed_head
+
+    def time_elapsed(self) -> float:
+        delta = datetime.now() - self.sync_start
+        return delta.total_seconds()
+
+    def should_continue(self, last_fetched_block: BlockNumber) -> bool:
+        has_time = self.timeout >= self.time_elapsed()
+        has_blocks_unsynched = self.current_confirmed_head > last_fetched_block
+
+        return has_time and has_blocks_unsynched
+
+
+class SynchornizationState(Enum):
+    FULLY_SYNCED = "fully_synced"
+    PARTIALLY_SYNCED = "partially_synced"
 
 
 class RaidenService(Runnable):
@@ -664,17 +695,17 @@ class RaidenService(Runnable):
         self.last_log_block = last_block_number
         self.last_log_time = time.monotonic()
 
-        latest_block_num = self.rpc_client.block_number()
-        latest_confirmed_block_number = BlockNumber(
-            max(GENESIS_BLOCK_NUMBER, latest_block_num - self.confirmation_blocks)
-        )
-
-        # `blockchain_events` is a requirement for `_poll_until_target`, so it
-        # must be set before calling it
+        # `blockchain_events` is a requirement for
+        # `_best_effort_synchronize_with_confirmed_head`, so it must be set
+        # before calling it
         self.blockchain_events = blockchain_events
-        self._poll_until_target(latest_confirmed_block_number)
 
-        self.alarm.register_callback(self._callback_new_block)
+        synchronization_state = SynchornizationState.PARTIALLY_SYNCED
+        while synchronization_state is SynchornizationState.PARTIALLY_SYNCED:
+            latest_block = self.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
+            synchronization_state = self._best_effort_synchronize(latest_block)
+
+        self.alarm.register_callback(self._best_effort_synchronize)
 
     def _start_alarm_task(self) -> None:
         """Start the alarm task.
@@ -933,29 +964,35 @@ class RaidenService(Runnable):
         if self.transport:
             self.transport.immediate_health_check_for(node_address)
 
-    def _callback_new_block(self, latest_block: Dict) -> None:
-        """Called once a new block is detected by the alarm task.
+    def _best_effort_synchronize(self, latest_block: BlockData) -> SynchornizationState:
+        """ Called with the current latest block, tries to synchronize with the
+        *confirmed* head of the chain in a best effort manner, it is not
+        guaranteed to succeed in a single call since `latest_block` may become
+        pruned.
 
         Note:
             This should be called only once per block, otherwise there will be
             duplicated `Block` state changes in the log.
-
-            Therefore this method should be called only once a new block is
-            mined with the corresponding block data from the AlarmTask.
         """
 
         latest_block_number = latest_block["number"]
 
         # Handle testing with private chains. The block number can be
         # smaller than confirmation_blocks
-        latest_confirmed_block_number = max(
-            GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks
+        current_confirmed_head = BlockNumber(
+            max(GENESIS_BLOCK_NUMBER, latest_block_number - self.confirmation_blocks)
         )
 
-        self._poll_until_target(latest_confirmed_block_number)
+        return self._best_effort_synchronize_with_confirmed_head(
+            current_confirmed_head, self.config.blockchain.timeout_before_block_pruned
+        )
 
-    def _poll_until_target(self, target_block_number: BlockNumber) -> None:
-        """Poll blockchain events up to `target_block_number`.
+    def _best_effort_synchronize_with_confirmed_head(
+        self, current_confirmed_head: BlockNumber, timeout: float
+    ) -> SynchornizationState:
+        """ Tries to synchronize with the blockchain events up to
+        `current_confirmed_head`. This may stop before being fully synchronized
+        if the number of `current_confirmed_head` is close to be pruned.
 
         Multiple queries may be necessary on restarts, because the node may
         have been offline for an extend period of time. During normal
@@ -963,24 +1000,28 @@ class RaidenService(Runnable):
         missed important events, like a channel close, while the transport
         layer is running, this can lead to loss of funds.
 
-        It is very important for `confirmed_target_block_number` to be an
-        confirmed block, otherwise reorgs may cause havoc. This is problematic
-        since some operations are irreversible, namely sending a balance proof.
-        Once a node accepts a deposit, these tokens can be used to do mediated
-        transfers, and if a reorg removes the deposit tokens could be lost.
+        It is very important for `current_confirmed_head` to be an confirmed
+        block that has not been pruned. Uncorfirmed blocks are a problem
+        because of reorgs, since some operations performed based on the events
+        are irreversible, namely sending a balance proof after a channel
+        deposit, once a node accepts a deposit, these tokens can be used to do
+        mediated transfers, and if a reorg removes the deposit tokens could be
+        lost. Using older blocks are a problem because of data availability
+        problems, in some cases it is necessary to query the blockchain to
+        fetch data which is not available in an event, the original event block
+        is used, however that block may have been pruned if the synchronization
+        is considerably lagging behind (which happens after long restarts), so
+        a new block number is necessary to be used as a fallback, an `latest`
+        is not a valid option because of the reorgs.
 
         This function takes care of fetching blocks in batches and confirming
         their result. This is important to keep memory usage low and to speed
         up restarts. Memory usage can get a hit if the node is asleep for a
-        long period of time and on the first run, since all the missing
-        confirmed blocks have to be fetched before the node is in a working
-        state. Restarts get a hit if the node is closed while it was
-        synchronizing, without regularly saving that work, if the node is
-        killed while synchronizing, it only gets gradually slower.
-
-        Returns:
-            int: number of polling queries required to synchronized with
-            `target_block_number`.
+        long period of time, since all the missing confirmed blocks have to be
+        fetched before the node is in a working state. Restarts get a hit if
+        the node is closed while it was synchronizing, without regularly saving
+        that work, if the node is killed while synchronizing, it only gets
+        gradually slower.
         """
         msg = (
             f"The blockchain event handler has to be instantiated before the "
@@ -988,9 +1029,9 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events, msg
 
-        sync_start = datetime.now()
-        while self.blockchain_events.last_fetched_block < target_block_number:
-            poll_result = self.blockchain_events.fetch_logs_in_batch(target_block_number)
+        guard = SyncTimeout(current_confirmed_head, timeout)
+        while guard.should_continue(self.blockchain_events.last_fetched_block):
+            poll_result = self.blockchain_events.fetch_logs_in_batch(current_confirmed_head)
             if poll_result is None:
                 # No blocks could be fetched (due to timeout), retry
                 continue
@@ -1001,9 +1042,15 @@ class RaidenService(Runnable):
 
             state_changes: List[StateChange] = list()
             for event in poll_result.events:
+                # Important: `blockchainevent_to_statechange` has to be called
+                # with the block of the current confirmed head! An unconfirmed
+                # block could lead to the wrong state being dispatched because
+                # of reorgs, and older blocks are not sufficient to fix
+                # problems with pruning, the `SyncTimeout` is used to ensure
+                # the `current_confirmed_head` stays valid.
                 state_changes.extend(
                     blockchainevent_to_statechange(
-                        self, event, poll_result.polled_block_number, pendingtokenregistration
+                        self, event, current_confirmed_head, pendingtokenregistration
                     )
                 )
 
@@ -1054,14 +1101,24 @@ class RaidenService(Runnable):
             # node sends the settle transaction).
             self.handle_and_track_state_changes(state_changes)
 
-            self._log_sync_progress(poll_result.polled_block_number, target_block_number)
+            self._log_sync_progress(poll_result.polled_block_number, current_confirmed_head)
 
-        sync_end = datetime.now()
+        current_synched_block_number = self.get_block_number()
+
         log.debug(
             "Synchronized to a new confirmed block",
             event_filters_qty=len(self.blockchain_events._address_to_filters),
-            sync_elapsed=sync_end - sync_start,
+            sync_elapsed=guard.time_elapsed(),
+            block_number=current_synched_block_number,
         )
+
+        msg = "current_synched_block_number is larger than current_confirmed_head"
+        assert current_synched_block_number <= current_confirmed_head, msg
+
+        if current_synched_block_number < current_confirmed_head:
+            return SynchornizationState.PARTIALLY_SYNCED
+
+        return SynchornizationState.FULLY_SYNCED
 
     def _initialize_transactions_queues(self, chain_state: ChainState) -> None:
         """Initialize the pending transaction queue from the previous run.

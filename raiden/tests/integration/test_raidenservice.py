@@ -60,7 +60,7 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     app0.raiden.proxy_manager.client.wait_until_block(target_block_num)
 
     latest_block = app0.raiden.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
-    app0.raiden._callback_new_block(latest_block=latest_block)
+    app0.raiden._best_effort_synchronize(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
     app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
