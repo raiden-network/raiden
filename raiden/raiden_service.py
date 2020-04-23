@@ -3,7 +3,6 @@ import os
 import random
 import time
 from collections import defaultdict
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, NamedTuple, Set, Tuple, cast
 from uuid import UUID
@@ -251,13 +250,13 @@ class SyncTimeout:
     """
 
     def __init__(self, current_confirmed_head: BlockNumber, timeout: float) -> None:
-        self.sync_start = datetime.now()
+        self.sync_start = time.monotonic()
         self.timeout = timeout
         self.current_confirmed_head = current_confirmed_head
 
     def time_elapsed(self) -> float:
-        delta = datetime.now() - self.sync_start
-        return delta.total_seconds()
+        delta = time.monotonic() - self.sync_start
+        return delta
 
     def should_continue(self, last_fetched_block: BlockNumber) -> bool:
         has_time = self.timeout >= self.time_elapsed()
