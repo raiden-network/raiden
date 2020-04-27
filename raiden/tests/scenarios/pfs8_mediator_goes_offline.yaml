@@ -9,7 +9,6 @@ settings:
       enable: true
       token:
         deposit: true
-        balance_per_node: 5000
 
 token:
   address: "{{ transfer_token }}"
