@@ -877,7 +877,7 @@ Querying node state
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/v1/address HTTP/1.1
+      GET /api/v1/status HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
