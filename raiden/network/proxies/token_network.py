@@ -27,10 +27,7 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
-from raiden.network.proxies.utils import (
-    get_channel_participants_from_open_event,
-    raise_on_call_returned_empty,
-)
+from raiden.network.proxies.utils import raise_on_call_returned_empty
 from raiden.network.rpc.client import (
     JSONRPCClient,
     check_address_has_code_handle_pruned_block,
@@ -2393,25 +2390,11 @@ class TokenNetwork:
                     locksroot=partner_locksroot,
                 )
 
-                participants = get_channel_participants_from_open_event(
-                    token_network=self,
-                    channel_identifier=channel_identifier,
-                    contract_manager=self.contract_manager,
-                    from_block=self.metadata.filters_start_at,
-                )
-                if not participants:
-                    msg = (
-                        f"The provided channel identifier {channel_identifier} "
-                        f"does not exist on-chain."
-                    )
-                    raise RaidenUnrecoverableError(msg)
-
-                if self.node_address not in participants:
-                    msg = (
-                        f"Settling a channel in which the current node is not a participant "
-                        f"of is not allowed."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                # The channel_identifier and the address of the participants
+                # can not be verified because querying for the open event would
+                # take prohibitly long (see #6106). Instead it is assumed that
+                # if there is a local ChannelState instance it is properly
+                # validated and the data is confirmed.
 
                 if channel_onchain_detail.state in (ChannelState.SETTLED, ChannelState.REMOVED):
                     raise RaidenRecoverableError("Channel is already settled")
@@ -2477,25 +2460,11 @@ class TokenNetwork:
                 locksroot=partner_locksroot,
             )
 
-            participants = get_channel_participants_from_open_event(
-                token_network=self,
-                channel_identifier=channel_identifier,
-                contract_manager=self.contract_manager,
-                from_block=self.metadata.filters_start_at,
-            )
-            if not participants:
-                msg = (
-                    f"The provided channel identifier {channel_identifier} "
-                    f"does not exist on-chain."
-                )
-                raise RaidenUnrecoverableError(msg)
-
-            if self.node_address not in participants:
-                msg = (
-                    f"Settling a channel in which the current node is not a participant "
-                    f"of is not allowed."
-                )
-                raise RaidenUnrecoverableError(msg)
+            # The channel_identifier and the address of the participants
+            # can not be verified because querying for the open event would
+            # take prohibitly long (see #6106). Instead it is assumed that
+            # if there is a local ChannelState instance it is properly
+            # validated and the data is confirmed.
 
             if channel_onchain_detail.state in (ChannelState.SETTLED, ChannelState.REMOVED):
                 raise RaidenRecoverableError("Channel is already settled")

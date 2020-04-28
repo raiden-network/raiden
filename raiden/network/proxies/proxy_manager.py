@@ -15,7 +15,7 @@ from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetad
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
     Address,
     BlockIdentifier,
@@ -240,11 +240,11 @@ class ProxyManager:
         return self.address_to_service_registry[address]
 
     def payment_channel(
-        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockIdentifier
+        self, channel_state: NettingChannelState, block_identifier: BlockIdentifier
     ) -> PaymentChannel:
 
-        token_network_address = canonical_identifier.token_network_address
-        channel_id = canonical_identifier.channel_identifier
+        token_network_address = channel_state.canonical_identifier.token_network_address
+        channel_id = channel_state.canonical_identifier.channel_identifier
 
         if not is_binary_address(token_network_address):
             raise ValueError("address must be a valid address")
@@ -260,7 +260,7 @@ class ProxyManager:
 
                 self.identifier_to_payment_channel[dict_key] = PaymentChannel(
                     token_network=token_network,
-                    channel_identifier=channel_id,
+                    channel_state=channel_state,
                     contract_manager=self.contract_manager,
                 )
 
