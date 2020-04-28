@@ -1,6 +1,6 @@
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
-from raiden.transfer.state import PendingLocksState, NettingChannelState
+from raiden.transfer.state import NettingChannelState, PendingLocksState
 from raiden.utils.typing import (
     AdditionalHash,
     Address,

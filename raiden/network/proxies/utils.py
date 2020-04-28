@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import NettingChannelState
 from raiden.utils.formatting import format_block_id
 from raiden.utils.typing import Address, BlockIdentifier, Locksroot, NoReturn, Tuple
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 def get_onchain_locksroots(
     proxy_manager: "ProxyManager",
-    canonical_identifier: CanonicalIdentifier,
+    channel_state: NettingChannelState,
     participant1: Address,
     participant2: Address,
     block_identifier: BlockIdentifier,
@@ -44,14 +44,14 @@ def get_onchain_locksroots(
       locksroot was used.
     """
     payment_channel = proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier, block_identifier=block_identifier
+        channel_state=channel_state, block_identifier=block_identifier
     )
     token_network = payment_channel.token_network
 
     participants_details = token_network.detail_participants(
         participant1=participant1,
         participant2=participant2,
-        channel_identifier=canonical_identifier.channel_identifier,
+        channel_identifier=channel_state.canonical_identifier.channel_identifier,
         block_identifier=block_identifier,
     )
 

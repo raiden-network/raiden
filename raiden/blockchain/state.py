@@ -108,7 +108,7 @@ def get_contractreceivechannelsettled_data_from_event(
         # provided during settle.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
             proxy_manager=proxy_manager,
-            canonical_identifier=channel_state.canonical_identifier,
+            channel_state=channel_state,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
             block_identifier=block_hash,
@@ -128,7 +128,7 @@ def get_contractreceivechannelsettled_data_from_event(
         # channel.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
             proxy_manager=proxy_manager,
-            canonical_identifier=channel_state.canonical_identifier,
+            channel_state=channel_state,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
             block_identifier=current_confirmed_head,

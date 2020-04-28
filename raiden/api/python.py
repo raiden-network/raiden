@@ -711,8 +711,7 @@ class RaidenAPI:  # pragma: no unittest
             address=token_network_address, block_identifier=confirmed_block_identifier
         )
         channel_proxy = self.raiden.proxy_manager.payment_channel(
-            canonical_identifier=channel_state.canonical_identifier,
-            block_identifier=confirmed_block_identifier,
+            channel_state=channel_state, block_identifier=confirmed_block_identifier
         )
 
         blockhash = chain_state.block_hash
