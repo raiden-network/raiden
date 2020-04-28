@@ -2,21 +2,35 @@ import gevent
 import pytest
 
 from raiden import routing, waiting
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI, get_channel_list
 from raiden.exceptions import InvalidAmount
+from raiden.raiden_service import RaidenService
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    BlockTimeout as BlockOffset,
+    PaymentAmount,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkRegistryAddress,
+)
 from raiden.waiting import wait_for_block
 
 
-def wait_for_transaction(receiver, registry_address, token_address, sender_address):
+def wait_for_transaction(
+    receiver: RaidenService,
+    registry_address: TokenNetworkRegistryAddress,
+    token_address: TokenAddress,
+    sender_address: Address,
+) -> None:
     """Wait until a first transaction in a channel is received"""
     while True:
-        receiver_channel = RaidenAPI(receiver).get_channel_list(
+        receiver_channel = get_channel_list(
+            raiden=receiver,
             registry_address=registry_address,
             token_address=token_address,
             partner_address=sender_address,
@@ -165,8 +179,8 @@ def test_participant_selection(raiden_network, token_addresses):
         sender_channel = next(
             (
                 channel_state
-                for channel_state in RaidenAPI(sender).get_channel_list(
-                    registry_address=registry_address, token_address=token_address
+                for channel_state in get_channel_list(
+                    raiden=sender, registry_address=registry_address, token_address=token_address
                 )
                 if channel_state.our_state.contract_balance > 0
                 and channel_state.partner_state.contract_balance > 0
@@ -185,7 +199,8 @@ def test_participant_selection(raiden_network, token_addresses):
     )
 
     # assert there is a direct channel receiver -> sender (vv)
-    receiver_channel = RaidenAPI(receiver).get_channel_list(
+    receiver_channel = get_channel_list(
+        raiden=receiver,
         registry_address=registry_address,
         token_address=token_address,
         partner_address=sender.address,

@@ -21,9 +21,14 @@ from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
+from raiden.api.debug import (
+    get_blockchain_events_channel,
+    get_blockchain_events_token_network,
+    get_token_network_registry_events,
+)
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.api.objects import AddressList, PartnersPerTokenList
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI, get_channel_list
 from raiden.api.rest_utils import api_error, api_response
 from raiden.api.v1.encoding import (
     AddressListSchema,
@@ -59,6 +64,7 @@ from raiden.api.v1.resources import (
     VersionResource,
     create_blueprint,
 )
+from raiden.blockchain.events import ALL_EVENTS
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -818,8 +824,8 @@ class RestAPI:  # pragma: no unittest
             token_address=optional_address_to_string(token_address),
             partner_address=optional_address_to_string(partner_address),
         )
-        raiden_service_result = self.raiden_api.get_channel_list(
-            registry_address, token_address, partner_address
+        raiden_service_result = get_channel_list(
+            self.raiden_api.raiden, registry_address, token_address, partner_address
         )
         typecheck(raiden_service_result, list)
 
@@ -874,8 +880,17 @@ class RestAPI:  # pragma: no unittest
             to_block=to_block,
         )
         try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_network(
-                registry_address=registry_address, from_block=from_block, to_block=to_block
+            events = get_token_network_registry_events(
+                proxy_manager=self.raiden_api.raiden.proxy_manager,
+                token_network_registry_address=registry_address,
+                contract_manager=self.raiden_api.raiden.contract_manager,
+                events=ALL_EVENTS,
+                from_block=from_block,
+                to_block=to_block,
+            )
+
+            raiden_service_result = sorted(
+                events, key=lambda evt: evt.get("block_number"), reverse=True
             )
         except InvalidBlockNumberInput as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
@@ -896,8 +911,11 @@ class RestAPI:  # pragma: no unittest
             to_block=to_block,
         )
         try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_token_network(
-                token_address=token_address, from_block=from_block, to_block=to_block
+            raiden_service_result = get_blockchain_events_token_network(
+                raiden=self.raiden_api.raiden,
+                token_address=token_address,
+                from_block=from_block,
+                to_block=to_block,
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
@@ -983,7 +1001,8 @@ class RestAPI:  # pragma: no unittest
             to_block=to_block,
         )
         try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_channel(
+            raiden_service_result = get_blockchain_events_channel(
+                raiden=self.raiden_api.raiden,
                 token_address=token_address,
                 partner_address=partner_address,
                 from_block=from_block,
@@ -1030,8 +1049,8 @@ class RestAPI:  # pragma: no unittest
         )
         return_list = []
         try:
-            raiden_service_result = self.raiden_api.get_channel_list(
-                registry_address, token_address
+            raiden_service_result = get_channel_list(
+                self.raiden_api.raiden, registry_address, token_address
             )
         except InvalidBinaryAddress as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)

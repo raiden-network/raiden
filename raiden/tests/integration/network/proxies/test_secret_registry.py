@@ -4,7 +4,6 @@ import gevent
 import pytest
 from web3 import Web3
 
-from raiden.blockchain.events import get_secret_registry_events
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
@@ -15,6 +14,7 @@ from raiden.network.rpc.client import (
     TransactionEstimated,
     TransactionSent,
 )
+from raiden.tests.utils.blockchain import get_secret_registry_events
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
 from raiden.utils.secrethash import sha256_secrethash

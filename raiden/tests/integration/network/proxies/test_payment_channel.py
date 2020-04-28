@@ -1,7 +1,7 @@
 import pytest
 from web3 import Web3
 
-from raiden.blockchain.events import get_all_netting_channel_events
+from raiden.api.debug import get_all_netting_channel_events
 from raiden.constants import (
     BLOCK_ID_LATEST,
     EMPTY_BALANCE_HASH,

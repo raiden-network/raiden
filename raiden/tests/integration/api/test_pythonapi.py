@@ -5,6 +5,7 @@ import pytest
 from eth_utils import to_canonical_address
 
 from raiden import waiting
+from raiden.api.debug import get_blockchain_events_channel, get_blockchain_events_token_network
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import UINT256_MAX, Environment
@@ -295,9 +296,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
         identifier=PaymentID(1),
     )
 
-    app0_events = RaidenAPI(app0.raiden).get_blockchain_events_channel(
-        token_address, app1.raiden.address
-    )
+    app0_events = get_blockchain_events_channel(app0.raiden, token_address, app1.raiden.address)
 
     assert must_have_event(app0_events, {"event": ChannelEvent.DEPOSIT})
 
@@ -307,9 +306,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     app1_events = app1.raiden.wal.storage.get_events()
     assert any(isinstance(event, EventPaymentReceivedSuccess) for event in app1_events)
 
-    app1_events = RaidenAPI(app1.raiden).get_blockchain_events_channel(
-        token_address, app0.raiden.address
-    )
+    app1_events = get_blockchain_events_channel(app1.raiden, token_address, app0.raiden.address)
     assert must_have_event(app1_events, {"event": ChannelEvent.DEPOSIT})
 
 
@@ -695,12 +692,15 @@ def test_raidenapi_channel_lifecycle(
     # nodes don't have a channel, so they are not healthchecking
     assert api1.get_node_network_state(api2.address) == NetworkState.UNKNOWN
     assert api2.get_node_network_state(api1.address) == NetworkState.UNKNOWN
-    assert not api1.get_channel_list(registry_address, token_address, api2.address)
+    assert not get_channel_list(node1.raiden, registry_address, token_address, api2.address)
 
     # Make sure invalid arguments to get_channel_list are caught
     with pytest.raises(UnknownTokenAddress):
-        api1.get_channel_list(
-            registry_address=registry_address, token_address=None, partner_address=api2.address
+        get_channel_list(
+            raiden=node1.raiden,
+            registry_address=registry_address,
+            token_address=None,
+            partner_address=api2.address,
         )
 
     address_for_lowest_settle_timeout = make_address()
@@ -745,7 +745,7 @@ def test_raidenapi_channel_lifecycle(
 
     # open is a synchronous api
     api1.channel_open(node1.raiden.default_registry.address, token_address, api2.address)
-    channels = api1.get_channel_list(registry_address, token_address, api2.address)
+    channels = get_channel_list(node1.raiden, registry_address, token_address, api2.address)
     assert len(channels) == 1
 
     channel12 = get_channelstate(node1, node2, token_network_address)
@@ -765,7 +765,7 @@ def test_raidenapi_channel_lifecycle(
         },
     )
 
-    network_event_list1 = api1.get_blockchain_events_token_network(token_address)
+    network_event_list1 = get_blockchain_events_token_network(node1.raiden, token_address)
     assert must_have_event(network_event_list1, {"event": ChannelEvent.OPENED})
 
     registry_address = api1.raiden.default_registry.address
@@ -794,14 +794,16 @@ def test_raidenapi_channel_lifecycle(
     assert channel.get_status(channel12) == ChannelState.STATE_OPENED
     assert channel.get_balance(channel12.our_state, channel12.partner_state) == deposit
     assert channel12.our_state.contract_balance == deposit
-    assert api1.get_channel_list(registry_address, token_address, api2.address) == [channel12]
+    assert get_channel_list(node1.raiden, registry_address, token_address, api2.address) == [
+        channel12
+    ]
 
     # there is a channel open, they must be healthchecking each other
     assert api1.get_node_network_state(api2.address) == NetworkState.REACHABLE
     assert api2.get_node_network_state(api1.address) == NetworkState.REACHABLE
 
-    event_list2 = api1.get_blockchain_events_channel(
-        token_address, channel12.partner_state.address
+    event_list2 = get_blockchain_events_channel(
+        node1.raiden, token_address, channel12.partner_state.address
     )
     assert must_have_event(
         event_list2,
@@ -816,8 +818,8 @@ def test_raidenapi_channel_lifecycle(
     # Load the new state with the channel closed
     channel12 = get_channelstate(node1, node2, token_network_address)
 
-    event_list3 = api1.get_blockchain_events_channel(
-        token_address, channel12.partner_state.address
+    event_list3 = get_blockchain_events_channel(
+        node1.raiden, token_address, channel12.partner_state.address
     )
     assert len(event_list3) > len(event_list2)
     assert must_have_event(

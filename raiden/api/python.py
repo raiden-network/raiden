@@ -2,16 +2,9 @@ import gevent
 import structlog
 from eth_utils import is_binary_address
 
-import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import (
-    BLOCK_ID_LATEST,
-    GENESIS_BLOCK_NUMBER,
-    NULL_ADDRESS_BYTES,
-    UINT64_MAX,
-    UINT256_MAX,
-)
+from raiden.constants import NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositMismatch,
@@ -197,6 +190,68 @@ def transfer_tasks_view(
     return view
 
 
+def get_channel_list(
+    raiden: "RaidenService",
+    registry_address: TokenNetworkRegistryAddress,
+    token_address: TokenAddress = None,
+    partner_address: Address = None,
+) -> List[NettingChannelState]:
+    """Returns a list of channels associated with the optionally given
+       `token_address` and/or `partner_address`.
+
+    Args:
+        token_address: an optionally provided token address
+        partner_address: an optionally provided partner address
+
+    Return:
+        A list containing all channels the node participates. Optionally
+        filtered by a token address and/or partner address.
+
+    Raises:
+        KeyError: An error occurred when the token address is unknown to the node.
+    """
+    if registry_address and not is_binary_address(registry_address):
+        raise InvalidBinaryAddress(
+            "Expected binary address format for registry in get_channel_list"
+        )
+
+    if token_address and not is_binary_address(token_address):
+        raise InvalidBinaryAddress("Expected binary address format for token in get_channel_list")
+
+    if partner_address:
+        if not is_binary_address(partner_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in get_channel_list"
+            )
+        if not token_address:
+            raise UnknownTokenAddress("Provided a partner address but no token address")
+
+    if token_address and partner_address:
+        channel_state = views.get_channelstate_for(
+            chain_state=views.state_from_raiden(raiden),
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if channel_state:
+            result = [channel_state]
+        else:
+            result = []
+
+    elif token_address:
+        result = views.list_channelstate_for_tokennetwork(
+            chain_state=views.state_from_raiden(raiden),
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+        )
+
+    else:
+        result = views.list_all_channelstate(chain_state=views.state_from_raiden(raiden))
+
+    return result
+
+
 class RaidenAPI:  # pragma: no unittest
     # pylint: disable=too-many-public-methods
 
@@ -219,7 +274,9 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(partner_address):
             raise InvalidBinaryAddress("Expected binary address format for partner in get_channel")
 
-        channel_list = self.get_channel_list(registry_address, token_address, partner_address)
+        channel_list = get_channel_list(
+            self.raiden, registry_address, token_address, partner_address
+        )
         msg = f"Found {len(channel_list)} channels, but expected 0 or 1."
         assert len(channel_list) <= 1, msg
 
@@ -921,69 +978,6 @@ class RaidenAPI:  # pragma: no unittest
             retry_timeout=retry_timeout,
         )
 
-    def get_channel_list(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        token_address: TokenAddress = None,
-        partner_address: Address = None,
-    ) -> List[NettingChannelState]:
-        """Returns a list of channels associated with the optionally given
-           `token_address` and/or `partner_address`.
-
-        Args:
-            token_address: an optionally provided token address
-            partner_address: an optionally provided partner address
-
-        Return:
-            A list containing all channels the node participates. Optionally
-            filtered by a token address and/or partner address.
-
-        Raises:
-            KeyError: An error occurred when the token address is unknown to the node.
-        """
-        if registry_address and not is_binary_address(registry_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for registry in get_channel_list"
-            )
-
-        if token_address and not is_binary_address(token_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for token in get_channel_list"
-            )
-
-        if partner_address:
-            if not is_binary_address(partner_address):
-                raise InvalidBinaryAddress(
-                    "Expected binary address format for partner in get_channel_list"
-                )
-            if not token_address:
-                raise UnknownTokenAddress("Provided a partner address but no token address")
-
-        if token_address and partner_address:
-            channel_state = views.get_channelstate_for(
-                chain_state=views.state_from_raiden(self.raiden),
-                token_network_registry_address=registry_address,
-                token_address=token_address,
-                partner_address=partner_address,
-            )
-
-            if channel_state:
-                result = [channel_state]
-            else:
-                result = []
-
-        elif token_address:
-            result = views.list_channelstate_for_tokennetwork(
-                chain_state=views.state_from_raiden(self.raiden),
-                token_network_registry_address=registry_address,
-                token_address=token_address,
-            )
-
-        else:
-            result = views.list_all_channelstate(chain_state=views.state_from_raiden(self.raiden))
-
-        return result
-
     def get_node_network_state(self, node_address: Address) -> NetworkState:
         """ Returns the currently network status of `node_address`. """
         return views.get_node_network_status(
@@ -1190,98 +1184,6 @@ class RaidenAPI:  # pragma: no unittest
         return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 
     transfer = transfer_and_wait
-
-    def get_blockchain_events_network(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
-        events = blockchain_events.get_token_network_registry_events(
-            proxy_manager=self.raiden.proxy_manager,
-            token_network_registry_address=registry_address,
-            contract_manager=self.raiden.contract_manager,
-            events=blockchain_events.ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-        return sorted(events, key=lambda evt: evt.get("block_number"), reverse=True)
-
-    def get_blockchain_events_token_network(
-        self,
-        token_address: TokenAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
-        """Returns a list of blockchain events corresponding to the token_address."""
-
-        if not is_binary_address(token_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for token in get_blockchain_events_token_network"
-            )
-
-        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
-        token_network_address = self.raiden.default_registry.get_token_network(
-            token_address=token_address, block_identifier=confirmed_block_identifier
-        )
-
-        if token_network_address is None:
-            raise UnknownTokenAddress("Token address is not known.")
-
-        returned_events = blockchain_events.get_token_network_events(
-            proxy_manager=self.raiden.proxy_manager,
-            token_network_address=token_network_address,
-            contract_manager=self.raiden.contract_manager,
-            events=blockchain_events.ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-        for event in returned_events:
-            if event.get("args"):
-                event["args"] = dict(event["args"])
-
-        returned_events.sort(key=lambda evt: evt.get("block_number"), reverse=True)
-        return returned_events
-
-    def get_blockchain_events_channel(
-        self,
-        token_address: TokenAddress,
-        partner_address: Address = None,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
-        if not is_binary_address(token_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for token in get_blockchain_events_channel"
-            )
-        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
-        token_network_address = self.raiden.default_registry.get_token_network(
-            token_address=token_address, block_identifier=confirmed_block_identifier
-        )
-        if token_network_address is None:
-            raise UnknownTokenAddress("Token address is not known.")
-
-        channel_list = self.get_channel_list(
-            registry_address=self.raiden.default_registry.address,
-            token_address=token_address,
-            partner_address=partner_address,
-        )
-        returned_events = []
-        for channel_state in channel_list:
-            returned_events.extend(
-                blockchain_events.get_all_netting_channel_events(
-                    proxy_manager=self.raiden.proxy_manager,
-                    token_network_address=token_network_address,
-                    netting_channel_identifier=channel_state.identifier,
-                    contract_manager=self.raiden.contract_manager,
-                    from_block=from_block,
-                    to_block=to_block,
-                )
-            )
-        returned_events.sort(key=lambda evt: evt.get("block_number"), reverse=True)
-        return returned_events
 
     def create_monitoring_request(
         self, balance_proof: BalanceProofSignedState, reward_amount: TokenAmount

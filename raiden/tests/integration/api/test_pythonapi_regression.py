@@ -1,7 +1,7 @@
 import pytest
 
 from raiden import waiting
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI, get_channel_list
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -23,7 +23,9 @@ def test_close_regression(raiden_network, deposit, token_addresses):
     api2 = RaidenAPI(app1.raiden)
 
     registry_address = app0.raiden.default_registry.address
-    channel_list = api1.get_channel_list(registry_address, token_address, app1.raiden.address)
+    channel_list = get_channel_list(
+        app0.raiden, registry_address, token_address, app1.raiden.address
+    )
     channel12 = channel_list[0]
 
     token_proxy = app0.raiden.proxy_manager.token(token_address, BLOCK_ID_LATEST)

@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from raiden import waiting
-from raiden.api.python import RaidenAPI
+from raiden.api.python import RaidenAPI, get_channel_list
 from raiden.app import App
 from raiden.constants import (
     BLOCK_ID_LATEST,
@@ -193,8 +193,8 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     app0.raiden._initialize_wal()
     app0.raiden._synchronize_with_blockchain()
 
-    channels = RaidenAPI(app0.raiden).get_channel_list(
-        registry_address=app0.raiden.default_registry.address
+    channels = get_channel_list(
+        raiden=app0.raiden, registry_address=app0.raiden.default_registry.address
     )
     msg = "Initialization did not properly synchronize with the blockchain, channel is missing"
     assert len(channels) != 0, msg

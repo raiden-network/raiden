@@ -10,17 +10,10 @@ from web3 import Web3
 from web3.types import LogReceipt, RPCEndpoint
 
 from raiden.blockchain.exceptions import EthGetLogsTimeout, UnknownRaidenEventType
-from raiden.blockchain.filters import decode_event, get_filter_args_for_all_events_from_channel
+from raiden.blockchain.filters import decode_event
 from raiden.blockchain.utils import BlockBatchSizeAdjuster
-from raiden.constants import (
-    BLOCK_ID_LATEST,
-    ETH_GET_LOGS_THRESHOLD_FAST,
-    ETH_GET_LOGS_THRESHOLD_SLOW,
-    GENESIS_BLOCK_NUMBER,
-    UINT64_MAX,
-)
+from raiden.constants import ETH_GET_LOGS_THRESHOLD_FAST, ETH_GET_LOGS_THRESHOLD_SLOW, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
-from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import BlockBatchSizeConfig
 from raiden.utils.typing import (
     ABI,
@@ -31,7 +24,6 @@ from raiden.utils.typing import (
     BlockIdentifier,
     BlockNumber,
     ChainID,
-    ChannelID,
     Dict,
     Iterable,
     List,
@@ -105,121 +97,6 @@ def verify_block_number(number: BlockIdentifier, argname: str) -> None:
             "Provided block number {} for {} is invalid. Has to be in the range "
             "of [0, UINT64_MAX]".format(number, argname)
         )
-
-
-def get_contract_events(
-    proxy_manager: ProxyManager,
-    abi: ABI,
-    contract_address: Address,
-    topics: Optional[List[str]],
-    from_block: BlockIdentifier,
-    to_block: BlockIdentifier,
-) -> List[Dict]:
-    """ Query the blockchain for all events of the smart contract at
-    `contract_address` that match the filters `topics`, `from_block`, and
-    `to_block`.
-    """
-    verify_block_number(from_block, "from_block")
-    verify_block_number(to_block, "to_block")
-    events = proxy_manager.client.get_filter_events(
-        contract_address, topics=topics, from_block=from_block, to_block=to_block
-    )
-
-    result = []
-    for event in events:
-        decoded_event = dict(decode_event(abi, event))
-        if event.get("blockNumber"):
-            decoded_event["block_number"] = event["blockNumber"]
-            del decoded_event["blockNumber"]
-        result.append(decoded_event)
-    return result
-
-
-def get_token_network_registry_events(
-    proxy_manager: ProxyManager,
-    token_network_registry_address: TokenNetworkRegistryAddress,
-    contract_manager: ContractManager,
-    events: Optional[List[str]] = ALL_EVENTS,
-    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-    to_block: BlockIdentifier = BLOCK_ID_LATEST,
-) -> List[Dict]:  # pragma: no unittest
-    """ Helper to get all events of the Registry contract at `registry_address`. """
-    return get_contract_events(
-        proxy_manager=proxy_manager,
-        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-        contract_address=Address(token_network_registry_address),
-        topics=events,
-        from_block=from_block,
-        to_block=to_block,
-    )
-
-
-def get_token_network_events(
-    proxy_manager: ProxyManager,
-    token_network_address: TokenNetworkAddress,
-    contract_manager: ContractManager,
-    events: Optional[List[str]] = ALL_EVENTS,
-    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-    to_block: BlockIdentifier = BLOCK_ID_LATEST,
-) -> List[Dict]:  # pragma: no unittest
-    """ Helper to get all events of the ChannelManagerContract at `token_address`. """
-
-    return get_contract_events(
-        proxy_manager,
-        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        Address(token_network_address),
-        events,
-        from_block,
-        to_block,
-    )
-
-
-def get_all_netting_channel_events(
-    proxy_manager: ProxyManager,
-    token_network_address: TokenNetworkAddress,
-    netting_channel_identifier: ChannelID,
-    contract_manager: ContractManager,
-    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-    to_block: BlockIdentifier = BLOCK_ID_LATEST,
-) -> List[Dict]:  # pragma: no unittest
-    """ Helper to get all events of a NettingChannelContract. """
-
-    filter_args = get_filter_args_for_all_events_from_channel(
-        token_network_address=token_network_address,
-        channel_identifier=netting_channel_identifier,
-        contract_manager=contract_manager,
-        from_block=from_block,
-        to_block=to_block,
-    )
-
-    return get_contract_events(
-        proxy_manager,
-        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        Address(token_network_address),
-        filter_args["topics"],  # type: ignore
-        from_block,
-        to_block,
-    )
-
-
-def get_secret_registry_events(
-    proxy_manager: ProxyManager,
-    secret_registry_address: SecretRegistryAddress,
-    contract_manager: ContractManager,
-    events: Optional[List[str]] = ALL_EVENTS,
-    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-    to_block: BlockIdentifier = BLOCK_ID_LATEST,
-) -> List[Dict]:  # pragma: no unittest
-    """ Helper to get all events of a SecretRegistry contract. """
-
-    return get_contract_events(
-        proxy_manager,
-        contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-        Address(secret_registry_address),
-        events,
-        from_block,
-        to_block,
-    )
 
 
 def decode_raiden_event_to_internal(
