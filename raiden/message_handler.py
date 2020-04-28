@@ -45,8 +45,8 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     TYPE_CHECKING,
     Address,
-    Dict,
     List,
+    Set,
     TargetAddress,
     Tuple,
 )
@@ -61,19 +61,16 @@ class MessageHandler:
     def on_messages(self, raiden: "RaidenService", messages: List[Message]) -> None:
         # pylint: disable=unidiomatic-typecheck
 
-        # Remove duplicate messages. A node will receive duplicate messages
-        # because of retries and persistent of the Matrix transport. This can
-        # be a problem when the recipient is under high load and the sender has
-        # a fast retries. This works because multiple batches of messages are
-        # dispatched collectively.
-        unique_messages: Dict[Message, int] = dict()
-        for msg in messages:
-            if msg not in unique_messages:
-                unique_messages[msg] = 1
+        # Remove duplicated messages, this can happen because of retries done
+        # by the sender when the receiver takes too long to acknowledge. This
+        # is a problem since the receiver may be taking a long time to reply
+        # because it is under high load, processing the duplicated messages
+        # just make the problem worse.
+        unique_messages: Set[Message] = set(messages)
 
         pool = Pool()
 
-        for message in unique_messages.keys():
+        for message in unique_messages:
             if type(message) == SecretRequest:
                 assert isinstance(message, SecretRequest), MYPY_ANNOTATION
                 pool.apply_async(self.handle_message_secretrequest, (raiden, message))
