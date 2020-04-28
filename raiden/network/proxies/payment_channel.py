@@ -1,8 +1,6 @@
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.constants import UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
-from raiden.network.proxies.utils import get_channel_participants_from_open_event
-from raiden.transfer.state import PendingLocksState
+from raiden.transfer.state import PendingLocksState, NettingChannelState
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -10,7 +8,6 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockIdentifier,
     BlockTimeout,
-    ChannelID,
     LockedAmount,
     Locksroot,
     Nonce,
@@ -27,33 +24,12 @@ class PaymentChannel:
     def __init__(
         self,
         token_network: TokenNetwork,
-        channel_identifier: ChannelID,
+        channel_state: NettingChannelState,
         contract_manager: ContractManager,
     ):
-        if channel_identifier <= 0 or channel_identifier > UINT256_MAX:
-            raise ValueError(f"channel_identifier {channel_identifier} is not a uint256")
-
-        participants = get_channel_participants_from_open_event(
-            token_network=token_network,
-            channel_identifier=channel_identifier,
-            contract_manager=contract_manager,
-            from_block=token_network.metadata.filters_start_at,
-        )
-
-        if not participants:
-            raise ValueError("Channel is non-existing.")
-
-        participant1, participant2 = participants
-
-        if token_network.node_address not in (participant1, participant2):
-            raise ValueError("One participant must be the node address")
-
-        if token_network.node_address == participant2:
-            participant1, participant2 = participant2, participant1
-
-        self.channel_identifier = channel_identifier
-        self.participant1 = participant1
-        self.participant2 = participant2
+        self.channel_identifier = channel_state.canonical_identifier.channel_identifier
+        self.participant1 = channel_state.our_state.address
+        self.participant2 = channel_state.partner_state.address
         self.token_network = token_network
         self.client = token_network.client
         self.contract_manager = contract_manager

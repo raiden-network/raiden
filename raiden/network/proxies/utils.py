@@ -1,61 +1,13 @@
 from typing import TYPE_CHECKING
 
-from eth_utils import decode_hex
-
-from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.constants import BLOCK_ID_LATEST
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.formatting import format_block_id
-from raiden.utils.typing import (
-    Address,
-    BlockIdentifier,
-    BlockNumber,
-    ChannelID,
-    Locksroot,
-    NoReturn,
-    Optional,
-    Tuple,
-)
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
-from raiden_contracts.contract_manager import ContractManager
+from raiden.utils.typing import Address, BlockIdentifier, Locksroot, NoReturn, Tuple
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.network.proxies.proxy_manager import ProxyManager
-    from raiden.network.proxies.token_network import TokenNetwork
-
-
-def get_channel_participants_from_open_event(
-    token_network: "TokenNetwork",
-    channel_identifier: ChannelID,
-    contract_manager: ContractManager,
-    from_block: BlockNumber,
-) -> Optional[Tuple[Address, Address]]:
-    # For this check it is perfectly fine to use a `latest` block number.
-    # Because the filter is looking just for the OPENED event.
-    to_block = BLOCK_ID_LATEST
-
-    filter_args = get_filter_args_for_specific_event_from_channel(
-        token_network_address=token_network.address,
-        channel_identifier=channel_identifier,
-        event_name=ChannelEvent.OPENED,
-        contract_manager=contract_manager,
-        from_block=from_block,
-        to_block=to_block,
-    )
-
-    events = token_network.proxy.web3.eth.getLogs(filter_args)
-
-    # There must be only one channel open event per channel identifier
-    if len(events) != 1:
-        return None
-
-    event = decode_event(contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0])
-    participant1 = Address(decode_hex(event["args"]["participant1"]))
-    participant2 = Address(decode_hex(event["args"]["participant2"]))
-
-    return participant1, participant2
 
 
 def get_onchain_locksroots(
