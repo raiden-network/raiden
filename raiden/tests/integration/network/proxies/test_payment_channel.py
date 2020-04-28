@@ -21,28 +21,39 @@ from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.transfer.state import (
+    NettingChannelEndState,
+    NettingChannelState,
+    SuccessfulTransactionState,
+)
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
+    Balance,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     List,
     LockedAmount,
     Nonce,
     PrivateKey,
     TokenAmount,
+    TokenNetworkRegistryAddress,
 )
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, MessageTypeId
 from raiden_contracts.contract_manager import ContractManager
 
 
 def test_payment_channel_proxy_basics(
+    token_network_registry_address: TokenNetworkRegistryAddress,
     token_network_proxy: TokenNetwork,
     token_proxy: Token,
     chain_id: ChainID,
     private_keys: List[PrivateKey],
     web3: Web3,
     contract_manager: ContractManager,
+    reveal_timeout: BlockTimeout,
 ) -> None:
     token_network_address = token_network_proxy.address
     partner = privatekey_to_address(private_keys[0])
@@ -68,13 +79,25 @@ def test_payment_channel_proxy_basics(
     )
     assert channel_identifier is not None
 
-    channel_proxy_1 = proxy_manager.payment_channel(
+    channel_state = NettingChannelState(
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_id,
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
-        block_identifier=BLOCK_ID_LATEST,
+        token_address=token_network_proxy.token_address(),
+        token_network_registry_address=token_network_registry_address,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=BlockTimeout(TEST_SETTLE_TIMEOUT_MIN),
+        fee_schedule=FeeScheduleState(),
+        our_state=NettingChannelEndState(
+            address=token_network_proxy.client.address, contract_balance=Balance(0)
+        ),
+        partner_state=NettingChannelEndState(address=partner, contract_balance=Balance(0)),
+        open_transaction=SuccessfulTransactionState(finished_block_number=BlockNumber(0)),
+    )
+    channel_proxy_1 = proxy_manager.payment_channel(
+        channel_state=channel_state, block_identifier=BLOCK_ID_LATEST
     )
 
     assert channel_proxy_1.channel_identifier == channel_identifier
@@ -171,13 +194,25 @@ def test_payment_channel_proxy_basics(
     )
     assert new_channel_identifier is not None
 
-    channel_proxy_2 = proxy_manager.payment_channel(
+    channel_state = NettingChannelState(
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=chain_id,
             token_network_address=token_network_address,
             channel_identifier=new_channel_identifier,
         ),
-        block_identifier=BLOCK_ID_LATEST,
+        token_address=token_network_proxy.token_address(),
+        token_network_registry_address=token_network_registry_address,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=BlockTimeout(TEST_SETTLE_TIMEOUT_MIN),
+        fee_schedule=FeeScheduleState(),
+        our_state=NettingChannelEndState(
+            address=token_network_proxy.client.address, contract_balance=Balance(0)
+        ),
+        partner_state=NettingChannelEndState(address=partner, contract_balance=Balance(0)),
+        open_transaction=SuccessfulTransactionState(finished_block_number=BlockNumber(0)),
+    )
+    channel_proxy_2 = proxy_manager.payment_channel(
+        channel_state=channel_state, block_identifier=BLOCK_ID_LATEST
     )
 
     assert channel_proxy_2.channel_identifier == new_channel_identifier
