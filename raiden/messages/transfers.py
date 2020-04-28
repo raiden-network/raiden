@@ -375,12 +375,12 @@ class LockedTransferBase(EnvelopeMessage):
 
     @overload  # noqa: F811
     @classmethod
-    def from_event(cls, event: SendRefundTransfer) -> "RefundTransfer":
+    def from_event(cls, event: SendRefundTransfer) -> "RefundTransfer":  # noqa: F811
         # pylint: disable=unused-argument
         ...
 
     @classmethod  # noqa: F811
-    def from_event(cls, event: Any) -> Any:
+    def from_event(cls, event: Any) -> Any:  # noqa: F811
         transfer = event.transfer
         balance_proof = transfer.balance_proof
         lock = Lock(

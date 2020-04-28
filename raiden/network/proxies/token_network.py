@@ -2392,7 +2392,7 @@ class TokenNetwork:
 
                 # The channel_identifier and the address of the participants
                 # can not be verified because querying for the open event would
-                # take prohibitly long (see #6106). Instead it is assumed that
+                # take prohibitively long (see #6106). Instead it is assumed that
                 # if there is a local ChannelState instance it is properly
                 # validated and the data is confirmed.
 
@@ -2462,7 +2462,7 @@ class TokenNetwork:
 
             # The channel_identifier and the address of the participants
             # can not be verified because querying for the open event would
-            # take prohibitly long (see #6106). Instead it is assumed that
+            # take prohibitively long (see #6106). Instead it is assumed that
             # if there is a local ChannelState instance it is properly
             # validated and the data is confirmed.
 

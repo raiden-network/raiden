@@ -30,7 +30,11 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transport import ParsedURL, TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.views import state_from_raiden
+from raiden.transfer.views import (
+    get_channelstate_by_canonical_identifier,
+    get_channelstate_by_token_network_and_partner,
+    state_from_raiden,
+)
 from raiden.ui.app import start_api_server
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.typing import (
@@ -39,7 +43,6 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     ChainID,
-    ChannelID,
     Host,
     Iterable,
     Iterator,
@@ -82,20 +85,27 @@ def check_channel(
     app1: App,
     app2: App,
     token_network_address: TokenNetworkAddress,
-    channel_identifier: ChannelID,
     settle_timeout: BlockTimeout,
     deposit_amount: TokenAmount,
 ) -> None:
-    canonical_identifier = CanonicalIdentifier(
-        chain_identifier=state_from_raiden(app1.raiden).chain_id,
+    channel_state1 = get_channelstate_by_token_network_and_partner(
+        chain_state=state_from_raiden(app1.raiden),
         token_network_address=token_network_address,
-        channel_identifier=channel_identifier,
+        partner_address=app2.raiden.address,
     )
+    assert channel_state1, "app1 does not have a channel with app2."
     netcontract1 = app1.raiden.proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier, block_identifier=BLOCK_ID_LATEST
+        channel_state=channel_state1, block_identifier=BLOCK_ID_LATEST
     )
+
+    channel_state2 = get_channelstate_by_token_network_and_partner(
+        chain_state=state_from_raiden(app2.raiden),
+        token_network_address=token_network_address,
+        partner_address=app1.raiden.address,
+    )
+    assert channel_state2, "app2 does not have a channel with app1."
     netcontract2 = app2.raiden.proxy_manager.payment_channel(
-        canonical_identifier=canonical_identifier, block_identifier=BLOCK_ID_LATEST
+        channel_state=channel_state2, block_identifier=BLOCK_ID_LATEST
     )
 
     # Check a valid settle timeout was used, the netting contract has an
@@ -167,16 +177,30 @@ def payment_channel_open_and_deposit(
     assert channel_identifier
 
     if deposit != 0:
-        canonical_identifier = CanonicalIdentifier(
-            chain_identifier=state_from_raiden(app0.raiden).chain_id,
-            token_network_address=token_network_proxy.address,
-            channel_identifier=channel_identifier,
-        )
-        for app in [app0, app1]:
+        for app, partner in [(app0, app1), (app1, app0)]:
+            waiting.wait_for_newchannel(
+                raiden=app.raiden,
+                token_network_registry_address=app.raiden.default_registry.address,
+                token_address=token_address,
+                partner_address=partner.raiden.address,
+                retry_timeout=0.5,
+            )
+
+            chain_state = state_from_raiden(app.raiden)
+            canonical_identifier = CanonicalIdentifier(
+                chain_identifier=chain_state.chain_id,
+                token_network_address=token_network_proxy.address,
+                channel_identifier=channel_identifier,
+            )
+            channel_state = get_channelstate_by_canonical_identifier(
+                chain_state=chain_state, canonical_identifier=canonical_identifier
+            )
+            assert channel_state, "nodes dont share a channel"
+
             # Use each app's own chain because of the private key / local signing
             token = app.raiden.proxy_manager.token(token_address, BLOCK_ID_LATEST)
             payment_channel_proxy = app.raiden.proxy_manager.payment_channel(
-                canonical_identifier=canonical_identifier, block_identifier=BLOCK_ID_LATEST
+                channel_state=channel_state, block_identifier=BLOCK_ID_LATEST
             )
 
             # This check can succeed and the deposit still fail, if channels are
@@ -195,9 +219,7 @@ def payment_channel_open_and_deposit(
             new_balance = token.balance_of(app.raiden.address)
             assert new_balance <= previous_balance - deposit
 
-        check_channel(
-            app0, app1, token_network_proxy.address, channel_identifier, settle_timeout, deposit
-        )
+        check_channel(app0, app1, token_network_proxy.address, settle_timeout, deposit)
 
 
 def create_all_channels_for_network(

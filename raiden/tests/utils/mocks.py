@@ -12,7 +12,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
@@ -75,9 +75,11 @@ class MockProxyManager:
         self.mocked_addresses = mocked_addresses or dict()
 
     def payment_channel(
-        self, canonical_identifier: CanonicalIdentifier, block_identifier: BlockIdentifier
+        self, channel_state: NettingChannelState, block_identifier: BlockIdentifier
     ):  # pylint: disable=unused-argument
-        return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
+        return MockPaymentChannel(
+            self.token_network, channel_state.canonical_identifier.channel_identifier
+        )
 
     def token_network_registry(
         self, address: Address, block_identifier: BlockIdentifier
@@ -144,6 +146,7 @@ class MockChannelState:
     def __init__(self):
         self.settle_transaction = None
         self.close_transaction = None
+        self.canonical_identifier = factories.make_canonical_identifier()
         self.our_state = Mock()
         self.partner_state = Mock()
 

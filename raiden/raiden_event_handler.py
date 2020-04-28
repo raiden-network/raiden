@@ -69,9 +69,9 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import (
+    get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
     state_from_raiden,
-    get_channelstate_by_canonical_identifier,
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
