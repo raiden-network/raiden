@@ -1,10 +1,14 @@
+import math
 from typing import cast
 
 import pytest
 
 from raiden import waiting
+from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import wait_for_state_change
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
@@ -13,7 +17,7 @@ from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils.packing import pack_signed_balance_proof
-from raiden.utils.typing import PaymentAmount, PaymentID
+from raiden.utils.typing import BlockNumber, List, PaymentAmount, PaymentID, TokenAddress
 from raiden_contracts.constants import MessageTypeId
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
@@ -38,8 +42,11 @@ STATE_PRUNING = {
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
 def test_locksroot_loading_during_channel_settle_handling(
-    raiden_chain, restart_node, deploy_client, token_addresses
-):
+    raiden_chain: List[App],
+    restart_node: RestartNode,
+    deploy_client: JSONRPCClient,
+    token_addresses: List[TokenAddress],
+) -> None:
     app0, app1 = raiden_chain
     token_network_registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -72,7 +79,7 @@ def test_locksroot_loading_during_channel_settle_handling(
     )
 
     channel = app0.raiden.proxy_manager.payment_channel(
-        channel_state.canonical_identifier, block_identifier=BLOCK_ID_LATEST
+        channel_state=channel_state, block_identifier=BLOCK_ID_LATEST
     )
     balance_proof = channel_state.partner_state.balance_proof
     assert balance_proof
@@ -126,15 +133,12 @@ def test_locksroot_loading_during_channel_settle_handling(
 
     # Wait until the target block has be prunned, it has to be larger than
     # pruning_history
-    pruned_after_blocks = pruning_history * 1.5
+    pruned_after_blocks = math.ceil(pruning_history * 1.5)
+    pruned_block = BlockNumber(close_block + pruned_after_blocks)
 
-    waiting.wait_for_block(
-        raiden=app1.raiden, block_number=close_block + pruned_after_blocks, retry_timeout=1
-    )
+    waiting.wait_for_block(raiden=app1.raiden, block_number=pruned_block, retry_timeout=1)
 
-    channel = app0.raiden.proxy_manager.payment_channel(
-        channel_state.canonical_identifier, BLOCK_ID_LATEST
-    )
+    channel = app0.raiden.proxy_manager.payment_channel(channel_state, BLOCK_ID_LATEST)
 
     # make sure the block was pruned
     with pytest.raises(ValueError):
