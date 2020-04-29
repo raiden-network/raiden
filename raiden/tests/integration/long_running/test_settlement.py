@@ -38,6 +38,7 @@ from raiden.transfer.state_change import (
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
+    Address,
     Balance,
     BlockNumber,
     BlockTimeout as BlockOffset,
@@ -50,13 +51,22 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAddress,
     TokenAmount,
+    TokenNetworkAddress,
+    WithdrawAmount,
 )
 
+MSG_BLOCKCHAIN_EVENTS = "Waiting for blockchain events requires a running node and alarm task."
 
-def wait_for_batch_unlock(app, token_network_address, receiver, sender):
+
+def wait_for_batch_unlock(
+    app: App, token_network_address: TokenNetworkAddress, receiver: Address, sender: Address
+) -> None:
     unlock_event = None
     while not unlock_event:
         gevent.sleep(1)
+
+        assert app.raiden.wal, MSG_BLOCKCHAIN_EVENTS
+        assert app.raiden.alarm, MSG_BLOCKCHAIN_EVENTS
 
         state_changes = app.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
@@ -94,7 +104,9 @@ def is_channel_registered(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_settle_is_automatically_called(raiden_network, token_addresses):
+def test_settle_is_automatically_called(
+    raiden_network: List[App], token_addresses: List[TokenAddress]
+) -> None:
     """Settle is automatically called by one of the nodes."""
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
@@ -152,6 +164,8 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
         not in token_network.partneraddresses_to_channelidentifiers[app1.raiden.address]
     )
 
+    assert app0.raiden.wal, MSG_BLOCKCHAIN_EVENTS
+    assert app0.raiden.alarm, MSG_BLOCKCHAIN_EVENTS
     state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     assert search_for_item(
@@ -174,7 +188,9 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_lock_expiry(raiden_network, token_addresses, deposit):
+def test_lock_expiry(
+    raiden_network: List[App], token_addresses: List[TokenAddress], deposit: TokenAmount
+) -> None:
     """Test lock expiry and removal."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -185,6 +201,10 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 
     hold_event_handler = bob_app.raiden.raiden_event_handler
     wait_message_handler = bob_app.raiden.message_handler
+
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler), msg
+    assert isinstance(wait_message_handler, WaitForMessage), msg
 
     token_network = views.get_token_network_by_address(
         views.state_from_app(alice_app), token_network_address
@@ -199,9 +219,9 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
         in token_network.partneraddresses_to_channelidentifiers[bob_app.raiden.address]
     )
 
-    alice_to_bob_amount = 10
-    identifier = 1
-    target = bob_app.raiden.address
+    alice_to_bob_amount = PaymentAmount(10)
+    identifier = factories.make_payment_id()
+    target = TargetAddress(bob_app.raiden.address)
     transfer_1_secret = factories.make_secret(0)
     transfer_1_secrethash = sha256_secrethash(transfer_1_secret)
     transfer_2_secret = factories.make_secret(1)
@@ -237,7 +257,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     #    B -> A SecretRequest
     #    - protocol didn't continue
     assert_synced_channel_state(
-        token_network_address, alice_app, deposit, [lock], bob_app, deposit, []
+        token_network_address, alice_app, Balance(deposit), [lock], bob_app, Balance(deposit), []
     )
 
     # Verify lock is registered in both channel states
@@ -263,8 +283,8 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     assert transfer_1_secrethash not in alice_chain_state.payment_mapping.secrethashes_to_task
 
     # Make another transfer
-    alice_to_bob_amount = 10
-    identifier = 2
+    alice_to_bob_amount = PaymentAmount(10)
+    identifier = factories.make_payment_id()
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
@@ -455,7 +475,12 @@ def test_batch_unlock(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_channel_withdraw(raiden_network, token_addresses, deposit, retry_timeout):
+def test_channel_withdraw(
+    raiden_network: List[App],
+    token_addresses: List[TokenAddress],
+    deposit: TokenAmount,
+    retry_timeout: float,
+) -> None:
     """ Withdraw funds after a mediated transfer."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -470,10 +495,10 @@ def test_channel_withdraw(raiden_network, token_addresses, deposit, retry_timeou
     message_handler = WaitForMessage()
     bob_app.raiden.message_handler = message_handler
 
-    alice_to_bob_amount = 10
-    identifier = 1
-    target = bob_app.raiden.address
-    secret = keccak(target)
+    alice_to_bob_amount = PaymentAmount(10)
+    identifier = PaymentID(1)
+    target = TargetAddress(bob_app.raiden.address)
+    secret = factories.make_secret()
 
     payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
@@ -493,7 +518,7 @@ def test_channel_withdraw(raiden_network, token_addresses, deposit, retry_timeou
         )
         assert payment_status.payment_done.get(), msg
 
-    total_withdraw = deposit + alice_to_bob_amount
+    total_withdraw = WithdrawAmount(deposit + alice_to_bob_amount)
 
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
     bob_app.raiden.withdraw(
@@ -515,8 +540,13 @@ def test_channel_withdraw(raiden_network, token_addresses, deposit, retry_timeou
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw_expired(
-    raiden_network, network_wait, number_of_nodes, token_addresses, deposit, retry_timeout
-):
+    raiden_network: List[App],
+    network_wait: float,
+    number_of_nodes: int,
+    token_addresses: List[TokenAddress],
+    deposit: TokenAmount,
+    retry_timeout: float,
+) -> None:
     """ Tests withdraw expiration. """
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -525,20 +555,28 @@ def test_channel_withdraw_expired(
     )
     assert token_network_address
 
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(alice_app.raiden.raiden_event_handler, HoldRaidenEventHandler), msg
+    assert isinstance(alice_app.raiden.message_handler, WaitForMessage), msg
+
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(bob_app.raiden.raiden_event_handler, HoldRaidenEventHandler), msg
+    assert isinstance(bob_app.raiden.message_handler, WaitForMessage), msg
+
     # Prevent withdraw confirmation from being sent
     send_withdraw_confirmation_event = alice_app.raiden.raiden_event_handler.hold(
         SendWithdrawConfirmation, {}
     )
 
-    alice_to_bob_amount = 10
-    total_withdraw = deposit + alice_to_bob_amount
+    alice_to_bob_amount = PaymentAmount(10)
+    total_withdraw = WithdrawAmount(deposit + alice_to_bob_amount)
     wait_for_withdraw_expired_message = alice_app.raiden.message_handler.wait_for_message(
         WithdrawExpired, {"total_withdraw": total_withdraw}
     )
 
-    identifier = 1
-    target = bob_app.raiden.address
-    secret = keccak(target)
+    identifier = PaymentID(1)
+    target = TargetAddress(bob_app.raiden.address)
+    secret = factories.make_secret()
 
     payment_status = alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
@@ -603,7 +641,9 @@ def test_channel_withdraw_expired(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-def test_settled_lock(token_addresses, raiden_network, deposit):
+def test_settled_lock(
+    token_addresses: List[TokenAddress], raiden_network: List[App], deposit: TokenAmount
+) -> None:
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
@@ -615,7 +655,11 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
     assert token_network_address
+
     hold_event_handler = app1.raiden.raiden_event_handler
+
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler), msg
 
     address0 = app0.raiden.address
     address1 = app1.raiden.address
@@ -626,9 +670,9 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     token_proxy = app0.raiden.proxy_manager.token(token_address, BLOCK_ID_LATEST)
     initial_balance0 = token_proxy.balance_of(address0)
     initial_balance1 = token_proxy.balance_of(address1)
-    identifier = 1
-    target = app1.raiden.address
-    secret = Secret(keccak(target))
+    identifier = factories.make_payment_id()
+    target = TargetAddress(app1.raiden.address)
+    secret = factories.make_secret()
     secrethash = sha256_secrethash(secret)
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -658,6 +702,10 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         identifier=PaymentID(2),
     )
 
+    # The channel state has to be recovered before the settlement, otherwise
+    # the object is cleared from the node's state.
+    channelstate_1_0 = get_channelstate(app1, app0, token_network_address)
+
     RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
 
     waiting.wait_for_settle(
@@ -670,8 +718,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     current_block = app0.raiden.rpc_client.block_number()
 
     netting_channel = app1.raiden.proxy_manager.payment_channel(
-        canonical_identifier=channelstate_0_1.canonical_identifier,
-        block_identifier=BLOCK_ID_LATEST,
+        channel_state=channelstate_1_0, block_identifier=BLOCK_ID_LATEST
     )
 
     # The transfer locksroot must not contain the unlocked lock, the
@@ -694,24 +741,28 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
-def test_automatic_secret_registration(raiden_chain, token_addresses):
+def test_automatic_secret_registration(
+    raiden_chain: List[App], token_addresses: List[TokenAddress]
+) -> None:
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
+    assert token_network_address
+
     hold_event_handler = app1.raiden.raiden_event_handler
+    message_handler = app1.raiden.message_handler
 
-    amount = 100
-    identifier = 1
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler), msg
+    assert isinstance(message_handler, WaitForMessage), msg
 
-    message_handler = WaitForMessage()
+    amount = PaymentAmount(100)
+    identifier = factories.make_payment_id()
 
-    app1.raiden.message_handler = message_handler
-
-    target = app1.raiden.address
-    secret = Secret(keccak(target))
-    secrethash = sha256_secrethash(secret)
+    target = TargetAddress(app1.raiden.address)
+    (secret, secrethash) = factories.make_secret_with_hash()
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
     locked_transfer_received = message_handler.wait_for_message(LockedTransfer, {})
@@ -754,7 +805,9 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
 @raise_on_failure
 @pytest.mark.xfail(reason="test incomplete")
 @pytest.mark.parametrize("number_of_nodes", [3])
-def test_start_end_attack(token_addresses, raiden_chain, deposit):
+def test_start_end_attack(
+    token_addresses: List[TokenAddress], raiden_chain: List[App], deposit: List[App]
+) -> None:
     """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
@@ -766,7 +819,6 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     The intention is to make the hub transfer the token but for him to be
     unable to require the token A1."""
-    amount = 30
 
     token = token_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
@@ -774,13 +826,16 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
         views.state_from_app(app0), app0.raiden.default_registry.address, token
     )
     assert token_network_address
+
     hold_event_handler = app2.raiden.raiden_event_handler
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler), msg
 
     # the attacker owns app0 and app2 and creates a transfer through app1
-    identifier = 1
-    target = app2.raiden.address
-    secret = Secret(keccak(target))
-    secrethash = sha256_secrethash(secret)
+    amount = PaymentAmount(30)
+    identifier = PaymentID(1)
+    target = TargetAddress(app2.raiden.address)
+    secret, secrethash = factories.make_secret_with_hash()
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -855,7 +910,9 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_automatic_dispute(raiden_network, deposit, token_addresses):
+def test_automatic_dispute(
+    raiden_network: List[App], deposit: TokenAmount, token_addresses: List[TokenAddress]
+) -> None:
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -919,7 +976,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions
-    assert token_proxy.balance_of(token_network_address) == 0
+    assert token_proxy.balance_of(Address(token_network_address)) == 0
     total0 = amount0_1 + amount0_2
     total1 = amount1_1
     expected_balance0 = initial_balance0 + deposit - total0 + total1
