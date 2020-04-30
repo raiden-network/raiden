@@ -737,8 +737,9 @@ class TransactionPending:
     extra_log_details: Dict[str, Any]
 
     def __post_init__(self) -> None:
-        log.debug("Transaction created", **self.to_log_details())
         self.extra_log_details.setdefault("token", str(uuid4()))
+
+        log.debug("Transaction created", **self.to_log_details())
 
         typecheck(self.from_address, T_Address)
         typecheck(self.data, SmartContractCall)
