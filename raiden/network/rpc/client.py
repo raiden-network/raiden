@@ -694,7 +694,11 @@ class EthTransfer:
         typecheck(self.value, int)
 
     def to_log_details(self) -> Dict[str, Any]:
-        return {"to_address": to_checksum_address(self.to_address), "value": self.value}
+        return {
+            "to_address": to_checksum_address(self.to_address),
+            "value": self.value,
+            "gas_price": self.gas_price,
+        }
 
 
 @dataclass
@@ -737,12 +741,12 @@ class TransactionPending:
     extra_log_details: Dict[str, Any]
 
     def __post_init__(self) -> None:
+        typecheck(self.from_address, T_Address)
+        typecheck(self.data, SmartContractCall)
+
         self.extra_log_details.setdefault("token", str(uuid4()))
 
         log.debug("Transaction created", **self.to_log_details())
-
-        typecheck(self.from_address, T_Address)
-        typecheck(self.data, SmartContractCall)
 
     def to_log_details(self) -> Dict[str, Any]:
         log_details = self.data.to_log_details()
@@ -796,8 +800,9 @@ class TransactionPending:
             if not expected_error:
                 raise err
 
+        block = self.data.contract.web3.eth.getBlock(BLOCK_ID_LATEST)
+
         if estimated_gas is not None:
-            block = self.data.contract.web3.eth.getBlock(BLOCK_ID_LATEST)
             gas_price = gas_price_for_fast_transaction(self.data.contract.web3)
 
             transaction_estimated = TransactionEstimated(
@@ -818,7 +823,12 @@ class TransactionPending:
 
             return transaction_estimated
         else:
-            log.debug("Transaction gas estimation failed", **self.to_log_details())
+            log.debug(
+                "Transaction gas estimation failed",
+                approximate_block_hash=to_hex(block["hash"]),
+                approximate_block_number=block["number"],
+                **self.to_log_details(),
+            )
 
             return None
 
@@ -850,6 +860,8 @@ class TransactionEstimated:
                 "eth_node": self.eth_node,
                 "estimated_gas": self.estimated_gas,
                 "gas_price": self.gas_price,
+                "approximate_block_hash": to_hex(self.approximate_block[0]),
+                "approximate_block_number": self.approximate_block[1],
             }
         )
         return log_details
