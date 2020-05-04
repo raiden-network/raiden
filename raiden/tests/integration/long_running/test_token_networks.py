@@ -105,13 +105,13 @@ def test_participant_selection(raiden_network, token_addresses):
         )
 
     # Call the connect endpoint for all but the first node
-    connect_greenlets = [
+    connect_greenlets = set(
         gevent.spawn(
             RaidenAPI(app.raiden).token_network_connect, registry_address, token_address, 100
         )
         for app in raiden_network[1:]
-    ]
-    gevent.wait(connect_greenlets)
+    )
+    gevent.joinall(connect_greenlets, raise_error=True)
 
     token_network_registry_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
@@ -286,7 +286,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
             gevent.sleep(1)
 
     # Call the connect endpoint for all but the two first nodes
-    connect_greenlets = [
+    connect_greenlets = set(
         gevent.spawn(
             RaidenAPI(app.raiden).token_network_connect,
             registry_address,
@@ -295,8 +295,8 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
             target_channels_num,
         )
         for app in raiden_network[2:]
-    ]
-    gevent.wait(connect_greenlets)
+    )
+    gevent.joinall(connect_greenlets, raise_error=True)
 
     connection_managers = [
         app.raiden.connection_manager_for_token_network(token_network_registry_address)

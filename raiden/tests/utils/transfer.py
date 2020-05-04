@@ -401,7 +401,7 @@ def transfer_and_assert_path(
         receiving.append((to_app, to_channel_state.identifier))
 
     assert isinstance(app.raiden.message_handler, WaitForMessage)
-    results = [
+    results = set(
         app.raiden.message_handler.wait_for_message(
             Unlock,
             {
@@ -412,7 +412,7 @@ def transfer_and_assert_path(
             },
         )
         for app, channel_identifier in receiving
-    ]
+    )
 
     last_app = path[-1]
     payment_status = first_app.raiden.start_mediated_transfer_with_secret(
@@ -431,7 +431,7 @@ def transfer_and_assert_path(
     exception = RuntimeError(msg + " due to Timeout")
     with watch_for_unlock_failures(*path):
         with Timeout(seconds=timeout, exception=exception):
-            gevent.wait(results)
+            gevent.joinall(results, raise_error=True)
             assert payment_status.payment_done.get(), msg
 
     return secrethash

@@ -121,9 +121,9 @@ def restart_network(
     for app in raiden_network:
         app.stop()
 
-    wait_network = [gevent.spawn(restart_app, app, restart_node) for app in raiden_network]
+    wait_network = (gevent.spawn(restart_app, app, restart_node) for app in raiden_network)
 
-    gevent.wait(wait_network)
+    gevent.joinall(set(wait_network), raise_error=True)
 
     new_network = [greenlet.get() for greenlet in wait_network]
 

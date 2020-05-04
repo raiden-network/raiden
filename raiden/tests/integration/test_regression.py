@@ -53,7 +53,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
                 settle_timeout,
             )
         )
-    gevent.wait(greenlets)
+    gevent.joinall(set(greenlets), raise_error=True)
 
     wait_for_channels(app_channels, registry_address, [token], deposit)
 
@@ -216,7 +216,7 @@ def test_regression_multiple_revealsecret(
     receive_method = app1.raiden.on_messages
     wait = set(gevent.spawn_later(0.1, receive_method, [data]) for data in messages)
 
-    gevent.joinall(wait)
+    gevent.joinall(wait, raise_error=True)
 
 
 def test_regression_register_secret_once(secret_registry_address, proxy_manager):

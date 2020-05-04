@@ -683,7 +683,7 @@ class GMatrixClient(MatrixClient):
         eventually processed. This introduces a cost in terms of latency.
         """
         while True:
-            gevent.wait({response_queue, stop_event}, count=1)
+            gevent.joinall({response_queue, stop_event}, count=1, raise_error=True)
 
             # Iterating over the Queue and adding to a separated list to
             # implement delivery at-least-once semantics. At-most-once would

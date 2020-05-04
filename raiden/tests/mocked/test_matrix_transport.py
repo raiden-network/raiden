@@ -536,7 +536,7 @@ def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_
 
     with Timeout(idle_after + (retry_interval_initial * 5)):
         # Retry
-        while not gevent.wait([retry_queue.greenlet], idle_after / 2):
+        while not gevent.joinall({retry_queue.greenlet}, idle_after / 2, raise_error=True):
             pass
 
     assert retry_queue.greenlet.ready()
