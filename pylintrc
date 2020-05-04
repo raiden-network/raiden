@@ -34,6 +34,8 @@ enable=
     exception-in-del,
     expression-not-assigned,
     gevent-joinall,
+    gevent-joinall-raise-error,
+    gevent-disable-wait,
     gevent-group-join,
     import-self,
     inconsistent-return-statements,

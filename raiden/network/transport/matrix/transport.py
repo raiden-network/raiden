@@ -529,14 +529,20 @@ class MatrixTransport(Runnable):
         # Wait for retriers which already started to exit, then discard them
         # Retriers which have not been started yet just get discarded
         # In the meanwhile no other retriers should be started since stop_event is set
-        gevent.wait({r.greenlet for r in self._address_to_retrier.values() if r.greenlet})
+        #
+        # No need to get on them, exceptions are re-raised because of the
+        # `link_exception`
+        gevent.wait(  # pylint: disable=gevent-disable-wait
+            {r.greenlet for r in self._address_to_retrier.values() if r.greenlet}
+        )
         self._address_to_retrier = {}
 
         self._address_mgr.stop()
         self._client.stop()  # stop sync_thread, wait on client's greenlets
 
-        # wait on own greenlets, no need to get on them, exceptions should be raised in _run()
-        gevent.wait(self.greenlets)
+        # wait on own greenlets. No need to get on them, exceptions are
+        # re-raised because of the `link_exception`
+        gevent.wait(self.greenlets)  # pylint: disable=gevent-disable-wait
 
         self._client.set_presence_state(UserPresence.OFFLINE.value)
 

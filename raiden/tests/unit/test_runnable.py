@@ -32,4 +32,4 @@ def test_runnable_and_gevent_join_all():
     a = RunnableTest()
     a.start()
     a.stop()
-    gevent.joinall({a})
+    gevent.joinall({a}, raise_error=True)

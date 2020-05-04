@@ -1186,7 +1186,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     mediator_unlock = mediator_wait.wait_for_message(Unlock, {})
     target_unlock = target_wait.wait_for_message(Unlock, {})
     target_hold.release_secretrequest_for(target.raiden, secrethash)
-    gevent.wait((mediator_unlock, target_unlock))
+    gevent.joinall({mediator_unlock, target_unlock}, raise_error=True)
 
     for server in (initiator_server, mediator_server, target_server):
         request = grequests.get(api_url_for(server, "pending_transfers_resource"))
