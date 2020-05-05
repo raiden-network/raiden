@@ -54,6 +54,7 @@ from raiden.api.v1.resources import (
     PendingTransfersResourceByTokenAndPartnerAddress,
     RaidenInternalEventsResource,
     RegisterTokenResource,
+    ShutdownResource,
     StatusResource,
     TokensResource,
     VersionResource,
@@ -104,6 +105,7 @@ from raiden.transfer.events import (
 from raiden.transfer.state import ChannelState, NettingChannelState
 from raiden.ui.sync import blocks_to_sync
 from raiden.utils.formatting import optional_address_to_string, to_checksum_address
+from raiden.utils.gevent import spawn_named
 from raiden.utils.http import split_endpoint
 from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
@@ -166,6 +168,7 @@ URLS_V1 = [
         "pending_transfers_resource_by_token_and_partner",
     ),
     ("/status", StatusResource),
+    ("/shutdown", ShutdownResource),
     ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
     ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
     (
@@ -1432,3 +1435,8 @@ class RestAPI:  # pragma: no unittest
                 return api_response(result=dict(status="syncing", blocks_to_sync=to_sync))
             else:
                 return api_response(result=dict(status="unavailable"))
+
+    def shutdown(self) -> Response:
+        shutdown_greenlet = spawn_named("trigger shutdown", self.raiden_api.shutdown)
+        shutdown_greenlet.link_exception(self.raiden_api.raiden.on_error)
+        return api_response(result=dict(status="shutdown"))
