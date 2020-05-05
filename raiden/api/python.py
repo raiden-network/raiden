@@ -1332,3 +1332,6 @@ class RaidenAPI:  # pragma: no unittest
                 channel_id = partner_channel.identifier
 
         return transfer_tasks_view(transfer_tasks, token_address, channel_id)
+
+    def shutdown(self) -> None:
+        self.raiden.stop()

@@ -322,3 +322,9 @@ class PendingTransfersResourceByTokenAndPartnerAddress(BaseResource):
 class StatusResource(BaseResource):
     def get(self) -> Response:
         return self.rest_api.get_status()
+
+
+class ShutdownResource(BaseResource):
+    @if_api_available
+    def post(self) -> Response:
+        return self.rest_api.shutdown()

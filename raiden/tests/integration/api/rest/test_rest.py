@@ -1244,3 +1244,19 @@ def test_api_testnet_token_mint(api_server_test_instance: APIServer, token_addre
     request = grequests.post(url, json=dict(to=user_address[:-2], value=10))
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_shutdown(api_server_test_instance: APIServer):
+    """ Node must stop after shutdown is called """
+    url = ("http://localhost:{port}/api/v1/shutdown").format(
+        port=api_server_test_instance.config.port
+    )
+    response = grequests.post(url).send().response
+
+    assert_response_with_code(response, HTTPStatus.OK)
+    finished = gevent.joinall({api_server_test_instance}, timeout=10, raise_error=True)
+    assert finished, "The Raiden node did not shut down!"
