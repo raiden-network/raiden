@@ -10,13 +10,13 @@ JOINALL_MSG = (
 JOINALL_RAISE_ERROR_ID = "gevent-joinall-raise-error"
 JOINALL_RAISE_ERROR_MSG = (
     "`joinall` should always re-raise exceptions from the underlying greenlets, "
-    "otherwise errros can be lost and the program will continue in a "
+    "otherwise errors can be lost and the program will continue in an "
     "undertermined state."
 )
 GROUP_DISABLE_WAIT_ID = "gevent-disable-wait"
 GROUP_DISABLE_WAIT_MSG = (
     "Just calling `gevent.wait` hides errors, since exceptions that killed the "
-    "underlying greenlet are swallowed. Instead of "
+    "underlying greenlet are swallowed. Instead "
     "`gevent.joinall(raise_error=True)` should be used"
 )
 GROUP_JOIN_ID = "gevent-group-join"

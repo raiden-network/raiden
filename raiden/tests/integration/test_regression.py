@@ -41,9 +41,9 @@ from raiden.utils.typing import (
 
 
 def open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout):
-    greenlets = []
+    greenlets = set()
     for first_app, second_app in app_channels:
-        greenlets.append(
+        greenlets.add(
             gevent.spawn(
                 payment_channel_open_and_deposit,
                 first_app,
@@ -53,7 +53,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
                 settle_timeout,
             )
         )
-    gevent.joinall(set(greenlets), raise_error=True)
+    gevent.joinall(greenlets, raise_error=True)
 
     wait_for_channels(app_channels, registry_address, [token], deposit)
 
