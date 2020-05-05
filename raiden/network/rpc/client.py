@@ -715,9 +715,13 @@ class SmartContractCall:
         typecheck(self.value, int)
 
     def to_log_details(self) -> Dict[str, Any]:
+        # As of web3 5.7.0 the typing of `Contract.address` is incorrect. The
+        # value is not always a `str`, it can also be `bytes`.
+        to_address = to_checksum_address(self.contract.address)  # type: ignore
+
         return {
             "function_name": self.function,
-            "to_address": self.contract.address,
+            "to_address": to_address,
             "args": self.args,
             "kwargs": self.kwargs,
             "value": self.value,
