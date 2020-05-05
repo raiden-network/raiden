@@ -906,11 +906,11 @@ class JSONRPCClient:
     def __init__(
         self,
         web3: Web3,
-        privkey: Optional[PrivateKey],
+        privkey: PrivateKey,
         gas_price_strategy: Callable = rpc_gas_price_strategy,
         block_num_confirmations: int = 0,
     ) -> None:
-        if privkey is None or len(privkey) != 32:
+        if len(privkey) != 32:
             raise ValueError("Invalid private key")
 
         if block_num_confirmations < 0:
