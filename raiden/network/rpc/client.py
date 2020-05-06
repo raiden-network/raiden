@@ -899,13 +899,7 @@ class TransactionMined:
 
 
 class JSONRPCClient:
-    """ Ethereum JSON RPC client.
-
-    Args:
-        host: Ethereum node host address.
-        port: Ethereum node port number.
-        privkey: Local user private key, used to sign transactions.
-    """
+    """ Ethereum JSON RPC client. """
 
     def __init__(
         self,
