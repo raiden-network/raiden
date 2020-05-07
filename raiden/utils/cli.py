@@ -14,9 +14,10 @@ from click import Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
-from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
+from web3.gas_strategies.time_based import fast_gas_price_strategy
 
 from raiden.exceptions import ConfigurationError, InvalidChecksummedAddress
+from raiden.network.rpc.middleware import faster_gas_price_strategy
 from raiden.utils.formatting import address_checksum_and_decode
 from raiden_contracts.constants import CHAINNAME_TO_ID
 
@@ -302,9 +303,9 @@ class GasPriceChoiceType(click.Choice):
         else:
             gas_price_string = super().convert(value, param, ctx)
             if gas_price_string == "fast":
-                return fast_gas_price_strategy
+                return faster_gas_price_strategy
             else:
-                return medium_gas_price_strategy
+                return fast_gas_price_strategy
 
 
 class MatrixServerType(click.Choice):
