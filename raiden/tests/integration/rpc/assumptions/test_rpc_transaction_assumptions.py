@@ -127,8 +127,12 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
     eth_node = deploy_client.eth_node
     next_nonce = discover_next_available_nonce(web3, eth_node, deploy_client.address)
 
+    # Should be larger than the number of transactions that can fit in a single
+    # block, to ensure all transactions from the pool are accounted for.
+    QTY_TRANSACTIONS = 1000
+
     # Test the next available nonce
-    for _ in range(5):
+    for _ in range(QTY_TRANSACTIONS):
         transaction = {
             "to": to_checksum_address(random_address),
             "gas": TRANSACTION_INTRINSIC_GAS,
@@ -151,7 +155,7 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
 
     # Test the next available nonce is not the same as the highest unused
     # nonce.
-    for _ in range(5):
+    for _ in range(QTY_TRANSACTIONS):
         transaction = {
             "to": to_checksum_address(random_address),
             "gas": TRANSACTION_INTRINSIC_GAS,

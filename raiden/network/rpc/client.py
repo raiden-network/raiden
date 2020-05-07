@@ -296,6 +296,27 @@ def geth_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
 
 
 def discover_next_available_nonce(web3: Web3, eth_node: EthClient, address: Address) -> Nonce:
+    """Returns the next available nonce for `address`.
+
+    Nonce discovery had a few iterations:
+
+    - Initially the client fetched the next avaialble nonce before sending
+      every transaction.
+    - Commit e4edcde0ce tried to handle race conditions were two concurrent
+      *local* transactions would use the same nonce, since the nonce was
+      fecthed without synchronization. The strategy was to query it often and
+      update the local state, with the addition of a lock to synchronize its
+      usage.
+    - Commit f750fbd7f7 removed the regular updates, it didn't fix race
+      conditions for *multiple* clients or restarts, and made a requirement
+      that only one app can use the private key at the time. This removed
+      remote race conditions.
+    - Commit d3d204022e started using the txpool interface to account for all
+      sent transactions.
+    - Commit 83f3d8f3bd simplified the nonce update since Geth's API was fixed.
+      And added the special case for Parity.
+    """
+
     if eth_node is EthClient.PARITY:
         parity_assert_rpc_interfaces(web3)
         available_nonce = parity_discover_next_available_nonce(web3, address)
