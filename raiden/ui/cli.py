@@ -106,6 +106,7 @@ def write_stack_trace(ex: Exception) -> None:
     )
     with file as traceback_file:
         traceback.print_exc(file=traceback_file)
+        traceback.print_exc()
         click.secho(
             f"FATAL: An unexpected exception occurred. "
             f"A traceback has been written to {traceback_file.name}\n"
@@ -622,7 +623,6 @@ def run(ctx: Context, **kwargs: Any) -> None:
         click.secho(str(e), fg="red")
         sys.exit(ReturnCode.ETH_INTERFACE_ERROR)
     except RaidenUnrecoverableError as ex:
-        click.secho(f"FATAL: An un-recoverable error happen, Raiden is bailing {ex}", fg="red")
         write_stack_trace(ex)
         sys.exit(ReturnCode.FATAL)
     except APIServerPortInUseError as ex:
