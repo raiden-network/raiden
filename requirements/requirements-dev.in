@@ -7,7 +7,7 @@
 -r requirements-docs.txt
 
 # Dependencies
-pip-tools~=4.5.1  # this is used by 'deps.py'
+pip-tools~=5.1.2  # this is used by 'deps.py'
 
 # Linting
 autopep8

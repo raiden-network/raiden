@@ -65,11 +65,11 @@ repos:
     hooks:
       - id: mypy
         entry: tools/pre-commit/pre-commit-wrapper.py mypy
-        additional_dependencies: ["pip-tools>=4.5.1"]
+        additional_dependencies: ["pip-tools>=5.1.2"]
 
   - repo: https://github.com/pre-commit/mirrors-pylint
     rev: v2.3.1
     hooks:
       - id: pylint
         entry: tools/pre-commit/pre-commit-wrapper.py pylint
-        additional_dependencies: ["pip-tools>=4.5.1"]
+        additional_dependencies: ["pip-tools>=5.1.2"]
