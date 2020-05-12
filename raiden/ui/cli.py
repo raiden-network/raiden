@@ -29,8 +29,10 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import (
+    AddressWithoutCode,
     APIServerPortInUseError,
     ConfigurationError,
+    ContractCodeMismatch,
     EthereumNonceTooLow,
     EthNodeInterfaceError,
     RaidenUnrecoverableError,
@@ -94,7 +96,8 @@ class ReturnCode(Enum):
     ETH_INTERFACE_ERROR = 4
     PORT_ALREADY_IN_USE = 5
     ETH_ACCOUNT_ERROR = 6
-    CONFIGURATION_ERROR = 7
+    RAIDEN_CONFIGURATION_ERROR = 7
+    SMART_CONTRACTS_CONFIGURATION_ERROR = 8
 
 
 def write_stack_trace(ex: Exception) -> None:
@@ -604,6 +607,10 @@ def run(ctx: Context, **kwargs: Any) -> None:
             abort=True,
         )
 
+    # Name used in the exception handlers, make sure the kwargs contains the
+    # key with the correct name by always running it.
+    name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
+
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
@@ -637,15 +644,30 @@ def run(ctx: Context, **kwargs: Any) -> None:
         sys.exit(ReturnCode.ETH_ACCOUNT_ERROR)
     except ConfigurationError as e:
         click.secho(str(e), fg="red")
-        sys.exit(ReturnCode.CONFIGURATION_ERROR)
+        sys.exit(ReturnCode.RAIDEN_CONFIGURATION_ERROR)
+    except ContractCodeMismatch as e:
+        click.secho(
+            f"{e}. This may happen if Raiden is configured to use an "
+            f"unsupported version of the contracts.",
+            fg="red",
+        )
+        sys.exit(ReturnCode.SMART_CONTRACTS_CONFIGURATION_ERROR)
+    except AddressWithoutCode as e:
+        click.secho(
+            f"{e}. This may happen if an external ERC20 smart contract "
+            f"selfdestructed, or if the configured address is misconfigured, make "
+            f"sure the used address is not a normal account but a smart contract, "
+            f"and that it is deployed to {name_or_id}.",
+            fg="red",
+        )
+        sys.exit(ReturnCode.SMART_CONTRACTS_CONFIGURATION_ERROR)
     except filelock.Timeout:
-        name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
         click.secho(
             f"FATAL: Another Raiden instance already running for account "
             f"{to_checksum_address(kwargs['address'])} on network id {name_or_id}",
             fg="red",
         )
-        sys.exit(ReturnCode.CONFIGURATION_ERROR)
+        sys.exit(ReturnCode.RAIDEN_CONFIGURATION_ERROR)
     except Exception as ex:
         write_stack_trace(ex)
         sys.exit(ReturnCode.FATAL)

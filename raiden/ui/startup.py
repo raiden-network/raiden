@@ -5,12 +5,7 @@ import click
 from eth_utils import to_canonical_address
 
 from raiden.constants import BLOCK_ID_LATEST, Environment, RoutingMode
-from raiden.exceptions import (
-    AddressWithoutCode,
-    AddressWrongContract,
-    ContractCodeMismatch,
-    RaidenError,
-)
+from raiden.exceptions import RaidenError
 from raiden.network.pathfinding import PFSConfig, check_pfs_for_production, configure_pfs_or_exit
 from raiden.network.proxies.monitoring_service import MonitoringService
 from raiden.network.proxies.one_to_n import OneToN
@@ -164,23 +159,6 @@ def load_deployed_contracts_data(config: RaidenConfig, network_id: ChainID) -> D
     return deployed_contracts_data
 
 
-def handle_contract_code_mismatch(mismatch_exception: ContractCodeMismatch) -> None:
-    raise RaidenError(f"{str(mismatch_exception)}. Please update your Raiden installation.")
-
-
-def handle_contract_no_code(name: str, address: Address) -> None:
-    hex_addr = to_checksum_address(address)
-    raise RaidenError(f"Error: Provided {name} {hex_addr} contract does not contain code")
-
-
-def handle_contract_wrong_address(name: str, address: Address) -> None:
-    hex_addr = to_checksum_address(address)
-    raise RaidenError(
-        f"Error: Provided address {hex_addr} for {name} contract"
-        " does not contain expected code."
-    )
-
-
 def load_deployment_addresses_from_contracts(contracts: Dict[str, Any]) -> DeploymentAddresses:
     return DeploymentAddresses(
         token_network_registry_address=TokenNetworkRegistryAddress(
@@ -275,14 +253,7 @@ def raiden_bundle_from_contracts_deployment(
     proxies = dict()
 
     for contractname, address, constructor in contractname_address:
-        try:
-            proxy = constructor(address, block_identifier=BLOCK_ID_LATEST)  # type: ignore
-        except ContractCodeMismatch as e:
-            handle_contract_code_mismatch(e)
-        except AddressWithoutCode:
-            handle_contract_no_code(contractname, Address(address))
-        except AddressWrongContract:
-            handle_contract_wrong_address(contractname, Address(address))
+        proxy = constructor(address, block_identifier=BLOCK_ID_LATEST)  # type: ignore
 
         proxies[contractname] = proxy
 
@@ -345,14 +316,7 @@ def services_bundle_from_contracts_deployment(
     proxies = dict()
 
     for contractname, address, constructor in contractname_address:
-        try:
-            proxy = constructor(address, block_identifier=BLOCK_ID_LATEST)
-        except ContractCodeMismatch as e:
-            handle_contract_code_mismatch(e)
-        except AddressWithoutCode:
-            handle_contract_no_code(contractname, address)
-        except AddressWrongContract:
-            handle_contract_wrong_address(contractname, address)
+        proxy = constructor(address, block_identifier=BLOCK_ID_LATEST)
 
         proxies[contractname] = proxy
 

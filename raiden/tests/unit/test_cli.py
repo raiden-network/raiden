@@ -54,7 +54,7 @@ def mock_raises(exception):
 def test_run_error_reporting(cli_runner, monkeypatch):
     caught_exceptions = {
         APIServerPortInUseError(): ReturnCode.PORT_ALREADY_IN_USE,
-        ConfigurationError(): ReturnCode.CONFIGURATION_ERROR,
+        ConfigurationError(): ReturnCode.RAIDEN_CONFIGURATION_ERROR,
         ConnectTimeout(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
         ConnectionError(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
         EthereumNonceTooLow(): ReturnCode.ETH_ACCOUNT_ERROR,

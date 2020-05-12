@@ -250,11 +250,6 @@ class AddressWithoutCode(RaidenError):
     """Raised on attempt to execute contract on address without a code."""
 
 
-class AddressWrongContract(RaidenError):
-    """Raised on attempt to execute contract on address that has code but
-    is probably not the contract we wanted."""
-
-
 class DuplicatedChannelError(RaidenRecoverableError):
     """Raised if someone tries to create a channel that already exists."""
 
