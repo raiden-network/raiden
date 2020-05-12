@@ -26,6 +26,21 @@ function display_usage {
     echo -e "\tDESTINATION_URL is optional and is used to specify the path prefix for the downloaded files. Otherwise the current directory is used\n"
 }
 
+die() {
+    printf "$(tput bold)$(tput setaf 1) -> $1$(tput sgr0)\n" >&2
+    exit 1
+}
+
+require_bin() {
+    hash $1 2> /dev/null || {
+        die "Required binary was not found ${1}"
+    }
+}
+
+require_bin pv
+require_bin scp
+require_bin ssh
+require_bin gunzip
 
 if [[  $1 == "--help" ]]; then
     display_usage
