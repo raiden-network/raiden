@@ -360,6 +360,8 @@ def check_address_has_code(
     result = client.web3.eth.getCode(address, given_block_identifier)
 
     if not result:
+        # The error message is printed to the user from ui/cli.py. Make sure it
+        # is readable.
         raise AddressWithoutCode(
             "[{}]Address {} does not contain code".format(
                 contract_name, to_checksum_address(address)
@@ -367,6 +369,8 @@ def check_address_has_code(
         )
 
     if expected_code is not None and result != expected_code:
+        # The error message is printed to the user from ui/cli.py. Make sure it
+        # is readable.
         raise ContractCodeMismatch(
             f"[{contract_name}] Address {to_checksum_address(address)} has wrong code"
         )
