@@ -343,7 +343,7 @@ class PFSReturnedError(ServiceRequestFailed):
     """ The PFS responded with a json message containing an error """
 
     def __init__(self, message: str, error_code: int, error_details: Dict[str, Any]) -> None:
-        args: List[Any] = [f"{message} ({error_code})"]
+        args: List[Any] = [f"{message} (PFS error code: {error_code})"]
         if error_details:
             args.append(error_details)
         super().__init__(*args)
