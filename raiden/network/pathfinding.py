@@ -505,9 +505,10 @@ def post_pfs_paths(
     try:
         response_json = get_response_json(response)
         return response_json["result"], UUID(response_json["feedback_token"])
-    except KeyError:
+    except KeyError as e:
+        missing_field = e.args[0]
         raise ServiceRequestFailed(
-            "Answer from Pathfinding Service not understood ('result' field missing)",
+            f"Answer from Pathfinding Service not understood ('{missing_field}' field missing)",
             dict(response=get_response_json(response)),
         )
     except ValueError:
