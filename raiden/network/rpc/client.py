@@ -368,7 +368,7 @@ def check_address_has_code(
 
     if expected_code is not None and result != expected_code:
         raise ContractCodeMismatch(
-            f"[{contract_name}]Address {to_checksum_address(address)} has wrong code."
+            f"[{contract_name}] Address {to_checksum_address(address)} has wrong code"
         )
 
 
