@@ -54,7 +54,6 @@ scenario:
       - serial:
           name: "Make monitor request"
           tasks:
-            - wait_blocks: 1
             - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - serial:
           name: "Stop node1"
@@ -67,7 +66,6 @@ scenario:
       - serial:
           name: "Wait for channel close and assert that it is closed"
           tasks:
-            - wait_blocks: 1
             - assert: {from: 0 ,to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
             - assert_events:
                 contract_name: "TokenNetwork"

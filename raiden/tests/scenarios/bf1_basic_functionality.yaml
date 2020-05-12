@@ -232,8 +232,6 @@ scenario:
           tasks:
             - stop_node: 4
             - close_channel: {from: 3, to: 4}
-            ## Wait for channel to be closed
-            - wait_blocks: 1
             - assert: {from: 3, to: 4, state: "closed"}
             - assert_events:
                 contract_name: "TokenNetwork"

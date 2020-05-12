@@ -53,8 +53,9 @@ scenario:
             # We expect the pfs not to send any route, but to charge for the information
             # but the node can check if the direct channel is usable so we need a deposit
             - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 409}
-            - wait_blocks: 1
+
             - assert_pfs_history: {source: 3, target: 0, request_count: 1}
             - assert_pfs_iou: {source: 3, amount: {{ pfs_fee }}}
             - assert_pfs_iou: {source: 2, iou_exists: false}
@@ -79,9 +80,9 @@ scenario:
           tasks:
             # Now that there is a path with capacity the transfer should go through
             # and another IOU should exist
-            - wait_blocks: 1
+
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
-            - wait_blocks: 1
+
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}
             - assert_pfs_iou: {source: 3, amount: {{ 2 * pfs_fee }}}
             - assert_pfs_iou: {source: 2, iou_exists: false}
