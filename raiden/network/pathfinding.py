@@ -142,10 +142,10 @@ def get_pfs_info(url: str) -> PFSInfo:
             confirmed_block_number=infos["network_info"]["confirmed_block"]["number"],
         )
     except requests.exceptions.RequestException as e:
-        msg = "Selected Pathfinding Service did not respond"
+        msg = f"Selected Pathfinding Service did not respond. {str(e)}"
         raise ServiceRequestFailed(msg) from e
     except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError) as e:
-        msg = "Selected Pathfinding Service returned unexpected reply"
+        msg = f"Selected Pathfinding Service returned unexpected reply. {str(e)}"
         raise ServiceRequestFailed(msg) from e
 
 
@@ -490,15 +490,16 @@ def post_pfs_paths(
     if response.status_code != 200:
         try:
             response_json = get_response_json(response)
-        except ValueError:
+        except ValueError as e:
             log.error(
                 "Pathfinding Service returned error code (malformed json in response)",
                 response=response,
             )
-            raise ServiceRequestFailed(
-                "Pathfinding Service returned error code (malformed json in response)",
-                {"http_error": response.status_code},
+            msg = (
+                f"Pathfinding Service returned error code (malformed json in "
+                f"response). Error: ({str(e)})."
             )
+            raise ServiceRequestFailed(msg, {"http_error": response.status_code})
 
         raise PFSReturnedError.from_response(response_json)
 
@@ -511,9 +512,9 @@ def post_pfs_paths(
             f"Answer from Pathfinding Service not understood ('{missing_field}' field missing)",
             dict(response=get_response_json(response)),
         )
-    except ValueError:
+    except ValueError as e:
         raise ServiceRequestFailed(
-            "Pathfinding Service returned invalid json",
+            f"Pathfinding Service returned invalid json. Error: ({str(e)}).",
             dict(response_text=response.text, exc_info=True),
         )
 
@@ -603,12 +604,8 @@ def query_paths(
                 elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                     scrap_existing_iou = True
                 elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
-                    try:
-                        new_info = get_pfs_info(pfs_config.info.url)
-                    except ServiceRequestFailed:
-                        raise ServiceRequestFailed(
-                            "Could not get updated fee information from Pathfinding Service."
-                        )
+                    new_info = get_pfs_info(pfs_config.info.url)
+
                     if new_info.price > pfs_config.maximum_fee:
                         raise ServiceRequestFailed("PFS fees too high.")
                     if new_info.price > pfs_config.info.price:
