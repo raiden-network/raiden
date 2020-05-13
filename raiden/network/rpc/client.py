@@ -1243,11 +1243,11 @@ class JSONRPCClient:
 
         except ValueError as e:
             if isinstance(slot.data, SmartContractCall):
-                error_msg = "Transaction to deploy smart contract failed"
+                error_msg = "Transaction to call smart contract function failed"
             elif isinstance(slot.data, EthTransfer):
                 error_msg = "Transaction to transfer ether failed"
-            else:
-                error_msg = "Transaction to call smart contract function failed"
+            else:  # ByteCode
+                error_msg = "Transaction to deploy smart contract failed"
 
             action = inspect_client_error(e, self.eth_node)
 
@@ -1324,7 +1324,7 @@ class JSONRPCClient:
         block = self.get_block(BLOCK_ID_LATEST)
 
         # Sometimes eth_estimateGas returns wrong values for contract deployments
-        # Add a margin of 10%
+        # Add a margin of 50%
         # See https://github.com/raiden-network/raiden/issues/5994
         gas_with_margin = int(contract_transaction["gas"] * 1.5)
         gas_price = gas_price_for_fast_transaction(self.web3)
