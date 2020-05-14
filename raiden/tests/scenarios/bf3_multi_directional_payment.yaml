@@ -9,7 +9,7 @@ settings:
       enable: true
       token:
         deposit: true
-        balance_per_node: {{ ms_reward_with_margin + 200 * pfs_fee }}
+        balance_per_node: {{ ms_reward_with_margin + 200 * 2 * pfs_fee }}
 
 token:
   address: "{{ transfer_token }}"

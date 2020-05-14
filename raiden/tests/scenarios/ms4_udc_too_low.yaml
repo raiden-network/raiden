@@ -11,7 +11,7 @@ settings:
       token:
         deposit: true
         # There should be enough deposit to use the PFS, but not enough to be able to use the MS
-        balance_per_node: {{ pfs_fee * 10 }}
+        balance_per_node: {{ 10 *  2 * pfs_fee }}
 
 token:
   address: "{{ transfer_token }}"
