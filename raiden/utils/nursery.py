@@ -43,6 +43,7 @@ class Janitor:
         self.stop_timeout = stop_timeout
         self._stop = AsyncResult()
         self._processes: Set[Popen] = set()
+        self._exit_in_progress = False
 
         # Lock to protect changes to `_stop` and `_processes`. The `_stop`
         # synchronization is necessary to fix the race described below,
@@ -77,6 +78,11 @@ class Janitor:
                 assert not kwargs.get("shell", False), "Janitor does not work with shell=True"
 
                 def subprocess_stopped(result: AsyncResult) -> None:
+                    if janitor._exit_in_progress:
+                        # During __exit__ we expect processes to stop, since
+                        # they are killed by the janitor.
+                        return
+
                     with janitor._processes_lock:
                         # Processes are expected to quit while the nursery is
                         # active, remove them from the track list to clear memory
@@ -146,6 +152,7 @@ class Janitor:
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
+        self._exit_in_progress = True
         with self._processes_lock:
             # Make sure to signal that we are exiting.
             if not self._stop.done():
