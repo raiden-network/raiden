@@ -158,7 +158,7 @@ sphinxcontrib-httpdomain==1.7.0  # via -r requirements-docs.txt, sphinxcontrib-h
 sphinxcontrib-httpexample==0.10.3  # via -r requirements-docs.txt
 sphinxcontrib-images==0.8.0  # via -r requirements-docs.txt
 sphinxcontrib-websupport==1.1.2  # via -r requirements-docs.txt, sphinx
-structlog==19.1.0         # via -r requirements.txt
+structlog==20.1.0         # via -r requirements.txt
 toml==0.10.0              # via black
 toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via -r requirements.txt, ipython
