@@ -78,7 +78,7 @@ jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, 
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in, pyinstaller
+macholib==1.14            # via -r requirements-ci.in
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
@@ -164,7 +164,7 @@ sphinxcontrib-httpdomain==1.7.0  # via -r requirements-dev.txt, sphinxcontrib-ht
 sphinxcontrib-httpexample==0.10.3  # via -r requirements-dev.txt
 sphinxcontrib-images==0.8.0  # via -r requirements-dev.txt
 sphinxcontrib-websupport==1.1.2  # via -r requirements-dev.txt, sphinx
-structlog==19.1.0         # via -r requirements-dev.txt
+structlog==20.1.0         # via -r requirements-dev.txt
 toml==0.10.0              # via -r requirements-dev.txt, black
 toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
