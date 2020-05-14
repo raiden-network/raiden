@@ -19,7 +19,7 @@ from eth_utils.toolz import assoc
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ReadTimeout
-from web3 import Web3
+from web3 import HTTPProvider, Web3
 from web3._utils.contracts import (
     encode_transaction_data,
     find_matching_fn_abi,
@@ -28,15 +28,15 @@ from web3._utils.contracts import (
 from web3._utils.empty import empty
 from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
-from web3.exceptions import TransactionNotFound
+from web3.exceptions import BlockNotFound, TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
-from web3.middleware import geth_poa_middleware
 from web3.types import (
     ABIFunction,
     BlockData,
     FilterParams,
     LogReceipt,
     RPCEndpoint,
+    RPCResponse,
     TxParams,
     TxReceipt,
     Wei,
@@ -50,6 +50,7 @@ from raiden.constants import (
     NULL_ADDRESS_CHECKSUM,
     RECEIPT_FAILURE_CODE,
     TRANSACTION_INTRINSIC_GAS,
+    WEB3_BLOCK_NOT_FOUND_RETRY_COUNT,
     EthClient,
 )
 from raiden.exceptions import (
@@ -91,6 +92,7 @@ log = structlog.get_logger(__name__)
 
 GETH_REQUIRE_OPCODE = "Missing opcode 0xfe"
 PARITY_REQUIRE_ERROR = "Bad instruction"
+EXTRA_DATA_LENGTH = 66  # 32 bytes hex encoded + `0x` prefix
 
 
 def logs_blocks_sanity_check(from_block: BlockIdentifier, to_block: BlockIdentifier) -> None:
@@ -551,6 +553,14 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     return False
 
 
+def is_infura(web3: Web3) -> bool:
+    return (
+        isinstance(web3.provider, HTTPProvider)
+        and web3.provider.endpoint_uri is not None
+        and "infura.io" in web3.provider.endpoint_uri
+    )
+
+
 def patched_web3_eth_estimate_gas(
     self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
 ) -> Wei:
@@ -680,6 +690,68 @@ def patched_contractfunction_estimateGas(
     )
 
 
+def make_sane_poa_middleware(
+    make_request: Callable[[RPCEndpoint, Any], Any], web3: Web3  # pylint: disable=unused-argument
+) -> Callable[[RPCEndpoint, Any], RPCResponse]:
+    """ Simpler geth_poa_middleware that doesn't break with ``null`` responses. """
+
+    def middleware(method: RPCEndpoint, params: Any) -> RPCResponse:
+        response = make_request(method, params)
+        result = response.get("result")
+        is_get_block_poa = (
+            method.startswith("eth_getBlockBy")
+            and result is not None
+            and len(result["extraData"]) != EXTRA_DATA_LENGTH
+        )
+        if is_get_block_poa:
+            extra_data = result.pop("extraData")
+            response["result"] = {**result, "proofOfAuthorityData": HexBytes(extra_data)}
+        return response
+
+    return middleware
+
+
+def make_patched_web3_get_block(
+    original_func: Callable[[Eth, BlockIdentifier, bool], BlockData]
+) -> Callable[[Eth, BlockIdentifier, bool], BlockData]:
+    """ Patch Eth.getBlock() to retry in case of ``BlockNotFound``
+
+    Infura sometimes erroneously returns a `null` response for
+    ``eth_getBlockByNumber`` and ``eth_getBlockByHash`` for existing blocks.
+
+    This generates a wrapper method that tries to perform the request up to
+    ``WEB3_BLOCK_NOT_FOUND_RETRY_COUNT`` times.
+
+    If no result is returned after the final retry the last ``BlockNotFound`` exception is
+    re-raised.
+
+    See:
+      - https://github.com/raiden-network/raiden/issues/3201
+      - https://github.com/INFURA/infura/issues/43
+    """
+
+    def patched_web3_get_block(  # type: ignore
+        self: Eth, block_identifier: BlockIdentifier, full_transactions: bool = False
+    ) -> BlockData:
+        last_ex: Optional[Exception] = None
+        for remaining_retries in range(WEB3_BLOCK_NOT_FOUND_RETRY_COUNT, 0, -1):
+            try:
+                return original_func(self, block_identifier, full_transactions)
+            except BlockNotFound as ex:
+                log.warning(
+                    "Block not found, retrying",
+                    remaining_retries=remaining_retries - 1,
+                    block_identifier=block_identifier,
+                )
+                last_ex = ex
+                # Short delay
+                gevent.sleep(0.1)
+        if last_ex is not None:
+            raise last_ex
+
+    return patched_web3_get_block
+
+
 def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     try:
         # install caching middleware
@@ -688,8 +760,10 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # set gas price strategy
         web3.eth.setGasPriceStrategy(gas_price_strategy)
 
-        # we use a PoA chain for smoketest, use this middleware to fix this
-        web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        # we use a PoA chain for the smoke, unit and integration tests
+        # The built-in `geth_poa_middleware` doesn't correctly deal with `null` responses
+        # to `eth_getBlockBy*` calls.
+        web3.middleware_onion.inject(make_sane_poa_middleware, layer=0)
     except ValueError:
         # `middleware_onion.inject()` raises a value error if the same middleware is
         # injected twice. This happens with `eth-tester` setup where a single session
@@ -705,6 +779,12 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     # Parity raises a value error. Raiden assumes the return of an empty
     # string so we have to make parity behave like geth
     Eth.call = patched_web3_eth_call  # type: ignore
+
+    if is_infura(web3):
+        # Infura sometimes erroneously returns `null` for existing (but very recent) blocks.
+        # Work around this by retrying those requests.
+        # See docstring for details.
+        Eth.getBlock = make_patched_web3_get_block(Eth.getBlock)  # type: ignore
 
 
 @dataclass
