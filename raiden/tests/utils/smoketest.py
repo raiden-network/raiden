@@ -18,7 +18,6 @@ from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
 from web3.contract import Contract
-from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
@@ -35,7 +34,7 @@ from raiden.constants import (
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.user_deposit import UserDeposit
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.client import JSONRPCClient, make_sane_poa_middleware
 from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
@@ -249,7 +248,7 @@ def setup_testchain(
 
     eth_rpc_endpoint = URI(f"http://127.0.0.1:{rpc_port}")
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
-    web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    web3.middleware_onion.inject(make_sane_poa_middleware, layer=0)
 
     eth_nodes = [
         EthNodeDescription(
