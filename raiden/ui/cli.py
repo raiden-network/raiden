@@ -616,6 +616,21 @@ def run(ctx: Context, **kwargs: Any) -> None:
     # not timeout.
     try:
         run_services(kwargs)
+    except KeyboardInterrupt:
+        # The user requested a shutdown. Assume that if the exception
+        # propagated all the way to the top-level everything was shutdown
+        # properly.
+        #
+        # Notes about edge cases:
+        # - It could happen the exception was handled somewhere else in the
+        # code, and did not reach the top-level, ideally that should result in
+        # an exit with a non-zero code, but currently there is not way to
+        # detect that.
+        # - Just because the exception reached main, it doesn't mean that all
+        # services were properly cleaned up. Ideally at this stage we should
+        # run extra code to verify the state of the main services, and if any
+        # of the is not properly shutdown exit with a non-zero code.
+        pass
     except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as ex:
         click.secho(
             f"{ex}. Please make sure that this Raiden node is the "
