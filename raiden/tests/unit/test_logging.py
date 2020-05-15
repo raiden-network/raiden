@@ -104,6 +104,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
         {module: level},
         disable_debug_logfile=disabled_debug,
         debug_log_file_path=str(tmpdir / "raiden-debug.log"),
+        colorize=False,
     )
     log = structlog.get_logger(logger).bind(foo="bar")
     log.debug("test event", key="value")
