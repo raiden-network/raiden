@@ -22,6 +22,7 @@ from raiden.constants import (
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import BlockBatchSizeConfig
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Address,
@@ -249,6 +250,11 @@ def decode_raiden_event_to_internal(
     data["transaction_hash"] = log_event["transactionHash"]
     data["block_hash"] = bytes(log_event["blockHash"])
 
+    # Remove the old names
+    del data["blockNumber"]
+    del data["transactionHash"]
+    del data["blockHash"]
+
     assert data["block_number"], "The event must have the block_number"
     assert data["transaction_hash"], "The event must have the transaction hash field"
     assert data["block_hash"], "The event must have the block_hash"
@@ -341,6 +347,42 @@ def filters_to_rpc(
         # slight performance gain (read documentation above for why).
         # "topics": None,
     }
+
+
+def fetch_all_events_for_a_deployment(
+    contract_manager: ContractManager,
+    web3: Web3,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    secret_registry_address: SecretRegistryAddress,
+    start_block: BlockNumber,
+    target_block: BlockNumber,
+) -> Iterable[Dict]:
+    """ Read all the events of a whole deployment, starting at the network
+    registry, and following the registered networks.
+    """
+
+    chain_id = ChainID(web3.eth.chainId)
+    filters = [
+        token_network_registry_events(token_network_registry_address, contract_manager),
+        secret_registry_events(secret_registry_address, contract_manager),
+    ]
+    blockchain_events = BlockchainEvents(
+        web3=web3,
+        chain_id=chain_id,
+        contract_manager=contract_manager,
+        last_fetched_block=start_block,
+        event_filters=filters,
+        block_batch_size_config=BlockBatchSizeConfig(),
+    )
+
+    while target_block > blockchain_events.last_fetched_block:
+        poll_result = blockchain_events.fetch_logs_in_batch(target_block)
+        if poll_result is None:
+            # No blocks could be fetched (due to timeout), retry
+            continue
+
+        for event in poll_result.events:
+            yield event.event_data
 
 
 class BlockchainEvents:
@@ -586,7 +628,12 @@ class BlockchainEvents:
         while filters_to_query:
             filter_params = filters_to_rpc(filters_to_query, from_block, to_block)
 
-            log.debug("StatelessFilter: querying new entries", filter_params=filter_params)
+            log.debug(
+                "StatelessFilter: querying new entries",
+                from_block=filter_params["fromBlock"],
+                to_block=filter_params["toBlock"],
+                addresses=[to_checksum_address(address) for address in filter_params["address"]],
+            )
 
             try:
                 start = time.monotonic()
@@ -606,7 +653,9 @@ class BlockchainEvents:
 
             log.debug(
                 "StatelessFilter: fetched new entries",
-                filter_params=filter_params,
+                from_block=filter_params["fromBlock"],
+                to_block=filter_params["toBlock"],
+                addresses=[to_checksum_address(address) for address in filter_params["address"]],
                 blockchain_events=blockchain_events,
                 request_duration=request_duration,
             )

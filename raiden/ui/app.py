@@ -82,7 +82,7 @@ from raiden.utils.typing import (
     Tuple,
     UserDepositAddress,
 )
-from raiden_contracts.constants import ID_TO_CHAINNAME
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, ID_TO_CHAINNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -297,7 +297,7 @@ def run_app(
     token_network_registry_deployed_at = None
     if "TokenNetworkRegistry" in contracts:
         token_network_registry_deployed_at = BlockNumber(
-            contracts["TokenNetworkRegistry"]["block_number"]
+            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["block_number"]
         )
 
     if token_network_registry_deployed_at is None:
