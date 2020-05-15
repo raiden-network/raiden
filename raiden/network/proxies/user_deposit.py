@@ -332,7 +332,9 @@ class UserDeposit:
             if estimated_transaction is not None:
                 transaction_hash = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(transaction_hash, token, total_deposit, amount_to_deposit)
+            self._deposit_check_result(
+                transaction_hash, token, beneficiary, total_deposit, amount_to_deposit
+            )
 
     def approve_and_deposit(
         self,
@@ -384,7 +386,9 @@ class UserDeposit:
                 if estimated_transaction is not None:
                     transaction_sent = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(transaction_sent, token, total_deposit, amount_to_deposit)
+            self._deposit_check_result(
+                transaction_sent, token, beneficiary, total_deposit, amount_to_deposit
+            )
 
     def plan_withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
@@ -536,6 +540,7 @@ class UserDeposit:
         self,
         transaction_sent: Optional[TransactionSent],
         token: Token,
+        beneficiary: Address,
         total_deposit: TokenAmount,
         amount_to_deposit: TokenAmount,
     ) -> None:
@@ -551,7 +556,7 @@ class UserDeposit:
             )
 
             latest_deposit = self.get_total_deposit(
-                address=self.node_address, block_identifier=failed_at_blocknumber
+                address=beneficiary, block_identifier=failed_at_blocknumber
             )
             amount_to_deposit = TokenAmount(total_deposit - latest_deposit)
 
@@ -602,7 +607,7 @@ class UserDeposit:
                 failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
 
                 latest_deposit = self.get_total_deposit(
-                    address=self.node_address, block_identifier=failed_at_blocknumber
+                    address=beneficiary, block_identifier=failed_at_blocknumber
                 )
                 amount_to_deposit = TokenAmount(total_deposit - latest_deposit)
 
