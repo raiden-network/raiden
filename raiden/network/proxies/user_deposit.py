@@ -305,7 +305,7 @@ class UserDeposit:
             token_address=token_address, block_identifier=given_block_identifier
         )
 
-        previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
+        previous_total_deposit, _ = self._deposit_preconditions(
             beneficiary, total_deposit, given_block_identifier, token
         )
 
@@ -332,9 +332,7 @@ class UserDeposit:
             if estimated_transaction is not None:
                 transaction_hash = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(
-                transaction_hash, token, beneficiary, total_deposit, amount_to_deposit
-            )
+            self._deposit_check_result(transaction_hash, token, beneficiary, total_deposit)
 
     def approve_and_deposit(
         self,
@@ -386,9 +384,7 @@ class UserDeposit:
                 if estimated_transaction is not None:
                     transaction_sent = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(
-                transaction_sent, token, beneficiary, total_deposit, amount_to_deposit
-            )
+            self._deposit_check_result(transaction_sent, token, beneficiary, total_deposit)
 
     def plan_withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
@@ -542,7 +538,6 @@ class UserDeposit:
         token: Token,
         beneficiary: Address,
         total_deposit: TokenAmount,
-        amount_to_deposit: TokenAmount,
     ) -> None:
         if transaction_sent is None:
             failed_at = self.client.get_block(BLOCK_ID_LATEST)
