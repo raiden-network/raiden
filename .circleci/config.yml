@@ -744,12 +744,6 @@ workflows:
           requires:
             - lint-3.7
 
-      - scenario-player-integration-test:
-          name: scenario-player-integration-test
-          py-version: "3.7"
-          requires:
-            - lint-3.7
-
       - test:
           name: test-unit-3.7
           py-version: "3.7"
@@ -772,6 +766,18 @@ workflows:
           requires:
             - lint-3.7
 
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
+          requires:
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
+            - test-mocked-3.7
+
       - test:
           name: test-integration-matrix-geth-3.7
           py-version: "3.7"
@@ -785,7 +791,6 @@ workflows:
             - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
-            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
@@ -803,13 +808,14 @@ workflows:
             - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
-            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
 
       - finalize:
           requires:
+            - build-docs-3.7
+            - scenario-player-integration-test
             - test-integration-matrix-geth-3.7
             - test-integration-matrix-parity-3.7
 
@@ -976,12 +982,6 @@ workflows:
           requires:
             - lint-3.7
 
-      - scenario-player-integration-test:
-          name: scenario-player-integration-test
-          py-version: "3.7"
-          requires:
-            - lint-3.7
-
       - test:
           name: test-unit-3.7
           py-version: "3.7"
@@ -1004,6 +1004,18 @@ workflows:
           requires:
             - lint-3.7
 
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
+          requires:
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
+            - test-mocked-3.7
+
       - test:
           name: test-integration-matrix-geth-3.7
           py-version: "3.7"
@@ -1017,11 +1029,9 @@ workflows:
             - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
-            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
-
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -1036,15 +1046,16 @@ workflows:
             - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
-            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
 
       - finalize:
           requires:
-          - test-integration-matrix-geth-3.7
-          - test-integration-matrix-parity-3.7
+            - build-docs-3.7
+            - scenario-player-integration-test
+            - test-integration-matrix-geth-3.7
+            - test-integration-matrix-parity-3.7
 
       - build-binary-linux:
           name: build-binary-linux-x86
