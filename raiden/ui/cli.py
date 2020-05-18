@@ -567,36 +567,35 @@ def run(ctx: Context, **kwargs: Any) -> None:
     click.secho(
         textwrap.dedent(
             """\
-            ----------------------------------------------------------------------
-            | This is an Alpha version of experimental open source software      |
-            | released as a test version under an MIT license and may contain    |
-            | errors and/or bugs. No guarantee or representations whatsoever is  |
-            | made regarding its suitability (or its use) for any purpose or     |
-            | regarding its compliance with any applicable laws and regulations. |
-            | Use of the software is at your own risk and discretion and by      |
-            | using the software you acknowledge that you have read this         |
-            | disclaimer, understand its contents, assume all risk related       |
-            | thereto and hereby release, waive, discharge and covenant not to   |
-            | sue Brainbot Labs Establishment or any officers, employees or      |
-            | affiliates from and for any direct or indirect liability resulting |
-            | from the use of the software as permissible by applicable laws and |
-            | regulations.                                                       |
-            |                                                                    |
-            | Privacy Warning: Please be aware, that by using the Raiden Client, |
-            | among others, your Ethereum address, channels, channel deposits,   |
-            | settlements and the Ethereum address of your channel counterparty  |
-            | will be stored on the Ethereum chain, i.e. on servers of Ethereum  |
-            | node operators and ergo are to a certain extent publicly available.|
-            | The same might also be stored on systems of parties running Raiden |
-            | nodes connected to the same token network. Data present in the     |
-            | Ethereum chain is very unlikely to be able to be changed, removed  |
-            | or deleted from the public arena.                                  |
-            |                                                                    |
-            | Also be aware, that data on individual Raiden token transfers will |
-            | be made available via the Matrix protocol to the recipient,        |
-            | intermediating nodes of a specific transfer as well as to the      |
-            | Matrix server operators.                                           |
-            ----------------------------------------------------------------------"""
+            +------------------------------------------------------------------------+
+            | This is a Beta version of experimental open source software released   |
+            | as a test version under an MIT license and may contain errors and/or   |
+            | bugs. No guarantee or representation whatsoever is made regarding its  |
+            | suitability (or its use) for any purpose or regarding its compliance   |
+            | with any applicable laws and regulations. Use of the software is at    |
+            | your own risk and discretion and by using the software you warrant and |
+            | represent that you have read this disclaimer, understand its contents, |
+            | assume all risk related thereto and hereby release, waive, discharge   |
+            | and covenant not to hold liable Brainbot Labs Establishment or any of  |
+            | its officers, employees or affiliates from and for any direct or       |
+            | indirect damage resulting from the the software or the use thereof.    |
+            | Such to the extent as permissible by applicable laws and regulations.  |
+            |                                                                        |
+            | Privacy warning: Please be aware, that by using the Raiden Client,     |
+            | among others your Ethereum address, channels, channel deposits,        |
+            | settlements and the Ethereum address of your channel counterparty will |
+            | be stored on the Ethereum chain, i.e. on servers of Ethereum node      |
+            | operators and ergo are to a certain extent publicly available. The     |
+            | same might also be stored on systems of parties running Raiden nodes   |
+            | connected to the same token network. Data present in the Ethereum      |
+            | chain is very unlikely to be able to be changed, removed or deleted    |
+            | from the public arena.                                                 |
+            |                                                                        |
+            | Also be aware, that data on individual Raiden token transfers will be  |
+            | made available via the Matrix protocol to the recipient,               |
+            | intermediating nodes of a specific transfer as well as to the Matrix   |
+            | server operators, see Raiden Transport Specification.                  |
+            +------------------------------------------------------------------------+"""
         ),
         fg="yellow",
     )
