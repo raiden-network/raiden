@@ -18,7 +18,7 @@ mkdir -p "${test_report_dir}"
 #
 # This value should be larger than our tests timeout configuration, the default
 # is defined at setup.cfg under the section `[tool:pytest]`.
-dormant_timeout=570
+dormant_timeout=1230
 
 # This signal is installed in
 # raiden/tests/conftest.py::auto_enable_gevent_monitoring_signal
