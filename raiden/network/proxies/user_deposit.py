@@ -299,42 +299,7 @@ class UserDeposit:
         given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Increase the total deposit of the beneficiary's account to `total_deposit`. """
-
-        token_address = self.token_address(given_block_identifier)
-        token = self.proxy_manager.token(
-            token_address=token_address, block_identifier=given_block_identifier
-        )
-
-        previous_total_deposit, amount_to_deposit = self._deposit_preconditions(
-            beneficiary, total_deposit, given_block_identifier, token
-        )
-
-        # The call to `_deposit_preconditions` makes sure the deposit was valid
-        # at block `given_block_identifier`, the check below is for another
-        # concurrent deposits, with a higher value. Since concurrent calls is
-        # not an error, just a race condition, just wait for the result of the
-        # other operation.
-        current_inflight = self._inflight_deposits.get(beneficiary)
-        if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
-            current_inflight.async_result.get()
-            return
-
-        with self._deposit_inflight(beneficiary, total_deposit):
-            log_details = {
-                "given_block_identifier": format_block_id(given_block_identifier),
-                "previous_total_deposit": previous_total_deposit,
-            }
-            estimated_transaction = self.client.estimate_gas(
-                self.proxy, "deposit", log_details, beneficiary, total_deposit
-            )
-
-            transaction_hash = None
-            if estimated_transaction is not None:
-                transaction_hash = self.client.transact(estimated_transaction)
-
-            self._deposit_check_result(
-                transaction_hash, token, beneficiary, total_deposit, amount_to_deposit
-            )
+        self._deposit(beneficiary, total_deposit, given_block_identifier, False)
 
     def approve_and_deposit(
         self,
@@ -349,7 +314,15 @@ class UserDeposit:
         for the deposit. Note that this will overwrite the existing value, so
         large allowances are not useful when this method is used.
         """
+        self._deposit(beneficiary, total_deposit, given_block_identifier, True)
 
+    def _deposit(
+        self,
+        beneficiary: Address,
+        total_deposit: TokenAmount,
+        given_block_identifier: BlockIdentifier,
+        approve_token_transfer: bool,
+    ) -> None:
         token_address = self.token_address(given_block_identifier)
         token = self.proxy_manager.token(
             token_address=token_address, block_identifier=given_block_identifier
@@ -359,36 +332,36 @@ class UserDeposit:
             beneficiary, total_deposit, given_block_identifier, token
         )
 
-        log_details = {
-            "given_block_identifier": format_block_id(given_block_identifier),
-            "previous_total_deposit": previous_total_deposit,
-        }
-
         current_inflight = self._inflight_deposits.get(beneficiary)
         if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
             current_inflight.async_result.get()
             return
 
         with self._deposit_inflight(beneficiary, total_deposit):
+            log_details = {
+                "given_block_identifier": format_block_id(given_block_identifier),
+                "previous_total_deposit": previous_total_deposit,
+            }
+
+            transaction_hash = None
             # Make sure another `approve` transactions is not sent before the
             # deposit, otherwise the value would be overwritten.
-            transaction_sent = None
             with token.token_lock:
-                # HACK: Prevents gas estimation failures because of race
-                # conditions, for more details check `TokenNetwork.approve_and_set_total_deposit.
-                allowance = TokenAmount(amount_to_deposit + 1)
-                token.approve(allowed_address=Address(self.address), allowance=allowance)
+                if approve_token_transfer:
+                    # HACK: Prevents gas estimation failures because of race
+                    # conditions, for more details check
+                    # `TokenNetwork.approve_and_set_total_deposit`
+                    allowance = TokenAmount(amount_to_deposit + 1)
+                    token.approve(allowed_address=Address(self.address), allowance=allowance)
 
                 estimated_transaction = self.client.estimate_gas(
                     self.proxy, "deposit", log_details, beneficiary, total_deposit
                 )
 
                 if estimated_transaction is not None:
-                    transaction_sent = self.client.transact(estimated_transaction)
+                    transaction_hash = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(
-                transaction_sent, token, beneficiary, total_deposit, amount_to_deposit
-            )
+            self._deposit_check_result(transaction_hash, token, beneficiary, total_deposit)
 
     def plan_withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
@@ -542,7 +515,6 @@ class UserDeposit:
         token: Token,
         beneficiary: Address,
         total_deposit: TokenAmount,
-        amount_to_deposit: TokenAmount,
     ) -> None:
         if transaction_sent is None:
             failed_at = self.client.get_block(BLOCK_ID_LATEST)
