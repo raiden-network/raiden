@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, NewType, Tuple, Type, Union
@@ -8,7 +9,6 @@ from eth_typing import (  # NOQA pylint:disable=unused-import
     Hash32,
     HexAddress,
 )
-from typing_extensions import Literal
 from web3.types import ABI, BlockIdentifier, Nonce  # NOQA pylint:disable=unused-import
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
@@ -18,6 +18,12 @@ from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-
 )
 
 from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
+
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal
+else:
+    from typing import Literal
+
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
