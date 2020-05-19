@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :release:`0.200.0-rc9`
+
 * :release:`0.200.0-rc8`
 * :feature:`5338` The number of blocks queried for events is now dynamically adjusted. This is necessary to prevent timeouts because the Ethereum client is overloaded.
 * :bug:`6082` Small bug fix, use of undefined variable.

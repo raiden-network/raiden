@@ -89,7 +89,7 @@ mirakuru==2.1.2           # via -r requirements.txt
 more-itertools==7.0.0     # via pytest
 msgpack==0.6.1            # via matrix-synapse
 multiaddr==0.0.9          # via -r requirements.txt, ipfshttpclient
-mypy-extensions==0.4.3    # via -r requirements.txt, mypy, typing-inspect
+mypy-extensions==0.4.3    # via -r requirements.txt, mypy, raiden-contracts, typing-inspect
 mypy==0.761               # via -r requirements-dev.in
 netaddr==0.7.19           # via -r requirements.txt, matrix-synapse, multiaddr
 netifaces==0.10.9         # via -r requirements.txt
@@ -136,7 +136,7 @@ pytest==5.3.5             # via -r requirements-dev.in, pytest-forked, pytest-ra
 pytoml==0.1.20            # via -r requirements.txt
 pytz==2019.1              # via -r requirements-docs.txt, -r requirements.txt, babel, flask-restful
 pyyaml==5.1.1             # via matrix-synapse
-raiden-contracts==0.37.0b3  # via -r requirements.txt
+raiden-contracts==0.37.0  # via -r requirements.txt
 raiden-webui==0.11.0      # via -r requirements.txt
 readme-renderer==24.0     # via -r requirements-dev.in
 releases==1.6.1           # via -r requirements-docs.txt

@@ -52,7 +52,7 @@ marshmallow==3.4.0        # via -r requirements.in, marshmallow-dataclass, marsh
 matrix-client==0.3.2      # via -r requirements.in
 mirakuru==2.1.2           # via -r requirements.in
 multiaddr==0.0.9          # via ipfshttpclient
-mypy-extensions==0.4.3    # via typing-inspect
+mypy-extensions==0.4.3    # via raiden-contracts, typing-inspect
 netaddr==0.7.19           # via multiaddr
 netifaces==0.10.9         # via -r requirements.in
 networkx==2.3             # via -r requirements.in
@@ -72,7 +72,7 @@ pyrsistent==0.15.7        # via jsonschema
 pysha3==1.0.2             # via -r requirements.in
 pytoml==0.1.20            # via -r requirements.in
 pytz==2019.1              # via flask-restful
-raiden-contracts==0.37.0b3  # via -r requirements.in
+raiden-contracts==0.37.0  # via -r requirements.in
 raiden-webui==0.11.0      # via -r requirements.in
 requests==2.22.0          # via -r requirements.in, ipfshttpclient, matrix-client, web3
 rlp==1.1.0                # via eth-account, eth-rlp, raiden-contracts
