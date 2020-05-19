@@ -51,7 +51,7 @@ DEFAULT_MATRIX_KNOWN_SERVERS = {
     # FIXME, XXX: Change to new mainet known servers file after mainnet testing is done!
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
-        "/master/known_servers.main.test.yaml"
+        "/master/known_servers/known_servers.alderaan.yaml"
     ),
     Environment.DEVELOPMENT: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
