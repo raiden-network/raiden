@@ -101,6 +101,11 @@ else:
     precondition_check(first, second, nth)
 ```
 
+It is also importanto to note that precondition checks are only done for one
+transaction at time. A precondition check by itself can not prevent nor detect
+race conditions with other nodes in the network or even with the node itself.
+[[12]](#12)
+
 ### Gas estimation
 
 Gas estimation is assumed to fail under these circumstances [[10]](#10)
@@ -254,3 +259,8 @@ Estimate gas is always used, even though we do have constants for the function
 calls and most of the smart contracts functions have an upper bound for gas
 usage. This RPC call is not just used for the gas estimation, but mainly to
 detect race conditions that may have happened after `trigerred_block`.
+
+###### 12
+This however does not prevent the node from implementing additional strategies
+to avoid internally conflicting transactions.
+([#6182](https://github.com/raiden-network/raiden/issues/6182)).
