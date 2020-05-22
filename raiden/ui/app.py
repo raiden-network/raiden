@@ -104,7 +104,7 @@ def setup_matrix(
 
         transport_config.available_servers = available_servers
 
-    # Add PFS broadcast room when not in privat mode
+    # Add PFS broadcast room when not in private mode
     if routing_mode != RoutingMode.PRIVATE:
         if PATH_FINDING_BROADCASTING_ROOM not in transport_config.broadcast_rooms:
             transport_config.broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)

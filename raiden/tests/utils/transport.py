@@ -18,6 +18,7 @@ from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from structlog import get_logger
 from synapse.handlers.auth import AuthHandler
 from twisted.internet import defer
 
@@ -31,6 +32,8 @@ from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Iterable, Port, Signature
+
+log = get_logger(__name__)
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
 _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
@@ -381,6 +384,8 @@ def matrix_server_starter(
 
                 synapse_io = DEVNULL, log_file, STDOUT
 
+            log.debug("Synapse command", command=synapse_cmd)
+
             startup_timeout = 10
             sleep = 0.1
 
@@ -415,6 +420,7 @@ def matrix_server_starter(
 
             servers.append((server_url, executor))
 
+        log.debug("Setting up broadcast rooms", aliases=broadcast_rooms_aliases)
         for broadcast_room_alias in broadcast_rooms_aliases:
             setup_broadcast_room([url for url, _ in servers], broadcast_room_alias)
 

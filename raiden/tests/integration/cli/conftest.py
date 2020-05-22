@@ -11,6 +11,7 @@ from raiden.constants import MATRIX_AUTO_SELECT_SERVER, Environment, EthClient
 from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
+from raiden.tests.utils.transport import ParsedURL
 from raiden.utils.typing import Any, ContextManager, Dict, List, Optional
 
 
@@ -76,6 +77,7 @@ def changed_args() -> Optional[Dict[str, Any]]:
 def cli_args(
     logs_storage: str,
     raiden_testchain: Dict[str, Any],
+    local_matrix_servers: List[ParsedURL],
     removed_args: Optional[Dict[str, Any]],
     changed_args: Optional[Dict[str, Any]],
     environment_type: Environment,
@@ -102,7 +104,9 @@ def cli_args(
         "--no-sync-check",
         f"--debug-logfile-path={base_logfile}",
         "--routing-mode",
-        "local",
+        "private",
+        "--matrix-server",
+        local_matrix_servers[0],
     ]
 
     args += ["--environment-type", environment_type.value]
