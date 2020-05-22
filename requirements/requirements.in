@@ -10,7 +10,7 @@ Flask-Cors
 Flask-RESTful
 gevent>=1.5a3
 guppy3
-ipython<5.0.0
+ipython
 marshmallow-dataclass==6.0.0
 marshmallow-polyfield
 marshmallow

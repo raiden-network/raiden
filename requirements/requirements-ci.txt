@@ -16,6 +16,7 @@ attrs==19.3.0             # via -r requirements-dev.txt, automat, black, flake8-
 automat==0.7.0            # via -r requirements-dev.txt, twisted
 autopep8==1.4.4           # via -r requirements-dev.txt
 babel==2.7.0              # via -r requirements-dev.txt, sphinx
+backcall==0.1.0           # via -r requirements-dev.txt, ipython
 base58==2.0.0             # via -r requirements-dev.txt, multiaddr
 bcrypt==3.1.6             # via -r requirements-dev.txt, matrix-synapse
 bitarray==1.2.1           # via -r requirements-dev.txt, eth-account
@@ -71,14 +72,15 @@ importlib-metadata==1.5.0  # via -r requirements-dev.txt, jsonschema, pluggy, py
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
-ipython==4.2.1            # via -r requirements-dev.txt
+ipython==7.14.0           # via -r requirements-dev.txt
 isort==4.3.20             # via -r requirements-dev.txt, pylint
 itsdangerous==1.1.0       # via -r requirements-dev.txt, flask
+jedi==0.17.0              # via -r requirements-dev.txt, ipython
 jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, sphinx
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in
+macholib==1.14            # via -r requirements-ci.in, pyinstaller
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
@@ -99,6 +101,7 @@ networkx==2.3             # via -r requirements-dev.txt
 objgraph==3.4.1           # via -r requirements-dev.txt
 packaging==19.0           # via -r requirements-dev.txt, pytest, sphinx
 parsimonious==0.8.1       # via -r requirements-dev.txt, eth-abi
+parso==0.7.0              # via -r requirements-dev.txt, jedi
 pdbpp==0.10.0             # via -r requirements-dev.txt
 pexpect==4.7.0            # via -r requirements-dev.txt, ipython
 phonenumbers==8.10.13     # via -r requirements-dev.txt, matrix-synapse
@@ -107,6 +110,7 @@ pillow==6.2.0             # via -r requirements-dev.txt, matrix-synapse
 pip-tools==5.1.2          # via -r requirements-dev.txt
 pluggy==0.12.0            # via -r requirements-dev.txt, pytest
 prometheus-client==0.3.1  # via -r requirements-dev.txt, matrix-synapse
+prompt-toolkit==3.0.5     # via -r requirements-dev.txt, ipython
 protobuf==3.11.3          # via -r requirements-dev.txt, web3
 psutil==5.6.6             # via -r requirements-dev.txt, mirakuru
 ptyprocess==0.6.0         # via -r requirements-dev.txt, pexpect
@@ -121,7 +125,7 @@ pycodestyle==2.5.0        # via -r requirements-dev.txt, autopep8, flake8
 pycparser==2.19           # via -r requirements-dev.txt, cffi
 pycryptodome==3.8.2       # via -r requirements-dev.txt, eth-hash, eth-keyfile
 pyflakes==2.1.1           # via -r requirements-dev.txt, flake8
-pygments==2.4.2           # via -r requirements-dev.txt, pdbpp, readme-renderer, sphinx
+pygments==2.6.1           # via -r requirements-dev.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via -r requirements-dev.txt, twisted
 pyinstaller==3.6          # via -r requirements-ci.in
 pylint==2.3.1             # via -r requirements-dev.txt
@@ -153,7 +157,6 @@ semantic-version==2.6.0   # via -r requirements-dev.txt, py-geth, py-solc, relea
 semver==2.8.1             # via -r requirements-dev.txt, raiden-contracts
 service-identity==18.1.0  # via -r requirements-dev.txt, matrix-synapse, twisted
 signedjson==1.1           # via -r requirements-dev.txt, matrix-synapse
-simplegeneric==0.8.1      # via -r requirements-dev.txt, ipython
 simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
 six==1.12.0               # via -r requirements-dev.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, readme-renderer, responses, sphinx, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
@@ -176,7 +179,7 @@ typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
 varint==1.0.2             # via -r requirements-dev.txt, multiaddr
-wcwidth==0.1.7            # via -r requirements-dev.txt, pytest
+wcwidth==0.1.9            # via -r requirements-dev.txt, prompt-toolkit, pytest
 web3==5.9.0               # via -r requirements-dev.txt, raiden-contracts
 webargs==5.3.1            # via -r requirements-dev.txt
 webencodings==0.5.1       # via -r requirements-dev.txt, bleach
