@@ -5,12 +5,7 @@ from eth_typing import BlockNumber
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
-from raiden.constants import (
-    DISCOVERY_DEFAULT_ROOM,
-    MATRIX_AUTO_SELECT_SERVER,
-    PATH_FINDING_BROADCASTING_ROOM,
-    Environment,
-)
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, MATRIX_AUTO_SELECT_SERVER, Environment
 from raiden.network.pathfinding import PFSConfig
 from raiden.utils.typing import (
     Address,
@@ -199,10 +194,7 @@ class RaidenConfig:
     transport: MatrixTransportConfig = MatrixTransportConfig(
         # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
         available_servers=[],
-        # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
-        #       and fix the conditional in `raiden.ui.app:_setup_matrix`
-        #       as well as the tests
-        broadcast_rooms=[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
+        broadcast_rooms=[DISCOVERY_DEFAULT_ROOM],
         retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
         retry_interval_initial=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL,
         retry_interval_max=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX,
