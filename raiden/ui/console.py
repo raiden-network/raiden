@@ -5,8 +5,7 @@ import time
 
 import gevent
 import IPython
-from eth_utils import to_canonical_address
-from IPython.lib.inputhook import inputhook_manager, stdin_ready
+from eth_utils import denoms, to_canonical_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -37,13 +36,10 @@ OKBLUE = "\033[94m"
 OKGREEN = "\033[92m"
 ENDC = "\033[0m"
 
-# ipython needs to accept "--gui gevent" option
-IPython.core.shellapp.InteractiveShellApp.gui.values += ("gevent",)
-
 
 def print_usage() -> None:
+    print(f"\tuse `{HEADER}app{OKBLUE}` to interact with the top level Raiden App API.")
     print(f"\t{OKBLUE}use `{HEADER}raiden{OKBLUE}` to interact with the raiden service.")
-    print(f"\tuse `{HEADER}chain{OKBLUE}` to interact with the blockchain.")
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
             HEADER, OKBLUE
@@ -55,43 +51,6 @@ def print_usage() -> None:
     print(f"\tuse `{HEADER}help(<topic>){OKBLUE}` for help on a specific topic.")
     print(f"\ttype `{HEADER}usage(){OKBLUE}` to see this help again.")
     print("\n" + ENDC)
-
-
-def inputhook_gevent() -> int:
-    while not stdin_ready():
-        gevent.sleep(0.05)
-    return 0
-
-
-@inputhook_manager.register("gevent")
-class GeventInputHook:
-    def __init__(self, manager: Any) -> None:
-        self.manager = manager
-        self._current_gui = GUI_GEVENT
-
-    def enable(self, app: Any = None) -> Any:
-        """ Enable event loop integration with gevent.
-
-        Args:
-            app: Ignored, it's only a placeholder to keep the call signature of all
-                gui activation methods consistent, which simplifies the logic of
-                supporting magics.
-
-        Notes:
-            This methods sets the PyOS_InputHook for gevent, which allows
-            gevent greenlets to run in the background while interactively using
-            IPython.
-        """
-        self.manager.set_inputhook(inputhook_gevent)
-        self._current_gui = GUI_GEVENT
-        return app
-
-    def disable(self) -> None:
-        """ Disable event loop integration with gevent.
-
-        This merely sets PyOS_InputHook to NULL.
-        """
-        self.manager.clear_inputhook()
 
 
 class Console(gevent.Greenlet):
@@ -142,6 +101,7 @@ class Console(gevent.Greenlet):
         self.console_locals = {
             "app": self.app,
             "raiden": self.app.raiden,
+            "denoms": denoms,
             "proxy_manager": self.app.raiden.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
@@ -153,7 +113,7 @@ class Console(gevent.Greenlet):
         print("Entering Console" + OKGREEN)
         print("Tip:" + OKBLUE)
         print_usage()
-        IPython.start_ipython(argv=["--gui", "gevent"], user_ns=self.console_locals)
+        IPython.start_ipython(argv=[], user_ns=self.console_locals)
 
         sys.exit(0)
 
