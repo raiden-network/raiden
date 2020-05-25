@@ -16,7 +16,7 @@
 
 The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It's complementary to the Ethereum Blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
 
->**INFO:** The Raiden client and smart contracts have been [released for Mainnet](https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c) with a limited alpha release of the Raiden Network in December 2018.
+>**INFO:** The Raiden client and smart contracts have been [released for Mainnet](https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c) for the Alderaan release of the Raiden Network in May 2020.
 
 The Raiden Network is an infrastructure layer on top of the Ethereum Blockchain. While the basic idea is simple, the underlying protocol is quite complex and the implementation non-trivial. Nonetheless the technicalities can be abstracted away, such that developers can interface with a rather simple API to build scalable decentralized applications based on the Raiden Network.
 
@@ -42,7 +42,7 @@ The Raiden Network is an infrastructure layer on top of the Ethereum Blockchain.
 If you haven't used Raiden before, you can
 
 * Checkout the [developer portal](http://developer.raiden.network)
-* Look at the [documentation](https://raiden-network.readthedocs.io/en/stable/index.html)
+* Look at the [documentation](https://docs.raiden.network/)
 * Learn more by watching explanatory [videos](https://www.youtube.com/channel/UCoUP_hnjUddEvbxmtNCcApg)
 * Read the blog posts on [Medium](https://medium.com/@raiden_network)
 * Visit [Awesome-Raiden](https://github.com/raiden-network/awesome-raiden), a curated list of resources, links, projects, tools and hacks
