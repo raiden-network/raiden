@@ -19,15 +19,23 @@ from hypothesis.strategies import binary, builds, composite, integers, random_mo
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
+from raiden.tests.fuzz import utils
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_block_hash
 from raiden.transfer import channel, node
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.channel import compute_locksroot
-from raiden.transfer.events import EventPaymentSentFailed, SendProcessed
+from raiden.transfer.events import (
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimSuccess,
     EventUnlockSuccess,
     SendLockedTransfer,
+    SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
 )
@@ -114,7 +122,13 @@ class Route:
 routes = Bundle("routes")
 init_initiators = Bundle("init_initiators")
 init_mediators = Bundle("init_mediators")
+init_targets = Bundle("init_targets")
+send_locked_transfers = Bundle("send_locked_transfers")
 secret_requests = Bundle("secret_requests")
+send_secret_requests = Bundle("send_secret_requests")
+send_secret_reveals_backward = Bundle("send_secret_reveals_backward")
+send_secret_reveals_forward = Bundle("send_secret_reveals_forward")
+send_unlocks = Bundle("send_unlocks")
 unlocks = Bundle("unlocks")
 
 AddressToAmount = Dict[Address, TokenAmount]
@@ -365,6 +379,9 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             needed_channel = client.address_to_channel[partner_address]
             return channel.get_status(needed_channel) == ChannelState.STATE_OPENED
 
+    def create_network(self):
+        raise NotImplementedError("Every fuzz test needs to override this.")
+
 
 class InitiatorMixinBase:
     address_to_client: dict
@@ -385,7 +402,12 @@ class InitiatorMixinBase:
         return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
     def _assume_channel_opened(self, action):
-        assume(any(self.channel_opened(route.route[1], route.route[0]) for route in action.routes))
+        assume(
+            any(
+                self.channel_opened(route.route[1], route.route[0])  # pylint: disable=no-member
+                for route in action.routes
+            )
+        )
 
     def _is_removed(self, action):
         client = self._get_initiator_client(action.transfer)
@@ -415,7 +437,7 @@ class InitiatorMixin(InitiatorMixinBase):
         )
 
     @rule(
-        target=init_initiators,
+        target=send_locked_transfers,
         route=routes,
         payment_id=payment_id(),  # pylint: disable=no-value-for-parameter
         amount=integers(min_value=1, max_value=100),
@@ -424,6 +446,8 @@ class InitiatorMixin(InitiatorMixinBase):
     def valid_init_initiator(self, route, payment_id, amount, secret):
         assume(amount <= self._available_amount(route))
         assume(secret not in self.used_secrets)
+
+        assume(self.pending_transfers == 0)
 
         transfer = self._new_transfer_description(route, payment_id, amount, secret)
         action = self._action_init_initiator(route, transfer)
@@ -435,7 +459,13 @@ class InitiatorMixin(InitiatorMixinBase):
         self.initiated.add(transfer.secret)
         client.expected_expiry[transfer.secrethash] = self.block_number + 10
 
-        return action
+        self.pending_transfers += 1
+
+        return utils.SendLockedTransferInNode(
+            event=result.events[0],
+            action=action,
+            private_key=self.address_to_privkey[route.initiator],
+        )
 
     @rule(
         route=routes,
@@ -469,11 +499,35 @@ class InitiatorMixin(InitiatorMixinBase):
         self.event("ActionInitInitiator failed: Secret already in use.")
 
     @rule(previous_action=init_initiators)
-    def replay_init_initator(self, previous_action):
+    def replay_init_initiator(self, previous_action):
         assume(not self._is_removed(previous_action))
         client = self._get_initiator_client(previous_action.transfer)
         result = node.state_transition(client.chain_state, previous_action)
         assert not result.events
+
+    @rule(target=send_secret_reveals_forward, source=consumes(send_secret_requests))
+    def process_valid_secret_request(
+        self, source: utils.SendSecretRequestInNode
+    ) -> utils.SendSecretRevealInNode:
+        initiator_address = source.event.recipient
+        initiator_client = self.address_to_client[initiator_address]
+
+        state_change = utils.send_secret_request_to_receive_secret_request(source)
+        result = node.state_transition(initiator_client.chain_state, state_change)
+
+        if state_change.secrethash in self.processed_secret_request_secrethashes:
+            assert not result.events
+            self.event("Valid SecretRequest dropped due to previous one with same secrethash.")
+            return multiple()
+        elif self._is_expired(state_change.secrethash, initiator_address):
+            assert not result.events
+            self.event("Otherwise valid SecretRequest dropped due to expired lock.")
+            return multiple()
+        else:
+            assert event_types_match(result.events, SendSecretReveal)
+            self.event("Valid SecretRequest accepted.")
+            self.processed_secret_request_secrethashes.add(state_change.secrethash)
+            return utils.SendSecretRevealInNode(node=initiator_address, event=result.events[0])
 
 
 class InitiatorMockMixin(InitiatorMixinBase):
@@ -548,6 +602,75 @@ class InitiatorMockMixin(InitiatorMixinBase):
         action = self._receive_secret_request(transfer)
         client = self._get_initiator_client(transfer)
         self._unauthentic_secret_request(action, client)
+
+    @rule(target=send_unlocks, source=consumes(send_secret_reveals_backward))
+    def process_secret_reveal_as_initiator(
+        self, source: utils.SendSecretRevealInNode
+    ) -> utils.SendUnlockInNode:
+        initiator_address = source.event.recipient
+        private_key = self.address_to_privkey[initiator_address]
+        initiator_client = self.address_to_client[initiator_address]
+
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        result = node.state_transition(initiator_client.chain_state, state_change)
+
+        assert event_types_match(
+            result.events, SendUnlock, EventPaymentSentSuccess, EventUnlockSuccess
+        )
+        return utils.SendUnlockInNode(
+            node=initiator_address, private_key=private_key, event=result.events[0]
+        )
+
+
+class TargetMixin:
+    @rule(target=send_secret_requests, source=consumes(send_locked_transfers))
+    def process_send_locked_transfer(
+        self, source: utils.SendLockedTransferInNode
+    ) -> utils.SendSecretRequestInNode:
+        assume(self.pending_transfers == 1)
+
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        message = utils.send_lockedtransfer_to_locked_transfer(source)
+        action = utils.locked_transfer_to_action_init_target(message)
+
+        result = node.state_transition(target_client.chain_state, action)
+
+        assert event_types_match(result.events, SendProcessed, SendSecretRequest)
+
+        return utils.SendSecretRequestInNode(result.events[1], target_address)
+
+    @rule(target=send_secret_reveals_backward, source=consumes(send_secret_reveals_forward))
+    def process_secret_reveal(
+        self, source: utils.SendSecretRevealInNode
+    ) -> utils.SendSecretRevealInNode:
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert event_types_match(result.events, SendSecretReveal)
+
+        return utils.SendSecretRevealInNode(node=target_address, event=result.events[0])
+
+    @rule(source=consumes(send_unlocks))
+    def process_unlock(self, source: utils.SendUnlockInNode):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+
+        initiator_client = self.address_to_client[source.node]
+        channel = initiator_client.address_to_channel[target_address]
+
+        state_change = utils.send_unlock_to_receive_unlock(source, channel.canonical_identifier)
+        result = node.state_transition(target_client.chain_state, state_change)
+
+        assert event_types_match(
+            result.events,
+            SendProcessed,
+            EventPaymentReceivedSuccess,
+            EventUnlockClaimSuccess,
+            SendProcessed,
+        )
 
 
 class BalanceProofData:
@@ -709,15 +832,17 @@ class MediatorMixin:
 
         if (
             in_time
-            and self.channel_opened(sender, our_address)
-            and self.channel_opened(recipient, our_address)
+            and self.channel_opened(sender, our_address)  # pylint: disable=no-member
+            and self.channel_opened(recipient, our_address)  # pylint: disable=no-member
         ):
             assert event_types_match(
                 result.events, SendSecretReveal, SendUnlock, EventUnlockSuccess
             )
             self.event("Unlock successful.")
             self.waiting_for_unlock[secret] = recipient
-        elif still_waiting and self.channel_opened(recipient, our_address):
+        elif still_waiting and self.channel_opened(
+            recipient, our_address
+        ):  # pylint: disable=no-member
             assert event_types_match(result.events, SendSecretReveal)
             self.event("Unlock failed, secret revealed too late.")
         else:
@@ -796,7 +921,8 @@ class OnChainMixin:
         address = self.new_channel_with_transaction(reference.initiator)
         return self.routes_for_new_channel(reference.initiator, address)
 
-    def routes_for_new_channel(self, from_address, to_address):
+    def routes_for_new_channel(self, from_address, to_address):  # pylint: disable=all
+        # TODO
         return multiple()
 
     @rule(reference=consumes(routes))
@@ -854,6 +980,15 @@ class FullStateMachine(InitiatorMixin, MediatorMixin, OnChainMixin, ChainStateSt
     pass
 
 
+class DirectTransfersStateMachine(InitiatorMixin, TargetMixin, ChainStateStateMachine):
+    def create_network(self):
+        address1 = self.new_client()
+        address2 = self.new_client()
+        self.new_channel_with_transaction(address1, address2)
+        self.pending_transfers = 0
+        return [Route(hops=(address1, address2))]
+
+
 # Skipped tests are temporarily broken during the ongoing
 # test restructuring that begun with issue #4013
 TestInitiator = InitiatorStateMachine.TestCase
@@ -862,6 +997,7 @@ TestOnChain = OnChainStateMachine.TestCase
 TestMultiChannelInitiator = pytest.mark.skip(MultiChannelInitiatorStateMachine.TestCase)
 TestMultiChannelMediator = pytest.mark.skip(MultiChannelMediatorStateMachine.TestCase)
 TestFullStateMachine = pytest.mark.skip(FullStateMachine.TestCase)
+TestDirectTransfers = DirectTransfersStateMachine.TestCase
 
 
 # use of hypothesis.stateful.multiple() breaks the failed-example code
