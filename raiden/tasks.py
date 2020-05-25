@@ -110,11 +110,11 @@ def check_rdn_deposits(
             click.secho(
                 (
                     f"WARNING\n"
-                    f"Your account's RDN balance of {rdn_balance} is below the "
-                    f"minimum threshold. Provided that you have either a monitoring "
-                    f"service or a path finding service activated, your node is not going "
-                    f"to be able to pay those services which may lead to denial of service or "
-                    f"loss of funds."
+                    f"Your account's RDN balance deposited in the UserDepositContract of"
+                    f"{rdn_balance} is below the minimum threshold {to_rdn(MIN_REI_THRESHOLD)}."
+                    f"Provided that you have either a monitoring service or a path"
+                    f"finding service activated, your node is not going to be able to"
+                    f"pay those services which may lead to denial of service or loss of funds."
                 ),
                 fg="red",
             )
