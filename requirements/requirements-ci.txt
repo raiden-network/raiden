@@ -146,7 +146,7 @@ pytoml==0.1.20            # via -r requirements-dev.txt
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
 raiden-contracts==0.37.0  # via -r requirements-dev.txt
-raiden-webui==0.11.0      # via -r requirements-dev.txt
+raiden-webui==0.11.1      # via -r requirements-dev.txt
 readme-renderer==24.0     # via -r requirements-dev.txt
 releases==1.6.1           # via -r requirements-dev.txt
 requests==2.22.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
