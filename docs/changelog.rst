@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 0.11.1 https://github.com/raiden-network/webui/releases/tag/v0.11.1
+
 * :release:`0.200.0-rc9`
 
 * :release:`0.200.0-rc8`
