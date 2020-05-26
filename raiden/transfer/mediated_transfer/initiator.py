@@ -277,7 +277,10 @@ def try_new_route(
             reason = "none of the available routes could be used"
 
         if route_fee_exceeds_max:
-            reason += " and at least one of them exceeded the maximum fee limit"
+            reason += (
+                " and at least one of them exceeded the maximum fee limit "
+                "(see https://docs.raiden.network/using-raiden/mediation-fees#frequently-asked-questions)"  # noqa
+            )
 
         transfer_failed = EventPaymentSentFailed(
             token_network_registry_address=transfer_description.token_network_registry_address,
