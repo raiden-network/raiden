@@ -26,7 +26,7 @@ from raiden.utils.typing import (
 
 LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
 RELEASE_PAGE = "https://github.com/raiden-network/raiden/releases"
-DOC_URL = "http://raiden-network.readthedocs.io/en/stable/rest_api.html"
+DOC_URL = "https://docs.raiden.network/raiden-api-1"
 SECURITY_EXPRESSION = r"\[CRITICAL UPDATE.*?\]"
 
 RAIDEN_DB_VERSION = RaidenDBVersion(26)

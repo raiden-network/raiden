@@ -179,8 +179,8 @@ def start_api_server(
 
     url = f"http://{config.host}:{config.port}/"
     print(
-        f"The Raiden API RPC server is now running at {url}.\n\n See "
-        f"the Raiden documentation for all available endpoints at\n "
+        f"The Raiden API RPC server is now running at {url}.\n\n"
+        f"See the Raiden documentation for all available endpoints at\n"
         f"{DOC_URL}"
     )
 
