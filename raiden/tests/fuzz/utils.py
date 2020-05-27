@@ -110,6 +110,7 @@ def send_secret_reveal_to_recieve_secret_reveal(
 class SendLockedTransferInNode:
     event: SendLockedTransfer
     action: ActionInitInitiator
+    node: Address
     private_key: PrivateKey
 
 
