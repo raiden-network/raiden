@@ -526,8 +526,14 @@ class RaidenService(Runnable):
 
     def _initialize_wal(self) -> None:
         if self.database_dir is not None:
-            self.db_lock.acquire(timeout=0)
-            assert self.db_lock.is_locked, f"Database not locked. node:{self!r}"
+            try:
+                self.db_lock.acquire(timeout=0)
+                assert self.db_lock.is_locked, f"Database not locked. node:{self!r}"
+            except (filelock.Timeout, AssertionError) as ex:
+                raise RaidenUnrecoverableError(
+                    "Could not aquire database lock. Maybe a Raiden node for this account "
+                    f"({to_checksum_address(self.address)}) is already running?"
+                ) from ex
 
         self.maybe_upgrade_db()
 
