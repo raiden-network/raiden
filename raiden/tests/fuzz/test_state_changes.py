@@ -120,14 +120,12 @@ class Route:
 routes = Bundle("routes")
 init_initiators = Bundle("init_initiators")
 init_mediators = Bundle("init_mediators")
-init_targets = Bundle("init_targets")
 send_locked_transfers = Bundle("send_locked_transfers")
 secret_requests = Bundle("secret_requests")
 send_secret_requests = Bundle("send_secret_requests")
 send_secret_reveals_backward = Bundle("send_secret_reveals_backward")
 send_secret_reveals_forward = Bundle("send_secret_reveals_forward")
 send_unlocks = Bundle("send_unlocks")
-unlocks = Bundle("unlocks")
 
 AddressToAmount = Dict[Address, TokenAmount]
 
@@ -381,7 +379,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         raise NotImplementedError("Every fuzz test needs to override this.")
 
 
-class InitiatorMixinBase:
+class InitiatorMixin:
     address_to_client: dict
     block_number: BlockNumber
 
@@ -391,35 +389,20 @@ class InitiatorMixinBase:
         self.processed_secret_request_secrethashes: Set[SecretHash] = set()
         self.initiated: Set[Secret] = set()
 
-    def _get_initiator_client(self, transfer: TransferDescriptionWithSecretState):
-        return self.address_to_client[transfer.initiator]
-
     def _available_amount(self, route):
         client = self.address_to_client[route.initiator]
         netting_channel = client.address_to_channel[route.hops[1]]
         return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
-    def _assume_channel_opened(self, action):
-        assume(
-            any(
-                self.channel_opened(route.route[1], route.route[0])  # pylint: disable=no-member
-                for route in action.routes
-            )
-        )
-
-    def _is_removed(self, action):
-        client = self._get_initiator_client(action.transfer)
-        expiry = client.expected_expiry[action.transfer.secrethash]
-        return self.block_number >= expiry + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
-
     def _is_expired(self, secrethash, initiator):
         expiry = self.address_to_client[initiator].expected_expiry[secrethash]
         return self.block_number >= expiry + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 
+    def _is_removed(self, action):
+        return self._is_expired(action.transfer.secrethash, action.transfer.initiator)
 
-class InitiatorMixin(InitiatorMixinBase):
     def _action_init_initiator(self, route: Route, transfer: TransferDescriptionWithSecretState):
-        client = self._get_initiator_client(transfer)
+        client = self.address_to_client[route.initiator]
         channel = client.address_to_channel[route.hops[1]]
         if transfer.secrethash not in client.expected_expiry:
             client.expected_expiry[transfer.secrethash] = self.block_number + 10
@@ -723,10 +706,6 @@ class MediatorMixin:
         expected.update(amount, lock)
         return expected
 
-    init_mediators = Bundle("init_mediators")
-    secret_requests = Bundle("secret_requests")
-    unlocks = Bundle("unlocks")
-
     def _new_mediator_transfer(
         self, initiator_address, target_address, payment_id, amount, secret, our_address
     ) -> LockedTransferSignedState:
@@ -934,17 +913,6 @@ class OnChainMixin:
         node.state_transition(client.chain_state, channel_settled_state_change)
 
 
-class InitiatorStateMachine(InitiatorMixin, InitiatorMockMixin, ChainStateStateMachine):
-    def create_network(self):
-        client_address = self.new_client()
-        partner_address = self.new_channel_with_transaction(client_address=client_address)
-        other_target = self.new_address()
-        return [
-            Route(hops=(client_address, partner_address)),
-            Route(hops=(client_address, partner_address, other_target)),
-        ]
-
-
 class MediatorStateMachine(MediatorMixin, ChainStateStateMachine):
     pass
 
@@ -956,15 +924,7 @@ class OnChainStateMachine(OnChainMixin, ChainStateStateMachine):
         return [Route(hops=(client, partner)) for partner in partners]
 
 
-class MultiChannelInitiatorStateMachine(InitiatorMixin, OnChainMixin, ChainStateStateMachine):
-    pass
-
-
 class MultiChannelMediatorStateMachine(MediatorMixin, OnChainMixin, ChainStateStateMachine):
-    pass
-
-
-class FullStateMachine(InitiatorMixin, MediatorMixin, OnChainMixin, ChainStateStateMachine):
     pass
 
 
@@ -979,12 +939,9 @@ class DirectTransfersStateMachine(InitiatorMixin, TargetMixin, ChainStateStateMa
 
 # Skipped tests are temporarily broken during the ongoing
 # test restructuring that begun with issue #4013
-TestInitiator = InitiatorStateMachine.TestCase
 TestMediator = pytest.mark.skip(MediatorStateMachine.TestCase)
 TestOnChain = OnChainStateMachine.TestCase
-TestMultiChannelInitiator = pytest.mark.skip(MultiChannelInitiatorStateMachine.TestCase)
 TestMultiChannelMediator = pytest.mark.skip(MultiChannelMediatorStateMachine.TestCase)
-TestFullStateMachine = pytest.mark.skip(FullStateMachine.TestCase)
 TestDirectTransfers = DirectTransfersStateMachine.TestCase
 
 
@@ -996,12 +953,13 @@ def unwrap_multiple(multiple_results):
 
 
 def test_regression_malicious_secret_request_handled_properly():
-    state = InitiatorStateMachine()
+    state = DirectTransfersStateMachine()
     state.replay_path = True
 
     v1 = unwrap_multiple(state.initialize_all(block_number=1, random=Random(), random_seed=None))
     v2 = state.valid_init_initiator(route=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
-    state.wrong_amount_secret_request(amount=0, previous_action=v2)
-    state.replay_init_initator(previous_action=v2)
+    v3 = state.process_send_locked_transfer(source=v2)
+    state.process_secret_request_with_wrong_amount(source=v3, wrong_amount=0)
+    state.replay_init_initiator(previous=v2)
 
     state.teardown()
