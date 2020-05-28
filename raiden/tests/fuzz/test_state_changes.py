@@ -135,6 +135,12 @@ def make_tokenamount_defaultdict():
 
 
 @dataclass
+class TransferOrder:
+    initiated: List[SecretHash] = field(default_factory=list)
+    answered: List[SecretHash] = field(default_factory=list)
+
+
+@dataclass
 class Client:
     chain_state: ChainState
 
@@ -150,6 +156,7 @@ class Client:
     partner_previous_unclaimed: AddressToAmount = field(
         default_factory=make_tokenamount_defaultdict
     )
+    transfer_order: TransferOrder = field(default_factory=TransferOrder)
 
     def assert_monotonicity_invariants(self):
         """ Assert all monotonicity properties stated in Raiden specification """
@@ -236,6 +243,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.replay_path: bool = False
         self.address_to_privkey: Dict[Address, PrivateKey] = dict()
         self.address_to_client: Dict[Address, Client] = dict()
+        self.transfer_order = TransferOrder()
         super().__init__()
 
     def new_address(self) -> Address:
@@ -432,8 +440,6 @@ class InitiatorMixin:
         assume(amount <= self._available_amount(route))
         assume(secret not in self.used_secrets)
 
-        assume(self.pending_transfers == 0)
-
         transfer = self._new_transfer_description(route, payment_id, amount, secret)
         action = self._action_init_initiator(route, transfer)
         client = self.address_to_client[route.initiator]
@@ -443,8 +449,7 @@ class InitiatorMixin:
 
         self.initiated.add(transfer.secret)
         client.expected_expiry[transfer.secrethash] = self.block_number + 10
-
-        self.pending_transfers += 1
+        self.transfer_order.initiated.append(secret)
 
         return utils.SendLockedTransferInNode(
             event=result.events[0],
@@ -598,16 +603,20 @@ class TargetMixin:
     def process_send_locked_transfer(
         self, source: utils.SendLockedTransferInNode
     ) -> utils.SendSecretRequestInNode:
-        assume(self.pending_transfers == 1)
-
         target_address = source.event.recipient
         target_client = self.address_to_client[target_address]
+
+        if not self.replay_path:
+            assume(source.action.transfer.secrethash == self.transfer_order.initiated[0])
+
         message = utils.send_lockedtransfer_to_locked_transfer(source)
         action = utils.locked_transfer_to_action_init_target(message)
 
         result = node.state_transition(target_client.chain_state, action)
 
         assert event_types_match(result.events, SendProcessed, SendSecretRequest)
+
+        self.transfer_order.answered.append(self.transfer_order.initiated.pop(0))
 
         return utils.SendSecretRequestInNode(result.events[1], target_address)
 
@@ -629,6 +638,8 @@ class TargetMixin:
         target_address = source.event.recipient
         target_client = self.address_to_client[target_address]
 
+        assume(source.event.secrethash == self.transfer_order.answered[0])
+
         initiator_client = self.address_to_client[source.node]
         channel = initiator_client.address_to_channel[target_address]
 
@@ -642,6 +653,8 @@ class TargetMixin:
             EventUnlockClaimSuccess,
             SendProcessed,
         )
+
+        self.transfer_order.answered.pop(0)
 
 
 class BalanceProofData:
@@ -933,7 +946,6 @@ class DirectTransfersStateMachine(InitiatorMixin, TargetMixin, ChainStateStateMa
         address1 = self.new_client()
         address2 = self.new_client()
         self.new_channel_with_transaction(address1, address2)
-        self.pending_transfers = 0
         return [Route(hops=(address1, address2))]
 
 
