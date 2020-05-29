@@ -1,5 +1,7 @@
 from dataclasses import dataclass, replace
 
+from hypothesis.strategies import builds, composite, integers, sampled_from
+
 from raiden.messages.decode import lockedtransfersigned_from_message
 from raiden.messages.encode import message_from_sendevent
 from raiden.messages.transfers import LockedTransfer
@@ -25,7 +27,15 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import HopState, NettingChannelState, RouteState
 from raiden.transfer.state_change import ReceiveUnlock
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockNumber, List, MessageID, PrivateKey
+from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    Address,
+    Any,
+    BlockNumber,
+    List,
+    MessageID,
+    PrivateKey,
+)
 
 
 def signed_transfer_from_description(
@@ -160,3 +170,54 @@ def send_unlock_to_receive_unlock(
         secrethash=source.event.secrethash,
         balance_proof=signed_balance_proof,
     )
+
+
+@dataclass
+class Scrambling:
+    field: str
+    value: Any
+
+    @property
+    def kwargs(self):
+        return {self.field: self.value}
+
+
+@composite
+def scrambling(draw, fields):
+    field = draw(sampled_from(list(fields.keys())))
+    value = draw(fields[field])
+    return Scrambling(field, value)
+
+
+@composite
+def balance_proof_scrambling(draw):
+    fields = {
+        "nonce": builds(factories.make_nonce),
+        "transferred_amount": integers(min_value=0),
+        "locked_amount": integers(min_value=0),
+        "locksroot": builds(factories.make_locksroot),
+        "canonical_identifier": builds(factories.make_canonical_identifier),
+        "balance_hash": builds(factories.make_transaction_hash),
+    }
+    return draw(scrambling(fields))  # pylint: disable=no-value-for-parameter
+
+
+@composite
+def hash_time_lock_scrambling(draw):
+    fields = {
+        "amount": integers(min_value=0),
+        "expiration": integers(min_value=1),
+        "secrethash": builds(factories.make_secret_hash),
+    }
+    return draw(scrambling(fields))  # pylint: disable=no-value-for-parameter
+
+
+@composite
+def locked_transfer_scrambling(draw):
+    fields = {
+        "token": builds(factories.make_token_address),
+        "token_network_address": builds(factories.make_token_network_address),
+        "channel_identifier": builds(factories.make_channel_identifier),
+        "chain_id": builds(factories.make_chain_id),
+    }
+    return draw(scrambling(fields))  # pylint: disable=no-value-for-parameter
