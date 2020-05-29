@@ -600,7 +600,7 @@ class InitiatorMixin:
             node=initiator_address, private_key=private_key, event=result.events[0]
         )
 
-    @rule(source=send_secret_reveals_backward, wrong_secret=secret)
+    @rule(source=send_secret_reveals_backward, wrong_secret=secret())
     def process_secret_reveal_with_mismatched_secret_as_initiator(
         self, source: utils.SendSecretRevealInNode, wrong_secret: Secret
     ):
@@ -615,7 +615,7 @@ class InitiatorMixin:
         assert not result.events
         self.event("Secret reveal with wrong secret dropped in initiator node.")
 
-    @rule(source=send_secret_reveals_backward, wrong_secret=secret)
+    @rule(source=send_secret_reveals_backward, wrong_secret=secret())
     def process_secret_reveal_with_unknown_secrethash_as_initiator(
         self, source: utils.SendSecretRevealInNode, wrong_secret: Secret
     ):
@@ -631,7 +631,7 @@ class InitiatorMixin:
         assert not result.events
         self.event("Secret reveal with unknown secrethash dropped in initiator node.")
 
-    @rule(source=send_secret_reveals_backward, wrong_channel_id=integers)
+    @rule(source=send_secret_reveals_backward, wrong_channel_id=integers())
     def process_secret_reveal_with_wrong_channel_identifier_as_initiator(
         self, source: utils.SendSecretRevealInNode, wrong_channel_id
     ):
@@ -647,7 +647,9 @@ class InitiatorMixin:
         assert not result.events
         self.event("Secret reveal with unknown channel id dropped in initiator node.")
 
-    @rule(source=send_secret_reveals_backward, wrong_channel_id=integers, wrong_recipient=address)
+    @rule(
+        source=send_secret_reveals_backward, wrong_channel_id=integers(), wrong_recipient=address()
+    )
     def process_secret_reveal_with_wrong_queue_identifier_as_initiator(
         self, source: utils.SendSecretRevealInNode, wrong_channel_id, wrong_recipient
     ):

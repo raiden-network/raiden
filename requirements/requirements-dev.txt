@@ -63,7 +63,7 @@ grequests==0.6.0          # via -r requirements-dev.in
 guppy3==3.0.10.post1      # via -r requirements.txt
 hexbytes==0.2.0           # via -r requirements.txt, eth-account, eth-rlp, web3
 hyperlink==19.0.0         # via twisted
-hypothesis==4.24.3        # via -r requirements-dev.in
+hypothesis==5.16.0        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
 importlib-metadata==1.6.1  # via pluggy
