@@ -138,6 +138,7 @@ def make_tokenamount_defaultdict():
 class TransferOrder:
     initiated: List[SecretHash] = field(default_factory=list)
     answered: List[SecretHash] = field(default_factory=list)
+    # TODO generalize this to channels with multiple routes
 
 
 @dataclass
@@ -593,9 +594,79 @@ class InitiatorMixin:
         assert event_types_match(
             result.events, SendUnlock, EventPaymentSentSuccess, EventUnlockSuccess
         )
+        self.event("Valid secret reveal processed in initiator node.")
+
         return utils.SendUnlockInNode(
             node=initiator_address, private_key=private_key, event=result.events[0]
         )
+
+    @rule(source=send_secret_reveals_backward, wrong_secret=secret)
+    def process_secret_reveal_with_mismatched_secret_as_initiator(
+        self, source: utils.SendSecretRevealInNode, wrong_secret: Secret
+    ):
+        initiator_address = source.event.recipient
+        initiator_client = self.address_to_client[initiator_address]
+
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.secret != wrong_secret)
+        state_change = replace(state_change, secret=wrong_secret)
+        result = node.state_transition(initiator_client.chain_state, state_change)
+
+        assert not result.events
+        self.event("Secret reveal with wrong secret dropped in initiator node.")
+
+    @rule(source=send_secret_reveals_backward, wrong_secret=secret)
+    def process_secret_reveal_with_unknown_secrethash_as_initiator(
+        self, source: utils.SendSecretRevealInNode, wrong_secret: Secret
+    ):
+        initiator_address = source.event.recipient
+        initiator_client = self.address_to_client[initiator_address]
+
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.secret != wrong_secret)
+        wrong_secrethash = sha256_secrethash(wrong_secret)
+        state_change = replace(state_change, secret=wrong_secret, secrethash=wrong_secrethash)
+        result = node.state_transition(initiator_client.chain_state, state_change)
+
+        assert not result.events
+        self.event("Secret reveal with unknown secrethash dropped in initiator node.")
+
+    @rule(source=send_secret_reveals_backward, wrong_channel_id=integers)
+    def process_secret_reveal_with_wrong_channel_identifier_as_initiator(
+        self, source: utils.SendSecretRevealInNode, wrong_channel_id
+    ):
+        initiator_address = source.event.recipient
+        initiator_client = self.address_to_client[initiator_address]
+
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.canonical_id.channel_id != wrong_channel_id)
+        wrong_canonical_id = replace(state_change.canonical_id, channel_id=wrong_channel_id)
+        state_change = replace(state_change, canonical_id=wrong_canonical_id)
+        result = node.state_transition(initiator_client.chain_state, state_change)
+
+        assert not result.events
+        self.event("Secret reveal with unknown channel id dropped in initiator node.")
+
+    @rule(source=send_secret_reveals_backward, wrong_channel_id=integers, wrong_recipient=address)
+    def process_secret_reveal_with_wrong_queue_identifier_as_initiator(
+        self, source: utils.SendSecretRevealInNode, wrong_channel_id, wrong_recipient
+    ):
+        initiator_address = source.event.recipient
+        initiator_client = self.address_to_client[initiator_address]
+
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.canonical_id.channel_id != wrong_channel_id)
+        wrong_canonical_id = replace(
+            state_change.queue_id.canonical_id, channel_id=wrong_channel_id
+        )
+        wrong_queue_id = replace(
+            state_change.queue_id, canonical_id=wrong_canonical_id, recipient=wrong_recipient
+        )
+        state_change = replace(state_change, queue_id=wrong_queue_id)
+        result = node.state_transition(initiator_client.chain_state, state_change)
+
+        assert not result.events
+        self.event("Secret reveal with unknown queue id dropped in initiator node.")
 
 
 class TargetMixin:
