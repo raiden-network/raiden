@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field, replace
 from random import Random
-from typing import Dict, List, Set
+from typing import Any, Dict, List, Set
 
 import pytest
 from hypothesis import assume, event
@@ -25,12 +25,14 @@ from raiden.transfer import channel, node
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.events import (
+    EventInvalidReceivedLockedTransfer,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
     SendLockedTransfer,
@@ -693,8 +695,78 @@ class TargetMixin:
 
         return utils.SendSecretRequestInNode(result.events[1], target_address)
 
+    @rule(source=send_locked_transfers, scrambling=utils.balance_proof_scrambling())
+    def process_send_locked_transfer_with_scrambled_balance_proof(
+        self, source: utils.SendLockedTransferInNode, scrambling: Dict[str, Any]
+    ):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+
+        scrambled_balance_proof = replace(source.event.balance_proof, **scrambling.kwargs)
+        assume(scrambled_balance_proof != source.event.balance_proof)
+        scrambled_transfer = replace(source.event.transfer, balance_proof=scrambled_balance_proof)
+        scrambled_event = replace(source.event, transfer=scrambled_transfer)
+        scrambled_source = replace(source, event=scrambled_event)
+
+        message = utils.send_lockedtransfer_to_locked_transfer(scrambled_source)
+        action = utils.locked_transfer_to_action_init_target(message)
+        result = node.state_transition(target_client.chain_state, action)
+
+        if scrambling.field == "canonical_identifier":
+            assert not result.events
+            self.event("SendLockedTransfer with wrong channel identifier dropped in target node.")
+        else:
+            assert event_types_match(
+                result.events, EventInvalidReceivedLockedTransfer, EventUnlockClaimFailed
+            )
+            self.event("SendLockedTransfer with scrambled balance proof caught in target node.")
+
+    @rule(source=send_locked_transfers, scrambling=utils.hash_time_lock_scrambling())
+    def process_send_locked_transfer_with_scrambled_hash_time_lock_state(
+        self, source: utils.SendLockedTransferInNode, scrambling: utils.Scrambling
+    ):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+
+        scrambled_lock = replace(source.event.transfer.lock, **scrambling.kwargs)
+        assume(scrambled_lock != source.event.transfer.lock)
+        scrambled_transfer = replace(source.event.transfer, lock=scrambled_lock)
+        scrambled_event = replace(source.event, transfer=scrambled_transfer)
+        scrambled_source = replace(source, event=scrambled_event)
+
+        message = utils.send_lockedtransfer_to_locked_transfer(scrambled_source)
+        action = utils.locked_transfer_to_action_init_target(message)
+        result = node.state_transition(target_client.chain_state, action)
+
+        assert event_types_match(
+            result.events, EventInvalidReceivedLockedTransfer, EventUnlockClaimFailed
+        )
+        self.event("SendLockedTransfer with scrambled lock caught in target node.")
+
+    @rule(source=send_locked_transfers, scrambling=utils.locked_transfer_scrambling())
+    def process_send_locked_transfer_with_scrambled_locked_transfer_parameter(
+        self, source: utils.SendLockedTransferInNode, scrambling: utils.Scrambling
+    ):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+
+        message = utils.send_lockedtransfer_to_locked_transfer(source)
+        scrambled_message = replace(message, **scrambling.kwargs)
+        assume(scrambled_message != message)
+        action = utils.locked_transfer_to_action_init_target(scrambled_message)
+        result = node.state_transition(target_client.chain_state, action)
+
+        if scrambling.field in ("token_network_address", "channel_identifier"):
+            assert not result.events
+            self.event("SendLockedTransfer with token network or channel dropped.")
+        else:
+            assert event_types_match(
+                result.events, EventInvalidReceivedLockedTransfer, EventUnlockClaimFailed
+            )
+            self.event("SendLockedTransfer with scrambled parameter caught in target node.")
+
     @rule(target=send_secret_reveals_backward, source=consumes(send_secret_reveals_forward))
-    def process_secret_reveal(
+    def process_secret_reveal_as_target(
         self, source: utils.SendSecretRevealInNode
     ) -> utils.SendSecretRevealInNode:
         state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
@@ -703,8 +775,75 @@ class TargetMixin:
 
         result = node.state_transition(target_client.chain_state, state_change)
         assert event_types_match(result.events, SendSecretReveal)
+        self.event("Valid SecretReveal processed in target node.")
 
         return utils.SendSecretRevealInNode(node=target_address, event=result.events[0])
+
+    @rule(source=send_secret_reveals_forward, wrong_secret=secret())
+    def process_secret_reveal_with_mismatched_secret_as_target(
+        self, source: utils.SendSecretRevealInNode, wrong_secret: Secret
+    ):
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.secret != wrong_secret)
+        state_change = replace(state_change, secret=wrong_secret)
+
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert not result.events
+        self.event("SecretReveal with wrong secret dropped in target node.")
+
+    @rule(source=send_secret_reveals_forward, wrong_secret=secret())
+    def process_secret_reveal_with_unknown_secrethash_as_target(
+        self, source: utils.SendSecretRevealInNode, wrong_secret: Secret
+    ):
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.secret != wrong_secret)
+        wrong_secrethash = sha256_secrethash(wrong_secret)
+        state_change = replace(state_change, secret=wrong_secret, secrethash=wrong_secrethash)
+
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert not result.events
+        self.event("SecretReveal with unknown SecretHash dropped in target node.")
+
+    @rule(source=send_secret_reveals_forward, wrong_channel_id=integers())
+    def process_secret_reveal_with_wrong_channel_identifier_as_target(
+        self, source: utils.SendSecretRevealInNode, wrong_channel_id
+    ):
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.canonical_id.channel_id != wrong_channel_id)
+        wrong_canonical_id = replace(state_change.canonical_id, channel_id=wrong_channel_id)
+        state_change = replace(state_change, canonical_id=wrong_canonical_id)
+
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert not result.events
+        self.event("SecretReveal with unknown channel id dropped in target node.")
+
+    @rule(
+        source=send_secret_reveals_forward, wrong_channel_id=integers(), wrong_recipient=address()
+    )
+    def process_secret_reveal_with_wrong_queue_identifier_as_target(
+        self, source: utils.SendSecretRevealInNode, wrong_channel_id, wrong_recipient
+    ):
+        state_change = utils.send_secret_reveal_to_recieve_secret_reveal(source)
+        assume(state_change.canonical_id.channel_id != wrong_channel_id)
+        wrong_canonical_id = replace(
+            state_change.queue_id.canonical_id, channel_id=wrong_channel_id
+        )
+        wrong_queue_id = replace(
+            state_change.queue_id, canonical_id=wrong_canonical_id, recipient=wrong_recipient
+        )
+        state_change = replace(state_change, queue_id=wrong_queue_id, recipient=wrong_recipient)
+
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert not result.events
+        self.event("SecretReveal with unknown queue id dropped in target node.")
 
     @rule(source=consumes(send_unlocks))
     def process_unlock(self, source: utils.SendUnlockInNode):
@@ -726,8 +865,62 @@ class TargetMixin:
             EventUnlockClaimSuccess,
             SendProcessed,
         )
+        self.event("Valid unlock processed in target node.")
 
         self.transfer_order.answered.pop(0)
+
+    @rule(source=send_unlocks, wrong_secret=secret())
+    def process_unlock_with_mismatched_secret(
+        self, source: utils.SendUnlockInNode, wrong_secret: Secret
+    ):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        initiator_client = self.address_to_client[source.node]
+        channel = initiator_client.address_to_channel[target_address]
+
+        state_change = utils.send_unlock_to_receive_unlock(source, channel.canonical_identifier)
+        assume(state_change.secret != wrong_secret)
+        state_change = replace(state_change, secret=wrong_secret)
+
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert not result.events
+        self.event("Unlock with mismatched secret dropped in target node.")
+
+    @rule(source=send_unlocks, wrong_secret=secret())
+    def process_unlock_with_unknown_secrethash(
+        self, source: utils.SendUnlockInNode, wrong_secret: Secret
+    ):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        initiator_client = self.address_to_client[source.node]
+        channel = initiator_client.address_to_channel[target_address]
+
+        state_change = utils.send_unlock_to_receive_unlock(source, channel.canonical_identifier)
+        assume(state_change.secret != wrong_secret)
+        wrong_secrethash = sha256_secrethash(wrong_secret)
+        state_change = replace(state_change, secret=wrong_secret, secrethash=wrong_secrethash)
+
+        result = node.state_transition(target_client.chain_state, state_change)
+        assert not result.events
+        self.event("Unlock with unknown SecretHash dropped in target node.")
+
+    @rule(source=send_unlocks, scrambling=utils.balance_proof_scrambling())
+    def process_unlock_with_scrambled_balance_proof(
+        self, source: utils.SendUnlockInNode, scrambling: utils.Scrambling
+    ):
+        target_address = source.event.recipient
+        target_client = self.address_to_client[target_address]
+        initiator_client = self.address_to_client[source.node]
+        channel = initiator_client.address_to_channel[target_address]
+
+        state_change = utils.send_unlock_to_receive_unlock(source, channel.canonical_identifier)
+        scrambled_balance_proof = replace(state_change.balance_proof, **scrambling.kwargs)
+        assume(scrambled_balance_proof != state_change.balance_proof)
+        scrambled_state_change = replace(state_change, balance_proof=scrambled_balance_proof)
+
+        result = node.state_transition(target_client.chain_state, scrambled_state_change)
+        assert not result.events
+        self.event("Unlock with scrambled balance proof dropped in target node.")
 
 
 class BalanceProofData:
