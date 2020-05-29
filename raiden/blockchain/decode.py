@@ -2,8 +2,8 @@
 
 All fuctions that map an event to a state change must be side-effect free. If
 any additional data is necessary, either from the database or the blockchain
-itself. an utility should be added to raiden.blockchain.state, and then called
-by blockchainevent_to_statechange.
+itself, an utility should be added to `raiden.blockchain.state`, and then
+called by `blockchainevent_to_statechange`.
 """
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -20,7 +20,7 @@ from raiden.blockchain.state import (
     get_contractreceivechannelsettled_data_from_event,
     get_contractreceiveupdatetransfer_data_from_event,
 )
-from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
+from raiden.constants import EMPTY_LOCKSROOT, LOCKSROOT_OF_NO_LOCKS
 from raiden.settings import MediationFeeConfig
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
@@ -29,6 +29,7 @@ from raiden.transfer.state import (
     FeeScheduleState,
     NettingChannelEndState,
     NettingChannelState,
+    SuccessfulTransactionState,
     TokenNetworkGraphState,
     TokenNetworkState,
     TransactionChannelDeposit,
@@ -51,11 +52,14 @@ from raiden.utils.typing import (
     Balance,
     BlockNumber,
     BlockTimeout,
+    Dict,
     List,
     Optional,
     SecretRegistryAddress,
+    TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
 )
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
@@ -78,17 +82,28 @@ class ChannelConfig:
 
 
 def contractreceivenewtokennetwork_from_event(
-    event: DecodedEvent
+    event: DecodedEvent,
+    pendingtokenregistration: Dict[
+        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+    ],
 ) -> ContractReceiveNewTokenNetwork:
     data = event.event_data
     args = data["args"]
+
     token_network_address = args["token_network_address"]
+    token_address = TokenAddress(args["token_address"])
+    token_network_registry_address = TokenNetworkRegistryAddress(event.originating_contract)
+
+    pendingtokenregistration[token_network_address] = (
+        token_network_registry_address,
+        token_address,
+    )
 
     return ContractReceiveNewTokenNetwork(
-        token_network_registry_address=TokenNetworkRegistryAddress(event.originating_contract),
+        token_network_registry_address=token_network_registry_address,
         token_network=TokenNetworkState(
             address=token_network_address,
-            token_address=args["token_address"],
+            token_address=token_address,
             network_graph=TokenNetworkGraphState(token_network_address),
         ),
         transaction_hash=event.transaction_hash,
@@ -129,9 +144,7 @@ def contractreceivechannelnew_from_event(
     our_state = NettingChannelEndState(new_channel_details.our_address, Balance(0))
     partner_state = NettingChannelEndState(new_channel_details.partner_address, Balance(0))
 
-    open_transaction = TransactionExecutionStatus(
-        None, block_number, TransactionExecutionStatus.SUCCESS
-    )
+    open_transaction = SuccessfulTransactionState(block_number, None)
 
     # If the node was offline for a long period, the channel may have been
     # closed already, if that is the case during initialization the node will
@@ -270,12 +283,12 @@ def contractreceivechannelsettled_from_event(
     transaction_hash = data["transaction_hash"]
 
     # For saving gas, LOCKSROOT_OF_NO_LOCKS is stored as EMPTY_HASH onchain
-    if channel_settle_state.our_locksroot == EMPTY_HASH:
+    if channel_settle_state.our_locksroot == EMPTY_LOCKSROOT:
         our_locksroot = LOCKSROOT_OF_NO_LOCKS
     else:
         our_locksroot = channel_settle_state.our_locksroot
 
-    if channel_settle_state.partner_locksroot == EMPTY_HASH:
+    if channel_settle_state.partner_locksroot == EMPTY_LOCKSROOT:
         partner_locksroot = LOCKSROOT_OF_NO_LOCKS
     else:
         partner_locksroot = channel_settle_state.partner_locksroot
@@ -325,7 +338,12 @@ def contractreceivechannelbatchunlock_from_event(
 
 
 def blockchainevent_to_statechange(
-    raiden: "RaidenService", event: DecodedEvent, latest_confirmed_block: BlockNumber
+    raiden: "RaidenService",
+    event: DecodedEvent,
+    current_confirmed_head: BlockNumber,
+    pendingtokenregistration: Dict[
+        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+    ],
 ) -> List[StateChange]:  # pragma: no unittest
     msg = "The state of the node has to be primed before blockchain events can be processed."
     assert raiden.wal, msg
@@ -337,17 +355,19 @@ def blockchainevent_to_statechange(
     state_changes: List[StateChange] = []
 
     if event_name == EVENT_TOKEN_NETWORK_CREATED:
-        state_changes.append(contractreceivenewtokennetwork_from_event(event))
+        state_changes.append(
+            contractreceivenewtokennetwork_from_event(event, pendingtokenregistration)
+        )
 
     elif event_name == ChannelEvent.OPENED:
         new_channel_details = get_contractreceivechannelnew_data_from_event(
-            chain_state=chain_state, event=event
+            chain_state=chain_state, event=event, pendingtokenregistration=pendingtokenregistration
         )
 
         if new_channel_details is not None:
-            fee_config: MediationFeeConfig = raiden.config["mediation_fees"]
+            fee_config: MediationFeeConfig = raiden.config.mediation_fees
             channel_config = ChannelConfig(
-                reveal_timeout=raiden.config["reveal_timeout"],
+                reveal_timeout=raiden.config.reveal_timeout,
                 fee_schedule=FeeScheduleState(
                     cap_fees=fee_config.cap_meditation_fees,
                     flat=fee_config.get_flat_fee(new_channel_details.token_address),
@@ -363,13 +383,11 @@ def blockchainevent_to_statechange(
             state_changes.append(contractreceiveroutenew_from_event(event))
 
     elif event_name == ChannelEvent.DEPOSIT:
-        deposit = contractreceivechanneldeposit_from_event(event, raiden.config["mediation_fees"])
+        deposit = contractreceivechanneldeposit_from_event(event, raiden.config.mediation_fees)
         state_changes.append(deposit)
 
     elif event_name == ChannelEvent.WITHDRAW:
-        withdraw = contractreceivechannelwithdraw_from_event(
-            event, raiden.config["mediation_fees"]
-        )
+        withdraw = contractreceivechannelwithdraw_from_event(event, raiden.config.mediation_fees)
         state_changes.append(withdraw)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:
@@ -392,7 +410,7 @@ def blockchainevent_to_statechange(
             proxy_manager=proxy_manager,
             chain_state=chain_state,
             event=event,
-            latest_confirmed_block=latest_confirmed_block,
+            current_confirmed_head=current_confirmed_head,
         )
 
         if channel_settle_state:

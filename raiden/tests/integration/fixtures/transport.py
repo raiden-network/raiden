@@ -2,12 +2,14 @@ from typing import List
 
 import pytest
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, Environment
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import make_room_alias
+from raiden.settings import DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT, MatrixTransportConfig
 from raiden.tests.fixtures.variables import TransportProtocol
-from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
-from raiden.utils.typing import Optional
+from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
+from raiden.utils.http import HTTPExecutor
+from raiden.utils.typing import Iterable, Optional, Tuple
 
 
 @pytest.fixture(scope="session")
@@ -17,12 +19,17 @@ def synapse_config_generator():
 
 
 @pytest.fixture
-def matrix_server_count():
+def matrix_server_count() -> int:
     return 1
 
 
 @pytest.fixture
-def local_matrix_servers(
+def matrix_sync_timeout() -> int:
+    return DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
+
+
+@pytest.fixture
+def local_matrix_servers_with_executor(
     request,
     transport_protocol,
     matrix_server_count,
@@ -30,9 +37,9 @@ def local_matrix_servers(
     port_generator,
     broadcast_rooms,
     chain_id,
-):
+) -> Iterable[List[Tuple[ParsedURL, HTTPExecutor]]]:
     if transport_protocol is not TransportProtocol.MATRIX:
-        yield [None]
+        yield []
         return
 
     broadcast_rooms_aliases = [
@@ -46,8 +53,15 @@ def local_matrix_servers(
         config_generator=synapse_config_generator,
         log_context=request.node.name,
     )
-    with starter as server_urls:
-        yield server_urls
+    with starter as servers:
+        yield servers
+
+
+@pytest.fixture
+def local_matrix_servers(
+    local_matrix_servers_with_executor: List[Tuple[ParsedURL, HTTPExecutor]]
+) -> Iterable[List[ParsedURL]]:
+    yield [url for url, _ in local_matrix_servers_with_executor]
 
 
 @pytest.fixture
@@ -57,25 +71,31 @@ def broadcast_rooms() -> List[str]:
 
 @pytest.fixture
 def matrix_transports(
-    local_matrix_servers,
-    retries_before_backoff,
-    retry_interval,
-    number_of_transports,
-    broadcast_rooms,
-):
+    local_matrix_servers: List[ParsedURL],
+    retries_before_backoff: int,
+    retry_interval_initial: float,
+    retry_interval_max: float,
+    number_of_transports: int,
+    broadcast_rooms: List[str],
+    matrix_sync_timeout: int,
+) -> Iterable[List[MatrixTransport]]:
     transports = []
+    local_matrix_servers_str = [str(server) for server in local_matrix_servers]
+
     for transport_index in range(number_of_transports):
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
         transports.append(
             MatrixTransport(
-                {
-                    "broadcast_rooms": broadcast_rooms,
-                    "retries_before_backoff": retries_before_backoff,
-                    "retry_interval": retry_interval,
-                    "server": server,
-                    "server_name": server.netloc,
-                    "available_servers": local_matrix_servers,
-                }
+                config=MatrixTransportConfig(
+                    broadcast_rooms=broadcast_rooms.copy(),
+                    retries_before_backoff=retries_before_backoff,
+                    retry_interval_initial=retry_interval_initial,
+                    retry_interval_max=retry_interval_max,
+                    server=server,
+                    available_servers=local_matrix_servers_str,
+                    sync_timeout=matrix_sync_timeout,
+                ),
+                environment=Environment.DEVELOPMENT,
             )
         )
 

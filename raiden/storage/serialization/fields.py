@@ -1,14 +1,25 @@
 import json
 from random import Random
-from typing import Callable
+from typing import Dict, Iterable
 
 import marshmallow
 import networkx
-from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import to_bytes, to_canonical_address, to_hex
+from marshmallow import Schema
 from marshmallow_polyfield import PolyField
 
+from raiden.storage.serialization.cache import SchemaCache
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.utils.typing import Address, Any, ChainID, ChannelID, Optional, Tuple
+from raiden.utils.formatting import to_hex_address
+from raiden.utils.typing import (
+    Address,
+    Any,
+    ChainID,
+    ChannelID,
+    Optional,
+    TokenNetworkAddress,
+    Tuple,
+)
 
 
 class IntegerToStringField(marshmallow.fields.Integer):
@@ -46,7 +57,7 @@ class AddressField(marshmallow.fields.Field):
     """ Converts addresses from bytes to hex and vice versa """
 
     def _serialize(self, value: Address, attr: Any, obj: Any, **kwargs: Any) -> str:
-        return to_checksum_address(value)
+        return to_hex_address(value)
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> Address:
         try:
@@ -64,7 +75,9 @@ class QueueIdentifierField(marshmallow.fields.Field):
             chain_id_str, token_network_address_hex, channel_id_str = string.split("|")
             return CanonicalIdentifier(
                 chain_identifier=ChainID(int(chain_id_str)),
-                token_network_address=to_bytes(hexstr=token_network_address_hex),
+                token_network_address=TokenNetworkAddress(
+                    to_canonical_address(token_network_address_hex)
+                ),
                 channel_identifier=ChannelID(int(channel_id_str)),
             )
         except ValueError:
@@ -74,13 +87,13 @@ class QueueIdentifierField(marshmallow.fields.Field):
     def _canonical_id_to_string(canonical_id: CanonicalIdentifier) -> str:
         return (
             f"{canonical_id.chain_identifier}|"
-            f"{to_checksum_address(canonical_id.token_network_address)}|"
+            f"{to_hex_address(canonical_id.token_network_address)}|"
             f"{canonical_id.channel_identifier}"
         )
 
     def _serialize(self, value: QueueIdentifier, attr: Any, obj: Any, **kwargs: Any) -> str:
         return (
-            f"{to_checksum_address(value.recipient)}"
+            f"{to_hex_address(value.recipient)}"
             f"-{self._canonical_id_to_string(value.canonical_identifier)}"
         )
 
@@ -119,19 +132,21 @@ class PRNGField(marshmallow.fields.Field):
 
 
 class CallablePolyField(PolyField):
-    def __init__(
-        self,
-        serialization_schema_selector: Callable = None,
-        deserialization_schema_selector: Callable = None,
-        many: bool = False,
-        **metadata: Any,
-    ):
-        super().__init__(
-            serialization_schema_selector=serialization_schema_selector,
-            deserialization_schema_selector=deserialization_schema_selector,
-            many=many,
-            **metadata,
-        )
+    def __init__(self, allowed_classes: Iterable[type], many: bool = False, **metadata: Any):
+        super().__init__(many=many, **metadata)
+        self._class_of_classname = {cls.__name__: cls for cls in allowed_classes}
+
+    @staticmethod
+    def serialization_schema_selector(obj: Any, parent: Any) -> Schema:
+        # pylint: disable=unused-argument
+        return SchemaCache.get_or_create_schema(obj.__class__)
+
+    def deserialization_schema_selector(
+        self, deserializable_dict: Dict[str, Any], parent: Dict[str, Any]
+    ) -> Schema:
+        # pylint: disable=unused-argument
+        type_ = deserializable_dict["_type"].split(".")[-1]
+        return SchemaCache.get_or_create_schema(self._class_of_classname[type_])
 
     def __call__(self, **metadata: Any) -> "CallablePolyField":
         self.metadata = metadata
@@ -143,7 +158,7 @@ class NetworkXGraphField(marshmallow.fields.Field):
 
     def _serialize(self, value: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
         return json.dumps(
-            [(to_checksum_address(edge[0]), to_checksum_address(edge[1])) for edge in value.edges]
+            [(to_hex_address(edge[0]), to_hex_address(edge[1])) for edge in value.edges]
         )
 
     def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:

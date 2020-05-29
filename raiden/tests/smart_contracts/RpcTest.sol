@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.6.3;
 
 contract RpcTest {
     function fail_require() pure public {

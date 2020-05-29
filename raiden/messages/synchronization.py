@@ -4,7 +4,6 @@ from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.abstract import SignedMessage, SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.utils.signing import pack_data
 from raiden.utils.typing import ClassVar, MessageID
 
 
@@ -49,11 +48,12 @@ class Processed(SignedRetrieableMessage):
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.message_identifier, "uint64"),
+        return bytes([self.cmdid.value, 0, 0, 0]) + self.message_identifier.to_bytes(
+            8, byteorder="big"
         )
+
+    def __repr__(self) -> str:
+        return f"<Processed(msg_id={self.message_identifier})>"
 
 
 @dataclass(repr=False, eq=False)
@@ -73,8 +73,9 @@ class Delivered(SignedMessage):
     delivered_message_identifier: MessageID
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.delivered_message_identifier, "uint64"),
+        return bytes([self.cmdid.value, 0, 0, 0]) + self.delivered_message_identifier.to_bytes(
+            8, byteorder="big"
         )
+
+    def __repr__(self) -> str:
+        return f"<Delivered(msg_id={self.delivered_message_identifier})>"

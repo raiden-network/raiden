@@ -3,39 +3,33 @@ version: 2
 settings:
   gas_price: "fast"
   # Adapt to chain used
-  chain: any
   services:
     pfs:
-      url: https://pfs-goerli.services-dev.raiden.network
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
         deposit: true
-        # Make sure that enough is deposited to pay for an MR
-        # The cost of an MR is `5 * 10 ** 18`
-        balance_per_node: 7_000_000_000_000_000_000
-        min_balance: 5_000_000_000_000_000_000
+        balance_per_node: {{ ms_reward_with_margin }}
 
 token:
-  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  address: "{{ transfer_token }}"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
-  mode: managed
   count: 2
   raiden_version: local
 
   default_options:
     gas-price: fast
-    environment-type: development
     enable-monitoring: true
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: 40
+    default-settle-timeout: {{ settlement_timeout_min }}
     default-reveal-timeout: 20
 
 # This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
@@ -61,7 +55,7 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## The MS reacts within the settle_timeout
-      - wait_blocks: 40
+      - wait_blocks: {{ settlement_timeout_min }}
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"
@@ -69,7 +63,6 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
-      ## Settlement timeout is 500, but we've already waited 400 blocks, leaving 100 blocks
       ## To make sure the transactions gets mined in time, 10 additional blocks are added
       - wait_blocks: 10
       - assert_ms_claim: {channel_info_key: "MS Test Channel"}

@@ -12,6 +12,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     ProportionalFeeAmount,
     TokenAmount,
+    typecheck,
 )
 
 NUM_DISCRETISATION_POINTS = 21
@@ -126,7 +127,9 @@ def _mediation_fee_func(
     assert (
         amount_with_fees is None or amount_without_fees is None
     ), "Must be called with either amount_with_fees or amount_without_fees as None"
-    if balance_out == 0:
+
+    # If either channel can't transfer even a single token, there can be no mediation.
+    if balance_out == 0 or receivable == 0:
         raise UndefinedMediationFee()
 
     # Add dummy penalty funcs if none are set
@@ -183,7 +186,7 @@ class FeeScheduleState(State):
 
     def _update_penalty_func(self) -> None:
         if self.imbalance_penalty:
-            assert isinstance(self.imbalance_penalty, list)
+            typecheck(self.imbalance_penalty, list)
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
             self._penalty_func = Interpolate(x_list, y_list)
 
@@ -243,8 +246,8 @@ class FeeScheduleState(State):
 
 def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:
     """ Returns a list of num numbers from start to stop (inclusive). """
-    assert num > 1
-    assert start <= stop
+    assert num > 1, "Must generate at least one step"
+    assert start <= stop, "start must be smaller than stop"
 
     step = (stop - start) / (num - 1)
 
@@ -263,8 +266,8 @@ def calculate_imbalance_fees(
     The penalty term takes the following value at the extrema:
     channel_capacity * (proportional_imbalance_fee / 1_000_000)
     """
-    assert channel_capacity >= 0
-    assert proportional_imbalance_fee >= 0
+    assert channel_capacity >= 0, "channel_capacity must be larger than zero"
+    assert proportional_imbalance_fee >= 0, "prop. imbalance fee must be larger than zero"
 
     if proportional_imbalance_fee == 0:
         return None

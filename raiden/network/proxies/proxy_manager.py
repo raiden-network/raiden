@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 
-import gevent
 from eth_utils import decode_hex, is_binary_address
 from gevent.lock import Semaphore
 
+from raiden.network.proxies.custom_token import CustomToken
 from raiden.network.proxies.metadata import SmartContractMetadata
+from raiden.network.proxies.monitoring_service import MonitoringService
+from raiden.network.proxies.one_to_n import OneToN
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -13,19 +15,25 @@ from raiden.network.proxies.token_network import TokenNetwork, TokenNetworkMetad
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
     Address,
+    BlockIdentifier,
     BlockNumber,
     ChannelID,
     Dict,
     EVMBytecode,
+    MonitoringServiceAddress,
+    OneToNAddress,
     Optional,
+    SecretRegistryAddress,
+    ServiceRegistryAddress,
     T_ChannelID,
     TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Tuple,
+    UserDepositAddress,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, CONTRACT_TOKEN_NETWORK_REGISTRY
@@ -69,14 +77,19 @@ class ProxyManager:
         contract_manager: ContractManager,
         metadata: ProxyManagerMetadata,
     ) -> None:
-        self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
+        self.address_to_secret_registry: Dict[SecretRegistryAddress, SecretRegistry] = dict()
         self.address_to_token: Dict[TokenAddress, Token] = dict()
+        self.address_to_custom_token: Dict[TokenAddress, CustomToken] = dict()
         self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
         self.address_to_token_network_registry: Dict[
             TokenNetworkRegistryAddress, TokenNetworkRegistry
         ] = dict()
-        self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
-        self.address_to_service_registry: Dict[Address, ServiceRegistry] = dict()
+        self.address_to_user_deposit: Dict[UserDepositAddress, UserDeposit] = dict()
+        self.address_to_service_registry: Dict[ServiceRegistryAddress, ServiceRegistry] = dict()
+        self.address_to_monitoring_service: Dict[
+            MonitoringServiceAddress, MonitoringService
+        ] = dict()
+        self.address_to_one_to_n: Dict[OneToNAddress, OneToN] = dict()
         self.identifier_to_payment_channel: Dict[
             Tuple[TokenNetworkAddress, ChannelID], PaymentChannel
         ] = dict()
@@ -85,46 +98,20 @@ class ProxyManager:
         self.contract_manager = contract_manager
         self.metadata = metadata
 
+        # exposing the lock since it is needed for a proper gas_reserve
+        # estimation
+        self.token_network_creation_lock = Semaphore()
+
         self._token_creation_lock = Semaphore()
-        self._token_network_creation_lock = Semaphore()
         self._token_network_registry_creation_lock = Semaphore()
         self._secret_registry_creation_lock = Semaphore()
         self._service_registry_creation_lock = Semaphore()
         self._payment_channel_creation_lock = Semaphore()
         self._user_deposit_creation_lock = Semaphore()
+        self._monitoring_service_creation_lock = Semaphore()
+        self._one_to_n_creation_lock = Semaphore()
 
-    def estimate_blocktime(self, oldest: int = 256) -> float:
-        """Calculate a blocktime estimate based on some past blocks.
-        Args:
-            oldest: delta in block numbers to go back.
-        Return:
-            average block time in seconds
-        """
-        last_block_number = self.client.block_number()
-        # around genesis block there is nothing to estimate
-        if last_block_number < 1:
-            return 15
-        # if there are less than `oldest` blocks available, start at block 1
-        if last_block_number < oldest:
-            interval = (last_block_number - 1) or 1
-        else:
-            interval = last_block_number - oldest
-        assert interval > 0
-        last_timestamp = self.client.get_block(last_block_number)["timestamp"]
-        first_timestamp = self.client.get_block(last_block_number - interval)["timestamp"]
-        delta = last_timestamp - first_timestamp
-        return delta / interval
-
-    def wait_until_block(self, target_block_number: BlockNumber) -> BlockNumber:
-        current_block = self.client.block_number()
-
-        while current_block < target_block_number:
-            current_block = self.client.block_number()
-            gevent.sleep(0.5)
-
-        return current_block
-
-    def token(self, token_address: TokenAddress) -> Token:
+    def token(self, token_address: TokenAddress, block_identifier: BlockIdentifier) -> Token:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
@@ -135,11 +122,32 @@ class ProxyManager:
                     jsonrpc_client=self.client,
                     token_address=token_address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_token[token_address]
 
-    def token_network_registry(self, address: TokenNetworkRegistryAddress) -> TokenNetworkRegistry:
+    def custom_token(
+        self, token_address: TokenAddress, block_identifier: BlockIdentifier
+    ) -> CustomToken:
+        """ Return a proxy to interact with a token. """
+        if not is_binary_address(token_address):
+            raise ValueError("token_address must be a valid address")
+
+        with self._token_creation_lock:
+            if token_address not in self.address_to_custom_token:
+                self.address_to_custom_token[token_address] = CustomToken(
+                    jsonrpc_client=self.client,
+                    token_address=token_address,
+                    contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
+                )
+
+        return self.address_to_custom_token[token_address]
+
+    def token_network_registry(
+        self, address: TokenNetworkRegistryAddress, block_identifier: BlockIdentifier
+    ) -> TokenNetworkRegistry:
 
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
@@ -160,16 +168,21 @@ class ProxyManager:
                 )
 
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    rpc_client=self.client, metadata=metadata, proxy_manager=self
+                    rpc_client=self.client,
+                    metadata=metadata,
+                    proxy_manager=self,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_token_network_registry[address]
 
-    def token_network(self, address: TokenNetworkAddress) -> TokenNetwork:
+    def token_network(
+        self, address: TokenNetworkAddress, block_identifier: BlockIdentifier
+    ) -> TokenNetwork:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
-        with self._token_network_creation_lock:
+        with self.token_network_creation_lock:
             if address not in self.address_to_token_network:
                 metadata = TokenNetworkMetadata(
                     deployed_at=None,
@@ -190,11 +203,14 @@ class ProxyManager:
                     contract_manager=self.contract_manager,
                     proxy_manager=self,
                     metadata=metadata,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_token_network[address]
 
-    def secret_registry(self, address: Address) -> SecretRegistry:
+    def secret_registry(
+        self, address: SecretRegistryAddress, block_identifier: BlockIdentifier
+    ) -> SecretRegistry:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -204,25 +220,31 @@ class ProxyManager:
                     jsonrpc_client=self.client,
                     secret_registry_address=address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_secret_registry[address]
 
-    def service_registry(self, address: Address) -> ServiceRegistry:
+    def service_registry(
+        self, address: ServiceRegistryAddress, block_identifier: BlockIdentifier
+    ) -> ServiceRegistry:
         with self._service_registry_creation_lock:
             if address not in self.address_to_service_registry:
                 self.address_to_service_registry[address] = ServiceRegistry(
                     jsonrpc_client=self.client,
                     service_registry_address=address,
                     contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_service_registry[address]
 
-    def payment_channel(self, canonical_identifier: CanonicalIdentifier) -> PaymentChannel:
+    def payment_channel(
+        self, channel_state: NettingChannelState, block_identifier: BlockIdentifier
+    ) -> PaymentChannel:
 
-        token_network_address = canonical_identifier.token_network_address
-        channel_id = canonical_identifier.channel_identifier
+        token_network_address = channel_state.canonical_identifier.token_network_address
+        channel_id = channel_state.canonical_identifier.channel_identifier
 
         if not is_binary_address(token_network_address):
             raise ValueError("address must be a valid address")
@@ -232,17 +254,21 @@ class ProxyManager:
             dict_key = (token_network_address, channel_id)
 
             if dict_key not in self.identifier_to_payment_channel:
-                token_network = self.token_network(token_network_address)
+                token_network = self.token_network(
+                    token_network_address, block_identifier=block_identifier
+                )
 
                 self.identifier_to_payment_channel[dict_key] = PaymentChannel(
                     token_network=token_network,
-                    channel_identifier=channel_id,
+                    channel_state=channel_state,
                     contract_manager=self.contract_manager,
                 )
 
         return self.identifier_to_payment_channel[dict_key]
 
-    def user_deposit(self, address: Address) -> UserDeposit:
+    def user_deposit(
+        self, address: UserDepositAddress, block_identifier: BlockIdentifier
+    ) -> UserDeposit:
         if not is_binary_address(address):
             raise ValueError("address must be a valid address")
 
@@ -253,6 +279,39 @@ class ProxyManager:
                     user_deposit_address=address,
                     contract_manager=self.contract_manager,
                     proxy_manager=self,
+                    block_identifier=block_identifier,
                 )
 
         return self.address_to_user_deposit[address]
+
+    def monitoring_service(
+        self, address: MonitoringServiceAddress, block_identifier: BlockIdentifier
+    ) -> MonitoringService:
+        if not is_binary_address(address):
+            raise ValueError("address must be a valid address")
+
+        with self._monitoring_service_creation_lock:
+            if address not in self.address_to_monitoring_service:
+                self.address_to_monitoring_service[address] = MonitoringService(
+                    jsonrpc_client=self.client,
+                    monitoring_service_address=address,
+                    contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
+                )
+
+        return self.address_to_monitoring_service[address]
+
+    def one_to_n(self, address: OneToNAddress, block_identifier: BlockIdentifier) -> OneToN:
+        if not is_binary_address(address):
+            raise ValueError("address must be a valid address")
+
+        with self._one_to_n_creation_lock:
+            if address not in self.address_to_one_to_n:
+                self.address_to_one_to_n[address] = OneToN(
+                    jsonrpc_client=self.client,
+                    one_to_n_address=address,
+                    contract_manager=self.contract_manager,
+                    block_identifier=block_identifier,
+                )
+
+        return self.address_to_one_to_n[address]

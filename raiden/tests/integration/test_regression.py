@@ -1,16 +1,16 @@
 import gevent
 import pytest
+from eth_utils import keccak
 
-from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
+from raiden.app import App
+from raiden.constants import BLOCK_ID_LATEST, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, RevealSecret, Unlock
-from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
     raiden_events_search_for_item,
     raiden_state_changes_search_for_item,
-    search_for_item,
 )
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
@@ -22,16 +22,28 @@ from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_un
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
-from raiden.utils import PaymentID, sha3
-from raiden.utils.typing import Locksroot, Nonce, PaymentAmount, PaymentWithFeeAmount, TokenAmount
+from raiden.utils.typing import (
+    BlockExpiration,
+    InitiatorAddress,
+    List,
+    LockedAmount,
+    Locksroot,
+    Nonce,
+    PaymentAmount,
+    PaymentID,
+    PaymentWithFeeAmount,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+)
 
 # pylint: disable=too-many-locals
 
 
 def open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout):
-    greenlets = []
+    greenlets = set()
     for first_app, second_app in app_channels:
-        greenlets.append(
+        greenlets.add(
             gevent.spawn(
                 payment_channel_open_and_deposit,
                 first_app,
@@ -41,12 +53,11 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
                 settle_timeout,
             )
         )
-    gevent.wait(greenlets)
+    gevent.joinall(greenlets, raise_error=True)
 
     wait_for_channels(app_channels, registry_address, [token], deposit)
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5195")
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
@@ -81,25 +92,32 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-def test_regression_revealsecret_after_secret(raiden_network, token_addresses, transport_protocol):
+def test_regression_revealsecret_after_secret(
+    raiden_network: List[App], token_addresses: List[TokenAddress]
+) -> None:
     """ A RevealSecret message received after a Unlock message must be cleanly
     handled.
     """
     app0, app1, app2 = raiden_network
     token = token_addresses[0]
-
-    identifier = 1
+    identifier = PaymentID(1)
     token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0), token_network_registry_address, token
     )
+    assert token_network_address, "The fixtures must register the token"
+
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_address, amount=1, target=app2.raiden.address, identifier=identifier
+        token_network_address,
+        amount=PaymentAmount(1),
+        target=TargetAddress(app2.raiden.address),
+        identifier=identifier,
     )
     with watch_for_unlock_failures(*raiden_network):
         assert payment_status.payment_done.wait()
 
-    event = search_for_item(app1.raiden.wal.storage.get_events(), SendSecretReveal, {})
+    assert app1.raiden.wal, "The fixtures must start the app."
+    event = raiden_events_search_for_item(app1.raiden, SendSecretReveal, {})
     assert event
 
     reveal_secret = RevealSecret(
@@ -108,17 +126,15 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
         signature=EMPTY_SIGNATURE,
     )
     app2.raiden.sign(reveal_secret)
-
-    if transport_protocol is TransportProtocol.MATRIX:
-        app1.raiden.transport._receive_message(reveal_secret)  # pylint: disable=protected-access
-    else:
-        raise TypeError("Unknown TransportProtocol")
+    app1.raiden.on_messages([reveal_secret])
 
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-def test_regression_multiple_revealsecret(raiden_network, token_addresses, transport_protocol):
+def test_regression_multiple_revealsecret(
+    raiden_network: List[App], token_addresses: List[TokenAddress]
+) -> None:
     """ Multiple RevealSecret messages arriving at the same time must be
     handled properly.
 
@@ -146,7 +162,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
 
     payment_identifier = PaymentID(1)
     secret, secrethash = make_secret_with_hash()
-    expiration = app0.raiden.get_block_number() + 100
+    expiration = BlockExpiration(app0.raiden.get_block_number() + 100)
     lock_amount = PaymentWithFeeAmount(10)
     lock = Lock(amount=lock_amount, expiration=expiration, secrethash=secrethash)
 
@@ -157,27 +173,23 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         message_identifier=make_message_identifier(),
         payment_identifier=payment_identifier,
         nonce=nonce,
-        token_network_address=app0.raiden.default_registry.address,
+        token_network_address=token_network_address,
         token=token,
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=transferred_amount,
-        locked_amount=TokenAmount(lock_amount),
+        locked_amount=LockedAmount(lock_amount),
         recipient=app1.raiden.address,
         locksroot=Locksroot(lock.lockhash),
         lock=lock,
-        target=app1.raiden.address,
-        initiator=app0.raiden.address,
+        target=TargetAddress(app1.raiden.address),
+        initiator=InitiatorAddress(app0.raiden.address),
         signature=EMPTY_SIGNATURE,
         metadata=Metadata(
             routes=[RouteMetadata(route=[app0.raiden.address, app1.raiden.address])]
         ),
     )
     app0.raiden.sign(mediated_transfer)
-
-    if transport_protocol is TransportProtocol.MATRIX:
-        app1.raiden.transport._receive_message(mediated_transfer)
-    else:
-        raise TypeError("Unknown TransportProtocol")
+    app1.raiden.on_messages([mediated_transfer])
 
     reveal_secret = RevealSecret(
         message_identifier=make_message_identifier(), secret=secret, signature=EMPTY_SIGNATURE
@@ -193,30 +205,27 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         token_network_address=token_network_address,
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=TokenAmount(lock_amount),
-        locked_amount=TokenAmount(0),
+        locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         secret=secret,
         signature=EMPTY_SIGNATURE,
     )
     app0.raiden.sign(unlock)
 
-    if transport_protocol is TransportProtocol.MATRIX:
-        messages = [unlock, reveal_secret]
-        receive_method = app1.raiden.transport._receive_message
-        wait = set(gevent.spawn_later(0.1, receive_method, data) for data in messages)
-    else:
-        raise TypeError("Unknown TransportProtocol")
+    messages = [unlock, reveal_secret]
+    receive_method = app1.raiden.on_messages
+    wait = set(gevent.spawn_later(0.1, receive_method, [data]) for data in messages)
 
-    gevent.joinall(wait)
+    gevent.joinall(wait, raise_error=True)
 
 
 def test_regression_register_secret_once(secret_registry_address, proxy_manager):
     """Register secret transaction must not be sent if the secret is already registered"""
     # pylint: disable=protected-access
 
-    secret_registry = proxy_manager.secret_registry(secret_registry_address)
+    secret_registry = proxy_manager.secret_registry(secret_registry_address, BLOCK_ID_LATEST)
 
-    secret = sha3(b"test_regression_register_secret_once")
+    secret = keccak(b"test_regression_register_secret_once")
     secret_registry.register_secret(secret=secret)
 
     previous_nonce = proxy_manager.client._available_nonce
@@ -266,6 +275,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         amount=PaymentAmount(50),
         identifier=PaymentID(2),
         timeout=20,
+        expect_unlock_failures=True,
     )
 
     assert raiden_state_changes_search_for_item(

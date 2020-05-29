@@ -10,7 +10,8 @@ from eth_utils import decode_hex, encode_hex
 
 from raiden.accounts import Account, AccountManager, KeystoreFileNotFound
 from raiden.ui.prompt import unlock_account_with_passwordfile
-from raiden.utils import get_project_root, privatekey_to_address, privatekey_to_publickey
+from raiden.utils.keys import privatekey_to_address, privatekey_to_publickey
+from raiden.utils.system import get_project_root
 
 # use random file name so tests can run in parallel
 KEYFILE_INACCESSIBLE = "UTC--2017-06-20T16-33-00.{:09d}Z--inaccessible".format(

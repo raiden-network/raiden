@@ -1,13 +1,23 @@
+from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import TYPE_CHECKING, Any, Dict, List, NewType, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, NewType, Tuple, Type, Union
 
-from eth_typing import Address, ChecksumAddress
+from eth_typing import (  # NOQA pylint:disable=unused-import
+    Address,
+    BlockNumber,
+    Hash32,
+    HexAddress,
+)
+from typing_extensions import Literal
+from web3.types import ABI, BlockIdentifier, Nonce  # NOQA pylint:disable=unused-import
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
     ChainID,
     T_ChainID,
 )
+
+from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -29,13 +39,10 @@ if TYPE_CHECKING:
 MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the variable"
 
 
-def typecheck(value: Any, expected: Type) -> None:
+def typecheck(value: Any, expected: Union[Type, Tuple[Type, ...]]) -> None:
     if not isinstance(value, expected):
         raise ValueError(f"Expected a value of type {expected}, got value of type {type(value)}")
 
-
-ABI = List[Dict[str, Any]]
-BlockchainEvent = Dict[str, Any]
 
 T_EVMBytecode = bytes
 EVMBytecode = NewType("EVMBytecode", T_EVMBytecode)
@@ -44,7 +51,7 @@ GasMeasurements = Dict[str, int]
 
 T_Address = bytes
 
-AddressHex = ChecksumAddress
+AddressHex = HexAddress
 
 # An absolute number of blocks
 T_BlockExpiration = int
@@ -62,11 +69,11 @@ BalanceHash = NewType("BalanceHash", T_BalanceHash)
 T_BlockGasLimit = int
 BlockGasLimit = NewType("BlockGasLimit", T_BlockGasLimit)
 
+# TODO: remove alias
 T_BlockHash = bytes
-BlockHash = NewType("BlockHash", T_BlockHash)
+BlockHash = Hash32
 
 T_BlockNumber = int
-BlockNumber = NewType("BlockNumber", T_BlockNumber)
 
 # A relative number of blocks
 T_BlockTimeout = int
@@ -88,7 +95,6 @@ T_MessageID = int
 MessageID = NewType("MessageID", T_MessageID)
 
 T_Nonce = int
-Nonce = NewType("Nonce", T_Nonce)
 
 T_AdditionalHash = bytes
 AdditionalHash = NewType("AdditionalHash", T_AdditionalHash)
@@ -132,14 +138,23 @@ RaidenProtocolVersion = NewType("RaidenProtocolVersion", T_RaidenProtocolVersion
 T_RaidenDBVersion = int
 RaidenDBVersion = NewType("RaidenDBVersion", T_RaidenDBVersion)
 
-T_Keccak256 = bytes
-Keccak256 = NewType("Keccak256", T_Keccak256)
-
 T_TargetAddress = bytes
 TargetAddress = NewType("TargetAddress", T_TargetAddress)
 
 T_TokenAddress = bytes
 TokenAddress = NewType("TokenAddress", T_TokenAddress)
+
+T_UserDepositAddress = bytes
+UserDepositAddress = NewType("UserDepositAddress", T_UserDepositAddress)
+
+T_MonitoringServiceAddress = bytes
+MonitoringServiceAddress = NewType("MonitoringServiceAddress", T_MonitoringServiceAddress)
+
+T_ServiceRegistryAddress = bytes
+ServiceRegistryAddress = NewType("ServiceRegistryAddress", T_ServiceRegistryAddress)
+
+T_OneToNAddress = bytes
+OneToNAddress = NewType("OneToNAddress", T_OneToNAddress)
 
 T_TokenNetworkAddress = bytes
 TokenNetworkAddress = NewType("TokenNetworkAddress", T_TokenNetworkAddress)
@@ -171,8 +186,6 @@ EncodedData = NewType("EncodedData", T_EncodedData)
 T_WithdrawAmount = int
 WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
 
-BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
-
 NodeNetworkStateMap = Dict[Address, "NetworkState"]
 
 Host = NewType("Host", str)
@@ -183,3 +196,22 @@ Endpoint = NewType("Endpoint", str)
 LockType = Union["HashTimeLockState", "UnlockPartialProofState"]
 ErrorType = Union[Type["RaidenRecoverableError"], Type["RaidenUnrecoverableError"]]
 LockedTransferType = Union["LockedTransferUnsignedState", "LockedTransferSignedState"]
+
+DatabasePath = Union[Path, Literal[":memory:"]]
+
+T_RoomID = str
+RoomID = NewType("RoomID", T_RoomID)
+
+AddressTypes = Union[
+    Address,
+    TokenAddress,
+    TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
+    MonitoringServiceAddress,
+    TargetAddress,
+    InitiatorAddress,
+    OneToNAddress,
+    SecretRegistryAddress,
+    ServiceRegistryAddress,
+    UserDepositAddress,
+]

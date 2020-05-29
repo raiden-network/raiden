@@ -1,9 +1,15 @@
 from eth_utils import decode_hex, encode_hex
-from web3 import Web3
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
-from raiden.utils.signing import pack_data
-from raiden.utils.typing import ChannelID, TokenNetworkAddress
+from raiden.transfer.utils import hash_balance_data
+from raiden.utils.typing import (
+    BalanceHash,
+    ChannelID,
+    LockedAmount,
+    Locksroot,
+    TokenAmount,
+    TokenNetworkAddress,
+)
 from raiden_contracts.constants import MessageTypeId
 
 LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
@@ -23,14 +29,14 @@ class BalanceProof:
         self,
         channel_identifier: ChannelID,
         token_network_address: TokenNetworkAddress,
-        balance_hash: str = None,
+        balance_hash: BalanceHash = None,
         nonce: int = 0,
         additional_hash: str = "0x%064x" % 0,
         chain_id: int = 1,
         signature: str = None,
-        transferred_amount: int = None,
-        locked_amount: int = 0,
-        locksroot: str = LOCKSROOT_OF_NO_LOCKS_AS_STRING,
+        transferred_amount: TokenAmount = None,
+        locked_amount: LockedAmount = LockedAmount(0),  # noqa
+        locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS,
     ):
         self.channel_identifier = channel_identifier
         self.token_network_address = token_network_address
@@ -54,24 +60,24 @@ class BalanceProof:
         self.locksroot = locksroot
 
     def serialize_bin(self, msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF):
-        return pack_data(
-            (self.token_network_address, "address"),
-            (self.chain_id, "uint256"),
-            (msg_type.value, "uint256"),
-            (self.channel_identifier, "uint256"),
-            (decode_hex(self.balance_hash), "bytes32"),
-            (self.nonce, "uint256"),
-            (decode_hex(self.additional_hash), "bytes32"),
+        return (
+            self.token_network_address
+            + self.chain_id.to_bytes(32, byteorder="big")
+            + msg_type.value.to_bytes(32, byteorder="big")
+            + self.channel_identifier.to_bytes(32, byteorder="big")
+            + self.balance_hash
+            + self.nonce.to_bytes(32, byteorder="big")
+            + decode_hex(self.additional_hash)
         )
 
     @property
-    def balance_hash(self) -> str:
+    def balance_hash(self) -> BalanceHash:
         if self._balance_hash:
             return self._balance_hash
         if None not in (self.transferred_amount, self.locked_amount, self.locksroot):
             assert isinstance(self.transferred_amount, int)
-            return encode_hex(
-                self.hash_balance_data(self.transferred_amount, self.locked_amount, self.locksroot)
+            return self.hash_balance_data(
+                self.transferred_amount, self.locked_amount, self.locksroot
             )
         raise ValueError("Can't compute balance hash")
 
@@ -80,7 +86,7 @@ class BalanceProof:
         self._balance_hash = value
 
     @staticmethod
-    def hash_balance_data(transferred_amount: int, locked_amount: int, locksroot: str) -> str:
-        return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter
-            ["uint256", "uint256", "bytes32"], [transferred_amount, locked_amount, locksroot]
-        )
+    def hash_balance_data(
+        transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
+    ) -> BalanceHash:
+        return hash_balance_data(transferred_amount, locked_amount, locksroot)

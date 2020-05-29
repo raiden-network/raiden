@@ -20,7 +20,7 @@ well.
 """
 from dataclasses import dataclass
 
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_hex
 
 from raiden.blockchain.events import DecodedEvent
 from raiden.exceptions import RaidenUnrecoverableError
@@ -34,15 +34,18 @@ from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer import views
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState, NettingChannelState
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,
     ChainID,
+    Dict,
     Locksroot,
     Optional,
     TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
 )
 
 
@@ -69,7 +72,7 @@ def get_contractreceivechannelsettled_data_from_event(
     proxy_manager: ProxyManager,
     chain_state: ChainState,
     event: DecodedEvent,
-    latest_confirmed_block: BlockNumber,
+    current_confirmed_head: BlockNumber,
 ) -> Optional[ChannelSettleState]:
     data = event.event_data
     token_network_address = TokenNetworkAddress(event.originating_contract)
@@ -105,7 +108,7 @@ def get_contractreceivechannelsettled_data_from_event(
         # provided during settle.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
             proxy_manager=proxy_manager,
-            canonical_identifier=channel_state.canonical_identifier,
+            channel_state=channel_state,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
             block_identifier=block_hash,
@@ -125,10 +128,10 @@ def get_contractreceivechannelsettled_data_from_event(
         # channel.
         our_locksroot, partner_locksroot = get_onchain_locksroots(
             proxy_manager=proxy_manager,
-            canonical_identifier=channel_state.canonical_identifier,
+            channel_state=channel_state,
             participant1=channel_state.our_state.address,
             participant2=channel_state.partner_state.address,
-            block_identifier=latest_confirmed_block,
+            block_identifier=current_confirmed_head,
         )
 
     return ChannelSettleState(canonical_identifier, our_locksroot, partner_locksroot)
@@ -162,7 +165,8 @@ def get_contractreceivechannelbatchunlock_data_from_event(
     locksroot = args["locksroot"]
 
     token_network_state = views.get_token_network_by_address(chain_state, token_network_address)
-    assert token_network_state is not None
+    msg = f"Could not find token network for address {to_checksum_address(token_network_address)}"
+    assert token_network_state is not None, msg
 
     if participant1 == chain_state.our_address:
         partner = participant2
@@ -219,7 +223,11 @@ def get_contractreceivechannelbatchunlock_data_from_event(
 
 
 def get_contractreceivechannelnew_data_from_event(
-    chain_state: ChainState, event: DecodedEvent
+    chain_state: ChainState,
+    event: DecodedEvent,
+    pendingtokenregistration: Dict[
+        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
+    ],
 ) -> Optional[NewChannelDetails]:
     token_network_address = TokenNetworkAddress(event.originating_contract)
     data = event.event_data
@@ -237,20 +245,27 @@ def get_contractreceivechannelnew_data_from_event(
         # Not a channel which this node is a participant
         return None
 
-    token_network_registry = views.get_token_network_registry_by_token_network_address(
-        chain_state, token_network_address
-    )
-    assert token_network_registry is not None, "Token network registry missing"
+    pending_addresses = pendingtokenregistration.get(token_network_address)
 
-    token_network = views.get_token_network_by_address(
-        chain_state=chain_state, token_network_address=token_network_address
-    )
-    assert token_network is not None, "Token network missing"
+    if pending_addresses:
+        token_network_registry_address, token_address = pending_addresses
+    else:
+        token_network_registry = views.get_token_network_registry_by_token_network_address(
+            chain_state, token_network_address
+        )
+        assert token_network_registry is not None, "Token network registry missing"
+
+        token_network = views.get_token_network_by_address(
+            chain_state=chain_state, token_network_address=token_network_address
+        )
+        assert token_network is not None, "Token network missing"
+        token_network_registry_address = token_network_registry.address
+        token_address = token_network.token_address
 
     return NewChannelDetails(
         chain_id=event.chain_id,
-        token_network_registry_address=token_network_registry.address,
-        token_address=token_network.token_address,
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
         token_network_address=token_network_address,
         our_address=our_address,
         partner_address=partner_address,

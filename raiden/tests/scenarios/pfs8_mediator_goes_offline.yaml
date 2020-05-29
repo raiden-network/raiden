@@ -2,38 +2,34 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: any
   services:
     pfs:
-      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
         deposit: true
-        balance_per_node: 5000
 
 token:
-  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  address: "{{ transfer_token }}"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
-  mode: managed
   count: 5
   raiden_version: local
 
   default_options:
     gas-price: fast
-    environment-type: development
     routing-mode: pfs
     # Only use one path per call to make sure the expected one is used
     pathfinding-max-paths: 1
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     enable-monitoring: true
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
 
 ## This is the PFS8 scenario. It aims to make sure that the PFS reacts correctly if a node along
@@ -81,7 +77,7 @@ scenario:
             - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount was tranferred on the correct path
+            # Assert that correct amount was transferred on the correct path
             - wait_blocks: 1
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
@@ -90,7 +86,7 @@ scenario:
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000}
 
             # Check that IOU is created
-            - assert_pfs_iou: {source: 0, amount: 100}
+            - assert_pfs_iou: {source: 0, amount: {{ pfs_fee }}}
       - serial:
           name: "Check that shortest path was used"
           tasks:
@@ -109,18 +105,18 @@ scenario:
       - serial:
           name: "Make payment from 0 to 3 after node4 is stopped"
           tasks:
-            # Check that a payment is made with the only availabe path [0, 1, 2, 3] from 0 to 3
+            # Check that a payment is made with the only available path [0, 1, 2, 3] from 0 to 3
             - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, expected_http_status: 200}
 
-            # Assert that correct amount was tranferred on the correct path
+            # Assert that correct amount was transferred on the correct path
             - wait_blocks: 1
             - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 999_000_000_000_000_000}
 
             # Check that IOU is created
-            - assert_pfs_iou: {source: 0, amount: 200}
+            - assert_pfs_iou: {source: 0, amount: {{ 2 * pfs_fee }}}
       - serial:
           name: "Check that the [0, 1, 2, 3] path was used"
           tasks:

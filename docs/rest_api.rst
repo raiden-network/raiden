@@ -21,15 +21,15 @@ Channel Object
 ::
 
     {
-       "channel_identifier": 21,
+       "channel_identifier": "21",
        "token_network_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-       "balance": 25000000,
-       "total_deposit": 35000000,
+       "balance": "25000000",
+       "total_deposit": "35000000",
        "state": "opened",
-       "settle_timeout": 500,
-       "reveal_timeout": 50
+       "settle_timeout": "500",
+       "reveal_timeout": "50"
     }
 
 
@@ -157,11 +157,13 @@ Deploying
 
    :statuscode 201: A token network for the token has been successfully created.
    :statuscode 402: Insufficient ETH to pay for the gas of the register on-chain transaction
+   :statuscode 403: Maximum of allowed token networks reached. No new token networks can be registered.
    :statuscode 404: The given token address is invalid.
    :statuscode 409:
     - The token was already registered before, or
     - The registering transaction failed.
    :statuscode 501: Registering a token only works on testnet temporarily. On mainnet this error is returned.
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjson address token_network_address: The deployed token networks address.
 
 Querying Information About Channels and Tokens
@@ -188,20 +190,21 @@ Querying Information About Channels and Tokens
       [
           {
               "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-              "channel_identifier": 20,
+              "channel_identifier": "20",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "balance": 25000000,
-              "total_deposit": 35000000,
-              "total_withdraw": 5000000,
+              "balance": "25000000",
+              "total_deposit": "35000000",
+              "total_withdraw": "5000000",
               "state": "opened",
-              "settle_timeout": 500,
-              "reveal_timeout": 50
+              "settle_timeout": "500",
+              "reveal_timeout": "50"
           }
       ]
 
    :statuscode 200: Successful query
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 .. http:get:: /api/(version)/channels/(token_address)
 
@@ -224,21 +227,22 @@ Querying Information About Channels and Tokens
       [
           {
               "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-              "channel_identifier": 20,
+              "channel_identifier": "20",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-              "balance": 25000000,
-              "total_deposit": 35000000,
-              "total_withdraw": 5000000,
+              "balance": "25000000",
+              "total_deposit": "35000000",
+              "total_withdraw": "5000000",
               "state": "opened",
-              "settle_timeout": 500,
-              "reveal_timeout": 50
+              "settle_timeout": "500",
+              "reveal_timeout": "50"
           }
       ]
 
    :statuscode 200: Successful query
    :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
 
@@ -260,15 +264,15 @@ Querying Information About Channels and Tokens
 
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": 20,
+          "channel_identifier": "20",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 25000000,
-          "total_deposit": 35000000,
-          "total_withdraw": 5000000,
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "5000000",
           "state": "opened",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :statuscode 200: Successful query
@@ -276,6 +280,7 @@ Querying Information About Channels and Tokens
     - The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses, or
     - The channel does not exist
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 .. http:get:: /api/(version)/tokens
 
@@ -302,6 +307,7 @@ Querying Information About Channels and Tokens
 
    :statuscode 200: Successful query
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 .. http:get:: /api/(version)/tokens/(token_address)
 
@@ -325,6 +331,7 @@ Querying Information About Channels and Tokens
 
    :statuscode 200: Successful query
    :statuscode 404: No token network found for the provided token address
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 .. http:get:: /api/(version)/tokens/(token_address)/partners
 
@@ -357,6 +364,7 @@ Querying Information About Channels and Tokens
     - The token does not exist
     - The token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjsonarr address partner_address: The partner we have a channel with
    :resjsonarr link channel: A link to the channel resource
 
@@ -421,6 +429,7 @@ Querying Information About Channels and Tokens
    :statuscode 200: Successful query
    :statuscode 404: The queried channel or token was not found
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjsonarr string role: One of "initiator", "mediator" and "target"
 
 
@@ -444,9 +453,9 @@ Channel Management
       {
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "total_deposit": 35000000,
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "total_deposit": "35000000",
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :reqjson address partner_address: The partner we want to open a channel with.
@@ -473,15 +482,15 @@ Channel Management
 
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": 20,
+          "channel_identifier": "20",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 25000000,
-          "total_deposit": 35000000,
-          "total_withdraw": 0,
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "0",
           "state": "opened",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :statuscode 201: Channel created successfully
@@ -490,6 +499,7 @@ Channel Management
    :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409: Invalid input, e. g. too low a settle timeout
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 .. http:patch:: /api/(version)/channels/(token_address)/(partner_address)
 
@@ -516,7 +526,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "total_deposit": 100
+          "total_deposit": "100"
       }
 
    **Example Request (withdraw tokens)**:
@@ -528,7 +538,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "total_withdraw": 100
+          "total_withdraw": "100"
       }
 
    **Example Request (update channel reveal timeout)**:
@@ -540,7 +550,7 @@ Channel Management
       Content-Type: application/json
 
       {
-          "reveal_timeout": 50
+          "reveal_timeout": "50"
       }
 
    :reqjson string state: Desired new state; the only valid choice is ``"closed"``
@@ -548,8 +558,10 @@ Channel Management
    :reqjson int total_withdraw: The increased total withdraw
    :reqjson int reveal_timeout: The new reveal timeout value
 
-.. note::
-      For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
+   .. note::
+      For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_.
+      This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH.
+      This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
    **Example Response**:
 
@@ -560,15 +572,15 @@ Channel Management
 
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": 20,
+          "channel_identifier": "20",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": 25000000,
-          "total_deposit": 35000000,
-          "total_withdraw": 5000000,
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "5000000",
           "state": "closed",
-          "settle_timeout": 500,
-          "reveal_timeout": 50
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
       }
 
    :statuscode 200: Success
@@ -585,6 +597,7 @@ Channel Management
     - attempt to deposit token amount lower than on-chain balance of the channel
     - attempt to deposit more tokens than the testing limit
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
 Connection Management
 =====================
@@ -611,19 +624,20 @@ Connection Management
 
       {
           "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
-              "funds": 100,
-              "sum_deposits": 67,
-              "channels": 3
+              "funds": "100",
+              "sum_deposits": "67",
+              "channels": "3"
           },
           "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "funds": 49,
-              "sum_deposits": 31,
-              "channels": 1
+              "funds": "49",
+              "sum_deposits": "31",
+              "channels": "1"
           }
       }
 
    :statuscode 200: For a successful query
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjsonarr int funds: Funds from last connect request
    :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
    :resjsonarr int channels: Number of channels currently open for that token
@@ -646,7 +660,7 @@ Connection Management
       Content-Type: application/json
 
       {
-          "funds": 1337
+          "funds": "1337"
       }
 
    :statuscode 204: For a successful connection creation.
@@ -655,6 +669,7 @@ Connection Management
    :statuscode 408: If a timeout happened during any of the transactions.
    :statuscode 409: If any of the provided input to the call is invalid.
    :statuscode 500: Internal Raiden node error.
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :reqjson int funds: Amount of funding you want to put into the network.
    :reqjson int initial_channel_target: Number of channels to open proactively.
    :reqjson float joinable_funds_target: Fraction of funds that will be used to join channels opened by other participants.
@@ -692,6 +707,7 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
    .. note::
       Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
@@ -716,8 +732,8 @@ Payments
       Content-Type: application/json
 
       {
-          "amount": 200,
-          "identifier": 42
+          "amount": "200",
+          "identifier": "42"
       }
 
    :reqjson int amount: Amount to be sent to the target
@@ -736,8 +752,8 @@ Payments
           "initiator_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
-          "amount": 200,
-          "identifier": 42,
+          "amount": "200",
+          "identifier": "42",
           "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
           "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
       }
@@ -749,12 +765,14 @@ Payments
    :statuscode 408: If a timeout happened during the payment
    :statuscode 409: If the address or the amount is invalid or if there is no path to the target, or if the identifier is already in use for a different payment.
    :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
-.. note::
+   .. note::
       This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
-      However, this does not necessarily mean that querying the balance from the target node, immediately after the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
+      However, this does not necessarily mean that querying the balance from the target node, immediately after
+      the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
 
-To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
+   To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
 
    **Example Request**:
 
@@ -765,8 +783,8 @@ To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the end
       Content-Type: application/json
 
       {
-          "amount": 200,
-          "identifier": 42,
+          "amount": "200",
+          "identifier": "42",
           "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
           "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
       }
@@ -789,7 +807,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
 
 
-.. http:get:: /api/v1/payments/(token_address)/(target_address)
+.. http:get:: /api/(version)/payments/(token_address)/(target_address)
 
      Query the payment history. This includes successful (EventPaymentSentSuccess) and failed (EventPaymentSentFailed) sent payments as well as received payments (EventPaymentReceivedSuccess).
      ``token_address`` and ``target_address`` are optional and will filter the list of events accordingly.
@@ -811,24 +829,27 @@ The format of ``log_time`` is ISO8601 with milliseconds.
       [
           {
               "event": "EventPaymentReceivedSuccess",
-              "amount": 5,
+              "amount": "5",
               "initiator": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": 1,
-              "log_time": "2018-10-30T07:03:52.193"
+              "identifier": "1",
+              "log_time": "2018-10-30T07:03:52.193",
+	      "token_address" : "0x5a2d2b9b015b46b8eaff7bffdc5db0051db7439b"
           },
           {
               "event": "EventPaymentSentSuccess",
-              "amount": 35,
+              "amount": "35",
               "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": 2,
-              "log_time": "2018-10-30T07:04:22.293"
+              "identifier": "2",
+              "log_time": "2018-10-30T07:04:22.293",
+	      "token_address" : "0x5a2d2b9b015b46b8eaff7bffdc5db0051db7439b"
           },
           {
               "event": "EventPaymentSentSuccess",
-              "amount": 20,
+              "amount": "20",
               "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": 3,
-              "log_time": "2018-10-30T07:10:13.122"
+              "identifier": "3",
+              "log_time": "2018-10-30T07:10:13.122",
+	      "token_address" : "0x5a2d2b9b015b46b8eaff7bffdc5db0051db7439b"
           }
       ]
 
@@ -836,6 +857,43 @@ The format of ``log_time`` is ISO8601 with milliseconds.
   :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
+  :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+
+Querying node state
+===================
+
+.. http:get:: /api/(version)/status
+
+   Query the node status. Possible answers are:
+
+   - ``"ready"``: The node is listening on its API endpoints
+
+   - ``"syncing"``: The node is still in the initial sync. Number of blocks to sync will also be given.
+
+   - ``"unavailable"``: The node is unavailable for some other reason
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/status HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "status": "syncing",
+         "blocks_to_sync": "130452"
+      }
+
+   :statuscode 200: Successful query
+   :statuscode 500: Internal Raiden error
 
 
 API endpoints for testing
@@ -864,14 +922,11 @@ API endpoints for testing
 
       {
          "to": "0x2c4b0Bdac486d492E3cD701F4cA87e480AE4C685",
-         "value": 1000,
-         "contract_method": "mintFor"
+         "value": "1000"
       }
 
    :reqjson address to: The address to assign the minted tokens to.
    :reqjson int value: The amount of tokens to be minted.
-   :reqjson string contract_method: The name of the contract's minting method. Must be one of
-      ``mintFor``, ``mint`` or ``increaseSupply``. Defaults to ``mintFor``.
 
    **Example Response**:
 
@@ -886,4 +941,5 @@ API endpoints for testing
 
    :statuscode 200: The transaction was successful.
    :statuscode 400: Something went wrong.
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjson string transaction_hash: The hash of the minting transaction.

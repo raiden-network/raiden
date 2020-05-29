@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.utils import split_endpoint
+from raiden.utils.http import split_endpoint
 from raiden.utils.typing import Endpoint
 
 

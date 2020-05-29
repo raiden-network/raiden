@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from eth_utils import keccak
 
 from raiden.messages.transfers import Lock
 from raiden.storage.restore import (
@@ -23,10 +24,10 @@ from raiden.storage.sqlite import (
 )
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
+    SendUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -37,7 +38,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import BalanceProofUnsignedState, HopState, RouteState
 from raiden.transfer.state_change import Block, ReceiveUnlock
-from raiden.utils import sha3
 from raiden.utils.typing import (
     AdditionalHash,
     BlockExpiration,
@@ -63,8 +63,8 @@ def make_signed_balance_proof_from_counter(counter):
             canonical_identifier=factories.make_canonical_identifier(
                 token_network_address=factories.make_address(), channel_identifier=next(counter)
             ),
-            locksroot=Locksroot(sha3(lock.as_bytes)),
-            message_hash=AdditionalHash(sha3(b"")),
+            locksroot=Locksroot(keccak(lock.as_bytes)),
+            message_hash=AdditionalHash(keccak(b"")),
             sender=factories.HOP1,
             pkey=factories.HOP1_KEY,
         )
@@ -78,7 +78,7 @@ def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
         nonce=next(counter),
         transferred_amount=next(counter),
         locked_amount=next(counter),
-        locksroot=Locksroot(sha3(next(counter).to_bytes(1, "big"))),
+        locksroot=Locksroot(keccak(next(counter).to_bytes(1, "big"))),
         canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=next(counter),
             token_network_address=factories.make_address(),
@@ -118,7 +118,7 @@ def make_signed_transfer_from_counter(counter):
             nonce=next(counter),
             transferred_amount=next(counter),
             locked_amount=next(counter),
-            locksroot=sha3(lock.as_bytes),
+            locksroot=keccak(lock.as_bytes),
             canonical_identifier=factories.make_canonical_identifier(
                 token_network_address=factories.make_address(), channel_identifier=next(counter)
             ),
@@ -154,7 +154,7 @@ def make_from_route_from_counter(counter):
             ),
             amount=TokenAmount(1),
             expiration=expiration,
-            secret=sha3(factories.make_secret(next(counter))),
+            secret=keccak(factories.make_secret(next(counter))),
             initiator=factories.make_initiator_address(),
             target=factories.make_target_address(),
             payment_identifier=next(counter),
@@ -200,7 +200,7 @@ def test_get_state_change_with_balance_proof():
         transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,  # pylint: disable=no-member
-        secret=sha3(factories.make_secret(next(counter))),
+        secret=keccak(factories.make_secret(next(counter))),
     )
     mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
 
@@ -308,7 +308,7 @@ def test_get_event_with_balance_proof():
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
-    send_balance_proof = SendBalanceProof(
+    send_balance_proof = SendUnlock(
         recipient=partner_address,
         message_identifier=MessageID(next(counter)),
         payment_identifier=factories.make_payment_id(),
@@ -460,7 +460,7 @@ def test_batch_query_state_changes():
     )
 
     # Test that querying the state changes in batches of 10 works
-    state_changes_num = 87
+    state_changes_num = 86
     state_changes = []
     for state_changes_batch in storage.batch_query_state_changes(batch_size=10):
         state_changes.extend(state_changes_batch)

@@ -3,11 +3,12 @@ from unittest.mock import Mock, patch
 import pytest
 from eth_utils import to_canonical_address
 
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.exceptions import BrokenPreconditionError
 from raiden.network.pathfinding import get_random_pfs, get_valid_pfs_url
 from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
-from raiden.utils import privatekey_to_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import FeeAmount, TokenNetworkRegistryAddress
 
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(
@@ -39,36 +40,39 @@ def test_service_registry_random_pfs(
         contract_manager=contract_manager,
         service_registry_address=service_registry_address,
     )
-    assert c1_service_proxy.ever_made_deposits_len("latest") == 3
+    assert c1_service_proxy.ever_made_deposits_len(BLOCK_ID_LATEST) == 3
 
     # Test that getting the url for each service address works
     for idx, address in enumerate(addresses):
-        assert c1_service_proxy.get_service_url("latest", address) == urls[idx]
+        assert c1_service_proxy.get_service_url(BLOCK_ID_LATEST, address) == urls[idx]
     # Test that getting the url for a non-existing service address returns None
-    assert c1_service_proxy.get_service_url("latest", HOP1) is None
+    assert c1_service_proxy.get_service_url(BLOCK_ID_LATEST, HOP1) is None
 
     # Test that get_service_address by index works
     for idx, address in enumerate(addresses):
-        assert c1_service_proxy.ever_made_deposits("latest", idx) == address
+        assert c1_service_proxy.ever_made_deposits(BLOCK_ID_LATEST, idx) == address
 
     # Test that getting the address for an index out of bounds returns None
-    assert not c1_service_proxy.ever_made_deposits("latest", 9999)
+    assert not c1_service_proxy.ever_made_deposits(BLOCK_ID_LATEST, 9999)
 
     mock_get_pfs_info = Mock()
     mock_get_pfs_info.return_value.price = 100
     with patch("raiden.network.pathfinding.get_pfs_info", mock_get_pfs_info):
         # Make sure that too expensive PFSes are not considered valid
         assert not get_valid_pfs_url(
-            c1_service_proxy, 0, "latest", pathfinding_max_fee=FeeAmount(99)
+            c1_service_proxy, 0, BLOCK_ID_LATEST, pathfinding_max_fee=FeeAmount(99)
         )
 
         # ...but ones with the expected price are fine
         assert (
-            get_valid_pfs_url(c1_service_proxy, 0, "latest", pathfinding_max_fee=FeeAmount(100))
+            get_valid_pfs_url(
+                c1_service_proxy, 0, BLOCK_ID_LATEST, pathfinding_max_fee=FeeAmount(100)
+            )
             == urls[0]
         )
 
         # Test that getting a random service from the proxy works
         assert (
-            get_random_pfs(c1_service_proxy, "latest", pathfinding_max_fee=FeeAmount(100)) in urls
+            get_random_pfs(c1_service_proxy, BLOCK_ID_LATEST, pathfinding_max_fee=FeeAmount(100))
+            in urls
         )

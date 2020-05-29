@@ -1,12 +1,12 @@
 FROM python:3.7-stretch
 
-# these are defined in .travis.yml and passed here in the makefile
+# these are defined in .circleci/config.yml and passed here in the makefile
 ARG SOLC_URL_LINUX
 ARG GETH_URL_LINUX
 
 # install dependencies
 RUN apt-get update
-RUN apt-get install -y git-core wget xz-utils libgmp-dev
+RUN apt-get install -y git-core wget xz-utils build-essential automake pkg-config libtool libffi-dev python3-dev libgmp-dev
 
 RUN wget -nv -O /usr/bin/solc ${SOLC_URL_LINUX} && \
     chmod +x /usr/bin/solc
@@ -24,7 +24,7 @@ ADD requirements/requirements.txt /tmp/
 WORKDIR /tmp
 
 
-RUN pip install -U 'pip<19.0.0' setuptools pip-tools
+RUN pip install -U pip setuptools pip-tools wheel
 RUN pip-sync requirements.txt
 
 ADD . /raiden

@@ -1,6 +1,7 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.6.3;
 
 contract RpcWithStorageTest {
+    uint256 current_counter;
     uint256[] data;
 
     event RpcEvent(
@@ -20,12 +21,9 @@ contract RpcWithStorageTest {
         // high variation in gas for consecutive transactions
         uint256 value;
         uint256 i;
-
-        data.length = (5 + data.length) ** 2;
-        value = data.length;
-
-        for (i=0; i<value; i++) {
-            data[i] = value;
+        uint256 new_length = (5 + data.length) ** 2;
+        for (i=0; i < new_length - data.length ; i++) {
+            data.push(new_length);
         }
 
         emit RpcEvent(i);
@@ -34,8 +32,20 @@ contract RpcWithStorageTest {
     function waste_storage(uint256 iterations) public {
         uint256 i;
         for (i=0; i<iterations; i++) {
-            data[data.length++] = i;
+            data.push(i);
         }
         emit RpcEvent(i);
+    }
+
+    function next(uint256 next_counter, uint256 iterations) public {
+        assert(current_counter + 1 == next_counter);
+
+        uint256 i;
+
+        for (i=0; i<iterations; i++) {
+            data.push(i);
+        }
+
+        current_counter = next_counter;
     }
 }

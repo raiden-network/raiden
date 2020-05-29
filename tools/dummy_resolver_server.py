@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json
 import logging
 from hashlib import sha256

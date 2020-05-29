@@ -9,12 +9,13 @@ from eth_utils import (
     to_checksum_address,
 )
 
-from raiden.constants import RoutingMode
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, RoutingMode
+from raiden.exceptions import RaidenError
 from raiden.network.pathfinding import PFSInfo, check_pfs_for_production, configure_pfs_or_exit
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
-from raiden.utils import privatekey_to_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import ChainID, TokenAmount, TokenNetworkRegistryAddress
 
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(
@@ -34,7 +35,11 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "price_info": 0,
         "network_info": {
             "chain_id": chain_id,
-            "registry_address": to_checksum_address(token_network_registry_address_test_default),
+            "token_network_registry_address": to_checksum_address(
+                token_network_registry_address_test_default
+            ),
+            "user_deposit_address": to_checksum_address(privatekey_to_address(private_keys[1])),
+            "confirmed_block": {"number": 10},
         },
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
@@ -71,7 +76,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     patch_random = patch("raiden.network.pathfinding.get_random_pfs", return_value="http://foo")
     with patch.object(requests, "get", return_value=response), patch_random:
         config = configure_pfs_or_exit(
-            pfs_url="auto",
+            pfs_url=MATRIX_AUTO_SELECT_SERVER,
             routing_mode=RoutingMode.PFS,
             service_registry=service_registry,
             node_network_id=chain_id,
@@ -98,7 +103,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     # Bad address, should exit the program
     bad_address = "http://badaddress"
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
         with patch.object(requests, "get", side_effect=requests.RequestException()):
             # Configuring a given address
             _ = configure_pfs_or_exit(
@@ -112,7 +117,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     # Addresses of token network registries of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
         with patch.object(requests, "get", return_value=response):
             _ = configure_pfs_or_exit(
                 pfs_url="http://foo",
@@ -127,7 +132,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     # ChainIDs of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
         with patch.object(requests, "get", return_value=response):
             configure_pfs_or_exit(
                 pfs_url="http://foo",
@@ -158,8 +163,10 @@ def test_check_pfs_for_production(service_registry_address, private_keys, web3, 
         message="",
         operator="",
         version="",
+        user_deposit_address=privatekey_to_address(private_keys[1]),
+        confirmed_block_number=10,
     )
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
 
     # Configuring an pfs payment address that isn't registered should error
@@ -172,6 +179,8 @@ def test_check_pfs_for_production(service_registry_address, private_keys, web3, 
         message="",
         operator="",
         version="",
+        user_deposit_address=privatekey_to_address(private_keys[1]),
+        confirmed_block_number=10,
     )
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)

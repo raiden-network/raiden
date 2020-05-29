@@ -666,14 +666,6 @@
         }
     ],
     [
-        4,
-        {
-            "auth_data": "@0x3503221a95028173969fc1f36b2e4f0705a3cc8b:localhost:8500/MDAxY2xvY2F0aW9uIGxvY2FsaG9zdDo4NTAwCjAwMTNpZGVudGlmaWVyIGtleQowMDEwY2lkIGdlbiA9IDEKMDA0ZGNpZCB1c2VyX2lkID0gQDB4MzUwMzIyMWE5NTAyODE3Mzk2OWZjMWYzNmIyZTRmMDcwNWEzY2M4Yjpsb2NhbGhvc3Q6ODUwMAowMDE2Y2lkIHR5cGUgPSBhY2Nlc3MKMDAyMWNpZCBub25jZSA9IE9OYnVLc0pFOFdhVG1HIzEKMDAyZnNpZ25hdHVyZSAHqWpHj5FvGs3HXnd1wA1Tj_wP8L3yX5plLyVjCY8iBAo",
-            "_type": "raiden.transfer.state_change.ActionUpdateTransportAuthData",
-            "_version": 0
-        }
-    ],
-    [
         5,
         {
             "transaction_hash": "0x7b671bf88558f7da9c76c5b89b2551b59d95f4f23ea50bad641931968aa82f84",

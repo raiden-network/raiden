@@ -1,5 +1,4 @@
-from copy import deepcopy
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -7,6 +6,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import (
+    BLOCK_ID_LATEST,
     DISCOVERY_DEFAULT_ROOM,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
@@ -23,13 +23,14 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
-from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import Block
+from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     BlockNumber,
     FeeAmount,
@@ -56,10 +57,10 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     target_block_num = (
         app0.raiden.rpc_client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
     )
-    app0.raiden.proxy_manager.wait_until_block(target_block_num)
+    app0.raiden.proxy_manager.client.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.rpc_client.get_block(block_identifier="latest")
-    app0.raiden._callback_new_block(latest_block=latest_block)
+    latest_block = app0.raiden.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
+    app0.raiden._best_effort_synchronize(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
     app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
@@ -80,14 +81,19 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
 )
 def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
-    raiden_network, number_of_nodes, token_addresses, network_wait, user_deposit_address
+    raiden_network,
+    restart_node,
+    number_of_nodes,
+    token_addresses,
+    network_wait,
+    user_deposit_address,
 ):
     """ Raiden must broadcast the latest known balance proof on restarts.
 
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
     app0, app1 = raiden_network
-    app0.config["services"]["monitoring_enabled"] = True
+    app0.config.services.monitoring_enabled = True
     # Send a transfer to make sure the state has a balance proof to broadcast
     token_address = token_addresses[0]
 
@@ -104,7 +110,9 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
 
     app0.stop()
 
-    transport = MatrixTransport(app0.config["transport"]["matrix"])
+    transport = MatrixTransport(
+        config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
+    )
     transport.send_async = Mock()  # type: ignore
     transport._send_raw = Mock()  # type: ignore
 
@@ -153,62 +161,49 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PFS,  # not private mode, otherwise no PFS updates are queued
-        user_deposit=app0.raiden.proxy_manager.user_deposit(user_deposit_address),
+        user_deposit=app0.raiden.proxy_manager.user_deposit(
+            user_deposit_address, block_identifier=BLOCK_ID_LATEST
+        ),
     )
-    app0_restart.start()
+    restart_node(app0_restart)
 
 
+@expect_failure  # raise_on_failure will not work here since the apps are not started
 @pytest.mark.parametrize("start_raiden_apps", [False])
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain_services):
-    """
-    Test that the alarm tasks syncs blockchain events at the end of its first run
+    """Raiden must synchronize with the blockchain events during
+    initialization.
 
     Test for https://github.com/raiden-network/raiden/issues/4498
     """
-    # These apps have had channels created but are not yet started
     app0, _ = raiden_network
 
-    # Make sure we get into app0.start() with a confirmed block that contains
+    # Make sure we get into the restart of app0 with a confirmed block that contains
     # the channel creation events
-    blockchain_services.proxy_manager.wait_until_block(target_block_number=10)
     target_block_num = (
         blockchain_services.proxy_manager.client.block_number()
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    blockchain_services.proxy_manager.wait_until_block(target_block_number=target_block_num)
+    blockchain_services.proxy_manager.client.wait_until_block(target_block_number=target_block_num)
 
-    original_first_run = app0.raiden._prepare_and_execute_alarm_first_run
+    # This is a bit brittle, it calls the same steps as `start` would do
+    app0.raiden._initialize_wal()
+    app0.raiden._synchronize_with_blockchain()
 
-    def first_run_with_check(last_log_block):
-        """
-        This function simply enhances the alarm task first run
-
-        The enhanced version has a check for channels being available right after
-        the first run of the alarm task
-        """
-        original_first_run(last_log_block)
-        channels = RaidenAPI(app0.raiden).get_channel_list(
-            registry_address=app0.raiden.default_registry.address
-        )
-        assert len(channels) != 0, "After the first alarm task run no channels are visible"
-
-    patched_first_run = patch.object(
-        app0.raiden, "_prepare_and_execute_alarm_first_run", side_effect=first_run_with_check
+    channels = RaidenAPI(app0.raiden).get_channel_list(
+        registry_address=app0.raiden.default_registry.address
     )
-    with patched_first_run:
-        app0.start()
-
-    # If all runs well and our first_run_with_check function runs then test passes
-    # since that means channels were queriable right after the first run of the
-    # alarm task
+    msg = "Initialization did not properly synchronize with the blockchain, channel is missing"
+    assert len(channels) != 0, msg
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_fees_are_updated_during_startup(
-    raiden_network, token_addresses, deposit, retry_timeout
+    raiden_network, restart_node, token_addresses, deposit, retry_timeout
 ) -> None:
     """
     Test that the supplied fee settings are correctly forwarded to all
@@ -268,14 +263,14 @@ def test_fees_are_updated_during_startup(
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
     assert channel_state.fee_schedule.imbalance_penalty == default_imbalance_penalty
 
-    orginal_config = app0.raiden.config.copy()
+    original_config = deepcopy(app0.raiden.config)
 
     # Now restart app0, and set new flat fee for that token network
     flat_fee = FeeAmount(100)
     app0.stop()
-    app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_flat_fee = {token_address: flat_fee}
-    app0.start()
+    app0.raiden.config = deepcopy(original_config)
+    app0.raiden.config.mediation_fees.token_to_flat_fee[token_address] = flat_fee
+    restart_node(app0)
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == flat_fee
@@ -285,9 +280,9 @@ def test_fees_are_updated_during_startup(
     # Now restart app0, and set new proportional fee
     prop_fee = ProportionalFeeAmount(123)
     app0.stop()
-    app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_proportional_fee = {token_address: prop_fee}
-    app0.start()
+    app0.raiden.config = deepcopy(original_config)
+    app0.raiden.config.mediation_fees.token_to_proportional_fee[token_address] = prop_fee
+    restart_node(app0)
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE
@@ -296,11 +291,9 @@ def test_fees_are_updated_during_startup(
 
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
-    app0.raiden.config = deepcopy(orginal_config)
-    app0.raiden.config["mediation_fees"].token_to_proportional_imbalance_fee = {
-        token_address: 0.05e6
-    }
-    app0.start()
+    app0.raiden.config = deepcopy(original_config)
+    app0.raiden.config.mediation_fees.token_to_proportional_imbalance_fee[token_address] = 0.05e6
+    restart_node(app0)
 
     channel_state = get_channel_state(app0)
     assert channel_state.fee_schedule.flat == DEFAULT_MEDIATION_FLAT_FEE

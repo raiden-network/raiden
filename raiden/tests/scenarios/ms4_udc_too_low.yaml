@@ -3,39 +3,34 @@ version: 2
 settings:
   gas_price: "fast"
   # Adapt to chain used
-  chain: any
   services:
     pfs:
-      url: https://pfs-goerli.services-dev.raiden.network
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
         deposit: true
-        min_balance: 9000
-        balance_per_node: 10000
-        # MS reward is 5 * 10 ** 18 tokens, so less than that must be deposited
-        max_funding: 10000
+        # There should be enough deposit to use the PFS, but not enough to be able to use the MS
+        balance_per_node: {{ 10 *  2 * pfs_fee }}
 
 token:
-  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  address: "{{ transfer_token }}"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
-  mode: managed
   count: 2
   raiden_version: local
 
   default_options:
     gas-price: fast
-    environment-type: development
     enable-monitoring: true
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: 40
+    default-settle-timeout: {{ settlement_timeout_min }}
     default-reveal-timeout: 20
 
 ## This scenario tests that the MS does not kick in, if the node requesting monitoring does
@@ -84,7 +79,7 @@ scenario:
           name: "Wait for MS to not react"
           tasks:
             # The MS reacts within the settle_timeout
-            - wait_blocks: 40
+            - wait_blocks: {{ settlement_timeout_min }}
             # Note that 0 events are expected
             - assert_events:
                 contract_name: "TokenNetwork"
@@ -97,7 +92,7 @@ scenario:
           tasks:
             # Monitored channel must be settled before the monitoring service can claim its reward
             # To make sure the transactions gets mined in time, 10 additional blocks are added
-            - wait_blocks: 5
+            - wait_blocks: 10
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "NonClosingBalanceProofUpdated"

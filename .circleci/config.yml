@@ -39,18 +39,18 @@ templates:
       type: string
 
   default-environment: &default-environment
-    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.2-e76047e9.tar.gz'
-    GETH_MD5_LINUX: 'bc7f6837a0fdbbecac36fc3bc4c3d3ae'
-    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.2-e76047e9.tar.gz'
-    GETH_MD5_MACOS: 'f97d506a0c27d970fb67337f008d74e7'
-    GETH_VERSION: '1.9.2'
-    PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-unknown-linux-gnu/parity'
-    PARITY_SHA256_LINUX: '9c1934728da62b0246af5cc189fe760b77e60b6811da0dbb536d1958d92153ad'
-    PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.5.5/x86_64-apple-darwin/parity'
-    PARITY_SHA256_MACOS: '1deb0d9dcf3eef2fee32867a200ddb65c9343071b6e4e39660d8837184b164e3'
-    PARITY_VERSION: 'v2.5.5'
-    SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.5.4/solc-static-linux'
-    SOLC_VERSION: 'v0.5.4'
+    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.11-6a62fe39.tar.gz'
+    GETH_MD5_LINUX: '6b226753430e33edf983c5581b52d6d1'
+    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.11-6a62fe39.tar.gz'
+    GETH_MD5_MACOS: '4214a7c45690fa54c4533fec27e3e83e'
+    GETH_VERSION: '1.9.11'
+    PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.7.2/x86_64-unknown-linux-gnu/parity'
+    PARITY_SHA256_LINUX: 'fe992f0c9b229a4406e82b9ff6d388f4acb4d6ce2782cb79b7bc379e7965ae34'
+    PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.7.2/x86_64-apple-darwin/parity'
+    PARITY_SHA256_MACOS: '2d0de1bf66f5ae693e44c474065fc9a24957463ee33c075731b06ce930139a61'
+    PARITY_VERSION: 'v2.7.2'
+    SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.6.3/solc-static-linux'
+    SOLC_VERSION: 'v0.6.3'
 
 
 executors:
@@ -173,7 +173,6 @@ commands:
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
-      - conditional-skip
       - config-path
       - restore_cache:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
@@ -197,7 +196,7 @@ commands:
           command: |
             . ${VENV_PATH}/bin/activate
             pip config set global.progress_bar off
-            pip install -U 'pip<19.0.0' wheel pip-tools
+            pip install -U pip wheel pip-tools
             pushd requirements
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
@@ -277,7 +276,6 @@ jobs:
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
-      - conditional-skip
       - config-path
       - run:
           name: Validate CircleCI Config
@@ -328,6 +326,9 @@ jobs:
       name: docker
       py-version: << parameters.py-version >>
 
+    environment:
+      RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
+
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
@@ -340,11 +341,43 @@ jobs:
             set -x
       - run:
           name: Running Raiden Smoketest with << parameters.transport-layer >>, environment << parameters.environment-type >> on ethereum client << parameters.blockchain-type >>
-          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
+          command: raiden --environment-type=<< parameters.environment-type >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >> --report-path /tmp/smoketest.log
 
       - store_artifacts:
           path: /tmp/smoketest.log
           destination: smoketest-logs
+
+  scenario-player-integration-test:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
+    executor:
+      name: docker
+      py-version: << parameters.py-version >>
+
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: Checkout Scenario Player
+          command: |
+            git clone https://github.com/raiden-network/scenario-player.git
+      - run:
+          name: Install dependencies
+          command: |
+            make -C scenario-player install-dev
+      - run:
+          name: Run Unit Tests
+          command: |
+            make -C scenario-player unit-tests
+      - run:
+          name: Run Smoketest
+          command: |
+            cd scenario-player
+            scenario_player smoketest
 
   test:
     parameters:
@@ -366,7 +399,6 @@ jobs:
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
       RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
       RAIDEN_TESTS_LOGSDIR: /tmp/tests/logs
-      COVERAGE_DIR: /home/circleci/raiden/coverage
 
     parallelism: << parameters.parallelism >>
 
@@ -381,12 +413,6 @@ jobs:
           keys:
             - synapse-keys-v1
             - synapse-keys-
-      # Remove any existing .coverage files so we don't persist them again, causing a conflict.
-      - run:
-          name: Prepare coverage
-          command: |
-            mkdir -p ${COVERAGE_DIR}
-            rm ${COVERAGE_DIR}/.coverage.* || true
       - run:
           name: Select tests
           command: .circleci/select_tests.sh "raiden/tests/<< parameters.test-type >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
@@ -394,16 +420,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
-      - run:
-          name: Store coverage
-          command: |
-            mv .coverage.* ${COVERAGE_DIR}
-
-      - persist_to_workspace:
-          root: "~"
-          paths:
-            - "./raiden/coverage"
+            .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" "<< parameters.test-type >>" << parameters.additional-args >>
 
       - save_cache:
           key: ethash-{{ checksum "~/.local/bin/geth" }}
@@ -418,17 +435,23 @@ jobs:
       - store_test_results:
           path: test-reports
 
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
+      - run:
+          name: Compress the logs to seed up the CI (upload can be very slow)
+          when: always
+          command: |
+            files=()
+            for f in /tmp/tests/logs test-reports /tmp/synapse-logs; do
+              if [ -e "$f" ]; then
+                files+=("$f")
+              fi
+            done
+
+            mkdir /tmp/artifacts
+            # For unknown reasons, this is not only tarred but also gzipped
+            tar cf /tmp/artifacts/test-logs-$CIRCLE_PR_NUMBER-$CIRCLE_NODE_INDEX.tar.gz "${files[@]}"
 
       - store_artifacts:
-          path: /tmp/synapse-logs
-          destination: synapse-logs
-
-      - store_artifacts:
-          path: /tmp/tests/logs
-          destination: eth-logs
+          path: /tmp/artifacts
 
   finalize:
     parameters:
@@ -443,12 +466,7 @@ jobs:
       - conditional-skip
       - config-path
       - run:
-          name: Report to Codecov
-          command: |
-            pip install codecov
-            cd ~/raiden
-            coverage combine coverage
-            codecov
+          command: "true"
 
   build-binary-linux:
     parameters:
@@ -591,7 +609,6 @@ jobs:
             git push --follow-tags
             popd
 
-
   deploy-digitalocean:
     parameters:
       py-version:
@@ -664,16 +681,6 @@ jobs:
           command: |
             twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*.{tar.gz,whl}
 
-  build-nightly-image:
-    executor:
-      name: docker
-
-    steps:
-      - run:
-          name: Trigger nightly automated build on Docker Hub.
-          command: >
-            curl -H "Content-Type: application/json" --data '{"docker_tag":"nightly"}' -X POST ${NIGHTLY_BUILD_TRIGGER}
-
 workflows:
   raiden-default:
     jobs:
@@ -711,6 +718,15 @@ workflows:
             - lint-3.7
 
       - smoketest:
+          name: smoketest-matrix-production-parity-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "production"
+          blockchain-type: "parity"
+          requires:
+            - lint-3.7
+
+      - smoketest:
           name: smoketest-matrix-development-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -725,6 +741,12 @@ workflows:
           transport-layer: "matrix"
           environment-type: "development"
           blockchain-type: "parity"
+          requires:
+            - lint-3.7
+
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
           requires:
             - lint-3.7
 
@@ -760,8 +782,10 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
@@ -776,8 +800,10 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
@@ -924,6 +950,15 @@ workflows:
             - lint-3.7
 
       - smoketest:
+          name: smoketest-matrix-production-parity-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "production"
+          blockchain-type: "parity"
+          requires:
+            - lint-3.7
+
+      - smoketest:
           name: smoketest-matrix-development-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
@@ -938,6 +973,12 @@ workflows:
           transport-layer: "matrix"
           environment-type: "development"
           blockchain-type: "parity"
+          requires:
+            - lint-3.7
+
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
           requires:
             - lint-3.7
 
@@ -973,11 +1014,14 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
+
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -989,8 +1033,10 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-production-parity-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
+            - scenario-player-integration-test
             - test-unit-3.7
             - test-fuzz-3.7
             - test-mocked-3.7
@@ -1020,11 +1066,6 @@ workflows:
           architecture: "aarch64"
           requires:
             - finalize
-
-      - build-nightly-image:
-          requires:
-            - finalize
-            - prepare-python-linux-3.7
 
       - prepare-system-macos:
           requires:

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_hex
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
@@ -11,6 +11,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
@@ -27,7 +28,6 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TargetAddress,
-    TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
@@ -191,7 +191,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     def __repr__(self) -> str:
         secrethash = sha256_secrethash(self.secret)
         return "ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})".format(
-            secrethash, to_hex(self.triggered_by_block_hash)
+            to_hex(secrethash), to_hex(self.triggered_by_block_hash)
         )
 
 
@@ -280,7 +280,7 @@ class EventPaymentReceivedSuccess(Event):
     token_network_registry_address: TokenNetworkRegistryAddress
     token_network_address: TokenNetworkAddress
     identifier: PaymentID
-    amount: TokenAmount
+    amount: PaymentAmount
     initiator: InitiatorAddress
 
     def __post_init__(self) -> None:
@@ -400,13 +400,3 @@ class EventInvalidSecretRequest(Event):
     payment_identifier: PaymentID
     intended_amount: PaymentAmount
     actual_amount: PaymentAmount
-
-
-@dataclass(frozen=True)
-class SendPFSFeeUpdate(Event):
-    """ Tell the PFSs about changed fee schedules
-
-    For example when a deposit or a withdrawal is made into a channel
-    """
-
-    canonical_identifier: CanonicalIdentifier

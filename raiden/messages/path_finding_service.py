@@ -10,8 +10,8 @@ from raiden.transfer import channel
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import NettingChannelState
-from raiden.utils.signing import pack_data
-from raiden.utils.typing import Address, Nonce, TokenAmount
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.typing import Address, BlockTimeout, Nonce, TokenAmount
 
 
 @dataclass(repr=False, eq=False)
@@ -25,11 +25,11 @@ class PFSCapacityUpdate(SignedMessage):
     other_nonce: Nonce
     updating_capacity: TokenAmount
     other_capacity: TokenAmount
-    reveal_timeout: int
+    reveal_timeout: BlockTimeout
 
     def __post_init__(self) -> None:
         if self.signature is None:
-            self.signature = EMPTY_SIGNATURE
+            self.signature = EMPTY_SIGNATURE  # type: ignore
 
     @classmethod
     def from_channel_state(cls, channel_state: NettingChannelState) -> "PFSCapacityUpdate":
@@ -51,21 +51,29 @@ class PFSCapacityUpdate(SignedMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.canonical_identifier.chain_identifier, "uint256"),
-            (self.canonical_identifier.token_network_address, "address"),
-            (self.canonical_identifier.channel_identifier, "uint256"),
-            (self.updating_participant, "address"),
-            (self.other_participant, "address"),
-            (self.updating_nonce, "uint64"),
-            (self.other_nonce, "uint64"),
-            (self.updating_capacity, "uint256"),
-            (self.other_capacity, "uint256"),
-            (self.reveal_timeout, "uint256"),
+        return (
+            self.canonical_identifier.chain_identifier.to_bytes(32, byteorder="big")
+            + self.canonical_identifier.token_network_address
+            + self.canonical_identifier.channel_identifier.to_bytes(32, byteorder="big")
+            + self.updating_participant
+            + self.other_participant
+            + self.updating_nonce.to_bytes(8, byteorder="big")
+            + self.other_nonce.to_bytes(8, byteorder="big")
+            + self.updating_capacity.to_bytes(32, byteorder="big")
+            + self.other_capacity.to_bytes(32, byteorder="big")
+            + self.reveal_timeout.to_bytes(32, byteorder="big")
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"<{self.__class__.__name__}("
+            f"updating_participant={to_checksum_address(self.updating_participant)} "
+            f"updating_capacity={self.updating_capacity} "
+            f"other_capacity={self.other_capacity})>"
         )
 
 
-@dataclass
+@dataclass(eq=False)
 class PFSFeeUpdate(SignedMessage):
     """Informs the PFS of mediation fees demanded by the client"""
 
@@ -76,22 +84,21 @@ class PFSFeeUpdate(SignedMessage):
 
     def __post_init__(self) -> None:
         if self.signature is None:
-            self.signature = EMPTY_SIGNATURE
+            self.signature = EMPTY_SIGNATURE  # type: ignore
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.canonical_identifier.chain_identifier, "uint256"),
-            (self.canonical_identifier.token_network_address, "address"),
-            (self.canonical_identifier.channel_identifier, "uint256"),
-            (self.updating_participant, "address"),
-            (self.fee_schedule.cap_fees, "bool"),
-            (self.fee_schedule.flat, "uint256"),
-            (self.fee_schedule.proportional, "uint256"),
-            (rlp.encode(self.fee_schedule.imbalance_penalty or 0), "bytes"),
-            (
-                marshmallow.fields.NaiveDateTime()._serialize(self.timestamp, "timestamp", self),
-                "string",
-            ),
+        return (
+            self.canonical_identifier.chain_identifier.to_bytes(32, byteorder="big")
+            + self.canonical_identifier.token_network_address
+            + self.canonical_identifier.channel_identifier.to_bytes(32, byteorder="big")
+            + self.updating_participant
+            + self.fee_schedule.cap_fees.to_bytes(1, byteorder="big")
+            + self.fee_schedule.flat.to_bytes(32, byteorder="big")
+            + self.fee_schedule.proportional.to_bytes(32, byteorder="big")
+            + rlp.encode(self.fee_schedule.imbalance_penalty or 0)
+            + marshmallow.fields.NaiveDateTime()
+            ._serialize(self.timestamp, "timestamp", self)
+            .encode("utf8")
         )
 
     @classmethod

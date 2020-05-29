@@ -9,6 +9,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
@@ -24,16 +25,17 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import create_default_identifier
+from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5133")
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5821")
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_happy_case(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
+    raiden_network, restart_node, number_of_nodes, deposit, token_addresses, network_wait
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -63,7 +65,7 @@ def test_recovery_happy_case(
         app1.raiden, app0.raiden.address, NetworkState.UNREACHABLE, network_wait
     )
 
-    app0.start()
+    restart_node(app0)
 
     assert_synced_channel_state(
         token_network_address, app0, deposit - spent_amount, [], app1, deposit + spent_amount, []
@@ -101,11 +103,18 @@ def test_recovery_happy_case(
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_unhappy_case(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait, retry_timeout
+    raiden_network,
+    restart_node,
+    number_of_nodes,
+    deposit,
+    token_addresses,
+    network_wait,
+    retry_timeout,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -130,7 +139,9 @@ def test_recovery_unhappy_case(
 
     app0.raiden.stop()
 
-    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(
+        config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
+    )
 
     app0.stop()
 
@@ -173,7 +184,7 @@ def test_recovery_unhappy_case(
         routing_mode=RoutingMode.PRIVATE,
     )
     del app0  # from here on the app0_restart should be used
-    app0_restart.start()
+    restart_node(app0_restart)
     wal = app0_restart.raiden.wal
     assert wal
 
@@ -189,10 +200,11 @@ def test_recovery_unhappy_case(
     )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_recovery_blockchain_events(raiden_network, token_addresses, network_wait):
+def test_recovery_blockchain_events(raiden_network, restart_node, token_addresses, network_wait):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
     app sees the change
@@ -202,7 +214,9 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
 
     app0.raiden.stop()
 
-    new_transport = MatrixTransport(app0.raiden.config["transport"]["matrix"])
+    new_transport = MatrixTransport(
+        config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
+    )
 
     app1_api = RaidenAPI(app1.raiden)
     app1_api.channel_close(
@@ -234,7 +248,7 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
 
     del app0  # from here on the app0_restart should be used
 
-    app0_restart.raiden.start()
+    restart_node(app0_restart)
     wal = app0_restart.raiden.wal
     assert wal
 
@@ -245,13 +259,14 @@ def test_recovery_blockchain_events(raiden_network, token_addresses, network_wai
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})
 
 
+@raise_on_failure
 @pytest.mark.parametrize("deposit", [2])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
-    raiden_network, token_addresses, network_wait, number_of_nodes, retry_timeout
+    raiden_network, restart_node, token_addresses, network_wait, number_of_nodes, retry_timeout
 ):
     """ A test case related to https://github.com/raiden-network/raiden/issues/4639
-    Where a node sends a withdraw transaction, is stopped before the transaction is completed.
+    where a node sends a withdraw transaction, is stopped before the transaction is completed.
     Meanwhile, the partner node closes the channel so when the stopped node is back up, it tries to
     execute the pending withdraw transaction and fails because the channel was closed.
     Expected behaviour: Channel closed state change should cancel a withdraw transaction.
@@ -307,7 +322,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
         retry_timeout=retry_timeout,
     )
 
-    app0.raiden.start()
+    restart_node(app0)
 
     chain_state = views.state_from_app(app0)
 

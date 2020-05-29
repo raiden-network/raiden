@@ -29,10 +29,11 @@ def prepare_mediation_fee_config(
 ) -> MediationFeeConfig:
     """ Converts the mediation fee CLI args to proper per-channel
     mediation fees. """
-    tn_to_flat_fee: Dict[TokenAddress, FeeAmount] = {}
-    # Add the defaults for flat fees for DAI/WETH
-    tn_to_flat_fee[WETH_TOKEN_ADDRESS] = FeeAmount(DEFAULT_WETH_FLAT_FEE // 2)
-    tn_to_flat_fee[DAI_TOKEN_ADDRESS] = FeeAmount(DEFAULT_DAI_FLAT_FEE // 2)
+    tn_to_flat_fee: Dict[TokenAddress, FeeAmount] = {
+        # Add the defaults for flat fees for DAI/WETH
+        WETH_TOKEN_ADDRESS: FeeAmount(DEFAULT_WETH_FLAT_FEE // 2),
+        DAI_TOKEN_ADDRESS: FeeAmount(DEFAULT_DAI_FLAT_FEE // 2),
+    }
 
     # Store the flat fee settings for the given token addresses
     # The given flat fee is for the whole mediation, but that includes two channels.

@@ -8,7 +8,7 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
-from raiden.routing import get_best_routes_internal
+from raiden.routing import get_best_routes
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
@@ -36,12 +36,14 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     BlockExpiration,
-    BlockNumber,
+    BlockTimeout,
     FeeAmount,
     PaymentAmount,
     PaymentID,
     ProportionalFeeAmount,
+    Secret,
     TargetAddress,
+    TokenAddress,
     TokenAmount,
 )
 from raiden.waiting import wait_for_block
@@ -114,7 +116,9 @@ def test_locked_transfer_secret_registered_onchain(
     identifier = PaymentID(1)
     transfer_secret = make_secret()
 
-    secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(secret_registry_address)
+    secret_registry_proxy = app0.raiden.proxy_manager.secret_registry(
+        secret_registry_address, block_identifier=chain_state.block_hash
+    )
     secret_registry_proxy.register_secret(secret=transfer_secret)
 
     # Wait until our node has processed the block that the secret registration was mined at
@@ -243,7 +247,7 @@ def test_mediated_transfer_with_entire_deposit(
         )
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4804")
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4694")
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
@@ -331,51 +335,54 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
 
 
 @raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", (1,))
+@pytest.mark.parametrize("number_of_nodes", (3,))
 @pytest.mark.parametrize("channels_per_node", (CHAIN,))
-def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
-    app0, = raiden_network
+def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: List[TokenAddress]):
+    app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     token_network_registry_address = app0.raiden.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address, "Fixture token_addresses don't have correspoding token_network"
 
     with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
 
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
-            amount=10,
-            target=factories.HOP1,
-            identifier=1,
-            secret=b"1" * 32,
+            amount=PaymentAmount(10),
+            target=TargetAddress(app1.raiden.address),
+            identifier=PaymentID(1),
+            secret=Secret(b"1" * 32),
         )
         assert not patched.called
 
         # Setup PFS config
-        app0.raiden.config["pfs_config"] = PFSConfig(
+        app0.raiden.config.pfs_config = PFSConfig(
             info=PFSInfo(
                 url="mock-address",
                 chain_id=app0.raiden.rpc_client.chain_id,
                 token_network_registry_address=token_network_registry_address,
+                user_deposit_address=factories.make_address(),
                 payment_address=factories.make_address(),
+                confirmed_block_number=chain_state.block_number,
                 message="",
                 operator="",
                 version="",
                 price=TokenAmount(0),
             ),
             maximum_fee=TokenAmount(100),
-            iou_timeout=BlockNumber(100),
+            iou_timeout=BlockTimeout(100),
             max_paths=5,
         )
 
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
-            amount=11,
-            target=factories.HOP2,
-            identifier=2,
-            secret=b"2" * 32,
+            amount=PaymentAmount(11),
+            target=TargetAddress(app2.raiden.address),
+            identifier=PaymentID(2),
+            secret=Secret(b"2" * 32),
         )
         assert patched.call_count == 1
 
@@ -384,7 +391,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             factories.LockedTransferProperties(
                 amount=TokenAmount(5),
                 initiator=factories.HOP1,
-                target=TargetAddress(factories.HOP2),
+                target=TargetAddress(app2.raiden.address),
                 sender=factories.HOP1,
                 pkey=factories.HOP1_KEY,
                 token=token_address,
@@ -393,7 +400,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
                 ),
             )
         )
-        app0.raiden.mediate_mediated_transfer(locked_transfer)
+        app0.raiden.on_messages([locked_transfer])
         assert patched.call_count == 1
 
 
@@ -441,12 +448,12 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     )
 
     def get_best_routes_with_fees(*args, **kwargs):
-        routes = get_best_routes_internal(*args, **kwargs)
+        error_msg, routes, uuid = get_best_routes(*args, **kwargs)
         for r in routes:
             r.estimated_fee = fee
-        return routes
+        return error_msg, routes, uuid
 
-    with patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees):
+    with patch("raiden.routing.get_best_routes", get_best_routes_with_fees):
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_address=token_network_address,
             amount=amount,
@@ -501,7 +508,8 @@ def test_mediated_transfer_with_fees(
     assert token_network_address
 
     def set_fee_schedule(app: App, other_app: App, fee_schedule: FeeScheduleState):
-        channel_state = views.get_channelstate_by_token_network_and_partner(  # type: ignore
+        assert token_network_address
+        channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=views.state_from_raiden(app.raiden),
             token_network_address=token_network_address,
             partner_address=other_app.raiden.address,
@@ -510,14 +518,15 @@ def test_mediated_transfer_with_fees(
         channel_state.fee_schedule = fee_schedule
 
     def get_best_routes_with_fees(*args, **kwargs):
-        routes = get_best_routes_internal(*args, **kwargs)
+        error_msg, routes, uuid = get_best_routes(*args, **kwargs)
         for r in routes:
             r.estimated_fee = fee_without_margin
-        return routes
+        return error_msg, routes, uuid
 
     def assert_balances(expected_transferred_amounts=List[int]):
+        assert token_network_address
         for i, transferred_amount in enumerate(expected_transferred_amounts):
-            assert_synced_channel_state(  # type: ignore
+            assert_synced_channel_state(
                 token_network_address=token_network_address,
                 app0=apps[i],
                 balance0=deposit - transferred_amount,
@@ -652,7 +661,7 @@ def test_mediated_transfer_with_fees(
         if fee_schedule:
             set_fee_schedule(apps[i + 1], apps[i], fee_schedule)
 
-    route_patch = patch("raiden.routing.get_best_routes_internal", get_best_routes_with_fees)
+    route_patch = patch("raiden.routing.get_best_routes", get_best_routes_with_fees)
     disable_max_mediation_fee_patch = patch(
         "raiden.transfer.mediated_transfer.initiator.MAX_MEDIATION_FEE_PERC", new=10000
     )

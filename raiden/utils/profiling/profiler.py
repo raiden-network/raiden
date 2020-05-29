@@ -39,10 +39,7 @@ _state: Optional["GlobalState"] = None
 
 # PEP-0418
 #        perf_counter = It does include time elapsed during sleep and is system-wide.
-try:
-    clock = time.perf_counter  # pylint: disable=no-member
-except AttributeError:
-    clock = time.clock
+clock = time.perf_counter  # pylint: disable=no-member
 
 # info is used to store the function name/module/lineno
 # children is an OrderedDict with function id -> CallNode
@@ -81,7 +78,7 @@ def ensure_call(curr, call):
 
 def ensure_thread_state(target, frame):
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     if target not in _state:
         frame = frame
@@ -270,7 +267,7 @@ class ThreadState:
 
 def thread_profiler(frame, event, arg):
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     now = clock()  # measure once and reuse it
 
@@ -304,7 +301,7 @@ def thread_profiler(frame, event, arg):
 
 def greenlet_profiler(event, args):
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     if event in ("switch", "throw"):  # both events are in the target context
         now = clock()
@@ -329,7 +326,7 @@ def greenlet_profiler(event, args):
 
 def start_profiler():
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     _state = GlobalState()
 
@@ -351,7 +348,7 @@ def stop_profiler():
     # Unregister the profiler in this order, otherwise we will have extra
     # measurements in the end
     sys.setprofile(None)
-    threading.setprofile(None)  # type: ignore
+    threading.setprofile(None)
     greenlet.settrace(None)  # pylint: disable=no-member
 
 
@@ -551,7 +548,7 @@ def print_thread_profile(thread_state):
 
 def print_merged():
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     merged = merge_threadstates(*_state.values())
     print_info_tree(filter_fast(merged))
@@ -559,7 +556,7 @@ def print_merged():
 
 def print_all_threads():
     global _state
-    assert _state
+    assert _state, "Global variable '_state' not set"
 
     for thread_state in _state.values():
         print_thread_profile(thread_state)

@@ -2,10 +2,18 @@ import random
 from random import Random
 from typing import TYPE_CHECKING
 
-from web3 import Web3
+from eth_hash.auto import keccak
 
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
-from raiden.utils.typing import Any, BalanceHash, Locksroot, SecretHash, TokenAmount, Union
+from raiden.utils.typing import (
+    Any,
+    BalanceHash,
+    LockedAmount,
+    Locksroot,
+    SecretHash,
+    TokenAmount,
+    Union,
+)
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -14,15 +22,17 @@ if TYPE_CHECKING:
 
 
 def hash_balance_data(
-    transferred_amount: TokenAmount, locked_amount: TokenAmount, locksroot: Locksroot
+    transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
 ) -> BalanceHash:
-    assert locksroot != b""
-    assert len(locksroot) == 32
+    assert locksroot != b"", "Can't hash empty locksroot"
+    assert len(locksroot) == 32, "Locksroot has wrong length"
     if transferred_amount == 0 and locked_amount == 0 and locksroot == LOCKSROOT_OF_NO_LOCKS:
         return BalanceHash(EMPTY_HASH)
 
-    return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter
-        ["uint256", "uint256", "bytes32"], [transferred_amount, locked_amount, locksroot]
+    return keccak(
+        transferred_amount.to_bytes(32, byteorder="big")
+        + locked_amount.to_bytes(32, byteorder="big")
+        + locksroot
     )
 
 

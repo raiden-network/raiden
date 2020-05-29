@@ -27,15 +27,22 @@ It is also tested that a node can be stopped and started again and that it still
 Several nodes perform up to 100 payments.
 In the end it is tested that channels can be closed and that the monitoring service correctly kicks in if a node is offline during closing.
 
+#### [bf2_long_running](./bf2_long_running.yaml)
+
+This scenario mimics user behaviour for
+opening channels, depositing, transferring, waiting keeping the raiden node alive for
+a long time in the process checking that the raiden network
+works accurately with a sufficiently dirty state of blockchain for a long time.
+
 #### [bf3_multi_directional_payment](./bf3_multi_directional_payment.yaml)
 It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
-When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
+When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4
 At the same time 100 payments are done in parallel from node4 to node0.
 After all payments have finished it is asserted that all nodes received the correct amounts.
 
 #### [bf4_multi_payments_same_node](./bf4_multi_payments_same_node.yaml)
 It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
-When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4 
+When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4
 At the same time 100 payments are done in parallel from node4 to node0.
 After all payments have finished it is asserted that all nodes received the correct amounts.
 
@@ -45,6 +52,20 @@ It sets up a simple topology of two nodes and then uses
 with nodes that didn't use `join_network` themselves and that nodes that used `join_network`
 also deposits in new channels when other nodes open channels with them. Finally it also
 tests that nodes using `leave_network` have all their open channels closed, when doing so.
+
+#### [bf6_stress_hub_node](./bf6_stress_hub_node.yaml)
+It sets up a tolopogy with 9 nodes connected to node0,
+so that node0 is the single hub that all payments have to go through. First one
+payment from each node to another node is carried out in parallel, to check that
+the hub can handle this amount of load. Then 5 payments from each node to another
+node is carried out in order to check that node0 can handle this load.
+
+#### [bf7_long_path](./bf7_long_path.yaml)
+It tests long paths. There are a total of 15 nodes in the scenario.
+A topology with deposits in both directions are created as [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+After opening channels, transfers are made with incrementing length starting with a transfer
+from node0 to node1 and back, then from node0 to node2 with node1 as a mediatorand back etc.
+This is done all the way up to a transfer from node0 to node14 and back.
 
 #### [ms1_simple_monitoring](./ms1_simple_monitoring.yaml)
 
@@ -81,7 +102,7 @@ It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 and che
 
 #### [pfs4_use_best_path](./pfs4_use_best_path.yaml)
 
-It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 2 and checks whether the best path is the one used for the payment. 
+It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 2 and checks whether the best path is the one used for the payment.
 Note that `max-paths` is set to 1 path.
 
 #### [pfs5_too_low_capacity](./pfs5_too_low_capacity.yaml)
@@ -109,7 +130,7 @@ Node0 will first make a payment to node3 through [0, 4, 3] and then node4 goes o
 then expected that the path [0, 1, 2, 3] is used instead.
 
 #### [pfs9_partial_withdraw](./pfs9_partial_withdraw.yaml)
-This scenario aims to make sure that the PFS reacts correctly to balance updates 
+This scenario aims to make sure that the PFS reacts correctly to balance updates
 after a partial withdraw takes place.
 A topology of 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3 will be used.
 Node0 will first make a payment to node3 through [0, 4, 3] and then node4 makes a partial withdraw

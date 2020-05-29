@@ -1,16 +1,18 @@
 import re
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 import click
 import gevent
 import requests
 import structlog
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_hex
 from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
+from web3.types import BlockData
 
 from raiden.constants import (
+    BLOCK_ID_LATEST,
     CHECK_GAS_RESERVE_INTERVAL,
     CHECK_NETWORK_ID_INTERVAL,
     CHECK_RDN_MIN_DEPOSIT_INTERVAL,
@@ -22,8 +24,10 @@ from raiden.constants import (
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
-from raiden.utils import gas_reserve, to_rdn
+from raiden.utils import gas_reserve
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
+from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import Any, BlockNumber, Callable, ChainID, List, Optional, Tuple
 
 if TYPE_CHECKING:
@@ -63,15 +67,12 @@ def check_version(current_version: str) -> None:  # pragma: no unittest
     while True:
         try:
             _do_check_version(app_version)
-        except requests.exceptions.HTTPError as herr:
+        except (requests.exceptions.HTTPError, ValueError) as err:
             click.secho("Error while checking for version", fg="red")
-            print(herr)
-        except ValueError as verr:
-            click.secho("Error while checking the version", fg="red")
-            print(verr)
-        finally:
-            # repeat the process once every 3h
-            gevent.sleep(CHECK_VERSION_INTERVAL)
+            print(err)
+
+        # repeat the process once every 3h
+        gevent.sleep(CHECK_VERSION_INTERVAL)
 
 
 def check_gas_reserve(raiden: "RaidenService") -> None:  # pragma: no unittest
@@ -103,17 +104,17 @@ def check_rdn_deposits(
 ) -> None:  # pragma: no unittest
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
-        rei_balance = user_deposit_proxy.effective_balance(raiden.address, "latest")
+        rei_balance = user_deposit_proxy.effective_balance(raiden.address, BLOCK_ID_LATEST)
         rdn_balance = to_rdn(rei_balance)
         if rei_balance < MIN_REI_THRESHOLD:
             click.secho(
                 (
                     f"WARNING\n"
-                    f"Your account's RDN balance of {rdn_balance} is below the "
-                    f"minimum threshold. Provided that you have either a monitoring "
-                    f"service or a path finding service activated, your node is not going "
-                    f"to be able to pay those services which may lead to denial of service or "
-                    f"loss of funds."
+                    f"Your account's RDN balance deposited in the UserDepositContract of "
+                    f"{rdn_balance} is below the minimum threshold {to_rdn(MIN_REI_THRESHOLD)}. "
+                    f"Provided that you have either a monitoring service or a path "
+                    f"finding service activated, your node is not going to be able to "
+                    f"pay those services which may lead to denial of service or loss of funds."
                 ),
                 fg="red",
             )
@@ -124,7 +125,7 @@ def check_rdn_deposits(
 def check_network_id(network_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
     """ Check periodically if the underlying ethereum client's network id has changed"""
     while True:
-        current_id = int(web3.version.network)
+        current_id = web3.eth.chainId
         if network_id != current_id:
             raise RuntimeError(
                 f"Raiden was running on network with id {network_id} and it detected "
@@ -169,10 +170,6 @@ class AlarmTask(Runnable):
         finally:
             self.callbacks = list()
 
-    def is_primed(self) -> bool:
-        """True if the first_run has been called."""
-        return self.known_block_number is not None
-
     def register_callback(self, callback: Callable) -> None:
         """ Register a new callback.
 
@@ -192,48 +189,27 @@ class AlarmTask(Runnable):
             self.callbacks.remove(callback)
 
     def loop_until_stop(self) -> None:
-        # The AlarmTask must have completed its first_run() before starting
-        # the background greenlet.
-        #
-        # This is required because the first run will synchronize the node with
-        # the blockchain since the last run.
-        msg = "Only start the AlarmTask after it has been primed with the first_run"
-        assert self.is_primed(), msg
-
         sleep_time = self.sleep_time
         while self._stop_event and self._stop_event.wait(sleep_time) is not True:
-            latest_block = self.rpc_client.get_block(block_identifier="latest")
+            latest_block = self.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
 
             self._maybe_run_callbacks(latest_block)
 
-    def first_run(self, known_block_number: BlockNumber) -> None:
-        """ Blocking call to update the local state, if necessary. """
-        assert self.callbacks, "callbacks not set"
-        latest_block = self.rpc_client.get_block(block_identifier="latest")
-
-        log.debug(
-            "Alarm task first run",
-            known_block_number=known_block_number,
-            latest_block_number=latest_block["number"],
-            latest_gas_limit=latest_block["gasLimit"],
-            latest_block_hash=to_hex(latest_block["hash"]),
-            node=to_checksum_address(self.rpc_client.address),
-        )
-
-        self.known_block_number = known_block_number
-        self._maybe_run_callbacks(latest_block)
-
-    def _maybe_run_callbacks(self, latest_block: Dict[str, Any]) -> None:
+    def _maybe_run_callbacks(self, latest_block: BlockData) -> None:
         """ Run the callbacks if there is at least one new block.
 
         The callbacks are executed only if there is a new block, otherwise the
         filters may try to poll for an inexisting block number and the Ethereum
         client can return an JSON-RPC error.
         """
-        assert self.known_block_number is not None, "known_block_number not set"
-
         latest_block_number = latest_block["number"]
-        missed_blocks = latest_block_number - self.known_block_number
+
+        # First run, set the block and run the callbacks
+        if self.known_block_number is None:
+            self.known_block_number = latest_block_number
+            missed_blocks = 1
+        else:
+            missed_blocks = latest_block_number - self.known_block_number
 
         if missed_blocks < 0:
             log.critical(

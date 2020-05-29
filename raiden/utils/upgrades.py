@@ -10,7 +10,7 @@ import structlog
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, filter_db_names, latest_db_file
-from raiden.utils.typing import Any, Callable, List, NamedTuple
+from raiden.utils.typing import Any, Callable, DatabasePath, List, NamedTuple
 
 
 class UpgradeRecord(NamedTuple):
@@ -46,7 +46,8 @@ def get_file_version(db_path: Path) -> int:
 def get_db_version(db_filename: Path) -> int:
     """Return the version value stored in the db"""
 
-    assert os.path.exists(db_filename)
+    msg = f"Path '{db_filename}' expected, but not found"
+    assert os.path.exists(db_filename), msg
 
     # Perform a query directly through SQL rather than using
     # storage.get_version()
@@ -118,7 +119,7 @@ class UpgradeManager:
       to proceed or not.
     """
 
-    def __init__(self, db_filename: str, **kwargs: Any) -> None:
+    def __init__(self, db_filename: DatabasePath, **kwargs: Any) -> None:
         base_name = os.path.basename(db_filename)
         match = VERSION_RE.match(base_name)
         assert match, f'Database name "{base_name}" does not match our format'

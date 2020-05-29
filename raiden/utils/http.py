@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import socket
 import ssl
 import time
@@ -16,13 +17,25 @@ from mirakuru.base import ENV_UUID
 from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError, TimeoutExpired
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
 
+from raiden.utils.typing import Endpoint, Host, HostPort, Port
+
 T_IO_OR_INT = Union[IO, int]
 EXECUTOR_IO = Union[int, Tuple[T_IO_OR_INT, T_IO_OR_INT, T_IO_OR_INT]]
 
 log = structlog.get_logger(__name__)
 
 
-class HTTPExecutor(MiHTTPExecutor):
+def split_endpoint(endpoint: Endpoint) -> HostPort:
+    match = re.match(r"(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?", endpoint, re.I)
+    if not match:
+        raise ValueError("Invalid endpoint", endpoint)
+    host, port = match.groups()
+    if not port:
+        port = "0"
+    return Host(host), Port(int(port))
+
+
+class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
     """ Subclass off mirakuru.HTTPExecutor, which allows other methods than HEAD """
 
     def __init__(
@@ -88,12 +101,12 @@ class HTTPExecutor(MiHTTPExecutor):
         if self.process is None:
             command = self.command
             if not self._shell:
-                command = self.command_parts
+                command = self.command_parts  # type: ignore
 
             if isinstance(self.stdio, (list, tuple)):
                 stdin, stdout, stderr = self.stdio
             else:
-                stdin = stdout = stderr = self.stdio
+                stdin = stdout = stderr = self.stdio  # type: ignore
             env = os.environ.copy()
             env[ENV_UUID] = self._uuid
             popen_kwargs = {
@@ -106,7 +119,7 @@ class HTTPExecutor(MiHTTPExecutor):
                 "cwd": self.cwd,
             }
             if platform.system() != "Windows":
-                popen_kwargs["preexec_fn"] = os.setsid
+                popen_kwargs["preexec_fn"] = os.setsid  # type: ignore
             self.process = subprocess.Popen(command, **popen_kwargs)
 
         self._set_timeout()
@@ -119,7 +132,9 @@ class HTTPExecutor(MiHTTPExecutor):
                     f"Can not execute {command!r}, check that the executable exists."
                 ) from e
             else:
-                output_file_names = {io.name for io in (stdout, stderr) if hasattr(io, "name")}
+                output_file_names = {
+                    io.name for io in (stdout, stderr) if hasattr(io, "name")  # type: ignore
+                }
                 if output_file_names:
                     log.warning("Process output file(s)", output_files=output_file_names)
             raise
@@ -177,7 +192,7 @@ class HTTPExecutor(MiHTTPExecutor):
         return True
 
 
-class JSONRPCExecutor(HTTPExecutor):
+class JSONRPCExecutor(HTTPExecutor):  # pragma: no cover
     def __init__(
         self,
         command: Union[str, List[str]],

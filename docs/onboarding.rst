@@ -234,7 +234,7 @@ In this section we are going to only look over the main points in the code which
 
 In Matrix each user has a userid in the form of ``@<userId>:<homeserver_uri>``. ``userId`` is the lowercased ethereum address of the node, possibly followed by a 4-bytes hex-encoded random suffix, separated from the address by a dot. The ``homeserver_uri`` is the URI of the matrix homeserver at which the user registers.
 
-For each partner we interact with a specific room is created on the matrix home server between us and our partner. The `_handle_message() <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/matrix.py#L727>`_ function is the entry point to any messages received in such a room and after some validation it is forwarded to `_receive_message() <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/matrix.py#L896>`_ which will finally forward to the message handler.
+Each pair of nodes have a private room for communication. Once a message is added to any of these rooms, they are processed in batch by `MatrixTransport._handle_sync_messages`, after decoding and validation these messages are forwarded to `RaidenService.on_messages` and processed by the node.
 
 As for sending messages to a partner in a channel the `send_async() <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/matrix.py#L458>`_ function is the entry point. It essentially populates the sending queue for the partner. The actual messages will be sent from the queue during the main loop of the transport through the `_check_and_send() <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/transport/matrix.py#L182>`_ function.
 
@@ -253,7 +253,7 @@ The `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401
 - Handling a valid locked transfer message
 
 
-On the sender's side for the messages in the global queue:
+On the sender's side for the messages in the unordered queue:
 
 - Secret Request
 - Secret Reveal
@@ -268,9 +268,9 @@ So, for a specific queue message, e.g. a ``LockedTransfer`` in a specific channe
 - -> A sends a ``LockedTransfer`` and starts a retry loop for it with message_id=123
 - <- B receives it and sends ``Delivered(123)``.
 - <- B accepts it (i.e. succesfully processes it). Then sends ``Processed(123)`` and starts a retry loop for it.
-- -> A receives ``Delivered(123)``. Stops retry loop for any message_id=123 from B in its global queue, which is none, so it effectivelly skips it.
+- -> A receives ``Delivered(123)``. Stops retry loop for any message_id=123 from B in its unordered queue, which is none, so it effectivelly skips it.
 - -> A receives ``Processed(123)``, stops retry loop for any message_id=123 from B in its specific queue (in this case, ``LockedTransfer``), sends ``Delivered(123)`` in reply to ``Processed(123)``.
-- <- B receives ``Delivered(123)``, stops retry loop for any message_id=123 from A in its global queue (in this case, ``Processed``).
+- <- B receives ``Delivered(123)``, stops retry loop for any message_id=123 from A in its unordered queue (in this case, ``Processed``).
 
 Blockchain Communication
 ************************

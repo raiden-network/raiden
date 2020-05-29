@@ -1,38 +1,44 @@
-import contextlib
 import datetime
 import json
 import os
-import signal
 import sys
 import textwrap
 import traceback
-from copy import deepcopy
+from enum import Enum
 from io import StringIO
-from subprocess import TimeoutExpired
-from tempfile import mkdtemp, mktemp
-from typing import Any, AnyStr, Callable, ContextManager, Dict, List, Optional, Tuple
+from tempfile import NamedTemporaryFile, mktemp
+from typing import Any, AnyStr, Callable, Optional
 
 import click
+import filelock
 import structlog
 from click import Context
-from requests.packages import urllib3
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
+from urllib3.exceptions import ReadTimeoutError
 
-from raiden.app import App
+from raiden.accounts import KeystoreAuthenticationError, KeystoreFileNotFound
 from raiden.constants import (
-    DISCOVERY_DEFAULT_ROOM,
     FLAT_MED_FEE_MIN,
     IMBALANCE_MED_FEE_MAX,
     IMBALANCE_MED_FEE_MIN,
+    MATRIX_AUTO_SELECT_SERVER,
     PROPORTIONAL_MED_FEE_MAX,
     PROPORTIONAL_MED_FEE_MIN,
     Environment,
     EthClient,
     RoutingMode,
 )
-from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
+from raiden.exceptions import (
+    AddressWithoutCode,
+    APIServerPortInUseError,
+    ConfigurationError,
+    ContractCodeMismatch,
+    EthereumNonceTooLow,
+    EthNodeInterfaceError,
+    RaidenUnrecoverableError,
+    ReplacementTransactionUnderpriced,
+)
 from raiden.log_config import configure_logging
-from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
@@ -42,9 +48,8 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_PATHS,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
-    RAIDEN_CONTRACT_VERSION,
 )
-from raiden.utils import get_system_spec
+from raiden.ui.runners import run_services
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
@@ -57,24 +62,60 @@ from raiden.utils.cli import (
     group,
     option,
     option_group,
-    validate_option_dependencies,
 )
-from raiden.utils.typing import MYPY_ANNOTATION, TokenAddress
-from raiden_contracts.constants import NETWORKNAME_TO_ID
-
-from .runners import EchoNodeRunner, MatrixRunner
+from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.profiling.greenlets import SwitchMonitoring
+from raiden.utils.profiling.memory import MemoryLogger
+from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
+from raiden.utils.system import get_system_spec
+from raiden.utils.typing import MYPY_ANNOTATION
+from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
+ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
+ETH_NETWORKID_OPTION = "--network-id"
+COMMUNICATION_ERROR = (
+    f"\n"
+    f"Communicating with an external service failed.\n"
+    f"This can be caused by internet connection problems or \n"
+    f"any of the following services, Ethereum client or Matrix or pathfinding.\n"
+    f"Please try again in five minutes."
+    f"\n"
+    f"Endpoint used with the Ethereum client: "
+    f"'{{}}', this option can be "
+    f"configured with the flag {ETH_RPC_CONFIG_OPTION}"
+)
 
 
-OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
-    "pathfinding-service-address": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-max-paths": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-max-fee": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "pathfinding-iou-timeout": [("transport", "matrix"), ("routing-mode", RoutingMode.PFS)],
-    "enable-monitoring": [("transport", "matrix")],
-    "matrix-server": [("transport", "matrix")],
-}
+class ReturnCode(Enum):
+    SUCCESS = 0
+    # 1 -> this error code is used arbitraryly in some places, skipping it
+    FATAL = 2
+    GENERIC_COMMUNICATION_ERROR = 3
+    ETH_INTERFACE_ERROR = 4
+    PORT_ALREADY_IN_USE = 5
+    ETH_ACCOUNT_ERROR = 6
+    RAIDEN_CONFIGURATION_ERROR = 7
+    SMART_CONTRACTS_CONFIGURATION_ERROR = 8
+
+
+def write_stack_trace(ex: Exception) -> None:
+    file = NamedTemporaryFile(
+        "w",
+        prefix=f"raiden-exception-{datetime.datetime.utcnow():%Y-%m-%dT%H-%M}",
+        suffix=".txt",
+        delete=False,
+    )
+    with file as traceback_file:
+        traceback.print_exc(file=traceback_file)
+        traceback.print_exc()
+        click.secho(
+            f"FATAL: An unexpected exception occurred. "
+            f"A traceback has been written to {traceback_file.name}\n"
+            f"{ex}",
+            fg="red",
+        )
 
 
 def options(func: Callable) -> Callable:
@@ -83,7 +124,6 @@ def options(func: Callable) -> Callable:
     # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
     # for every use
     options_ = [
-        option("--version", hidden=True, is_flag=True, allow_from_autoenv=False),
         option(
             "--datadir",
             help="Directory for storing raiden data.",
@@ -135,54 +175,13 @@ def options(func: Callable) -> Callable:
             show_default=True,
         ),
         option(
-            "--tokennetwork-registry-contract-address",
-            help="hex encoded address of the Token Network Registry contract.",
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
-            "--secret-registry-contract-address",
-            help="hex encoded address of the Secret Registry contract.",
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
-            "--service-registry-contract-address",
-            help="hex encoded address of the Service Registry contract.",
-            type=ADDRESS_TYPE,
-        ),
-        option(
-            "--one-to-n-contract-address",
-            help="hex encoded address of the OneToN contract.",
-            type=ADDRESS_TYPE,
-        ),
-        option(
-            "--endpoint-registry-contract-address",
-            help="hex encoded address of the Endpoint Registry contract.",
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
             "--user-deposit-contract-address",
             help="hex encoded address of the User Deposit contract.",
             type=ADDRESS_TYPE,
         ),
-        option(
-            "--monitoring-service-contract-address",
-            help="hex encoded address of the Monitorin Service contract.",
-            type=ADDRESS_TYPE,
-        ),
         option("--console", help="Start the interactive raiden console", is_flag=True),
         option(
-            "--transport",
-            help="Transport system to use.",
-            type=click.Choice(["matrix"]),
-            default="matrix",
-            show_default=True,
-            hidden=True,
-        ),
-        option(
-            "--network-id",
+            ETH_NETWORKID_OPTION,
             help=(
                 "Specify the network name/id of the Ethereum network to run Raiden on.\n"
                 "Available networks:\n"
@@ -213,11 +212,6 @@ def options(func: Callable) -> Callable:
         option(
             "--accept-disclaimer",
             help="Bypass the experimental software disclaimer prompt",
-            is_flag=True,
-        ),
-        option(
-            "--showconfig",
-            help="Show all configuration values used to control Raiden's behavior",
             is_flag=True,
         ),
         option(
@@ -267,7 +261,7 @@ def options(func: Callable) -> Callable:
                 show_default=True,
             ),
             option(
-                "--eth-rpc-endpoint",
+                ETH_RPC_CONFIG_OPTION,
                 help=(
                     '"host:port" address of ethereum JSON-RPC server.\n'
                     "Also accepts a protocol prefix (http:// or https://) with optional port"
@@ -294,12 +288,13 @@ def options(func: Callable) -> Callable:
             option(
                 "--pathfinding-service-address",
                 help=(
-                    "URL to the Raiden path finding service to request paths from.\n"
-                    "Example: https://pfs-ropsten.services-dev.raiden.network\n"
-                    'Can also be given the "auto" value so that raiden chooses a '
-                    "PFS randomly from the service registry contract"
+                    f"URL to the Raiden path finding service to request paths from.\n "
+                    f"Example: https://pfs-ropsten.services-dev.raiden.network\n "
+                    f"Can also be given the '{MATRIX_AUTO_SELECT_SERVER}' value "
+                    f"so that raiden chooses a PFS randomly from the service "
+                    f"registry contract."
                 ),
-                default="auto",
+                default=MATRIX_AUTO_SELECT_SERVER,
                 type=str,
                 show_default=True,
             ),
@@ -327,6 +322,7 @@ def options(func: Callable) -> Callable:
             option(
                 "--enable-monitoring",
                 help="Enable broadcasting of balance proofs to the monitoring services.",
+                default=False,
                 is_flag=True,
             ),
         ),
@@ -335,13 +331,13 @@ def options(func: Callable) -> Callable:
             option(
                 "--matrix-server",
                 help=(
-                    "Matrix homeserver to use for communication.\n"
-                    "Valid values:\n"
-                    '"auto" - automatically select a suitable homeserver\n'
-                    "A URL pointing to a Raiden matrix homeserver"
+                    f"Matrix homeserver to use for communication.\n"
+                    f"Valid values:\n"
+                    f"'{MATRIX_AUTO_SELECT_SERVER}' - automatically select a suitable homeserver\n"
+                    f"A URL pointing to a Raiden matrix homeserver"
                 ),
-                default="auto",
-                type=MatrixServerType(["auto", "<url>"]),
+                default=MATRIX_AUTO_SELECT_SERVER,
+                type=MatrixServerType([MATRIX_AUTO_SELECT_SERVER, "<url>"]),
                 show_default=True,
             ),
         ),
@@ -430,6 +426,7 @@ def options(func: Callable) -> Callable:
                 ),
                 default=None,
             ),
+            option("--switch-tracing", help="Enable switch tracing", is_flag=True, default=False),
             option(
                 "--unrecoverable-error-should-crash",
                 help=(
@@ -439,6 +436,12 @@ def options(func: Callable) -> Callable:
                 ),
                 is_flag=True,
                 default=False,
+            ),
+            option(
+                "--log-memory-usage-interval",
+                help="Log memory usage every X sec (fractions accepted). [default: disabled]",
+                type=float,
+                default=0,
             ),
         ),
         option_group(
@@ -513,79 +516,86 @@ def options(func: Callable) -> Callable:
 def run(ctx: Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    flamegraph = kwargs.pop("flamegraph", None)
-    profiler = None
+    if kwargs["config_file"]:
+        apply_config_file(run, kwargs, ctx)
 
-    if flamegraph:
+    configure_logging(
+        kwargs["log_config"],
+        log_json=kwargs["log_json"],
+        log_file=kwargs["log_file"],
+        disable_debug_logfile=kwargs["disable_debug_logfile"],
+        debug_log_file_path=kwargs["debug_logfile_path"],
+    )
+
+    flamegraph = kwargs.pop("flamegraph", None)
+    switch_tracing = kwargs.pop("switch_tracing", None)
+    profiler = None
+    switch_monitor = None
+
+    enable_gevent_monitoring_signal()
+
+    if flamegraph:  # pragma: no cover
         os.makedirs(flamegraph, exist_ok=True)
 
-        from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
-
-        now = datetime.datetime.now()
-        stack_path = os.path.join(flamegraph, f"{now:%Y%m%d_%H%M}_stack.data")
+        now = datetime.datetime.now().isoformat()
+        address = to_checksum_address(kwargs["address"])
+        stack_path = os.path.join(flamegraph, f"{address}_{now}_stack.data")
         stack_stream = open(stack_path, "w")
         flame = FlameGraphCollector(stack_stream)
         profiler = TraceSampler(flame)
 
-    if kwargs.pop("version", False):
-        click.echo(
-            click.style("Hint: Use ", fg="green")
-            + click.style(f"'{os.path.basename(sys.argv[0])} version'", fg="yellow")
-            + click.style(" instead", fg="green")
-        )
-        ctx.invoke(version, short=True)
-        return
+    if switch_tracing is True:  # pragma: no cover
+        switch_monitor = SwitchMonitoring()
 
-    if kwargs["config_file"]:
-        apply_config_file(run, kwargs, ctx)
+    if kwargs["environment_type"] == Environment.DEVELOPMENT:
+        IDLE.enable()
 
-    validate_option_dependencies(run, ctx, kwargs, OPTION_DEPENDENCIES)
+    memory_logger = None
+    log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
+    if log_memory_usage_interval > 0:  # pragma: no cover
+        memory_logger = MemoryLogger(log_memory_usage_interval)
+        memory_logger.start()
 
     if ctx.invoked_subcommand is not None:
         # Pass parsed args on to subcommands.
         ctx.obj = kwargs
         return
 
-    if kwargs["transport"] == "matrix":
-        runner = MatrixRunner(kwargs, ctx)
-    else:
-        # Shouldn't happen
-        raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
+    raiden_version = get_system_spec()["raiden"]
+    click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
 
-    click.secho(runner.welcome_string, fg="green")
     click.secho(
         textwrap.dedent(
             """\
-            ----------------------------------------------------------------------
-            | This is an Alpha version of experimental open source software      |
-            | released as a test version under an MIT license and may contain    |
-            | errors and/or bugs. No guarantee or representations whatsoever is  |
-            | made regarding its suitability (or its use) for any purpose or     |
-            | regarding its compliance with any applicable laws and regulations. |
-            | Use of the software is at your own risk and discretion and by      |
-            | using the software you acknowledge that you have read this         |
-            | disclaimer, understand its contents, assume all risk related       |
-            | thereto and hereby release, waive, discharge and covenant not to   |
-            | sue Brainbot Labs Establishment or any officers, employees or      |
-            | affiliates from and for any direct or indirect liability resulting |
-            | from the use of the software as permissible by applicable laws and |
-            | regulations.                                                       |
-            |                                                                    |
-            | Privacy Warning: Please be aware, that by using the Raiden Client, |
-            | among others, your Ethereum address, channels, channel deposits,   |
-            | settlements and the Ethereum address of your channel counterparty  |
-            | will be stored on the Ethereum chain, i.e. on servers of Ethereum  |
-            | node operators and ergo are to a certain extent publicly available.|
-            | The same might also be stored on systems of parties running Raiden |
-            | nodes connected to the same token network. Data present in the     |
-            | Ethereum chain is very unlikely to be able to be changed, removed  |
-            | or deleted from the public arena.                                  |
-            |                                                                    |
-            | Also be aware, that data on individual Raiden token transfers will |
-            | be made available via the Matrix protocol to the recipient,        |
-            | intermediating nodes of a specific transfer as well as to the      |
-            | Matrix server operators.                                           |
-            ----------------------------------------------------------------------"""
+            +------------------------------------------------------------------------+
+            | This is a Beta version of experimental open source software released   |
+            | as a test version under an MIT license and may contain errors and/or   |
+            | bugs. No guarantee or representation whatsoever is made regarding its  |
+            | suitability (or its use) for any purpose or regarding its compliance   |
+            | with any applicable laws and regulations. Use of the software is at    |
+            | your own risk and discretion and by using the software you warrant and |
+            | represent that you have read this disclaimer, understand its contents, |
+            | assume all risk related thereto and hereby release, waive, discharge   |
+            | and covenant not to hold liable Brainbot Labs Establishment or any of  |
+            | its officers, employees or affiliates from and for any direct or       |
+            | indirect damage resulting from the the software or the use thereof.    |
+            | Such to the extent as permissible by applicable laws and regulations.  |
+            |                                                                        |
+            | Privacy warning: Please be aware, that by using the Raiden Client,     |
+            | among others your Ethereum address, channels, channel deposits,        |
+            | settlements and the Ethereum address of your channel counterparty will |
+            | be stored on the Ethereum chain, i.e. on servers of Ethereum node      |
+            | operators and ergo are to a certain extent publicly available. The     |
+            | same might also be stored on systems of parties running Raiden nodes   |
+            | connected to the same token network. Data present in the Ethereum      |
+            | chain is very unlikely to be able to be changed, removed or deleted    |
+            | from the public arena.                                                 |
+            |                                                                        |
+            | Also be aware, that data on individual Raiden token transfers will be  |
+            | made available via the Matrix protocol to the recipient,               |
+            | intermediating nodes of a specific transfer as well as to the Matrix   |
+            | server operators, see Raiden Transport Specification.                  |
+            +------------------------------------------------------------------------+"""
         ),
         fg="yellow",
     )
@@ -596,20 +606,94 @@ def run(ctx: Context, **kwargs: Any) -> None:
             abort=True,
         )
 
+    # Name used in the exception handlers, make sure the kwargs contains the
+    # key with the correct name by always running it.
+    name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
+
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
     try:
-        app = runner.run()
-        app.stop()
-    except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as e:
+        run_services(kwargs)
+    except KeyboardInterrupt:
+        # The user requested a shutdown. Assume that if the exception
+        # propagated all the way to the top-level everything was shutdown
+        # properly.
+        #
+        # Notes about edge cases:
+        # - It could happen the exception was handled somewhere else in the
+        # code, and did not reach the top-level, ideally that should result in
+        # an exit with a non-zero code, but currently there is not way to
+        # detect that.
+        # - Just because the exception reached main, it doesn't mean that all
+        # services were properly cleaned up. Ideally at this stage we should
+        # run extra code to verify the state of the main services, and if any
+        # of the is not properly shutdown exit with a non-zero code.
+        pass
+    except (ReplacementTransactionUnderpriced, EthereumNonceTooLow) as ex:
         click.secho(
-            "{}. Please make sure that this Raiden node is the "
-            "only user of the selected account".format(str(e)),
+            f"{ex}. Please make sure that this Raiden node is the "
+            f"only user of the selected account",
             fg="red",
         )
-        sys.exit(1)
-    finally:
+        sys.exit(ReturnCode.ETH_ACCOUNT_ERROR)
+    except (ConnectionError, ConnectTimeout, RequestsConnectionError, ReadTimeoutError):
+        print(COMMUNICATION_ERROR.format(kwargs["eth_rpc_endpoint"]))
+        sys.exit(ReturnCode.GENERIC_COMMUNICATION_ERROR)
+    except EthNodeInterfaceError as e:
+        click.secho(str(e), fg="red")
+        sys.exit(ReturnCode.ETH_INTERFACE_ERROR)
+    except RaidenUnrecoverableError as ex:
+        write_stack_trace(ex)
+        sys.exit(ReturnCode.FATAL)
+    except APIServerPortInUseError as ex:
+        click.secho(
+            f"ERROR: API Address {ex} is in use. Use --api-address <host:port> "
+            f"to specify a different port.",
+            fg="red",
+        )
+        sys.exit(ReturnCode.PORT_ALREADY_IN_USE)
+    except (KeystoreAuthenticationError, KeystoreFileNotFound) as e:
+        click.secho(str(e), fg="red")
+        sys.exit(ReturnCode.ETH_ACCOUNT_ERROR)
+    except ConfigurationError as e:
+        click.secho(str(e), fg="red")
+        sys.exit(ReturnCode.RAIDEN_CONFIGURATION_ERROR)
+    except ContractCodeMismatch as e:
+        click.secho(
+            f"{e}. This may happen if Raiden is configured to use an "
+            f"unsupported version of the contracts.",
+            fg="red",
+        )
+        sys.exit(ReturnCode.SMART_CONTRACTS_CONFIGURATION_ERROR)
+    except AddressWithoutCode as e:
+        click.secho(
+            f"{e}. This may happen if an external ERC20 smart contract "
+            f"selfdestructed, or if the configured address is misconfigured, make "
+            f"sure the used address is not a normal account but a smart contract, "
+            f"and that it is deployed to {name_or_id}.",
+            fg="red",
+        )
+        sys.exit(ReturnCode.SMART_CONTRACTS_CONFIGURATION_ERROR)
+    except filelock.Timeout:
+        click.secho(
+            f"FATAL: Another Raiden instance already running for account "
+            f"{to_checksum_address(kwargs['address'])} on network id {name_or_id}",
+            fg="red",
+        )
+        sys.exit(ReturnCode.RAIDEN_CONFIGURATION_ERROR)
+    except Exception as ex:
+        write_stack_trace(ex)
+        sys.exit(ReturnCode.FATAL)
+    finally:  # pragma: no cover
+        # teardown order is important because of side-effects, both the
+        # switch_monitor and profiler could use the tracing api, for the
+        # teardown code to work correctly the teardown has to be done in the
+        # reverse order of the initialization.
+        if switch_monitor is not None:
+            switch_monitor.stop()
+        if memory_logger is not None:
+            memory_logger.stop()
         if profiler is not None:
             profiler.stop()
 
@@ -647,39 +731,20 @@ def version(short: bool) -> None:
 @click.pass_context
 def smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
-) -> None:
+) -> None:  # pragma: no cover
     """ Test, that the raiden installation is sane. """
-    from raiden.tests.utils.smoketest import (
-        setup_raiden,
-        run_smoketest,
-        setup_matrix_for_smoketest,
-        setup_testchain_for_smoketest,
-    )
-    from raiden.tests.utils.transport import make_requests_insecure, ParsedURL
-    from raiden.utils.debugging import enable_gevent_monitoring_signal
+    from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest, step_printer
 
-    step_count = 8
-    step = 0
-    stdout = sys.stdout
     raiden_stdout = StringIO()
 
     assert ctx.parent, MYPY_ANNOTATION
     environment_type = ctx.parent.params["environment_type"]
-    transport = ctx.parent.params["transport"]
     disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
-    matrix_server = ctx.parent.params["matrix_server"]
-
-    if transport != "matrix":
-        raise RuntimeError(f"Invalid transport type '{transport}'")
 
     if report_path is None:
         report_file = mktemp(suffix=".log")
     else:
         report_file = report_path
-
-    enable_gevent_monitoring_signal()
-    make_requests_insecure()
-    urllib3.disable_warnings(InsecureRequestWarning)
 
     click.secho(f"Report file: {report_file}", fg="yellow")
 
@@ -703,108 +768,39 @@ def smoketest(
     append_report("Raiden version", json.dumps(get_system_spec()))
     append_report("Raiden log")
 
-    def print_step(description: str, error: bool = False) -> None:
-        nonlocal step
-        step += 1
-        click.echo(
-            "{} {}".format(
-                click.style(f"[{step}/{step_count}]", fg="blue"),
-                click.style(description, fg="green" if not error else "red"),
-            ),
-            file=stdout,
-        )
-
-    contracts_version = RAIDEN_CONTRACT_VERSION
-
+    free_port_generator = get_free_port()
     try:
-        free_port_generator = get_free_port()
-        ethereum_nodes = None
-
-        datadir = mkdtemp()
-        testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
-            eth_client=eth_client,
-            print_step=print_step,
-            free_port_generator=free_port_generator,
-            base_datadir=datadir,
-            base_logdir=datadir,
-        )
-        matrix_manager: ContextManager[List[ParsedURL]] = setup_matrix_for_smoketest(
-            print_step=print_step,
-            free_port_generator=free_port_generator,
-            broadcast_rooms_aliases=[
-                make_room_alias(NETWORKNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM)
-            ],
-        )
-
-        # Do not redirect the stdout on a debug session, otherwise the REPL
-        # will also be redirected
-        if debug:
-            stdout_manager = contextlib.nullcontext()
-        else:
-            stdout_manager = contextlib.redirect_stdout(raiden_stdout)
-
-        with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
-            result = setup_raiden(
-                transport=transport,
-                matrix_server=matrix_server,
+        with step_printer(step_count=7, stdout=sys.stdout) as print_step:
+            with setup_smoketest(
+                eth_client=eth_client,
                 print_step=print_step,
-                contracts_version=contracts_version,
-                eth_client=testchain["eth_client"],
-                eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
-                web3=testchain["web3"],
-                base_datadir=testchain["base_datadir"],
-                keystore=testchain["keystore"],
-            )
+                free_port_generator=free_port_generator,
+                debug=debug,
+                stdout=raiden_stdout,
+                append_report=append_report,
+            ) as setup:
+                args = setup.args
+                port = next(free_port_generator)
 
-            args = result["args"]
-            contract_addresses = result["contract_addresses"]
-            ethereum_nodes = testchain["node_executors"]
-            token = result["token"]
+                args["api_address"] = f"localhost:{port}"
+                args["environment_type"] = environment_type
 
-            port = next(free_port_generator)
+                # Matrix server
+                args["one_to_n_contract_address"] = "0x" + "1" * 40
+                args["routing_mode"] = RoutingMode.LOCAL
+                args["flat_fee"] = ()
+                args["proportional_fee"] = ()
+                args["proportional_imbalance_fee"] = ()
 
-            args["api_address"] = f"localhost:{port}"
-            args["config"] = deepcopy(App.DEFAULT_CONFIG)
-            args["environment_type"] = environment_type
-            args["extra_config"] = {"transport": {"matrix": {"available_servers": server_urls}}}
-            args["one_to_n_contract_address"] = "0x" + "1" * 40
-            args["routing_mode"] = RoutingMode.PRIVATE
-            args["flat_fee"] = ()
-            args["proportional_fee"] = ()
-            args["proportional_imbalance_fee"] = ()
+                for option_ in run.params:
+                    if option_.name in args.keys():
+                        args[option_.name] = option_.process_value(ctx, args[option_.name])
+                    else:
+                        args[option_.name] = option_.default
 
-            for option_ in run.params:
-                if option_.name in args.keys():
-                    args[option_.name] = option_.process_value(ctx, args[option_.name])
-                else:
-                    args[option_.name] = option_.default
+                run_smoketest(print_step=print_step, setup=setup)
 
-            try:
-                run_smoketest(
-                    print_step=print_step,
-                    args=args,
-                    contract_addresses=contract_addresses,
-                    token=token,
-                )
-            finally:
-                if ethereum_nodes:
-                    for node_executor in ethereum_nodes:
-                        node = node_executor.process
-                        node.send_signal(signal.SIGINT)
-
-                        try:
-                            node.wait(10)
-                        except TimeoutExpired:
-                            print_step("Ethereum node shutdown unclean, check log!", error=True)
-                            node.kill()
-
-                        if isinstance(node_executor.stdio, tuple):
-                            logfile = node_executor.stdio[1]
-                            logfile.flush()
-                            logfile.seek(0)
-                            append_report("Ethereum Node log output", logfile.read())
-
-        append_report("Raiden Node stdout", raiden_stdout.getvalue())
+            append_report("Raiden Node stdout", raiden_stdout.getvalue())
 
     except:  # noqa pylint: disable=bare-except
         if debug:
@@ -822,18 +818,3 @@ def smoketest(
 
     if not success:
         sys.exit(1)
-
-
-@run.command(
-    help=(
-        "Start an echo node.\n"
-        "Mainly useful for development.\n"
-        "See: https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html"
-        "#interacting-with-the-raiden-echo-node"
-    )
-)
-@click.option("--token-address", type=ADDRESS_TYPE, required=True)
-@click.pass_context
-def echonode(ctx: Context, token_address: TokenAddress) -> None:
-    """ Start a raiden Echo Node that will send received transfers back to the initiator. """
-    EchoNodeRunner(ctx.obj, ctx, token_address).run()

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json
 import re
 import string
@@ -5,8 +6,9 @@ from json import JSONDecodeError
 from typing import Any, Dict, List, Optional, Set, TextIO
 
 import click
-from eth_utils import to_checksum_address
 from eth_utils.typing import ChecksumAddress
+
+from raiden.utils.formatting import to_checksum_address
 
 EVENT_FIELD_REGEXES = {
     "node": re.compile(r"(0x[0-9a-fA-F]{40})"),

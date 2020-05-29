@@ -1,14 +1,18 @@
 import math
 from enum import Enum
 
-from eth_utils import keccak, to_canonical_address, to_checksum_address
+from eth_utils import keccak, to_canonical_address
 
+from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     AdditionalHash,
+    Address,
     BalanceHash,
     BlockHash,
     BlockNumber,
+    ChainID,
+    Literal,
     Locksroot,
     RaidenDBVersion,
     RaidenProtocolVersion,
@@ -22,9 +26,10 @@ from raiden.utils.typing import (
 
 LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
 RELEASE_PAGE = "https://github.com/raiden-network/raiden/releases"
+DOC_URL = "https://docs.raiden.network/raiden-api-1"
 SECURITY_EXPRESSION = r"\[CRITICAL UPDATE.*?\]"
 
-RAIDEN_DB_VERSION = RaidenDBVersion(23)
+RAIDEN_DB_VERSION = RaidenDBVersion(26)
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = RaidenProtocolVersion(1)
 
@@ -69,12 +74,12 @@ class GoerliForks(Enum):
 
 
 class Networks(Enum):
-    MAINNET = 1
-    ROPSTEN = 3
-    RINKEBY = 4
-    GOERLI = 5
-    KOVAN = 42
-    SMOKETEST = 627
+    MAINNET = ChainID(1)
+    ROPSTEN = ChainID(3)
+    RINKEBY = ChainID(4)
+    GOERLI = ChainID(5)
+    KOVAN = ChainID(42)
+    SMOKETEST = ChainID(627)
 
 
 # Set at 64 since parity's default is 64 and Geth's default is 128
@@ -84,7 +89,8 @@ STATE_PRUNING_SAFETY_MARGIN = 8
 NO_STATE_QUERY_AFTER_BLOCKS = STATE_PRUNING_AFTER_BLOCKS - STATE_PRUNING_SAFETY_MARGIN
 
 NULL_ADDRESS_BYTES = bytes(20)
-NULL_ADDRESS_HEX = to_checksum_address(NULL_ADDRESS_BYTES)
+NULL_ADDRESS_HEX = to_hex_address(Address(NULL_ADDRESS_BYTES))
+NULL_ADDRESS_CHECKSUM = to_checksum_address(Address(NULL_ADDRESS_BYTES))
 
 EMPTY_HASH = BlockHash(bytes(32))
 EMPTY_TRANSACTION_HASH = TransactionHash(bytes(32))
@@ -95,6 +101,7 @@ EMPTY_SECRET = Secret(bytes(32))
 EMPTY_SECRETHASH = SecretHash(bytes(32))
 EMPTY_SECRET_SHA256 = sha256_secrethash(EMPTY_SECRET)
 LOCKSROOT_OF_NO_LOCKS = Locksroot(keccak(b""))
+EMPTY_LOCKSROOT = Locksroot(bytes(32))
 ZERO_TOKENS = TokenAmount(0)
 
 ABSENT_SECRET = Secret(b"")
@@ -114,6 +121,7 @@ SNAPSHOT_STATE_CHANGES_COUNT = 500
 
 # An arbitrary limit for transaction size in Raiden, added in PR #1990
 TRANSACTION_GAS_LIMIT_UPPER_BOUND = int(0.4 * 3_141_592)
+TRANSACTION_INTRINSIC_GAS = 21_000
 
 # Used to add a 30% security margin to gas estimations in case the calculations are off
 GAS_FACTOR = 1.3
@@ -155,6 +163,7 @@ DEFAULT_HTTP_REQUEST_TIMEOUT = 10.0  # seconds
 DISCOVERY_DEFAULT_ROOM = "discovery"
 MONITORING_BROADCASTING_ROOM = "monitoring"
 PATH_FINDING_BROADCASTING_ROOM = "path_finding"
+MATRIX_AUTO_SELECT_SERVER = "auto"
 
 # According to the smart contracts as of 07/08:
 # https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
@@ -163,20 +172,28 @@ PATH_FINDING_BROADCASTING_ROOM = "path_finding"
 # global queue
 EMPTY_ADDRESS = b"\0" * 20
 
+BLOCK_ID_LATEST: Literal["latest"] = "latest"
+BLOCK_ID_PENDING: Literal["pending"] = "pending"
+
+# Thresholds for the ``eth.getLogs`` call. Used to automatically adjust the block batch size.
+ETH_GET_LOGS_TIMEOUT = 10
+ETH_GET_LOGS_THRESHOLD_FAST = ETH_GET_LOGS_TIMEOUT // 4
+ETH_GET_LOGS_THRESHOLD_SLOW = ETH_GET_LOGS_TIMEOUT // 2
 
 # Keep in sync with .circleci/config.yaml
-HIGHEST_SUPPORTED_GETH_VERSION = "1.9.2"
-LOWEST_SUPPORTED_GETH_VERSION = "1.8.21"
+HIGHEST_SUPPORTED_GETH_VERSION = "1.9.11"
+LOWEST_SUPPORTED_GETH_VERSION = "1.9.7"
 # this is the last stable version as of this comment
-HIGHEST_SUPPORTED_PARITY_VERSION = "2.5.5"
+HIGHEST_SUPPORTED_PARITY_VERSION = "2.7.2"
 LOWEST_SUPPORTED_PARITY_VERSION = "1.7.6"
 
+WEB3_BLOCK_NOT_FOUND_RETRY_COUNT = 3
 
 WETH_TOKEN_ADDRESS = TokenAddress(
     to_canonical_address("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
 )
 DAI_TOKEN_ADDRESS = TokenAddress(
-    to_canonical_address("0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359")
+    to_canonical_address("0x6B175474E89094C44Da98b954EedeAC495271d0F")
 )
 
 FLAT_MED_FEE_MIN = 0

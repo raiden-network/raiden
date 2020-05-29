@@ -28,7 +28,6 @@ from raiden.utils.typing import (
     List,
     Optional,
     PaymentAmount,
-    TokenAmount,
 )
 
 
@@ -97,7 +96,9 @@ def handle_inittarget(
     transfer = state_change.transfer
     route = state_change.from_hop
 
-    assert channel_state.identifier == transfer.balance_proof.channel_identifier
+    assert (
+        channel_state.identifier == transfer.balance_proof.channel_identifier
+    ), "channel_id mismatch in handle_inittarget"
     is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
         channel_state, transfer
     )
@@ -236,7 +237,7 @@ def handle_unlock(
             token_network_registry_address=channel_state.token_network_registry_address,
             token_network_address=channel_state.token_network_address,
             identifier=transfer.payment_identifier,
-            amount=TokenAmount(transfer.lock.amount),
+            amount=PaymentAmount(transfer.lock.amount),
             initiator=transfer.initiator,
         )
 
@@ -340,7 +341,7 @@ def state_transition(
             )
     elif type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
-        assert state_change.block_number == block_number
+        assert state_change.block_number == block_number, "Block number mismatch"
         assert target_state, "Block state changes should be accompanied by a valid target state"
 
         iteration = handle_block(

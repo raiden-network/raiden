@@ -1,18 +1,21 @@
 # pylint: disable=redefined-outer-name
 import random
 from enum import Enum
+from typing import Dict, List
 
 import pytest
-from eth_utils import remove_0x_prefix
+from eth_typing import HexStr
+from eth_utils import keccak, remove_0x_prefix
 
-from raiden.constants import Environment
+from raiden.constants import Environment, EthClient
 from raiden.network.utils import get_free_port
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
+from raiden.tests.utils.eth_node import EthNodeDescription
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
-from raiden.utils import sha3
+from raiden.utils.typing import Iterator, Port, TokenAmount
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 # we need to use fixture for the default values otherwise
@@ -103,12 +106,11 @@ def random_marker():
     detect unwanted interations if the user sets the PYTHONHASHSEED to the same
     value.
     """
-    random_hex = hex(random.getrandbits(100))
-    return remove_0x_prefix(random_hex)
+    return remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
 
 
 @pytest.fixture
-def logs_storage(request, tmpdir):
+def logs_storage(request, tmpdir) -> str:
     """Returns the path where debugging data should be saved.
 
     Use this to preserve the databases and logs necessary to debug test
@@ -125,43 +127,45 @@ def logs_storage(request, tmpdir):
 
 
 @pytest.fixture
-def deposit():
+def deposit() -> TokenAmount:
     """ Raiden chain default deposit. """
     # Arbitrary initial balance for each channel, using a small number for
     # easier calculations during testing
-    return 200
+    return TokenAmount(200)
 
 
 @pytest.fixture
-def number_of_tokens():
+def number_of_tokens() -> int:
     """ Number of tokens pre-registered in the test Registry. """
     return 1
 
 
 @pytest.fixture
-def register_tokens():
+def register_tokens() -> bool:
     """ Should fixture generated tokens be registered with raiden. """
     return True
 
 
 @pytest.fixture
-def number_of_nodes():
+def number_of_nodes() -> int:
     """ Number of raiden nodes in the test network. """
     return 3
 
 
 @pytest.fixture
-def channels_per_node():
+def channels_per_node() -> int:
     """ Number of pre-created channels per test raiden node. """
     return 1
 
 
 @pytest.fixture
-def retry_interval(transport_protocol):
-    if transport_protocol is TransportProtocol.MATRIX:
-        return 2
-    else:
-        return 0.5
+def retry_interval_initial(transport_protocol):  # pylint: disable=unused-argument
+    return 2
+
+
+@pytest.fixture
+def retry_interval_max(transport_protocol):  # pylint: disable=unused-argument
+    return 2
 
 
 @pytest.fixture
@@ -201,7 +205,7 @@ def private_keys(number_of_nodes, privatekey_seed):
 
     # Note: The fixtures depend on the order of the private keys
     result = [
-        sha3(privatekey_seed.format(position).encode()) for position in range(number_of_nodes)
+        keccak(privatekey_seed.format(position).encode()) for position in range(number_of_nodes)
     ]
 
     # this must not happen, otherwise the keys and addresses will be equal!
@@ -212,21 +216,26 @@ def private_keys(number_of_nodes, privatekey_seed):
 
 @pytest.fixture
 def deploy_key(privatekey_seed):
-    return sha3(privatekey_seed.format("deploykey").encode())
+    return keccak(privatekey_seed.format("deploykey").encode())
 
 
 @pytest.fixture(scope="session")
-def blockchain_type(request):
-    return request.config.option.blockchain_type
+def blockchain_type(request) -> str:
+    blockchain_type = request.config.option.blockchain_type
+
+    if blockchain_type not in {client.value for client in EthClient}:
+        raise ValueError(f"unknown blockchain_type {blockchain_type}")
+
+    return blockchain_type
 
 
 @pytest.fixture
-def blockchain_extra_config():
+def blockchain_extra_config() -> Dict:
     return {}
 
 
 @pytest.fixture
-def blockchain_number_of_nodes():
+def blockchain_number_of_nodes() -> int:
     """ Number of nodes in the cluster, not the same as the number of raiden
     nodes. Used for all geth clusters.
     """
@@ -244,19 +253,8 @@ def blockchain_key_seed(request):
     return escape_for_format(request.node.name) + "cluster:{}"
 
 
-@pytest.fixture
-def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
-    """ The private keys for the each private chain node, not the same as the
-    raiden's private key.
-    """
-    return [
-        sha3(blockchain_key_seed.format(position).encode())
-        for position in range(blockchain_number_of_nodes)
-    ]
-
-
 @pytest.fixture(scope="session")
-def port_generator(request, worker_id):
+def port_generator(request, worker_id) -> Iterator[Port]:
     """ count generator used to get a unique port number. """
     if worker_id == "master":
         # xdist is not in use to run parallel tests
@@ -267,29 +265,33 @@ def port_generator(request, worker_id):
 
 
 @pytest.fixture
-def blockchain_rpc_ports(blockchain_number_of_nodes, port_generator):
-    """ A list of unique port numbers to be used by the blockchain nodes for
-    the json-rpc interface.
-    """
-    return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
+def eth_nodes_configuration(
+    blockchain_number_of_nodes,
+    blockchain_key_seed,
+    port_generator,
+    blockchain_type,
+    blockchain_extra_config,
+) -> List[EthNodeDescription]:
+    eth_nodes = list()
+
+    for position in range(blockchain_number_of_nodes):
+        key = keccak(blockchain_key_seed.format(position).encode())
+        eth_node = EthNodeDescription(
+            private_key=key,
+            rpc_port=next(port_generator),
+            p2p_port=next(port_generator),
+            miner=(position == 0),
+            extra_config=blockchain_extra_config,
+            blockchain_type=blockchain_type,
+        )
+
+        eth_nodes.append(eth_node)
+
+    return eth_nodes
 
 
 @pytest.fixture
-def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
-    """ A list of unique port numbers to be used by the blockchain nodes for
-    the p2p protocol.
-    """
-    return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
-
-
-@pytest.fixture
-def rest_api_port_number(port_generator):
-    """ Unique port for the REST API server. """
-    return next(port_generator)
-
-
-@pytest.fixture
-def environment_type():
+def environment_type() -> Environment:
     """Specifies the environment type"""
     return Environment.DEVELOPMENT
 
@@ -342,6 +344,12 @@ def skip_if_not_geth(blockchain_type):
 
 
 @pytest.fixture
-def start_raiden_apps():
+def start_raiden_apps() -> bool:
     """Determines if the raiden apps created at test setup should also be started"""
     return True
+
+
+@pytest.fixture
+def enable_rest_api() -> bool:
+    """Determines if the raiden apps created at test setup should also be started"""
+    return False

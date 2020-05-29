@@ -1,5 +1,3 @@
-import copy
-
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -48,7 +46,6 @@ from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
-    ActionUpdateTransportAuthData,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -69,6 +66,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     BlockHash,
@@ -80,6 +78,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     Union,
+    typecheck,
 )
 
 # All State changes that are subdispatched as token network actions
@@ -269,43 +268,37 @@ def subdispatch_initiatortask(
     token_network_address: TokenNetworkAddress,
     secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
+    token_network_state = get_token_network_by_address(chain_state, token_network_address)
+    if not token_network_state:
+        return TransitionResult(chain_state, [])
 
-    block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
-
     if not sub_task:
-        is_valid_subtask = True
         manager_state = None
-
-    elif sub_task and isinstance(sub_task, InitiatorTask):
-        is_valid_subtask = token_network_address == sub_task.token_network_address
-        manager_state = sub_task.manager_state
     else:
-        is_valid_subtask = False
+        if (
+            not isinstance(sub_task, InitiatorTask)
+            or token_network_address != sub_task.token_network_address
+        ):
+            return TransitionResult(chain_state, [])
+        manager_state = sub_task.manager_state
 
-    events: List[Event] = list()
-    if is_valid_subtask:
-        pseudo_random_generator = chain_state.pseudo_random_generator
+    iteration = initiator_manager.state_transition(
+        payment_state=manager_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
+        nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+        pseudo_random_generator=chain_state.pseudo_random_generator,
+        block_number=chain_state.block_number,
+    )
+    events: List[Event] = iteration.events
 
-        token_network_state = get_token_network_by_address(chain_state, token_network_address)
-
-        if token_network_state:
-            iteration = initiator_manager.state_transition(
-                payment_state=manager_state,
-                state_change=state_change,
-                channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
-                nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
-                pseudo_random_generator=pseudo_random_generator,
-                block_number=block_number,
-            )
-            events = iteration.events
-
-            if iteration.new_state:
-                sub_task = InitiatorTask(token_network_address, iteration.new_state)
-                if sub_task is not None:
-                    chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
-            elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
-                del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+    if iteration.new_state:
+        chain_state.payment_mapping.secrethashes_to_task[secrethash] = InitiatorTask(
+            token_network_address, iteration.new_state
+        )
+    elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
+        del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(chain_state, events)
 
@@ -442,10 +435,6 @@ def maybe_add_tokennetwork(
 
         mapping = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses
         mapping[token_network_address] = token_network_registry_address
-
-
-def sanity_check(iteration: TransitionResult[ChainState]) -> None:
-    assert isinstance(iteration.new_state, ChainState)
 
 
 def inplace_delete_message_queue(
@@ -590,9 +579,9 @@ def handle_action_change_node_network_state(
     chain_state.nodeaddresses_to_networkstates[node_address] = network_state
 
     for secrethash, subtask in list(chain_state.payment_mapping.secrethashes_to_task.items()):
-        # This assert would not have been needed if token_network_address, a common attribute
+        # This typecheck would not have been needed if token_network_address, a common attribute
         # for all TransferTasks was part of the TransferTasks superclass.
-        assert isinstance(subtask, (InitiatorTask, MediatorTask, TargetTask))
+        typecheck(subtask, (InitiatorTask, MediatorTask, TargetTask))
         result = subdispatch_mediatortask(
             chain_state=chain_state,
             state_change=state_change,
@@ -685,7 +674,7 @@ def handle_action_transfer_reroute(
         state_change.transfer.lock.secrethash
     ]
     chain_state.payment_mapping.secrethashes_to_task.update(
-        {new_secrethash: copy.deepcopy(current_payment_task)}
+        {new_secrethash: deepcopy(current_payment_task)}
     )
 
     return subdispatch_to_paymenttask(chain_state, state_change, new_secrethash)
@@ -773,14 +762,6 @@ def handle_receive_unlock(
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
 
-def handle_action_update_transport_auth_data(
-    chain_state: ChainState, state_change: ActionUpdateTransportAuthData
-) -> TransitionResult[ChainState]:
-    assert chain_state is not None, "chain_state must be set"
-    chain_state.last_transport_authdata = state_change.auth_data
-    return TransitionResult(chain_state, list())
-
-
 def handle_state_change(
     chain_state: Optional[ChainState], state_change: StateChange
 ) -> TransitionResult[ChainState]:  # pragma: no cover
@@ -822,9 +803,6 @@ def handle_state_change(
         elif type(state_change) == ActionInitTarget:
             assert isinstance(state_change, ActionInitTarget), MYPY_ANNOTATION
             iteration = handle_action_init_target(chain_state, state_change)
-        elif type(state_change) == ActionUpdateTransportAuthData:
-            assert isinstance(state_change, ActionUpdateTransportAuthData), MYPY_ANNOTATION
-            iteration = handle_action_update_transport_auth_data(chain_state, state_change)
         elif type(state_change) == ReceiveTransferCancelRoute:
             assert isinstance(state_change, ReceiveTransferCancelRoute), MYPY_ANNOTATION
             iteration = handle_receive_transfer_cancel_route(chain_state, state_change)
@@ -1168,6 +1146,6 @@ def state_transition(
     iteration = handle_state_change(chain_state, state_change)
 
     update_queues(iteration, state_change)
-    sanity_check(iteration)
+    typecheck(iteration.new_state, ChainState)
 
     return iteration

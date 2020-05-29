@@ -1,8 +1,9 @@
 # pylint: disable=too-many-lines
 import random
+from enum import Enum
 from typing import TYPE_CHECKING
 
-from eth_utils import encode_hex, keccak, to_checksum_address, to_hex
+from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
@@ -22,7 +23,6 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
-    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -30,10 +30,10 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
+    SendUnlock,
     refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import (
@@ -81,6 +81,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
@@ -96,6 +97,7 @@ from raiden.utils.typing import (
     EncodedData,
     InitiatorAddress,
     List,
+    LockedAmount,
     Locksroot,
     LockType,
     MessageID,
@@ -114,6 +116,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
+    typecheck,
 )
 
 if TYPE_CHECKING:
@@ -123,13 +126,23 @@ if TYPE_CHECKING:
 # This should be changed to `Union[str, PendingLocksState]`
 PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
 EventsOrError = Tuple[bool, List[Event], Optional[str]]
-BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
-SendUnlockAndPendingLocksState = Tuple[SendBalanceProof, PendingLocksState]
+BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, LockedAmount]
+SendUnlockAndPendingLocksState = Tuple[SendUnlock, PendingLocksState]
 
 
 class UnlockGain(NamedTuple):
     from_our_locks: TokenAmount
     from_partner_locks: TokenAmount
+
+
+class ChannelUsability(Enum):
+    USABLE = True
+    NOT_OPENED = "channel is not open"
+    INVALID_SETTLE_TIMEOUT = "channel settle timeout is too low"
+    CHANNEL_REACHED_PENDING_LIMIT = "channel reached limit of pending transfers"
+    CHANNEL_DOESNT_HAVE_ENOUGH_DISTRIBUTABLE = "channel doesn't have enough distributable tokens"
+    CHANNEL_BALANCE_PROOF_WOULD_OVERFLOW = "channel balance proof would overflow"
+    LOCKTIMEOUT_MISMATCH = "the lock timeout can not be used with the channel"
 
 
 def get_safe_initial_expiration(
@@ -195,7 +208,7 @@ def is_channel_usable_for_mediation(
     lower than the block gas limit constraints.
 
     The lock expiration has to be smaller than the channel's settlement window
-    because otherwise it is possible to employ attacks. Where an attacker open
+    because otherwise it is possible to employ attacks, where an attacker opens
     two channels to the victim, with different settlement windows. The channel
     with lower settlement is used to start a payment to the other channel, if
     the lock's expiration is allowed to be larger than the settlement window,
@@ -208,14 +221,14 @@ def is_channel_usable_for_mediation(
         channel_state, transfer_amount, lock_timeout
     )
 
-    return channel_usable
+    return channel_usable is ChannelUsability.USABLE
 
 
 def is_channel_usable_for_new_transfer(
     channel_state: NettingChannelState,
     transfer_amount: PaymentWithFeeAmount,
     lock_timeout: Optional[BlockTimeout],
-) -> bool:
+) -> ChannelUsability:
     """True if the channel can be used to start a new transfer.
 
     This will make sure that:
@@ -248,15 +261,25 @@ def is_channel_usable_for_new_transfer(
     # option is to ignore the channel.
     is_valid_settle_timeout = channel_state.settle_timeout >= channel_state.reveal_timeout * 2
 
-    channel_usable = (
-        get_status(channel_state) == ChannelState.STATE_OPENED
-        and is_valid_settle_timeout
-        and pending_transfers < MAXIMUM_PENDING_TRANSFERS
-        and transfer_amount <= distributable
-        and is_valid_amount(channel_state.our_state, transfer_amount)
-        and lock_timeout_valid
-    )
-    return channel_usable
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
+        return ChannelUsability.NOT_OPENED
+
+    if not is_valid_settle_timeout:
+        return ChannelUsability.INVALID_SETTLE_TIMEOUT
+
+    if pending_transfers >= MAXIMUM_PENDING_TRANSFERS:
+        return ChannelUsability.CHANNEL_REACHED_PENDING_LIMIT
+
+    if transfer_amount > distributable:
+        return ChannelUsability.CHANNEL_DOESNT_HAVE_ENOUGH_DISTRIBUTABLE
+
+    if not is_valid_amount(channel_state.our_state, transfer_amount):
+        return ChannelUsability.CHANNEL_BALANCE_PROOF_WOULD_OVERFLOW
+
+    if not lock_timeout_valid:
+        return ChannelUsability.LOCKTIMEOUT_MISMATCH
+
+    return ChannelUsability.USABLE
 
 
 def is_lock_pending(end_state: NettingChannelEndState, secrethash: SecretHash) -> bool:
@@ -360,7 +383,7 @@ def is_valid_channel_total_withdraw(channel_total_withdraw: TokenAmount) -> bool
         - The channel's withdraw must be in the range [0,channel_total_deposit].
 
     Because the `total_withdraw` must be in the range [0,channel_deposit], and
-    the maximum value for channel_deposit is UINT256, the overflow bellow must
+    the maximum value for channel_deposit is UINT256, the overflow below must
     never happen, otherwise there is a smart contract bug.
     """
     return channel_total_withdraw <= UINT256_MAX
@@ -510,8 +533,8 @@ def is_balance_proof_usable_onchain(
         # the signature** must match for the balance_proof to be valid.
         return SuccessOrError(
             f"token_network_address does not match. "
-            f"expected: {channel_state.token_network_address} "
-            f"got: {received_balance_proof.token_network_address}."
+            f"expected: {to_checksum_address(channel_state.token_network_address)} "
+            f"got: {to_checksum_address(received_balance_proof.token_network_address)}."
         )
 
     elif received_balance_proof.chain_id != channel_state.chain_id:
@@ -767,7 +790,7 @@ def refund_transfer_matches_transfer(
 ) -> bool:
     refund_transfer_sender = refund_transfer.balance_proof.sender
     # Ignore a refund from the target
-    if refund_transfer_sender == transfer.target:
+    if TargetAddress(refund_transfer_sender) == transfer.target:
         return False
 
     return (
@@ -1077,7 +1100,7 @@ def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmou
     )
 
 
-def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
+def get_amount_locked(end_state: NettingChannelEndState) -> LockedAmount:
     total_pending = sum(lock.amount for lock in end_state.secrethashes_to_lockedlocks.values())
 
     total_unclaimed = sum(
@@ -1087,7 +1110,7 @@ def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
     total_unclaimed_onchain = get_amount_unclaimed_onchain(end_state)
 
     result = total_pending + total_unclaimed + total_unclaimed_onchain
-    return TokenAmount(result)
+    return LockedAmount(result)
 
 
 def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
@@ -1172,7 +1195,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
         nonce = Nonce(0)
         transferred_amount = TokenAmount(0)
-        locked_amount = TokenAmount(0)
+        locked_amount = LockedAmount(0)
 
     return locksroot, nonce, transferred_amount, locked_amount
 
@@ -1229,7 +1252,8 @@ def get_lock(
         if partial_unlock:
             lock = partial_unlock.lock
 
-    assert isinstance(lock, HashTimeLockState) or lock is None
+    if lock is not None:
+        typecheck(lock, HashTimeLockState)
     return lock
 
 
@@ -1299,7 +1323,7 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: SecretHash) -> None
     Note:
         This won't change the pending locks!
     """
-    assert is_lock_pending(end_state, secrethash)
+    assert is_lock_pending(end_state, secrethash), "Lock must be pending"
 
     _del_unclaimed_lock(end_state, secrethash)
 
@@ -1405,7 +1429,7 @@ def create_sendlockedtransfer(
     token = channel_state.token_address
     recipient = channel_state.partner_state.address
     # the new lock is not registered yet
-    locked_amount = TokenAmount(get_amount_locked(our_state) + amount)
+    locked_amount = LockedAmount(get_amount_locked(our_state) + amount)
 
     nonce = get_next_nonce(channel_state.our_state)
 
@@ -1443,6 +1467,7 @@ def create_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     lock: HashTimeLockState,
+    block_number: BlockNumber,
 ) -> SendUnlockAndPendingLocksState:
     our_state = channel_state.our_state
 
@@ -1451,6 +1476,15 @@ def create_unlock(
 
     msg = "caller must make sure the channel is open"
     assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
+
+    expired = is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock.expiration,
+    )
+    msg = "caller must make sure the lock is not expired"
+    assert not expired, msg
 
     our_balance_proof = our_state.balance_proof
     msg = "the lock is pending, it must be in the pending locks"
@@ -1468,7 +1502,7 @@ def create_unlock(
     token_address = channel_state.token_address
     recipient = channel_state.partner_state.address
     # the lock is still registered
-    locked_amount = TokenAmount(get_amount_locked(our_state) - lock.amount)
+    locked_amount = LockedAmount(get_amount_locked(our_state) - lock.amount)
 
     nonce = get_next_nonce(our_state)
     channel_state.our_state.nonce = nonce
@@ -1481,7 +1515,7 @@ def create_unlock(
         canonical_identifier=channel_state.canonical_identifier,
     )
 
-    unlock_lock = SendBalanceProof(
+    unlock_lock = SendUnlock(
         recipient=recipient,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
@@ -1574,12 +1608,13 @@ def send_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     secrethash: SecretHash,
-) -> SendBalanceProof:
+    block_number: BlockNumber,
+) -> SendUnlock:
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock, "caller must ensure the lock exists"
 
     unlock, pending_locks = create_unlock(
-        channel_state, message_identifier, payment_identifier, secret, lock
+        channel_state, message_identifier, payment_identifier, secret, lock, block_number
     )
 
     channel_state.our_state.balance_proof = unlock.balance_proof
@@ -1600,7 +1635,9 @@ def events_for_close(
 
         balance_proof = channel_state.partner_state.balance_proof
         # silence mypy: partner's balance proofs should be signed
-        assert balance_proof is None or isinstance(balance_proof, BalanceProofSignedState)
+        assert balance_proof is None or isinstance(
+            balance_proof, BalanceProofSignedState
+        ), "BP is not signed"
 
         close_event = ContractSendChannelClose(
             canonical_identifier=channel_state.canonical_identifier,
@@ -1665,7 +1702,7 @@ def create_sendexpiredlock(
 ) -> Tuple[Optional[SendLockExpired], Optional[PendingLocksState]]:
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
-    updated_locked_amount = TokenAmount(locked_amount - locked_lock.amount)
+    updated_locked_amount = LockedAmount(locked_amount - locked_lock.amount)
 
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
@@ -2218,7 +2255,7 @@ def handle_block(
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
-    assert state_change.block_number == block_number
+    assert state_change.block_number == block_number, "Block number mismatch"
 
     events: List[Event] = list()
 
@@ -2273,8 +2310,7 @@ def handle_channel_closed(
         )
         if call_update:
             expiration = BlockExpiration(state_change.block_number + channel_state.settle_timeout)
-            # silence mypy: partner's balance proof is always signed
-            assert isinstance(balance_proof, BalanceProofSignedState)
+            assert isinstance(balance_proof, BalanceProofSignedState), MYPY_ANNOTATION
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
@@ -2356,7 +2392,7 @@ def update_fee_schedule_after_balance_change(
         proportional=channel_state.fee_schedule.proportional,
         imbalance_penalty=imbalance_penalty,
     )
-    return [SendPFSFeeUpdate(canonical_identifier=channel_state.canonical_identifier)]
+    return []
 
 
 def handle_channel_deposit(
@@ -2371,8 +2407,8 @@ def handle_channel_deposit(
         update_contract_balance(channel_state.partner_state, contract_balance)
 
     # A deposit changes the total capacity of the channel and as such the fees need to change
-    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
-    return TransitionResult(channel_state, events)
+    update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    return TransitionResult(channel_state, [])
 
 
 def handle_channel_withdraw(
@@ -2398,8 +2434,8 @@ def handle_channel_withdraw(
     end_state.onchain_total_withdraw = state_change.total_withdraw
 
     # A withdraw changes the total capacity of the channel and as such the fees need to change
-    events = update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
-    return TransitionResult(channel_state, events)
+    update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    return TransitionResult(channel_state, [])
 
 
 def handle_channel_batch_unlock(
@@ -2433,7 +2469,7 @@ def handle_channel_batch_unlock(
 
 
 def sanity_check(channel_state: NettingChannelState) -> None:
-    """Some of the checks bellow are tautologies for the current version of the
+    """Some of the checks below are tautologies for the current version of the
     codebase. However they are kept in there to check the constraints if/when
     the code changes.
     """
@@ -2443,7 +2479,7 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     previous = WithdrawAmount(0)
     for total_withdraw, withdraw_state in our_state.withdraws_pending.items():
         assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
-        assert total_withdraw == withdraw_state.total_withdraw
+        assert total_withdraw == withdraw_state.total_withdraw, "Total withdraw mismatch"
         previous = withdraw_state.total_withdraw
 
     our_balance = get_balance(our_state, partner_state)
@@ -2480,9 +2516,12 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     # Because of overflow checks, it is possible for the distributable amount
     # to be lower than the available balance, therefore the sanity check has to
     # be lower-than instead of equal-to
-    assert our_distributable + our_locked <= our_balance
-    assert partner_distributable + partner_locked <= partner_balance
-
+    assert (
+        our_distributable + our_locked <= our_balance
+    ), "distributable + locked must not exceed balance (own)"
+    assert (
+        partner_distributable + partner_locked <= partner_balance
+    ), "distributable + locked must not exceed balance (partner)"
     our_locksroot = compute_locksroot(our_state.pending_locks)
     partner_locksroot = compute_locksroot(partner_state.pending_locks)
 

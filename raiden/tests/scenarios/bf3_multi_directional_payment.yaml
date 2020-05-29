@@ -2,43 +2,35 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: any
   services:
     pfs:
-      url: https://pfs-goerli-with-fee.services-dev.raiden.network
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
-        # Make sure that enough is deposited to pay for an MR
-        # The cost of an MR is `5 * 10 ** 18`
         deposit: true
-        balance_per_node: 100_000_000_000_000_000_000
-        min_balance: 5_000_000_000_000_000_000
+        balance_per_node: {{ ms_reward_with_margin + 200 * 2 * pfs_fee }}
 
 token:
-  address: "0x62083c80353Df771426D209eF578619EE68D5C7A"
+  address: "{{ transfer_token }}"
   balance_fund: 10_000_000_000_000_000_000
 
 nodes:
-  mode: managed
   count: 5
   raiden_version: local
 
   default_options:
     gas-price: fast
-    environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: 100
+    pathfinding-max-fee: {{ pfs_fee }}
     enable-monitoring: true
     proportional-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
     proportional-imbalance-fee:
-      - "0x62083c80353Df771426D209eF578619EE68D5C7A"
+      - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: 40
-    default-reveal-timeout: 20
 
 # This is the bf3 scenario. It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
 # When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4
@@ -84,12 +76,12 @@ scenario:
                 name: "Make 100 transfers from 0 to 4"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000}
             - serial:
                 name: "Make 100 transfers from 4 to 0"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 4, to: 0, amount: 1_000_000_000_000_000}
       - wait: 100
       - parallel:
           name: "Assert that all balances are the same as before the payments, since same amounts are sent in both directions"

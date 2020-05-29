@@ -1,18 +1,16 @@
-from typing import Union
-
 import structlog
-from eth_utils import to_checksum_address
 
 from raiden import constants
-from raiden.constants import RoutingMode
+from raiden.constants import BLOCK_ID_LATEST, RoutingMode
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.settings import MONITORING_REWARD
 from raiden.transfer import views
-from raiden.transfer.architecture import BalanceProofSignedState, BalanceProofUnsignedState
+from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState
-from raiden.utils import to_rdn
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import TYPE_CHECKING, Address
 
 if TYPE_CHECKING:
@@ -20,22 +18,6 @@ if TYPE_CHECKING:
 
 
 log = structlog.get_logger(__name__)
-
-
-def update_services_from_balance_proof(
-    raiden: "RaidenService",
-    chain_state: ChainState,
-    balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
-    non_closing_participant: Address,
-) -> None:
-    send_pfs_update(raiden=raiden, canonical_identifier=balance_proof.canonical_identifier)
-    if isinstance(balance_proof, BalanceProofSignedState):
-        update_monitoring_service_from_balance_proof(
-            raiden=raiden,
-            chain_state=chain_state,
-            new_balance_proof=balance_proof,
-            non_closing_participant=non_closing_participant,
-        )
 
 
 def send_pfs_update(
@@ -56,14 +38,24 @@ def send_pfs_update(
     capacity_msg = PFSCapacityUpdate.from_channel_state(channel_state)
     capacity_msg.sign(raiden.signer)
     raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, capacity_msg)
-    log.debug("Sent a PFS Capacity Update", message=capacity_msg, channel_state=channel_state)
+    log.debug(
+        "Sent a PFS Capacity Update",
+        node=to_checksum_address(raiden.address),
+        message=capacity_msg,
+        channel_state=channel_state,
+    )
 
     if update_fee_schedule:
         fee_msg = PFSFeeUpdate.from_channel_state(channel_state)
         fee_msg.sign(raiden.signer)
 
         raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, fee_msg)
-        log.debug("Sent a PFS Fee Update", message=fee_msg, channel_state=channel_state)
+        log.debug(
+            "Sent a PFS Fee Update",
+            node=to_checksum_address(raiden.address),
+            message=fee_msg,
+            channel_state=channel_state,
+        )
 
 
 def update_monitoring_service_from_balance_proof(
@@ -72,8 +64,11 @@ def update_monitoring_service_from_balance_proof(
     new_balance_proof: BalanceProofSignedState,
     non_closing_participant: Address,
 ) -> None:
-    if raiden.config["services"]["monitoring_enabled"] is False:
+    if raiden.config.services.monitoring_enabled is False:
         return
+
+    msg = f"Monitoring is enabled but the default monitoring service address is None."
+    assert raiden.default_msc_address is not None, msg
 
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state, canonical_identifier=new_balance_proof.canonical_identifier
@@ -86,12 +81,13 @@ def update_monitoring_service_from_balance_proof(
     )
     assert channel_state, msg
 
-    assert raiden.user_deposit is not None
-    rei_balance = raiden.user_deposit.effective_balance(raiden.address, "latest")
+    msg = f"Monitoring is enabled but the `UserDeposit` contract is None."
+    assert raiden.user_deposit is not None, msg
+    rei_balance = raiden.user_deposit.effective_balance(raiden.address, BLOCK_ID_LATEST)
     if rei_balance < MONITORING_REWARD:
         rdn_balance = to_rdn(rei_balance)
         rdn_reward = to_rdn(MONITORING_REWARD)
-        log.warn(
+        log.warning(
             f"Skipping update to Monitoring service. "
             f"Your deposit balance {rdn_balance} is less than "
             f"the required monitoring service reward of {rdn_reward}"
@@ -100,6 +96,7 @@ def update_monitoring_service_from_balance_proof(
 
     log.info(
         "Received new balance proof, creating message for Monitoring Service.",
+        node=to_checksum_address(raiden.address),
         balance_proof=new_balance_proof,
     )
 

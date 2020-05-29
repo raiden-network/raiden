@@ -5,7 +5,7 @@ import pdb
 import platform
 import sys
 
-from raiden.utils import get_system_spec
+from raiden.utils.system import get_system_spec
 
 """
 PyInstaller spec file to build single file or dir distributions
@@ -87,7 +87,7 @@ a = Entrypoint(
         'tools/pyinstaller_hooks/runtime_encoding.py',
         'tools/pyinstaller_hooks/runtime_raiden_contracts.py',
     ],
-    hiddenimports=['scrypt', 'eth_tester'],
+    hiddenimports=['scrypt', 'eth_tester', 'pkg_resources.py2_warn'],
     datas=[],
     excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
 )

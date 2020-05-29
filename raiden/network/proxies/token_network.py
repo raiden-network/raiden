@@ -2,18 +2,13 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 import structlog
-from eth_utils import (
-    encode_hex,
-    is_binary_address,
-    to_canonical_address,
-    to_checksum_address,
-    to_hex,
-)
+from eth_utils import encode_hex, is_binary_address, to_canonical_address, to_hex
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import (
-    EMPTY_HASH,
+    BLOCK_ID_LATEST,
+    EMPTY_BALANCE_HASH,
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
     NULL_ADDRESS_BYTES,
@@ -32,21 +27,21 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies.metadata import SmartContractMetadata
-from raiden.network.proxies.token import Token
-from raiden.network.proxies.utils import (
-    get_channel_participants_from_open_event,
-    log_transaction,
-    raise_on_call_returned_empty,
+from raiden.network.proxies.utils import raise_on_call_returned_empty
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    check_address_has_code_handle_pruned_block,
+    check_transaction_failure,
+    was_transaction_successfully_mined,
 )
-from raiden.network.rpc.client import JSONRPCClient, StatelessFilter, check_address_has_code
-from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import PendingLocksState
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import safe_gas_limit
+from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_signed_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
+from raiden.utils.smart_contracts import safe_gas_limit
 from raiden.utils.typing import (
     TYPE_CHECKING,
     AdditionalHash,
@@ -54,11 +49,13 @@ from raiden.utils.typing import (
     Any,
     BalanceHash,
     BlockExpiration,
+    BlockHash,
+    BlockIdentifier,
     BlockNumber,
-    BlockSpecification,
     ChainID,
     ChannelID,
     Dict,
+    LockedAmount,
     Locksroot,
     NamedTuple,
     Nonce,
@@ -69,6 +66,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
     WithdrawAmount,
     typecheck,
 )
@@ -113,7 +111,7 @@ class ParticipantDetails(NamedTuple):
     balance_hash: BalanceHash
     nonce: Nonce
     locksroot: Locksroot
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
 
 
 class ParticipantsDetails(NamedTuple):
@@ -140,15 +138,17 @@ class TokenNetwork:
         contract_manager: ContractManager,
         proxy_manager: "ProxyManager",
         metadata: TokenNetworkMetadata,
+        block_identifier: BlockIdentifier,
     ) -> None:
         if not is_binary_address(metadata.address):
             raise ValueError("Expected binary address format for token nework")
 
-        check_address_has_code(
+        check_address_has_code_handle_pruned_block(
             client=jsonrpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK,
             expected_code=metadata.runtime_bytecode,
+            given_block_identifier=block_identifier,
         )
 
         self.contract_manager = contract_manager
@@ -157,10 +157,8 @@ class TokenNetwork:
         )
 
         # These are constants
-        self._chain_id = proxy.contract.functions.chain_id().call()
-        self._token_address = TokenAddress(
-            to_canonical_address(proxy.contract.functions.token().call())
-        )
+        self._chain_id = proxy.functions.chain_id().call()
+        self._token_address = TokenAddress(to_canonical_address(proxy.functions.token().call()))
 
         self.address = TokenNetworkAddress(metadata.address)
         self.proxy = proxy
@@ -168,7 +166,9 @@ class TokenNetwork:
         self.node_address = self.client.address
         self.metadata = metadata
 
-        self.token: Token = proxy_manager.token(token_address=self.token_address())
+        self.token = proxy_manager.token(
+            token_address=self.token_address(), block_identifier=block_identifier
+        )
 
         # Forbids concurrent operations on the same channel. This is important
         # because some operations conflict with each other. E.g. deposit and
@@ -188,32 +188,30 @@ class TokenNetwork:
         """ Return the token of this manager. """
         return self._token_address
 
-    def channel_participant_deposit_limit(
-        self, block_identifier: BlockSpecification
-    ) -> TokenAmount:
+    def channel_participant_deposit_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
         """ Return the deposit limit of a channel participant. """
         return TokenAmount(
-            self.proxy.contract.functions.channel_participant_deposit_limit().call(
+            self.proxy.functions.channel_participant_deposit_limit().call(
                 block_identifier=block_identifier
             )
         )
 
-    def token_network_deposit_limit(self, block_identifier: BlockSpecification) -> TokenAmount:
+    def token_network_deposit_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
         """ Return the token of this manager. """
         return TokenAmount(
-            self.proxy.contract.functions.token_network_deposit_limit().call(
+            self.proxy.functions.token_network_deposit_limit().call(
                 block_identifier=block_identifier
             )
         )
 
-    def safety_deprecation_switch(self, block_identifier: BlockSpecification) -> bool:
-        return self.proxy.contract.functions.safety_deprecation_switch().call(
+    def safety_deprecation_switch(self, block_identifier: BlockIdentifier) -> bool:
+        return self.proxy.functions.safety_deprecation_switch().call(
             block_identifier=block_identifier
         )
 
     def new_netting_channel(
-        self, partner: Address, settle_timeout: int, given_block_identifier: BlockSpecification
-    ) -> ChannelID:
+        self, partner: Address, settle_timeout: int, given_block_identifier: BlockIdentifier
+    ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
         """ Creates a new channel in the TokenNetwork contract.
 
         Args:
@@ -272,43 +270,32 @@ class TokenNetwork:
                 if safety_deprecation_switch:
                     raise BrokenPreconditionError("This token network is deprecated.")
 
-            log_details = {
-                "node": to_checksum_address(self.node_address),
-                "contract": to_checksum_address(self.address),
-                "peer1": to_checksum_address(self.node_address),
-                "peer2": to_checksum_address(partner),
-                "settle_timeout": settle_timeout,
-            }
-
-            with log_transaction(log, "new_netting_channel", log_details):
-                self.opening_channels_count += 1
-                try:
-                    channel_identifier = self._new_netting_channel(
-                        partner, settle_timeout, log_details
-                    )
-                finally:
-                    self.opening_channels_count -= 1
-                log_details["channel_identifier"] = str(channel_identifier)
+            self.opening_channels_count += 1
+            try:
+                channel_identifier = self._new_netting_channel(partner, settle_timeout)
+            finally:
+                self.opening_channels_count -= 1
 
             return channel_identifier
 
     def _new_netting_channel(
-        self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
-    ) -> ChannelID:
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
-            checking_block,
+        self, partner: Address, settle_timeout: int
+    ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
             "openChannel",
+            extra_log_details={},
             participant1=self.node_address,
             participant2=partner,
             settle_timeout=settle_timeout,
         )
-        if not gas_limit:
-            failed_at = self.proxy.rpc_client.get_block("latest")
+
+        if estimated_transaction is None:
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="openChannel",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.openChannel"],
@@ -336,24 +323,21 @@ class TokenNetwork:
                 raise RaidenRecoverableError("This token network is deprecated.")
 
             raise RaidenRecoverableError(
-                "Creating a new channel will fail - Gas estimation failed for unknown reason."
+                f"Creating a new channel will fail - Gas estimation failed for "
+                f"unknown reason. Reference block {failed_at_blockhash} "
+                f"{failed_at_blocknumber}."
             )
         else:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.openChannel"]
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.openChannel"],
             )
-            log_details["gas_limit"] = gas_limit
-            transaction_hash = self.proxy.transact(
-                "openChannel",
-                gas_limit,
-                participant1=self.node_address,
-                participant2=partner,
-                settle_timeout=settle_timeout,
-            )
-            receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-            if failed_receipt:
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
+            receipt = transaction_mined.receipt
+
+            if not was_transaction_successfully_mined(transaction_mined):
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
                 existing_channel_identifier = self.get_channel_identifier_or_none(
                     participant1=self.node_address,
                     participant2=partner,
@@ -378,17 +362,20 @@ class TokenNetwork:
 
                 raise RaidenRecoverableError("Creating new channel failed.")
 
-        receipt = self.client.get_transaction_receipt(transaction_hash)
         channel_identifier: ChannelID = self._detail_channel(
             participant1=self.node_address,
             participant2=partner,
             block_identifier=encode_hex(receipt["blockHash"]),
         ).channel_identifier
 
-        return channel_identifier
+        return (
+            channel_identifier,
+            BlockHash(receipt["blockHash"]),
+            BlockNumber(receipt["blockNumber"]),
+        )
 
     def get_channel_identifier(
-        self, participant1: Address, participant2: Address, block_identifier: BlockSpecification
+        self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier
     ) -> ChannelID:
         """Return the channel identifier for the opened channel among
         `(participant1, participant2)`.
@@ -403,9 +390,8 @@ class TokenNetwork:
         """
         raise_if_invalid_address_pair(participant1, participant2)
 
-        channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
-            participant=to_checksum_address(participant1),
-            partner=to_checksum_address(participant2),
+        channel_identifier = self.proxy.functions.getChannelIdentifier(
+            participant=participant1, partner=participant2
         ).call(block_identifier=block_identifier)
 
         if channel_identifier == 0:
@@ -420,7 +406,7 @@ class TokenNetwork:
         return channel_identifier
 
     def get_channel_identifier_or_none(
-        self, participant1: Address, participant2: Address, block_identifier: BlockSpecification
+        self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier
     ) -> Optional[ChannelID]:
         """ Returns the channel identifier if an open channel exists, else None. """
         try:
@@ -437,15 +423,13 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         detail_for: Address,
         partner: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> ParticipantDetails:
         """ Returns a dictionary with the channel participant information. """
         raise_if_invalid_address_pair(detail_for, partner)
 
-        data = self.proxy.contract.functions.getChannelParticipantInfo(
-            channel_identifier=channel_identifier,
-            participant=to_checksum_address(detail_for),
-            partner=to_checksum_address(partner),
+        data = self.proxy.functions.getChannelParticipantInfo(
+            channel_identifier=channel_identifier, participant=detail_for, partner=partner
         ).call(block_identifier=block_identifier)
 
         return ParticipantDetails(
@@ -463,7 +447,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ChannelData:
         """ Returns a ChannelData instance with the channel specific information.
@@ -487,10 +471,10 @@ class TokenNetwork:
                 "channel_identifier must be larger then 0 and smaller then uint256"
             )
 
-        channel_data = self.proxy.contract.functions.getChannelInfo(
+        channel_data = self.proxy.functions.getChannelInfo(
             channel_identifier=channel_identifier,
-            participant1=to_checksum_address(participant1),
-            participant2=to_checksum_address(participant2),
+            participant1=participant1,
+            participant2=participant2,
         ).call(block_identifier=block_identifier)
 
         return ChannelData(
@@ -503,7 +487,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ParticipantsDetails:
         """ Returns a ParticipantsDetails instance with the participants'
@@ -549,7 +533,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ChannelDetails:
         """ Returns a ChannelDetails instance with all the details of the
@@ -587,17 +571,17 @@ class TokenNetwork:
 
     def settlement_timeout_min(self) -> int:
         """ Returns the minimal settlement timeout for the token network. """
-        return self.proxy.contract.functions.settlement_timeout_min().call()
+        return self.proxy.functions.settlement_timeout_min().call()
 
     def settlement_timeout_max(self) -> int:
         """ Returns the maximal settlement timeout for the token network. """
-        return self.proxy.contract.functions.settlement_timeout_max().call()
+        return self.proxy.functions.settlement_timeout_max().call()
 
     def channel_is_opened(
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
@@ -616,7 +600,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
@@ -635,7 +619,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
@@ -654,7 +638,7 @@ class TokenNetwork:
         self,
         participant1: Address,
         participant2: Address,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
@@ -680,9 +664,9 @@ class TokenNetwork:
         ).deposit
         return deposit > 0
 
-    def set_total_deposit(
+    def approve_and_set_total_deposit(
         self,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
         total_deposit: TokenAmount,
         partner: Address,
@@ -695,12 +679,12 @@ class TokenNetwork:
         it simplifies the analysis of bad behavior and the handling code of
         out-dated balance proofs.
 
-        Races to `set_total_deposit` are handled by the smart contract, where
+        Races to `approve_and_set_total_deposit` are handled by the smart contract, where
         largest total deposit wins. The end balance of the funding accounts is
         undefined. E.g.
 
-        - Acc1 calls set_total_deposit with 10 tokens
-        - Acc2 calls set_total_deposit with 13 tokens
+        - Acc1 calls approve_and_set_total_deposit with 10 tokens
+        - Acc2 calls approve_and_set_total_deposit with 13 tokens
 
         - If Acc2's transaction is mined first, then Acc1 token supply is left intact.
         - If Acc1's transaction is mined first, then Acc2 will only move 3 tokens.
@@ -746,7 +730,7 @@ class TokenNetwork:
         # approve + deposit + deposit`, since the second approve will overwrite
         # the first and at least one of the deposits will fail. Because of
         # this, the allowance can not change until the deposit is done.
-        with self.channel_operations_lock[partner], self.token.token_lock:
+        with self.channel_operations_lock[partner]:
             try:
                 queried_channel_identifier = self.get_channel_identifier_or_none(
                     participant1=self.node_address,
@@ -793,7 +777,7 @@ class TokenNetwork:
                     channel_identifier=channel_identifier,
                     detail_for=self.node_address,
                     partner=partner,
-                    block_identifier="latest",
+                    block_identifier=BLOCK_ID_LATEST,
                 )
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
@@ -815,8 +799,8 @@ class TokenNetwork:
                 if channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
                         f"The channel was not opened at the provided block "
-                        f"({given_block_identifier}). This call should never have "
-                        f"been attempted."
+                        f"({format_block_id(given_block_identifier)}). This call "
+                        f"should never have been attempted."
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -856,25 +840,19 @@ class TokenNetwork:
                     raise BrokenPreconditionError(msg)
 
             log_details = {
-                "node": to_checksum_address(self.node_address),
-                "contract": to_checksum_address(self.address),
-                "participant": to_checksum_address(self.node_address),
-                "receiver": to_checksum_address(partner),
-                "channel_identifier": channel_identifier,
-                "total_deposit": total_deposit,
                 "previous_total_deposit": our_details.deposit,
+                "given_block_identifier": format_block_id(given_block_identifier),
             }
 
-            with log_transaction(log, "set_total_deposit", log_details):
-                self._set_total_deposit(
-                    channel_identifier=channel_identifier,
-                    total_deposit=total_deposit,
-                    previous_total_deposit=our_details.deposit,
-                    partner=partner,
-                    log_details=log_details,
-                )
+            self._approve_and_set_total_deposit(
+                channel_identifier=channel_identifier,
+                total_deposit=total_deposit,
+                previous_total_deposit=our_details.deposit,
+                partner=partner,
+                log_details=log_details,
+            )
 
-    def _set_total_deposit(
+    def _approve_and_set_total_deposit(
         self,
         channel_identifier: ChannelID,
         total_deposit: TokenAmount,
@@ -882,7 +860,6 @@ class TokenNetwork:
         previous_total_deposit: TokenAmount,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         # If there are channels being set up concurrently either the
@@ -890,8 +867,8 @@ class TokenNetwork:
         # `setTotalDeposit` must be serialized. This is necessary otherwise
         # the deposit will fail.
         #
-        # Calls to approve and setTotalDeposit are serialized with the
-        # deposit_lock to avoid transaction failure, because with two
+        # Calls to `approve` and `setTotalDeposit` are serialized with the
+        # `token_lock` to avoid transaction failure, because with two
         # concurrent deposits, we may have the transactions executed in the
         # following order
         #
@@ -903,35 +880,38 @@ class TokenNetwork:
         # in which case the second `approve` will overwrite the first,
         # and the first `setTotalDeposit` will consume the allowance,
         # making the second deposit fail.
-        self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
+        estimated_transaction = None
+        with self.token.token_lock:
+            # HACK: The hack below is necessary to make sure the gas
+            # estimation of an approve works concurrently with the mining of a
+            # deposit. If the *exact* amount is used, the storage of the smart
+            # contract will be set to `0` once the `deposit` is mined, this
+            # means the gas estimation of an approve done before the deposit
+            # was mined will be off by the 20_000 required by the `SSTORE` to
+            # change the value back from `0`.
+            allowance = TokenAmount(amount_to_deposit + 1)
+            self.token.approve(allowed_address=Address(self.address), allowance=allowance)
 
-        gas_limit = self.proxy.estimate_gas(
-            checking_block,
-            "setTotalDeposit",
-            channel_identifier=channel_identifier,
-            participant=self.node_address,
-            total_deposit=total_deposit,
-            partner=partner,
-        )
-
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"]
-            )
-            log_details["gas_limit"] = gas_limit
-
-            transaction_hash = self.proxy.transact(
+            estimated_transaction = self.client.estimate_gas(
+                self.proxy,
                 "setTotalDeposit",
-                gas_limit,
+                extra_log_details=log_details,
                 channel_identifier=channel_identifier,
                 participant=self.node_address,
                 total_deposit=total_deposit,
                 partner=partner,
             )
-            receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
 
-            if failed_receipt:
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
+            )
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
+
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
                 # Because the gas estimation succeeded it is known that:
                 # - The channel id was correct, i.e. this node and partner are
                 #   participants of the chanenl with id `channel_identifier`.
@@ -939,18 +919,10 @@ class TokenNetwork:
                 # - The account had enough tokens to deposit
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
-                    msg = (
-                        f"setTotalDeposit failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"setTotalDeposit, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
-                    )
-                    raise RaidenRecoverableError(msg)
+                check_transaction_failure(transaction_mined, self.client)
 
                 safety_deprecation_switch = self.safety_deprecation_switch(
                     block_identifier=failed_at_blockhash
@@ -1006,11 +978,11 @@ class TokenNetwork:
                     raise RaidenRecoverableError("Requested total deposit was already performed")
 
                 token_network_deposit_limit = self.token_network_deposit_limit(
-                    block_identifier=failed_receipt["blockHash"]
+                    block_identifier=receipt["blockHash"]
                 )
 
                 network_total_deposit = self.token.balance_of(
-                    address=Address(self.address), block_identifier=failed_receipt["blockHash"]
+                    address=Address(self.address), block_identifier=receipt["blockHash"]
                 )
 
                 if network_total_deposit + deposit_amount > token_network_deposit_limit:
@@ -1021,7 +993,7 @@ class TokenNetwork:
                     raise RaidenRecoverableError(msg)
 
                 channel_participant_deposit_limit = self.channel_participant_deposit_limit(
-                    block_identifier=failed_receipt["blockHash"]
+                    block_identifier=receipt["blockHash"]
                 )
                 if total_deposit > channel_participant_deposit_limit:
                     msg = (
@@ -1068,11 +1040,11 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="setTotalDeposit",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalDeposit"],
@@ -1195,11 +1167,14 @@ class TokenNetwork:
                 msg = f"Deposit of {amount_to_deposit} exceeded the token network deposit limit."
                 raise RaidenRecoverableError(msg)
 
-            raise RaidenRecoverableError("Deposit gas estimatation failed for unknown reasons")
+            raise RaidenRecoverableError(
+                f"Deposit gas estimatation failed for unknown reasons. Reference "
+                f"block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def set_total_withdraw(
         self,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
         total_withdraw: WithdrawAmount,
         expiration_block: BlockExpiration,
@@ -1252,8 +1227,8 @@ class TokenNetwork:
                 if channel_onchain_detail.state != ChannelState.OPENED:
                     msg = (
                         f"The channel was not opened at the provided block "
-                        f"({given_block_identifier}). This call should never have "
-                        f"been attempted."
+                        f"({format_block_id(given_block_identifier)}). This call "
+                        f"should never have been attempted."
                     )
                     raise RaidenUnrecoverableError(msg)
 
@@ -1292,7 +1267,7 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 canonical_identifier = CanonicalIdentifier(
-                    chain_identifier=self.proxy.contract.functions.chain_id().call(),
+                    chain_identifier=self.proxy.functions.chain_id().call(),
                     token_network_address=self.address,
                     channel_identifier=channel_identifier,
                 )
@@ -1332,25 +1307,18 @@ class TokenNetwork:
                     if partner_recovered_address != partner:
                         raise RaidenUnrecoverableError("Invalid withdraw partner signature")
 
-            log_details = {
-                "node": to_checksum_address(participant),
-                "contract": to_checksum_address(self.address),
-                "participant": to_checksum_address(participant),
-                "partner": to_checksum_address(partner),
-                "total_withdraw": total_withdraw,
-            }
+            log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-            with log_transaction(log, "set_total_withdraw", log_details):
-                self._set_total_withdraw(
-                    channel_identifier=channel_identifier,
-                    total_withdraw=total_withdraw,
-                    expiration_block=expiration_block,
-                    participant=participant,
-                    partner=partner,
-                    partner_signature=partner_signature,
-                    participant_signature=participant_signature,
-                    log_details=log_details,
-                )
+            self._set_total_withdraw(
+                channel_identifier=channel_identifier,
+                total_withdraw=total_withdraw,
+                expiration_block=expiration_block,
+                participant=participant,
+                partner=partner,
+                partner_signature=partner_signature,
+                participant_signature=participant_signature,
+                log_details=log_details,
+            )
 
     def _set_total_withdraw(
         self,
@@ -1363,11 +1331,11 @@ class TokenNetwork:
         participant_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
 
-        gas_limit = self.proxy.estimate_gas(
-            checking_block,
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
             "setTotalWithdraw",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             participant=participant,
             total_withdraw=total_withdraw,
@@ -1376,44 +1344,27 @@ class TokenNetwork:
             participant_signature=participant_signature,
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"]
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
             )
-            log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
-                function_name="setTotalWithdraw",
-                startgas=gas_limit,
-                channel_identifier=channel_identifier,
-                participant=participant,
-                total_withdraw=total_withdraw,
-                expiration_block=expiration_block,
-                partner_signature=partner_signature,
-                participant_signature=participant_signature,
-            )
-            receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was open.
                 # - The total withdraw amount increased.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
-                    msg = (
-                        f"update transfer failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"update transfer, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                check_transaction_failure(transaction_mined, self.client)
 
                 # Query the current state to check for transaction races
                 detail = self._detail_channel(
@@ -1479,11 +1430,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="total_withdraw",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements["TokenNetwork.setTotalWithdraw"],
@@ -1529,7 +1480,10 @@ class TokenNetwork:
             if total_withdraw_done:
                 raise RaidenRecoverableError("Requested total withdraw was already performed")
 
-            raise RaidenUnrecoverableError("setTotalWithdraw failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                f"setTotalWithdraw gas estimation failed for an unknown reason. "
+                f"Reference block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def close(
         self,
@@ -1540,7 +1494,7 @@ class TokenNetwork:
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
         closing_signature: Signature,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         """ Close the channel using the provided balance proof.
 
@@ -1559,7 +1513,7 @@ class TokenNetwork:
         """
 
         canonical_identifier = CanonicalIdentifier(
-            chain_identifier=self.proxy.contract.functions.chain_id().call(),
+            chain_identifier=self.proxy.functions.chain_id().call(),
             token_network_address=self.address,
             channel_identifier=channel_identifier,
         )
@@ -1623,7 +1577,7 @@ class TokenNetwork:
             if onchain_channel_identifier != channel_identifier:
                 msg = (
                     f"The provided channel identifier does not match the value "
-                    f"on-chain at the provided block ({given_block_identifier}). "
+                    f"on-chain at the provided block ({format_block_id(given_block_identifier)}). "
                     f"This call should never have been attempted. "
                     f"provided_channel_identifier={channel_identifier}, "
                     f"onchain_channel_identifier={channel_onchain_detail.channel_identifier}"
@@ -1633,33 +1587,23 @@ class TokenNetwork:
             if channel_onchain_detail.state != ChannelState.OPENED:
                 msg = (
                     f"The channel was not open at the provided block "
-                    f"({given_block_identifier}). This call should never have "
+                    f"({format_block_id(given_block_identifier)}). This call should never have "
                     f"been attempted."
                 )
                 raise RaidenUnrecoverableError(msg)
 
-        log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "partner": to_checksum_address(partner),
-            "nonce": nonce,
-            "balance_hash": encode_hex(balance_hash),
-            "additional_hash": encode_hex(additional_hash),
-            "non_closing_signature": encode_hex(non_closing_signature),
-            "closing_signature": encode_hex(closing_signature),
-        }
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-        with log_transaction(log, "close", log_details):
-            self._close(
-                channel_identifier=channel_identifier,
-                partner=partner,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                non_closing_signature=non_closing_signature,
-                closing_signature=closing_signature,
-                log_details=log_details,
-            )
+        self._close(
+            channel_identifier=channel_identifier,
+            partner=partner,
+            balance_hash=balance_hash,
+            nonce=nonce,
+            additional_hash=additional_hash,
+            non_closing_signature=non_closing_signature,
+            closing_signature=closing_signature,
+            log_details=log_details,
+        )
 
     def _close(
         self,
@@ -1675,10 +1619,10 @@ class TokenNetwork:
         # `channel_operations_lock` is used to serialize conflicting channel
         # operations. E.g. this close and a deposit or withdraw.
         with self.channel_operations_lock[partner]:
-            checking_block = self.client.get_checking_block()
-            gas_limit = self.proxy.estimate_gas(
-                checking_block,
+            estimated_transaction = self.client.estimate_gas(
+                self.proxy,
                 "closeChannel",
+                extra_log_details=log_details,
                 channel_identifier=channel_identifier,
                 non_closing_participant=partner,
                 closing_participant=self.node_address,
@@ -1689,27 +1633,16 @@ class TokenNetwork:
                 closing_signature=closing_signature,
             )
 
-            if gas_limit:
-                gas_limit = safe_gas_limit(
-                    gas_limit, self.metadata.gas_measurements["TokenNetwork.closeChannel"]
+            if estimated_transaction is not None:
+                estimated_transaction.estimated_gas = safe_gas_limit(
+                    estimated_transaction.estimated_gas,
+                    self.metadata.gas_measurements["TokenNetwork.closeChannel"],
                 )
-                log_details["gas_limit"] = gas_limit
-                transaction_hash = self.proxy.transact(
-                    "closeChannel",
-                    gas_limit,
-                    channel_identifier=channel_identifier,
-                    non_closing_participant=partner,
-                    closing_participant=self.node_address,
-                    balance_hash=balance_hash,
-                    nonce=nonce,
-                    additional_hash=additional_hash,
-                    non_closing_signature=non_closing_signature,
-                    closing_signature=closing_signature,
-                )
-                receipt = self.client.poll(transaction_hash)
-                failed_receipt = check_transaction_threw(receipt=receipt)
+                transaction_sent = self.client.transact(estimated_transaction)
+                transaction_mined = self.client.poll_transaction(transaction_sent)
 
-                if failed_receipt:
+                if not was_transaction_successfully_mined(transaction_mined):
+                    receipt = transaction_mined.receipt
                     # Because the gas estimation succeeded it is known that:
                     # - The channel existed.
                     # - The channel was at the state open.
@@ -1723,16 +1656,9 @@ class TokenNetwork:
 
                     # These checks do not have problems with race conditions because
                     # `poll`ing waits for the transaction to be confirmed.
-                    mining_block = failed_receipt["blockNumber"]
+                    mining_block = BlockNumber(receipt["blockNumber"])
 
-                    if failed_receipt["cumulativeGasUsed"] == gas_limit:
-                        msg = (
-                            "update transfer failed and all gas was used. Estimate gas "
-                            "may have underestimated update transfer, or succeeded even "
-                            "though an assert is triggered, or the smart contract code "
-                            "has an conditional assert."
-                        )
-                        raise RaidenUnrecoverableError(msg)
+                    check_transaction_failure(transaction_mined, self.client)
 
                     partner_details = self._detail_participant(
                         channel_identifier=channel_identifier,
@@ -1752,11 +1678,11 @@ class TokenNetwork:
 
                 # The latest block can not be used reliably because of reorgs,
                 # therefore every call using this block has to handle pruned data.
-                failed_at = self.proxy.rpc_client.get_block("latest")
+                failed_at = self.client.get_block(BLOCK_ID_LATEST)
                 failed_at_blockhash = encode_hex(failed_at["hash"])
                 failed_at_blocknumber = failed_at["number"]
 
-                self.proxy.rpc_client.check_for_insufficient_eth(
+                self.client.check_for_insufficient_eth(
                     transaction_name="closeChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.closeChannel"],
@@ -1784,7 +1710,11 @@ class TokenNetwork:
                     )
                     raise RaidenRecoverableError(msg)
 
-                raise RaidenUnrecoverableError("close channel failed for an unknown reason")
+                raise RaidenUnrecoverableError(
+                    f"close channel gas estimation failed for an unknown "
+                    f"reason. Reference block {failed_at_blockhash} "
+                    f"{failed_at_blocknumber}."
+                )
 
     def update_transfer(
         self,
@@ -1795,16 +1725,16 @@ class TokenNetwork:
         additional_hash: AdditionalHash,
         closing_signature: Signature,
         non_closing_signature: Signature,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
-        if balance_hash is EMPTY_HASH:
+        if balance_hash is EMPTY_BALANCE_HASH:
             raise RaidenUnrecoverableError("update_transfer called with an empty balance_hash")
 
         if nonce <= 0 or nonce > UINT256_MAX:
             raise RaidenUnrecoverableError("update_transfer called with an invalid nonce")
 
         canonical_identifier = CanonicalIdentifier(
-            chain_identifier=self.proxy.contract.functions.chain_id().call(),
+            chain_identifier=self.proxy.functions.chain_id().call(),
             token_network_address=self.address,
             channel_identifier=channel_identifier,
         )
@@ -1881,7 +1811,7 @@ class TokenNetwork:
             if channel_onchain_detail.state != ChannelState.CLOSED:
                 msg = (
                     f"The channel was not closed at the provided block "
-                    f"({given_block_identifier}). This call should never have "
+                    f"({format_block_id(given_block_identifier)}). This call should never have "
                     f"been attempted."
                 )
                 raise RaidenUnrecoverableError(msg)
@@ -1900,28 +1830,18 @@ class TokenNetwork:
                 )
                 raise RaidenRecoverableError(msg)
 
-        log_details = {
-            "contract": to_checksum_address(self.address),
-            "node": to_checksum_address(self.node_address),
-            "partner": to_checksum_address(partner),
-            "nonce": nonce,
-            "balance_hash": encode_hex(balance_hash),
-            "additional_hash": encode_hex(additional_hash),
-            "closing_signature": encode_hex(closing_signature),
-            "non_closing_signature": encode_hex(non_closing_signature),
-        }
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-        with log_transaction(log, "update_transfer", log_details):
-            self._update_transfer(
-                channel_identifier=channel_identifier,
-                partner=partner,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                closing_signature=closing_signature,
-                non_closing_signature=non_closing_signature,
-                log_details=log_details,
-            )
+        self._update_transfer(
+            channel_identifier=channel_identifier,
+            partner=partner,
+            balance_hash=balance_hash,
+            nonce=nonce,
+            additional_hash=additional_hash,
+            closing_signature=closing_signature,
+            non_closing_signature=non_closing_signature,
+            log_details=log_details,
+        )
 
     def _update_transfer(
         self,
@@ -1934,10 +1854,10 @@ class TokenNetwork:
         non_closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
-            checking_block,
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
             "updateNonClosingBalanceProof",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             closing_participant=partner,
             non_closing_participant=self.node_address,
@@ -1948,29 +1868,16 @@ class TokenNetwork:
             non_closing_signature=non_closing_signature,
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit,
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
                 self.metadata.gas_measurements["TokenNetwork.updateNonClosingBalanceProof"],
             )
-            log_details["gas_limit"] = gas_limit
-            transaction_hash = self.proxy.transact(
-                "updateNonClosingBalanceProof",
-                gas_limit,
-                channel_identifier=channel_identifier,
-                closing_participant=partner,
-                non_closing_participant=self.node_address,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                closing_signature=closing_signature,
-                non_closing_signature=non_closing_signature,
-            )
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
-
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
                 # Because the gas estimation succeeded it is known that:
                 # - The channel existed.
                 # - The channel was at the state closed.
@@ -1980,16 +1887,9 @@ class TokenNetwork:
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
-                mining_block = failed_receipt["blockNumber"]
+                mining_block = BlockNumber(receipt["blockNumber"])
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
-                    msg = (
-                        "update transfer failed and all gas was used. Estimate gas "
-                        "may have underestimated update transfer, or succeeded even "
-                        "though an assert is triggered, or the smart contract code "
-                        "has an conditional assert."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                check_transaction_failure(transaction_mined, self.client)
 
                 # Query the current state to check for transaction races
                 channel_data = self._detail_channel(
@@ -2068,11 +1968,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="updateNonClosingBalanceProof",
                 transaction_executed=False,
                 required_gas=self.metadata.gas_measurements[
@@ -2121,7 +2021,10 @@ class TokenNetwork:
                     "update_transfer cannot be sent if the partner did not close the channel"
                 )
 
-            raise RaidenUnrecoverableError("update_transfer failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                f"update_transfer gas estimation failed for an unknown reason. "
+                f"Reference block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def unlock(
         self,
@@ -2129,7 +2032,7 @@ class TokenNetwork:
         sender: Address,
         receiver: Address,
         pending_locks: PendingLocksState,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         if not pending_locks:
             raise ValueError("unlock cannot be done without pending locks")
@@ -2159,8 +2062,8 @@ class TokenNetwork:
             if channel_onchain_detail.state != ChannelState.SETTLED:
                 msg = (
                     f"The channel was not settled at the provided block "
-                    f"({given_block_identifier}). This call should never have "
-                    f"been attempted."
+                    f"({format_block_id(given_block_identifier)}). This call "
+                    f"should never have been attempted."
                 )
                 raise RaidenUnrecoverableError(msg)
 
@@ -2184,22 +2087,18 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError(msg)
 
         log_details = {
-            "node": to_checksum_address(self.node_address),
-            "contract": to_checksum_address(self.address),
-            "sender": to_checksum_address(sender),
-            "receiver": to_checksum_address(receiver),
             "pending_locks": pending_locks,
+            "given_block_identifier": format_block_id(given_block_identifier),
         }
 
-        with log_transaction(log, "unlock", log_details):
-            self._unlock(
-                channel_identifier=channel_identifier,
-                sender=sender,
-                receiver=receiver,
-                pending_locks=pending_locks,
-                given_block_identifier=given_block_identifier,
-                log_details=log_details,
-            )
+        self._unlock(
+            channel_identifier=channel_identifier,
+            sender=sender,
+            receiver=receiver,
+            pending_locks=pending_locks,
+            given_block_identifier=given_block_identifier,
+            log_details=log_details,
+        )
 
     def _unlock(
         self,
@@ -2207,52 +2106,36 @@ class TokenNetwork:
         sender: Address,
         receiver: Address,
         pending_locks: PendingLocksState,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         leaves_packed = b"".join(pending_locks.locks)
-        gas_limit = self.proxy.estimate_gas(
-            checking_block,
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
             "unlock",
+            extra_log_details=log_details,
             channel_identifier=channel_identifier,
             receiver=receiver,
             sender=sender,
             locks=encode_hex(leaves_packed),
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
-            log_details["gas_limit"] = gas_limit
-
-            transaction_hash = self.proxy.transact(
-                function_name="unlock",
-                startgas=gas_limit,
-                channel_identifier=channel_identifier,
-                receiver=receiver,
-                sender=sender,
-                locks=leaves_packed,
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas, UNLOCK_TX_GAS_LIMIT
             )
 
-            receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if failed_receipt:
+            if not was_transaction_successfully_mined(transaction_mined):
                 # Because the gas estimation succeeded it is known that:
                 # - The channel was settled.
                 # - The channel had pending locks on-chain for that participant.
                 # - The account had enough balance to pay for the gas (however
                 #   there is a race condition for multiple transactions #3890)
 
-                if failed_receipt["cumulativeGasUsed"] == gas_limit:
-                    msg = (
-                        f"Unlock failed and all gas was used "
-                        f"({gas_limit}). Estimate gas may have underestimated "
-                        f"unlock, or succeeded even though an assert is "
-                        f"triggered, or the smart contract code has an "
-                        f"conditional assert."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                check_transaction_failure(transaction_mined, self.client)
 
                 # Query the current state to check for transaction races
                 sender_details = self._detail_participant(
@@ -2272,11 +2155,11 @@ class TokenNetwork:
 
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
-            self.proxy.rpc_client.check_for_insufficient_eth(
+            self.client.check_for_insufficient_eth(
                 transaction_name="unlock",
                 transaction_executed=False,
                 required_gas=UNLOCK_TX_GAS_LIMIT,
@@ -2306,19 +2189,22 @@ class TokenNetwork:
             if is_unlock_done:
                 raise RaidenRecoverableError("The locks are already unlocked ")
 
-            raise RaidenUnrecoverableError("unlock failed for an unknown reason")
+            raise RaidenUnrecoverableError(
+                f"unlock estimation failed for an unknown reason. Reference "
+                f"block {failed_at_blockhash} {failed_at_blocknumber}."
+            )
 
     def settle(
         self,
         channel_identifier: ChannelID,
         transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
+        locked_amount: LockedAmount,
         locksroot: Locksroot,
         partner: Address,
         partner_transferred_amount: TokenAmount,
-        partner_locked_amount: TokenAmount,
+        partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         # `channel_operations_lock` is used to serialize conflicting channel
         # operations. E.g. this settle and a channel open.
@@ -2368,8 +2254,8 @@ class TokenNetwork:
                 if channel_onchain_detail.state != ChannelState.CLOSED:
                     msg = (
                         f"The channel was not closed at the provided block "
-                        f"({given_block_identifier}). This call should never have "
-                        f"been attempted."
+                        f"({format_block_id(given_block_identifier)}). This call "
+                        f"should never have been attempted."
                     )
                     raise BrokenPreconditionError(msg)
 
@@ -2392,45 +2278,31 @@ class TokenNetwork:
                     msg = "Partner balance hash does not match the on-chain value"
                     raise BrokenPreconditionError(msg)
 
-            log_details = {
-                "channel_identifier": channel_identifier,
-                "contract": to_checksum_address(self.address),
-                "node": to_checksum_address(self.node_address),
-                "our_address": to_checksum_address(self.node_address),
-                "transferred_amount": transferred_amount,
-                "locked_amount": locked_amount,
-                "locksroot": encode_hex(locksroot),
-                "partner": to_checksum_address(partner),
-                "partner_transferred_amount": partner_transferred_amount,
-                "partner_locked_amount": partner_locked_amount,
-                "partner_locksroot": encode_hex(partner_locksroot),
-            }
-            with log_transaction(log, "settle", log_details):
-                self._settle(
-                    channel_identifier=channel_identifier,
-                    transferred_amount=transferred_amount,
-                    locked_amount=locked_amount,
-                    locksroot=locksroot,
-                    partner=partner,
-                    partner_transferred_amount=partner_transferred_amount,
-                    partner_locked_amount=partner_locked_amount,
-                    partner_locksroot=partner_locksroot,
-                    log_details=log_details,
-                )
+            log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
+            self._settle(
+                channel_identifier=channel_identifier,
+                transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
+                locksroot=locksroot,
+                partner=partner,
+                partner_transferred_amount=partner_transferred_amount,
+                partner_locked_amount=partner_locked_amount,
+                partner_locksroot=partner_locksroot,
+                log_details=log_details,
+            )
 
     def _settle(
         self,
         channel_identifier: ChannelID,
         transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
+        locked_amount: LockedAmount,
         locksroot: Locksroot,
         partner: Address,
         partner_transferred_amount: TokenAmount,
-        partner_locked_amount: TokenAmount,
+        partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
 
         # The second participant transferred + locked amount must be higher
         our_maximum = transferred_amount + locked_amount
@@ -2459,30 +2331,29 @@ class TokenNetwork:
                 "participant2_locksroot": partner_locksroot,
             }
 
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "settleChannel", channel_identifier=channel_identifier, **kwargs
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
+            "settleChannel",
+            extra_log_details=log_details,
+            channel_identifier=channel_identifier,
+            **kwargs,
         )
 
-        if gas_limit:
-            gas_limit = safe_gas_limit(
-                gas_limit, self.metadata.gas_measurements["TokenNetwork.settleChannel"]
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.settleChannel"],
             )
-            log_details["gas_limit"] = gas_limit
 
-            transaction_hash = self.proxy.transact(
-                function_name="settleChannel",
-                startgas=gas_limit,
-                channel_identifier=channel_identifier,
-                **kwargs,
-            )
-            receipt = self.client.poll(transaction_hash)
-            failed_receipt = check_transaction_threw(receipt=receipt)
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
 
-            if failed_receipt:
-                failed_at_blockhash = encode_hex(failed_receipt["blockHash"])
-                failed_at_blocknumber = failed_receipt["blockNumber"]
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
 
-                self.proxy.rpc_client.check_for_insufficient_eth(
+                self.client.check_for_insufficient_eth(
                     transaction_name="settleChannel",
                     transaction_executed=True,
                     required_gas=self.metadata.gas_measurements["TokenNetwork.settleChannel"],
@@ -2519,25 +2390,11 @@ class TokenNetwork:
                     locksroot=partner_locksroot,
                 )
 
-                participants = get_channel_participants_from_open_event(
-                    token_network=self,
-                    channel_identifier=channel_identifier,
-                    contract_manager=self.contract_manager,
-                    from_block=self.metadata.filters_start_at,
-                )
-                if not participants:
-                    msg = (
-                        f"The provided channel identifier {channel_identifier} "
-                        f"does not exist on-chain."
-                    )
-                    raise RaidenUnrecoverableError(msg)
-
-                if self.node_address not in participants:
-                    msg = (
-                        f"Settling a channel in which the current node is not a participant "
-                        f"of is not allowed."
-                    )
-                    raise RaidenUnrecoverableError(msg)
+                # The channel_identifier and the address of the participants
+                # can not be verified because querying for the open event would
+                # take prohibitively long (see #6106). Instead it is assumed that
+                # if there is a local ChannelState instance it is properly
+                # validated and the data is confirmed.
 
                 if channel_onchain_detail.state in (ChannelState.SETTLED, ChannelState.REMOVED):
                     raise RaidenRecoverableError("Channel is already settled")
@@ -2569,7 +2426,7 @@ class TokenNetwork:
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
-            failed_at = self.proxy.rpc_client.get_block("latest")
+            failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blockhash = encode_hex(failed_at["hash"])
             failed_at_blocknumber = failed_at["number"]
 
@@ -2603,25 +2460,11 @@ class TokenNetwork:
                 locksroot=partner_locksroot,
             )
 
-            participants = get_channel_participants_from_open_event(
-                token_network=self,
-                channel_identifier=channel_identifier,
-                contract_manager=self.contract_manager,
-                from_block=self.metadata.filters_start_at,
-            )
-            if not participants:
-                msg = (
-                    f"The provided channel identifier {channel_identifier} "
-                    f"does not exist on-chain."
-                )
-                raise RaidenUnrecoverableError(msg)
-
-            if self.node_address not in participants:
-                msg = (
-                    f"Settling a channel in which the current node is not a participant "
-                    f"of is not allowed."
-                )
-                raise RaidenUnrecoverableError(msg)
+            # The channel_identifier and the address of the participants
+            # can not be verified because querying for the open event would
+            # take prohibitively long (see #6106). Instead it is assumed that
+            # if there is a local ChannelState instance it is properly
+            # validated and the data is confirmed.
 
             if channel_onchain_detail.state in (ChannelState.SETTLED, ChannelState.REMOVED):
                 raise RaidenRecoverableError("Channel is already settled")
@@ -2649,18 +2492,7 @@ class TokenNetwork:
                 msg = "Partner balance hash does not match the on-chain value"
                 raise RaidenUnrecoverableError(msg)
 
-            raise RaidenRecoverableError("Settle failed for an unknown reason")
-
-    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
-        """ Install a new filter for all the events emitted by the current token network contract
-
-        Args:
-            from_block: Create filter starting from this block number (default: 0).
-            to_block: Create filter stopping at this block number (default: 'latest').
-
-        Return:
-            The filter instance.
-        """
-        return self.client.new_filter(
-            contract_address=Address(self.address), topics=None, from_block=from_block
-        )
+            raise RaidenRecoverableError(
+                f"Settle gas estimation failed for an unknown reason. Reference "
+                f"block {failed_at_blockhash} {failed_at_blocknumber}."
+            )

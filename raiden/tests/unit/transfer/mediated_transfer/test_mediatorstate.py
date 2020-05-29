@@ -1,6 +1,5 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
-from copy import deepcopy
 from dataclasses import replace
 from typing import List, Optional, Tuple
 
@@ -56,11 +55,11 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
     SendSecretReveal,
+    SendUnlock,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import (
     FeeScheduleState,
@@ -93,7 +92,8 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ReceiveUnlock,
 )
-from raiden.utils import random_secret
+from raiden.utils.copy import deepcopy
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import BlockExpiration, BlockNumber, FeeAmount, TokenAmount
 
 
@@ -471,7 +471,7 @@ def test_events_for_balanceproof():
     )
     assert search_for_item(
         events,
-        SendBalanceProof,
+        SendUnlock,
         {
             "recipient": last_pair.payee_address,
             "message_identifier": msg_identifier,
@@ -552,7 +552,7 @@ def test_events_for_balanceproof_middle_secret():
         UNIT_SECRETHASH,
     )
 
-    assert search_for_item(events, SendBalanceProof, {"recipient": middle_pair.payee_address})
+    assert search_for_item(events, SendUnlock, {"recipient": middle_pair.payee_address})
     assert search_for_item(events, EventUnlockSuccess, {})
     assert middle_pair.payee_state == "payee_balance_proof"
 
@@ -750,7 +750,7 @@ def test_secret_learned():
     assert transfer_pair.payer_state == "payer_secret_revealed"
 
     assert search_for_item(iteration.events, SendSecretReveal, {})
-    assert search_for_item(iteration.events, SendBalanceProof, {})
+    assert search_for_item(iteration.events, SendUnlock, {})
 
 
 def test_secret_learned_with_refund():
@@ -1728,7 +1728,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     )
 
     # Mediator should NOT send balance proof
-    assert search_for_item(iteration.events, SendBalanceProof, {}) is None
+    assert search_for_item(iteration.events, SendUnlock, {}) is None
 
     # Make sure the lock was moved
     payer_channel, payee_channel = channels[0], channels[1]

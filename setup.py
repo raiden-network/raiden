@@ -57,7 +57,7 @@ with open("requirements/requirements.txt") as req_file:
 test_requirements: List[str] = []
 
 # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
-version = "0.200.0-rc2"
+version = "1.0.0"
 
 setup(
     name="raiden",
@@ -70,6 +70,7 @@ setup(
     package_data={"raiden": ["py.typed"]},
     license="MIT",
     zip_safe=False,
+    include_package_data=True,
     long_description_content_type="text/markdown",
     keywords="raiden",
     classifiers=[

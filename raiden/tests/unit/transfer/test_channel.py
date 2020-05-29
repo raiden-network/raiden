@@ -1,7 +1,8 @@
 import random
-from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
+
+from eth_utils import keccak
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
@@ -28,7 +29,7 @@ from raiden.transfer.channel import (
     set_settled,
     update_fee_schedule_after_balance_change,
 )
-from raiden.transfer.events import EventInvalidActionSetRevealTimeout, SendPFSFeeUpdate
+from raiden.transfer.events import EventInvalidActionSetRevealTimeout
 from raiden.transfer.state import (
     ChannelState,
     HashTimeLockState,
@@ -42,7 +43,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
 )
-from raiden.utils import sha3
+from raiden.utils.copy import deepcopy
 from raiden.utils.mediation_fees import prepare_mediation_fee_config
 from raiden.utils.typing import BlockExpiration, TokenAmount
 
@@ -52,7 +53,7 @@ def _channel_and_transfer(num_pending_locks):
     partner_model, privkey = create_model(700, num_pending_locks)
     reverse_channel_state = create_channel_from_models(partner_model, our_model, privkey)
 
-    lock_secret = sha3(b"some secret seed")
+    lock_secret = keccak(b"some secret seed")
     lock = HashTimeLockState(30, 10, sha256(lock_secret).digest())
 
     mediated_transfer = make_receive_transfer_mediated(
@@ -284,8 +285,8 @@ def test_is_valid_balanceproof_signature():
 def test_get_secret():
     secret1 = factories.make_secret()
     secret2 = factories.make_secret()
-    secrethash3 = factories.make_keccak_hash()
-    secrethash4 = factories.make_keccak_hash()
+    secrethash3 = factories.make_secret_hash()
+    secrethash4 = factories.make_secret_hash()
 
     lock_state = HashTimeLockState(amount=10, expiration=10, secrethash=factories.UNIT_SECRETHASH)
     end_state = factories.create(factories.NettingChannelEndStateProperties())
@@ -293,15 +294,15 @@ def test_get_secret():
         end_state,
         secrethashes_to_lockedlocks={secrethash3: lock_state},
         secrethashes_to_unlockedlocks={
-            sha3(secret1): UnlockPartialProofState(lock=lock_state, secret=secret1)
+            keccak(secret1): UnlockPartialProofState(lock=lock_state, secret=secret1)
         },
         secrethashes_to_onchain_unlockedlocks={
-            sha3(secret2): UnlockPartialProofState(lock=lock_state, secret=secret2)
+            keccak(secret2): UnlockPartialProofState(lock=lock_state, secret=secret2)
         },
     )
 
-    assert get_secret(end_state, sha3(secret1)) == secret1  # known secret from offchain unlock
-    assert get_secret(end_state, sha3(secret2)) == secret2  # known secret from offchain unlock
+    assert get_secret(end_state, keccak(secret1)) == secret1  # known secret from offchain unlock
+    assert get_secret(end_state, keccak(secret2)) == secret2  # known secret from offchain unlock
     assert get_secret(end_state, secrethash3) is None  # known lock but not unlocked yet
     assert get_secret(end_state, secrethash4) is None  # unknown secrethash
 
@@ -351,25 +352,25 @@ def test_get_batch_unlock_gain():
     channel_state.our_state = replace(
         channel_state.our_state,
         secrethashes_to_lockedlocks={
-            factories.make_keccak_hash(): make_hash_time_lock_state(1),
-            factories.make_keccak_hash(): make_hash_time_lock_state(2),
+            factories.make_secret_hash(): make_hash_time_lock_state(1),
+            factories.make_secret_hash(): make_hash_time_lock_state(2),
         },
         secrethashes_to_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(4)
+            factories.make_secret_hash(): make_unlock_partial_proof_state(4)
         },
         secrethashes_to_onchain_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(8)
+            factories.make_secret_hash(): make_unlock_partial_proof_state(8)
         },
     )
     channel_state.partner_state = replace(
         channel_state.partner_state,
-        secrethashes_to_lockedlocks={factories.make_keccak_hash(): make_hash_time_lock_state(16)},
+        secrethashes_to_lockedlocks={factories.make_secret_hash(): make_hash_time_lock_state(16)},
         secrethashes_to_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(32)
+            factories.make_secret_hash(): make_unlock_partial_proof_state(32)
         },
         secrethashes_to_onchain_unlockedlocks={
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(64),
-            factories.make_keccak_hash(): make_unlock_partial_proof_state(128),
+            factories.make_secret_hash(): make_unlock_partial_proof_state(64),
+            factories.make_secret_hash(): make_unlock_partial_proof_state(128),
         },
     )
     unlock_gain = get_batch_unlock_gain(channel_state)
@@ -438,8 +439,7 @@ def test_update_fee_schedule_after_balance_change():
         cli_token_to_proportional_imbalance_fee=((channel_state.token_address, 50_000),),  # 5%
         cli_cap_mediation_fees=True,
     )
-    events = update_fee_schedule_after_balance_change(channel_state, fee_config)
-    assert isinstance(events[0], SendPFSFeeUpdate)
+    update_fee_schedule_after_balance_change(channel_state, fee_config)
     assert channel_state.fee_schedule.imbalance_penalty[0] == (0, 5)
 
 

@@ -4,6 +4,7 @@ import os
 import pytest
 import structlog
 
+from raiden.exceptions import ConfigurationError
 from raiden.log_config import LogFilter, configure_logging
 
 
@@ -103,6 +104,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
         {module: level},
         disable_debug_logfile=disabled_debug,
         debug_log_file_path=str(tmpdir / "raiden-debug.log"),
+        colorize=False,
     )
     log = structlog.get_logger(logger).bind(foo="bar")
     log.debug("test event", key="value")
@@ -120,7 +122,7 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
 
 def test_debug_logfile_invalid_dir():
     """Test that providing an invalid directory for the debug logfile throws an error"""
-    with pytest.raises(SystemExit):
+    with pytest.raises(ConfigurationError):
         configure_logging(
             {"": "DEBUG"}, debug_log_file_path=os.path.join("notarealdir", "raiden-debug.log")
         )
@@ -139,30 +141,6 @@ def test_redacted_request(capsys, tmpdir):
 
     assert token not in captured.err
     assert "access_token=<redacted>" in captured.err
-
-
-def test_redacted_state_change(capsys, tmpdir):
-    configure_logging({"": "DEBUG"}, debug_log_file_path=str(tmpdir / "raiden-debug.log"))
-    auth_token = (
-        "MDAxZGxvY2F0aW9uIGxvY2FsaG9zdDo2NDAzMwowMDEzaWRlbnRpZmllciBrZXkKMDAxMGNpZCBnZW4gPSAxCjAwN"
-        "GVjaWQgdXNlcl9pZCA9IEAweDYyNjRkYThmMmViOGQ4MDM3NjM2OTEwYzFlYzAzODA0MzhmNGVmZWU6bG9jYWxob3"
-        "N0OjY0MDMzCjAwMTZjaWQgdHlwZSA9IGFjY2VzcwowMDIxY2lkIG5vbmNlID0gSlhjfjI4YVA9clZmbzZUSQowMDJ"
-        "mc2lnbmF0dXJlIKQ1WCUJ-1Mv6rN6yjnb2w5R2BqH7iew7RwFiKuMcYosCg"
-    )
-    auth_user = "@0x0123456789abcdef0123456789abcdef01234567:localhost:64033"
-    state_changes = [
-        {
-            "auth_data": f"{auth_user}/{auth_token}",
-            "_type": "raiden.transfer.state_change.ActionUpdateTransportAuthData",
-        }
-    ]
-    log = structlog.get_logger("raiden.raiden_service")
-    log.debug("State changes", state_changes=state_changes)
-
-    captured = capsys.readouterr()
-
-    assert auth_token not in captured.err
-    assert f"{auth_user}/<redacted>" in captured.err
 
 
 def test_that_secret_is_redacted(capsys, tmpdir):

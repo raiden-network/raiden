@@ -1,5 +1,5 @@
 System Requirements and Installation Guide
-##################################################
+##########################################
 .. toctree::
   :maxdepth: 2
 
@@ -14,15 +14,25 @@ Installation
 
 To install Raiden you can either:
 
-    * Use the `Raiden Wizard <https://docs.raiden.network/quick-start/>`_
+    * Use the Raiden Wizard
     * Download a self contained application bundle from the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_
+    * Use pip or, on macOS, homebrew
+    * Run a raiden docker image
 
-**If you're installing Raiden from the self contained application bundle the following sections will detail how to set up Raiden on various platforms.**
+Below we will give details on how to use the self contained application bundles on different platforms, as well as the other installation methods.
+
+Installation via Raiden Wizard
+******************************
+
+See the `Raiden Wizard documentation <https://docs.raiden.network/quick-start/>`_.
+
+Installation from GitHub
+************************
 
 Linux
-*****
+~~~~~
 
-Download the latest :code:`raiden-<version>-linux-x86_64.tar.gz`, and extract it::
+`Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-linux-x86_64.tar.gz`, and extract it::
 
     tar -xvzf raiden-<version>-linux-x86_64.tar.gz
 
@@ -30,12 +40,10 @@ The Raiden binary should work on most 64bit GNU/Linux distributions without any 
 than an Ethereum client installed in your system (see below). The Raiden binary takes the same command line
 arguments as the ``raiden`` script.
 
-Raiden is also available as a PyPi package and can be installed with ``pip install raiden``.
-
 macOS
-*****
+~~~~~
 
-Download the latest :code:`raiden-<version>-macOS-x86_64.zip`, and extract it::
+`Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-macOS-x86_64.zip`, and extract it::
 
     unzip raiden-<version>-macOS-x86_64.zip
 
@@ -53,7 +61,7 @@ arguments as the ``raiden`` script.
 Raiden is also available as a PyPi package and can be installed with ``pip install raiden``.
 
 Raspberry Pi
-************
+~~~~~~~~~~~~
 
 `Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-linux-armv7l.tar.gz` or :code:`raiden-<version>-linux-aarch64.tar.gz` for the respective Raspberry Pi Model and extract it::
 
@@ -66,8 +74,8 @@ An Ethereum client is required in both cases. The Raiden binary takes the same c
 arguments as the ``raiden`` script.
 
 
-PIP
-***
+Installation using pip
+**********************
 
 To get the latest available stable version via `pip`::
 
@@ -77,8 +85,8 @@ If you'd like to give the pre-releases a spin, use pip's `--pre` flag::
 
     pip install --pre raiden
 
-Docker
-******
+Installation via Docker
+***********************
 
 There are two options to run a raiden docker image:
 
@@ -95,11 +103,11 @@ Other flags such as the JSON-RPC endpoint to an Ethereum node can easily be chai
 
 Dependencies
 ************
-You will need to have an Ethereum client installed in your system. Alternatively, you can skip
-the setup of an ethereum node and use the :ref:`--eth-rpc-endpoint <using_rpc-endpoint>` argument to remotely use an ethereum node of your choice.
+You will need a local or remote Ethereum node to connect Raiden to.
 
-- Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
-- Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for  the parity client.
+- Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ to install the go-ethereum client.
+- Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ to install the parity client.
+- Or sign up at a service like `Infura <https://infura.io>` to set up a remote node.
 
 Now you are ready :ref:`to get started <running_raiden>`.
 
@@ -167,14 +175,14 @@ Requirements for Safe Usage
 In order to use Raiden correctly and safely there are some things that need to be taken care of by the user:
 
 - **Layer 1 works reliably**: That means that you have a local Ethereum node, either geth or parity, that is always synced and working reliably. If there are any problems or bugs on the client then Raiden can not work reliably.
-- **Unique account for Raiden**: We need to have a specific Ethereum account dedicated to Raiden. Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour
+- **Dedicated account for Raiden**: We need to have a specific Ethereum account dedicated to Raiden. Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour
 - **Raiden account has sufficient ETH**: Raiden will try to warn you if there is not enough ETH in your Raiden account in order to maintain your current open channels and go through their entire cycle. But it is your job as the user to refill your account with ETH and always have it filled.
 - **Persistency of local DB**: Your local state database is located at ``~/.raiden``. This data should not be deleted by the user or tampered with in any way. Frequent backups are also recommended. Deleting this directory could mean losing funds.
-- **Raiden Always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the Raiden node crashes.
-- **Ethereum Client Always Online**: Make sure that your Ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
-- **Ethereum Client can not be changed**: Swapping the Ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching Ethereum clients once the Raiden node is running.
-- **Never expose the Raiden REST API to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
-- **"Wormhole Attack" is possible** When your Raiden node plays the role of a mediator, so-called "wormhole attack" is possible. Under this attack, even though the whole payment succeeds, your incoming and outgoing capacities will be locked until the expiration, and the attackers gain mediation fees. However, such an attacker can also avoid your node altogether, and avoid locking their capacities.
+- **Raiden always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the Raiden node crashes.
+- **Ethereum client always online**: Make sure that your Ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
+- **Ethereum client is not changed**: Swapping the Ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching Ethereum clients once the Raiden node is running.
+- **Raiden REST API is never exposed to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
+- **"Wormhole Attack" is possible**: When your Raiden node plays the role of a mediator, a so-called "wormhole attack" is possible. Under this attack, even though the whole payment succeeds, your incoming and outgoing capacities will be locked until the expiration, and the attackers gain mediation fees. However, such an attacker can also avoid your node altogether, and avoid locking their capacities.
 - **Be patient**: Do not mash buttons in the webUI and do not shut down the client while on-chain transactions are on the fly and have not yet been confirmed.
 
 Firing it up
@@ -183,7 +191,9 @@ Firing it up
 To fire up Raiden you need at least
  1. a synced **Ethereum Node** - using geth, parity or infura
  2. an **Ethereum keystore file** - whereas the address holds ETH, RDN, and the ERC20 token you want to transfer
- 3. the address of your favorite **pathfinding service** - local routing is possible but no recommended
+ 3. If you want to use :doc:`Raiden services <raiden_services>` that charge a fee, a deposit of RDN tokens to pay the services with.
+
+More about the Raiden services (pathfinding and monitoring service) will be explained below. On the testnets there are also free services available, and on any network it is possible (though not recommended) to use Raiden without Raiden services.
 
 We will provide you with the necessary cli arguments step by step. Full example is at the end of the page.
 
@@ -197,7 +207,7 @@ Run the Ethereum client and let it sync::
     geth --syncmode fast --rpc --rpcapi eth,net,web3
 
 .. note::
-    When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with ``--networkid`` directly.
+    When you want to use a testnet add one of the ``--testnet``, ``--rinkeby`` or ``--goerli`` flags or set the network id with ``--networkid`` directly.
 
 Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
 
@@ -227,20 +237,97 @@ After account creation, launch Raiden with the path of your keystore supplied::
 
 - **Using Infura**
 
+Sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden directly::
 
-In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://<network>.infura.io/v3/<yourToken>"
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>" --pathfinding-service-address $PFS_ADDRESS
-
-.. note::
-    When you want to use a testnet you need to update the URL of the infura endpoints, e.g. for the ropsten testnet use ``https://ropsten.infura.io/v3/<yourToken>``
+Where `<network>` can be mainnet, ropsten, etc.
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 
-3. The Pathfinding Address
-***************************
+3. Depositing tokens to pay the services
+****************************************
 
-Raiden provides a pathfinding service for efficient transfer routing. The default option when starting the client is with the pathfinding service to be paid in RDN tokens.
+To pay the services, you have to lock some of your Raiden tokens in the ``UserDeposit`` contract.
+Normally the Raiden Wizard or some other auxilliary scripts would do the contract interaction for you.
+In this section, we will briefly explain how it can be done manually so you are able to use Raiden without them.
+
+All services that are registered in the service registry of a given network will use one shared instance of ``UserDeposit``.
+You can obtain the address of the contract from
+
+    ``https://github.com/raiden-network/raiden-contracts/blob/master/raiden_contracts/data/deployment_services_<network>.json``
+
+where ``network`` is one of ``mainnet``, ``ropsten``, ``rinkeby`` or ``goerli``.
+
+As an example, suppose we want to run a Raiden node with address ``0x3040435D7F1012e861f0B0989422a47D1825F120`` on the mainnet
+and deposit 10 Raiden tokens (10**19 REI) for it to use. Here we use `MetaMask <https://metamask.io>`_ to access our wallet
+and the contract interface of `Etherscan <https://etherscan.io>`_ to do the transactions. Of course, you can also use another
+service or your own Ethereum node.
+
+We log into MetaMask with our account that holds the Raiden tokens (which should be a different account than the one we use with
+Raiden, as the latter is supposed to be used with Raiden only.) To find the ``UserDeposit`` contract, we take a look at ``deployment_services_mainnet.json``:
+
+.. code-block:: none
+
+    {
+        "contracts_version": null, "chain_id": 1,
+        (...)
+        "UserDeposit": {
+            "address": "0x53Cc1decDD7d452c8844a5f383e23AD479A1f614",
+            (...)
+
+
+We can then look up the contract address on Etherscan, and use Etherscan's "read/write contract" panels to interact with it.
+The Raiden token (RDN) can be searched by name on Etherscan, or we can look up its address in the ``UserDeposit`` contract's
+``token`` property. On the testnets, the token symbol is SVT (service token) rather than RDN and it may not be possible
+to find the token by name, but it can always be found in ``UserDeposit.token``.
+
+
+As usual with ERC-20 tokens, we need to call two contract functions:
+
+.. code-block:: none
+
+    approve(0x53Cc1decDD7d452c8844a5f383e23AD479A1f614, 10000000000000000000)
+
+on the RDN (or SVT) token contract, to allow the ``UserDeposit`` contract to move the 10 RDN, and
+
+.. code-block:: none
+
+    deposit(0x3040435D7F1012e861f0B0989422a47D1825F120, 10000000000000000000)
+
+on the ``UserDeposit`` contract.
+
+
+Optional CLI arguments
+======================
+
+There are further CLI arguments with which you can control, among other things
+
+ 1. The choice of a pathfinding service
+ 2. The choice of a monitoring service
+ 3. Logging
+
+1. Pathfinding service
+**********************
+
+A pathfinding service is a third party service helping your node with efficient transfer routing. It is usually paid in RDN tokens.
+
+Raiden can be configured to not use a pathfinding service and rely on its internal routing instead.
+This is discouraged since the node has less information about the network that it can use to find routes and compute fees.
+So transfers will be more likely to fail to route, and paid fees will often be unnecessarily high when internal routing is used.
+If you want to use internal routing anyway, you can do so with ``--routing-mode local``.
+
+.. note::
+    Although otherwise discouraged, ``--routing-mode local`` has to be used at the moment to try
+    out Raiden on the mainnet. The Raiden Service Bundle, with pathfinding service and registry,
+    will not be deployed on the mainnet until the Alderaan release.
+
+If you want to use a particular pathfinding service, e.g. one of the testnet pathfinding services given below, you can
+do so with ``--pathfinding-service-address <url>``. Otherwise Raiden will automatically pick one of the pathfinding
+services from the registry.
+
+The default setting for the pathfinding options is to use a pathfinding service and choose it automatically
+(``--routing-mode pfs --pathfinding-service-address auto``).
 
 There are pathfinding services running on every testnet at the moment, some that charge fees and some that are for free.
 
@@ -256,21 +343,17 @@ There are pathfinding services running on every testnet at the moment, some that
 | Rinkeby    | https://pfs-rinkeby-with-fee.services-dev.raiden.network | https://pfs-rinkeby.services-dev.raiden.network |
 +------------+----------------------------------------------------------+-------------------------------------------------+
 
-To start Raiden you need to provide a valid pathfinding service address, e.g. for Görli::
+For the mainnet we don't want to prefer and suggest specific pathfinding services.
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://goerli.infura.io/v3/<yourToken>" --pathfinding-service-address "https://pfs-goerli.services-dev.raiden.network"
+2. Monitoring service
+*********************
 
+A monitoring service watches a client's open channels while it is offline, and represents the client in case of settlement.
+Like the pathfinding service, it is paid in RDN tokens. If you want to use a monitoring service, use the option
+``--enable-monitoring`` and Raiden will automatically pick one from its service registry.
 
-Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface.
-
-
-Optional CLI arguments
-***************************
-
-In this section we will see how some optional CLI arguments work and what you can achieve by using them.
-
-Logging configuration
-~~~~~~~~~~~~~~~~~~~~~
+3. Logging configuration
+************************
 
 By default raiden keeps a "debug" log file so that people who have not configured logging but are facing problems can still provide us with some logs to debug their problems.
 
@@ -287,3 +370,8 @@ Finally by default the output of the logs are in plain readable text format. In 
 Summing up these are the arguments you need to append if you want to disable the debug log and want to configure normal logging for up to debug statement in json inside a file called ``raiden.log``
 
 ``--disable-debug-logfile --log-config ":debug" --log-file raiden.log --log-json``
+
+Further reading
+===============
+
+Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface, and a :doc:`Mainnet tutorial <alderaan_mainnet_tutorial>` for your first mainnet transfers via API.

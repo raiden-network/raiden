@@ -99,6 +99,7 @@ def events_for_unlock_lock(
     secret: Secret,
     secrethash: SecretHash,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> List[Event]:
     """ Unlocks the lock offchain, and emits the events for the successful payment. """
     # next hop learned the secret, unlock the token locally and send the
@@ -112,6 +113,7 @@ def events_for_unlock_lock(
         payment_identifier=transfer_description.payment_identifier,
         secret=secret,
         secrethash=secrethash,
+        block_number=block_number,
     )
 
     payment_sent_success = EventPaymentSentSuccess(
@@ -240,13 +242,9 @@ def try_new_route(
     )
 
     for reachable_route_state in reachable_route_states:
-        forward_channel_id = reachable_route_state.forward_channel_id
-
-        candidate_channel_state = forward_channel_id and channelidentifiers_to_channels.get(
-            forward_channel_id
-        )
-
-        assert isinstance(candidate_channel_state, NettingChannelState)
+        candidate_channel_state = channelidentifiers_to_channels[
+            reachable_route_state.forward_channel_id
+        ]
 
         amount_with_fee = calculate_safe_amount_with_fee(
             payment_amount=transfer_description.amount,
@@ -262,12 +260,12 @@ def try_new_route(
             route_fee_exceeds_max = True
             continue
 
-        is_channel_usable = channel.is_channel_usable_for_new_transfer(
+        channel_usability_state = channel.is_channel_usable_for_new_transfer(
             channel_state=candidate_channel_state,
             transfer_amount=amount_with_fee,
             lock_timeout=transfer_description.lock_timeout,
         )
-        if is_channel_usable:
+        if channel_usability_state is channel.ChannelUsability.USABLE:
             channel_state = candidate_channel_state
             route_state = reachable_route_state
             break
@@ -279,7 +277,10 @@ def try_new_route(
             reason = "none of the available routes could be used"
 
         if route_fee_exceeds_max:
-            reason += " and at least one of them exceeded the maximum fee limit"
+            reason += (
+                " and at least one of them exceeded the maximum fee limit "
+                "(see https://docs.raiden.network/using-raiden/mediation-fees#frequently-asked-questions)"  # noqa
+            )
 
         transfer_failed = EventPaymentSentFailed(
             token_network_registry_address=transfer_description.token_network_registry_address,
@@ -293,7 +294,7 @@ def try_new_route(
         initiator_state = None
 
     else:
-        assert channel_state is not None
+        assert channel_state is not None, "We must have a channel_state if we have a route_state"
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
@@ -304,7 +305,6 @@ def try_new_route(
             route_state=route_state,
             route_states=reachable_route_states,
         )
-        assert lockedtransfer_event
 
         initiator_state = InitiatorTransferState(
             route=route_state,
@@ -326,7 +326,9 @@ def send_lockedtransfer(
     route_states: List[RouteState],
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel. """
-    assert channel_state.token_network_address == transfer_description.token_network_address
+    assert (
+        channel_state.token_network_address == transfer_description.token_network_address
+    ), "token_network_address mismatch"
 
     lock_expiration = channel.get_safe_initial_expiration(
         block_number, channel_state.reveal_timeout, transfer_description.lock_timeout
@@ -363,7 +365,7 @@ def handle_secretrequest(
 ) -> TransitionResult[InitiatorTransferState]:
 
     is_message_from_target = (
-        state_change.sender == initiator_state.transfer_description.target
+        state_change.sender == Address(initiator_state.transfer_description.target)
         and state_change.secrethash == initiator_state.transfer_description.secrethash
         and state_change.payment_identifier
         == initiator_state.transfer_description.payment_identifier
@@ -428,6 +430,7 @@ def handle_offchain_secretreveal(
     state_change: ReceiveSecretReveal,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ Once the next hop proves it knows the secret, the initiator can unlock
     the mediated transfer.
@@ -444,13 +447,22 @@ def handle_offchain_secretreveal(
     sent_by_partner = state_change.sender == channel_state.partner_state.address
     is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
-    if valid_reveal and is_channel_open and sent_by_partner:
+    lock = initiator_state.transfer.lock
+    expired = channel.is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock.expiration,
+    )
+
+    if valid_reveal and is_channel_open and sent_by_partner and not expired:
         events = events_for_unlock_lock(
             initiator_state=initiator_state,
             channel_state=channel_state,
             secret=state_change.secret,
             secrethash=state_change.secrethash,
             pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
         iteration = TransitionResult(None, events)
     else:
@@ -465,6 +477,7 @@ def handle_onchain_secretreveal(
     state_change: ContractReceiveSecretReveal,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ When a secret is revealed on-chain all nodes learn the secret.
 
@@ -492,13 +505,22 @@ def handle_onchain_secretreveal(
             secret_reveal_block_number=state_change.block_number,
         )
 
-    if is_lock_unlocked and is_channel_open:
+    lock = initiator_state.transfer.lock
+    expired = channel.is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock.expiration,
+    )
+
+    if is_lock_unlocked and is_channel_open and not expired:
         events = events_for_unlock_lock(
             initiator_state,
             channel_state,
             state_change.secret,
             state_change.secrethash,
             pseudo_random_generator,
+            block_number,
         )
         iteration = TransitionResult(None, events)
     else:
@@ -513,6 +535,7 @@ def state_transition(
     state_change: StateChange,
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
@@ -527,12 +550,12 @@ def state_transition(
     elif type(state_change) == ReceiveSecretReveal:
         assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_offchain_secretreveal(
-            initiator_state, state_change, channel_state, pseudo_random_generator
+            initiator_state, state_change, channel_state, pseudo_random_generator, block_number
         )
     elif type(state_change) == ContractReceiveSecretReveal:
         assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_onchain_secretreveal(
-            initiator_state, state_change, channel_state, pseudo_random_generator
+            initiator_state, state_change, channel_state, pseudo_random_generator, block_number
         )
     else:
         iteration = TransitionResult(initiator_state, list())

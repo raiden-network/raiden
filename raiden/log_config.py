@@ -8,9 +8,10 @@ import sys
 from functools import wraps
 from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tuple
 
-import click
 import gevent
 import structlog
+
+from raiden.exceptions import ConfigurationError
 
 LOG_BLACKLIST: Dict[Pattern, str] = {
     re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I): r"\1<redacted>",
@@ -139,12 +140,10 @@ def configure_debug_logfile_path(debug_log_file_path: Optional[str]) -> str:
         # If it's not just a filename relative to the current directory make sure
         # that the directory exists
         if given_dir != "" and not os.path.isdir(given_dir):
-            click.secho(
+            raise ConfigurationError(
                 f"The provided directory {given_dir} for the debuglog filename "
-                f"either does not exist or is not a directory",
-                fg="red",
+                f"either does not exist or is not a directory"
             )
-            sys.exit(1)
 
         return debug_log_file_path
 

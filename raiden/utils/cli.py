@@ -2,24 +2,24 @@ import errno
 import os
 import re
 import string
-import sys
 from enum import EnumMeta
 from itertools import groupby
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Union
 
 import click
 import requests
-from click import BadParameter, Choice, MissingParameter
+from click import Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
-from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
+from web3.gas_strategies.time_based import fast_gas_price_strategy
 
-from raiden.exceptions import InvalidChecksummedAddress
-from raiden.utils import address_checksum_and_decode
-from raiden_contracts.constants import NETWORKNAME_TO_ID
+from raiden.exceptions import ConfigurationError, InvalidChecksummedAddress
+from raiden.network.rpc.middleware import faster_gas_price_strategy
+from raiden.utils.formatting import address_checksum_and_decode
+from raiden_contracts.constants import CHAINNAME_TO_ID
 
 CONTEXT_KEY_DEFAULT_OPTIONS = "raiden.options_using_default"
 LOG_CONFIG_OPTION_NAME = "log_config"
@@ -94,12 +94,12 @@ class CustomContextMixin:
         :param extra: extra keyword arguments forwarded to the context
                       constructor.
         """
-        for key, value in iter(self.context_settings.items()):
+        for key, value in iter(self.context_settings.items()):  # type: ignore
             if key not in extra:
                 extra[key] = value
-        ctx = Context(self, info_name=info_name, parent=parent, **extra)
+        ctx = Context(self, info_name=info_name, parent=parent, **extra)  # type: ignore
         with ctx.scope(cleanup=False):
-            self.parse_args(ctx, args)
+            self.parse_args(ctx, args)  # type: ignore
         return ctx
 
 
@@ -112,7 +112,7 @@ class UsesDefaultValueOptionMixin(click.Option):
         This is then used in ``apply_config_file()`` to establish precedence between values given
         via the config file and the cli.
         """
-        if value is None and self.prompt is not None and not ctx.resilient_parsing:
+        if value is None and self.prompt is not None and not ctx.resilient_parsing:  # type: ignore
             return self.prompt_for_value(ctx)
 
         value = self.process_value(ctx, value)
@@ -188,7 +188,7 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
 
 class GroupableOptionCommandGroup(CustomContextMixin, click.Group):
     def format_options(self, ctx, formatter):
-        GroupableOptionCommand.format_options(self, ctx, formatter)
+        GroupableOptionCommand.format_options(self, ctx, formatter)  # type: ignore
         self.format_commands(ctx, formatter)
 
     def command(self, *args, **kwargs):
@@ -268,7 +268,7 @@ class NetworkChoiceType(click.Choice):
                 self.fail(f"invalid numeric network id: {value}", param, ctx)
         else:
             network_name = super().convert(value, param, ctx)
-            return NETWORKNAME_TO_ID[network_name]
+            return CHAINNAME_TO_ID[network_name]
 
 
 class EnumChoiceType(Choice):
@@ -303,9 +303,9 @@ class GasPriceChoiceType(click.Choice):
         else:
             gas_price_string = super().convert(value, param, ctx)
             if gas_price_string == "fast":
-                return fast_gas_price_strategy
+                return faster_gas_price_strategy
             else:
-                return medium_gas_price_strategy
+                return fast_gas_price_strategy
 
 
 class MatrixServerType(click.Choice):
@@ -386,11 +386,10 @@ def apply_config_file(
         if default_config_missing:
             cli_params["config_file"] = None
         else:
-            click.secho(f"Error opening config file: {ex}", fg="red")
-            sys.exit(1)
+            raise ConfigurationError(f"Error opening config file: {ex}")
+
     except TomlError as ex:
-        click.secho(f"Error loading config file: {ex}", fg="red")
-        sys.exit(1)
+        raise ConfigurationError(f"Error loading config file: {ex}")
 
     for config_name, config_value in config_file_values.items():
         config_name_int = config_name.replace("-", "_")
@@ -416,8 +415,7 @@ def apply_config_file(
                     config_value, paramname_to_param[config_name_int], ctx
                 )
             except click.BadParameter as ex:
-                click.secho(f"Invalid config file setting '{config_name}': {ex}", fg="red")
-                sys.exit(1)
+                raise ConfigurationError(f"Invalid config file setting '{config_name}': {ex}")
 
         # Only use the config file value if the option wasn't explicitly given on the command line
         option_has_default = paramname_to_param[config_name_int].default is not None
@@ -449,40 +447,6 @@ def get_matrix_servers(url: str) -> List[str]:
             line = "https://" + line  # default schema
         available_servers.append(line)
     return available_servers
-
-
-def validate_option_dependencies(
-    command_function: Union[click.Command, click.Group],
-    ctx,
-    cli_params: Dict[str, Any],
-    option_dependencies: Dict[str, List[Tuple[str, Any]]],
-):
-    paramname_to_param = {param.name: param for param in command_function.params}
-
-    for depending_option_name, requirements in option_dependencies.items():
-        depending_option_name_int = depending_option_name.replace("-", "_")
-        param = paramname_to_param[depending_option_name_int]
-
-        depending_option_value = cli_params[depending_option_name_int]
-        if depending_option_value is None:
-            continue
-
-        depending_option_value_default = param.get_default(ctx)
-        if depending_option_value == depending_option_value_default:
-            # Ignore dependencies for default values
-            continue
-
-        for depended_option_name, depended_option_required_value in requirements:
-            depended_option_name_int = depended_option_name.replace("-", "_")
-            depended_option_actual_value = cli_params[depended_option_name_int]
-            if depended_option_actual_value != depended_option_required_value:
-                raise BadParameter(
-                    f'This option is only available when option "--{depended_option_name}" '
-                    f'is set to "{depended_option_required_value}". '
-                    f'Current value: "{depended_option_actual_value}"',
-                    ctx,
-                    param,
-                )
 
 
 ADDRESS_TYPE = AddressType()

@@ -1,7 +1,7 @@
 import gevent
 import pytest
-from eth_utils import is_list_like, to_checksum_address
-from web3.utils.events import construct_event_topic_set
+from eth_utils import keccak
+from web3._utils.events import construct_event_topic_set
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -13,7 +13,7 @@ from raiden.blockchain.events import (
     get_token_network_events,
     get_token_network_registry_events,
 )
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
@@ -23,6 +23,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
+    block_offset_timeout,
     get_channelstate,
     watch_for_unlock_failures,
 )
@@ -30,13 +31,15 @@ from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
+from raiden.transfer.state import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveSecretReveal
-from raiden.utils import sha3, wait_until
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
     Balance,
-    BlockSpecification,
+    BlockIdentifier,
+    BlockNumber,
     ChannelID,
     Dict,
     List,
@@ -46,6 +49,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenNetworkAddress,
 )
+from raiden.waiting import wait_until
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -59,25 +63,22 @@ def get_netting_channel_closed_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> List[Dict]:
     closed_event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, ChannelEvent.CLOSED)
 
     topic_set = construct_event_topic_set(
-        event_abi=closed_event_abi, arguments={"channel_identifier": netting_channel_identifier}
+        event_abi=closed_event_abi,
+        abi_codec=proxy_manager.client.web3.codec,
+        arguments={"channel_identifier": netting_channel_identifier},
     )
-
-    if len(topic_set) == 1 and is_list_like(topic_set[0]):
-        topics = topic_set[0]
-    else:
-        topics = topic_set
 
     return get_contract_events(
         proxy_manager=proxy_manager,
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         contract_address=Address(token_network_address),
-        topics=topics,
+        topics=topic_set,  # type: ignore
         from_block=from_block,
         to_block=to_block,
     )
@@ -88,26 +89,23 @@ def get_netting_channel_deposit_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> List[Dict]:
     deposit_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.DEPOSIT
     )
     topic_set = construct_event_topic_set(
-        event_abi=deposit_event_abi, arguments={"channel_identifier": netting_channel_identifier}
+        event_abi=deposit_event_abi,
+        abi_codec=proxy_manager.client.web3.codec,
+        arguments={"channel_identifier": netting_channel_identifier},
     )
-
-    if len(topic_set) == 1 and is_list_like(topic_set[0]):
-        topics = topic_set[0]
-    else:
-        topics = topic_set
 
     return get_contract_events(
         proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
-        topics,
+        topic_set,  # type: ignore
         from_block,
         to_block,
     )
@@ -118,26 +116,23 @@ def get_netting_channel_settled_events(
     token_network_address: TokenNetworkAddress,
     netting_channel_identifier: ChannelID,
     contract_manager: ContractManager,
-    from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-    to_block: BlockSpecification = "latest",
+    from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+    to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> List[Dict]:
     settled_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK, ChannelEvent.SETTLED
     )
     topic_set = construct_event_topic_set(
-        event_abi=settled_event_abi, arguments={"channel_identifier": netting_channel_identifier}
+        event_abi=settled_event_abi,
+        abi_codec=proxy_manager.client.web3.codec,
+        arguments={"channel_identifier": netting_channel_identifier},
     )
-
-    if len(topic_set) == 1 and is_list_like(topic_set[0]):
-        topics = topic_set[0]
-    else:
-        topics = topic_set
 
     return get_contract_events(
         proxy_manager,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         Address(token_network_address),
-        topics,
+        topic_set,  # type: ignore
         from_block,
         to_block,
     )
@@ -247,10 +242,12 @@ def test_query_events(
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
 
-    token_network_address = app0.raiden.default_registry.get_token_network(token_address, "latest")
+    token_network_address = app0.raiden.default_registry.get_token_network(
+        token_address, BLOCK_ID_LATEST
+    )
 
     assert token_network_address
-    manager0 = app0.raiden.proxy_manager.token_network(token_network_address)
+    manager0 = app0.raiden.proxy_manager.token_network(token_network_address, BLOCK_ID_LATEST)
 
     channelcount0 = views.total_token_network_channels(
         views.state_from_app(app0), registry_address, token_address
@@ -282,8 +279,8 @@ def test_query_events(
             token_network_registry_address=app0.raiden.default_registry.address,
             contract_manager=contract_manager,
             events=ALL_EVENTS,
-            from_block=999999998,
-            to_block=999999999,
+            from_block=BlockNumber(999999998),
+            to_block=BlockNumber(999999999),
         )
         assert not events
 
@@ -319,8 +316,8 @@ def test_query_events(
             token_network_address=manager0.address,
             contract_manager=contract_manager,
             events=ALL_EVENTS,
-            from_block=999999998,
-            to_block=999999999,
+            from_block=BlockNumber(999999998),
+            to_block=BlockNumber(999999999),
         )
         assert not events
 
@@ -388,7 +385,7 @@ def test_query_events(
     assert must_have_event(all_netting_channel_events, closed_event)
 
     settle_expiration = app0.raiden.rpc_client.block_number() + settle_timeout + 5
-    app0.raiden.proxy_manager.wait_until_block(target_block_number=settle_expiration)
+    app0.raiden.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
         proxy_manager=app0.raiden.proxy_manager,
@@ -413,7 +410,7 @@ def test_query_events(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_secret_revealed_on_chain(
-    raiden_chain, deposit, settle_timeout, token_addresses, retry_interval
+    raiden_chain, deposit, settle_timeout, token_addresses, retry_interval_initial
 ):
     """ A node must reveal the secret on-chain if it's known and the channel is closed. """
     app0, app1, app2 = raiden_chain
@@ -440,9 +437,9 @@ def test_secret_revealed_on_chain(
         secret=secret,
     )
 
-    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), block_offset_timeout(app0.raiden):
         wait_for_state_change(
-            app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
+            app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval_initial
         )
 
     channel_state2_1 = get_channelstate(app2, app1, token_network_address)
@@ -454,14 +451,16 @@ def test_secret_revealed_on_chain(
     # intercepting it and app2 has not received the updated balance proof
 
     # Close the channel. This must register the secret on chain
-    channel_close_event = ContractSendChannelClose(  # type: ignore
+    balance_proof = channel_state2_1.partner_state.balance_proof
+    assert isinstance(balance_proof, BalanceProofSignedState)
+    channel_close_event = ContractSendChannelClose(
         canonical_identifier=channel_state2_1.canonical_identifier,
-        balance_proof=channel_state2_1.partner_state.balance_proof,
-        triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber("latest"),
+        balance_proof=balance_proof,
+        triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber(BLOCK_ID_LATEST),
     )
     current_state = app2.raiden.wal.state_manager.current_state
-    app2.raiden.raiden_event_handler.on_raiden_event(
-        raiden=app2.raiden, chain_state=current_state, event=channel_close_event
+    app2.raiden.raiden_event_handler.on_raiden_events(
+        raiden=app2.raiden, chain_state=current_state, events=[channel_close_event]
     )
 
     settle_expiration = (
@@ -469,7 +468,7 @@ def test_secret_revealed_on_chain(
         + settle_timeout
         + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    app0.raiden.proxy_manager.wait_until_block(target_block_number=settle_expiration)
+    app0.raiden.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
     # TODO:
     # - assert on the transferred amounts on-chain (for settle and unlock)
@@ -482,7 +481,10 @@ def test_secret_revealed_on_chain(
 
     with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
-            app2.raiden, ContractReceiveSecretReveal, {"secrethash": secrethash}, retry_interval
+            app2.raiden,
+            ContractReceiveSecretReveal,
+            {"secrethash": secrethash},
+            retry_interval_initial,
         )
 
 
@@ -513,7 +515,7 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
     )
 
     target = app1.raiden.address
-    secret = Secret(sha3(target))
+    secret = Secret(keccak(target))
     secrethash = sha256_secrethash(secret)
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
@@ -553,8 +555,7 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
     # A ChannelClose event will be generated, this will be polled by both apps
     RaidenAPI(app0.raiden).channel_close(registry_address, token_address, app1.raiden.address)
 
-    exception = ValueError("Could not get close event")
-    with gevent.Timeout(seconds=30, exception=exception):
+    with block_offset_timeout(app0.raiden, "Could not get close event"):
         waiting.wait_for_close(
             app0.raiden,
             registry_address,

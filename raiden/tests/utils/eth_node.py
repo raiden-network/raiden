@@ -3,32 +3,23 @@ import os
 import shutil
 import subprocess
 from contextlib import ExitStack, contextmanager
-from datetime import datetime
 from typing import ContextManager, Iterator
 
 import gevent
 import structlog
 from eth_keyfile import create_keyfile_json
-from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
+from eth_utils import encode_hex, remove_0x_prefix, to_normalized_address
 from pkg_resources import parse_version
 from web3 import Web3
 
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
-from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.ethereum_clients import parse_geth_version
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import JSONRPCExecutor
-from raiden.utils.typing import (
-    Address,
-    Any,
-    ChainID,
-    Dict,
-    List,
-    NamedTuple,
-    Port,
-    PrivateKey,
-    TokenAmount,
-)
+from raiden.utils.keys import privatekey_to_address, privatekey_to_publickey
+from raiden.utils.typing import Address, Any, ChainID, Dict, List, NamedTuple, Port, TokenAmount
 
 log = structlog.get_logger(__name__)
 
@@ -38,7 +29,7 @@ _GETH_VERBOSITY_LEVEL = {"error": 1, "warn": 2, "info": 3, "debug": 4}
 
 
 class EthNodeDescription(NamedTuple):
-    private_key: PrivateKey
+    private_key: bytes
     rpc_port: Port
     p2p_port: Port
     miner: bool
@@ -52,13 +43,11 @@ class AccountDescription(NamedTuple):
 
 
 class GenesisDescription(NamedTuple):
-    """Genesis configuration for a geth PoA private chain.
+    """ Genesis configuration for a geth PoA private chain.
 
     Args:
         prefunded_accounts: iterable list of privatekeys whose
             corresponding accounts will have a premined balance available.
-        seal_address: Address of the ethereum account that can seal
-            blocks in the PoA chain.
         random_marker: A unique used to preventing interacting with the wrong
             chain.
         chain_id: The id of the private chain.
@@ -141,7 +130,7 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
         [
             "--rpc",
             "--rpcapi",
-            "eth,net,web3,personal",
+            "eth,net,web3,personal,debug",
             "--rpcaddr",
             "127.0.0.1",
             "--networkid",
@@ -188,7 +177,7 @@ def parity_to_cmd(
 
     cmd.extend(
         [
-            "--jsonrpc-apis=eth,net,web3,parity,personal",
+            "--jsonrpc-apis=eth,net,web3,parity,personal,traces",
             "--jsonrpc-interface=127.0.0.1",
             "--no-discovery",
             "--no-ws",
@@ -213,18 +202,13 @@ def geth_keystore(datadir: str) -> str:
     return os.path.join(datadir, "keystore")
 
 
-def geth_keyfile(datadir: str, address: Address) -> str:
+def geth_keyfile(datadir: str) -> str:
     keystore = geth_keystore(datadir)
     os.makedirs(keystore, exist_ok=True)
-
-    address_hex = remove_0x_prefix(to_normalized_address(address))
-    broken_iso_8601 = datetime.now().isoformat().replace(":", "-")
-    account = f"UTC--{broken_iso_8601}000Z--{address_hex}"
-
-    return os.path.join(keystore, account)
+    return os.path.join(keystore, "keyfile")
 
 
-def eth_create_account_file(keyfile_path: str, privkey: PrivateKey) -> None:
+def eth_create_account_file(keyfile_path: str, privkey: bytes) -> None:
     keyfile_json = create_keyfile_json(privkey, bytes(DEFAULT_PASSPHRASE, "utf-8"))
 
     # Parity expects a string of length 32 here, but eth_keyfile does not pad
@@ -263,7 +247,7 @@ def geth_generate_poa_genesis(
         to_normalized_address(account.address): {"balance": str(account.balance)}
         for account in genesis_description.prefunded_accounts
     }
-    seal_address_normalized = remove_0x_prefix(to_normalized_address(seal_account))
+    seal_address_normalized = remove_0x_prefix(encode_hex(seal_account))
     extra_data = geth_clique_extradata(genesis_description.random_marker, seal_address_normalized)
 
     genesis = GENESIS_STUB.copy()
@@ -310,7 +294,7 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: in
     addresses = {to_checksum_address(account) for account in accounts_addresses}
     for _ in range(retries):
         for address in addresses.copy():
-            if web3.eth.getBalance(address, "latest") > 0:
+            if web3.eth.getBalance(address, BLOCK_ID_LATEST) > 0:
                 addresses.remove(address)
         gevent.sleep(1)
 
@@ -319,7 +303,7 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: in
 
 
 def eth_node_config(
-    node_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Any
+    node_pkey: bytes, p2p_port: Port, rpc_port: Port, **extra_config: Any
 ) -> Dict[str, Any]:
     address = privatekey_to_address(node_pkey)
     pub = privatekey_to_publickey(node_pkey).hex()
@@ -488,15 +472,12 @@ def run_private_blockchain(
 
     Args:
         web3: A Web3 instance used to check when the private chain is running.
-        accounts_to_fund: Accounts that will start with funds in
-            the private chain.
         eth_nodes: A list of geth node
             description, containing the details of each node of the private
             chain.
         base_datadir: Directory used to store the geth databases.
         log_dir: Directory used to store the geth logs.
         verbosity: Verbosity used by the geth nodes.
-        random_marker: A random marked used to identify the private chain.
     """
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
@@ -536,7 +517,7 @@ def run_private_blockchain(
         for config in nodes_configuration:
             if config.get("mine"):
                 datadir = eth_node_to_datadir(config["address"], base_datadir)
-                keyfile_path = geth_keyfile(datadir, config["address"])
+                keyfile_path = geth_keyfile(datadir)
                 eth_create_account_file(keyfile_path, config["nodekey"])
 
     elif blockchain_type == "parity":

@@ -1,6 +1,6 @@
 import binascii
 import datetime
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from eth_utils import (
     is_0x_prefixed,
@@ -24,8 +24,12 @@ from raiden.constants import (
     UINT256_MAX,
 )
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
+from raiden.storage.serialization.fields import IntegerToStringField
+from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
-from raiden.transfer.state import ChannelState, NettingChannelState
+from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
+from raiden.transfer.views import get_token_network_by_address
+from raiden.utils.typing import Address as AddressBytes, AddressHex
 
 
 class InvalidEndpoint(NotFound):
@@ -37,7 +41,7 @@ class InvalidEndpoint(NotFound):
 
 class HexAddressConverter(BaseConverter):
     @staticmethod
-    def to_python(value):
+    def to_python(value: Any) -> AddressBytes:
         if not is_0x_prefixed(value):
             raise InvalidEndpoint("Not a valid hex address, 0x prefix missing.")
 
@@ -52,7 +56,7 @@ class HexAddressConverter(BaseConverter):
         return value
 
     @staticmethod
-    def to_url(value):
+    def to_url(value: Any) -> AddressHex:
         return to_checksum_address(value)
 
 
@@ -71,21 +75,21 @@ class AddressField(fields.Field):
 
     def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
-            self.fail("missing_prefix")
+            raise self.make_error("missing_prefix")
 
         if not is_checksum_address(value):
-            self.fail("invalid_checksum")
+            raise self.make_error("invalid_checksum")
 
         try:
             value = to_canonical_address(value)
         except ValueError:
-            self.fail("invalid_data")
+            raise self.make_error("invalid_data")
 
         if len(value) != 20:
-            self.fail("invalid_size")
+            raise self.make_error("invalid_size")
 
         if value == NULL_ADDRESS_BYTES:
-            self.fail("null_address")
+            raise self.make_error("null_address")
 
         return value
 
@@ -119,15 +123,15 @@ class SecretField(fields.Field):
 
     def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
-            self.fail("missing_prefix")
+            raise self.make_error("missing_prefix")
 
         try:
             value = to_bytes(hexstr=value)
         except binascii.Error:
-            self.fail("invalid_data")
+            raise self.make_error("invalid_data")
 
         if len(value) != SECRET_LENGTH:
-            self.fail("invalid_size")
+            raise self.make_error("invalid_size")
 
         return value
 
@@ -147,15 +151,15 @@ class SecretHashField(fields.Field):
 
     def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
-            self.fail("missing_prefix")
+            raise self.make_error("missing_prefix")
 
         try:
             value = to_bytes(hexstr=value)
         except binascii.Error:
-            self.fail("invalid_data")
+            raise self.make_error("invalid_data")
 
         if len(value) != SECRETHASH_LENGTH:
-            self.fail("invalid_size")
+            raise self.make_error("invalid_size")
 
         return value
 
@@ -177,7 +181,7 @@ class BaseSchema(Schema):
     def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
         # this will depend on the Schema used, which has its object class in
         # the class Meta attributes
-        decoding_class = self.opts.decoding_class  # pylint: disable=no-member
+        decoding_class = self.opts.decoding_class  # type: ignore # pylint: disable=no-member
         return decoding_class(**data)
 
 
@@ -198,14 +202,14 @@ class BaseListSchema(Schema):
 
     @post_load
     def make_object(self, data, **kwargs):  # pylint: disable=unused-argument
-        decoding_class = self.opts.decoding_class  # pylint: disable=no-member
+        decoding_class = self.opts.decoding_class  # type: ignore # pylint: disable=no-member
         list_ = data["data"]
         return decoding_class(list_)
 
 
 class BlockchainEventsRequestSchema(BaseSchema):
-    from_block = fields.Integer(missing=None)
-    to_block = fields.Integer(missing=None)
+    from_block = IntegerToStringField(missing=None)
+    to_block = IntegerToStringField(missing=None)
 
     class Meta:
         strict = True
@@ -214,8 +218,8 @@ class BlockchainEventsRequestSchema(BaseSchema):
 
 
 class RaidenEventsRequestSchema(BaseSchema):
-    limit = fields.Integer(missing=None)
-    offset = fields.Integer(missing=None)
+    limit = IntegerToStringField(missing=None)
+    offset = IntegerToStringField(missing=None)
 
     class Meta:
         strict = True
@@ -258,10 +262,7 @@ class PartnersPerTokenListSchema(BaseListSchema):
 
 class MintTokenSchema(BaseSchema):
     to = AddressField(required=True)
-    value = fields.Integer(required=True, validate=validate.Range(min=1, max=UINT256_MAX))
-    contract_method = fields.String(
-        validate=validate.OneOf(choices=("increaseSupply", "mint", "mintFor"))
-    )
+    value = IntegerToStringField(required=True, validate=validate.Range(min=1, max=UINT256_MAX))
 
     class Meta:
         strict = True
@@ -269,12 +270,12 @@ class MintTokenSchema(BaseSchema):
 
 
 class ChannelStateSchema(BaseSchema):
-    channel_identifier = fields.Integer(attribute="identifier")
+    channel_identifier = IntegerToStringField(attribute="identifier")
     token_network_address = AddressField()
     token_address = AddressField()
     partner_address = fields.Method("get_partner_address")
-    settle_timeout = fields.Integer()
-    reveal_timeout = fields.Integer()
+    settle_timeout = IntegerToStringField()
+    reveal_timeout = IntegerToStringField()
     balance = fields.Method("get_balance")
     state = fields.Method("get_state")
     total_deposit = fields.Method("get_total_deposit")
@@ -285,22 +286,22 @@ class ChannelStateSchema(BaseSchema):
         return to_checksum_address(channel_state.partner_state.address)
 
     @staticmethod
-    def get_balance(channel_state: NettingChannelState) -> int:
-        return channel.get_balance(channel_state.our_state, channel_state.partner_state)
+    def get_balance(channel_state: NettingChannelState) -> str:
+        return str(channel.get_balance(channel_state.our_state, channel_state.partner_state))
 
     @staticmethod
     def get_state(channel_state: NettingChannelState) -> str:
         return channel.get_status(channel_state).value
 
     @staticmethod
-    def get_total_deposit(channel_state: NettingChannelState) -> int:
+    def get_total_deposit(channel_state: NettingChannelState) -> str:
         """Return our total deposit in the contract for this channel"""
-        return channel_state.our_total_deposit
+        return str(channel_state.our_total_deposit)
 
     @staticmethod
-    def get_total_withdraw(channel_state: NettingChannelState) -> int:
+    def get_total_withdraw(channel_state: NettingChannelState) -> str:
         """Return our total withdraw from this channel"""
-        return channel_state.our_total_withdraw
+        return str(channel_state.our_total_withdraw)
 
     class Meta:
         strict = True
@@ -310,9 +311,9 @@ class ChannelStateSchema(BaseSchema):
 class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
-    reveal_timeout = fields.Integer(missing=None)
-    settle_timeout = fields.Integer(missing=None)
-    total_deposit = fields.Integer(default=None, missing=None)
+    reveal_timeout = IntegerToStringField(missing=None)
+    settle_timeout = IntegerToStringField(missing=None)
+    total_deposit = IntegerToStringField(default=None, missing=None)
 
     class Meta:
         strict = True
@@ -321,9 +322,9 @@ class ChannelPutSchema(BaseSchema):
 
 
 class ChannelPatchSchema(BaseSchema):
-    total_deposit = fields.Integer(default=None, missing=None)
-    total_withdraw = fields.Integer(default=None, missing=None)
-    reveal_timeout = fields.Integer(default=None, missing=None)
+    total_deposit = IntegerToStringField(default=None, missing=None)
+    total_withdraw = IntegerToStringField(default=None, missing=None)
+    reveal_timeout = IntegerToStringField(default=None, missing=None)
     state = fields.String(
         default=None,
         missing=None,
@@ -346,11 +347,11 @@ class PaymentSchema(BaseSchema):
     initiator_address = AddressField(missing=None)
     target_address = AddressField(missing=None)
     token_address = AddressField(missing=None)
-    amount = fields.Integer(required=True)
-    identifier = fields.Integer(missing=None)
+    amount = IntegerToStringField(required=True)
+    identifier = IntegerToStringField(missing=None)
     secret = SecretField(missing=None)
     secret_hash = SecretHashField(missing=None)
-    lock_timeout = fields.Integer(missing=None)
+    lock_timeout = IntegerToStringField(missing=None)
 
     class Meta:
         strict = True
@@ -358,8 +359,8 @@ class PaymentSchema(BaseSchema):
 
 
 class ConnectionsConnectSchema(BaseSchema):
-    funds = fields.Integer(required=True)
-    initial_channel_target = fields.Integer(missing=DEFAULT_INITIAL_CHANNEL_TARGET)
+    funds = IntegerToStringField(required=True)
+    initial_channel_target = IntegerToStringField(missing=DEFAULT_INITIAL_CHANNEL_TARGET)
     joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
 
     class Meta:
@@ -373,43 +374,67 @@ class ConnectionsLeaveSchema(BaseSchema):
         decoding_class = dict
 
 
-class EventPaymentSentFailedSchema(BaseSchema):
-    block_number = fields.Integer()
-    identifier = fields.Integer()
+class EventPaymentSchema(BaseSchema):
+    block_number = IntegerToStringField()
+    identifier = IntegerToStringField()
+    log_time = TimeStampField()
+    token_address = AddressField(missing=None)
+
+    def serialize(self, chain_state: ChainState, event: TimestampedEvent) -> Dict[str, Any]:
+        serialized_event = self.dump(event)
+        token_network = get_token_network_by_address(
+            chain_state=chain_state,
+            token_network_address=event.wrapped_event.token_network_address,
+        )
+        assert token_network, "Token network object should be registered if we got events with it"
+        serialized_event["token_address"] = to_checksum_address(token_network.token_address)
+        return serialized_event
+
+
+class EventPaymentSentFailedSchema(EventPaymentSchema):
     event = fields.Constant("EventPaymentSentFailed")
     reason = fields.Str()
     target = AddressField()
-    log_time = TimeStampField()
 
     class Meta:
-        fields = ("block_number", "event", "reason", "target", "log_time")
+        fields = ("block_number", "event", "reason", "target", "log_time", "token_address")
         strict = True
         decoding_class = dict
 
 
-class EventPaymentSentSuccessSchema(BaseSchema):
-    block_number = fields.Integer()
-    identifier = fields.Integer()
+class EventPaymentSentSuccessSchema(EventPaymentSchema):
     event = fields.Constant("EventPaymentSentSuccess")
-    amount = fields.Integer()
+    amount = IntegerToStringField()
     target = AddressField()
-    log_time = TimeStampField()
 
     class Meta:
-        fields = ("block_number", "event", "amount", "target", "identifier", "log_time")
+        fields = (
+            "block_number",
+            "event",
+            "amount",
+            "target",
+            "identifier",
+            "log_time",
+            "token_address",
+        )
         strict = True
         decoding_class = dict
 
 
-class EventPaymentReceivedSuccessSchema(BaseSchema):
-    block_number = fields.Integer()
-    identifier = fields.Integer()
+class EventPaymentReceivedSuccessSchema(EventPaymentSchema):
     event = fields.Constant("EventPaymentReceivedSuccess")
-    amount = fields.Integer()
+    amount = IntegerToStringField()
     initiator = AddressField()
-    log_time = TimeStampField()
 
     class Meta:
-        fields = ("block_number", "event", "amount", "initiator", "identifier", "log_time")
+        fields = (
+            "block_number",
+            "event",
+            "amount",
+            "initiator",
+            "identifier",
+            "log_time",
+            "token_address",
+        )
         strict = True
         decoding_class = dict

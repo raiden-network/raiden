@@ -3,7 +3,7 @@ jobs=4
 persistent=yes
 suggestion-mode=yes
 unsafe-load-any-extension=no
-load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker
+load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker,tools.pylint.del_method_checker
 
 # Blacklist files or directories (basenames, not paths)
 ignore=
@@ -28,24 +28,30 @@ logging-modules=logging,structlog
 
 disable=all
 enable=
-    no-value-for-parameter,
-    too-many-format-args,
-    no-member,
+    assert-message,
     bad-except-order,
-    redefined-builtin,
-    unused-variable,
-    no-self-use,
-    import-self,
-    gevent-joinall,
-    useless-object-inheritance,
-    unused-argument,
-    unexpected-keyword-arg,
+    del-method-used,
+    exception-in-del,
     expression-not-assigned,
-    pointless-statement,
-    unused-import,
+    gevent-joinall,
+    gevent-joinall-raise-error,
+    gevent-disable-wait,
+    gevent-group-join,
+    import-self,
     inconsistent-return-statements,
+    no-member,
+    no-self-use,
+    no-value-for-parameter,
+    pointless-statement,
+    redefined-builtin,
     reimported,
-    too-many-function-args
+    too-many-format-args,
+    too-many-function-args,
+    unexpected-keyword-arg,
+    unused-argument,
+    unused-import,
+    unused-variable,
+    useless-object-inheritance,
 
 [REPORTS]
 

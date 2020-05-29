@@ -13,6 +13,7 @@ from raiden.utils.typing import (
     BalanceHash,
     ChainID,
     ChannelID,
+    MonitoringServiceAddress,
     Nonce,
     Optional,
     Signature,
@@ -96,7 +97,7 @@ class RequestMonitoring(SignedMessage):
 
     balance_proof: SignedBlindedBalanceProof
     reward_amount: TokenAmount
-    monitoring_service_contract_address: Address
+    monitoring_service_contract_address: MonitoringServiceAddress
     non_closing_participant: Address
     non_closing_signature: Optional[Signature] = None
 
@@ -112,7 +113,7 @@ class RequestMonitoring(SignedMessage):
         balance_proof: BalanceProofSignedState,
         non_closing_participant: Address,
         reward_amount: TokenAmount,
-        monitoring_service_contract_address: Address,
+        monitoring_service_contract_address: MonitoringServiceAddress,
     ) -> "RequestMonitoring":
         typecheck(balance_proof, BalanceProofSignedState)
 
@@ -134,7 +135,7 @@ class RequestMonitoring(SignedMessage):
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
-        assert self.non_closing_signature
+        assert self.non_closing_signature is not None, "Message is not signed yet."
         packed = pack_reward_proof(
             chain_id=self.balance_proof.chain_id,
             token_network_address=self.balance_proof.token_network_address,

@@ -38,9 +38,6 @@ class Timer:
 
         signal.signal(TIMER_SIGNAL, signal.SIG_IGN)
 
-    def __del__(self) -> None:
-        self.stop()
-
     def __bool__(self) -> bool:
         # we're always truthy
         return True

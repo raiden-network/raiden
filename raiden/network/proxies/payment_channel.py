@@ -1,24 +1,14 @@
-from typing import Optional
-
-from raiden.blockchain.filters import (
-    StatelessFilter,
-    decode_event,
-    get_filter_args_for_specific_event_from_channel,
-)
-from raiden.constants import UINT256_MAX
+from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
-from raiden.network.proxies.utils import get_channel_participants_from_open_event
-from raiden.transfer.state import PendingLocksState
+from raiden.transfer.state import NettingChannelState, PendingLocksState
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
     BalanceHash,
     BlockExpiration,
-    BlockNumber,
-    BlockSpecification,
+    BlockIdentifier,
     BlockTimeout,
-    ChannelID,
-    List,
+    LockedAmount,
     Locksroot,
     Nonce,
     Signature,
@@ -34,33 +24,12 @@ class PaymentChannel:
     def __init__(
         self,
         token_network: TokenNetwork,
-        channel_identifier: ChannelID,
+        channel_state: NettingChannelState,
         contract_manager: ContractManager,
     ):
-        if channel_identifier <= 0 or channel_identifier > UINT256_MAX:
-            raise ValueError(f"channel_identifier {channel_identifier} is not a uint256")
-
-        participants = get_channel_participants_from_open_event(
-            token_network=token_network,
-            channel_identifier=channel_identifier,
-            contract_manager=contract_manager,
-            from_block=token_network.metadata.filters_start_at,
-        )
-
-        if not participants:
-            raise ValueError("Channel is non-existing.")
-
-        participant1, participant2 = participants
-
-        if token_network.node_address not in (participant1, participant2):
-            raise ValueError("One participant must be the node address")
-
-        if token_network.node_address == participant2:
-            participant1, participant2 = participant2, participant1
-
-        self.channel_identifier = channel_identifier
-        self.participant1 = participant1
-        self.participant2 = participant2
+        self.channel_identifier = channel_state.canonical_identifier.channel_identifier
+        self.participant1 = channel_state.our_state.address
+        self.participant2 = channel_state.partner_state.address
         self.token_network = token_network
         self.client = token_network.client
         self.contract_manager = contract_manager
@@ -69,7 +38,7 @@ class PaymentChannel:
         """ Returns the address of the token for the channel. """
         return self.token_network.token_address()
 
-    def detail(self, block_identifier: BlockSpecification) -> ChannelDetails:
+    def detail(self, block_identifier: BlockIdentifier) -> ChannelDetails:
         """ Returns the channel details. """
         return self.token_network.detail(
             participant1=self.participant1,
@@ -90,7 +59,7 @@ class PaymentChannel:
             contract_manager=self.contract_manager,
         )
 
-        events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
+        events = self.client.web3.eth.getLogs(filter_args)
         assert len(events) > 0, "No matching ChannelOpen event found."
 
         # we want the latest event here, there might have been multiple channels
@@ -99,7 +68,7 @@ class PaymentChannel:
         )
         return event["args"]["settle_timeout"]
 
-    def opened(self, block_identifier: BlockSpecification) -> bool:
+    def opened(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is opened. """
         return self.token_network.channel_is_opened(
             participant1=self.participant1,
@@ -108,7 +77,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def closed(self, block_identifier: BlockSpecification) -> bool:
+    def closed(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is closed. """
         return self.token_network.channel_is_closed(
             participant1=self.participant1,
@@ -117,7 +86,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def settled(self, block_identifier: BlockSpecification) -> bool:
+    def settled(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is settled. """
         return self.token_network.channel_is_settled(
             participant1=self.participant1,
@@ -126,7 +95,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def can_transfer(self, block_identifier: BlockSpecification) -> bool:
+    def can_transfer(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns True if the channel is opened and the node has deposit in it. """
         return self.token_network.can_transfer(
             participant1=self.participant1,
@@ -135,10 +104,10 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def set_total_deposit(
-        self, total_deposit: TokenAmount, block_identifier: BlockSpecification
+    def approve_and_set_total_deposit(
+        self, total_deposit: TokenAmount, block_identifier: BlockIdentifier
     ) -> None:
-        self.token_network.set_total_deposit(
+        self.token_network.approve_and_set_total_deposit(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
             total_deposit=total_deposit,
@@ -151,7 +120,7 @@ class PaymentChannel:
         participant_signature: Signature,
         partner_signature: Signature,
         expiration_block: BlockExpiration,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         self.token_network.set_total_withdraw(
             given_block_identifier=block_identifier,
@@ -171,7 +140,7 @@ class PaymentChannel:
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
         closing_signature: Signature,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ Closes the channel using the provided balance proof, and our closing signature. """
         self.token_network.close(
@@ -192,7 +161,7 @@ class PaymentChannel:
         additional_hash: AdditionalHash,
         partner_signature: Signature,
         signature: Signature,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
@@ -211,7 +180,7 @@ class PaymentChannel:
         sender: Address,
         receiver: Address,
         pending_locks: PendingLocksState,
-        given_block_identifier: BlockSpecification,
+        given_block_identifier: BlockIdentifier,
     ) -> None:
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
@@ -224,12 +193,12 @@ class PaymentChannel:
     def settle(
         self,
         transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
+        locked_amount: LockedAmount,
         locksroot: Locksroot,
         partner_transferred_amount: TokenAmount,
-        partner_locked_amount: TokenAmount,
+        partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
-        block_identifier: BlockSpecification,
+        block_identifier: BlockIdentifier,
     ) -> None:
         """ Settles the channel. """
         self.token_network.settle(
@@ -243,21 +212,3 @@ class PaymentChannel:
             partner_locksroot=partner_locksroot,
             given_block_identifier=block_identifier,
         )
-
-    def all_events_filter(self, from_block: BlockNumber) -> StatelessFilter:
-
-        channel_topics: List[Optional[str]] = [
-            None,  # event topic is any
-            f"0x{self.channel_identifier:064x}",
-        ]
-
-        # This will match the events:
-        # ChannelOpened, ChannelNewDeposit, ChannelWithdraw, ChannelClosed,
-        # NonClosingBalanceProofUpdated, ChannelSettled, ChannelUnlocked
-        channel_filter = self.token_network.client.new_filter(
-            contract_address=Address(self.token_network.address),
-            topics=channel_topics,
-            from_block=from_block,
-        )
-
-        return channel_filter

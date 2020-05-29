@@ -1,13 +1,12 @@
-from eth_typing.evm import HexAddress
-from eth_utils import to_checksum_address
-
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
     BalanceHash,
     BlockExpiration,
     ChainID,
+    MonitoringServiceAddress,
     Nonce,
     Signature,
     TokenAmount,
@@ -30,7 +29,7 @@ def pack_balance_proof(
     contracts expect the signed data to have.
     """
     return proofs.pack_balance_proof(
-        token_network_address=to_checksum_address(canonical_identifier.token_network_address),
+        token_network_address=to_hex_address(canonical_identifier.token_network_address),
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
         msg_type=MessageTypeId.BALANCE_PROOF,
@@ -54,7 +53,7 @@ def pack_signed_balance_proof(
     contracts expect the signed data for updateNonClosingBalanceProof to have.
     """
     return proofs.pack_balance_proof_message(
-        token_network_address=to_checksum_address(canonical_identifier.token_network_address),
+        token_network_address=to_hex_address(canonical_identifier.token_network_address),
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
         msg_type=msg_type,
@@ -69,17 +68,15 @@ def pack_reward_proof(
     chain_id: ChainID,
     token_network_address: TokenNetworkAddress,
     reward_amount: TokenAmount,
-    monitoring_service_contract_address: Address,
+    monitoring_service_contract_address: MonitoringServiceAddress,
     non_closing_participant: Address,
     non_closing_signature: Signature,
 ) -> bytes:
     return proofs.pack_reward_proof(
-        monitoring_service_contract_address=to_checksum_address(
-            monitoring_service_contract_address
-        ),
+        monitoring_service_contract_address=to_hex_address(monitoring_service_contract_address),
         chain_id=chain_id,
-        token_network_address=HexAddress(to_checksum_address(token_network_address)),
-        non_closing_participant=HexAddress(to_checksum_address(non_closing_participant)),
+        token_network_address=to_hex_address(token_network_address),
+        non_closing_participant=to_hex_address(non_closing_participant),
         non_closing_signature=non_closing_signature,
         reward_amount=reward_amount,
     )
@@ -97,10 +94,10 @@ def pack_withdraw(
     contracts expect the signed data to have.
     """
     return proofs.pack_withdraw_message(
-        token_network_address=to_checksum_address(canonical_identifier.token_network_address),
+        token_network_address=to_hex_address(canonical_identifier.token_network_address),
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
-        participant=to_checksum_address(participant),
+        participant=to_hex_address(participant),
         amount_to_withdraw=total_withdraw,
         expiration_block=expiration_block,
     )

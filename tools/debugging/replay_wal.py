@@ -10,7 +10,6 @@ state changes until a channel is found with the provided token network address a
 The ignored state changes will still be applied, but they will just not be printed out.
 """
 import json
-import os
 import re
 from contextlib import closing
 from itertools import chain
@@ -24,7 +23,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event, StateChange, StateManager
 from raiden.transfer.state import NetworkState
-from raiden.utils import pex, to_checksum_address
+from raiden.utils.formatting import pex, to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,
@@ -200,7 +199,7 @@ def print_node_balances(
 
 
 def print_nl():
-    click.echo("-" * os.get_terminal_size()[0], nl=True)
+    click.echo("-" * click.get_terminal_size()[0], nl=True)
 
 
 def replay_wal(

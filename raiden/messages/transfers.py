@@ -2,23 +2,25 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any, overload
 
+import eth_hash.auto as eth_hash
+from eth_utils import keccak
+
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages.abstract import SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
+    SendUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import ishash, sha3
 from raiden.utils.packing import pack_balance_proof
-from raiden.utils.signing import pack_data
+from raiden.utils.predicates import ishash
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -27,6 +29,7 @@ from raiden.utils.typing import (
     ChannelID,
     ClassVar,
     InitiatorAddress,
+    LockedAmount,
     Locksroot,
     Nonce,
     PaymentAmount,
@@ -45,7 +48,7 @@ def assert_envelope_values(
     nonce: int,
     channel_identifier: ChannelID,
     transferred_amount: TokenAmount,
-    locked_amount: TokenAmount,
+    locked_amount: LockedAmount,
     locksroot: Locksroot,
 ) -> None:
     if nonce <= 0:
@@ -129,14 +132,16 @@ class Lock:
 
     @property
     def as_bytes(self) -> bytes:
-        return pack_data(
-            (self.expiration, "uint256"), (self.amount, "uint256"), (self.secrethash, "bytes32")
+        return (
+            self.expiration.to_bytes(32, byteorder="big")
+            + self.amount.to_bytes(32, byteorder="big")
+            + self.secrethash
         )
 
     # FIXME: is this used?
     @property
     def lockhash(self) -> bytes:
-        return sha3(self.as_bytes)
+        return keccak(self.as_bytes)
 
     @classmethod
     def from_bytes(cls, serialized: bytes) -> "Lock":
@@ -159,7 +164,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
     chain_id: ChainID
     nonce: Nonce
     transferred_amount: TokenAmount
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
     locksroot: Locksroot
     channel_identifier: ChannelID
     token_network_address: TokenNetworkAddress
@@ -218,14 +223,13 @@ class SecretRequest(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.message_identifier, "uint64"),
-            (self.payment_identifier, "uint64"),
-            (self.secrethash, "bytes32"),
-            (self.amount, "uint256"),
-            (self.expiration, "uint256"),
+        return (
+            bytes([self.cmdid.value, 0, 0, 0])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.payment_identifier.to_bytes(8, byteorder="big")
+            + self.secrethash
+            + self.amount.to_bytes(32, byteorder="big")
+            + self.expiration.to_bytes(32, byteorder="big")
         )
 
 
@@ -280,7 +284,7 @@ class Unlock(EnvelopeMessage):
         return sha256(self.secret).digest()
 
     @classmethod
-    def from_event(cls, event: SendBalanceProof) -> "Unlock":
+    def from_event(cls, event: SendUnlock) -> "Unlock":
         balance_proof = event.balance_proof
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -299,13 +303,11 @@ class Unlock(EnvelopeMessage):
 
     @property
     def message_hash(self) -> bytes:
-        return sha3(
-            pack_data(
-                (self.cmdid.value, "uint8"),
-                (self.message_identifier, "uint64"),
-                (self.payment_identifier, "uint64"),
-                (self.secret, "bytes32"),
-            )
+        return eth_hash.keccak(
+            bytes([self.cmdid.value])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.payment_identifier.to_bytes(8, byteorder="big")
+            + self.secret
         )
 
 
@@ -334,11 +336,10 @@ class RevealSecret(SignedRetrieableMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.message_identifier, "uint64"),
-            (self.secret, "bytes32"),
+        return (
+            bytes([self.cmdid.value, 0, 0, 0])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.secret
         )
 
 
@@ -374,12 +375,12 @@ class LockedTransferBase(EnvelopeMessage):
 
     @overload  # noqa: F811
     @classmethod
-    def from_event(cls, event: SendRefundTransfer) -> "RefundTransfer":
+    def from_event(cls, event: SendRefundTransfer) -> "RefundTransfer":  # noqa: F811
         # pylint: disable=unused-argument
         ...
 
     @classmethod  # noqa: F811
-    def from_event(cls, event: Any) -> Any:
+    def from_event(cls, event: Any) -> Any:  # noqa: F811
         transfer = event.transfer
         balance_proof = transfer.balance_proof
         lock = Lock(
@@ -411,17 +412,17 @@ class LockedTransferBase(EnvelopeMessage):
         )
 
     def _packed_data(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (self.message_identifier, "uint64"),
-            (self.payment_identifier, "uint64"),
-            (self.lock.expiration, "uint256"),
-            (self.token, "address"),
-            (self.recipient, "address"),
-            (self.target, "address"),
-            (self.initiator, "address"),
-            (self.lock.secrethash, "bytes32"),
-            (self.lock.amount, "uint256"),
+        return (
+            bytes([self.cmdid.value])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.payment_identifier.to_bytes(8, byteorder="big")
+            + self.lock.expiration.to_bytes(32, byteorder="big")
+            + self.token
+            + self.recipient
+            + self.target
+            + self.initiator
+            + self.lock.secrethash
+            + self.lock.amount.to_bytes(32, byteorder="big")
         )
 
 
@@ -452,7 +453,7 @@ class LockedTransfer(LockedTransferBase):
     @property
     def message_hash(self) -> bytes:
         metadata_hash = (self.metadata and self.metadata.hash) or b""
-        return sha3(self._packed_data() + metadata_hash)
+        return keccak(self._packed_data() + metadata_hash)
 
 
 @dataclass(repr=False, eq=False)
@@ -469,7 +470,7 @@ class RefundTransfer(LockedTransferBase):
 
     @property
     def message_hash(self) -> bytes:
-        return sha3(self._packed_data())
+        return keccak(self._packed_data())
 
 
 @dataclass(repr=False, eq=False)
@@ -516,11 +517,9 @@ class LockExpired(EnvelopeMessage):
 
     @property
     def message_hash(self) -> bytes:
-        return sha3(
-            pack_data(
-                (self.cmdid.value, "uint8"),
-                (self.message_identifier, "uint64"),
-                (self.recipient, "address"),
-                (self.secrethash, "bytes32"),
-            )
+        return eth_hash.keccak(
+            bytes([self.cmdid.value])
+            + self.message_identifier.to_bytes(8, byteorder="big")
+            + self.recipient
+            + self.secrethash
         )

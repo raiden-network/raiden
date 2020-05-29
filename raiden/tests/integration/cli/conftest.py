@@ -2,24 +2,28 @@ import os
 import sys
 from copy import copy
 from tempfile import mkdtemp
+from typing import Iterable
 
 import pexpect
 import pytest
 
-from raiden.constants import Environment, EthClient
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, Environment, EthClient
 from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils.ci import get_artifacts_storage
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
-from raiden.utils.typing import Any, ContextManager, Dict
+from raiden.tests.utils.transport import ParsedURL
+from raiden.utils.typing import Any, ContextManager, Dict, List, Optional
 
 
 @pytest.fixture(scope="module")
-def cli_tests_contracts_version():
+def cli_tests_contracts_version() -> str:
     return RAIDEN_CONTRACT_VERSION
 
 
 @pytest.fixture(scope="module")
-def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_version):
+def raiden_testchain(
+    blockchain_type: str, port_generator, cli_tests_contracts_version: str
+) -> Iterable[Dict[str, Any]]:
     import time
 
     start_time = time.monotonic()
@@ -42,19 +46,16 @@ def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_versio
 
     with testchain_manager as testchain:
         result = setup_raiden(
-            transport="matrix",
-            matrix_server="auto",
+            matrix_server=MATRIX_AUTO_SELECT_SERVER,
             print_step=lambda x: None,
             contracts_version=cli_tests_contracts_version,
-            eth_client=testchain["eth_client"],
             eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
             web3=testchain["web3"],
             base_datadir=testchain["base_datadir"],
             keystore=testchain["keystore"],
         )
-        result["ethereum_nodes"] = testchain["node_executors"]
 
-        args = result["args"]
+        args = result.args
         # The setup of the testchain returns a TextIOWrapper but
         # for the tests we need a filename
         args["password_file"] = args["password_file"].name
@@ -63,17 +64,24 @@ def raiden_testchain(blockchain_type, port_generator, cli_tests_contracts_versio
 
 
 @pytest.fixture()
-def removed_args():
+def removed_args() -> Optional[Dict[str, Any]]:
     return None
 
 
 @pytest.fixture()
-def changed_args():
+def changed_args() -> Optional[Dict[str, Any]]:
     return None
 
 
 @pytest.fixture()
-def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environment_type):
+def cli_args(
+    logs_storage: str,
+    raiden_testchain: Dict[str, Any],
+    local_matrix_servers: List[ParsedURL],
+    removed_args: Optional[Dict[str, Any]],
+    changed_args: Optional[Dict[str, Any]],
+    environment_type: Environment,
+) -> List[str]:
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -96,11 +104,12 @@ def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environ
         "--no-sync-check",
         f"--debug-logfile-path={base_logfile}",
         "--routing-mode",
-        "local",
+        "private",
+        "--matrix-server",
+        local_matrix_servers[0],
     ]
 
-    if environment_type == Environment.DEVELOPMENT.value:
-        args += ["--environment-type", environment_type]
+    args += ["--environment-type", environment_type.value]
 
     for arg_name, arg_value in initial_args.items():
         if arg_name == "sync_check":
@@ -117,7 +126,7 @@ def cli_args(logs_storage, raiden_testchain, removed_args, changed_args, environ
 
 @pytest.fixture
 def raiden_spawner(tmp_path, request):
-    def spawn_raiden(args):
+    def spawn_raiden(args: List[str]):
         # Remove any possibly defined `RAIDEN_*` environment variables from outer scope
         new_env = {k: copy(v) for k, v in os.environ.items() if not k.startswith("RAIDEN")}
         new_env["HOME"] = str(tmp_path)

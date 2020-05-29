@@ -3,26 +3,37 @@ import os
 import re
 import sys
 from binascii import unhexlify
+from collections import defaultdict
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from itertools import chain
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
-from typing import Any, Callable, Dict, Iterator, List, Tuple
+from typing import Any, Callable, DefaultDict, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
 from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
+from requests.packages import urllib3
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from structlog import get_logger
 from synapse.handlers.auth import AuthHandler
 from twisted.internet import defer
 
-from raiden.network.transport.matrix.client import GMatrixClient
+from raiden.constants import Environment
+from raiden.messages.abstract import Message
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
+from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
+from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Iterable, Port, Signature
+
+log = get_logger(__name__)
 
 _SYNAPSE_BASE_DIR_VAR_NAME = "RAIDEN_TESTS_SYNAPSE_BASE_DIR"
 _SYNAPSE_LOGS_PATH = os.environ.get("RAIDEN_TESTS_SYNAPSE_LOGS_DIR")
@@ -32,28 +43,61 @@ SynapseConfig = Tuple[str, Path]
 SynapseConfigGenerator = Callable[[int], SynapseConfig]
 
 
-def new_client(server: "ParsedURL") -> GMatrixClient:
-    server_name = server.netloc
+def get_admin_credentials(server_name):
+    username = f"admin-{server_name}".replace(":", "-")
+    credentials = {"username": username, "password": "securepassword"}
 
+    return credentials
+
+
+def new_client(
+    handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    handle_member_join_callback: Callable[[Room], None],
+    server: "ParsedURL",
+) -> GMatrixClient:
+    server_name = server.netloc
     signer = make_signer()
     username = str(to_normalized_address(signer.address))
     password = encode_hex(signer.sign(server_name.encode()))
 
-    client = GMatrixClient(server)
+    client = GMatrixClient(
+        handle_messages_callback=handle_messages_callback,
+        handle_member_join_callback=handle_member_join_callback,
+        base_url=server,
+    )
     client.login(username, password, sync=False)
 
     return client
 
 
+def ignore_member_join(_room: Room) -> None:
+    return None
+
+
+def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
+    return True
+
+
 def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
-    client = new_client(servers[0])
-    room = client.create_room(alias=broadcast_room_name, is_public=True)
+    client = new_client(ignore_messages, ignore_member_join, servers[0])
+    admin_power_level = {"users": {client.user_id: 100}}
+    for server in servers:
+        admin_username = get_admin_credentials(server.netloc)["username"]
+        admin_user_id = f"@{admin_username}:{servers[0].netloc}"
+        admin_power_level["users"][admin_user_id] = 50
+
+    room = client.create_room(
+        alias=broadcast_room_name, is_public=True, power_level_content_override=admin_power_level
+    )
 
     for server in servers[1:]:
-        client = new_client(server)
+        client = new_client(ignore_messages, ignore_member_join, server)
 
         # A user must join the room to create the room in the federated server
         room = client.join_room(room.aliases[0])
+
+        # Since #5892 `join_room()` only populates server-local aliases but we need all here
+        room.update_aliases()
         server_name = server.netloc
         alias = f"#{broadcast_room_name}:{server_name}"
 
@@ -74,7 +118,7 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
             "Leaving the room failed. This is done otherwise there would be "
             "a ghost user in the broadcast room"
         )
-        assert room.leave(), msg
+        assert room.leave() is None, msg
 
 
 class ParsedURL(str):
@@ -98,6 +142,45 @@ class ParsedURL(str):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{item}'")
 
 
+class AdminUserAuthProvider:
+    __version__ = "0.1"
+
+    def __init__(self, config, account_handler):
+        self.account_handler = account_handler
+        self.log = logging.getLogger(__name__)
+        self.credentials = config["admin_credentials"]
+
+        msg = "Keys 'username' and 'password' expected in credentials."
+        assert "username" in self.credentials, msg
+        assert "password" in self.credentials, msg
+
+    @defer.inlineCallbacks
+    def check_password(self, user_id: str, password: str):
+        if not password:
+            self.log.error("No password provided, user=%r", user_id)
+            defer.returnValue(False)
+
+        username = user_id.partition(":")[0].strip("@")
+        if username == self.credentials["username"] and password == self.credentials["password"]:
+            self.log.info("Logging in well known admin user")
+            user_exists = yield self.account_handler.check_user_exists(user_id)
+            if not user_exists:
+                self.log.info("First well known admin user login, registering: user=%r", user_id)
+                user_id = yield self.account_handler._hs.get_registration_handler().register_user(
+                    localpart=username, admin=True
+                )
+                _, access_token = yield self.account_handler.register_device(user_id)
+                yield user_id, access_token
+            defer.returnValue(True)
+
+        self.log.error("Unknown user '%s', ignoring.", user_id)
+        defer.returnValue(False)
+
+    @staticmethod
+    def parse_config(config):
+        return config
+
+
 # Used from within synapse during tests
 class EthAuthProvider:
     __version__ = "0.1"
@@ -107,7 +190,7 @@ class EthAuthProvider:
     def __init__(self, config, account_handler):
         self.account_handler = account_handler
         self.config = config
-        self.hs_hostname = self.account_handler.hs.hostname
+        self.hs_hostname = self.account_handler._hs.hostname
         self.log = logging.getLogger(__name__)
 
     @defer.inlineCallbacks
@@ -206,6 +289,7 @@ def make_requests_insecure():
     # Disable verification in requests by replacing the 'verify'
     # attribute with non-writable property that always returns `False`
     requests.Session.verify = property(lambda self: False, lambda self, val: None)  # type: ignore
+    urllib3.disable_warnings(InsecureRequestWarning)
 
 
 @contextmanager
@@ -222,11 +306,15 @@ def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
         server_dir.mkdir(parents=True, exist_ok=True)
 
         server_name = f"localhost:{port}"
-
+        admin_credentials = get_admin_credentials(server_name)
         # Always overwrite config file to ensure we're not using a stale version
         config_file = server_dir.joinpath("synapse_config.yaml").resolve()
         config_template = _SYNAPSE_CONFIG_TEMPLATE.read_text()
-        config_file.write_text(config_template.format(server_dir=server_dir, port=port))
+        config_file.write_text(
+            config_template.format(
+                server_dir=server_dir, port=port, admin_credentials=admin_credentials
+            )
+        )
 
         tls_key_file = server_dir.joinpath(f"{server_name}.tls.crt")
 
@@ -259,17 +347,16 @@ def matrix_server_starter(
     count: int = 1,
     config_generator: SynapseConfigGenerator = None,
     log_context: str = None,
-) -> Iterator[List[ParsedURL]]:
+) -> Iterator[List[Tuple[ParsedURL, HTTPExecutor]]]:
     with ExitStack() as exit_stack:
 
         if config_generator is None:
             config_generator = exit_stack.enter_context(generate_synapse_config())
 
-        server_urls: List[ParsedURL] = []
+        servers: List[Tuple[ParsedURL, HTTPExecutor]] = []
         for _, port in zip(range(count), free_port_generator):
             server_name, config_file = config_generator(port)
             server_url = ParsedURL(f"http://{server_name}")
-            server_urls.append(server_url)
 
             synapse_cmd = [
                 sys.executable,
@@ -296,6 +383,8 @@ def matrix_server_starter(
                 log_file.flush()
 
                 synapse_io = DEVNULL, log_file, STDOUT
+
+            log.debug("Synapse command", command=synapse_cmd)
 
             startup_timeout = 10
             sleep = 0.1
@@ -329,7 +418,31 @@ def matrix_server_starter(
             # must poke at the private member and overwrite it.
             executor._timeout = teardown_timeout
 
-        for broadcast_room_alias in broadcast_rooms_aliases:
-            setup_broadcast_room(server_urls, broadcast_room_alias)
+            servers.append((server_url, executor))
 
-        yield server_urls
+        log.debug("Setting up broadcast rooms", aliases=broadcast_rooms_aliases)
+        for broadcast_room_alias in broadcast_rooms_aliases:
+            setup_broadcast_room([url for url, _ in servers], broadcast_room_alias)
+
+        yield servers
+
+
+class TestMatrixTransport(MatrixTransport):
+    __test__ = False  # pytest should ignore this
+
+    def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
+        super().__init__(config, environment)
+
+        self.broadcast_messages: DefaultDict[str, List[Message]] = defaultdict(list)
+        self.send_messages: DefaultDict[QueueIdentifier, List[Message]] = defaultdict(list)
+
+    def broadcast(self, room: str, message: Message) -> None:
+        self.broadcast_messages[room].append(message)
+
+        super().broadcast(room, message)
+
+    def send_async(self, message_queues: List[MessagesQueue]) -> None:
+        for queue in message_queues:
+            self.send_messages[queue.queue_identifier].extend(queue.messages)
+
+        super().send_async(message_queues)

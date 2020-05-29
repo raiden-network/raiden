@@ -6,7 +6,7 @@ from enum import Enum
 from random import Random
 
 import networkx
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_hex
 
 from raiden.constants import (
     EMPTY_SECRETHASH,
@@ -25,7 +25,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
-from raiden.utils import lpex
+from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,
@@ -169,7 +169,7 @@ class RouteState(State):
 
     @property
     def next_hop_address(self) -> Address:
-        assert len(self.route) >= 1
+        assert len(self.route) >= 1, "Route has no next hop"
         return self.route[1]
 
     def __repr__(self) -> str:
@@ -251,6 +251,26 @@ class TransactionExecutionStatus(State):
 
         if not is_valid_result:
             raise ValueError(f"result must be one of '{self.SUCCESS}', '{self.FAILURE}' or 'None'")
+
+
+@dataclass
+class SuccessfulTransactionState(State):
+    """ Represents the status of a transaction. """
+
+    finished_block_number: BlockNumber
+    started_block_number: Optional[BlockNumber] = None
+
+    def __post_init__(self) -> None:
+        is_valid_start = self.started_block_number is None or isinstance(
+            self.started_block_number, T_BlockNumber
+        )
+        is_valid_finish = isinstance(self.finished_block_number, T_BlockNumber)
+
+        if not is_valid_start:
+            raise ValueError("started_block_number must be None or a block_number")
+
+        if not is_valid_finish:
+            raise ValueError("finished_block_number must be None or a block_number")
 
 
 @dataclass
@@ -361,7 +381,7 @@ class NettingChannelState(State):
     fee_schedule: FeeScheduleState = field(repr=False)
     our_state: NettingChannelEndState
     partner_state: NettingChannelEndState
-    open_transaction: TransactionExecutionStatus
+    open_transaction: SuccessfulTransactionState
     close_transaction: Optional[TransactionExecutionStatus] = None
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
@@ -369,7 +389,7 @@ class NettingChannelState(State):
     def __post_init__(self) -> None:
         typecheck(self.reveal_timeout, int)
         typecheck(self.settle_timeout, int)
-        typecheck(self.open_transaction, TransactionExecutionStatus)
+        typecheck(self.open_transaction, SuccessfulTransactionState)
         typecheck(self.canonical_identifier.channel_identifier, T_ChannelID)
 
         if self.our_state.address == self.partner_state.address:
@@ -380,11 +400,6 @@ class NettingChannelState(State):
 
         if self.settle_timeout <= 0:
             raise ValueError("settle_timeout must be a positive integer")
-
-        if self.open_transaction.result != TransactionExecutionStatus.SUCCESS:
-            raise ValueError(
-                "Cannot create a NettingChannelState with a non successfull open_transaction"
-            )
 
         if (
             self.canonical_identifier.channel_identifier < 0
@@ -521,7 +536,6 @@ class ChainState(State):
     payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
     pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
-    last_transport_authdata: Optional[str] = field(repr=False, default=None)
     tokennetworkaddresses_to_tokennetworkregistryaddresses: Dict[
         TokenNetworkAddress, TokenNetworkRegistryAddress
     ] = field(repr=False, default_factory=dict)

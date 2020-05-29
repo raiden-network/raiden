@@ -1,12 +1,15 @@
 # pylint: disable=too-few-public-methods
-from copy import deepcopy
+import time
 from dataclasses import dataclass, field
 
-from eth_utils import to_checksum_address, to_hex
+import structlog
+from eth_utils import to_hex
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils.copy import deepcopy
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -20,6 +23,7 @@ from raiden.utils.typing import (
     ChannelID,
     Generic,
     List,
+    LockedAmount,
     Locksroot,
     MessageID,
     Nonce,
@@ -28,7 +32,8 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_Keccak256,
+    T_LockedAmount,
+    T_Locksroot,
     T_Signature,
     T_TokenAmount,
     TokenAmount,
@@ -38,6 +43,8 @@ from raiden.utils.typing import (
     TypeVar,
     typecheck,
 )
+
+log = structlog.get_logger(__name__)
 
 # Quick overview
 # --------------
@@ -254,23 +261,26 @@ class StateManager(Generic[ST]):
 
         # The state objects must be treated as immutable, so make a copy of the
         # current state and pass the copy to the state machine to be modified.
+        before_copy = time.time()
         next_state = deepcopy(self.current_state)
+        log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
 
         # Update the current state by applying the state changes
         events: List[List[Event]] = list()
         for state_change in state_changes:
             iteration = self.state_transition(next_state, state_change)
 
-            assert isinstance(iteration, TransitionResult)
-            assert all(isinstance(e, Event) for e in iteration.events)
-            assert isinstance(iteration.new_state, State)
+            typecheck(iteration, TransitionResult)
+            for e in iteration.events:
+                typecheck(e, Event)
+            typecheck(iteration.new_state, State)
 
             # Skipping the copy because this value is internal
             events.append(iteration.events)
             next_state = iteration.new_state
 
+        assert next_state is not None, "State transition did not yield new state"
         self.current_state = next_state
-        assert next_state is not None
 
         return iteration.new_state, events
 
@@ -291,7 +301,7 @@ class BalanceProofUnsignedState(State):
 
     nonce: Nonce
     transferred_amount: TokenAmount
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
     locksroot: Locksroot
     canonical_identifier: CanonicalIdentifier
     balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
@@ -300,7 +310,7 @@ class BalanceProofUnsignedState(State):
         typecheck(self.nonce, int)
         typecheck(self.transferred_amount, T_TokenAmount)
         typecheck(self.locked_amount, T_TokenAmount)
-        typecheck(self.locksroot, T_Keccak256)
+        typecheck(self.locksroot, T_Locksroot)
 
         if self.nonce <= 0:
             raise ValueError("nonce cannot be zero or negative")
@@ -346,7 +356,7 @@ class BalanceProofSignedState(State):
 
     nonce: Nonce
     transferred_amount: TokenAmount
-    locked_amount: TokenAmount
+    locked_amount: LockedAmount
     locksroot: Locksroot
     message_hash: AdditionalHash
     signature: Signature
@@ -357,9 +367,9 @@ class BalanceProofSignedState(State):
     def __post_init__(self) -> None:
         typecheck(self.nonce, int)
         typecheck(self.transferred_amount, T_TokenAmount)
-        typecheck(self.locked_amount, T_TokenAmount)
-        typecheck(self.locksroot, T_Keccak256)
-        typecheck(self.message_hash, T_Keccak256)
+        typecheck(self.locked_amount, T_LockedAmount)
+        typecheck(self.locksroot, T_Locksroot)
+        typecheck(self.message_hash, bytes)
         typecheck(self.signature, T_Signature)
         typecheck(self.sender, T_Address)
 

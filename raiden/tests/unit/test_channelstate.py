@@ -1,11 +1,11 @@
 # pylint: disable=too-many-locals,too-many-statements,too-many-lines
 import random
 from collections import namedtuple
-from copy import deepcopy
 from hashlib import sha256
 from itertools import cycle
 
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.messages.decode import balanceproof_from_envelope
@@ -46,7 +46,6 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
-    SendPFSFeeUpdate,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -63,6 +62,7 @@ from raiden.transfer.state import (
     PendingLocksState,
     PendingWithdrawState,
     RouteState,
+    SuccessfulTransactionState,
     TransactionChannelDeposit,
     TransactionExecutionStatus,
     UnlockPartialProofState,
@@ -83,7 +83,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.utils import sha3
+from raiden.utils.copy import deepcopy
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
@@ -149,7 +149,7 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
                 balance=partner_model.balance,
                 pending_locks=PendingLocksState(partner_model.pending_locks),
             ),
-            open_transaction=TransactionExecutionStatusProperties(finished_block_number=1),
+            open_transaction=SuccessfulTransactionState(finished_block_number=1),
         )
     )
 
@@ -208,7 +208,7 @@ def test_new_end_state():
     node_address = make_address()
     end_state = NettingChannelEndState(node_address, balance1)
 
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
 
     assert channel.is_lock_pending(end_state, lock_secrethash) is False
@@ -280,9 +280,6 @@ def test_channelstate_update_contract_balance():
 
     assert_partner_state(new_state.our_state, new_state.partner_state, our_model2)
     assert_partner_state(new_state.partner_state, new_state.our_state, partner_model2)
-    # Also make sure that a fee update triggering event is created
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
 
 
 def test_channelstate_decreasing_contract_balance():
@@ -382,7 +379,7 @@ def test_channelstate_send_lockedtransfer():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
 
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
@@ -440,7 +437,7 @@ def test_channelstate_receive_lockedtransfer():
     # - The lock must be registered with the sender end
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -683,7 +680,7 @@ def test_invalid_timeouts():
     balance1 = 10
     balance2 = 10
 
-    opened_transaction = TransactionExecutionStatus(None, 1, TransactionExecutionStatus.SUCCESS)
+    opened_transaction = SuccessfulTransactionState(1, None)
     closed_transaction = None
     settled_transaction = None
 
@@ -886,7 +883,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
 
     lock = HashTimeLockState(
@@ -945,7 +942,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(b"test_regression_must_update_balanceproof_remove_expired_lock")
+    lock_secret = keccak(b"test_regression_must_update_balanceproof_remove_expired_lock")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
@@ -1011,7 +1008,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(
+    lock_secret = keccak(
         b"test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain"
     )
     lock_secrethash = sha256(lock_secret).digest()
@@ -1135,7 +1132,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
     secret_reveal_block_number = block_number - 5
 
     lock_amount = 10
-    lock_secret = sha3(b"test_channel_rejects_onchain_secret_reveal_with_expired_locks")
+    lock_secret = keccak(b"test_channel_rejects_onchain_secret_reveal_with_expired_locks")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
@@ -1196,7 +1193,7 @@ def test_receive_lockedtransfer_before_deposit():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_end_state")
+    lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -1288,7 +1285,7 @@ def test_channelstate_unlock_unlocked_onchain():
 
     lock_amount = 10
     lock_expiration = 100
-    lock_secret = sha3(b"test_channelstate_lockedtransfer_overspent")
+    lock_secret = keccak(b"test_channelstate_lockedtransfer_overspent")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -1398,7 +1395,7 @@ def test_update_must_be_called_if_close_lost_race():
 
     lock_amount = 30
     lock_expiration = 10
-    lock_secret = sha3(b"test_update_must_be_called_if_close_lost_race")
+    lock_secret = keccak(b"test_update_must_be_called_if_close_lost_race")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -1534,7 +1531,7 @@ def test_valid_lock_expired_for_unlocked_lock():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(b"test_valid_lock_expired_for_unlocked_lock")
+    lock_secret = keccak(b"test_valid_lock_expired_for_unlocked_lock")
     lock_secrethash = sha256(lock_secret).digest()
     lock = HashTimeLockState(
         amount=lock_amount, expiration=lock_expiration, secrethash=lock_secrethash
@@ -2223,9 +2220,6 @@ def test_receive_contract_withdraw():
     assert iteration.new_state.our_state.total_withdraw == total_withdraw
     assert iteration.new_state.our_total_withdraw == total_withdraw
     assert total_withdraw not in iteration.new_state.our_state.withdraws_pending
-    # Also make sure that a fee update triggering event is created
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendPFSFeeUpdate)
 
     contract_receive_withdraw = ContractReceiveChannelWithdraw(
         canonical_identifier=channel_state.canonical_identifier,
@@ -2248,6 +2242,3 @@ def test_receive_contract_withdraw():
     assert iteration.new_state.partner_state.total_withdraw == total_withdraw
     assert iteration.new_state.partner_total_withdraw == total_withdraw
     assert total_withdraw not in iteration.new_state.partner_state.withdraws_pending
-    # Also make sure that a fee update triggering event is created
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], SendPFSFeeUpdate)

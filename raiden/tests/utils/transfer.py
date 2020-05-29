@@ -1,9 +1,8 @@
 """ Utilities to make and assert transfers. """
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from enum import Enum
 
 import gevent
-from eth_utils import to_checksum_address
 from gevent.timeout import Timeout
 
 from raiden.app import App
@@ -25,11 +24,7 @@ from raiden.storage.restore import (
     get_state_change_with_transfer_by_secrethash,
 )
 from raiden.storage.wal import SavedState, WriteAheadLog
-from raiden.tests.utils.events import (
-    count_unlock_failures,
-    has_unlock_failure,
-    raiden_state_changes_search_for_item,
-)
+from raiden.tests.utils.events import has_unlock_failure, raiden_state_changes_search_for_item
 from raiden.tests.utils.factories import (
     make_initiator_address,
     make_message_identifier,
@@ -40,7 +35,11 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_locksroot
-from raiden.transfer.mediated_transfer.events import SendSecretRequest
+from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimFailed,
+    EventUnlockFailed,
+    SendSecretRequest,
+)
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -58,6 +57,7 @@ from raiden.transfer.state import (
     make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.timeout import BlockTimeout
 from raiden.utils.typing import (
@@ -66,6 +66,7 @@ from raiden.utils.typing import (
     Any,
     Balance,
     BlockNumber,
+    BlockTimeout as BlockOffset,
     Callable,
     ChainID,
     FeeAmount,
@@ -101,7 +102,7 @@ class TransferState(Enum):
 def sign_and_inject(message: SignedMessage, signer: Signer, app: App) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
-    MessageHandler().on_message(app.raiden, message)
+    MessageHandler().on_messages(app.raiden, [message])
 
 
 def get_channelstate(
@@ -115,26 +116,27 @@ def get_channelstate(
 
 
 @contextmanager
-def watch_for_unlock_failures(*apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
+def watch_for_unlock_failures(*apps):
     """
     Context manager to assure there are no failing unlocks during transfers in integration tests.
     """
 
-    def watcher_function():
-        offset = {
-            app.raiden.address: count_unlock_failures(app.raiden.wal.storage.get_events())
-            for app in apps
-        }
-        while True:
-            for app in apps:
-                assert not has_unlock_failure(app.raiden, offset=offset[app.raiden.address])
-            gevent.sleep(retry_timeout)
+    failed_event = None
 
-    watcher = gevent.spawn(watcher_function)
+    def check(event):
+        nonlocal failed_event
+        if isinstance(event, (EventUnlockClaimFailed, EventUnlockFailed)):
+            failed_event = event
+
+    for app in apps:
+        app.raiden.raiden_event_handler.pre_hooks.add(check)
+
     try:
         yield
     finally:
-        gevent.kill(watcher)
+        for app in apps:
+            app.raiden.raiden_event_handler.pre_hooks.remove(check)
+        assert failed_event is None, f"Unexpected unlock failure: {str(failed_event)}"
 
 
 def transfer(
@@ -145,6 +147,7 @@ def transfer(
     identifier: PaymentID,
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
+    expect_unlock_failures: bool = False,
 ) -> SecretHash:
     """ Nice to read shortcut to make successful mediated transfer.
 
@@ -159,6 +162,7 @@ def transfer(
             amount=amount,
             identifier=identifier,
             timeout=timeout,
+            expect_unlock_failures=expect_unlock_failures,
         )
     elif transfer_state is TransferState.EXPIRED:
         return _transfer_expired(
@@ -189,6 +193,7 @@ def _transfer_unlocked(
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: Optional[float] = None,
+    expect_unlock_failures: bool = False,
 ) -> SecretHash:
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
 
@@ -216,7 +221,8 @@ def _transfer_unlocked(
         secrethash=secrethash,
     )
 
-    with watch_for_unlock_failures(initiator_app, target_app):
+    apps = [initiator_app, target_app]
+    with watch_for_unlock_failures(*apps) if not expect_unlock_failures else nullcontext():
         with Timeout(seconds=timeout):
             wait_for_unlock.get()
             msg = (
@@ -395,7 +401,7 @@ def transfer_and_assert_path(
         receiving.append((to_app, to_channel_state.identifier))
 
     assert isinstance(app.raiden.message_handler, WaitForMessage)
-    results = [
+    results = set(
         app.raiden.message_handler.wait_for_message(
             Unlock,
             {
@@ -406,7 +412,7 @@ def transfer_and_assert_path(
             },
         )
         for app, channel_identifier in receiving
-    ]
+    )
 
     last_app = path[-1]
     payment_status = first_app.raiden.start_mediated_transfer_with_secret(
@@ -425,7 +431,7 @@ def transfer_and_assert_path(
     exception = RuntimeError(msg + " due to Timeout")
     with watch_for_unlock_failures(*path):
         with Timeout(seconds=timeout, exception=exception):
-            gevent.wait(results)
+            gevent.joinall(results, raise_error=True)
             assert payment_status.payment_done.get(), msg
 
     return secrethash
@@ -641,57 +647,48 @@ def assert_balance_proof(
         )
 
         if received_balance_proof is not None:
-            if type(received_balance_proof) == ReceiveTransferRefund:
-                msg = (
-                    f"Node1 received a refund from node0 and rejected it. This "
-                    f"is likely a Raiden bug. state_change={received_balance_proof}"
-                )
-            elif type(received_balance_proof) in (
-                ActionInitMediator,
-                ActionInitTarget,
-                ReceiveUnlock,
-                ReceiveLockExpired,
-            ):
-                if type(received_balance_proof) == ReceiveUnlock:
-                    assert isinstance(received_balance_proof, ReceiveUnlock), MYPY_ANNOTATION
-                    is_valid, _, innermsg = channel.handle_unlock(
-                        channel_state=channel1, unlock=received_balance_proof
-                    )
-                elif type(received_balance_proof) == ReceiveLockExpired:
-                    assert isinstance(received_balance_proof, ReceiveLockExpired), MYPY_ANNOTATION
-                    is_valid, innermsg, _ = channel.is_valid_lock_expired(
-                        state_change=received_balance_proof,
-                        channel_state=channel1,
-                        sender_state=channel1.partner_state,
-                        receiver_state=channel1.our_state,
-                        block_number=saved_state1.state.block_number,
-                    )
-                else:
-                    assert isinstance(
-                        received_balance_proof, (ActionInitMediator, ActionInitTarget)
-                    ), MYPY_ANNOTATION
-                    is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
-                        channel_state=channel1,
-                        mediated_transfer=received_balance_proof.from_transfer,
-                    )
+            state_change_type = type(received_balance_proof.data)
 
-                if not is_valid:
-                    msg = (
-                        f"Node1 received the node0's message but rejected it. This "
-                        f"is likely a Raiden bug. reason={innermsg} "
-                        f"state_change={received_balance_proof}"
-                    )
-                else:
-                    msg = (
-                        f"Node1 received the node0's message at that time it "
-                        f"was rejected, this is likely a race condition, node1 "
-                        f"has to process the message again. reason={innermsg} "
-                        f"state_change={received_balance_proof}"
-                    )
-            else:
+            if state_change_type == ReceiveTransferRefund:
+                is_valid = False
+                innermsg = "Message is a refund"
+            elif state_change_type == ReceiveUnlock:
+                assert isinstance(received_balance_proof, ReceiveUnlock), MYPY_ANNOTATION
+                is_valid, _, innermsg = channel.handle_unlock(
+                    channel_state=channel1, unlock=received_balance_proof
+                )
+            elif state_change_type == ReceiveLockExpired:
+                assert isinstance(received_balance_proof, ReceiveLockExpired), MYPY_ANNOTATION
+                is_valid, innermsg, _ = channel.is_valid_lock_expired(
+                    state_change=received_balance_proof,
+                    channel_state=channel1,
+                    sender_state=channel1.partner_state,
+                    receiver_state=channel1.our_state,
+                    block_number=saved_state1.state.block_number,
+                )
+            elif state_change_type == ActionInitMediator:
+                assert isinstance(received_balance_proof, ActionInitMediator), MYPY_ANNOTATION
+                is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
+                    channel_state=channel1, mediated_transfer=received_balance_proof.from_transfer
+                )
+            elif state_change_type == ActionInitTarget:
+                assert isinstance(received_balance_proof, ActionInitTarget), MYPY_ANNOTATION
+                is_valid, _, innermsg = channel.handle_receive_lockedtransfer(
+                    channel_state=channel1, mediated_transfer=received_balance_proof.from_transfer
+                )
+
+            if not is_valid:
                 msg = (
                     f"Node1 received the node0's message but rejected it. This "
-                    f"is likely a Raiden bug. state_change={received_balance_proof}"
+                    f"is likely a Raiden bug. reason={innermsg} "
+                    f"state_change={received_balance_proof}"
+                )
+            else:
+                msg = (
+                    f"Node1 received the node0's message at that time it "
+                    f"was rejected, this is likely a race condition, node1 "
+                    f"has to process the message again. reason={innermsg} "
+                    f"state_change={received_balance_proof}"
                 )
 
         elif sent_balance_proof is None:
@@ -914,7 +911,7 @@ def assert_balance(
     assert channel_distributable == distributable, msg
 
     msg = f"channel locked amount does not match. Expected: {locked} got: {channel_locked_amount}"
-    assert channel_locked_amount == locked, msg
+    assert LockedAmount(channel_locked_amount) == locked, msg
 
     msg = (
         f"locked_amount ({locked}) + distributable ({distributable}) "
@@ -979,7 +976,7 @@ def make_receive_transfer_mediated(
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount,
-        locked_amount=TokenAmount(locked_amount),
+        locked_amount=LockedAmount(locked_amount),
         recipient=channel_state.partner_state.address,
         locksroot=locksroot,
         lock=Lock(amount=lock.amount, expiration=lock.expiration, secrethash=lock.secrethash),
@@ -1035,7 +1032,7 @@ def make_receive_expired_lock(
         nonce=nonce,
         message_identifier=make_message_identifier(),
         transferred_amount=transferred_amount,
-        locked_amount=TokenAmount(locked_amount),
+        locked_amount=LockedAmount(locked_amount),
         locksroot=locksroot,
         channel_identifier=channel_state.identifier,
         token_network_address=channel_state.token_network_address,
@@ -1055,6 +1052,30 @@ def make_receive_expired_lock(
     )
 
     return receive_lockedtransfer
+
+
+def block_offset_timeout(
+    raiden: RaidenService,
+    error_message: Optional[str] = None,
+    offset: Optional[BlockOffset] = None,
+    safety_margin: int = 5,
+) -> BlockTimeout:
+    """
+    Returns a BlockTimeout that will fire after a number of blocks. Usually created
+    at the same time as a set of transfers to wait until their expiration.
+    """
+    expiration = BlockNumber(
+        raiden.get_block_number() + (offset or raiden.config.settle_timeout) + safety_margin
+    )
+    exception = RuntimeError(
+        error_message or "Events were not completed in the required number of blocks."
+    )
+    return BlockTimeout(
+        raiden=raiden,
+        exception_to_throw=exception,
+        block_number=expiration,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
+    )
 
 
 def block_timeout_for_transfer_by_secrethash(

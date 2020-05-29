@@ -1,11 +1,13 @@
+import time
 from copy import copy
 from dataclasses import replace
 from unittest.mock import Mock, call, patch
 from uuid import UUID, uuid4
 
+import gevent
 import pytest
 import requests
-from eth_utils import is_checksum_address, is_hex, is_hex_address, to_checksum_address
+from eth_utils import is_checksum_address, is_hex, is_hex_address
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
@@ -26,11 +28,14 @@ from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.transfer.state import NettingChannelState, NetworkState, TokenNetworkState
-from raiden.utils import privatekey_to_address, typing
+from raiden.utils import typing
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
     Any,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     Dict,
     PaymentAmount,
@@ -103,13 +108,15 @@ PFS_CONFIG = PFSConfig(
         price=TokenAmount(12),
         chain_id=ChainID(42),
         token_network_registry_address=factories.make_token_network_registry_address(),
+        user_deposit_address=factories.make_address(),
         payment_address=factories.make_address(),
         message="",
         operator="",
         version="",
+        confirmed_block_number=BlockNumber(10),
     ),
     maximum_fee=TokenAmount(100),
-    iou_timeout=BlockNumber(100),
+    iou_timeout=BlockTimeout(100),
     max_paths=5,
 )
 CONFIG = {"pfs_config": PFS_CONFIG}
@@ -126,20 +133,39 @@ def get_best_routes_with_iou_request_mocked(
     amount,
     iou_json_data=None,
 ):
-    def iou_side_effect(*_, **kwargs):
-        assert "params" in kwargs
-        body = kwargs["params"]
+    def iou_side_effect(*args, **kwargs):
+        if args[0].endswith("/info"):
+            return mocked_json_response(
+                {
+                    "price_info": 5,
+                    "network_info": {
+                        "chain_id": 42,
+                        "token_network_registry_address": to_checksum_address(
+                            factories.make_token_network_registry_address()
+                        ),
+                        "user_deposit_address": to_checksum_address(factories.make_address()),
+                        "confirmed_block": {"number": 11},
+                    },
+                    "version": "0.0.3",
+                    "operator": "John Doe",
+                    "message": "This is your favorite pathfinding service",
+                    "payment_address": to_checksum_address(factories.make_address()),
+                }
+            )
+        else:
+            assert "params" in kwargs
+            body = kwargs["params"]
 
-        assert is_hex_address(body["sender"])
-        assert is_hex_address(body["receiver"])
-        assert "timestamp" in body
-        assert is_hex(body["signature"])
-        assert len(body["signature"]) == 65 * 2 + 2  # 65 hex encoded bytes with 0x prefix
+            assert is_hex_address(body["sender"])
+            assert is_hex_address(body["receiver"])
+            assert "timestamp" in body
+            assert is_hex(body["signature"])
+            assert len(body["signature"]) == 65 * 2 + 2  # 65 hex encoded bytes with 0x prefix
 
-        return mocked_json_response(response_data=iou_json_data)
+            return mocked_json_response(response_data=iou_json_data)
 
     with patch.object(requests, "get", side_effect=iou_side_effect) as patched:
-        best_routes, feedback_token = get_best_routes(
+        _, best_routes, feedback_token = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
@@ -147,7 +173,7 @@ def get_best_routes_with_iou_request_mocked(
             to_address=to_address,
             amount=amount,
             previous_address=None,
-            config=CONFIG,
+            pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
         assert_checksum_address_in_url(patched.call_args[0][0])
@@ -617,16 +643,18 @@ def assert_failed_pfs_request(
         for data, status_code in zip(responses, status_codes)
     ]
 
-    with patch.object(requests, "get", return_value=mocked_json_response()) as get_iou:
-        with patch.object(requests, "post", side_effect=path_mocks) as post_paths:
-            if expected_success:
-                query_paths(**paths_args)
-            else:
-                with pytest.raises(exception_type) as raised_exception:
+    with patch("raiden.network.pathfinding.get_pfs_info") as mocked_pfs_info:
+        mocked_pfs_info.return_value = PFS_CONFIG.info
+        with patch.object(requests, "get", return_value=mocked_json_response()) as get_iou:
+            with patch.object(requests, "post", side_effect=path_mocks) as post_paths:
+                if expected_success:
                     query_paths(**paths_args)
-                    assert "broken iou" in str(raised_exception)
-            assert get_iou.call_count == (expected_get_iou_requests or expected_requests)
-            assert post_paths.call_count == expected_requests
+                else:
+                    with pytest.raises(exception_type) as raised_exception:
+                        query_paths(**paths_args)
+                        assert "broken iou" in str(raised_exception)
+                assert get_iou.call_count == (expected_get_iou_requests or expected_requests)
+                assert post_paths.call_count == expected_requests
 
 
 def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_address):
@@ -637,8 +665,8 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
     # with the transfer of 50 the direct channel should be returned,
     # so there must be not a pfs call
     with patch("raiden.routing.get_best_routes_pfs") as pfs_request:
-        pfs_request.return_value = True, [], "feedback_token"
-        routes, _ = get_best_routes(
+        pfs_request.return_value = None, [], "feedback_token"
+        _, routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
@@ -646,7 +674,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             to_address=address1,
             amount=PaymentAmount(50),
             previous_address=None,
-            config=CONFIG,
+            pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
         assert routes[0].next_hop_address == address1
@@ -656,7 +684,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
     # with the transfer of 51 the direct channel should not be returned,
     # so there must be a pfs call
     with patch("raiden.routing.get_best_routes_pfs") as pfs_request:
-        pfs_request.return_value = True, [], "feedback_token"
+        pfs_request.return_value = None, [], "feedback_token"
         get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
@@ -665,7 +693,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             to_address=address1,
             amount=PaymentAmount(51),
             previous_address=None,
-            config=CONFIG,
+            pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
         )
 
@@ -687,6 +715,7 @@ def query_paths_args(
         route_from=our_address,
         route_to=factories.make_address(),
         value=50,
+        pfs_wait_for_block=10,
     )
 
 
@@ -758,7 +787,7 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
 
     # PFS fails to return info
     assert_failed_pfs_request(
-        query_paths_args, [insufficient_response], expected_requests=1, expected_get_iou_requests=2
+        query_paths_args, [insufficient_response], expected_requests=2, expected_get_iou_requests=2
     )
 
     # PFS has increased fees
@@ -781,8 +810,8 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
         assert_failed_pfs_request(
             query_paths_args,
             [insufficient_response],
-            expected_requests=1,
-            expected_get_iou_requests=1,
+            expected_requests=2,
+            expected_get_iou_requests=2,
         )
 
 
@@ -863,8 +892,10 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
             url="abc",
             price=TokenAmount(0),
             chain_id=ChainID(42),
-            token_network_registry_address=factories.make_token_network_address(),
+            token_network_registry_address=factories.make_token_network_registry_address(),
+            user_deposit_address=factories.make_address(),
             payment_address=factories.make_address(),
+            confirmed_block_number=dict(number=BlockNumber(1)),
             message="",
             operator="",
             version="",
@@ -873,29 +904,63 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
         iou_timeout=BlockNumber(100),
         max_paths=5,
     )
+    with patch("raiden.network.pathfinding.get_pfs_info") as mocked_pfs_info:
+        mocked_pfs_info.return_value = PFS_CONFIG.info
 
-    with patch.object(
-        pathfinding, "post_pfs_paths", return_value=mocked_json_response()
-    ) as post_path:
-        query_paths(
-            pfs_config=query_paths_args["pfs_config"],
-            our_address=query_paths_args["our_address"],
-            privkey=query_paths_args["privkey"],
-            current_block_number=query_paths_args["current_block_number"],
+        with patch.object(
+            pathfinding, "post_pfs_paths", return_value=mocked_json_response()
+        ) as post_path:
+            query_paths(
+                pfs_config=query_paths_args["pfs_config"],
+                our_address=query_paths_args["our_address"],
+                privkey=query_paths_args["privkey"],
+                current_block_number=query_paths_args["current_block_number"],
+                token_network_address=query_paths_args["token_network_address"],
+                one_to_n_address=query_paths_args["one_to_n_address"],
+                chain_id=query_paths_args["chain_id"],
+                route_from=query_paths_args["route_from"],
+                route_to=query_paths_args["route_to"],
+                value=query_paths_args["value"],
+                pfs_wait_for_block=query_paths_args["pfs_wait_for_block"],
+            )
+        assert post_path.call_args == call(
+            payload={
+                "from": to_checksum_address(query_paths_args["route_from"]),
+                "to": to_checksum_address(query_paths_args["route_to"]),
+                "value": query_paths_args["value"],
+                "max_paths": query_paths_args["pfs_config"].max_paths,
+            },
             token_network_address=query_paths_args["token_network_address"],
-            one_to_n_address=query_paths_args["one_to_n_address"],
-            chain_id=query_paths_args["chain_id"],
-            route_from=query_paths_args["route_from"],
-            route_to=query_paths_args["route_to"],
-            value=query_paths_args["value"],
+            url=query_paths_args["pfs_config"].info.url,
         )
-    assert post_path.call_args == call(
-        payload={
-            "from": to_checksum_address(query_paths_args["route_from"]),
-            "to": to_checksum_address(query_paths_args["route_to"]),
-            "value": query_paths_args["value"],
-            "max_paths": query_paths_args["pfs_config"].max_paths,
-        },
-        token_network_address=query_paths_args["token_network_address"],
-        url=query_paths_args["pfs_config"].info.url,
-    )
+
+
+def test_two_parallel_queries(query_paths_args):
+    """ Test that only one IOU is being processed at a time. """
+
+    # We mock one query to last at least 0.2s
+    def mocked_json_response_with_sleep(**kwargs):  # pylint: disable=unused-argument
+        gevent.sleep(0.2)
+        return mocked_json_response()
+
+    # Now we start two function calls - query_path - in parallel
+    with patch("raiden.network.pathfinding.get_pfs_info") as mocked_pfs_info:
+        mocked_pfs_info.return_value = PFS_CONFIG.info
+
+        with patch.object(pathfinding, "create_current_iou"):
+
+            with patch.object(
+                pathfinding, "post_pfs_paths", side_effect=mocked_json_response_with_sleep
+            ):
+
+                query_1 = gevent.spawn(query_paths, **query_paths_args)
+                query_2 = gevent.spawn(query_paths, **query_paths_args)
+
+                before = time.monotonic()
+                gevent.joinall({query_1, query_2}, raise_error=True)
+                duration = time.monotonic() - before
+
+                # We expect the calls to happen sequentially, so one greenlet must wait for
+                # the other. If semaphore in raiden.network.pathfinding is bound to 2,
+                # the test fails
+                assert duration >= 0.4

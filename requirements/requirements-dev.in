@@ -7,7 +7,7 @@
 -r requirements-docs.txt
 
 # Dependencies
-pip-tools~=3.8.0  # this is used by 'deps.py'
+pip-tools~=5.1.2  # this is used by 'deps.py'
 
 # Linting
 autopep8
@@ -28,13 +28,12 @@ pytest-xdist
 grequests
 pexpect
 hypothesis
+responses
 
 # Debugging
 pdbpp
 colour
-
-# Profilling
-objgraph
+py-spy
 
 # Continuous Integration
 coverage
@@ -43,4 +42,4 @@ coverage
 bump2version
 
 # Test support
-matrix-synapse==1.5.1
+matrix-synapse<1.11

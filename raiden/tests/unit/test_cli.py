@@ -4,9 +4,20 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 
+from raiden.accounts import KeystoreAuthenticationError, KeystoreFileNotFound
 from raiden.constants import EthClient
-from raiden.ui.cli import run
+from raiden.exceptions import (
+    APIServerPortInUseError,
+    ConfigurationError,
+    EthereumNonceTooLow,
+    EthNodeInterfaceError,
+    RaidenUnrecoverableError,
+    ReplacementTransactionUnderpriced,
+)
+from raiden.ui import cli
+from raiden.ui.cli import ReturnCode
 from raiden.utils.ethereum_clients import is_supported_client
 
 
@@ -18,7 +29,7 @@ def cli_runner(tmp_path):
 
 
 def test_cli_version(cli_runner):
-    result = cli_runner(run, ["version"])
+    result = cli_runner(cli.run, ["version"])
     result_json = json.loads(result.output)
     result_expected_keys = {
         "raiden",
@@ -33,6 +44,42 @@ def test_cli_version(cli_runner):
     assert result.exit_code == 0
 
 
+def mock_raises(exception):
+    def f(*_, **__):
+        raise exception
+
+    return f
+
+
+def test_run_error_reporting(cli_runner, monkeypatch):
+    caught_exceptions = {
+        APIServerPortInUseError(): ReturnCode.PORT_ALREADY_IN_USE,
+        ConfigurationError(): ReturnCode.RAIDEN_CONFIGURATION_ERROR,
+        ConnectTimeout(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
+        ConnectionError(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
+        EthereumNonceTooLow(): ReturnCode.ETH_ACCOUNT_ERROR,
+        EthNodeInterfaceError(): ReturnCode.ETH_INTERFACE_ERROR,
+        KeystoreAuthenticationError(): ReturnCode.ETH_ACCOUNT_ERROR,
+        KeystoreFileNotFound(): ReturnCode.ETH_ACCOUNT_ERROR,
+        RaidenUnrecoverableError(): ReturnCode.FATAL,
+        ReplacementTransactionUnderpriced(): ReturnCode.ETH_ACCOUNT_ERROR,
+        RequestsConnectionError(): ReturnCode.GENERIC_COMMUNICATION_ERROR,
+        Exception(): ReturnCode.FATAL,
+    }
+
+    for exception, code in caught_exceptions.items():
+        monkeypatch.setattr(cli, "run_services", mock_raises(exception))
+        result = cli_runner(cli.run, "--accept-disclaimer")
+        assert result.exception.code == code
+
+
+def test_check_is_supported_unknown_client():
+    supported, client, version = is_supported_client("Aleth//v1.2.1")
+    assert not supported
+    assert not client
+    assert not version
+
+
 def run_test_check_json_rpc_geth():
     g1, client, v1 = is_supported_client("Geth/v1.7.3-unstable-e9295163/linux-amd64/go1.9.1")
     g2, _, v2 = is_supported_client("Geth/v1.7.2-unstable-e9295163/linux-amd64/go1.9.1")
@@ -43,8 +90,9 @@ def run_test_check_json_rpc_geth():
     # Test that patch version upgrades are not triggering the non-supported check
     g7, _, v7 = is_supported_client("Geth/v1.9.3-unstable-e9295163/linux-amd64/go1.9.1")
     g8, _, v8 = is_supported_client("Geth/v1.9.0-stable-52f24617/linux-amd64/go1.12.7")
+    g9, _, v9 = is_supported_client("Geth/v1.9.0-unstable-3d3e83ec-20190611/linux-amd64/go1.12.5")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3, g7, g8])
+    assert all([g1, g2, g3, g7, g8, g9])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.3"
     assert v2 == "1.7.2"
@@ -54,6 +102,7 @@ def run_test_check_json_rpc_geth():
     assert v6 == "999.999.999"
     assert v7 == "1.9.3"
     assert v8 == "1.9.0"
+    assert v9 == "1.9.0"
 
     b1, client, v1 = is_supported_client("Geth/v1.7.1-unstable-e9295163/linux-amd64/go1.9.1")
     b2, _, v2 = is_supported_client("Geth/v0.7.1-unstable-e9295163/linux-amd64/go1.9.1")
@@ -66,13 +115,6 @@ def run_test_check_json_rpc_geth():
     assert v3 == "0.0.0"
 
     supported, client, version = is_supported_client("Geth/faultyversion")
-    assert not supported
-    assert not client
-    assert not version
-
-
-def test_check_is_supported_unknown_client():
-    supported, client, version = is_supported_client("Aleth//v1.2.1")
     assert not supported
     assert not client
     assert not version

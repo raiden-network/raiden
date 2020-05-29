@@ -28,6 +28,7 @@ from raiden.utils.typing import (
     Address,
     ChannelID,
     List,
+    LockedAmount,
     Nonce,
     Optional,
     PaymentAmount,
@@ -70,7 +71,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     def detail_participants(_participant1, _participant2, _block_identifier, _channel_identifier):
         transferred_amount = TokenAmount(1)
-        locked_amount = TokenAmount(1)
+        locked_amount = LockedAmount(1)
         locksroot = make_locksroot()
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         our_details = ParticipantDetails(
@@ -85,7 +86,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         )
 
         transferred_amount = TokenAmount(1)
-        locked_amount = TokenAmount(1)
+        locked_amount = LockedAmount(1)
         # Let's mock here that partner locksroot is 0x0
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         partner_details = ParticipantDetails(
@@ -112,8 +113,8 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     )
 
     # This should not throw an unrecoverable error
-    RaidenEventHandler().on_raiden_event(
-        raiden=raiden, chain_state=raiden.wal.state_manager.current_state, event=event
+    RaidenEventHandler().on_raiden_events(
+        raiden=raiden, chain_state=raiden.wal.state_manager.current_state, events=[event]
     )
 
 
@@ -145,7 +146,7 @@ def setup_pfs_handler_test(
 
     # Set PFS config and feedback token
     pfs_config = True  # just a truthy value
-    raiden.config["pfs_config"] = pfs_config
+    raiden.config.pfs_config = pfs_config
 
     feedback_uuid = None
     if set_feedback_token:
@@ -172,14 +173,14 @@ def test_pfs_handler_handle_routefailed_with_feedback_token():
     )
 
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_events(
             raiden=raiden,
             chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
-            event=route_failed_event,
+            events=[route_failed_event],
         )
     assert pfs_feedback_handler.called
     assert pfs_feedback_handler.call_args == call(
-        pfs_config=raiden.config["pfs_config"],
+        pfs_config=raiden.config.pfs_config,
         route=route,
         routing_mode=RoutingMode.PRIVATE,
         successful=False,
@@ -198,10 +199,10 @@ def test_pfs_handler_handle_routefailed_without_feedback_token():
     )
 
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_events(
             raiden=raiden,
             chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
-            event=route_failed_event,
+            events=[route_failed_event],
         )
     assert not pfs_feedback_handler.called
 
@@ -232,14 +233,14 @@ def test_pfs_handler_handle_paymentsentsuccess_with_feedback_token():
     )
 
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_events(
             raiden=raiden,
             chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
-            event=route_failed_event,
+            events=[route_failed_event],
         )
     assert pfs_feedback_handler.called
     assert pfs_feedback_handler.call_args == call(
-        pfs_config=raiden.config["pfs_config"],
+        pfs_config=raiden.config.pfs_config,
         route=route,
         routing_mode=RoutingMode.PRIVATE,
         successful=True,
@@ -274,9 +275,9 @@ def test_pfs_handler_handle_paymentsentsuccess_without_feedback_token():
     )
 
     with patch("raiden.raiden_event_handler.post_pfs_feedback") as pfs_feedback_handler:
-        pfs_handler.on_raiden_event(
+        pfs_handler.on_raiden_events(
             raiden=raiden,
             chain_state=cast(ChainState, raiden.wal.state_manager.current_state),  # type: ignore
-            event=route_failed_event,
+            events=[route_failed_event],
         )
     assert not pfs_feedback_handler.called

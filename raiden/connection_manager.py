@@ -1,9 +1,11 @@
+import random
 from random import shuffle
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Tuple
 
 import gevent
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_typing import HexStr
+from eth_utils import to_canonical_address
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -21,11 +23,15 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     UnexpectedChannelState,
 )
+from raiden.network.transport.matrix.utils import AddressReachability
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.utils import typing
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.gevent import spawn_named
 from raiden.utils.typing import (
     Address,
+    AddressHex,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -85,7 +91,7 @@ class ConnectionManager:  # pragma: no unittest
 
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
-    BOOTSTRAP_ADDR_HEX = to_checksum_address("2" * 40)
+    BOOTSTRAP_ADDR_HEX = AddressHex(HexStr("0x" + "2" * 40))
     BOOTSTRAP_ADDR = to_canonical_address(BOOTSTRAP_ADDR_HEX)
 
     def __init__(self, raiden: "RaidenService", token_network_address: TokenNetworkAddress):
@@ -98,8 +104,13 @@ class ConnectionManager:  # pragma: no unittest
             chain_state, token_network_address
         )
 
-        assert token_network_state
-        assert token_network_registry
+        msg = f"Token network for address {to_checksum_address(token_network_address)} not found."
+        assert token_network_state, msg
+        msg = (
+            f"Token network registry for token network address "
+            f"{to_checksum_address(token_network_address)} not found."
+        )
+        assert token_network_registry, msg
 
         # TODO:
         # - Add timeout for transaction polling, used to overwrite the RaidenAPI
@@ -138,7 +149,8 @@ class ConnectionManager:  # pragma: no unittest
             initial_channel_target: Target number of channels to open.
             joinable_funds_target: Amount of funds not initially assigned.
         """
-        token = self.raiden.proxy_manager.token(self.token_address)
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
+        token = self.raiden.proxy_manager.token(self.token_address, confirmed_block_identifier)
         token_balance = token.balance_of(self.raiden.address)
 
         if token_balance < funds:
@@ -160,21 +172,31 @@ class ConnectionManager:  # pragma: no unittest
             self.joinable_funds_target = joinable_funds_target
 
             log_open_channels(self.raiden, self.registry_address, self.token_address, funds)
-
-            qty_network_channels = views.count_token_network_channels(
-                views.state_from_raiden(self.raiden), self.registry_address, self.token_address
-            )
-
-            if not qty_network_channels:
+            have_online_partners, potential_partners = self._have_online_channels_to_connect_to()
+            if not have_online_partners:
+                bootstrap_address = (
+                    self.BOOTSTRAP_ADDR
+                    if len(potential_partners) == 0
+                    else random.choice(potential_partners)
+                )
                 log.info(
                     "Bootstrapping token network.",
                     node=to_checksum_address(self.raiden.address),
                     network_id=to_checksum_address(self.registry_address),
                     token_id=to_checksum_address(self.token_address),
+                    bootstrap_address=to_checksum_address(bootstrap_address),
                 )
-                self.api.channel_open(
-                    self.registry_address, self.token_address, self.BOOTSTRAP_ADDR
-                )
+                try:
+                    self.api.channel_open(
+                        registry_address=self.registry_address,
+                        token_address=self.token_address,
+                        partner_address=bootstrap_address,
+                    )
+                except DuplicatedChannelError:
+                    # If we have none else to connect to and connect got called twice
+                    # then it's possible to already have channel with the bootstrap node.
+                    # In that case do nothing
+                    pass
             else:
                 self._open_channels()
 
@@ -230,7 +252,10 @@ class ConnectionManager:  # pragma: no unittest
         # To fix this race, first the node must wait for the pending operations
         # to finish, because in them could be a deposit, and then deposit must
         # be called only if the channel is still not funded.
-        token_network_proxy = self.raiden.proxy_manager.token_network(self.token_network_address)
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
+        token_network_proxy = self.raiden.proxy_manager.token_network(
+            self.token_network_address, block_identifier=confirmed_block_identifier
+        )
 
         # Wait for any pending operation in the channel to complete, before
         # deciding on the deposit
@@ -266,8 +291,8 @@ class ConnectionManager:  # pragma: no unittest
                 raise
             except RaidenUnrecoverableError as e:
                 should_crash = (
-                    self.raiden.config["environment_type"] != Environment.PRODUCTION
-                    or self.raiden.config["unrecoverable_error_should_crash"]
+                    self.raiden.config.environment_type != Environment.PRODUCTION
+                    or self.raiden.config.unrecoverable_error_should_crash
                 )
                 if should_crash:
                     raise
@@ -291,6 +316,22 @@ class ConnectionManager:  # pragma: no unittest
         with self.lock:
             if self._funds_remaining > 0 and not self._leaving_state:
                 self._open_channels()
+
+    def _have_online_channels_to_connect_to(self) -> Tuple[bool, List[Address]]:
+        """Returns whether there are any possible new online channel partners to connect to
+
+        If there are channels online the first element of the returned tuple is True
+        The second element is the list of all potential addresses to connect to(online and offline)
+        """
+        potential_addresses = self._find_new_partners()
+        have_online_channels = False
+        for address in potential_addresses:
+            reachability = self.raiden.transport.force_check_address_reachability(address)
+            if reachability == AddressReachability.REACHABLE:
+                have_online_channels = True
+                break
+
+        return have_online_channels, potential_addresses
 
     def _find_new_partners(self) -> List[Address]:
         """ Search the token network for potential channel partners. """
@@ -354,8 +395,8 @@ class ConnectionManager:  # pragma: no unittest
             )
         except RaidenUnrecoverableError:
             should_crash = (
-                self.raiden.config["environment_type"] != Environment.PRODUCTION
-                or self.raiden.config["unrecoverable_error_should_crash"]
+                self.raiden.config.environment_type != Environment.PRODUCTION
+                or self.raiden.config.unrecoverable_error_should_crash
             )
             if should_crash:
                 raise
@@ -397,15 +438,14 @@ class ConnectionManager:  # pragma: no unittest
             if channel_state not in funded_channels
         ]
         possible_new_partners = self._find_new_partners()
-        if possible_new_partners == 0:
-            return False
 
         # if we already met our target, break
         if len(funded_channels) >= self.initial_channel_target:
             return False
+
         # if we didn't, but there's no nonfunded channels and no available partners
         # it means the network is smaller than our target, so we should also break
-        if not nonfunded_channels and possible_new_partners == 0:
+        if len(nonfunded_channels) == 0 and len(possible_new_partners) == 0:
             return False
 
         n_to_join = self.initial_channel_target - len(funded_channels)
@@ -414,7 +454,16 @@ class ConnectionManager:  # pragma: no unittest
         ]
         # first, fund nonfunded channels, then open and fund with possible_new_partners,
         # until initial_channel_target of funded channels is met
-        join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
+        possible_partners = nonfunded_partners + possible_new_partners
+        join_partners: List[Address] = []
+        # Also filter the possible partners by excluding offline addresses
+        for possible_partner in possible_partners:
+            if len(join_partners) == n_to_join:
+                break
+
+            reachability = self.raiden.transport.force_check_address_reachability(possible_partner)
+            if reachability == AddressReachability.REACHABLE:
+                join_partners.append(possible_partner)
 
         log.debug(
             "Spawning greenlets to join partners",
@@ -422,7 +471,12 @@ class ConnectionManager:  # pragma: no unittest
             num_greenlets=len(join_partners),
         )
 
-        greenlets = set(gevent.spawn(self._join_partner, partner) for partner in join_partners)
+        greenlets = set(
+            spawn_named(
+                f"cm-join_partner-{to_checksum_address(partner)}", self._join_partner, partner
+            )
+            for partner in join_partners
+        )
         gevent.joinall(greenlets, raise_error=True)
         return True
 
@@ -449,7 +503,8 @@ class ConnectionManager:  # pragma: no unittest
             - This attribute must be accessed with the lock held.
         """
         if self.funds > 0:
-            token = self.raiden.proxy_manager.token(self.token_address)
+            confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
+            token = self.raiden.proxy_manager.token(self.token_address, confirmed_block_identifier)
             token_balance = token.balance_of(self.raiden.address)
             sum_deposits = views.get_our_deposits_for_token_network(
                 views.state_from_raiden(self.raiden), self.registry_address, self.token_address

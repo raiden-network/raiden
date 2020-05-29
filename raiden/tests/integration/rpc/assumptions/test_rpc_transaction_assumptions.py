@@ -1,66 +1,98 @@
 import pytest
-from eth_utils import to_checksum_address
 
+from raiden.constants import BLOCK_ID_LATEST, TRANSACTION_INTRINSIC_GAS
 from raiden.exceptions import InsufficientEth
-from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.network.rpc.client import (
+    JSONRPCClient,
+    SmartContractCall,
+    TransactionEstimated,
+    discover_next_available_nonce,
+    gas_price_for_fast_transaction,
+    was_transaction_successfully_mined,
+)
 from raiden.tests.utils.client import burn_eth
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
-from raiden.utils import safe_gas_limit
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.smart_contracts import safe_gas_limit
+from raiden.utils.typing import Nonce
 
 
 def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that did not throw is 0x1 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    address = contract_proxy.contract_address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    address = contract_proxy.address
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    check_block = deploy_client.get_checking_block()
-    startgas = contract_proxy.estimate_gas(check_block, "ret") * 2
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
+    assert estimated_transaction
+    estimated_transaction.estimated_gas *= 2
 
-    transaction = contract_proxy.transact("ret", startgas)
-    receipt = deploy_client.poll(transaction)
-
-    assert check_transaction_threw(receipt=receipt) is None, "must be empty"
+    transaction_sent = deploy_client.transact(estimated_transaction)
+    transaction_mined = deploy_client.poll_transaction(transaction_sent)
+    assert was_transaction_successfully_mined(transaction_mined), "Transaction must be succesfull"
 
 
 def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that hit an assert or require is 0x0 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    address = contract_proxy.contract_address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    address = contract_proxy.address
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
-    # the gas estimation returns 0 here, so hardcode a value
-    startgas = safe_gas_limit(22000)
+    # the method always fails, so the gas estimation returns 0 here, using a
+    # hardcoded a value to circumvent gas estimation.
+    estimated_gas = safe_gas_limit(22000)
+    gas_price = gas_price_for_fast_transaction(deploy_client.web3)
 
-    transaction = contract_proxy.transact("fail_assert", startgas)
-    receipt = deploy_client.poll(transaction)
+    block = deploy_client.get_block(BLOCK_ID_LATEST)
 
-    assert check_transaction_threw(receipt=receipt), "must not be empty"
+    estimated_transaction_fail_assert = TransactionEstimated(
+        from_address=address,
+        data=SmartContractCall(contract_proxy, "fail_assert", (), {}, value=0),
+        eth_node=deploy_client.eth_node,
+        extra_log_details={},
+        estimated_gas=estimated_gas,
+        gas_price=gas_price,
+        approximate_block=(block["hash"], block["number"]),
+    )
+    transaction_fail_assert_sent = deploy_client.transact(estimated_transaction_fail_assert)
+    transaction_fail_assert_mined = deploy_client.poll_transaction(transaction_fail_assert_sent)
+    msg = "Transaction must have failed"
+    assert not was_transaction_successfully_mined(transaction_fail_assert_mined), msg
 
-    transaction = contract_proxy.transact("fail_require", startgas)
-    receipt = deploy_client.poll(transaction)
-
-    assert check_transaction_threw(receipt=receipt), "must not be empty"
+    estimated_transaction_fail_require = TransactionEstimated(
+        from_address=address,
+        data=SmartContractCall(contract_proxy, "fail_require", (), {}, value=0),
+        eth_node=deploy_client.eth_node,
+        extra_log_details={},
+        estimated_gas=estimated_gas,
+        gas_price=gas_price,
+        approximate_block=(block["hash"], block["number"]),
+    )
+    transaction_fail_require_sent = deploy_client.transact(estimated_transaction_fail_require)
+    transaction_fail_require_mined = deploy_client.poll_transaction(transaction_fail_require_sent)
+    msg = "Transaction must have failed"
+    assert not was_transaction_successfully_mined(transaction_fail_require_mined), msg
 
 
 def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that did NOT throw is 0x0. """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    address = contract_proxy.contract_address
-    assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
+    address = contract_proxy.address
+    assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # divide the estimate by 2 to run into out-of-gas
-    check_block = deploy_client.get_checking_block()
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "loop", 1000)) // 2
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "loop", {}, 1000)
+    assert estimated_transaction
+    estimated_transaction.estimated_gas //= 2
 
-    transaction = contract_proxy.transact("loop", startgas, 1000)
-    receipt = deploy_client.poll(transaction)
-
-    assert check_transaction_threw(receipt=receipt), "must not be empty"
+    transaction_sent = deploy_client.transact(estimated_transaction)
+    transaction_mined = deploy_client.poll_transaction(transaction_sent)
+    msg = "Transaction must be succesfull"
+    assert not was_transaction_successfully_mined(transaction_mined), msg
 
 
 def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_gas(
@@ -72,11 +104,74 @@ def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_g
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    check_block = deploy_client.get_checking_block()
+    estimated_transaction = deploy_client.estimate_gas(contract_proxy, "loop", {}, 1000)
+    assert estimated_transaction, "The gas estimation should not have failed."
 
-    startgas = contract_proxy.estimate_gas(check_block, "loop", 1000)
-    assert startgas, "The gas estimation should not have failed."
-
-    burn_eth(deploy_client, amount_to_leave=startgas // 2)
+    burn_eth(deploy_client, amount_to_leave=estimated_transaction.estimated_gas // 2)
     with pytest.raises(InsufficientEth):
-        contract_proxy.transact("loop", startgas, 1000)
+        deploy_client.transact(estimated_transaction)
+
+
+def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
+    """`parity_discover_next_available_nonce` returns the *next available nonce*.
+
+    Notes:
+    - This is not the same as the *highest unused nonce*, additional details on
+      issue #4976.
+    - The behaviour of `geth_discover_next_available_nonce` and
+      `parity_discover_next_available_nonce` should match.
+    """
+    web3 = deploy_client.web3
+    random_address = make_address()
+    gas_price = web3.eth.gasPrice  # pylint: disable=no-member
+    eth_node = deploy_client.eth_node
+    next_nonce = discover_next_available_nonce(web3, eth_node, deploy_client.address)
+
+    # Should be larger than the number of transactions that can fit in a single
+    # block, to ensure all transactions from the pool are accounted for.
+    QTY_TRANSACTIONS = 1000
+
+    # Test the next available nonce
+    for _ in range(QTY_TRANSACTIONS):
+        transaction = {
+            "to": to_checksum_address(random_address),
+            "gas": TRANSACTION_INTRINSIC_GAS,
+            "nonce": next_nonce,
+            "value": 1,
+            "gasPrice": gas_price,
+        }
+        signed_txn = deploy_client.web3.eth.account.sign_transaction(
+            transaction, deploy_client.privkey
+        )
+        deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+        next_nonce = Nonce(next_nonce + 1)
+        msg = "The nonce must increment when a new transaction is sent."
+        assert (
+            discover_next_available_nonce(web3, eth_node, deploy_client.address) == next_nonce
+        ), msg
+
+    skip_nonce = next_nonce + 1
+
+    # Test the next available nonce is not the same as the highest unused
+    # nonce.
+    for _ in range(QTY_TRANSACTIONS):
+        transaction = {
+            "to": to_checksum_address(random_address),
+            "gas": TRANSACTION_INTRINSIC_GAS,
+            "nonce": skip_nonce,
+            "value": 1,
+            "gasPrice": gas_price,
+        }
+        signed_txn = deploy_client.web3.eth.account.sign_transaction(
+            transaction, deploy_client.privkey
+        )
+        deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+
+        available_nonce = discover_next_available_nonce(web3, eth_node, deploy_client.address)
+
+        msg = "Expected the latest unused nonce."
+        assert available_nonce == next_nonce, msg
+        assert available_nonce != skip_nonce, msg
+
+        skip_nonce = Nonce(skip_nonce + 1)

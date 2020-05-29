@@ -1,33 +1,42 @@
+import contextlib
 import json
 import os
 import random
 import shutil
-import sys
+import signal
 from contextlib import contextmanager
 from http import HTTPStatus
+from pathlib import Path
+from subprocess import TimeoutExpired
+from tempfile import mkdtemp
+from typing import IO, ContextManager, NamedTuple
 
 import click
 import requests
-from eth_utils import remove_0x_prefix, to_canonical_address, to_checksum_address
+from eth_typing import URI, HexStr
+from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
 from web3 import HTTPProvider, Web3
-from web3.middleware import geth_poa_middleware
+from web3.contract import Contract
 
 from raiden.accounts import AccountManager
-from raiden.api.python import RaidenAPI
-from raiden.api.rest import APIServer, RestAPI
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
+    BLOCK_ID_LATEST,
+    DISCOVERY_DEFAULT_ROOM,
     EMPTY_ADDRESS,
     GENESIS_BLOCK_NUMBER,
+    PATH_FINDING_BROADCASTING_ROOM,
     SECONDS_PER_DAY,
     UINT256_MAX,
+    Environment,
     EthClient,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
-from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.network.proxies.user_deposit import UserDeposit
+from raiden.network.rpc.client import JSONRPCClient, make_sane_poa_middleware
+from raiden.network.transport.matrix.utils import make_room_alias
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
     AccountDescription,
@@ -38,17 +47,20 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.factories import make_address
-from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
+from raiden.tests.utils.smartcontracts import deploy_token
+from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
-from raiden.utils import privatekey_to_address, split_endpoint
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.http import HTTPExecutor
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     AddressHex,
     Any,
+    Balance,
     BlockNumber,
     Callable,
     ChainID,
@@ -56,21 +68,26 @@ from raiden.utils.typing import (
     Iterable,
     Iterator,
     List,
+    MonitoringServiceAddress,
+    OneToNAddress,
     Port,
     PrivateKey,
     TokenAddress,
     TokenAmount,
     TokenNetworkRegistryAddress,
+    Tuple,
+    UserDepositAddress,
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
-    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CHAINNAME_TO_ID,
+    CONTRACT_CUSTOM_TOKEN,
     CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
-    NETWORKNAME_TO_ID,
+    CONTRACT_USER_DEPOSIT,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
@@ -93,11 +110,10 @@ TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 def ensure_executable(cmd):
     """look for the given command and make sure it can be executed"""
     if not shutil.which(cmd):
-        print(
+        raise ValueError(
             "Error: unable to locate %s binary.\n"
             "Make sure it is installed and added to the PATH variable." % cmd
         )
-        sys.exit(1)
 
 
 def deploy_smoketest_contracts(
@@ -106,53 +122,107 @@ def deploy_smoketest_contracts(
     contract_manager: ContractManager,
     token_address: AddressHex,
 ) -> Dict[str, Address]:
-    client.web3.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
+    if client.eth_node is EthClient.GETH:
+        client.web3.geth.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
+    elif client.eth_node is EthClient.PARITY:
+        client.web3.parity.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
 
-    secret_registry_address = deploy_contract_web3(
+    contract_proxy, _ = client.deploy_single_contract(
         contract_name=CONTRACT_SECRET_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
+        contract=contract_manager.get_contract(CONTRACT_SECRET_REGISTRY),
+        constructor_parameters=None,
     )
-    constructor_arguments = [
+    secret_registry_address = Address(to_canonical_address(contract_proxy.address))
+
+    secret_registry_constructor_arguments = (
         to_checksum_address(secret_registry_address),
         chain_id,
         TEST_SETTLE_TIMEOUT_MIN,
         TEST_SETTLE_TIMEOUT_MAX,
         UINT256_MAX,
-    ]
+    )
 
-    token_network_registry_address = deploy_contract_web3(
+    contract_proxy, _ = client.deploy_single_contract(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-        deploy_client=client,
+        contract=contract_manager.get_contract(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        constructor_parameters=secret_registry_constructor_arguments,
+    )
+    token_network_registry_address = Address(to_canonical_address(contract_proxy.address))
+
+    service_registry_constructor_arguments = (
+        token_address,
+        EMPTY_ADDRESS,
+        int(500e18),
+        6,
+        5,
+        180 * SECONDS_PER_DAY,
+        1000,
+        200 * SECONDS_PER_DAY,
+    )
+    service_registry_contract, _ = client.deploy_single_contract(
+        contract_name=CONTRACT_SERVICE_REGISTRY,
+        contract=contract_manager.get_contract(CONTRACT_SERVICE_REGISTRY),
+        constructor_parameters=service_registry_constructor_arguments,
+    )
+    service_registry_address = Address(to_canonical_address(service_registry_contract.address))
+
+    user_deposit_contract, _ = client.deploy_single_contract(
+        contract_name=CONTRACT_USER_DEPOSIT,
+        contract=contract_manager.get_contract(CONTRACT_USER_DEPOSIT),
+        constructor_parameters=(token_address, UINT256_MAX),
+    )
+    user_deposit_address = Address(to_canonical_address(user_deposit_contract.address))
+
+    monitoring_service_contract, _ = client.deploy_single_contract(
+        contract_name=CONTRACT_MONITORING_SERVICE,
+        contract=contract_manager.get_contract(CONTRACT_MONITORING_SERVICE),
+        constructor_parameters=(
+            token_address,
+            service_registry_address,
+            user_deposit_address,
+            token_network_registry_address,
+        ),
+    )
+    monitoring_service_address = Address(to_canonical_address(monitoring_service_contract.address))
+
+    one_to_n_contract, _ = client.deploy_single_contract(
+        contract_name=CONTRACT_ONE_TO_N,
+        contract=contract_manager.get_contract(CONTRACT_ONE_TO_N),
+        constructor_parameters=(user_deposit_address, chain_id, service_registry_address),
+    )
+    one_to_n_address = Address(to_canonical_address(one_to_n_contract.address))
+
+    proxy_manager = ProxyManager(
+        rpc_client=client,
         contract_manager=contract_manager,
-        constructor_arguments=constructor_arguments,
+        metadata=ProxyManagerMetadata(
+            token_network_registry_deployed_at=GENESIS_BLOCK_NUMBER,
+            filters_start_at=GENESIS_BLOCK_NUMBER,
+        ),
+    )
+    user_deposit_proxy = UserDeposit(
+        jsonrpc_client=client,
+        user_deposit_address=UserDepositAddress(
+            to_canonical_address(user_deposit_contract.address)
+        ),
+        contract_manager=contract_manager,
+        proxy_manager=proxy_manager,
+        block_identifier=BLOCK_ID_LATEST,
+    )
+    user_deposit_proxy.init(
+        monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
+        one_to_n_address=OneToNAddress(one_to_n_address),
+        given_block_identifier=BLOCK_ID_LATEST,
     )
 
     addresses = {
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
         CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
+        CONTRACT_SERVICE_REGISTRY: service_registry_address,
+        CONTRACT_USER_DEPOSIT: user_deposit_address,
+        CONTRACT_MONITORING_SERVICE: monitoring_service_address,
+        CONTRACT_ONE_TO_N: one_to_n_address,
     }
-    service_registry_address = deploy_contract_web3(
-        contract_name=CONTRACT_SERVICE_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=(
-            token_address,
-            EMPTY_ADDRESS,
-            int(500e18),
-            6,
-            5,
-            180 * SECONDS_PER_DAY,
-            1000,
-            200 * SECONDS_PER_DAY,
-        ),
-    )
-    addresses[CONTRACT_SERVICE_REGISTRY] = service_registry_address
-
-    # The MSC is not used, no need to waste time on deployment
-    addresses[CONTRACT_MONITORING_SERVICE] = make_address()
-    # The OneToN contract is not used, no need to waste time on deployment
-    addresses[CONTRACT_ONE_TO_N] = make_address()
 
     return addresses
 
@@ -176,9 +246,9 @@ def setup_testchain(
     rpc_port = next(free_port_generator)
     p2p_port = next(free_port_generator)
 
-    eth_rpc_endpoint = f"http://127.0.0.1:{rpc_port}"
+    eth_rpc_endpoint = URI(f"http://127.0.0.1:{rpc_port}")
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
-    web3.middleware_stack.inject(geth_poa_middleware, layer=0)
+    web3.middleware_onion.inject(make_sane_poa_middleware, layer=0)
 
     eth_nodes = [
         EthNodeDescription(
@@ -191,11 +261,11 @@ def setup_testchain(
         )
     ]
 
-    random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
+    random_marker = remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
     genesis_description = GenesisDescription(
         prefunded_accounts=[AccountDescription(TEST_ACCOUNT_ADDRESS, DEFAULT_BALANCE)],
         random_marker=random_marker,
-        chain_id=NETWORKNAME_TO_ID["smoketest"],
+        chain_id=CHAINNAME_TO_ID["smoketest"],
     )
 
     datadir = eth_node_to_datadir(privatekey_to_address(TEST_PRIVKEY), base_datadir)
@@ -228,7 +298,7 @@ def setup_matrix_for_smoketest(
     print_step: Callable,
     free_port_generator: Iterable[Port],
     broadcast_rooms_aliases: Iterable[str],
-) -> Iterator[List["ParsedURL"]]:
+) -> Iterator[List[Tuple["ParsedURL", HTTPExecutor]]]:
     from raiden.tests.utils.transport import matrix_server_starter
 
     print_step("Starting Matrix transport")
@@ -256,25 +326,24 @@ def setup_testchain_for_smoketest(
         yield ctx
 
 
+class RaidenTestSetup(NamedTuple):
+    args: Dict[str, Any]
+    token: Contract
+    contract_addresses: Dict[str, Address]
+
+
 def setup_raiden(
-    transport,
-    matrix_server,
-    print_step,
+    matrix_server: str,
+    print_step: Callable,
     contracts_version,
-    eth_client,
-    eth_rpc_endpoint,
-    web3,
-    base_datadir,
-    keystore,
-):
+    eth_rpc_endpoint: str,
+    web3: Web3,
+    base_datadir: Path,
+    keystore: Path,
+) -> RaidenTestSetup:
     print_step("Deploying Raiden contracts")
 
-    if eth_client is EthClient.PARITY:
-        client = JSONRPCClient(
-            web3, get_private_key(keystore), gas_estimate_correction=lambda gas: gas * 2
-        )
-    else:
-        client = JSONRPCClient(web3, get_private_key(keystore))
+    client = JSONRPCClient(web3, get_private_key(keystore))
     contract_manager = ContractManager(contracts_precompiled_path(contracts_version))
 
     proxy_manager = ProxyManager(
@@ -293,32 +362,29 @@ def setup_raiden(
         decimals=0,
         token_name="TKN",
         token_symbol="TKN",
-        token_contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        token_contract_name=CONTRACT_CUSTOM_TOKEN,
     )
     contract_addresses = deploy_smoketest_contracts(
         client=client,
-        chain_id=NETWORKNAME_TO_ID["smoketest"],
+        chain_id=CHAINNAME_TO_ID["smoketest"],
         contract_manager=contract_manager,
-        token_address=to_checksum_address(token.contract.address),
+        token_address=token.address,
     )
+    confirmed_block_identifier = client.get_confirmed_blockhash()
     registry = proxy_manager.token_network_registry(
-        TokenNetworkRegistryAddress(contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
+        TokenNetworkRegistryAddress(contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]),
+        block_identifier=confirmed_block_identifier,
     )
 
     registry.add_token(
-        token_address=TokenAddress(to_canonical_address(token.contract.address)),
+        token_address=TokenAddress(to_canonical_address(token.address)),
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
-        block_identifier=client.get_confirmed_blockhash(),
+        given_block_identifier=confirmed_block_identifier,
     )
 
     print_step("Setting up Raiden")
-    tokennetwork_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
-    )
-    secret_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_SECRET_REGISTRY]
-    )
+    user_deposit_contract_address = to_checksum_address(contract_addresses[CONTRACT_USER_DEPOSIT])
 
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
@@ -327,26 +393,12 @@ def setup_raiden(
         "gas_price": "fast",
         "keystore_path": keystore,
         "matrix_server": matrix_server,
-        "network_id": str(NETWORKNAME_TO_ID["smoketest"]),
+        "network_id": str(CHAINNAME_TO_ID["smoketest"]),
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
-        "tokennetwork_registry_contract_address": tokennetwork_registry_contract_address,
-        "secret_registry_contract_address": secret_registry_contract_address,
+        "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
-        "transport": transport,
+        "environment_type": Environment.DEVELOPMENT,
     }
-
-    service_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_SERVICE_REGISTRY]
-    )
-    args["service_registry_contract_address"] = service_registry_contract_address
-
-    monitoring_service_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_MONITORING_SERVICE]
-    )
-    args["monitoring_service_contract_address"] = monitoring_service_contract_address
-
-    one_to_n_contract_address = to_checksum_address(contract_addresses[CONTRACT_ONE_TO_N])
-    args["one_to_n_contract_address"] = one_to_n_contract_address
 
     # Wait until the secret registry is confirmed, otherwise the App
     # inialization will fail, needed for the check
@@ -357,26 +409,17 @@ def setup_raiden(
         current_block = client.block_number()
         sleep(0.5)
 
-    return {"args": args, "contract_addresses": contract_addresses, "token": token}
+    return RaidenTestSetup(args=args, token=token, contract_addresses=contract_addresses)
 
 
-def run_smoketest(
-    print_step: Callable,
-    args: Dict[str, Any],
-    contract_addresses: Dict[str, Address],
-    token: ContractProxy,
-):
+def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
     print_step("Starting Raiden")
 
     app = None
-    api_server = None
     try:
-        app = run_app(**args)
-        raiden_api = RaidenAPI(app.raiden)
-        rest_api = RestAPI(raiden_api)
-        (api_host, api_port) = split_endpoint(args["api_address"])
-        api_server = APIServer(rest_api, config={"host": api_host, "port": api_port})
-        api_server.start()
+        app = run_app(**setup.args)
+        raiden_api = app.raiden.raiden_api
+        assert raiden_api is not None  # for mypy
 
         block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
@@ -386,20 +429,20 @@ def run_smoketest(
 
         raiden_api.channel_open(
             registry_address=TokenNetworkRegistryAddress(
-                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+                setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
-            token_address=TokenAddress(to_canonical_address(token.contract.address)),
+            token_address=TokenAddress(to_canonical_address(setup.token.address)),
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
         )
         raiden_api.set_total_channel_deposit(
             registry_address=TokenNetworkRegistryAddress(
-                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+                setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
-            token_address=TokenAddress(to_canonical_address(token.contract.address)),
+            token_address=TokenAddress(to_canonical_address(setup.token.address)),
             partner_address=ConnectionManager.BOOTSTRAP_ADDR,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
-        token_addresses = [to_checksum_address(token.contract.address)]
+        token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
 
         print_step("Running smoketest")
 
@@ -428,10 +471,10 @@ def run_smoketest(
             channel_state.our_state, channel_state.partner_state
         )
         assert distributable == TEST_DEPOSIT_AMOUNT
-        assert distributable == channel_state.our_state.contract_balance
+        assert Balance(distributable) == channel_state.our_state.contract_balance
         assert channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
-        port_number = raiden_service.config["api_port"]
+        port_number = raiden_service.config.rest_api.port
         response = requests.get(f"http://localhost:{port_number}/api/v1/channels")
 
         assert response.status_code == HTTPStatus.OK
@@ -441,12 +484,99 @@ def run_smoketest(
             ConnectionManager.BOOTSTRAP_ADDR
         )
         assert response_json[0]["state"] == "opened"
-        assert response_json[0]["balance"] > 0
+        assert int(response_json[0]["balance"]) > 0
     finally:
-        if api_server is not None:
-            api_server.stop()
-            api_server.greenlet.get()
-
         if app is not None:
             app.stop()
             app.raiden.greenlet.get()
+
+
+@contextmanager
+def setup_smoketest(
+    *,
+    eth_client: EthClient,
+    print_step: Callable,
+    free_port_generator: Iterator[Port],
+    debug: bool = False,
+    stdout: IO = None,
+    append_report: Callable = print,
+) -> Iterator[RaidenTestSetup]:
+
+    make_requests_insecure()
+
+    datadir = mkdtemp()
+    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
+        eth_client=eth_client,
+        print_step=print_step,
+        free_port_generator=free_port_generator,
+        base_datadir=datadir,
+        base_logdir=datadir,
+    )
+    matrix_manager: ContextManager[
+        List[Tuple[ParsedURL, HTTPExecutor]]
+    ] = setup_matrix_for_smoketest(
+        print_step=print_step,
+        free_port_generator=free_port_generator,
+        broadcast_rooms_aliases=[
+            make_room_alias(CHAINNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
+            make_room_alias(CHAINNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
+        ],
+    )
+
+    # Do not redirect the stdout on a debug session, otherwise the REPL
+    # will also be redirected
+    if debug:
+        stdout_manager = contextlib.nullcontext()
+    else:
+        assert stdout is not None
+        stdout_manager = contextlib.redirect_stdout(stdout)
+
+    with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
+        try:
+            raiden_setup = setup_raiden(
+                matrix_server=server_urls[0][0],
+                print_step=print_step,
+                contracts_version=RAIDEN_CONTRACT_VERSION,
+                eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
+                web3=testchain["web3"],
+                base_datadir=testchain["base_datadir"],
+                keystore=testchain["keystore"],
+            )
+            ethereum_nodes = testchain["node_executors"]
+            assert all(ethereum_nodes)
+
+            yield raiden_setup
+        finally:
+            if ethereum_nodes:
+                for node_executor in ethereum_nodes:
+                    node = node_executor.process
+                    if node is not None:
+                        node.send_signal(signal.SIGINT)
+                        try:
+                            node.wait(10)
+                        except TimeoutExpired:
+                            print_step("Ethereum node shutdown unclean, check log!", error=True)
+                            node.kill()
+                    if isinstance(node_executor.stdio, tuple):
+                        logfile = node_executor.stdio[1]
+                        logfile.flush()
+                        logfile.seek(0)
+                        append_report("Ethereum Node log output", logfile.read())
+
+
+@contextmanager
+def step_printer(step_count, stdout):
+    step = 0
+
+    def print_step(description: str, error: bool = False) -> None:
+        nonlocal step
+        step += 1
+        click.echo(
+            "{} {}".format(
+                click.style(f"[{step}/{step_count}]", fg="blue"),
+                click.style(description, fg="green" if not error else "red"),
+            ),
+            file=stdout,
+        )
+
+    yield print_step

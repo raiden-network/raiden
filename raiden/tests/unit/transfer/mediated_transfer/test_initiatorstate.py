@@ -1,11 +1,11 @@
 # pylint: disable=invalid-name,too-few-public-methods,too-many-arguments,too-many-locals
 import random
 import uuid
-from copy import deepcopy
 from typing import NamedTuple
 from unittest.mock import patch
 
 import pytest
+from eth_utils import keccak
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.raiden_service import initiator_init
@@ -39,10 +39,10 @@ from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockFailed,
     EventUnlockSuccess,
-    SendBalanceProof,
     SendLockedTransfer,
     SendLockExpired,
     SendSecretReveal,
+    SendUnlock,
 )
 from raiden.transfer.mediated_transfer.initiator import (
     calculate_fee_margin,
@@ -70,7 +70,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveSecretReveal,
 )
-from raiden.utils import random_secret, sha3, typing
+from raiden.utils import typing
+from raiden.utils.copy import deepcopy
+from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     Address,
     BlockNumber,
@@ -276,7 +278,8 @@ def test_init_with_fees_more_than_max_limit():
     assert isinstance(transition.events[0], EventPaymentSentFailed)
     reason_msg = (
         "none of the available routes could be used and at least one of them "
-        "exceeded the maximum fee limit"
+        "exceeded the maximum fee limit "
+        "(see https://docs.raiden.network/using-raiden/mediation-fees#frequently-asked-questions)"  # noqa
     )
     assert transition.events[0].reason == reason_msg
 
@@ -467,7 +470,7 @@ def test_state_wait_unlock_valid():
 
     assert len(iteration.events) == 3
 
-    balance_proof = search_for_item(iteration.events, SendBalanceProof, {})
+    balance_proof = search_for_item(iteration.events, SendUnlock, {})
     complete = search_for_item(iteration.events, EventPaymentSentSuccess, {})
     assert search_for_item(iteration.events, EventUnlockSuccess, {})
     assert balance_proof
@@ -961,7 +964,6 @@ def test_init_with_maximum_pending_transfers_exceeded():
 
 def test_handle_offchain_secretreveal():
     setup = setup_initiator_tests()
-
     secret_reveal = ReceiveSecretReveal(
         secret=UNIT_SECRET, sender=setup.channel.partner_state.address
     )
@@ -972,13 +974,14 @@ def test_handle_offchain_secretreveal():
         state_change=secret_reveal,
         channel_state=setup.channel,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
     payment_identifier = initiator_state.transfer_description.payment_identifier
     balance_proof = search_for_item(
         iteration.events,
-        SendBalanceProof,
+        SendUnlock,
         {"message_identifier": message_identifier, "payment_identifier": payment_identifier},
     )
     assert balance_proof is not None
@@ -995,6 +998,7 @@ def test_handle_offchain_emptyhash_secret():
         state_change=secret_reveal,
         channel_state=setup.channel,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
     secrethash = factories.UNIT_TRANSFER_DESCRIPTION.secrethash
     assert len(iteration.events) == 0
@@ -1210,7 +1214,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
     payment_identifier = initiator_state.transfer_description.payment_identifier
     balance_proof = search_for_item(
         iteration.events,
-        SendBalanceProof,
+        SendUnlock,
         {"message_identifier": message_identifier, "payment_identifier": payment_identifier},
     )
     assert balance_proof is not None
@@ -1239,6 +1243,7 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
 
     assert len(iteration.events) == 3
@@ -1270,9 +1275,10 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
 
-    assert search_for_item(iteration.events, SendBalanceProof, {}) is None
+    assert search_for_item(iteration.events, SendUnlock, {}) is None
 
 
 def test_initiator_handle_contract_receive_after_channel_closed():
@@ -1327,13 +1333,14 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         state_change=state_change,
         channelidentifiers_to_channels=channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
     )
     initiator_task = get_transfer_at_index(setup.current_state, 0)
     secrethash = initiator_task.transfer_description.secrethash
     assert secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
 
     msg = "The channel is closed already, the balance proof must not be sent off-chain"
-    assert search_for_item(iteration.events, SendBalanceProof, {}) is None, msg
+    assert search_for_item(iteration.events, SendUnlock, {}) is None, msg
 
 
 def test_lock_expiry_updates_balance_proof():
@@ -1459,10 +1466,10 @@ def test_secret_reveal_cancel_other_transfers():
         block_number=block_number,
     )
 
-    assert search_for_item(iteration.events, SendBalanceProof, {}) is not None
+    assert search_for_item(iteration.events, SendUnlock, {}) is not None
     # An unlock should only be sent to the intended transfer that we received
     # a secret reveal for. So there should only be 1 balance proof to be sent
-    assert len(list(filter(lambda e: isinstance(e, SendBalanceProof), iteration.events))) == 1
+    assert len(list(filter(lambda e: isinstance(e, SendUnlock), iteration.events))) == 1
 
     rerouted_transfer = get_transfer_at_index(iteration.new_state, 0)
     assert rerouted_transfer.transfer_state == "transfer_cancelled"
@@ -1949,16 +1956,16 @@ def test_initiator_init():
     feedback_token = uuid.uuid4()
 
     with patch(
-        "raiden.routing.get_best_routes", return_value=(route_states, feedback_token)
+        "raiden.routing.get_best_routes", return_value=(None, route_states, feedback_token)
     ) as best_routes:
         assert len(service.route_to_feedback_token) == 0
 
-        state = initiator_init(
+        _, init_state_change = initiator_init(
             raiden=service,
             transfer_identifier=1,
             transfer_amount=PaymentAmount(100),
             transfer_secret=secret,
-            transfer_secrethash=sha3(secret),
+            transfer_secrethash=keccak(secret),
             token_network_address=factories.make_token_network_address(),
             target_address=factories.make_address(),
         )
@@ -1967,7 +1974,7 @@ def test_initiator_init():
         assert len(service.route_to_feedback_token) == 1
         assert service.route_to_feedback_token[tuple(route_states[0].route)] == feedback_token
 
-        assert state.routes == route_states
+        assert init_state_change.routes == route_states
 
 
 def test_calculate_safe_amount_with_fee():

@@ -1,19 +1,24 @@
-from copy import deepcopy
 from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest
 from eth_utils import to_canonical_address
 
-from raiden.app import App
 from raiden.constants import Environment, RoutingMode
+from raiden.exceptions import RaidenError
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
-from raiden.tests.utils.factories import make_address, make_token_network_registry_address
+from raiden.settings import RaidenConfig, ServiceConfig
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_network_id
-from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_proxies_or_exit
-from raiden.utils.typing import TokenAmount, TokenNetworkRegistryAddress
+from raiden.ui.startup import (
+    load_deployed_contracts_data,
+    load_deployment_addresses_from_contracts,
+    raiden_bundle_from_contracts_deployment,
+    services_bundle_from_contracts_deployment,
+)
+from raiden.utils.typing import Address, BlockNumber, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -25,6 +30,9 @@ from raiden_contracts.utils.type_aliases import ChainID
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(
     to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
 )
+user_deposit_address_test_default = Address(
+    to_canonical_address("0x8888888888888888888888888888888888888888")
+)
 
 pfs_payment_address_default = to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B907")
 
@@ -33,7 +41,9 @@ PFS_INFO = PFSInfo(
     price=TokenAmount(12),
     chain_id=ChainID(5),
     token_network_registry_address=token_network_registry_address_test_default,
+    user_deposit_address=user_deposit_address_test_default,
     payment_address=pfs_payment_address_default,
+    confirmed_block_number=BlockNumber(1),
     message="This is your favorite pathfinding service",
     operator="John Doe",
     version="0.0.3",
@@ -41,28 +51,16 @@ PFS_INFO = PFSInfo(
 
 
 def test_check_network_id_raises_with_mismatching_ids():
-    check_ethereum_network_id(68, MockWeb3(68))
+    check_ethereum_network_id(ChainID(68), MockWeb3(68))
 
-    with pytest.raises(SystemExit):
-        check_ethereum_network_id(61, MockWeb3(68))
+    with pytest.raises(RaidenError):
+        check_ethereum_network_id(ChainID(61), MockWeb3(68))
 
 
 @pytest.mark.parametrize("netid", [1, 3, 4, 5, 627])
 def test_setup_does_not_raise_with_matching_ids(netid):
     """Test that network setup works for the known network ids"""
     check_ethereum_network_id(netid, MockWeb3(netid))
-
-
-def test_setup_environment():
-    # Test that setting development works
-    config = deepcopy(App.DEFAULT_CONFIG)
-    setup_environment(config, Environment.DEVELOPMENT)
-    assert config["environment_type"] == Environment.DEVELOPMENT
-
-    # Test that setting production sets private rooms for Matrix
-    config = deepcopy(App.DEFAULT_CONFIG)
-    setup_environment(config, Environment.PRODUCTION)
-    assert config["environment_type"] == Environment.PRODUCTION
 
 
 def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:
@@ -75,72 +73,70 @@ def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
 
 def test_setup_contracts():
     # Mainnet production: contracts are not deployed
-    config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 1)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=1, environment_type=Environment.PRODUCTION)
+    contracts = load_deployed_contracts_data(config, 1)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Mainnet development -- NOT allowed
-    config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 1)
-    assert "contracts_path" in config
-    assert raiden_contracts_in_data(contracts)
-    assert service_contracts_in_data(contracts)
+    config = RaidenConfig(chain_id=1, environment_type=Environment.DEVELOPMENT)
+    with pytest.raises(RaidenError):
+        contracts = load_deployed_contracts_data(config, 1)
 
     # Ropsten production
-    config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 3)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=3, environment_type=Environment.PRODUCTION)
+    contracts = load_deployed_contracts_data(config, 3)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Ropsten development
-    config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 3)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=3, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, 3)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby production
-    config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 4)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=4, environment_type=Environment.PRODUCTION)
+    contracts = load_deployed_contracts_data(config, 4)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby development
-    config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 4)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=4, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, 4)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli production
-    config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 5)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=5, environment_type=Environment.PRODUCTION)
+    contracts = load_deployed_contracts_data(config, 5)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli development
-    config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 5)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=5, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, 5)
+    assert config.contracts_path is not None
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # random private network production
-    config = {"environment_type": Environment.PRODUCTION}
-    contracts = setup_contracts_or_exit(config, 5257)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=5257, environment_type=Environment.PRODUCTION)
+    contracts = load_deployed_contracts_data(config, 5257)
+    assert config.contracts_path is not None
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # random private network development
-    config = {"environment_type": Environment.DEVELOPMENT}
-    contracts = setup_contracts_or_exit(config, 5257)
-    assert "contracts_path" in config
+    config = RaidenConfig(chain_id=5257, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, 5257)
+    assert config.contracts_path is not None
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
@@ -149,86 +145,108 @@ def test_setup_proxies_raiden_addresses_are_given():
     """
     Test that startup for proxies works fine if only raiden addresses are given
     """
-
-    network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
-    contracts = {}
+    chain_id = ChainID(5)
+    config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
-    proxies = setup_proxies_or_exit(
-        config=config,
-        tokennetwork_registry_contract_address=token_network_registry_address_test_default,
-        secret_registry_contract_address=make_address(),
-        user_deposit_contract_address=None,
-        service_registry_contract_address=None,
+    deployed_addresses = load_deployment_addresses_from_contracts(contracts)
+    raiden_bundle = raiden_bundle_from_contracts_deployment(
         proxy_manager=proxy_manager,
-        contracts=contracts,
+        token_network_registry_address=deployed_addresses.token_network_registry_address,
+        secret_registry_address=deployed_addresses.secret_registry_address,
+    )
+    services_bundle = services_bundle_from_contracts_deployment(
+        config=config,
+        proxy_manager=proxy_manager,
+        deployed_addresses=deployed_addresses,
         routing_mode=RoutingMode.LOCAL,
         pathfinding_service_address=None,
+        enable_monitoring=False,
     )
-    assert proxies
-    assert proxies.token_network_registry
-    assert proxies.secret_registry
-    assert not proxies.user_deposit
-    assert not proxies.service_registry
+    assert raiden_bundle
+    assert services_bundle
+    assert raiden_bundle.token_network_registry
+    assert raiden_bundle.secret_registry
+    assert services_bundle.user_deposit
+    assert not services_bundle.service_registry
 
 
 def test_setup_proxies_all_addresses_are_given():
     """
-    Test that startup for proxies works fine if all addresses are given and routing is basic
+    Test that startup for proxies works fine if all addresses are given and routing is local
     """
-
-    network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
-    contracts = {}
+    chain_id = ChainID(5)
+    config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
+    deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = setup_proxies_or_exit(
-            config=config,
-            tokennetwork_registry_contract_address=token_network_registry_address_test_default,
-            secret_registry_contract_address=make_address(),
-            user_deposit_contract_address=make_address(),
-            service_registry_contract_address=make_address(),
+        raiden_bundle = raiden_bundle_from_contracts_deployment(
             proxy_manager=proxy_manager,
-            contracts=contracts,
+            token_network_registry_address=deployed_addresses.token_network_registry_address,
+            secret_registry_address=deployed_addresses.secret_registry_address,
+        )
+        services_bundle = services_bundle_from_contracts_deployment(
+            config=config,
+            proxy_manager=proxy_manager,
+            deployed_addresses=deployed_addresses,
             routing_mode=RoutingMode.LOCAL,
             pathfinding_service_address="my-pfs",
+            enable_monitoring=True,
         )
-    assert proxies
-    assert proxies.token_network_registry
-    assert proxies.secret_registry
-    assert proxies.user_deposit
-    assert proxies.service_registry
+    assert raiden_bundle
+    assert services_bundle
+    assert raiden_bundle.token_network_registry
+    assert raiden_bundle.secret_registry
+    assert services_bundle.user_deposit
+    assert not services_bundle.service_registry
 
 
 def test_setup_proxies_all_addresses_are_known():
     """
     Test that startup for proxies works fine if all addresses are given and routing is basic
     """
-
-    network_id = 5
-    config = {"environment_type": Environment.DEVELOPMENT, "chain_id": network_id, "services": {}}
-    contracts = setup_contracts_or_exit(config, network_id)
+    chain_id = ChainID(5)
+    config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
-
+    PFS_INFO = PFSInfo(
+        url="my-pfs",
+        price=TokenAmount(12),
+        chain_id=ChainID(5),
+        token_network_registry_address=to_canonical_address(
+            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
+        ),
+        user_deposit_address=user_deposit_address_test_default,
+        payment_address=pfs_payment_address_default,
+        confirmed_block_number=BlockNumber(1),
+        message="This is your favorite pathfinding service",
+        operator="John Doe",
+        version="0.0.3",
+    )
+    deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = setup_proxies_or_exit(
-            config=config,
-            tokennetwork_registry_contract_address=None,
-            secret_registry_contract_address=None,
-            user_deposit_contract_address=None,
-            service_registry_contract_address=None,
+        raiden_bundle = raiden_bundle_from_contracts_deployment(
             proxy_manager=proxy_manager,
-            contracts=contracts,
-            routing_mode=RoutingMode.LOCAL,
-            pathfinding_service_address="my-pfs",
+            token_network_registry_address=deployed_addresses.token_network_registry_address,
+            secret_registry_address=deployed_addresses.secret_registry_address,
         )
-    assert proxies
-    assert proxies.token_network_registry
-    assert proxies.secret_registry
-    assert proxies.user_deposit
-    assert proxies.service_registry
+        services_bundle = services_bundle_from_contracts_deployment(
+            config=config,
+            proxy_manager=proxy_manager,
+            deployed_addresses=deployed_addresses,
+            routing_mode=RoutingMode.PFS,
+            pathfinding_service_address="my-pfs",
+            enable_monitoring=False,
+        )
+    assert raiden_bundle
+    assert services_bundle
+    assert raiden_bundle.token_network_registry
+    assert raiden_bundle.secret_registry
+    assert services_bundle.user_deposit
+    assert services_bundle.service_registry
 
 
 def test_setup_proxies_no_service_registry_but_pfs():
@@ -238,31 +256,42 @@ def test_setup_proxies_no_service_registry_but_pfs():
 
     Regression test for https://github.com/raiden-network/raiden/issues/3740
     """
-
-    network_id = 5
-    config = {
-        "environment_type": Environment.DEVELOPMENT,
-        "chain_id": network_id,
-        "services": dict(
+    chain_id = ChainID(5)
+    config = RaidenConfig(
+        chain_id=chain_id,
+        environment_type=Environment.DEVELOPMENT,
+        services=ServiceConfig(
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
-    }
-    contracts = {}
+    )
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
+    PFS_INFO = PFSInfo(
+        url="my-pfs",
+        price=TokenAmount(12),
+        chain_id=ChainID(5),
+        token_network_registry_address=to_canonical_address(
+            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
+        ),
+        user_deposit_address=user_deposit_address_test_default,
+        confirmed_block_number=BlockNumber(1),
+        payment_address=pfs_payment_address_default,
+        message="This is your favorite pathfinding service",
+        operator="John Doe",
+        version="0.0.3",
+    )
+    deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-        proxies = setup_proxies_or_exit(
+        services_bundle = services_bundle_from_contracts_deployment(
             config=config,
-            tokennetwork_registry_contract_address=token_network_registry_address_test_default,
-            secret_registry_contract_address=make_address(),
-            user_deposit_contract_address=make_address(),
-            service_registry_contract_address=None,
             proxy_manager=proxy_manager,
-            contracts=contracts,
+            deployed_addresses=deployed_addresses,
             routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",
+            enable_monitoring=True,
         )
-    assert proxies
+    assert services_bundle
 
 
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT, Environment.PRODUCTION])
@@ -272,27 +301,25 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
     then the client exits with an error message
     """
 
-    network_id = 5
-    config = {
-        "environment_type": environment_type,
-        "chain_id": network_id,
-        "services": dict(
+    chain_id = ChainID(5)
+    config = RaidenConfig(
+        chain_id=chain_id,
+        environment_type=environment_type,
+        services=ServiceConfig(
             pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
         ),
-    }
-    contracts = {}
+    )
+    contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(RaidenError):
+        deployed_addresses = load_deployment_addresses_from_contracts(contracts)
         with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
-            setup_proxies_or_exit(
+            services_bundle_from_contracts_deployment(
                 config=config,
-                tokennetwork_registry_contract_address=make_token_network_registry_address(),
-                secret_registry_contract_address=make_address(),
-                user_deposit_contract_address=make_address(),
-                service_registry_contract_address=None,
                 proxy_manager=proxy_manager,
-                contracts=contracts,
+                deployed_addresses=deployed_addresses,
                 routing_mode=RoutingMode.PFS,
                 pathfinding_service_address=None,
+                enable_monitoring=False,
             )

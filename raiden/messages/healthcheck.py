@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from raiden.messages.abstract import SignedMessage
 from raiden.messages.cmdid import CmdId
-from raiden.utils.signing import pack_data
 from raiden.utils.typing import ClassVar, Nonce, RaidenProtocolVersion
 
 
@@ -24,11 +23,10 @@ class Ping(SignedMessage):
     current_protocol_version: RaidenProtocolVersion
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"),
-            (b"\x00" * 3, "bytes"),  # padding
-            (self.nonce, "uint64"),
-            (self.current_protocol_version, "uint8"),
+        return (
+            bytes([self.cmdid.value, 0, 0, 0])
+            + self.nonce.to_bytes(8, byteorder="big")
+            + bytes([self.current_protocol_version])
         )
 
 
@@ -41,6 +39,4 @@ class Pong(SignedMessage):
     nonce: Nonce
 
     def _data_to_sign(self) -> bytes:
-        return pack_data(
-            (self.cmdid.value, "uint8"), (b"\x00" * 3, "bytes"), (self.nonce, "uint64")
-        )
+        return bytes([self.cmdid.value, 0, 0, 0]) + self.nonce.to_bytes(8, byteorder="big")

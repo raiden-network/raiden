@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import pytest
 
 from raiden.tests.utils import factories
@@ -14,7 +12,6 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.views import (
     count_token_network_channels,
-    detect_balance_proof_change,
     filter_channels_by_partneraddress,
     filter_channels_by_status,
     get_networks,
@@ -25,6 +22,7 @@ from raiden.transfer.views import (
     get_transfer_secret,
     role_from_transfer_task,
 )
+from raiden.utils.copy import deepcopy
 
 
 def test_filter_channels_by_partneraddress_empty(chain_state):
@@ -44,9 +42,17 @@ def test_filter_channels_by_partneraddress_empty(chain_state):
 
 def test_filter_channels_by_status_empty_excludes():
     channel_states = factories.make_channel_set(number_of_channels=3).channels
-    channel_states[1].close_transaction = channel_states[1].open_transaction
-    channel_states[2].close_transaction = channel_states[2].open_transaction
-    channel_states[2].settle_transaction = channel_states[2].open_transaction
+    channel_states[1].close_transaction = TransactionExecutionStatus(
+        started_block_number=channel_states[1].open_transaction.started_block_number,
+        finished_block_number=channel_states[1].open_transaction.finished_block_number,
+        result=TransactionExecutionStatus.SUCCESS,
+    )
+    channel_states[2].close_transaction = TransactionExecutionStatus(
+        started_block_number=channel_states[2].open_transaction.started_block_number,
+        finished_block_number=channel_states[2].open_transaction.finished_block_number,
+        result=TransactionExecutionStatus.SUCCESS,
+    )
+    channel_states[2].settle_transaction = channel_states[2].close_transaction
     assert (
         filter_channels_by_status(channel_states=channel_states, exclude_states=None)
         == channel_states
@@ -117,12 +123,6 @@ def test_get_transfer_secret_none_for_none_transfer_state(chain_state):
     )
     chain_state.payment_mapping.secrethashes_to_task[secrethash] = task
     assert get_transfer_secret(chain_state=chain_state, secrethash=secrethash) is None
-
-
-def test_detect_balance_proof_chain_handles_attribute_error(chain_state):
-    chain_state.identifiers_to_tokennetworkregistries["123"] = None
-    changes_iterator = detect_balance_proof_change(old_state=object(), current_state=chain_state)
-    assert len(list(changes_iterator)) == 0
 
 
 def test_channelstate_filters():

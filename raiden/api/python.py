@@ -1,11 +1,17 @@
 import gevent
 import structlog
-from eth_utils import is_binary_address, to_checksum_address
+from eth_utils import is_binary_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS_BYTES, UINT256_MAX
+from raiden.constants import (
+    BLOCK_ID_LATEST,
+    GENESIS_BLOCK_NUMBER,
+    NULL_ADDRESS_BYTES,
+    UINT64_MAX,
+    UINT256_MAX,
+)
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositMismatch,
@@ -15,12 +21,14 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAmount,
     InvalidBinaryAddress,
+    InvalidPaymentIdentifier,
     InvalidRevealTimeout,
     InvalidSecret,
     InvalidSecretHash,
     InvalidSettleTimeout,
     InvalidTokenAddress,
     RaidenRecoverableError,
+    SamePeerAddress,
     TokenNetworkDeprecated,
     TokenNotRegistered,
     UnexpectedChannelState,
@@ -40,22 +48,25 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import (
     BalanceProofSignedState,
+    ChainState,
     ChannelState,
     NettingChannelState,
     NetworkState,
 )
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import create_default_identifier
+from raiden.transfer.views import get_token_network_by_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import has_enough_gas_reserve
-from raiden.utils.testnet import MintingMethod, call_minting_method, token_minting_proxy
+from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     Any,
-    BlockSpecification,
+    BlockIdentifier,
     BlockTimeout,
     ChannelID,
     Dict,
+    InitiatorAddress,
     List,
     LockedTransferType,
     NetworkTimeout,
@@ -71,8 +82,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    TransactionHash,
-    Tuple,
     WithdrawAmount,
 )
 
@@ -88,23 +97,41 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 )
 
 
-def event_filter_for_payments(event: Event, partner_address: Address = None) -> bool:
-    """Filters payment history related events depending on partner_address argument
+def event_filter_for_payments(
+    event: Event,
+    chain_state: Optional[ChainState] = None,
+    partner_address: Optional[Address] = None,
+    token_address: Optional[TokenAddress] = None,
+) -> bool:
+    """Filters payment history related events depending on given arguments
 
-    - If no other args are given, all payment related events match
-    - If a token network identifier is given then only payment events for that match
+    - If no other args are given, all payment related events match.
+    - If a token network identifier is given then only payment events for that match.
     - If a partner is also given then if the event is a payment sent event and the
-      target matches it's returned. If it's a payment received and the initiator matches
+      target matches it's returned. If it's a payment received and the initiator matches.
       then it's returned.
+    - If a token address is given then all events are filtered to be about that token.
     """
-
     sent_and_target_matches = isinstance(
         event, (EventPaymentSentFailed, EventPaymentSentSuccess)
-    ) and (partner_address is None or event.target == partner_address)
+    ) and (partner_address is None or event.target == TargetAddress(partner_address))
     received_and_initiator_matches = isinstance(event, EventPaymentReceivedSuccess) and (
-        partner_address is None or event.initiator == partner_address
+        partner_address is None or event.initiator == InitiatorAddress(partner_address)
     )
-    return sent_and_target_matches or received_and_initiator_matches
+
+    token_address_matches = True
+    if token_address:
+        assert chain_state, "Filtering for token_address without a chain state is an error"
+        token_network = get_token_network_by_address(
+            chain_state=chain_state,
+            token_network_address=event.token_network_address,  # type: ignore
+        )
+        if not token_network:
+            token_address_matches = False
+        else:
+            token_address_matches = token_address == token_network.token_address
+
+    return token_address_matches and (sent_and_target_matches or received_and_initiator_matches)
 
 
 def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
@@ -123,23 +150,26 @@ def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
 
 def get_transfer_from_task(
     secrethash: SecretHash, transfer_task: TransferTask
-) -> Tuple[LockedTransferType, str]:
-    role = views.role_from_transfer_task(transfer_task)
-    transfer: LockedTransferType
+) -> Optional[LockedTransferType]:
     if isinstance(transfer_task, InitiatorTask):
-        transfer = transfer_task.manager_state.initiator_transfers[secrethash].transfer
+        # Work around for https://github.com/raiden-network/raiden/issues/5480,
+        # can be removed when
+        # https://github.com/raiden-network/raiden/issues/5515 is done.
+        if secrethash not in transfer_task.manager_state.initiator_transfers:
+            return None
+
+        return transfer_task.manager_state.initiator_transfers[secrethash].transfer
     elif isinstance(transfer_task, MediatorTask):
         pairs = transfer_task.mediator_state.transfers_pair
         if pairs:
-            transfer = pairs[-1].payer_transfer
-        elif transfer_task.mediator_state.waiting_transfer:
-            transfer = transfer_task.mediator_state.waiting_transfer.transfer
-    elif isinstance(transfer_task, TargetTask):
-        transfer = transfer_task.target_state.transfer
-    else:  # pragma: no unittest
-        raise ValueError("get_transfer_from_task for a non TransferTask argument")
+            return pairs[-1].payer_transfer
 
-    return transfer, role
+        assert transfer_task.mediator_state.waiting_transfer, "Invalid mediator_state"
+        return transfer_task.mediator_state.waiting_transfer.transfer
+    elif isinstance(transfer_task, TargetTask):
+        return transfer_task.target_state.transfer
+
+    raise ValueError("get_transfer_from_task for a non TransferTask argument")
 
 
 def transfer_tasks_view(
@@ -150,7 +180,7 @@ def transfer_tasks_view(
     view = list()
 
     for secrethash, transfer_task in transfer_tasks.items():
-        transfer, role = get_transfer_from_task(secrethash, transfer_task)
+        transfer = get_transfer_from_task(secrethash, transfer_task)
 
         if transfer is None:
             continue
@@ -161,6 +191,7 @@ def transfer_tasks_view(
                 if transfer.balance_proof.channel_identifier != channel_id:
                     continue
 
+        role = views.role_from_transfer_task(transfer_task)
         view.append(flatten_transfer(transfer, role))
 
     return view
@@ -189,7 +220,8 @@ class RaidenAPI:  # pragma: no unittest
             raise InvalidBinaryAddress("Expected binary address format for partner in get_channel")
 
         channel_list = self.get_channel_list(registry_address, token_address, partner_address)
-        assert len(channel_list) <= 1
+        msg = f"Found {len(channel_list)} channels, but expected 0 or 1."
+        assert len(channel_list) <= 1, msg
 
         if not channel_list:
             msg = (
@@ -241,13 +273,15 @@ class RaidenAPI:  # pragma: no unittest
 
         chainstate = views.state_from_raiden(self.raiden)
 
-        registry = self.raiden.proxy_manager.token_network_registry(registry_address)
+        registry = self.raiden.proxy_manager.token_network_registry(
+            registry_address, block_identifier=chainstate.block_hash
+        )
 
         token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,
-            block_identifier=chainstate.block_hash,
+            given_block_identifier=chainstate.block_hash,
         )
 
         waiting.wait_for_token_network(
@@ -345,7 +379,7 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_network_address: TokenNetworkAddress,
         partner_address: Address,
-        block_identifier: Optional[BlockSpecification] = None,
+        block_identifier: Optional[BlockIdentifier] = None,
     ) -> bool:
         proxy_manager = self.raiden.proxy_manager
         proxy = proxy_manager.address_to_token_network[token_network_address]
@@ -370,10 +404,10 @@ class RaidenAPI:  # pragma: no unittest
         with the given `token_address`.
         """
         if settle_timeout is None:
-            settle_timeout = self.raiden.config["settle_timeout"]
+            settle_timeout = self.raiden.config.settle_timeout
 
         if reveal_timeout is None:
-            reveal_timeout = self.raiden.config["reveal_timeout"]
+            reveal_timeout = self.raiden.config.reveal_timeout
 
         if reveal_timeout <= 0:
             raise InvalidRevealTimeout("reveal_timeout should be larger than zero")
@@ -407,8 +441,10 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for partner in channel open"
             )
 
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
-        registry = self.raiden.proxy_manager.token_network_registry(registry_address)
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
+        registry = self.raiden.proxy_manager.token_network_registry(
+            registry_address, block_identifier=confirmed_block_identifier
+        )
 
         settlement_timeout_min = registry.settlement_timeout_min(
             block_identifier=confirmed_block_identifier
@@ -435,7 +471,9 @@ class RaidenAPI:  # pragma: no unittest
                 "Token network for token %s does not exist" % to_checksum_address(token_address)
             )
 
-        token_network = self.raiden.proxy_manager.token_network(token_network_address)
+        token_network = self.raiden.proxy_manager.token_network(
+            address=token_network_address, block_identifier=confirmed_block_identifier
+        )
 
         safety_deprecation_switch = token_network.safety_deprecation_switch(
             block_identifier=confirmed_block_identifier
@@ -461,35 +499,34 @@ class RaidenAPI:  # pragma: no unittest
                 f"(At blockhash: {confirmed_block_identifier.hex()})"
             )
 
-        with self.raiden.gas_reserve_lock:
-            has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
-                self.raiden, channels_to_open=1
+        has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
+            self.raiden, channels_to_open=1
+        )
+
+        if not has_enough_reserve:
+            raise InsufficientGasReserve(
+                "The account balance is below the estimated amount necessary to "
+                "finish the lifecycles of all active channels. A balance of at "
+                f"least {estimated_required_reserve} wei is required."
             )
 
-            if not has_enough_reserve:
-                raise InsufficientGasReserve(
-                    "The account balance is below the estimated amount necessary to "
-                    "finish the lifecycles of all active channels. A balance of at "
-                    f"least {estimated_required_reserve} wei is required."
-                )
-
-            try:
-                token_network.new_netting_channel(
-                    partner=partner_address,
-                    settle_timeout=settle_timeout,
-                    given_block_identifier=confirmed_block_identifier,
-                )
-            except DuplicatedChannelError:
-                log.info("partner opened channel first")
-            except RaidenRecoverableError:
-                # The channel may have been created in the pending block.
-                duplicated_channel = self.is_already_existing_channel(
-                    token_network_address=token_network_address, partner_address=partner_address
-                )
-                if duplicated_channel:
-                    log.info("Channel has already been opened")
-                else:
-                    raise
+        try:
+            token_network.new_netting_channel(
+                partner=partner_address,
+                settle_timeout=settle_timeout,
+                given_block_identifier=confirmed_block_identifier,
+            )
+        except DuplicatedChannelError:
+            log.info("partner opened channel first")
+        except RaidenRecoverableError:
+            # The channel may have been created in the pending block.
+            duplicated_channel = self.is_already_existing_channel(
+                token_network_address=token_network_address, partner_address=partner_address
+            )
+            if duplicated_channel:
+                log.info("Channel has already been opened")
+            else:
+                raise
 
         waiting.wait_for_newchannel(
             raiden=self.raiden,
@@ -515,24 +552,18 @@ class RaidenAPI:  # pragma: no unittest
 
         return channel_state.identifier
 
-    def mint_token(
-        self,
-        token_address: TokenAddress,
-        to: Address,
-        value: TokenAmount,
-        contract_method: MintingMethod,
-    ) -> TransactionHash:
-        """ Try to mint `value` units of the token at `token_address` and assign them to `to`,
-        using the minting method named `contract_method`.
+    def mint_token_for(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> None:
+        """ Try to mint `value` units of the token at `token_address` and
+        assign them to `to`, using `mintFor`.
 
         Raises:
             MintFailed if the minting fails for any reason.
         """
-        jsonrpc_client = self.raiden.rpc_client
-        token_proxy = token_minting_proxy(jsonrpc_client, token_address)
-        args = [to, value] if contract_method == MintingMethod.MINT else [value, to]
-
-        return call_minting_method(jsonrpc_client, token_proxy, contract_method, args)
+        confirmed_block_identifier = self.raiden.get_block_number()
+        token_proxy = self.raiden.proxy_manager.custom_token(
+            token_address, block_identifier=confirmed_block_identifier
+        )
+        token_proxy.mint_for(value, to)
 
     def set_total_channel_withdraw(
         self,
@@ -550,7 +581,7 @@ class RaidenAPI:  # pragma: no unittest
                 20 bytes long.
             RaidenUnrecoverableError: May happen for multiple reasons:
                 - During preconditions checks, if the channel was not open
-                  at the time of the set_total_deposit call.
+                  at the time of the approve_and_set_total_deposit call.
                 - If the transaction fails during gas estimation or
                   if a previous withdraw transaction with the same value
                    was already mined.
@@ -659,9 +690,13 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        token = self.raiden.proxy_manager.token(token_address)
-        token_network_registry = self.raiden.proxy_manager.token_network_registry(registry_address)
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = chain_state.block_hash
+        token = self.raiden.proxy_manager.token(
+            token_address, block_identifier=confirmed_block_identifier
+        )
+        token_network_registry = self.raiden.proxy_manager.token_network_registry(
+            registry_address, block_identifier=confirmed_block_identifier
+        )
         token_network_address = token_network_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
@@ -672,9 +707,11 @@ class RaidenAPI:  # pragma: no unittest
                 f"with the network {to_checksum_address(registry_address)}."
             )
 
-        token_network_proxy = self.raiden.proxy_manager.token_network(token_network_address)
+        token_network_proxy = self.raiden.proxy_manager.token_network(
+            address=token_network_address, block_identifier=confirmed_block_identifier
+        )
         channel_proxy = self.raiden.proxy_manager.payment_channel(
-            canonical_identifier=channel_state.canonical_identifier
+            channel_state=channel_state, block_identifier=confirmed_block_identifier
         )
 
         blockhash = chain_state.block_hash
@@ -740,10 +777,8 @@ class RaidenAPI:  # pragma: no unittest
         if total_channel_deposit >= UINT256_MAX:
             raise DepositOverLimit("Deposit overflow")
 
-        # set_total_deposit calls approve
-        # token.approve(netcontract_address, addendum)
         try:
-            channel_proxy.set_total_deposit(
+            channel_proxy.approve_and_set_total_deposit(
                 total_deposit=total_deposit, block_identifier=blockhash
             )
         except RaidenRecoverableError as e:
@@ -955,17 +990,16 @@ class RaidenAPI:  # pragma: no unittest
             chain_state=views.state_from_raiden(self.raiden), node_address=node_address
         )
 
-    def start_health_check_for(self, node_address: Address) -> None:
+    def async_start_health_check_for(self, node_address: Address) -> None:
         """ Returns the currently network status of `node_address`. """
-        self.raiden.start_health_check_for(node_address)
+        self.raiden.async_start_health_check_for(node_address)
 
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> List[TokenAddress]:
         """Returns a list of tokens the node knows about"""
-        tokens_list = views.get_token_identifiers(
+        return views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
             token_network_registry_address=registry_address,
         )
-        return tokens_list
 
     def get_token_network_address_for_token_address(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
@@ -1021,6 +1055,9 @@ class RaidenAPI:  # pragma: no unittest
         if not isinstance(amount, int):  # pragma: no unittest
             raise InvalidAmount("Amount not a number")
 
+        if Address(target) == self.address:
+            raise SamePeerAddress("Address must be different than ours")
+
         if amount <= 0:
             raise InvalidAmount("Amount negative")
 
@@ -1050,6 +1087,12 @@ class RaidenAPI:  # pragma: no unittest
 
         if identifier is None:
             identifier = create_default_identifier()
+
+        if identifier <= 0:
+            raise InvalidPaymentIdentifier("Payment identifier cannot be 0 or negative")
+
+        if identifier > UINT64_MAX:
+            raise InvalidPaymentIdentifier("Payment identifier is too large")
 
         log.debug(
             "Initiating transfer",
@@ -1113,10 +1156,16 @@ class RaidenAPI:  # pragma: no unittest
             logical_and=False,
         )
 
+        chain_state = views.state_from_raiden(self.raiden)
         events = [
             e
             for e in events
-            if event_filter_for_payments(event=e.wrapped_event, partner_address=target_address)
+            if event_filter_for_payments(
+                event=e.wrapped_event,
+                chain_state=chain_state,
+                partner_address=target_address,
+                token_address=token_address,
+            )
         ]
 
         return events
@@ -1145,8 +1194,8 @@ class RaidenAPI:  # pragma: no unittest
     def get_blockchain_events_network(
         self,
         registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[Dict]:
         events = blockchain_events.get_token_network_registry_events(
             proxy_manager=self.raiden.proxy_manager,
@@ -1162,8 +1211,8 @@ class RaidenAPI:  # pragma: no unittest
     def get_blockchain_events_token_network(
         self,
         token_address: TokenAddress,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[Dict]:
         """Returns a list of blockchain events corresponding to the token_address."""
 
@@ -1172,7 +1221,7 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for token in get_blockchain_events_token_network"
             )
 
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
@@ -1200,14 +1249,14 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_address: TokenAddress,
         partner_address: Address = None,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = "latest",
+        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
+        to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[Dict]:
         if not is_binary_address(token_address):
             raise InvalidBinaryAddress(
                 "Expected binary address format for token in get_blockchain_events_channel"
             )
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
         token_network_address = self.raiden.default_registry.get_token_network(
             token_address=token_address, block_identifier=confirmed_block_identifier
         )
@@ -1244,6 +1293,10 @@ class RaidenAPI:  # pragma: no unittest
         - claim the `reward_amount` from the UDC.
         """
         # create RequestMonitoring message from the above + `reward_amount`
+
+        msg = "Default monitoring service address should not be None"
+        assert self.raiden.default_msc_address is not None, msg
+
         monitor_request = RequestMonitoring.from_balance_proof_signed_state(
             balance_proof=balance_proof,
             non_closing_participant=self.raiden.address,
@@ -1260,19 +1313,25 @@ class RaidenAPI:  # pragma: no unittest
         chain_state = views.state_from_raiden(self.raiden)
         transfer_tasks = views.get_all_transfer_tasks(chain_state)
         channel_id = None
-        confirmed_block_identifier = views.state_from_raiden(self.raiden).block_hash
+        confirmed_block_identifier = chain_state.block_hash
         if token_address is not None:
             token_network = self.raiden.default_registry.get_token_network(
                 token_address=token_address, block_identifier=confirmed_block_identifier
             )
             if token_network is None:
-                raise UnknownTokenAddress(f"Token {token_address} not found.")
+                raise UnknownTokenAddress(f"Token {to_checksum_address(token_address)} not found.")
             if partner_address is not None:
-                partner_channel = self.get_channel(
-                    registry_address=self.raiden.default_registry.address,
+                partner_channel = views.get_channelstate_for(
+                    chain_state=chain_state,
+                    token_network_registry_address=self.raiden.default_registry.address,
                     token_address=token_address,
                     partner_address=partner_address,
                 )
+                if not partner_channel:
+                    raise ChannelNotFound(f"Channel with partner `partner_address not found.`")
                 channel_id = partner_channel.identifier
 
         return transfer_tasks_view(transfer_tasks, token_address, channel_id)
+
+    def shutdown(self) -> None:
+        self.raiden.stop()

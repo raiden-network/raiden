@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Dict, Tuple
 
 from raiden.constants import UNLOCK_TX_GAS_LIMIT
+from raiden.network.rpc.client import gas_price_for_fast_transaction
 from raiden.transfer import views
 from raiden_contracts.contract_manager import gas_measurements
 
@@ -57,67 +58,61 @@ def _get_required_gas_estimate(
     return estimate
 
 
-def _get_required_gas_estimate_for_state(raiden: "RaidenService") -> int:
+def get_required_gas_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:
+    num_opening_channels = 0
+    num_opened_channels = 0
+    num_closing_channels = 0
+    num_closed_channels = 0
+    num_settling_channels = 0
+    num_settled_channels = 0
+
+    # Only use the token networks that have been instantiated. Instantiating
+    # the token networks here has a very high performance impact for a registry
+    # with lots of tokens.
+    #
+    # The lock is being acquired to prevent chnages to the dictionary while
+    # iterating over it.
+    with raiden.proxy_manager.token_network_creation_lock:
+        num_opening_channels = sum(
+            token_network.opening_channels_count
+            for token_network in raiden.proxy_manager.address_to_token_network.values()
+        )
+
     chain_state = views.state_from_raiden(raiden)
     registry_address = raiden.default_registry.address
     token_addresses = views.get_token_identifiers(chain_state, registry_address)
-    measurements = gas_measurements(raiden.contract_manager.contracts_version)
-
-    gas_estimate = 0
 
     for token_address in token_addresses:
-        token_network_address = views.get_token_network_address_by_token_address(
-            chain_state=chain_state,
-            token_network_registry_address=registry_address,
-            token_address=token_address,
-        )
-        if token_network_address is None:
-            continue
-
-        num_opening_channels = raiden.proxy_manager.token_network(
-            token_network_address
-        ).opening_channels_count
-        num_opened_channels = len(
+        num_opened_channels += len(
             views.get_channelstate_open(chain_state, registry_address, token_address)
         )
-        num_closing_channels = len(
+        num_closing_channels += len(
             views.get_channelstate_closing(chain_state, registry_address, token_address)
         )
-        num_closed_channels = len(
+        num_closed_channels += len(
             views.get_channelstate_closed(chain_state, registry_address, token_address)
         )
-        num_settling_channels = len(
+        num_settling_channels += len(
             views.get_channelstate_settling(chain_state, registry_address, token_address)
         )
-        num_settled_channels = len(
+        num_settled_channels += len(
             views.get_channelstate_settled(chain_state, registry_address, token_address)
         )
 
-        gas_estimate += _get_required_gas_estimate(
-            gas_measurements=measurements,
-            opening_channels=num_opening_channels,
-            opened_channels=num_opened_channels,
-            closing_channels=num_closing_channels,
-            closed_channels=num_closed_channels,
-            settling_channels=num_settling_channels,
-            settled_channels=num_settled_channels,
-        )
-
-    return gas_estimate
-
-
-def get_required_gas_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:
-    gas_estimate = _get_required_gas_estimate_for_state(raiden)
-    measurements = gas_measurements(raiden.contract_manager.contracts_version)
-    gas_estimate += _get_required_gas_estimate(
-        gas_measurements=measurements, new_channels=channels_to_open
+    return _get_required_gas_estimate(
+        gas_measurements=gas_measurements(raiden.contract_manager.contracts_version),
+        opening_channels=num_opening_channels + channels_to_open,
+        opened_channels=num_opened_channels,
+        closing_channels=num_closing_channels,
+        closed_channels=num_closed_channels,
+        settling_channels=num_settling_channels,
+        settled_channels=num_settled_channels,
     )
-    return gas_estimate
 
 
 def get_reserve_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> int:
     gas_estimate = get_required_gas_estimate(raiden, channels_to_open)
-    gas_price = raiden.rpc_client.gas_price()
+    gas_price = gas_price_for_fast_transaction(raiden.rpc_client.web3)
     reserve_amount = gas_estimate * gas_price
 
     return round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)

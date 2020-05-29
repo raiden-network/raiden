@@ -5,18 +5,18 @@ import time
 
 import gevent
 import IPython
-from eth_utils import decode_hex, to_canonical_address, to_checksum_address
-from IPython.lib.inputhook import inputhook_manager, stdin_ready
+from eth_utils import denoms, to_canonical_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
-from raiden.constants import UINT256_MAX
+from raiden.constants import BLOCK_ID_LATEST, UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils.smart_contracts import deploy_contract_web3
+from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
+    Address,
     AddressHex,
     Any,
     BlockTimeout,
@@ -36,13 +36,10 @@ OKBLUE = "\033[94m"
 OKGREEN = "\033[92m"
 ENDC = "\033[0m"
 
-# ipython needs to accept "--gui gevent" option
-IPython.core.shellapp.InteractiveShellApp.gui.values += ("gevent",)
-
 
 def print_usage() -> None:
+    print(f"\tuse `{HEADER}app{OKBLUE}` to interact with the top level Raiden App API.")
     print(f"\t{OKBLUE}use `{HEADER}raiden{OKBLUE}` to interact with the raiden service.")
-    print(f"\tuse `{HEADER}chain{OKBLUE}` to interact with the blockchain.")
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
             HEADER, OKBLUE
@@ -54,43 +51,6 @@ def print_usage() -> None:
     print(f"\tuse `{HEADER}help(<topic>){OKBLUE}` for help on a specific topic.")
     print(f"\ttype `{HEADER}usage(){OKBLUE}` to see this help again.")
     print("\n" + ENDC)
-
-
-def inputhook_gevent() -> int:
-    while not stdin_ready():
-        gevent.sleep(0.05)
-    return 0
-
-
-@inputhook_manager.register("gevent")
-class GeventInputHook:
-    def __init__(self, manager: Any) -> None:
-        self.manager = manager
-        self._current_gui = GUI_GEVENT
-
-    def enable(self, app: Any = None) -> Any:
-        """ Enable event loop integration with gevent.
-
-        Args:
-            app: Ignored, it's only a placeholder to keep the call signature of all
-                gui activation methods consistent, which simplifies the logic of
-                supporting magics.
-
-        Notes:
-            This methods sets the PyOS_InputHook for gevent, which allows
-            gevent greenlets to run in the background while interactively using
-            IPython.
-        """
-        self.manager.set_inputhook(inputhook_gevent)
-        self._current_gui = GUI_GEVENT
-        return app
-
-    def disable(self) -> None:
-        """ Disable event loop integration with gevent.
-
-        This merely sets PyOS_InputHook to NULL.
-        """
-        self.manager.clear_inputhook()
 
 
 class Console(gevent.Greenlet):
@@ -141,6 +101,7 @@ class Console(gevent.Greenlet):
         self.console_locals = {
             "app": self.app,
             "raiden": self.app.raiden,
+            "denoms": denoms,
             "proxy_manager": self.app.raiden.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
@@ -152,7 +113,7 @@ class Console(gevent.Greenlet):
         print("Entering Console" + OKGREEN)
         print("Tip:" + OKBLUE)
         print_usage()
-        IPython.start_ipython(argv=["--gui", "gevent"], user_ns=self.console_locals)
+        IPython.start_ipython(argv=[], user_ns=self.console_locals)
 
         sys.exit(0)
 
@@ -192,14 +153,14 @@ class ConsoleTools:
             token_address_hex: the hex encoded address of the new token/token.
         """
         with gevent.Timeout(timeout):
-            token_address = deploy_contract_web3(
-                CONTRACT_HUMAN_STANDARD_TOKEN,
-                self._raiden.rpc_client,
-                contract_manager=self._raiden.contract_manager,
-                constructor_arguments=(initial_alloc, name, decimals, symbol),
+            contract_proxy, _ = self._raiden.rpc_client.deploy_single_contract(
+                contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+                contract=self._raiden.contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+                constructor_parameters=(initial_alloc, name, decimals, symbol),
             )
+            token_address = Address(to_canonical_address(contract_proxy.address))
 
-        token_address_hex = to_checksum_address(token_address)
+        token_address_hex = to_hex_address(token_address)
         if auto_register:
             self.register_token(registry_address_hex, token_address_hex)
 
@@ -229,19 +190,21 @@ class ConsoleTools:
         registry_address = TokenNetworkRegistryAddress(to_canonical_address(registry_address_hex))
         token_address = TokenAddress(to_canonical_address(token_address_hex))
 
-        registry = self._raiden.proxy_manager.token_network_registry(registry_address)
+        registry = self._raiden.proxy_manager.token_network_registry(
+            registry_address, BLOCK_ID_LATEST
+        )
 
         token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
-            block_identifier="latest",
+            given_block_identifier=BLOCK_ID_LATEST,
         )
         waiting.wait_for_token_network(
             self._raiden, registry.address, token_address, retry_timeout
         )
 
-        return self._raiden.proxy_manager.token_network(token_network_address)
+        return self._raiden.proxy_manager.token_network(token_network_address, BLOCK_ID_LATEST)
 
     def open_channel_with_funding(
         self,
@@ -286,9 +249,10 @@ class ConsoleTools:
         Returns:
             True if the contract got mined, false otherwise
         """
-        contract_address = decode_hex(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.rpc_client.web3.eth.getCode(to_checksum_address(contract_address))
+        result = self._raiden.rpc_client.web3.eth.getCode(
+            to_canonical_address(contract_address_hex)
+        )
 
         current_time = time.time()
         while not result:
@@ -296,7 +260,7 @@ class ConsoleTools:
                 return False
 
             result = self._raiden.rpc_client.web3.eth.getCode(
-                to_checksum_address(contract_address)
+                to_canonical_address(contract_address_hex)
             )
             gevent.sleep(0.5)
 

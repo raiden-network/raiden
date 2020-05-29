@@ -1,3 +1,4 @@
+import itertools
 import uuid
 from typing import Callable, Dict, Iterator, List, Optional
 
@@ -8,7 +9,7 @@ from matrix_client.user import User
 
 from raiden.network.transport.matrix import AddressReachability, UserPresence
 from raiden.network.transport.matrix.utils import USERID_RE, DisplayNameCache, UserAddressManager
-from raiden.utils import Address
+from raiden.utils.typing import Address
 
 
 class DummyApi:
@@ -24,6 +25,7 @@ class DummyMatrixClient:
         self._user_directory_content = user_directory_content if user_directory_content else []
         # This is only used in `get_user_presence()`
         self._user_presence: Dict[str, str] = {}
+        self._presence_update_ids: Iterator[int] = itertools.count()
 
     def add_presence_listener(self, callback: Callable) -> uuid.UUID:
         if self._presence_callback is not None:
@@ -57,7 +59,7 @@ class DummyMatrixClient:
                 "type": "m.presence",
                 "content": {"presence": presence.value},
             }
-            self._presence_callback(event)
+            self._presence_callback(event, next(self._presence_update_ids))
 
 
 class NonValidatingUserAddressManager(UserAddressManager):
@@ -221,7 +223,7 @@ def test_user_addr_mgr_force(user_addr_mgr, address_reachability, user_presence)
     assert not user_addr_mgr.known_addresses
 
     user_addr_mgr.add_userid_for_address(ADDR1, USER1_S1_ID)
-    # This only updates the internal user presense state, but calls no callbacks and also doesn't
+    # This only updates the internal user presence state, but calls no callbacks and also doesn't
     # update the address reachability
     user_addr_mgr.force_user_presence(USER1_S1, UserPresence.ONLINE)
 
@@ -231,7 +233,7 @@ def test_user_addr_mgr_force(user_addr_mgr, address_reachability, user_presence)
     assert len(address_reachability) == 0
 
     # Update address presence from previously forced user state
-    user_addr_mgr.track_address_presence(ADDR1, [USER1_S1_ID])
+    user_addr_mgr.track_address_presence(ADDR1, {USER1_S1_ID})
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.REACHABLE
     assert len(user_presence) == 0
@@ -250,7 +252,7 @@ def test_user_addr_mgr_fetch_presence(
     assert dummy_matrix_client._user_presence[USER1_S1_ID] == UserPresence.ONLINE.value
     assert dummy_matrix_client.get_user_presence(USER1_S1_ID) == UserPresence.ONLINE.value
 
-    user_addr_mgr.track_address_presence(ADDR1, [USER1_S1_ID])
+    user_addr_mgr.track_address_presence(ADDR1, {USER1_S1_ID})
 
     assert user_addr_mgr._userid_to_presence[USER1_S1_ID] == UserPresence.ONLINE
 
@@ -265,7 +267,7 @@ def test_user_addr_mgr_fetch_presence_error(user_addr_mgr, address_reachability,
     # We have not provided or forced any explicit user presence,
     # therefore the client will be queried and return a 404 since we haven't setup a presence
     with pytest.raises(MatrixRequestError):
-        user_addr_mgr.track_address_presence(ADDR1, [USER1_S1_ID])
+        user_addr_mgr.track_address_presence(ADDR1, {USER1_S1_ID})
 
     assert user_addr_mgr.get_address_reachability(ADDR1) is AddressReachability.UNKNOWN
     assert len(user_presence) == 0
@@ -301,8 +303,8 @@ def test_user_addr_mgr_populate(user_addr_mgr, address_reachability, user_presen
     assert user_addr_mgr.get_userids_for_address(ADDR2) == {USER2_S1_ID, USER2_S2_ID}
     assert user_addr_mgr.get_address_reachability(ADDR2) is AddressReachability.UNKNOWN
 
-    user_addr_mgr._set_user_presence(USER2_S1_ID, UserPresence.ONLINE)
-    user_addr_mgr._set_user_presence(USER2_S2_ID, UserPresence.UNKNOWN)
+    user_addr_mgr._set_user_presence(USER2_S1_ID, UserPresence.ONLINE, 0)
+    user_addr_mgr._set_user_presence(USER2_S2_ID, UserPresence.UNKNOWN, 1)
 
     user_addr_mgr.track_address_presence(ADDR2, {USER2_S2_ID, USER2_S2_ID})
 

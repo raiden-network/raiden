@@ -1,18 +1,19 @@
 import getpass
-import sys
 from typing import TextIO
 
 import click
-from eth_utils import to_checksum_address
+from eth_utils import decode_hex
 
-from raiden.accounts import AccountManager, KeystoreFileNotFound
-from raiden.utils.typing import AddressHex, PrivateKey
+from raiden.accounts import AccountManager, KeystoreAuthenticationError
+from raiden.utils.formatting import to_checksum_address
+from raiden.utils.typing import Address, AddressHex, PrivateKey
 
 
 def prompt_account(account_manager: AccountManager) -> AddressHex:
     addresses = list(account_manager.accounts.keys())
     formatted_addresses = [
-        "[{:3d}] - {}".format(idx, to_checksum_address(addr)) for idx, addr in enumerate(addresses)
+        "[{:3d}] - {}".format(idx, to_checksum_address(Address(decode_hex(addr))))
+        for idx, addr in enumerate(addresses)
     ]
 
     print("The following accounts were found in your machine:")
@@ -36,12 +37,8 @@ def unlock_account_with_passwordfile(
 
     try:
         return account_manager.get_privkey(address_hex, password.strip())
-    except KeystoreFileNotFound as e:
-        click.secho(str(e), fg="red")
-        sys.exit(1)
     except ValueError:
-        click.secho(f"Incorrect password for {address_hex} in file. Aborting ...", fg="red")
-        sys.exit(1)
+        raise KeystoreAuthenticationError(f"Incorrect password for {address_hex} in file.")
 
 
 def unlock_account_with_passwordprompt(
@@ -50,7 +47,7 @@ def unlock_account_with_passwordprompt(
     tries = 3
     for current in range(tries):
         try:
-            checksum_address = to_checksum_address(address_hex)
+            checksum_address = to_checksum_address(Address(decode_hex(address_hex)))
             password = getpass.getpass(f"Enter the password to unlock {checksum_address}: ")
             return account_manager.get_privkey(address_hex, password)
         except ValueError:
@@ -61,4 +58,6 @@ def unlock_account_with_passwordprompt(
                 f"Usually Ctrl-c."
             )
 
-    sys.exit(1)
+    raise KeystoreAuthenticationError(
+        f"Provided Incorrect password for {address_hex} {tries} times."
+    )

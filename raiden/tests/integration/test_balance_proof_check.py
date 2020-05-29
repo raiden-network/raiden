@@ -1,9 +1,8 @@
 import pytest
-from eth_utils import encode_hex
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import BLOCK_ID_LATEST, EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -12,7 +11,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
-from raiden.utils.typing import Nonce, PaymentAmount, PaymentID, TokenNetworkAddress
+from raiden.utils.typing import Nonce, PaymentAmount, PaymentID, TokenAmount, TokenNetworkAddress
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -58,14 +57,16 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
-    token_network_contract = app1.raiden.proxy_manager.token_network(token_network_address)
+    token_network_contract = app1.raiden.proxy_manager.token_network(
+        token_network_address, BLOCK_ID_LATEST
+    )
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
         token_network_address=TokenNetworkAddress(token_network_contract.address),
-        balance_hash=encode_hex(EMPTY_BALANCE_HASH),
+        balance_hash=EMPTY_BALANCE_HASH,
         nonce=Nonce(0),
         chain_id=chain_state.chain_id,
-        transferred_amount=0,
+        transferred_amount=TokenAmount(0),
     )
     closing_data = (
         empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
@@ -82,7 +83,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         additional_hash=EMPTY_HASH,
         non_closing_signature=EMPTY_SIGNATURE,
         closing_signature=closing_signature,
-        given_block_identifier="latest",
+        given_block_identifier=BLOCK_ID_LATEST,
     )
     waiting.wait_for_settle(
         raiden=app0.raiden,

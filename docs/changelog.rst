@@ -2,6 +2,37 @@
 Changelog
 =========
 
+* :release:`1.0.0`
+
+* :feature:`-` Update WebUI to version 0.11.1 https://github.com/raiden-network/webui/releases/tag/v0.11.1
+
+* :release:`0.200.0-rc9`
+
+* :release:`0.200.0-rc8`
+* :feature:`5338` The number of blocks queried for events is now dynamically adjusted. This is necessary to prevent timeouts because the Ethereum client is overloaded.
+* :bug:`6082` Small bug fix, use of undefined variable.
+* :bug:`6083` Weakened byte code check to prevent errors with client pruning.
+* :bug:`6071` Fixed transport race condition which prevented a node to restart after a failure.
+* :bug:`6075` Fixed serialization problem for pending transactions.
+
+* :release:`0.200.0-rc7`
+* :bug:`6077` Fix missing requirement to build macOS binaries
+
+* :release:`0.200.0-rc6`
+* :bug:`6072` Always return valid JSON on the config endpoint, even when the REST API is starting.
+* :bug:`6067` Workaround gevent's bug on wait for single elements.
+* :bug:`6066` Workaround slow speed of geth on mainnet for eth_getLogs.
+
+* :release:`0.200.0-rc3`
+* :feature:`5281` Add a /status endpoint; start the API earlier and return 503 SERVICE UNAVAILABLE during the initial sync.
+* :feature:`4588` Remove the echo_node subcommand of the command line interface.
+* :bug:`5779` Handle the API exception when no further token networks can be registered by returning 403 FORBIDDEN.
+* :bug:`5583` The connection manager no longer opens channels with offline nodes when trying to connect to a token network.
+* :feature:`5589` The Rest API now includes the token address in all returned payment related events.
+* :bug:`5591` Rest API payment events can now be properly filtered by token address.
+* :bug:`5395` Convert and return big integers as strings in the API response body.
+* :feature:`-` Update WebUI to version 0.11.0 https://github.com/raiden-network/webui/releases/tag/v0.11.0
+
 * :release:`0.200.0-rc2 <2019-11-25>`
 * :feature:`5050` Raiden's argument --debug-logfile-name has been renamed to --debug-logfile-path to better reflect the argument's function.
 * :bug:`5050` Raiden now works on OSX Catalina. Debug logfile is no longer written in the current directory.
