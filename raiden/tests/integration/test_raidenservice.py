@@ -12,6 +12,7 @@ from raiden.constants import (
     PATH_FINDING_BROADCASTING_ROOM,
     RoutingMode,
 )
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
@@ -34,6 +35,7 @@ from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     BlockNumber,
     FeeAmount,
+    List,
     PaymentAmount,
     PaymentID,
     ProportionalFeeAmount,
@@ -198,6 +200,37 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     )
     msg = "Initialization did not properly synchronize with the blockchain, channel is missing"
     assert len(channels) != 0, msg
+
+
+@raise_on_failure
+@pytest.mark.parametrize("deposit", [0])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
+    """Raiden must throw a proper exception when the filelock of the DB is already taken.
+
+    Test for https://github.com/raiden-network/raiden/issues/6079
+    """
+    app0, _ = raiden_network
+
+    # Start a second app, that should throw an expection, as the lock is already taken
+    app0_2 = App(
+        config=app0.config,
+        rpc_client=app0.raiden.rpc_client,
+        proxy_manager=app0.raiden.proxy_manager,
+        query_start_block=BlockNumber(0),
+        default_registry=app0.raiden.default_registry,
+        default_one_to_n_address=app0.raiden.default_one_to_n_address,
+        default_secret_registry=app0.raiden.default_secret_registry,
+        default_service_registry=app0.raiden.default_service_registry,
+        default_msc_address=app0.raiden.default_msc_address,
+        transport=app0.raiden.transport,
+        raiden_event_handler=RaidenEventHandler(),
+        message_handler=MessageHandler(),
+        routing_mode=RoutingMode.PRIVATE,
+    )
+    with pytest.raises(RaidenUnrecoverableError):
+        app0_2.start()
 
 
 @raise_on_failure
