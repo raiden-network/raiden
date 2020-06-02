@@ -16,7 +16,7 @@ from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils.keys import privatekey_to_address
-from raiden.utils.typing import ChainID, TokenAmount, TokenNetworkRegistryAddress
+from raiden.utils.typing import BlockNumber, ChainID, TokenAmount, TokenNetworkRegistryAddress
 
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(
     to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
@@ -45,6 +45,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "operator": "John Doe",
         "version": "0.0.1",
         "payment_address": to_checksum_address(privatekey_to_address(private_keys[0])),
+        "matrix_server": "http://matrix.example.com",
     }
 
     response = mocked_json_response(response_data=json_data)
@@ -58,6 +59,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+            matrix_servers=["http://matrix.example.com"],
         )
 
     # With private routing configure_pfs should raise assertion
@@ -69,6 +71,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+            matrix_servers=["http://matrix.example.com"],
         )
 
     # Asking for auto address
@@ -82,6 +85,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+            matrix_servers=["http://matrix.example.com"],
         )
     assert config.url in urls
     assert is_canonical_address(config.payment_address)
@@ -96,6 +100,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+            matrix_servers=["http://matrix.example.com"],
         )
     assert config.url == given_address
     assert is_same_address(config.payment_address, json_data["payment_address"])
@@ -113,6 +118,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 node_network_id=chain_id,
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+                matrix_servers=["http://matrix.example.com"],
             )
 
     # Addresses of token network registries of pfs and client conflict, should exit the client
@@ -128,6 +134,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                     to_canonical_address("0x2222222222222222222222222222222222222221")
                 ),
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+                matrix_servers=["http://matrix.example.com"],
             )
 
     # ChainIDs of pfs and client conflict, should exit the client
@@ -141,10 +148,27 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 node_network_id=ChainID(chain_id + 1),
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+                matrix_servers=["http://matrix.example.com"],
+            )
+
+    # Wrong matrix server
+    response = mocked_json_response(response_data=json_data)
+    with pytest.raises(RaidenError, match="matrix server"):
+        with patch.object(requests, "get", return_value=response):
+            configure_pfs_or_exit(
+                pfs_url="http://foo",
+                routing_mode=RoutingMode.PFS,
+                service_registry=service_registry,
+                node_network_id=ChainID(chain_id),
+                token_network_registry_address=token_network_registry_address_test_default,
+                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
+                matrix_servers=["http://matrix.doesnotexist.com"],
             )
 
 
-def test_check_pfs_for_production(service_registry_address, private_keys, web3, contract_manager):
+def test_check_pfs_for_production(
+    service_registry_address, private_keys, web3, contract_manager
+) -> None:
     chain_id = ChainID(int(web3.net.version))
     service_registry, _ = deploy_service_registry_and_set_urls(
         private_keys=private_keys,
@@ -164,7 +188,8 @@ def test_check_pfs_for_production(service_registry_address, private_keys, web3, 
         operator="",
         version="",
         user_deposit_address=privatekey_to_address(private_keys[1]),
-        confirmed_block_number=10,
+        confirmed_block_number=BlockNumber(10),
+        matrix_server="http://matrix.example.com",
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
@@ -180,7 +205,8 @@ def test_check_pfs_for_production(service_registry_address, private_keys, web3, 
         operator="",
         version="",
         user_deposit_address=privatekey_to_address(private_keys[1]),
-        confirmed_block_number=10,
+        confirmed_block_number=BlockNumber(10),
+        matrix_server="http://matrix.example.com",
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)

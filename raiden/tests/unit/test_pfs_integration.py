@@ -114,6 +114,7 @@ PFS_CONFIG = PFSConfig(
         operator="",
         version="",
         confirmed_block_number=BlockNumber(10),
+        matrix_server="http://matrix.example.com",
     ),
     maximum_fee=TokenAmount(100),
     iou_timeout=BlockTimeout(100),
@@ -150,6 +151,7 @@ def get_best_routes_with_iou_request_mocked(
                     "operator": "John Doe",
                     "message": "This is your favorite pathfinding service",
                     "payment_address": to_checksum_address(factories.make_address()),
+                    "matrix_server": "http://matrix.example.com",
                 }
             )
         else:
@@ -899,6 +901,7 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
             message="",
             operator="",
             version="",
+            matrix_server="http://matrix.example.com",
         ),
         maximum_fee=TokenAmount(100),
         iou_timeout=BlockNumber(100),

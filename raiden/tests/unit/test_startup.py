@@ -18,7 +18,13 @@ from raiden.ui.startup import (
     raiden_bundle_from_contracts_deployment,
     services_bundle_from_contracts_deployment,
 )
-from raiden.utils.typing import Address, BlockNumber, TokenAmount, TokenNetworkRegistryAddress
+from raiden.utils.typing import (
+    Address,
+    BlockNumber,
+    BlockTimeout,
+    TokenAmount,
+    TokenNetworkRegistryAddress,
+)
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -47,6 +53,7 @@ PFS_INFO = PFSInfo(
     message="This is your favorite pathfinding service",
     operator="John Doe",
     version="0.0.3",
+    matrix_server="http://matrix.example.com",
 )
 
 
@@ -210,6 +217,7 @@ def test_setup_proxies_all_addresses_are_known():
     """
     chain_id = ChainID(5)
     config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
+    config.transport.available_servers = ["http://matrix.example.com"]
     contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
     PFS_INFO = PFSInfo(
@@ -225,6 +233,7 @@ def test_setup_proxies_all_addresses_are_known():
         message="This is your favorite pathfinding service",
         operator="John Doe",
         version="0.0.3",
+        matrix_server="http://matrix.example.com",
     )
     deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
@@ -249,7 +258,7 @@ def test_setup_proxies_all_addresses_are_known():
     assert services_bundle.service_registry
 
 
-def test_setup_proxies_no_service_registry_but_pfs():
+def test_setup_proxies_no_service_registry_but_pfs() -> None:
     """
     Test that if no service registry is provided but a manual pfs address is given then startup
     still works
@@ -261,9 +270,12 @@ def test_setup_proxies_no_service_registry_but_pfs():
         chain_id=chain_id,
         environment_type=Environment.DEVELOPMENT,
         services=ServiceConfig(
-            pathfinding_max_fee=100, pathfinding_iou_timeout=500, pathfinding_max_paths=5
+            pathfinding_max_fee=TokenAmount(100),
+            pathfinding_iou_timeout=BlockTimeout(500),
+            pathfinding_max_paths=5,
         ),
     )
+    config.transport.available_servers = ["http://matrix.example.com"]
     contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
@@ -271,8 +283,8 @@ def test_setup_proxies_no_service_registry_but_pfs():
         url="my-pfs",
         price=TokenAmount(12),
         chain_id=ChainID(5),
-        token_network_registry_address=to_canonical_address(
-            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"]
+        token_network_registry_address=TokenNetworkRegistryAddress(
+            to_canonical_address(contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]["address"])
         ),
         user_deposit_address=user_deposit_address_test_default,
         confirmed_block_number=BlockNumber(1),
@@ -280,12 +292,13 @@ def test_setup_proxies_no_service_registry_but_pfs():
         message="This is your favorite pathfinding service",
         operator="John Doe",
         version="0.0.3",
+        matrix_server="http://matrix.example.com",
     )
     deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
         services_bundle = services_bundle_from_contracts_deployment(
             config=config,
-            proxy_manager=proxy_manager,
+            proxy_manager=proxy_manager,  # type: ignore
             deployed_addresses=deployed_addresses,
             routing_mode=RoutingMode.PFS,
             pathfinding_service_address="my-pfs",

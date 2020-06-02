@@ -32,6 +32,7 @@ def test_get_pfs_info_success():
         "operator": "John Doe",
         "message": "This is your favorite pathfinding service",
         "payment_address": pfs_test_default_payment_address,
+        "matrix_server": "http://matrix.example.com",
     }
 
     response = Mock()
