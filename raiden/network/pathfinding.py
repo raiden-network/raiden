@@ -68,6 +68,7 @@ class PFSInfo:
     operator: str
     version: str
     confirmed_block_number: BlockNumber
+    matrix_server: str
 
 
 @dataclass
@@ -140,6 +141,7 @@ def get_pfs_info(url: str) -> PFSInfo:
             operator=infos["operator"],
             version=infos["version"],
             confirmed_block_number=infos["network_info"]["confirmed_block"]["number"],
+            matrix_server=infos["matrix_server"],
         )
     except requests.exceptions.RequestException as e:
         msg = "Selected Pathfinding Service did not respond"
@@ -224,6 +226,7 @@ def configure_pfs_or_exit(
     node_network_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: TokenAmount,
+    matrix_servers: List[str],
 ) -> PFSInfo:
     """
     Take in the given pfs_address argument, the service registry and find out a
@@ -289,6 +292,14 @@ def configure_pfs_or_exit(
             f" as your node ({to_checksum_address(token_network_registry_address)}).\n"
             f"Raiden will shut down. Please choose a different Pathfinding Service."
         )
+
+    if pathfinding_service_info.matrix_server not in matrix_servers:
+        raise RaidenError(
+            f"The Pathfinding Service {pfs_url} is not connected to the same matrix federation. "
+            f"Please check your settings for PFS and matrix server, if manually chosen. "
+            f"Otherwise, check your environment-type."
+        )
+
     click.secho(
         f"You have chosen the Pathfinding Service at {pfs_url}.\n"
         f"Operator: {pathfinding_service_info.operator}, "

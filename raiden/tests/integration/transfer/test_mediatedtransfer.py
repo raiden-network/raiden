@@ -371,6 +371,7 @@ def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: L
                 operator="",
                 version="",
                 price=TokenAmount(0),
+                matrix_server="http://matrix.example.com",
             ),
             maximum_fee=TokenAmount(100),
             iou_timeout=BlockTimeout(100),

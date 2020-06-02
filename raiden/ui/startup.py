@@ -332,6 +332,7 @@ def services_bundle_from_contracts_deployment(
                 token_network_registry_address
             ),
             pathfinding_max_fee=config.services.pathfinding_max_fee,
+            matrix_servers=config.transport.available_servers,
         )
         msg = "Eth address of selected pathfinding service is unknown."
         assert pfs_info.payment_address is not None, msg
