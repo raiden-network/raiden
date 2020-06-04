@@ -298,7 +298,8 @@ def configure_pfs_or_exit(
     server_in_federation = any(
         pathfinding_service_info.matrix_server in matrix_server for matrix_server in matrix_servers
     )
-    if not server_in_federation:
+    # Only check if PFS is right federation when matrix server is not given explicitely
+    if len(matrix_servers) > 0 and not server_in_federation:
         raise RaidenError(
             f"The Pathfinding Service {pfs_url} is not connected to the same matrix federation. "
             f"Please check your settings for PFS and matrix server, if manually chosen. "
