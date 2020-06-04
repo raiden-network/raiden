@@ -88,22 +88,28 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
+def fetch_available_matrix_servers(
+    transport_config: MatrixTransportConfig, environment_type: Environment
+) -> None:
+    """
+    Fetches the list of known servers from raiden-network/raiden-tranport repo
+    for the given environment.
+    """
+    available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[environment_type]
+
+    log.debug("Fetching available matrix servers")
+    available_servers = get_matrix_servers(available_servers_url)
+    log.debug("Available matrix servers", available_servers=available_servers)
+
+    transport_config.available_servers = available_servers
+
+
 def setup_matrix(
     transport_config: MatrixTransportConfig,
     services_config: ServiceConfig,
     environment_type: Environment,
     routing_mode: RoutingMode,
 ) -> MatrixTransport:
-    if transport_config.server == MATRIX_AUTO_SELECT_SERVER:
-        # fetch list of known servers from raiden-network/raiden-tranport repo
-        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[environment_type]
-
-        log.debug("Fetching available matrix servers")
-        available_servers = get_matrix_servers(available_servers_url)
-        log.debug("Available matrix servers", available_servers=available_servers)
-
-        transport_config.available_servers = available_servers
-
     # Add PFS broadcast room when not in private mode
     if routing_mode != RoutingMode.PRIVATE:
         if PATH_FINDING_BROADCASTING_ROOM not in transport_config.broadcast_rooms:
@@ -342,6 +348,11 @@ def run_app(
         )
     else:
         deployed_addresses = load_deployment_addresses_from_contracts(contracts=contracts)
+
+    # Load the available matrix servers when no matrix server is given
+    # The list is used in a PFS check
+    if config.transport.server == MATRIX_AUTO_SELECT_SERVER:
+        fetch_available_matrix_servers(config.transport, environment_type)
 
     raiden_bundle = raiden_bundle_from_contracts_deployment(
         proxy_manager=proxy_manager,
