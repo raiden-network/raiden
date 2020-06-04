@@ -102,7 +102,7 @@ objgraph==3.4.1           # via -r requirements-dev.txt
 packaging==19.0           # via -r requirements-dev.txt, pytest, sphinx
 parsimonious==0.8.1       # via -r requirements-dev.txt, eth-abi
 parso==0.7.0              # via -r requirements-dev.txt, jedi
-pdbpp==0.10.0             # via -r requirements-dev.txt
+pdbpp==0.10.2             # via -r requirements-dev.txt
 pexpect==4.7.0            # via -r requirements-dev.txt, ipython
 phonenumbers==8.10.13     # via -r requirements-dev.txt, matrix-synapse
 pickleshare==0.7.5        # via -r requirements-dev.txt, ipython
