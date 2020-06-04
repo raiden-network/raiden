@@ -85,7 +85,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-            matrix_servers=["http://matrix.example.com"],
+            matrix_servers=["matrix.example.com"],
         )
     assert config.url in urls
     assert is_canonical_address(config.payment_address)
@@ -100,7 +100,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-            matrix_servers=["http://matrix.example.com"],
+            matrix_servers=["matrix.example.com"],
         )
     assert config.url == given_address
     assert is_same_address(config.payment_address, json_data["payment_address"])
@@ -162,7 +162,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 node_network_id=ChainID(chain_id),
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-                matrix_servers=["http://matrix.doesnotexist.com"],
+                matrix_servers=["matrix.doesnotexist.com"],
             )
 
 
