@@ -2,6 +2,7 @@ import json
 import random
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import urlparse
 from uuid import UUID
 
 import click
@@ -125,6 +126,7 @@ def get_pfs_info(url: str) -> PFSInfo:
     try:
         response = requests.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
         infos = get_response_json(response)
+        matrix_server_info = urlparse(infos["matrix_server"])
 
         return PFSInfo(
             url=url,
@@ -141,12 +143,12 @@ def get_pfs_info(url: str) -> PFSInfo:
             operator=infos["operator"],
             version=infos["version"],
             confirmed_block_number=infos["network_info"]["confirmed_block"]["number"],
-            matrix_server=infos["matrix_server"],
+            matrix_server=matrix_server_info.netloc,
         )
     except requests.exceptions.RequestException as e:
         msg = "Selected Pathfinding Service did not respond"
         raise ServiceRequestFailed(msg) from e
-    except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError) as e:
+    except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError, ValueError) as e:
         msg = "Selected Pathfinding Service returned unexpected reply"
         raise ServiceRequestFailed(msg) from e
 
@@ -293,7 +295,10 @@ def configure_pfs_or_exit(
             f"Raiden will shut down. Please choose a different Pathfinding Service."
         )
 
-    if pathfinding_service_info.matrix_server not in matrix_servers:
+    server_in_federation = any(
+        pathfinding_service_info.matrix_server in matrix_server for matrix_server in matrix_servers
+    )
+    if not server_in_federation:
         raise RaidenError(
             f"The Pathfinding Service {pfs_url} is not connected to the same matrix federation. "
             f"Please check your settings for PFS and matrix server, if manually chosen. "
