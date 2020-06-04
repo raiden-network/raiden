@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -ex
 
-if [[ ! -z ${CIRCLE_TAG} ]]; then
+# shellcheck disable=SC2154
+if [[ -n ${CIRCLE_TAG} ]]; then
     export ARCHIVE_TAG=${CIRCLE_TAG}
     if [[ ${CIRCLE_TAG} = "*-rc*" ]]; then
         export RELEASE_TYPE="RC"
@@ -16,7 +17,7 @@ else
     export RELEASE_TYPE="NIGHTLY"
 fi
 
-echo "export ARCHIVE_TAG=${ARCHIVE_TAG}" >> ${BASH_ENV}
-echo "export RELEASE_TYPE=${RELEASE_TYPE}" >> ${BASH_ENV}
+echo "export ARCHIVE_TAG=${ARCHIVE_TAG}" >> "${BASH_ENV}"
+echo "export RELEASE_TYPE=${RELEASE_TYPE}" >> "${BASH_ENV}"
 
 set +ex

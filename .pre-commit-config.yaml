@@ -73,3 +73,8 @@ repos:
       - id: pylint
         entry: tools/pre-commit/pre-commit-wrapper.py pylint
         additional_dependencies: ["pip-tools>=5.1.2"]
+
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.5
+    hooks:
+      - id: shellcheck

@@ -44,18 +44,18 @@ function compare_pylint_reports() {
         previous_error_count=$(wc -l "${old}" | cut '-d ' -f1)
 
         if [[ $new_error_count -gt $previous_error_count ]]; then
-            diff ${old} ${new}
+            diff "${old}" "${new}"
 
             # DO NOT overwrite the old report in the cache, we want to keep the
             # version with the lower number of errors
         else
             # This PR fixed errors, move the new report over the old one to enforce
             # a new lower bound on the number of errors
-            mv ${new} ${old}
+            mv "${new}" "${old}"
         fi
     else
         # Save the report to compare on subsequent runs
-        mv ${new} ${old}
+        mv "${new}" "${old}"
     fi
 }
 
@@ -74,17 +74,17 @@ function compare_mypy_reports() {
     fi
 
     if [[ -e "${old}" ]]; then
-        if ! ./.circleci/lint_report.py ${old} ${new}; then
+        if ! ./.circleci/lint_report.py "${old}" "${new}"; then
             # DO NOT overwrite the old report in the cache, we want to keep the
             # version with the lower number of errors
             #
             # If this PR fixed errors, move the new report over the old one to
             # enforce a new lower bound on the number of errors
-            mv ${new} ${old}
+            mv "${new}" "${old}"
         fi
     else
         # Save the report to compare on subsequent runs
-        mv ${new} ${old}
+        mv "${new}" "${old}"
     fi
 }
 
@@ -96,7 +96,8 @@ old_report_mypy="${CACHE_DIR}/mypy"
 new_report_pylint=$(mktemp)
 new_report_mypy=$(mktemp)
 
-if [[ ! -z ${CIRCLECI} ]]; then
+# shellcheck disable=SC2154
+if [[ -n ${CIRCLECI} ]]; then
     JOBS=8
 else
     JOBS=0
@@ -104,11 +105,11 @@ fi
 
 pylint --jobs=${JOBS} \
     --load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker \
-    raiden/ tools/scenario-player/ > ${new_report_pylint} || true
+    raiden/ tools/scenario-player/ > "${new_report_pylint}" || true
 
 mypy --config-file /dev/null --strict --disallow-subclassing-any \
     --disallow-any-expr --disallow-any-decorated --disallow-any-explicit \
-    --disallow-any-generics raiden tools > ${new_report_mypy} || true
+    --disallow-any-generics raiden tools > "${new_report_mypy}" || true
 
 exit_code=0
 
