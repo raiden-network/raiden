@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 ######################################################
 ### Run coverage, generate and display html report ###
@@ -58,15 +58,15 @@ fi
 OPEN=${OPEN:-xdg-open}
 
 # be a bit smarter about which file to display
-if [[ "$ONLY" = "*" ]];
+if [[ "${ONLY}" = "*" ]];
 then
     SHOW=${SHOW:-index.html}
 else
-    SHOW=$(python -c "import sys; print(sys.argv[1].replace('/', '_').replace('.', '_') + '.html')" $ONLY)
+    SHOW=$(python -c "import sys; print(sys.argv[1].replace('/', '_').replace('.', '_') + '.html')" "${ONLY}")
 fi
 
 # in case that out dir was configured, make sure, that it exists
-mkdir -p $OUT_DIR
+mkdir -p "${OUT_DIR}"
 
 rm .coverage
-coverage run --branch $PYTEST -x $SUITE && coverage html -d $OUT_DIR --include=$ONLY && $OPEN $OUT_DIR/$SHOW
+coverage run --branch "${PYTEST}" -x "${SUITE}" && coverage html -d "${OUT_DIR}" --include="${ONLY}" && "${OPEN}" "${OUT_DIR}/${SHOW}"

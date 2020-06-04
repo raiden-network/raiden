@@ -10,7 +10,7 @@ test_type=$3
 # Remove the above arguments, every thing extra will be passed down to coverage
 shift 3
 
-mkdir -p ${test_report_dir}
+mkdir -p "${test_report_dir}"
 
 # Using 9min as the dormant timeout, CircleCI will kill the container after
 # 10min
@@ -39,21 +39,22 @@ dormant_signal=SIGUSR1
     --color=yes \
     --log-config='raiden:DEBUG' \
     --random \
-    --junit-xml=${test_report_dir}/results.xml \
-    --blockchain-type=${blockchain_type} \
+    --junit-xml="${test_report_dir}"/results.xml \
+    --blockchain-type="${blockchain_type}" \
     --select-fail-on-missing \
     --select-from-file selected-tests.txt \
     "${@}"
 
 # Skip log splitting for unit tests
-if [ "${test_type}" != "unit" ]; then
-    if [ -n ${RAIDEN_TESTS_LOGSDIR} ]; then
+if [[ "${test_type}" != "unit" ]]; then
+    # shellcheck disable=SC2154
+    if [[ -n ${RAIDEN_TESTS_LOGSDIR} ]]; then
         # Enable nullglob, otherwise the loop bellow would do one iteration
         # over the pattern, leading to a failure, since the pattern is not a
         # valid file.
         shopt -s nullglob
 
-        for test_directory in ${RAIDEN_TESTS_LOGSDIR}/*; do
+        for test_directory in "${RAIDEN_TESTS_LOGSDIR}"/*; do
             # Pytest's paremetrize tests have brackets in their names, e.g.
             # `test_api_open_channel_invalid_input[matrix-False-0-1]`, the
             # expression bellow must have the test_directory variable in quotes to

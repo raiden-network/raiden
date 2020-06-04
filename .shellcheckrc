@@ -1,0 +1,8 @@
+enable=check-unassigned-uppercase
+
+# Workaround to fix issue with pre-commit.
+# See: https://github.com/gruntwork-io/pre-commit/issues/28
+disable=SC1091
+
+# This has been disabled by default in v0.7.1 but the CircleCI Orb is still on v0.7.0
+disable=SC2230

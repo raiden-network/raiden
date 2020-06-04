@@ -52,11 +52,10 @@ ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_module
 
 lint: ISORT_CHECK_PARAMS := --diff --check-only
 lint: BLACK_CHECK_PARAMS := --check --diff
-lint: format flake8 mypy pylint
+lint: format flake8 mypy pylint shellcheck
 
 mypy:
-	mypy raiden
-	mypy tools
+	mypy raiden tools
 
 mypy-all:
 	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
@@ -74,6 +73,14 @@ isort:
 
 black:
 	black $(BLACK_CHECK_PARAMS) $(LINT_PATHS)
+
+shellcheck:
+ifeq (, $(shell type -p shellcheck))
+	@echo "Shellcheck isn't installed. Shell scripts won't be linted!"
+else
+	find tools/ .circleci/ -name "*.sh" -print0 | xargs -0 shellcheck -x
+	shellcheck requirements/deps
+endif
 
 format: isort black
 

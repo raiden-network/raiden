@@ -14,16 +14,17 @@ output_file=$(mktemp)
         --collect-only \
         --quiet \
         "--blockchain-type=${blockchain_type}" \
-        ${additional_args} > ${output_file}
+        ${additional_args:+"$additional_args"} > "${output_file}"
 } || {
     # Print pytest's output if test selection failed. This may happen if a
     # depencency is broken or if the codebase has syntax errors.
-    cat ${output_file};
+    cat "${output_file}"
     exit 1;
 }
 
 # Save the tests in a file, it will be used by follow up steps
-cat ${output_file} \
+# shellcheck disable=SC2002
+cat "${output_file}" \
     | grep '::' \
     | circleci tests split --split-by=timings --timings-type=testname \
     | grep '::' > selected-tests.txt
