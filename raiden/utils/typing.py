@@ -13,8 +13,24 @@ from web3.types import ABI, BlockIdentifier, Nonce  # NOQA pylint:disable=unused
 
 from raiden_contracts.contract_manager import CompiledContract  # NOQA pylint:disable=unused-import
 from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-import
+    AdditionalHash,
+    BalanceHash,
+    BlockExpiration,
     ChainID,
+    ChannelID,
+    Locksroot,
+    PrivateKey,
+    Signature,
+    T_AdditionalHash,
+    T_BalanceHash,
+    T_BlockExpiration,
     T_ChainID,
+    T_ChannelID,
+    T_Locksroot,
+    T_PrivateKey,
+    T_Signature,
+    T_TokenAmount,
+    TokenAmount,
 )
 
 from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
@@ -53,23 +69,15 @@ T_Address = bytes
 
 AddressHex = HexAddress
 
-# An absolute number of blocks
-T_BlockExpiration = int
-BlockExpiration = NewType("BlockExpiration", T_BlockExpiration)
-
 T_Balance = int
 Balance = NewType("Balance", T_Balance)
 
 T_GasPrice = int
 GasPrice = NewType("GasPrice", T_GasPrice)
 
-T_BalanceHash = bytes
-BalanceHash = NewType("BalanceHash", T_BalanceHash)
-
 T_BlockGasLimit = int
 BlockGasLimit = NewType("BlockGasLimit", T_BlockGasLimit)
 
-# TODO: remove alias
 T_BlockHash = bytes
 BlockHash = Hash32
 
@@ -79,25 +87,16 @@ T_BlockNumber = int
 T_BlockTimeout = int
 BlockTimeout = NewType("BlockTimeout", T_BlockTimeout)
 
-T_ChannelID = int
-ChannelID = NewType("ChannelID", T_ChannelID)
-
 T_ChannelState = int
 ChannelState = NewType("ChannelState", T_ChannelState)
 
 T_InitiatorAddress = bytes
 InitiatorAddress = NewType("InitiatorAddress", T_InitiatorAddress)
 
-T_Locksroot = bytes
-Locksroot = NewType("Locksroot", T_Locksroot)
-
 T_MessageID = int
 MessageID = NewType("MessageID", T_MessageID)
 
 T_Nonce = int
-
-T_AdditionalHash = bytes
-AdditionalHash = NewType("AdditionalHash", T_AdditionalHash)
 
 T_NetworkTimeout = float
 NetworkTimeout = NewType("NetworkTimeout", T_NetworkTimeout)
@@ -108,9 +107,6 @@ PaymentID = NewType("PaymentID", T_PaymentID)
 # PaymentAmount is for amounts of tokens paid end-to-end
 T_PaymentAmount = int
 PaymentAmount = NewType("PaymentAmount", T_PaymentAmount)
-
-T_PrivateKey = bytes
-PrivateKey = NewType("PrivateKey", T_PrivateKey)
 
 T_PublicKey = bytes
 PublicKey = NewType("PublicKey", T_PublicKey)
@@ -159,9 +155,6 @@ OneToNAddress = NewType("OneToNAddress", T_OneToNAddress)
 T_TokenNetworkAddress = bytes
 TokenNetworkAddress = NewType("TokenNetworkAddress", T_TokenNetworkAddress)
 
-T_TokenAmount = int
-TokenAmount = NewType("TokenAmount", T_TokenAmount)
-
 T_TransferID = bytes
 TransferID = NewType("TransferID", T_TransferID)
 
@@ -173,9 +166,6 @@ SecretHash = NewType("SecretHash", T_SecretHash)
 
 T_SecretRegistryAddress = bytes
 SecretRegistryAddress = NewType("SecretRegistryAddress", T_SecretRegistryAddress)
-
-T_Signature = bytes
-Signature = NewType("Signature", T_Signature)
 
 T_TransactionHash = bytes
 TransactionHash = NewType("TransactionHash", T_TransactionHash)

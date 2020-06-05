@@ -24,7 +24,7 @@ py-geth
 py-solc
 pysha3
 pytoml
-raiden-contracts==0.37.0
+git+git://github.com/raiden-network/raiden-contracts.git@bf405d3ebfaf8e2394b7981ed4a2843fbff48349
 raiden-webui
 requests
 structlog

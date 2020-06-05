@@ -122,6 +122,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
+    PrivateKey,
     Secret,
     SecretHash,
     SecretRegistryAddress,
@@ -477,7 +478,7 @@ class RaidenService(Runnable):
         return self.config.blockchain.confirmation_blocks
 
     @property
-    def privkey(self) -> bytes:
+    def privkey(self) -> PrivateKey:
         return self.rpc_client.privkey
 
     def add_pending_greenlet(self, greenlet: Greenlet) -> None:

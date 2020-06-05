@@ -24,6 +24,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentWithFeeAmount,
+    PrivateKey,
     TargetAddress,
     TokenNetworkAddress,
     Tuple,
@@ -41,7 +42,7 @@ def get_best_routes(
     amount: PaymentAmount,
     previous_address: Optional[Address],
     pfs_config: Optional[PFSConfig],
-    privkey: bytes,
+    privkey: PrivateKey,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
 
     token_network = views.get_token_network_by_address(chain_state, token_network_address)
@@ -248,7 +249,7 @@ def get_best_routes_pfs(
     amount: PaymentAmount,
     previous_address: Optional[Address],
     pfs_config: PFSConfig,
-    privkey: bytes,
+    privkey: PrivateKey,
     pfs_wait_for_block: BlockNumber,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
     try:
