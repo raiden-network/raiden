@@ -142,7 +142,7 @@ pytest-xdist==1.31.0      # via -r requirements-dev.txt
 pytest==5.3.5             # via -r requirements-dev.txt, pytest-forked, pytest-random, pytest-select, pytest-xdist
 python-dateutil==2.8.0    # via s3cmd
 python-magic==0.4.15      # via s3cmd
-pytoml==0.1.20            # via -r requirements-dev.txt
+pytoml==0.1.21            # via -r requirements-dev.txt
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
 raiden-contracts==0.37.0  # via -r requirements-dev.txt
