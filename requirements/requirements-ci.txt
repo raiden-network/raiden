@@ -181,7 +181,7 @@ urllib3==1.25.3           # via -r requirements-dev.txt, requests
 varint==1.0.2             # via -r requirements-dev.txt, multiaddr
 wcwidth==0.1.9            # via -r requirements-dev.txt, prompt-toolkit, pytest
 web3==5.9.0               # via -r requirements-dev.txt, raiden-contracts
-webargs==5.3.1            # via -r requirements-dev.txt
+webargs==6.1.0            # via -r requirements-dev.txt
 webencodings==0.5.1       # via -r requirements-dev.txt, bleach
 websockets==8.1           # via -r requirements-dev.txt, web3
 werkzeug==0.15.4          # via -r requirements-dev.txt, flask
