@@ -74,7 +74,7 @@ pycryptodome==3.8.2       # via eth-hash, eth-keyfile
 pygments==2.6.1           # via ipython
 pyrsistent==0.15.7        # via jsonschema
 pysha3==1.0.2             # via -r requirements.in
-pytoml==0.1.20            # via -r requirements.in
+pytoml==0.1.21            # via -r requirements.in
 pytz==2019.1              # via flask-restful
 raiden-contracts==0.37.0  # via -r requirements.in
 raiden-webui==0.11.1      # via -r requirements.in
