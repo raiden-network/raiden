@@ -9,7 +9,7 @@ import click
 import gevent
 import requests
 import structlog
-from eth_utils import decode_hex, encode_hex, to_canonical_address, to_hex
+from eth_utils import decode_hex, to_canonical_address, to_hex
 from web3 import Web3
 
 from raiden.constants import (
@@ -33,6 +33,7 @@ from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import (
     Address,
     Any,
+    BlockExpiration,
     BlockIdentifier,
     BlockNumber,
     BlockTimeout,
@@ -43,6 +44,7 @@ from raiden.utils.typing import (
     OneToNAddress,
     Optional,
     PaymentAmount,
+    PrivateKey,
     Signature,
     TargetAddress,
     TokenAmount,
@@ -86,14 +88,14 @@ class IOU:
     receiver: Address
     one_to_n_address: OneToNAddress
     amount: TokenAmount
-    expiration_block: BlockNumber
+    expiration_block: BlockExpiration
     chain_id: ChainID
     signature: Optional[Signature] = None
 
-    def sign(self, privkey: bytes) -> None:
+    def sign(self, privkey: PrivateKey) -> None:
         self.signature = Signature(
             sign_one_to_n_iou(
-                privatekey=encode_hex(privkey),
+                privatekey=privkey,
                 sender=to_checksum_address(self.sender),
                 receiver=to_checksum_address(self.receiver),
                 amount=self.amount,
@@ -400,12 +402,12 @@ def make_iou(
     pfs_config: PFSConfig,
     our_address: Address,
     one_to_n_address: OneToNAddress,
-    privkey: bytes,
+    privkey: PrivateKey,
     block_number: BlockNumber,
     chain_id: ChainID,
     offered_fee: TokenAmount,
 ) -> IOU:
-    expiration = BlockNumber(block_number + pfs_config.iou_timeout)
+    expiration = BlockExpiration(block_number + pfs_config.iou_timeout)
 
     iou = IOU(
         sender=our_address,
@@ -422,14 +424,14 @@ def make_iou(
 
 def update_iou(
     iou: IOU,
-    privkey: bytes,
+    privkey: PrivateKey,
     added_amount: TokenAmount = ZERO_TOKENS,
-    expiration_block: Optional[BlockNumber] = None,
+    expiration_block: Optional[BlockExpiration] = None,
 ) -> IOU:
 
     expected_signature = Signature(
         sign_one_to_n_iou(
-            privatekey=to_hex(privkey),
+            privatekey=privkey,
             sender=to_checksum_address(iou.sender),
             receiver=to_checksum_address(iou.receiver),
             amount=iou.amount,
@@ -457,7 +459,7 @@ def create_current_iou(
     token_network_address: TokenNetworkAddress,
     one_to_n_address: OneToNAddress,
     our_address: Address,
-    privkey: bytes,
+    privkey: PrivateKey,
     block_number: BlockNumber,
     chain_id: ChainID,
     offered_fee: TokenAmount,
@@ -537,7 +539,7 @@ def post_pfs_paths(
 def query_paths(
     pfs_config: PFSConfig,
     our_address: Address,
-    privkey: bytes,
+    privkey: PrivateKey,
     current_block_number: BlockNumber,
     token_network_address: TokenNetworkAddress,
     one_to_n_address: OneToNAddress,

@@ -98,6 +98,6 @@ def pack_withdraw(
         chain_identifier=canonical_identifier.chain_identifier,
         channel_identifier=canonical_identifier.channel_identifier,
         participant=to_hex_address(participant),
-        amount_to_withdraw=total_withdraw,
+        amount_to_withdraw=TokenAmount(total_withdraw),
         expiration_block=expiration_block,
     )

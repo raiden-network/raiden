@@ -9,7 +9,7 @@ from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_f
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, TokenAmount
+from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, PrivateKey, TokenAmount
 from raiden.waiting import wait_for_block
 
 
@@ -155,7 +155,7 @@ def test_participant_selection(raiden_network, token_addresses):
                 amount=PaymentAmount(1),
                 previous_address=None,
                 pfs_config=None,
-                privkey=b"",  # not used if pfs is not configured
+                privkey=PrivateKey(b""),  # not used if pfs is not configured
             )
             assert routes is not None
 
