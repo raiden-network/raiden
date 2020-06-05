@@ -148,7 +148,7 @@ pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
 raiden-contracts==0.37.0  # via -r requirements-dev.txt
 raiden-webui==0.11.1      # via -r requirements-dev.txt
 readme-renderer==24.0     # via -r requirements-dev.txt
-releases==1.6.1           # via -r requirements-dev.txt
+releases==1.6.3           # via -r requirements-dev.txt
 requests==2.22.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.9         # via -r requirements-dev.txt
 rlp==1.1.0                # via -r requirements-dev.txt, eth-account, eth-rlp, raiden-contracts
