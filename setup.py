@@ -1,9 +1,13 @@
 #!/usr/bin/env python
+import os
+import re
 from typing import List
 
 from setuptools import find_packages, setup
 from setuptools.command.egg_info import egg_info
 from setuptools.command.test import test as TestCommand
+
+REQ_REPLACE = {re.compile(r"git\+https://github.com/(\w|-)+/raiden.git@.*"): "raiden"}
 
 
 class PyTest(TestCommand):
@@ -45,14 +49,28 @@ with open("README.md") as readme_file:
 history = ""
 
 
-with open("requirements/requirements.txt") as req_file:
-    install_requires = list(
-        {
-            requirement
-            for requirement in req_file
-            if requirement.strip() and not requirement.lstrip().startswith("#")
-        }
-    )
+def read_requirements(path: str) -> List[str]:
+    """ Read requirements, skip comments, modify git dependencies
+
+    setup.py does not support git dependencies, so we change those to simple package names, here.
+    This only leads to the correct versions in the installation because we
+    always use pip to install from the requirements file before setup.py gets
+    executed. Cleaner solutions wanted!
+    """
+    assert os.path.isfile(path), "Missing requirements file"
+    ret = []
+    with open(path) as requirements:
+        for line in requirements.readlines():
+            line = line.strip()
+            if line and line[0] in ("#", "-"):
+                continue
+            for regex, replacement in REQ_REPLACE.items():
+                if regex.match(line):
+                    line = replacement
+            ret.append(line)
+
+    return ret
+
 
 test_requirements: List[str] = []
 
@@ -84,7 +102,7 @@ setup(
     cmdclass={"test": PyTest, "egg_info": EggInfo},
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    install_requires=install_requires,
+    install_requires=[read_requirements("requirements.txt")],
     tests_require=test_requirements,
     python_requires=">=3.7",
     entry_points={"console_scripts": ["raiden = raiden.__main__:main"]},
