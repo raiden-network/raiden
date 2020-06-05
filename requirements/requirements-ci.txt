@@ -117,7 +117,7 @@ ptyprocess==0.6.0         # via -r requirements-dev.txt, pexpect
 py-ecc==1.4.7             # via -r requirements-dev.txt, raiden-contracts
 py-geth==2.1.0            # via -r requirements-dev.txt
 py-solc==3.2.0            # via -r requirements-dev.txt, raiden-contracts
-py-spy==0.3.2             # via -r requirements-dev.txt
+py-spy==0.3.3             # via -r requirements-dev.txt
 py==1.8.0                 # via -r requirements-dev.txt, pytest
 pyasn1-modules==0.2.5     # via -r requirements-dev.txt, matrix-synapse, service-identity
 pyasn1==0.4.5             # via -r requirements-dev.txt, matrix-synapse, pyasn1-modules, service-identity
