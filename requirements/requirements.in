@@ -20,8 +20,6 @@ mirakuru==2.1.2
 netifaces
 networkx
 psutil
-py-geth
-py-solc
 pysha3
 pytoml
 git+git://github.com/raiden-network/raiden-contracts.git@bf405d3ebfaf8e2394b7981ed4a2843fbff48349

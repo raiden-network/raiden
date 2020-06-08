@@ -115,7 +115,6 @@ protobuf==3.11.3          # via -r requirements-dev.txt, web3
 psutil==5.6.6             # via -r requirements-dev.txt, mirakuru
 ptyprocess==0.6.0         # via -r requirements-dev.txt, pexpect
 py-ecc==1.4.7             # via -r requirements-dev.txt, raiden-contracts
-py-geth==2.1.0            # via -r requirements-dev.txt
 py-solc==3.2.0            # via -r requirements-dev.txt, raiden-contracts
 py-spy==0.3.3             # via -r requirements-dev.txt
 py==1.8.0                 # via -r requirements-dev.txt, pytest
@@ -153,7 +152,7 @@ requests==2.22.0          # via -r requirements-dev.txt, grequests, ipfshttpclie
 responses==0.10.9         # via -r requirements-dev.txt
 rlp==1.1.0                # via -r requirements-dev.txt, eth-account, eth-rlp, raiden-contracts
 s3cmd==2.0.2              # via -r requirements-ci.in
-semantic-version==2.6.0   # via -r requirements-dev.txt, py-geth, py-solc, releases
+semantic-version==2.6.0   # via -r requirements-dev.txt, py-solc, releases
 semver==2.8.1             # via -r requirements-dev.txt, raiden-contracts
 service-identity==18.1.0  # via -r requirements-dev.txt, matrix-synapse, twisted
 signedjson==1.1           # via -r requirements-dev.txt, matrix-synapse
