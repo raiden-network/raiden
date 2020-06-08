@@ -74,7 +74,7 @@ from raiden.transfer.architecture import (
     StateChange,
 )
 from raiden.transfer.channel import get_capacity
-from raiden.transfer.events import EventPaymentSentFailed
+from raiden.transfer.events import EventPaymentSentFailed, SendWithdrawExpired, SendWithdrawRequest
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendUnlock
 from raiden.transfer.mediated_transfer.mediation_fee import (
@@ -100,7 +100,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelDeposit,
     ContractReceiveNewTokenNetworkRegistry,
     ReceiveUnlock,
-    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
@@ -144,7 +143,6 @@ PFS_UPDATE_CAPACITY_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
     ReceiveUnlock,
     ReceiveWithdrawRequest,
-    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveTransferCancelRoute,
     ReceiveLockExpired,
@@ -156,18 +154,29 @@ PFS_UPDATE_CAPACITY_STATE_CHANGES = (
     # ActionTransferReroute | Update triggered by SendLockedTransfer
     # ActionChannelWithdraw | Upd. triggered by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
-PFS_UPDATE_CAPACITY_EVENTS = (SendUnlock, SendLockedTransfer)
+PFS_UPDATE_CAPACITY_EVENTS = (
+    SendUnlock,
+    SendLockedTransfer,
+    SendWithdrawRequest,
+    SendWithdrawExpired,
+)
 
+# Assume lower capacity for fees when in doubt, see
+# https://raiden-network-specification.readthedocs.io/en/latest/pathfinding_service.html
+#    #when-to-send-pfsfeeupdates
 PFS_UPDATE_FEE_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
     ReceiveWithdrawRequest,
-    ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
 )
+PFS_UPDATE_FEE_EVENTS = (SendWithdrawRequest, SendWithdrawExpired)
+
 assert not set(PFS_UPDATE_FEE_STATE_CHANGES) - set(
     PFS_UPDATE_CAPACITY_STATE_CHANGES
 ), "No fee updates without capacity updates possible"
-PFS_UPDATE_FEE_EVENTS = ()
+assert not set(PFS_UPDATE_FEE_EVENTS) - set(
+    PFS_UPDATE_CAPACITY_EVENTS
+), "No fee updates without capacity updates possible"
 
 
 def initiator_init(
@@ -838,10 +847,9 @@ class RaidenService(Runnable):
 
         for event in raiden_event_list:
             if isinstance(event, PFS_UPDATE_FEE_EVENTS):
-                # pfs_fee_updates.add(event.balance_proof.canonical_identifier)
-                pass
+                pfs_fee_updates.add(event.canonical_identifier)
             elif isinstance(event, PFS_UPDATE_CAPACITY_EVENTS):
-                pfs_capacity_updates.add(event.balance_proof.canonical_identifier)
+                pfs_capacity_updates.add(event.canonical_identifier)
 
         for monitoring_update in monitoring_updates.values():
             update_monitoring_service_from_balance_proof(
