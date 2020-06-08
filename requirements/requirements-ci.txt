@@ -89,7 +89,7 @@ marshmallow==3.6.1        # via -r requirements-dev.txt, marshmallow-dataclass, 
 matrix-client==0.3.2      # via -r requirements-dev.txt
 matrix-synapse==1.10.1    # via -r requirements-dev.txt
 mccabe==0.6.1             # via -r requirements-dev.txt, flake8, pylint
-mirakuru==2.3.0           # via -r requirements-dev.txt
+mirakuru==2.1.2           # via -r requirements-dev.txt
 more-itertools==7.0.0     # via -r requirements-dev.txt, pytest
 msgpack==0.6.1            # via -r requirements-dev.txt, matrix-synapse
 multiaddr==0.0.9          # via -r requirements-dev.txt, ipfshttpclient

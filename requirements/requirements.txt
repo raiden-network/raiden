@@ -51,7 +51,7 @@ marshmallow-enum==1.5.1   # via -r requirements.in
 marshmallow-polyfield==5.8  # via -r requirements.in
 marshmallow==3.6.1        # via -r requirements.in, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield, webargs
 matrix-client==0.3.2      # via -r requirements.in
-mirakuru==2.3.0           # via -r requirements.in
+mirakuru==2.1.2           # via -r requirements.in
 multiaddr==0.0.9          # via ipfshttpclient
 mypy-extensions==0.4.3    # via raiden-contracts, typing-inspect
 netaddr==0.7.19           # via multiaddr
