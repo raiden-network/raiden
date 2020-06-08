@@ -10,8 +10,7 @@ from eth_utils import (
     to_checksum_address,
     to_hex,
 )
-from marshmallow import Schema, SchemaOpts, fields, post_dump, post_load, pre_load
-from webargs import validate
+from marshmallow import Schema, SchemaOpts, fields, post_dump, post_load, pre_load, validate
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 

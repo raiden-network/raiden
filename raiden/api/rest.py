@@ -8,16 +8,14 @@ import gevent
 import gevent.pool
 import structlog
 from eth_utils import encode_hex
-from flask import Flask, Request, Response, request, send_from_directory, url_for
+from flask import Flask, Response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
-from flask_restful import Api, abort
+from flask_restful import Api
 from gevent.event import Event
 from gevent.pywsgi import WSGIServer
 from hexbytes import HexBytes
-from marshmallow import Schema
 from raiden_webui import RAIDEN_WEBUI_PATH
-from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
@@ -186,15 +184,6 @@ URLS_V1 = [
     ("/_debug/raiden_events", RaidenInternalEventsResource),
     ("/_testing/tokens/<hexaddress:token_address>/mint", MintTokenResource, "tokensmintresource"),
 ]
-
-
-@parser.error_handler
-def handle_request_parsing_error(
-    err: Any, _req: Request, _schema: Schema, _err_status_code: int, _err_headers: Any
-) -> None:
-    """ This handles request parsing errors generated for example by schema
-    field validation failing."""
-    abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
 
 
 def endpoint_not_found(e: Any) -> Response:
