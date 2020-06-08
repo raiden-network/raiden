@@ -63,11 +63,11 @@ class ULIDMonotonicFactory(Generic[ID]):
         resolution = clock_getres(CLOCK_MONOTONIC_RAW)
 
         msg = (
-            "The monotonic clock must have nanosecond resolution. This is "
+            "The monotonic clock must have microsecond resolution. This is "
             "necessary because multiple state changes can be written on the same "
             "millisecond."
         )
-        assert resolution <= 0.000_000_001, msg
+        assert resolution <= 1e-06, msg
 
         current_time = time_ns()
 
@@ -77,6 +77,11 @@ class ULIDMonotonicFactory(Generic[ID]):
         self._previous_timestamp = start
         self._previous_monotonic = clock_gettime_ns(CLOCK_MONOTONIC_RAW)
         self._lock = Semaphore()
+        msg = (
+            "Consecutive calls to `new()` must not return the same value. "
+            "Most likely the monotonic clock resolution on this system is too low."
+        )
+        assert self.new() != self.new(), msg
 
     def new(self) -> ID:
         timestamp: int
