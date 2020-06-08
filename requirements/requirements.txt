@@ -34,7 +34,7 @@ flask==1.1.2              # via -r requirements.in, flask-cors, flask-restful
 gevent==1.5a3             # via -r requirements.in
 graphviz==0.13.2          # via objgraph
 greenlet==0.4.15          # via gevent
-guppy3==3.0.9             # via -r requirements.in
+guppy3==3.0.10.post1      # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
 ipfshttpclient==0.4.12    # via web3
@@ -86,8 +86,8 @@ six==1.12.0               # via flask-cors, flask-restful, ipfshttpclient, jsons
 structlog==20.1.0         # via -r requirements.in
 toolz==0.9.0              # via cytoolz
 traitlets==4.3.2          # via ipython
+typing-extensions==3.7.4.2  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
-typing_extensions==3.7.4.2  # via -r requirements.in
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
 wcwidth==0.1.9            # via prompt-toolkit

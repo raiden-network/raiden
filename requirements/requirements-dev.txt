@@ -61,7 +61,7 @@ gevent==1.5a3             # via -r requirements.txt, grequests
 graphviz==0.13.2          # via -r requirements.txt, objgraph
 greenlet==0.4.15          # via -r requirements.txt, gevent
 grequests==0.3.0          # via -r requirements-dev.in
-guppy3==3.0.9             # via -r requirements.txt
+guppy3==3.0.10.post1      # via -r requirements.txt
 hexbytes==0.2.0           # via -r requirements.txt, eth-account, eth-rlp, web3
 hyperlink==19.0.0         # via twisted
 hypothesis==4.24.3        # via -r requirements-dev.in
