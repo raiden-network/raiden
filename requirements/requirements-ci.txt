@@ -10,7 +10,7 @@ aniso8601==7.0.0          # via -r requirements-dev.txt, flask-restful
 apipkg==1.5               # via -r requirements-dev.txt, execnet
 appdirs==1.4.3            # via -r requirements-dev.txt, black
 asn1crypto==1.3.0         # via -r requirements-dev.txt, coincurve
-astroid==2.2.5            # via -r requirements-dev.txt, pylint
+astroid==2.4.2            # via -r requirements-dev.txt, pylint
 astunparse==1.6.2         # via -r requirements-dev.txt, sphinxcontrib-httpexample
 attrs==19.3.0             # via -r requirements-dev.txt, automat, black, flake8-bugbear, hypothesis, jsonschema, matrix-synapse, pytest, service-identity, treq, twisted
 automat==0.7.0            # via -r requirements-dev.txt, twisted
@@ -68,7 +68,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==4.24.3        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==1.5.0  # via -r requirements-dev.txt, pluggy
+importlib-metadata==1.5.0  # via -r requirements-dev.txt, jsonschema, pluggy, pytest
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
@@ -80,7 +80,7 @@ jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, 
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in
+macholib==1.14            # via -r requirements-ci.in, pyinstaller
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
@@ -128,7 +128,7 @@ pyflakes==2.1.1           # via -r requirements-dev.txt, flake8
 pygments==2.6.1           # via -r requirements-dev.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via -r requirements-dev.txt, twisted
 pyinstaller==3.6          # via -r requirements-ci.in
-pylint==2.3.1             # via -r requirements-dev.txt
+pylint==2.5.3             # via -r requirements-dev.txt
 pymacaroons==0.13.0       # via -r requirements-dev.txt, matrix-synapse
 pynacl==1.3.0             # via -r requirements-dev.txt, matrix-synapse, pymacaroons, signedjson
 pyopenssl==19.0.0         # via -r requirements-dev.txt, matrix-synapse, twisted
@@ -168,13 +168,13 @@ sphinxcontrib-httpexample==0.10.3  # via -r requirements-dev.txt
 sphinxcontrib-images==0.8.0  # via -r requirements-dev.txt
 sphinxcontrib-websupport==1.1.2  # via -r requirements-dev.txt, sphinx
 structlog==20.1.0         # via -r requirements-dev.txt
-toml==0.10.0              # via -r requirements-dev.txt, black
+toml==0.10.0              # via -r requirements-dev.txt, black, pylint
 toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==20.3.0      # via -r requirements-dev.txt, matrix-synapse, treq
 typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, mypy
-typing-extensions==3.7.4.1  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson
+typing-extensions==3.7.4.1  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson, web3
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
