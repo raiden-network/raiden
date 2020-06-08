@@ -67,8 +67,7 @@ protobuf==3.11.3          # via web3
 psutil==5.6.6             # via -r requirements.in, mirakuru
 ptyprocess==0.6.0         # via pexpect
 py-ecc==1.4.7             # via raiden-contracts
-py-geth==2.1.0            # via -r requirements.in
-py-solc==3.2.0            # via -r requirements.in, raiden-contracts
+py-solc==3.2.0            # via raiden-contracts
 pycparser==2.19           # via cffi
 pycryptodome==3.8.2       # via eth-hash, eth-keyfile
 pygments==2.6.1           # via ipython
@@ -80,7 +79,7 @@ raiden-contracts==0.37.0  # via -r requirements.in
 raiden-webui==0.11.1      # via -r requirements.in
 requests==2.22.0          # via -r requirements.in, ipfshttpclient, matrix-client, web3
 rlp==1.1.0                # via eth-account, eth-rlp, raiden-contracts
-semantic-version==2.6.0   # via py-geth, py-solc
+semantic-version==2.6.0   # via py-solc
 semver==2.8.1             # via raiden-contracts
 six==1.12.0               # via flask-cors, flask-restful, ipfshttpclient, jsonschema, multiaddr, parsimonious, protobuf, pyrsistent, structlog, traitlets
 structlog==20.1.0         # via -r requirements.in

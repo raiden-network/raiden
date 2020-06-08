@@ -20,8 +20,6 @@ mirakuru==2.1.2
 netifaces
 networkx
 psutil
-py-geth
-py-solc
 pysha3
 pytoml
 raiden-contracts==0.37.0
