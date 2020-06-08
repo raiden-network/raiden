@@ -140,7 +140,7 @@ log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
 ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 
-PFS_UPDATE_STATE_CHANGES = (
+PFS_UPDATE_CAPACITY_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
     ReceiveUnlock,
     ReceiveWithdrawRequest,
@@ -156,7 +156,18 @@ PFS_UPDATE_STATE_CHANGES = (
     # ActionTransferReroute | Update triggered by SendLockedTransfer
     # ActionChannelWithdraw | Upd. triggered by ReceiveWithdrawConfirmation/ReceiveWithdrawExpired
 )
-PFS_UPDATE_EVENTS = (SendUnlock, SendLockedTransfer)
+PFS_UPDATE_CAPACITY_EVENTS = (SendUnlock, SendLockedTransfer)
+
+PFS_UPDATE_FEE_STATE_CHANGES = (
+    ContractReceiveChannelDeposit,
+    ReceiveWithdrawRequest,
+    ReceiveWithdrawConfirmation,
+    ReceiveWithdrawExpired,
+)
+assert not set(PFS_UPDATE_FEE_STATE_CHANGES) - set(
+    PFS_UPDATE_CAPACITY_STATE_CHANGES
+), "No fee updates without capacity updates possible"
+PFS_UPDATE_FEE_EVENTS = ()
 
 
 def initiator_init(
@@ -814,29 +825,22 @@ class RaidenService(Runnable):
             ):
                 monitoring_updates[state_change.balance_proof.canonical_identifier] = state_change
 
-            if isinstance(state_change, PFS_UPDATE_STATE_CHANGES):
-
-                update_fee_schedule = isinstance(
-                    state_change,
-                    (
-                        ContractReceiveChannelDeposit,
-                        ReceiveWithdrawRequest,
-                        ReceiveWithdrawConfirmation,
-                        ReceiveWithdrawExpired,
-                    ),
-                )
+            if isinstance(state_change, PFS_UPDATE_CAPACITY_STATE_CHANGES):
                 if isinstance(state_change, BalanceProofStateChange):
                     canonical_identifier = state_change.balance_proof.canonical_identifier
                 else:
                     canonical_identifier = state_change.canonical_identifier
 
-                if update_fee_schedule:
+                if isinstance(state_change, PFS_UPDATE_FEE_STATE_CHANGES):
                     pfs_fee_updates.add(canonical_identifier)
                 else:
                     pfs_capacity_updates.add(canonical_identifier)
 
         for event in raiden_event_list:
-            if isinstance(event, PFS_UPDATE_EVENTS):
+            if isinstance(event, PFS_UPDATE_FEE_EVENTS):
+                # pfs_fee_updates.add(event.balance_proof.canonical_identifier)
+                pass
+            elif isinstance(event, PFS_UPDATE_CAPACITY_EVENTS):
                 pfs_capacity_updates.add(event.balance_proof.canonical_identifier)
 
         for monitoring_update in monitoring_updates.values():
