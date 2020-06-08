@@ -16,7 +16,7 @@ marshmallow-polyfield
 marshmallow
 marshmallow_enum
 matrix-client==0.3.2
-mirakuru
+mirakuru==2.1.2
 netifaces
 networkx
 psutil
