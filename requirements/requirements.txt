@@ -56,7 +56,7 @@ multiaddr==0.0.9          # via ipfshttpclient
 mypy-extensions==0.4.3    # via raiden-contracts, typing-inspect
 netaddr==0.7.19           # via multiaddr
 netifaces==0.10.9         # via -r requirements.in
-networkx==2.3             # via -r requirements.in
+networkx==2.4             # via -r requirements.in
 objgraph==3.4.1           # via -r requirements.in
 parsimonious==0.8.1       # via eth-abi
 parso==0.7.0              # via jedi
@@ -86,8 +86,8 @@ six==1.12.0               # via flask-cors, flask-restful, ipfshttpclient, jsons
 structlog==20.1.0         # via -r requirements.in
 toolz==0.9.0              # via cytoolz
 traitlets==4.3.2          # via ipython
+typing-extensions==3.7.4.2  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
-typing_extensions==3.7.4.2  # via -r requirements.in
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
 wcwidth==0.1.9            # via prompt-toolkit
