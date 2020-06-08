@@ -112,7 +112,7 @@ def get_best_routes(
             )
 
             try:
-                route = networkx.shortest_path(
+                route = networkx.shortest_path(  # pylint: disable=E1121
                     token_network.network_graph.network, partner_address, to_address
                 )
             except (networkx.NetworkXNoPath, networkx.NodeNotFound):
