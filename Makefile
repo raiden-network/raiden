@@ -75,7 +75,7 @@ black:
 	black $(BLACK_CHECK_PARAMS) $(LINT_PATHS)
 
 shellcheck:
-ifeq (, $(shell type -p shellcheck))
+ifeq (, $(shell command -v shellcheck 2> /dev/null))
 	@echo "Shellcheck isn't installed. Shell scripts won't be linted!"
 else
 	find tools/ .circleci/ -name "*.sh" -print0 | xargs -0 shellcheck -x
@@ -139,4 +139,4 @@ check-venv:
 
 # Ensure pip-tools is installed
 check-pip-tools: check-venv
-	@type pip-compile > /dev/null 2>&1 || (echo "pip-tools is required. Installing." && python3 -m pip install pip-tools)
+	@command -v pip-compile > /dev/null 2>&1 || (echo "pip-tools is required. Installing." && python3 -m pip install pip-tools)
