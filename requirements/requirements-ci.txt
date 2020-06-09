@@ -93,7 +93,7 @@ more-itertools==7.0.0     # via -r requirements-dev.txt, pytest
 msgpack==0.6.1            # via -r requirements-dev.txt, matrix-synapse
 multiaddr==0.0.9          # via -r requirements-dev.txt, ipfshttpclient
 mypy-extensions==0.4.3    # via -r requirements-dev.txt, mypy, raiden-contracts, typing-inspect
-mypy==0.761               # via -r requirements-dev.txt
+mypy==0.780               # via -r requirements-dev.txt
 netaddr==0.7.19           # via -r requirements-dev.txt, matrix-synapse, multiaddr
 netifaces==0.10.9         # via -r requirements-dev.txt
 networkx==2.4             # via -r requirements-dev.txt
