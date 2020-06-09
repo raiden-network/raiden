@@ -30,6 +30,7 @@ from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
 from web3.exceptions import BlockNotFound, TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
+from web3.middleware import simple_cache_middleware
 from web3.types import (
     ABIFunction,
     BlockData,
@@ -756,6 +757,7 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
     try:
         # install caching middleware
         web3.middleware_onion.add(block_hash_cache_middleware)
+        web3.middleware_onion.add(simple_cache_middleware)
 
         # set gas price strategy
         web3.eth.setGasPriceStrategy(gas_price_strategy)
