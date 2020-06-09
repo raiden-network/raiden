@@ -21,6 +21,7 @@ def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
     assert deploy_client.estimate_gas(contract_proxy, "fail_require", {}) is None, msg
 
 
+@pytest.mark.skip(reason="Flaky, see https://github.com/raiden-network/raiden/issues/6261")
 def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     deploy_client: JSONRPCClient,
 ) -> None:
