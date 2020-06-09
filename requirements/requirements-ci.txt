@@ -43,9 +43,9 @@ eth-abi==2.1.0            # via -r requirements-dev.txt, eth-account, raiden-con
 eth-account==0.5.2        # via -r requirements-dev.txt, web3
 eth-hash[pycryptodome]==0.2.0  # via -r requirements-dev.txt, eth-utils, web3
 eth-keyfile==0.5.1        # via -r requirements-dev.txt, eth-account
-eth-keys==0.2.4           # via -r requirements-dev.txt, eth-account, eth-keyfile
+eth-keys==0.3.3           # via -r requirements-dev.txt, eth-account, eth-keyfile
 eth-rlp==0.1.2            # via -r requirements-dev.txt, eth-account
-eth-typing==2.2.1         # via -r requirements-dev.txt, eth-abi, eth-utils, raiden-contracts, web3
+eth-typing==2.2.1         # via -r requirements-dev.txt, eth-abi, eth-keys, eth-utils, raiden-contracts, web3
 eth-utils==1.9.0          # via -r requirements-dev.txt, eth-abi, eth-account, eth-keyfile, eth-keys, eth-rlp, hexbytes, raiden-contracts, rlp, web3
 execnet==1.6.0            # via -r requirements-dev.txt, pytest-xdist
 fancycompleter==0.8       # via -r requirements-dev.txt, pdbpp
@@ -67,7 +67,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==4.24.3        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==1.6.1  # via -r requirements-dev.txt, flake8, jsonschema, pluggy, pytest
+importlib-metadata==1.6.1  # via -r requirements-dev.txt, pluggy
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
@@ -173,8 +173,8 @@ toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==20.3.0      # via -r requirements-dev.txt, matrix-synapse, treq
-typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, black, mypy
-typing-extensions==3.7.4.2  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson, web3
+typed-ast==1.4.0          # via -r requirements-dev.txt, black, mypy
+typing-extensions==3.7.4.2  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
