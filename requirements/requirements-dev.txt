@@ -63,10 +63,10 @@ grequests==0.6.0          # via -r requirements-dev.in
 guppy3==3.0.10.post1      # via -r requirements.txt
 hexbytes==0.2.0           # via -r requirements.txt, eth-account, eth-rlp, web3
 hyperlink==19.0.0         # via twisted
-hypothesis==4.24.3        # via -r requirements-dev.in
+hypothesis==5.16.0        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.6.1  # via -r requirements.txt, flake8, jsonschema, pluggy, pytest
+importlib-metadata==1.6.1  # via -r requirements.txt, pluggy
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -154,7 +154,7 @@ signedjson==1.1           # via matrix-synapse
 simplejson==3.16.0        # via canonicaljson
 six==1.12.0               # via -r requirements-docs.txt, -r requirements.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, readme-renderer, responses, sphinx, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-docs.txt, sphinx
-sortedcontainers==2.1.0   # via matrix-synapse
+sortedcontainers==2.1.0   # via hypothesis, matrix-synapse
 sphinx-rtd-theme==0.4.3   # via -r requirements-docs.txt
 sphinx==1.8.5             # via -r requirements-docs.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
 sphinxcontrib-httpdomain==1.7.0  # via -r requirements-docs.txt, sphinxcontrib-httpexample
@@ -167,8 +167,8 @@ toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via -r requirements.txt, ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
-typed-ast==1.4.0          # via astroid, black, mypy
-typing-extensions==3.7.4.2  # via -r requirements.txt, matrix-synapse, mypy, signedjson, web3
+typed-ast==1.4.0          # via black, mypy
+typing-extensions==3.7.4.2  # via -r requirements.txt, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
