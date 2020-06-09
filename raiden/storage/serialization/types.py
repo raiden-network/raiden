@@ -146,7 +146,7 @@ _native_to_marshmallow.update(
         PaymentWithFeeAmount: IntegerToStringField,
         TransferID: IntegerToStringField,
         WithdrawAmount: IntegerToStringField,
-        Optional[BlockNumber]: OptionalIntegerToStringField,
+        Optional[BlockNumber]: OptionalIntegerToStringField,  # type: ignore
         # Integers which should be converted to strings
         # This is done for querying purposes as sqlite
         # integer type is smaller than python's.
@@ -154,10 +154,12 @@ _native_to_marshmallow.update(
         ChannelID: IntegerToStringField,
         # Polymorphic fields
         TransferTask: CallablePolyField(allowed_classes=[InitiatorTask, MediatorTask, TargetTask]),
-        Union[BalanceProofUnsignedState, BalanceProofSignedState]: CallablePolyField(
-            allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState]
-        ),
-        Optional[Union[BalanceProofUnsignedState, BalanceProofSignedState]]: CallablePolyField(
+        Union[  # type: ignore
+            BalanceProofUnsignedState, BalanceProofSignedState
+        ]: CallablePolyField(allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState]),
+        Optional[  # type: ignore
+            Union[BalanceProofUnsignedState, BalanceProofSignedState]
+        ]: CallablePolyField(
             allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState], allow_none=True
         ),
         SendMessageEvent: CallablePolyField(

@@ -188,7 +188,7 @@ class FeeScheduleState(State):
         if self.imbalance_penalty:
             typecheck(self.imbalance_penalty, list)
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
-            self._penalty_func = Interpolate(x_list, y_list)
+            self._penalty_func = Interpolate(x_list, y_list)  # type: ignore
 
     def fee(self, balance: Balance, amount: Fraction) -> Fraction:
         return (
