@@ -367,12 +367,6 @@ class ConnectionsConnectSchema(BaseSchema):
         decoding_class = dict
 
 
-class ConnectionsLeaveSchema(BaseSchema):
-    class Meta:
-        strict = True
-        decoding_class = dict
-
-
 class EventPaymentSchema(BaseSchema):
     block_number = IntegerToStringField()
     identifier = IntegerToStringField()

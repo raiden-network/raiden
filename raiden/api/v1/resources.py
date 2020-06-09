@@ -1,6 +1,8 @@
-from flask import Blueprint, Response
+from typing import Dict
+
+import marshmallow
+from flask import Blueprint, Response, abort, jsonify, make_response, request
 from flask_restful import Resource
-from webargs.flaskparser import use_kwargs
 
 from raiden.api.rest_utils import if_api_available
 from raiden.api.v1.encoding import (
@@ -8,7 +10,6 @@ from raiden.api.v1.encoding import (
     ChannelPatchSchema,
     ChannelPutSchema,
     ConnectionsConnectSchema,
-    ConnectionsLeaveSchema,
     MintTokenSchema,
     PaymentSchema,
     RaidenEventsRequestSchema,
@@ -19,18 +20,30 @@ from raiden.utils.typing import (
     Address,
     Any,
     BlockIdentifier,
-    BlockTimeout,
-    PaymentAmount,
-    PaymentID,
-    Secret,
-    SecretHash,
     TargetAddress,
     TokenAddress,
-    TokenAmount,
 )
 
 if TYPE_CHECKING:
     from raiden.api.rest import RestAPI
+
+
+def _validate(schema: marshmallow.Schema, data: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        return schema.load(data)
+    except marshmallow.ValidationError as ex:
+        abort(make_response(jsonify(errors=ex.normalized_messages()), 400))
+
+
+def validate_json(schema: marshmallow.Schema) -> Dict[str, Any]:
+    json_data = request.get_json()
+    if not json_data:
+        abort(make_response(jsonify(errors="JSON payload expected"), 400))
+    return _validate(schema, json_data)
+
+
+def validate_query_params(schema: marshmallow.Schema) -> Dict[str, Any]:
+    return _validate(schema, request.args)
 
 
 def create_blueprint() -> Blueprint:
@@ -60,7 +73,7 @@ class VersionResource(BaseResource):
 
 class ChannelsResource(BaseResource):
 
-    put_schema = ChannelPutSchema
+    put_schema = ChannelPutSchema()
 
     @if_api_available
     def get(self) -> Response:
@@ -71,9 +84,9 @@ class ChannelsResource(BaseResource):
             self.rest_api.raiden_api.raiden.default_registry.address
         )
 
-    @use_kwargs(put_schema, locations=("json",))
     @if_api_available
     def put(self, **kwargs: Any) -> Response:
+        kwargs.update(validate_json(self.put_schema))
         return self.rest_api.open(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address, **kwargs
         )
@@ -92,11 +105,11 @@ class ChannelsResourceByTokenAddress(BaseResource):
 
 class ChannelsResourceByTokenAndPartnerAddress(BaseResource):
 
-    patch_schema = ChannelPatchSchema
+    patch_schema = ChannelPatchSchema()
 
-    @use_kwargs(patch_schema, locations=("json",))
     @if_api_available
     def patch(self, **kwargs: Any) -> Response:
+        kwargs.update(validate_json(self.patch_schema))
         return self.rest_api.patch_channel(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address, **kwargs
         )
@@ -131,11 +144,11 @@ class BlockchainEventsNetworkResource(BaseResource):
 
     get_schema = BlockchainEventsRequestSchema()
 
-    @use_kwargs(get_schema, locations=("query",))
     @if_api_available
-    def get(self, from_block: BlockIdentifier, to_block: BlockIdentifier) -> Response:
-        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or BLOCK_ID_LATEST
+    def get(self) -> Response:
+        params = validate_query_params(self.get_schema)
+        from_block = params["from_block"] or self.rest_api.raiden_api.raiden.query_start_block
+        to_block = params["to_block"] or BLOCK_ID_LATEST
 
         return self.rest_api.get_blockchain_events_network(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
@@ -148,13 +161,11 @@ class BlockchainEventsTokenResource(BaseResource):
 
     get_schema = BlockchainEventsRequestSchema()
 
-    @use_kwargs(get_schema, locations=("query",))
     @if_api_available
-    def get(
-        self, token_address: TokenAddress, from_block: BlockIdentifier, to_block: BlockIdentifier
-    ) -> Response:
-        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or BLOCK_ID_LATEST
+    def get(self, token_address: TokenAddress) -> Response:
+        params = validate_query_params(self.get_schema)
+        from_block = params["from_block"] or self.rest_api.raiden_api.raiden.query_start_block
+        to_block = params["to_block"] or BLOCK_ID_LATEST
 
         return self.rest_api.get_blockchain_events_token_network(
             token_address=token_address, from_block=from_block, to_block=to_block
@@ -165,7 +176,6 @@ class ChannelBlockchainEventsResource(BaseResource):
 
     get_schema = BlockchainEventsRequestSchema()
 
-    @use_kwargs(get_schema, locations=("query",))
     @if_api_available
     def get(
         self,
@@ -174,8 +184,9 @@ class ChannelBlockchainEventsResource(BaseResource):
         from_block: BlockIdentifier = None,
         to_block: BlockIdentifier = None,
     ) -> Response:
-        from_block = from_block or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = to_block or BLOCK_ID_LATEST
+        params = validate_query_params(self.get_schema)
+        from_block = params["from_block"] or self.rest_api.raiden_api.raiden.query_start_block
+        to_block = params["to_block"] or BLOCK_ID_LATEST
 
         return self.rest_api.get_blockchain_events_channel(
             token_address=token_address,
@@ -189,10 +200,10 @@ class RaidenInternalEventsResource(BaseResource):
 
     get_schema = RaidenEventsRequestSchema()
 
-    @use_kwargs(get_schema, locations=("query",))
     @if_api_available
-    def get(self, limit: int = None, offset: int = None) -> Response:
-        return self.rest_api.get_raiden_internal_events_with_timestamps(limit=limit, offset=offset)
+    def get(self) -> Response:
+        kwargs = validate_query_params(self.get_schema)
+        return self.rest_api.get_raiden_internal_events_with_timestamps(**kwargs)
 
 
 class RegisterTokenResource(BaseResource):
@@ -210,37 +221,27 @@ class RegisterTokenResource(BaseResource):
 
 
 class MintTokenResource(BaseResource):
-    post_schema = MintTokenSchema
+    post_schema = MintTokenSchema()
 
-    @use_kwargs(post_schema, locations=("json",))
     @if_api_available
-    def post(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> Response:
-        return self.rest_api.mint_token_for(token_address=token_address, to=to, value=value)
+    def post(self, token_address: TokenAddress) -> Response:
+        kwargs = validate_json(self.post_schema)
+        return self.rest_api.mint_token_for(token_address=token_address, **kwargs)
 
 
 class ConnectionsResource(BaseResource):
 
     put_schema = ConnectionsConnectSchema()
-    delete_schema = ConnectionsLeaveSchema()
 
-    @use_kwargs(put_schema)
     @if_api_available
-    def put(
-        self,
-        token_address: TokenAddress,
-        funds: TokenAmount,
-        initial_channel_target: int,
-        joinable_funds_target: float,
-    ) -> Response:
+    def put(self, token_address: TokenAddress) -> Response:
+        kwargs = validate_json(self.put_schema)
         return self.rest_api.connect(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
-            funds=funds,
-            initial_channel_target=initial_channel_target,
-            joinable_funds_target=joinable_funds_target,
+            **kwargs,
         )
 
-    @use_kwargs(delete_schema, locations=("json",))
     @if_api_available
     def delete(self, token_address: TokenAddress) -> Response:
         return self.rest_api.leave(
@@ -264,40 +265,22 @@ class PaymentResource(BaseResource):
     )
     get_schema = RaidenEventsRequestSchema()
 
-    @use_kwargs(get_schema, locations=("query",))
     @if_api_available
-    def get(
-        self,
-        token_address: TokenAddress = None,
-        target_address: Address = None,
-        limit: int = None,
-        offset: int = None,
-    ) -> Response:
+    def get(self, token_address: TokenAddress = None, target_address: Address = None) -> Response:
+        kwargs = validate_query_params(self.get_schema)
         return self.rest_api.get_raiden_events_payment_history_with_timestamps(
-            token_address=token_address, target_address=target_address, limit=limit, offset=offset
+            token_address=token_address, target_address=target_address, **kwargs
         )
 
-    @use_kwargs(post_schema, locations=("json",))
     @if_api_available
-    def post(
-        self,
-        token_address: TokenAddress,
-        target_address: TargetAddress,
-        amount: PaymentAmount,
-        identifier: PaymentID,
-        secret: Secret,
-        secret_hash: SecretHash,
-        lock_timeout: BlockTimeout,
-    ) -> Response:
+    def post(self, token_address: TokenAddress, target_address: TargetAddress) -> Response:
+        kwargs = validate_json(self.post_schema)
+
         return self.rest_api.initiate_payment(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
             target_address=target_address,
-            amount=amount,
-            identifier=identifier,
-            secret=secret,
-            secret_hash=secret_hash,
-            lock_timeout=lock_timeout,
+            **kwargs,
         )
 
 
