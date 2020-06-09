@@ -27,6 +27,5 @@ raiden-webui
 requests
 structlog
 web3
-webargs
 typing_extensions
 objgraph
