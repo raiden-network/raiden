@@ -90,7 +90,7 @@ typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
 wcwidth==0.1.9            # via prompt-toolkit
-web3==5.9.0               # via -r requirements.in, raiden-contracts
+web3==5.11.0              # via -r requirements.in, raiden-contracts
 webargs==5.3.1            # via -r requirements.in
 websockets==8.1           # via web3
 werkzeug==1.0.1           # via flask
