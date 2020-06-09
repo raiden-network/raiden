@@ -728,7 +728,7 @@ workflows:
             alias: test-fuzz
             parameters:
               py-version: ["3.7", "3.8"]
-          test-type: "fuzz"
+              test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint
@@ -747,9 +747,9 @@ workflows:
             alias: test-integration
             parameters:
               py-version: ["3.7"]
+              test-type: ["integration"]
               blockchain-type: ["geth", "parity"]
           resource: "medium+"
-          test-type: "integration"
           transport-layer: "matrix"
           parallelism: 25
           requires:
@@ -922,7 +922,7 @@ workflows:
             alias: test-fuzz
             parameters:
               py-version: ["3.7", "3.8"]
-          test-type: "fuzz"
+              test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint
@@ -941,9 +941,9 @@ workflows:
             alias: test-integration
             parameters:
               py-version: ["3.7"]
+              test-type: ["integration"]
               blockchain-type: ["geth", "parity"]
           resource: "medium+"
-          test-type: "integration"
           transport-layer: "matrix"
           parallelism: 25
           requires:
