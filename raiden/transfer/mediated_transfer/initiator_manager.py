@@ -38,7 +38,7 @@ from raiden.utils.typing import (
 
 
 def clear_if_finalized(
-    iteration: TransitionResult
+    iteration: TransitionResult,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
     """ Clear the initiator payment task if all transfers have been finalized
     or expired. """

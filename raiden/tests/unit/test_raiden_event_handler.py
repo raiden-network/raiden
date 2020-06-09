@@ -119,7 +119,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
 
 def setup_pfs_handler_test(
-    set_feedback_token: bool
+    set_feedback_token: bool,
 ) -> Tuple[
     RaidenService,
     PFSFeedbackEventHandler,

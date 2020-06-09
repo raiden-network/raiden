@@ -81,7 +81,7 @@ class SendSecretRequestInNode:
 
 
 def send_secret_request_to_receive_secret_request(
-    source: SendSecretRequestInNode
+    source: SendSecretRequestInNode,
 ) -> ReceiveSecretRequest:
     return ReceiveSecretRequest(
         sender=source.node,
@@ -99,7 +99,7 @@ class SendSecretRevealInNode:
 
 
 def send_secret_reveal_to_recieve_secret_reveal(
-    source: SendSecretRevealInNode
+    source: SendSecretRevealInNode,
 ) -> ReceiveSecretReveal:
     return ReceiveSecretReveal(
         sender=source.node, secrethash=source.event.secrethash, secret=source.event.secret

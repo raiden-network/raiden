@@ -155,7 +155,7 @@ def test_concurrent_secret_registration(secret_registry_proxy: SecretRegistry, m
         transact = secret_registry_proxy.client.transact
 
         def count_how_many_times_a_secret_is_sent(
-            transaction: TransactionEstimated
+            transaction: TransactionEstimated,
         ) -> TransactionSent:
             assert isinstance(transaction.data, SmartContractCall)
             assert isinstance(transaction.data.args, tuple)
