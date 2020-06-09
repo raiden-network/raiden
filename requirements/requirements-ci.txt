@@ -60,7 +60,7 @@ frozendict==1.2           # via -r requirements-dev.txt, canonicaljson, matrix-s
 gevent==20.6.0            # via -r requirements-dev.txt, grequests
 graphviz==0.13.2          # via -r requirements-dev.txt, objgraph
 greenlet==0.4.16          # via -r requirements-dev.txt, gevent
-grequests==0.3.0          # via -r requirements-dev.txt
+grequests==0.6.0          # via -r requirements-dev.txt
 guppy3==3.0.10.post1      # via -r requirements-dev.txt
 hexbytes==0.2.0           # via -r requirements-dev.txt, eth-account, eth-rlp, web3
 hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
