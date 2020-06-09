@@ -743,25 +743,13 @@ workflows:
             - shellcheck
 
       - test:
-          name: test-integration-matrix-geth-3.7
-          py-version: "3.7"
+          matrix:
+            alias: test-integration
+            parameters:
+              py-version: ["3.7"]
+              blockchain-type: ["geth", "parity"]
           resource: "medium+"
           test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "matrix"
-          parallelism: 25
-          requires:
-            - smoketest
-            - test
-            - test-fuzz
-            - shellcheck
-
-      - test:
-          name: test-integration-matrix-parity-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "parity"
           transport-layer: "matrix"
           parallelism: 25
           requires:
@@ -773,8 +761,7 @@ workflows:
       - finalize:
           requires:
             - scenario-player-integration-test
-            - test-integration-matrix-geth-3.7
-            - test-integration-matrix-parity-3.7
+            - test-integration
 
   deploy-release:
     jobs:
@@ -950,25 +937,13 @@ workflows:
             - shellcheck
 
       - test:
-          name: test-integration-matrix-geth-3.7
-          py-version: "3.7"
+          matrix:
+            alias: test-integration
+            parameters:
+              py-version: ["3.7"]
+              blockchain-type: ["geth", "parity"]
           resource: "medium+"
           test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "matrix"
-          parallelism: 25
-          requires:
-            - smoketest
-            - test
-            - test-fuzz
-            - shellcheck
-
-      - test:
-          name: test-integration-matrix-parity-3.7
-          py-version: "3.7"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "parity"
           transport-layer: "matrix"
           parallelism: 25
           requires:
@@ -980,8 +955,7 @@ workflows:
       - finalize:
           requires:
           - scenario-player-integration-test
-          - test-integration-matrix-geth-3.7
-          - test-integration-matrix-parity-3.7
+          - test-integration
 
       - build-binary-linux:
           name: build-binary-linux-x86
