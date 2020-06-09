@@ -226,7 +226,6 @@ def test_api_channel_open_and_deposit(
         "token_address": to_checksum_address(token_address),
         "settle_timeout": str(settle_timeout),
         "reveal_timeout": str(reveal_timeout),
-        "balance": "1",
     }
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj

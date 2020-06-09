@@ -626,7 +626,6 @@ def test_channel_events(api_server_test_instance: APIServer, token_addresses):
         api_url_for(
             api_server_test_instance,
             "tokenchanneleventsresourceblockchain",
-            partner_address=partner_address,
             token_address=token_address,
             from_block=str(GENESIS_BLOCK_NUMBER),
         )
