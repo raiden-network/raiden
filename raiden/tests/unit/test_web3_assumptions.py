@@ -48,7 +48,7 @@ def patched_web3():
 
 
 def _make_json_rpc_null_response(
-    succeed_at: int
+    succeed_at: int,
 ) -> Callable[[PreparedRequest], Tuple[int, Dict[str, Any], str]]:
     """ Generate a callback that returns a ``null`` JSONRPC response until ``succeed_at`` retries
     after which it will return a dummy block.

@@ -136,7 +136,7 @@ def get_our_deposits_for_token_network(
 
 
 def get_token_network_registry_address(
-    chain_state: ChainState
+    chain_state: ChainState,
 ) -> List[TokenNetworkRegistryAddress]:
     return list(chain_state.identifiers_to_tokennetworkregistries.keys())
 

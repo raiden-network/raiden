@@ -10,7 +10,7 @@ from raiden.transfer import views
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
-    app0, = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    (app0,) = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]

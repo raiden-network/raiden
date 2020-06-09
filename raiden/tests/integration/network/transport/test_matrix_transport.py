@@ -727,7 +727,7 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
 def test_matrix_invite_retry_with_offline_invitee(
-    matrix_transports: List[MatrixTransport]
+    matrix_transports: List[MatrixTransport],
 ) -> None:
     """The inviter should create the room and send the invite even if the
     target node is offline.
@@ -795,7 +795,7 @@ def test_matrix_invite_retry_with_offline_invitee(
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
 def test_matrix_invitee_receives_invite_on_restart(
-    matrix_transports: List[MatrixTransport]
+    matrix_transports: List[MatrixTransport],
 ) -> None:
     """The invitee should receive the invite, even if the inviter is offline."""
     raiden_service0: RaidenService = cast(RaidenService, MockRaidenService(None))

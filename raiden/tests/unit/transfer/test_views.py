@@ -131,9 +131,13 @@ def test_channelstate_filters():
     token_network_registry_address = test_state.token_network_registry_address
     token_address = test_state.token_address
 
-    channel_open, channel_closing, channel_closed, channel_settling, channel_settled = (
-        test_state.channels
-    )
+    (
+        channel_open,
+        channel_closing,
+        channel_closed,
+        channel_settling,
+        channel_settled,
+    ) = test_state.channels
     in_progress = TransactionExecutionStatus(started_block_number=chain_state.block_number)
     done = TransactionExecutionStatus(
         started_block_number=chain_state.block_number,

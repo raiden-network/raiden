@@ -55,7 +55,7 @@ def test_parity_request_pruned_data_raises_an_exception(deploy_client: JSONRPCCl
 
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
 def test_parity_request_block_data_does_not_raise_an_exception(
-    deploy_client: JSONRPCClient
+    deploy_client: JSONRPCClient,
 ) -> None:
     """ Interacting with a pruned block through eth_getBlock does not raise.
 
