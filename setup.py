@@ -98,6 +98,7 @@ setup(
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     cmdclass={"test": PyTest, "egg_info": EggInfo},
     use_scm_version=True,
