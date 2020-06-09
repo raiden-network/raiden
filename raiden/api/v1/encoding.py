@@ -181,6 +181,8 @@ class BaseSchema(Schema):
         # this will depend on the Schema used, which has its object class in
         # the class Meta attributes
         decoding_class = self.opts.decoding_class  # type: ignore # pylint: disable=no-member
+        if decoding_class is None:
+            return data
         return decoding_class(**data)
 
 
@@ -210,27 +212,16 @@ class BlockchainEventsRequestSchema(BaseSchema):
     from_block = IntegerToStringField(missing=None)
     to_block = IntegerToStringField(missing=None)
 
-    class Meta:
-        strict = True
-        # decoding to a dict is required by the @use_kwargs decorator from webargs
-        decoding_class = dict
-
 
 class RaidenEventsRequestSchema(BaseSchema):
     limit = IntegerToStringField(missing=None)
     offset = IntegerToStringField(missing=None)
-
-    class Meta:
-        strict = True
-        # decoding to a dict is required by the @use_kwargs decorator from webargs
-        decoding_class = dict
 
 
 class AddressSchema(BaseSchema):
     address = AddressField()
 
     class Meta:
-        strict = True
         decoding_class = Address
 
 
@@ -238,7 +229,6 @@ class AddressListSchema(BaseListSchema):
     data = fields.List(AddressField())
 
     class Meta:
-        strict = True
         decoding_class = AddressList
 
 
@@ -247,7 +237,6 @@ class PartnersPerTokenSchema(BaseSchema):
     channel = fields.String()
 
     class Meta:
-        strict = True
         decoding_class = PartnersPerToken
 
 
@@ -255,17 +244,12 @@ class PartnersPerTokenListSchema(BaseListSchema):
     data = fields.Nested(PartnersPerTokenSchema, many=True)
 
     class Meta:
-        strict = True
         decoding_class = PartnersPerTokenList
 
 
 class MintTokenSchema(BaseSchema):
     to = AddressField(required=True)
     value = IntegerToStringField(required=True, validate=validate.Range(min=1, max=UINT256_MAX))
-
-    class Meta:
-        strict = True
-        decoding_class = dict
 
 
 class ChannelStateSchema(BaseSchema):
@@ -302,10 +286,6 @@ class ChannelStateSchema(BaseSchema):
         """Return our total withdraw from this channel"""
         return str(channel_state.our_total_withdraw)
 
-    class Meta:
-        strict = True
-        decoding_class = dict
-
 
 class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
@@ -313,11 +293,6 @@ class ChannelPutSchema(BaseSchema):
     reveal_timeout = IntegerToStringField(missing=None)
     settle_timeout = IntegerToStringField(missing=None)
     total_deposit = IntegerToStringField(default=None, missing=None)
-
-    class Meta:
-        strict = True
-        # decoding to a dict is required by the @use_kwargs decorator from webargs:
-        decoding_class = dict
 
 
 class ChannelPatchSchema(BaseSchema):
@@ -336,11 +311,6 @@ class ChannelPatchSchema(BaseSchema):
         ),
     )
 
-    class Meta:
-        strict = True
-        # decoding to a dict is required by the @use_kwargs decorator from webargs:
-        decoding_class = dict
-
 
 class PaymentSchema(BaseSchema):
     initiator_address = AddressField(missing=None)
@@ -352,19 +322,11 @@ class PaymentSchema(BaseSchema):
     secret_hash = SecretHashField(missing=None)
     lock_timeout = IntegerToStringField(missing=None)
 
-    class Meta:
-        strict = True
-        decoding_class = dict
-
 
 class ConnectionsConnectSchema(BaseSchema):
     funds = IntegerToStringField(required=True)
     initial_channel_target = IntegerToStringField(missing=DEFAULT_INITIAL_CHANNEL_TARGET)
     joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
-
-    class Meta:
-        strict = True
-        decoding_class = dict
 
 
 class EventPaymentSchema(BaseSchema):
@@ -391,8 +353,6 @@ class EventPaymentSentFailedSchema(EventPaymentSchema):
 
     class Meta:
         fields = ("block_number", "event", "reason", "target", "log_time", "token_address")
-        strict = True
-        decoding_class = dict
 
 
 class EventPaymentSentSuccessSchema(EventPaymentSchema):
@@ -410,8 +370,6 @@ class EventPaymentSentSuccessSchema(EventPaymentSchema):
             "log_time",
             "token_address",
         )
-        strict = True
-        decoding_class = dict
 
 
 class EventPaymentReceivedSuccessSchema(EventPaymentSchema):
@@ -429,5 +387,3 @@ class EventPaymentReceivedSuccessSchema(EventPaymentSchema):
             "log_time",
             "token_address",
         )
-        strict = True
-        decoding_class = dict

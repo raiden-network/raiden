@@ -12,7 +12,6 @@ class SchemaTest(BaseSchema):
     class Meta:
         fields = ("timestamp",)
         strict = True
-        decoding_class = dict
 
 
 def test_timestamp_field():
