@@ -679,8 +679,9 @@ workflows:
             - checkout
 
       - prepare-python-linux:
-          name: prepare-python-linux-3.7
-          py-version: '3.7'
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
           requires:
             - prepare-system-linux
 
@@ -690,16 +691,18 @@ workflows:
             - prepare-system-linux
 
       - lint:
-          name: lint-3.7
-          py-version: "3.7"
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
           requires:
-            - prepare-python-linux-3.7
+            - prepare-python-linux
 
       - build-docs:
-          name: build-docs-3.7
-          py-version: "3.7"
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
           requires:
-            - prepare-python-linux-3.7
+            - prepare-python-linux
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
@@ -708,7 +711,7 @@ workflows:
           environment-type: "production"
           blockchain-type: "geth"
           requires:
-            - lint-3.7
+            - lint
 
       - smoketest:
           name: smoketest-matrix-production-parity-3.7
@@ -717,7 +720,7 @@ workflows:
           environment-type: "production"
           blockchain-type: "parity"
           requires:
-            - lint-3.7
+            - lint
 
       - smoketest:
           name: smoketest-matrix-development-geth-3.7
@@ -726,7 +729,7 @@ workflows:
           environment-type: "development"
           blockchain-type: "geth"
           requires:
-            - lint-3.7
+            - lint
 
       - smoketest:
           name: smoketest-matrix-development-parity-3.7
@@ -735,21 +738,21 @@ workflows:
           environment-type: "development"
           blockchain-type: "parity"
           requires:
-            - lint-3.7
+            - lint
 
       - test:
           name: test-unit-3.7
           py-version: "3.7"
           test-type: "unit"
           requires:
-            - lint-3.7
+            - lint
 
       - test:
           name: test-mocked-3.7
           py-version: "3.7"
           test-type: "mocked"
           requires:
-            - lint-3.7
+            - lint
 
       - test:
           name: test-fuzz-3.7
@@ -757,7 +760,7 @@ workflows:
           test-type: "fuzz"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - lint-3.7
+            - lint
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
@@ -924,8 +927,9 @@ workflows:
             - checkout
 
       - prepare-python-linux:
-          name: prepare-python-linux-3.7
-          py-version: '3.7'
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
           requires:
           - prepare-system-linux
 
@@ -935,16 +939,18 @@ workflows:
             - prepare-system-linux
 
       - lint:
-          name: lint-3.7
-          py-version: "3.7"
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
           requires:
-          - prepare-python-linux-3.7
+          - prepare-python-linux
 
       - build-docs:
-          name: build-docs-3.7
-          py-version: "3.7"
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
           requires:
-            - prepare-python-linux-3.7
+            - prepare-python-linux
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
@@ -953,7 +959,7 @@ workflows:
           environment-type: "production"
           blockchain-type: "geth"
           requires:
-            - lint-3.7
+            - lint
 
       - smoketest:
           name: smoketest-matrix-production-parity-3.7
@@ -962,7 +968,7 @@ workflows:
           environment-type: "production"
           blockchain-type: "parity"
           requires:
-            - lint-3.7
+            - lint
 
       - smoketest:
           name: smoketest-matrix-development-geth-3.7
@@ -971,7 +977,7 @@ workflows:
           environment-type: "development"
           blockchain-type: "geth"
           requires:
-            - lint-3.7
+            - lint
 
       - smoketest:
           name: smoketest-matrix-development-parity-3.7
@@ -980,21 +986,21 @@ workflows:
           environment-type: "development"
           blockchain-type: "parity"
           requires:
-            - lint-3.7
+            - lint
 
       - test:
           name: test-unit-3.7
           py-version: "3.7"
           test-type: "unit"
           requires:
-            - lint-3.7
+            - lint
 
       - test:
           name: test-mocked-3.7
           py-version: "3.7"
           test-type: "mocked"
           requires:
-            - lint-3.7
+            - lint
 
       - test:
           name: test-fuzz-3.7
@@ -1002,7 +1008,7 @@ workflows:
           test-type: "fuzz"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - lint-3.7
+            - lint
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
