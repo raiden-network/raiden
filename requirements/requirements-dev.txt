@@ -71,7 +71,7 @@ incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
 ipython==7.14.0           # via -r requirements.txt
-isort==4.3.20             # via -r requirements-dev.in, pylint
+isort==4.3.21             # via -r requirements-dev.in, pylint
 itsdangerous==1.1.0       # via -r requirements.txt, flask
 jedi==0.17.0              # via -r requirements.txt, ipython
 jinja2==2.10.1            # via -r requirements-docs.txt, -r requirements.txt, flask, matrix-synapse, sphinx
