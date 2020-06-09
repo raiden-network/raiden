@@ -145,7 +145,7 @@ pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
 git+git://github.com/raiden-network/raiden-contracts.git@bf405d3ebfaf8e2394b7981ed4a2843fbff48349  # via -r requirements-dev.txt
 raiden-webui==0.11.1      # via -r requirements-dev.txt
-readme-renderer==24.0     # via -r requirements-dev.txt
+readme-renderer==26.0     # via -r requirements-dev.txt
 releases==1.6.3           # via -r requirements-dev.txt
 requests==2.22.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.14        # via -r requirements-dev.txt
