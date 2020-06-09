@@ -471,7 +471,7 @@ class SQLiteStorage:
         args: List[Union[str, int]] = []
         if filters:
             for field, value in filters:
-                where_clauses.append(f"json_extract(data, ?) LIKE ?")
+                where_clauses.append("json_extract(data, ?) LIKE ?")
                 args.append(f"$.{field}")
                 args.append(value)
 

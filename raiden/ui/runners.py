@@ -88,7 +88,7 @@ def run_services(options: Dict[str, Any]) -> None:
         signal_received = stop_event.get()
         if signal_received:
             print("\r", end="")  # Reset cursor to overwrite a possibly printed "^C"
-            log.info(f"Signal received. Shutting down.", signal=signal_received)
+            log.info("Signal received. Shutting down.", signal=signal_received)
     finally:
         for task in gevent_tasks:
             task.kill()

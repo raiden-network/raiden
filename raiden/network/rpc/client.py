@@ -166,7 +166,7 @@ def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCC
                 )
             else:
                 typecheck(transaction.data, EthTransfer)
-                msg = f"EthTransfer failed!"
+                msg = "EthTransfer failed!"
 
         else:
             # Couldn't determine if a require was hit because the debug
@@ -197,7 +197,7 @@ def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCC
                 msg = f"Deploying {contract_name} failed because all the gas was used!"
             else:
                 typecheck(transaction.data, EthTransfer)
-                msg = f"EthTransfer failed!"
+                msg = "EthTransfer failed!"
 
         # Keeping this around just in case the wrong value from the receipt is
         # used (Previously the `cumulativeGasUsed` was used, which was

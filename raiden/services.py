@@ -67,7 +67,7 @@ def update_monitoring_service_from_balance_proof(
     if raiden.config.services.monitoring_enabled is False:
         return
 
-    msg = f"Monitoring is enabled but the default monitoring service address is None."
+    msg = "Monitoring is enabled but the default monitoring service address is None."
     assert raiden.default_msc_address is not None, msg
 
     channel_state = views.get_channelstate_by_canonical_identifier(
@@ -81,7 +81,7 @@ def update_monitoring_service_from_balance_proof(
     )
     assert channel_state, msg
 
-    msg = f"Monitoring is enabled but the `UserDeposit` contract is None."
+    msg = "Monitoring is enabled but the `UserDeposit` contract is None."
     assert raiden.user_deposit is not None, msg
     rei_balance = raiden.user_deposit.effective_balance(raiden.address, BLOCK_ID_LATEST)
     if rei_balance < MONITORING_REWARD:

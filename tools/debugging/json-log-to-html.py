@@ -773,7 +773,7 @@ def main(
         raise UsageError(f"Option '--replacements' contains invalid JSON: {ex}") from ex
 
     if drop_events and keep_events:
-        raise UsageError(f"Options '--keep-event' and '--drop-event' cannot be used together.")
+        raise UsageError("Options '--keep-event' and '--drop-event' cannot be used together.")
 
     time_from, _, time_to = time_range.partition("^")
     time_range_dt = (
@@ -795,7 +795,7 @@ def main(
                     log_records_progr,
                     drop_events=set(d.lower() for d in drop_events),
                     keep_events=set(k.lower() for k in keep_events),
-                    drop_loggers=set(l.lower() for l in drop_loggers),
+                    drop_loggers=set(logger.lower() for logger in drop_loggers),
                     time_range=time_range_dt,
                 ),
                 replacements=replacements_dict,

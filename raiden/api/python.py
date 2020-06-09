@@ -1328,7 +1328,7 @@ class RaidenAPI:  # pragma: no unittest
                     partner_address=partner_address,
                 )
                 if not partner_channel:
-                    raise ChannelNotFound(f"Channel with partner `partner_address not found.`")
+                    raise ChannelNotFound("Channel with partner `partner_address not found.`")
                 channel_id = partner_channel.identifier
 
         return transfer_tasks_view(transfer_tasks, token_address, channel_id)

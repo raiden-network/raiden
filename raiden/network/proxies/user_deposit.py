@@ -288,7 +288,7 @@ class UserDeposit:
         )
 
         if balance == b"":
-            raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")
+            raise RuntimeError("Call to 'effectiveBalance' returned nothing")
 
         return balance
 
@@ -637,9 +637,9 @@ class UserDeposit:
                 # We know that the account had enough balance for the deposit transaction.
                 if token.balance_of(self.node_address, failed_at_blocknumber) < amount_to_deposit:
                     msg = (
-                        f"Transaction failed and balance decreased unexpectedly. "
-                        f"This could be a bug in Raiden or a mallicious "
-                        f"ERC20 Token."
+                        "Transaction failed and balance decreased unexpectedly. "
+                        "This could be a bug in Raiden or a mallicious "
+                        "ERC20 Token."
                     )
                     raise RaidenRecoverableError(msg)
 
@@ -818,6 +818,6 @@ class UserDeposit:
             # FIXME: This seems fishy. The token balance could have an unexpected value for
             #        unrelated reasons (e.g. concurrent token transfers via transferFrom).
             if current_token_balance != previous_token_balance + amount_to_withdraw:
-                raise RaidenRecoverableError(f"Token transfer during withdraw failed.")
+                raise RaidenRecoverableError("Token transfer during withdraw failed.")
 
             raise RaidenRecoverableError("Withdraw failed for an unknown reason.")

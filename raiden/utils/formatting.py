@@ -65,7 +65,7 @@ def pex(data: bytes) -> str:
 
 
 def lpex(lst: Iterable[bytes]) -> List[str]:
-    return [pex(l) for l in lst]
+    return [pex(item) for item in lst]
 
 
 def optional_address_to_string(
