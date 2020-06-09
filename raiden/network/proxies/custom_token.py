@@ -35,7 +35,7 @@ class CustomToken(Token):
             transaction_mined = self.client.poll_transaction(transaction_sent)
 
             if not was_transaction_successfully_mined(transaction_mined):
-                raise MintFailed(f"Mint failed.")
+                raise MintFailed("Mint failed.")
 
         else:
             raise MintFailed(
@@ -59,7 +59,7 @@ class CustomToken(Token):
             transaction_mined = self.client.poll_transaction(transaction_sent)
 
             if not was_transaction_successfully_mined(transaction_mined):
-                raise MintFailed(f"Call to contract method mintFor: Transaction failed.")
+                raise MintFailed("Call to contract method mintFor: Transaction failed.")
 
         else:
             raise MintFailed(

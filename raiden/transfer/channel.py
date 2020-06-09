@@ -956,11 +956,11 @@ def is_valid_withdraw_request(
     # flaw because the smart contract will not allow the withdraw to happen.
 
     if channel_state.canonical_identifier != withdraw_request.canonical_identifier:
-        return SuccessOrError(f"Invalid canonical identifier provided in withdraw request")
+        return SuccessOrError("Invalid canonical identifier provided in withdraw request")
     elif withdraw_request.participant != channel_state.partner_state.address:
-        return SuccessOrError(f"Invalid participant, it must be the partner address")
+        return SuccessOrError("Invalid participant, it must be the partner address")
     elif withdraw_request.sender != channel_state.partner_state.address:
-        return SuccessOrError(f"Invalid sender, withdraw request must be sent by the partner.")
+        return SuccessOrError("Invalid sender, withdraw request must be sent by the partner.")
     elif withdraw_amount <= 0:
         return SuccessOrError(f"Total withdraw {withdraw_request.total_withdraw} did not increase")
     elif balance < withdraw_amount:
@@ -1017,7 +1017,7 @@ def is_valid_withdraw_confirmation(
     # wants to withdraw, it will have to request it again.
 
     if channel_state.canonical_identifier != received_withdraw.canonical_identifier:
-        return SuccessOrError(f"Invalid canonical identifier provided in withdraw request")
+        return SuccessOrError("Invalid canonical identifier provided in withdraw request")
     elif received_withdraw.total_withdraw != channel_state.our_total_withdraw:
         return SuccessOrError(
             f"Total withdraw confirmation {received_withdraw.total_withdraw} "
@@ -1042,9 +1042,7 @@ def is_valid_withdraw_confirmation(
             f"{to_checksum_address(channel_state.our_state.address)}"
         )
     elif received_withdraw.sender != channel_state.partner_state.address:
-        return SuccessOrError(
-            f"Invalid sender, withdraw confirmation must be sent by the partner."
-        )
+        return SuccessOrError("Invalid sender, withdraw confirmation must be sent by the partner.")
     elif withdraw_overflow:
         return SuccessOrError(
             f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
@@ -1073,7 +1071,7 @@ def is_valid_withdraw_expired(
             f"WithdrawExpired for withdraw that has not yet expired {state_change.total_withdraw}."
         )
     elif channel_state.canonical_identifier != state_change.canonical_identifier:
-        return SuccessOrError(f"Invalid canonical identifier provided in WithdrawExpire")
+        return SuccessOrError("Invalid canonical identifier provided in WithdrawExpire")
     elif state_change.sender != channel_state.partner_state.address:
         return SuccessOrError("Expired withdraw not from partner.")
     elif state_change.total_withdraw != withdraw_state.total_withdraw:

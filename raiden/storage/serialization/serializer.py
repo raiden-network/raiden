@@ -135,7 +135,7 @@ class MessageSerializer(SerializationBase):
         try:
             msg_type = decoded_json.pop("type")
         except KeyError as ex:
-            raise SerializationError(f"No 'type' attribute in message") from ex
+            raise SerializationError("No 'type' attribute in message") from ex
 
         try:
             decoded_json["_type"] = MESSAGE_NAME_TO_QUALIFIED_NAME[msg_type]

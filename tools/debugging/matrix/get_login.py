@@ -30,7 +30,7 @@ def get_login(address, password) -> None:
     signer = LocalSigner(am.get_privkey(to_checksum_address(address), password))
 
     print(f"Username: {to_normalized_address(address)}")
-    print(f"Password:")
+    print("Password:")
     for i in range(1, 5):
         print(
             f"\ttransport {i:02d}:",

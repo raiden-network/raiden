@@ -832,7 +832,7 @@ class MatrixTransport(Runnable):
             try:
                 self.retry_api_call(room.leave)
             except MatrixRequestError as ex:
-                raise TransportError(f"could not leave room due to MatrixRequestError") from ex
+                raise TransportError("could not leave room due to MatrixRequestError") from ex
 
             # update address_to_room_ids (remove room_id for address)
             for valid_partner in [partner for partner in partners if partner is not None]:
@@ -1425,7 +1425,7 @@ class MatrixTransport(Runnable):
             # This cannot lead to loss of funds,
             # it is just unexpected behavior.
             self.log.debug(
-                f"Multiple rooms exist with peer",
+                "Multiple rooms exist with peer",
                 peer_address=to_checksum_address(peer_address),
                 rooms=room_ids,
             )

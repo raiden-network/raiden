@@ -45,10 +45,10 @@ def test_no_upgrade_executes_if_already_upgraded(tmp_path):
 
 
 def test_upgrade_executes_necessary_migration_functions(tmp_path, monkeypatch):
-    old_db_filename = tmp_path / Path(f"v18_log.db")
+    old_db_filename = tmp_path / Path("v18_log.db")
 
     with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=18), SQLiteStorage(
-        str(old_db_filename)
+        old_db_filename
     ) as storage:
         storage.update_version()
 

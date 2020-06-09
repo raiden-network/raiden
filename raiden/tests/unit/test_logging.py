@@ -156,4 +156,4 @@ def test_that_secret_is_redacted(capsys, tmpdir):
     captured = capsys.readouterr()
 
     assert secret not in captured.err
-    assert f'"secret": "<redacted>"' in captured.err
+    assert '"secret": "<redacted>"' in captured.err

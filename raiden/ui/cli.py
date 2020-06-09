@@ -813,7 +813,7 @@ def smoketest(
         print_step("Smoketest execution error", error=True)
         success = False
     else:
-        print_step(f"Smoketest successful")
+        print_step("Smoketest successful")
         success = True
 
     if not success:

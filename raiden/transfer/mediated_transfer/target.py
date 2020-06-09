@@ -282,7 +282,7 @@ def handle_block(
         failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
-            reason=f"lock expired",
+            reason="lock expired",
         )
         target_state.state = TargetTransferState.EXPIRED
         events = [failed]

@@ -333,8 +333,8 @@ def check_pfs_for_production(
     """
     if service_registry is None:
         raise RaidenError(
-            f"Cannot verify registration of Pathfinding Service because no Service Registry "
-            f"is set. Raiden will shut down. Please select a Service Registry."
+            "Cannot verify registration of Pathfinding Service because no Service Registry "
+            "is set. Raiden will shut down. Please select a Service Registry."
         )
 
     pfs_registered = service_registry.has_valid_registration(
@@ -352,7 +352,7 @@ def check_pfs_for_production(
             f"with the Service Registry at {to_checksum_address(service_registry.address)} "
             f"or the registered URL ({registered_pfs_url}) doesn't match the given URL "
             f"{pfs_info.url}. "
-            f"Raiden will shut down. Please select a registered Pathfinding Service."
+            "Raiden will shut down. Please select a registered Pathfinding Service."
         )
 
 
@@ -630,11 +630,11 @@ def query_paths(
                     if new_info.price > pfs_config.maximum_fee:
                         raise ServiceRequestFailed("PFS fees too high.")
                     if new_info.price > pfs_config.info.price:
-                        log.info(f"Pathfinding Service increased fees", new_price=new_info.price)
+                        log.info("Pathfinding Service increased fees", new_price=new_info.price)
                         pfs_config.info = new_info
                     else:
                         log.error(
-                            f"Concurrent Pathfinding Service requests by same node",
+                            "Concurrent Pathfinding Service requests by same node",
                             value=str(iou_semaphore),
                         )
                 elif code == PFSError.NO_ROUTE_FOUND:
@@ -679,5 +679,5 @@ def post_pfs_feedback(
         )
     except requests.RequestException as e:
         log.warning(
-            f"Could not send feedback to Pathfinding Service", exception_=str(e), payload=payload
+            "Could not send feedback to Pathfinding Service", exception_=str(e), payload=payload
         )
