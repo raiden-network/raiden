@@ -22,7 +22,7 @@ bcrypt==3.1.6             # via -r requirements-dev.txt, matrix-synapse
 bitarray==1.2.1           # via -r requirements-dev.txt, eth-account
 black==19.3b0             # via -r requirements-dev.txt
 bleach==3.1.4             # via -r requirements-dev.txt, matrix-synapse, readme-renderer
-bump2version==0.5.10      # via -r requirements-dev.txt
+bump2version==1.0.0       # via -r requirements-dev.txt
 cachetools==3.1.1         # via -r requirements-dev.txt
 canonicaljson==1.1.4      # via -r requirements-dev.txt, matrix-synapse, signedjson
 certifi==2019.3.9         # via -r requirements-dev.txt, requests
