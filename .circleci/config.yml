@@ -715,22 +715,19 @@ workflows:
             - lint
 
       - test:
-          name: test-unit-3.7
-          py-version: "3.7"
-          test-type: "unit"
+          matrix:
+            alias: test
+            parameters:
+              py-version: ["3.7", "3.8"]
+              test-type: ["unit", "mocked"]
           requires:
             - lint
 
       - test:
-          name: test-mocked-3.7
-          py-version: "3.7"
-          test-type: "mocked"
-          requires:
-            - lint
-
-      - test:
-          name: test-fuzz-3.7
-          py-version: "3.7"
+          matrix:
+            alias: test-fuzz
+            parameters:
+              py-version: ["3.7", "3.8"]
           test-type: "fuzz"
           additional-args: "--hypothesis-show-statistics"
           requires:
@@ -741,9 +738,8 @@ workflows:
           py-version: "3.7"
           requires:
             - smoketest
-            - test-unit-3.7
-            - test-fuzz-3.7
-            - test-mocked-3.7
+            - test
+            - test-fuzz
             - shellcheck
 
       - test:
@@ -756,9 +752,8 @@ workflows:
           parallelism: 25
           requires:
             - smoketest
-            - test-unit-3.7
-            - test-fuzz-3.7
-            - test-mocked-3.7
+            - test
+            - test-fuzz
             - shellcheck
 
       - test:
@@ -771,9 +766,8 @@ workflows:
           parallelism: 25
           requires:
             - smoketest
-            - test-unit-3.7
-            - test-fuzz-3.7
-            - test-mocked-3.7
+            - test
+            - test-fuzz
             - shellcheck
 
       - finalize:
@@ -928,22 +922,19 @@ workflows:
             - lint
 
       - test:
-          name: test-unit-3.7
-          py-version: "3.7"
-          test-type: "unit"
+          matrix:
+            alias: test
+            parameters:
+              py-version: ["3.7", "3.8"]
+              test-type: ["unit", "mocked"]
           requires:
             - lint
 
       - test:
-          name: test-mocked-3.7
-          py-version: "3.7"
-          test-type: "mocked"
-          requires:
-            - lint
-
-      - test:
-          name: test-fuzz-3.7
-          py-version: "3.7"
+          matrix:
+            alias: test-fuzz
+            parameters:
+              py-version: ["3.7", "3.8"]
           test-type: "fuzz"
           additional-args: "--hypothesis-show-statistics"
           requires:
@@ -954,9 +945,8 @@ workflows:
           py-version: "3.7"
           requires:
             - smoketest
-            - test-unit-3.7
-            - test-fuzz-3.7
-            - test-mocked-3.7
+            - test
+            - test-fuzz
             - shellcheck
 
       - test:
@@ -969,9 +959,8 @@ workflows:
           parallelism: 25
           requires:
             - smoketest
-            - test-unit-3.7
-            - test-fuzz-3.7
-            - test-mocked-3.7
+            - test
+            - test-fuzz
             - shellcheck
 
       - test:
@@ -984,9 +973,8 @@ workflows:
           parallelism: 25
           requires:
             - smoketest
-            - test-unit-3.7
-            - test-fuzz-3.7
-            - test-mocked-3.7
+            - test
+            - test-fuzz
             - shellcheck
 
       - finalize:
