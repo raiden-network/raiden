@@ -84,7 +84,7 @@ markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
 marshmallow-polyfield==5.8  # via -r requirements-dev.txt
-marshmallow==3.6.1        # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield, webargs
+marshmallow==3.6.1        # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
 matrix-client==0.3.2      # via -r requirements-dev.txt
 matrix-synapse==1.10.1    # via -r requirements-dev.txt
 mccabe==0.6.1             # via -r requirements-dev.txt, flake8, pylint
@@ -186,7 +186,6 @@ urllib3==1.25.3           # via -r requirements-dev.txt, requests
 varint==1.0.2             # via -r requirements-dev.txt, multiaddr
 wcwidth==0.1.9            # via -r requirements-dev.txt, prompt-toolkit, pytest
 web3==5.11.0              # via -r requirements-dev.txt, raiden-contracts
-webargs==5.3.1            # via -r requirements-dev.txt
 webencodings==0.5.1       # via -r requirements-dev.txt, bleach
 websockets==8.1           # via -r requirements-dev.txt, web3
 werkzeug==1.0.1           # via -r requirements-dev.txt, flask
