@@ -78,10 +78,10 @@ class ULIDMonotonicFactory(Generic[ID]):
         self._previous_monotonic = clock_gettime_ns(CLOCK_MONOTONIC_RAW)
         self._lock = Semaphore()
         msg = (
-            "Consecutive calls to `new()` must not return the same value. "
+            "Consecutive calls to `new()` must not return the same timestamp. "
             "Most likely the monotonic clock resolution on this system is too low."
         )
-        assert self.new() != self.new(), msg
+        assert self.new().timestamp != self.new().timestamp, msg
 
     def new(self) -> ID:
         timestamp: int
@@ -91,8 +91,9 @@ class ULIDMonotonicFactory(Generic[ID]):
             # of Linux Kernels which allowed `CLOCK_MONOTONIC` to go backwards
             # (PR: #4156).
             #
-            # A monotonic clock with ns precision must not return the same
-            # value twice, looking up the time itself should take more then 1ns,
+            # A monotonic clock with microsecond (us), or better, precision must
+            # not return the same value twice, looking up the time itself should
+            # take more then 1us:
             # https://www.python.org/dev/peps/pep-0564/#annex-clocks-resolution-in-python
             new_monotonic = clock_gettime_ns(CLOCK_MONOTONIC_RAW)
 
