@@ -56,9 +56,9 @@ flask-cors==3.0.8         # via -r requirements.txt
 flask-restful==0.3.8      # via -r requirements.txt
 flask==1.1.2              # via -r requirements.txt, flask-cors, flask-restful
 frozendict==1.2           # via canonicaljson, matrix-synapse
-gevent==1.5a3             # via -r requirements.txt, grequests
+gevent==20.6.0            # via -r requirements.txt, grequests
 graphviz==0.13.2          # via -r requirements.txt, objgraph
-greenlet==0.4.15          # via -r requirements.txt, gevent
+greenlet==0.4.16          # via -r requirements.txt, gevent
 grequests==0.3.0          # via -r requirements-dev.in
 guppy3==3.0.10.post1      # via -r requirements.txt
 hexbytes==0.2.0           # via -r requirements.txt, eth-account, eth-rlp, web3
@@ -183,7 +183,8 @@ wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
 zipp==3.1.0               # via importlib-metadata
-zope.interface==4.6.0     # via twisted
+zope.event==4.4           # via -r requirements.txt, gevent
+zope.interface==5.1.0     # via -r requirements.txt, gevent, twisted
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
