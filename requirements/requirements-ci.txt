@@ -39,7 +39,6 @@ cytoolz==0.10.1           # via -r requirements-dev.txt, eth-keyfile, eth-utils
 daemonize==2.5.0          # via -r requirements-dev.txt, matrix-synapse
 decorator==4.4.0          # via -r requirements-dev.txt, ipython, networkx, traitlets
 docutils==0.14            # via -r requirements-dev.txt, readme-renderer, sphinx, sphinxcontrib-httpexample
-entrypoints==0.3          # via -r requirements-dev.txt, flake8
 eth-abi==2.1.0            # via -r requirements-dev.txt, eth-account, raiden-contracts, web3
 eth-account==0.5.2        # via -r requirements-dev.txt, web3
 eth-hash[pycryptodome]==0.2.0  # via -r requirements-dev.txt, eth-utils, web3
@@ -53,7 +52,7 @@ fancycompleter==0.8       # via -r requirements-dev.txt, pdbpp
 filelock==3.0.12          # via -r requirements-dev.txt
 flake8-bugbear==19.3.0    # via -r requirements-dev.txt
 flake8-tuple==0.4.1       # via -r requirements-dev.txt
-flake8==3.7.9             # via -r requirements-dev.txt, flake8-bugbear, flake8-tuple
+flake8==3.8.3             # via -r requirements-dev.txt, flake8-bugbear, flake8-tuple
 flask-cors==3.0.8         # via -r requirements-dev.txt
 flask-restful==0.3.8      # via -r requirements-dev.txt
 flask==1.1.2              # via -r requirements-dev.txt, flask-cors, flask-restful
@@ -120,10 +119,10 @@ py-spy==0.3.3             # via -r requirements-dev.txt
 py==1.8.0                 # via -r requirements-dev.txt, pytest
 pyasn1-modules==0.2.5     # via -r requirements-dev.txt, matrix-synapse, service-identity
 pyasn1==0.4.5             # via -r requirements-dev.txt, matrix-synapse, pyasn1-modules, service-identity
-pycodestyle==2.5.0        # via -r requirements-dev.txt, autopep8, flake8
+pycodestyle==2.6.0        # via -r requirements-dev.txt, autopep8, flake8
 pycparser==2.19           # via -r requirements-dev.txt, cffi
 pycryptodome==3.8.2       # via -r requirements-dev.txt, eth-hash, eth-keyfile
-pyflakes==2.1.1           # via -r requirements-dev.txt, flake8
+pyflakes==2.2.0           # via -r requirements-dev.txt, flake8
 pygments==2.6.1           # via -r requirements-dev.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via -r requirements-dev.txt, twisted
 pyinstaller==3.6          # via -r requirements-ci.in
