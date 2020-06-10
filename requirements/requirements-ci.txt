@@ -64,7 +64,7 @@ grequests==0.6.0          # via -r requirements-dev.txt
 guppy3==3.0.10.post1      # via -r requirements-dev.txt
 hexbytes==0.2.0           # via -r requirements-dev.txt, eth-account, eth-rlp, web3
 hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
-hypothesis==4.24.3        # via -r requirements-dev.txt
+hypothesis==5.16.1        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
 importlib-metadata==1.6.1  # via -r requirements-dev.txt, pluggy
@@ -160,7 +160,7 @@ signedjson==1.1           # via -r requirements-dev.txt, matrix-synapse
 simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
 six==1.12.0               # via -r requirements-dev.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
-sortedcontainers==2.1.0   # via -r requirements-dev.txt, matrix-synapse
+sortedcontainers==2.1.0   # via -r requirements-dev.txt, hypothesis, matrix-synapse
 sphinx-rtd-theme==0.4.3   # via -r requirements-dev.txt
 sphinx==3.1.0             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
 sphinxcontrib-applehelp==1.0.2  # via -r requirements-dev.txt, sphinx
