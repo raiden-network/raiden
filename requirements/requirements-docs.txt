@@ -21,14 +21,19 @@ pytz==2019.1              # via babel
 releases==1.6.3           # via -r requirements-docs.in
 requests==2.22.0          # via sphinx, sphinxcontrib-images
 semantic-version==2.6.0   # via releases
-six==1.12.0               # via astunparse, packaging, sphinx, sphinxcontrib-httpdomain
+six==1.12.0               # via astunparse, packaging, sphinxcontrib-httpdomain
 snowballstemmer==1.2.1    # via sphinx
 sphinx-rtd-theme==0.4.3   # via -r requirements-docs.in
-sphinx==1.8.5             # via -r requirements-docs.in, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinx==3.1.0             # via -r requirements-docs.in, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinxcontrib-applehelp==1.0.2  # via sphinx
+sphinxcontrib-devhelp==1.0.2  # via sphinx
+sphinxcontrib-htmlhelp==1.0.3  # via sphinx
 sphinxcontrib-httpdomain==1.7.0  # via -r requirements-docs.in, sphinxcontrib-httpexample
 sphinxcontrib-httpexample==0.10.3  # via -r requirements-docs.in
-sphinxcontrib-images==0.8.0  # via -r requirements-docs.in
-sphinxcontrib-websupport==1.1.2  # via sphinx
+sphinxcontrib-images==0.9.2  # via -r requirements-docs.in
+sphinxcontrib-jsmath==1.0.1  # via sphinx
+sphinxcontrib-qthelp==1.0.3  # via sphinx
+sphinxcontrib-serializinghtml==1.1.4  # via sphinx
 urllib3==1.25.3           # via requests
 wheel==0.33.4             # via astunparse
 
