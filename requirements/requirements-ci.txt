@@ -152,7 +152,7 @@ releases==1.6.3           # via -r requirements-dev.txt
 requests==2.22.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.14        # via -r requirements-dev.txt
 rlp==1.1.0                # via -r requirements-dev.txt, eth-account, eth-rlp, raiden-contracts
-s3cmd==2.0.2              # via -r requirements-ci.in
+s3cmd==2.1.0              # via -r requirements-ci.in
 semantic-version==2.6.0   # via -r requirements-dev.txt, py-solc, releases
 semver==2.8.1             # via -r requirements-dev.txt, raiden-contracts
 service-identity==18.1.0  # via -r requirements-dev.txt, matrix-synapse, twisted
