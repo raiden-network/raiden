@@ -158,15 +158,20 @@ semver==2.8.1             # via -r requirements-dev.txt, raiden-contracts
 service-identity==18.1.0  # via -r requirements-dev.txt, matrix-synapse, twisted
 signedjson==1.1           # via -r requirements-dev.txt, matrix-synapse
 simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
-six==1.12.0               # via -r requirements-dev.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, readme-renderer, responses, sphinx, sphinxcontrib-httpdomain, structlog, traitlets, treq
+six==1.12.0               # via -r requirements-dev.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
 sortedcontainers==2.1.0   # via -r requirements-dev.txt, matrix-synapse
 sphinx-rtd-theme==0.4.3   # via -r requirements-dev.txt
-sphinx==1.8.5             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinx==3.1.0             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinxcontrib-applehelp==1.0.2  # via -r requirements-dev.txt, sphinx
+sphinxcontrib-devhelp==1.0.2  # via -r requirements-dev.txt, sphinx
+sphinxcontrib-htmlhelp==1.0.3  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-httpdomain==1.7.0  # via -r requirements-dev.txt, sphinxcontrib-httpexample
 sphinxcontrib-httpexample==0.10.3  # via -r requirements-dev.txt
-sphinxcontrib-images==0.8.0  # via -r requirements-dev.txt
-sphinxcontrib-websupport==1.1.2  # via -r requirements-dev.txt, sphinx
+sphinxcontrib-images==0.9.2  # via -r requirements-dev.txt
+sphinxcontrib-jsmath==1.0.1  # via -r requirements-dev.txt, sphinx
+sphinxcontrib-qthelp==1.0.3  # via -r requirements-dev.txt, sphinx
+sphinxcontrib-serializinghtml==1.1.4  # via -r requirements-dev.txt, sphinx
 structlog==20.1.0         # via -r requirements-dev.txt
 toml==0.10.0              # via -r requirements-dev.txt, black, pylint
 toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
