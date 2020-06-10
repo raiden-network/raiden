@@ -71,7 +71,7 @@ importlib-metadata==1.6.1  # via -r requirements-dev.txt, pluggy
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
-ipython==7.14.0           # via -r requirements-dev.txt
+ipython==7.15.0           # via -r requirements-dev.txt
 isort==4.3.21             # via -r requirements-dev.txt, pylint
 itsdangerous==1.1.0       # via -r requirements-dev.txt, flask
 jedi==0.17.0              # via -r requirements-dev.txt, ipython
