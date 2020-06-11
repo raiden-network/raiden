@@ -14,7 +14,7 @@ astroid==2.4.2            # via -r requirements-dev.txt, pylint
 astunparse==1.6.2         # via -r requirements-dev.txt, sphinxcontrib-httpexample
 attrs==19.3.0             # via -r requirements-dev.txt, automat, black, flake8-bugbear, hypothesis, jsonschema, matrix-synapse, pytest, service-identity, treq, twisted
 automat==0.7.0            # via -r requirements-dev.txt, twisted
-autopep8==1.4.4           # via -r requirements-dev.txt
+autopep8==1.5.3           # via -r requirements-dev.txt
 babel==2.7.0              # via -r requirements-dev.txt, sphinx
 backcall==0.1.0           # via -r requirements-dev.txt, ipython
 base58==2.0.0             # via -r requirements-dev.txt, multiaddr
@@ -173,7 +173,7 @@ sphinxcontrib-jsmath==1.0.1  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-qthelp==1.0.3  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-serializinghtml==1.1.4  # via -r requirements-dev.txt, sphinx
 structlog==20.1.0         # via -r requirements-dev.txt
-toml==0.10.0              # via -r requirements-dev.txt, black, pylint
+toml==0.10.0              # via -r requirements-dev.txt, autopep8, black, pylint
 toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
