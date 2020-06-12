@@ -64,7 +64,7 @@ pexpect==4.8.0            # via ipython
 pickleshare==0.7.5        # via ipython
 prompt-toolkit==3.0.5     # via ipython
 protobuf==3.11.3          # via web3
-psutil==5.6.6             # via -r requirements.in, mirakuru
+psutil==5.7.0             # via -r requirements.in, mirakuru
 ptyprocess==0.6.0         # via pexpect
 py-ecc==1.4.7             # via raiden-contracts
 py-solc==3.2.0            # via raiden-contracts
