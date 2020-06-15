@@ -74,9 +74,19 @@ from raiden.transfer.architecture import (
     StateChange,
 )
 from raiden.transfer.channel import get_capacity
-from raiden.transfer.events import EventPaymentSentFailed, SendWithdrawExpired, SendWithdrawRequest
+from raiden.transfer.events import (
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
+)
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendUnlock
+from raiden.transfer.mediated_transfer.events import (
+    EventRouteFailed,
+    SendLockedTransfer,
+    SendSecretRequest,
+    SendUnlock,
+)
 from raiden.transfer.mediated_transfer.mediation_fee import (
     FeeScheduleState,
     calculate_imbalance_fees,
@@ -917,22 +927,38 @@ class RaidenService(Runnable):
         """
         typecheck(chain_state, ChainState)
 
-        non_transaction_events = list()
+        fast_events = list()
         greenlets: List[Greenlet] = list()
 
+        # These events are slow to process, and they will add extra delay to the protocol messages.
+        # To avoid unnecessary delays and weird edge cases, every event that can lead to a blocking
+        # operation is handled in a separated thread.
+        #
+        # - ContractSend* events will send transactions that can take multiple minutes to be
+        #   processed, since that will wait for the transaction to be mined and confirmed.
+        # - SecretSecretRequest events may take a long time if a resolver is used, which can be as
+        #   high as the lock expiration (couple of minutes).
+        # - Payment related events may block on the PFS. (see `PFSFeedbackEventHandler`)
+        blocking_events = (
+            EventRouteFailed,
+            EventPaymentSentSuccess,
+            SendSecretRequest,
+            ContractSendEvent,
+        )
+
         for event in raiden_events:
-            if isinstance(event, ContractSendEvent):
+            if isinstance(event, blocking_events):
                 greenlets.append(
-                    spawn_named("rs-handle_events", self._handle_events, chain_state, [event])
+                    spawn_named(
+                        "rs-handle_blocking_events", self._handle_events, chain_state, [event]
+                    )
                 )
             else:
-                non_transaction_events.append(event)
+                fast_events.append(event)
 
-        if non_transaction_events:
+        if fast_events:
             greenlets.append(
-                spawn_named(
-                    "rs-handle_events", self._handle_events, chain_state, non_transaction_events
-                )
+                spawn_named("rs-handle_events", self._handle_events, chain_state, fast_events)
             )
 
         return greenlets
