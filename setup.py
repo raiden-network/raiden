@@ -75,7 +75,7 @@ def read_requirements(path: str) -> List[str]:
 test_requirements: List[str] = []
 
 # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
-version = "1.0.0"
+version = "1.0.1"
 
 setup(
     name="raiden",
