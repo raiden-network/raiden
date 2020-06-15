@@ -422,7 +422,7 @@ def eth_run_nodes(
             log_path = eth_node_to_logpath(node_config, logdir)
             logfile = stack.enter_context(open(log_path, "w+"))
 
-            startup_timeout = 10
+            startup_timeout = 20
             sleep = 0.1
 
             executor = JSONRPCExecutor(
