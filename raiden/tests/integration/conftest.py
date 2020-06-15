@@ -6,6 +6,18 @@ from raiden.tests.integration.fixtures.smartcontracts import *  # noqa: F401,F40
 from raiden.tests.integration.fixtures.transport import *  # noqa: F401,F403
 
 
+def pytest_collection_modifyitems(items):
+    """ Use ``flaky`` to rerun tests failing with ``RetryTestError``
+    """
+    # We don't want this in every test's namespace, so import locally
+    from raiden.tests.integration.exception import RetryTestError
+
+    for item in items:
+        item.add_marker(
+            pytest.mark.flaky(rerun_filter=lambda err, *args: issubclass(err[0], RetryTestError))
+        )
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "expect_failure")
 

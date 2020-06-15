@@ -28,6 +28,7 @@ grequests
 pexpect
 hypothesis
 responses
+flaky
 
 # Debugging
 pdbpp
