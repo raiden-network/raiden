@@ -15,7 +15,7 @@ from contextlib import closing
 from itertools import chain
 
 import click
-from eth_utils import encode_hex, is_checksum_address, to_canonical_address
+from eth_utils import encode_hex, is_address, to_canonical_address
 
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
@@ -232,7 +232,7 @@ def replay_wal(
 
         ###
         # Customize this to filter things further somewhere around here.
-        # An example would be to add `import pdb; pdb.set_trace()`
+        # An example would be to add `breakpoint()`
         # and inspect the state.
         ###
         print_state_change(state_change, translator=translator)
@@ -272,14 +272,14 @@ def main(db_file, token_network_address, partner_address, names_translator):
     else:
         translator = None
 
-    assert is_checksum_address(token_network_address), "token_network_address must be provided"
-    assert is_checksum_address(partner_address), "partner_address must be provided"
+    assert is_address(token_network_address), "token_network_address must be provided"
+    assert is_address(partner_address), "partner_address must be provided"
 
     with closing(SerializedSQLiteStorage(db_file, JSONSerializer())) as storage:
         replay_wal(
             storage=storage,
-            token_network_address=token_network_address,
-            partner_address=partner_address,
+            token_network_address=to_canonical_address(token_network_address),
+            partner_address=to_canonical_address(partner_address),
             translator=translator,
         )
 
