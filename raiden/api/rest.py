@@ -656,7 +656,6 @@ class RestAPI:  # pragma: no unittest
             InvalidSettleTimeout,
             TokenNetworkDeprecated,
             InvalidBinaryAddress,
-            InvalidSettleTimeout,
             SamePeerAddress,
             AddressWithoutCode,
             DuplicatedChannelError,
