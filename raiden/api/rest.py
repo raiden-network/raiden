@@ -898,6 +898,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress = None,
         target_address: Address = None,
         limit: int = None,
@@ -913,13 +914,14 @@ class RestAPI:  # pragma: no unittest
         )
         try:
             service_result = self.raiden_api.get_raiden_events_payment_history_with_timestamps(
+                registry_address=registry_address,
                 token_address=token_address,
                 target_address=target_address,
                 limit=limit,
                 offset=offset,
             )
-        except (InvalidNumberInput, InvalidBinaryAddress) as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+        except (InvalidNumberInput, InvalidBinaryAddress, InvalidTokenAddress) as e:
+            return api_error(str(e), status_code=HTTPStatus.BAD_REQUEST)
 
         result = []
         chain_state = views.state_from_raiden(self.raiden_api.raiden)
