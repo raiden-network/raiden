@@ -2,7 +2,10 @@
 Changelog
 =========
 
+* :release:`1.0.1`
 * :feature:`-` Update WebUI to version 1.0.0 https://github.com/raiden-network/webui/releases/tag/v1.0.0
+* :feature:`6220` Make sure the confiugred PFS and Matrix servers use the same ckchain and smart contracts.
+* :bug:`6224` Fix ULID generation under Windows, nanosecond clock resolution is not necessary anymore.
 
 * :release:`1.0.0`
 
