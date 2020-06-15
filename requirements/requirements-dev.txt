@@ -48,7 +48,7 @@ eth-utils==1.9.0          # via -r requirements.txt, eth-abi, eth-account, eth-k
 execnet==1.6.0            # via pytest-xdist
 fancycompleter==0.8       # via pdbpp
 filelock==3.0.12          # via -r requirements.txt
-flake8-bugbear==19.3.0    # via -r requirements-dev.in
+flake8-bugbear==20.1.4    # via -r requirements-dev.in
 flake8-tuple==0.4.1       # via -r requirements-dev.in
 flake8==3.8.3             # via -r requirements-dev.in, flake8-bugbear, flake8-tuple
 flask-cors==3.0.8         # via -r requirements.txt
@@ -65,7 +65,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==5.16.1        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.6.1  # via pluggy
+importlib-metadata==1.6.1  # via -r requirements.txt, pluggy
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -138,7 +138,7 @@ pytest==5.4.3             # via -r requirements-dev.in, pytest-forked, pytest-ra
 pytoml==0.1.21            # via -r requirements.txt
 pytz==2019.1              # via -r requirements-docs.txt, -r requirements.txt, babel, flask-restful
 pyyaml==5.1.1             # via matrix-synapse
-git+git://github.com/raiden-network/raiden-contracts.git@bf405d3ebfaf8e2394b7981ed4a2843fbff48349  # via -r requirements.txt
+raiden-contracts==0.37.1  # via -r requirements.txt
 raiden-webui==1.0.0       # via -r requirements.txt
 readme-renderer==26.0     # via -r requirements-dev.in
 regex==2020.6.8           # via black
@@ -185,7 +185,7 @@ werkzeug==1.0.1           # via -r requirements.txt, flask
 wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
-zipp==3.1.0               # via importlib-metadata
+zipp==3.1.0               # via -r requirements.txt, importlib-metadata
 zope.event==4.4           # via -r requirements.txt, gevent
 zope.interface==5.1.0     # via -r requirements.txt, gevent, twisted
 
