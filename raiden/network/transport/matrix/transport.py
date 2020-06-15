@@ -1520,7 +1520,7 @@ class MatrixTransport(Runnable):
                 last_ex = e
             finally:
                 if self._stop_event.wait(retry_interval):
-                    return return_value
+                    return return_value  # noqa: B012
                 retry_interval = retry_interval * retry_interval_multiplier
 
         if last_ex is None:

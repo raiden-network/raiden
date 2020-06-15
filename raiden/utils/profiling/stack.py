@@ -51,7 +51,7 @@ def get_lines_from_file(filename, lineno, context_lines, loader=None, module_nam
     if source is None:
         try:
             source = linecache.getlines(filename)
-        except (OSError, IOError):
+        except OSError:
             return None, None, None
 
     if not source:
