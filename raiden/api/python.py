@@ -1128,7 +1128,8 @@ class RaidenAPI:  # pragma: no unittest
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
-        token_address: TokenAddress = None,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: Optional[TokenAddress] = None,
         target_address: Address = None,
         limit: int = None,
         offset: int = None,
@@ -1138,6 +1139,17 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for token in get_raiden_events_payment_history"
             )
 
+        chain_state = views.state_from_raiden(self.raiden)
+        token_network_address = None
+        if token_address:
+            token_network_address = views.get_token_network_address_by_token_address(
+                chain_state=chain_state,
+                token_network_registry_address=registry_address,
+                token_address=token_address,
+            )
+            if not token_network_address:
+                raise InvalidTokenAddress("Token address does not match a Raiden token network")
+
         if target_address and not is_binary_address(target_address):
             raise InvalidBinaryAddress(
                 "Expected binary address format for "
@@ -1145,18 +1157,20 @@ class RaidenAPI:  # pragma: no unittest
             )
 
         assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
-        events = self.raiden.wal.storage.get_events_with_timestamps(
+
+        event_types = [
+            "raiden.transfer.events.EventPaymentReceivedSuccess",
+            "raiden.transfer.events.EventPaymentSentFailed",
+            "raiden.transfer.events.EventPaymentSentSuccess",
+        ]
+
+        events = self.raiden.wal.storage.get_raiden_events_payment_history_with_timestamps(
+            event_types=event_types,
             limit=limit,
             offset=offset,
-            filters=[
-                ("_type", "raiden.transfer.events.EventPaymentReceivedSuccess"),
-                ("_type", "raiden.transfer.events.EventPaymentSentFailed"),
-                ("_type", "raiden.transfer.events.EventPaymentSentSuccess"),
-            ],
-            logical_and=False,
+            token_network_address=token_network_address,
+            partner_address=target_address,
         )
-
-        chain_state = views.state_from_raiden(self.raiden)
         events = [
             e
             for e in events
@@ -1167,21 +1181,7 @@ class RaidenAPI:  # pragma: no unittest
                 token_address=token_address,
             )
         ]
-
         return events
-
-    def get_raiden_events_payment_history(
-        self,
-        token_address: TokenAddress = None,
-        target_address: Address = None,
-        limit: int = None,
-        offset: int = None,
-    ) -> List[Event]:
-        timestamped_events = self.get_raiden_events_payment_history_with_timestamps(
-            token_address=token_address, target_address=target_address, limit=limit, offset=offset
-        )
-
-        return [event.wrapped_event for event in timestamped_events]
 
     def get_raiden_internal_events_with_timestamps(
         self, limit: int = None, offset: int = None
