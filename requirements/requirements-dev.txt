@@ -52,6 +52,7 @@ filelock==3.0.12          # via -r requirements.txt
 flake8-bugbear==19.3.0    # via -r requirements-dev.in
 flake8-tuple==0.4.1       # via -r requirements-dev.in
 flake8==3.8.3             # via -r requirements-dev.in, flake8-bugbear, flake8-tuple
+flaky==3.6.1              # via -r requirements-dev.in
 flask-cors==3.0.8         # via -r requirements.txt
 flask-restful==0.3.8      # via -r requirements.txt
 flask==1.1.2              # via -r requirements.txt, flask-cors, flask-restful
@@ -66,7 +67,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==5.16.1        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.6.1  # via pluggy
+importlib-metadata==1.6.1  # via -r requirements.txt, flake8, jsonschema, pluggy, pytest
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -172,8 +173,8 @@ toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via -r requirements.txt, ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
-typed-ast==1.4.0          # via black, mypy
-typing-extensions==3.7.4.2  # via -r requirements.txt, matrix-synapse, mypy, signedjson
+typed-ast==1.4.0          # via astroid, black, mypy
+typing-extensions==3.7.4.2  # via -r requirements.txt, matrix-synapse, mypy, signedjson, web3
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
@@ -186,7 +187,7 @@ werkzeug==1.0.1           # via -r requirements.txt, flask
 wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
-zipp==3.1.0               # via importlib-metadata
+zipp==3.1.0               # via -r requirements.txt, importlib-metadata
 zope.event==4.4           # via -r requirements.txt, gevent
 zope.interface==5.1.0     # via -r requirements.txt, gevent, twisted
 

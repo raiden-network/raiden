@@ -20,6 +20,8 @@ import structlog
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
 
+from raiden.tests.integration.exception import RetryTestError
+
 # Execute these before the raiden imports because rewrites can't work after the
 # module has been imported.
 pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
@@ -477,7 +479,7 @@ def pytest_runtest_teardown(item):
 
     def report():
         gevent.util.print_run_info()
-        pytest.fail(
+        raise RetryTestError(
             f"Teardown timeout >{item.timeout_setup_and_call}s. This must not happen, when "
             f"the teardown times out not all finalizers got a chance to run. This "
             f"means not all fixtures are cleaned up, which can make subsequent "

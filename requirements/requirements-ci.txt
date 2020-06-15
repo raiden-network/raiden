@@ -53,6 +53,7 @@ filelock==3.0.12          # via -r requirements-dev.txt
 flake8-bugbear==19.3.0    # via -r requirements-dev.txt
 flake8-tuple==0.4.1       # via -r requirements-dev.txt
 flake8==3.8.3             # via -r requirements-dev.txt, flake8-bugbear, flake8-tuple
+flaky==3.6.1              # via -r requirements-dev.txt
 flask-cors==3.0.8         # via -r requirements-dev.txt
 flask-restful==0.3.8      # via -r requirements-dev.txt
 flask==1.1.2              # via -r requirements-dev.txt, flask-cors, flask-restful
@@ -67,7 +68,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==5.16.1        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==1.6.1  # via -r requirements-dev.txt, pluggy
+importlib-metadata==1.6.1  # via -r requirements-dev.txt, flake8, jsonschema, pluggy, pytest
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
@@ -178,8 +179,8 @@ toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==20.3.0      # via -r requirements-dev.txt, matrix-synapse, treq
-typed-ast==1.4.0          # via -r requirements-dev.txt, black, mypy
-typing-extensions==3.7.4.2  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson
+typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, black, mypy
+typing-extensions==3.7.4.2  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson, web3
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
