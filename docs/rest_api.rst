@@ -496,7 +496,6 @@ Channel Management
    :statuscode 201: Channel created successfully
    :statuscode 400: Provided JSON is in some way malformed
    :statuscode 402: Insufficient ETH to pay for the gas of the channel open on-chain transaction
-   :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409: Invalid input, e. g. too low a settle timeout
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
@@ -590,7 +589,6 @@ Channel Management
     - the value of ``state`` is not a valid channel state.
    :statuscode 402: Insufficient balance to do a deposit, or insufficient ETH to pay for the gas of the on-chain transaction
    :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
-   :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409:
     - Provided channel does not exist or
     - ``state``, ``total_deposit`` and ``total_withdraw`` have been attempted to update in the same request or
@@ -666,7 +664,6 @@ Connection Management
    :statuscode 204: For a successful connection creation.
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions.
    :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
-   :statuscode 408: If a timeout happened during any of the transactions.
    :statuscode 409: If any of the provided input to the call is invalid.
    :statuscode 500: Internal Raiden node error.
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
@@ -762,7 +759,6 @@ Payments
    :statuscode 400: If the provided json is in some way malformed
    :statuscode 402: If the payment can't start due to insufficient balance
    :statuscode 404: The given token and / or target addresses are not valid eip55-encoded Ethereum addresses
-   :statuscode 408: If a timeout happened during the payment
    :statuscode 409: If the address or the amount is invalid or if there is no path to the target, or if the identifier is already in use for a different payment.
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.

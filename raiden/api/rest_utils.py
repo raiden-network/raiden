@@ -12,7 +12,6 @@ log = structlog.get_logger(__name__)
 ERROR_STATUS_CODES = [
     HTTPStatus.FORBIDDEN,
     HTTPStatus.CONFLICT,
-    HTTPStatus.REQUEST_TIMEOUT,
     HTTPStatus.PAYMENT_REQUIRED,
     HTTPStatus.BAD_REQUEST,
     HTTPStatus.NOT_FOUND,
