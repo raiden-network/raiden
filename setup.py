@@ -103,7 +103,7 @@ setup(
     cmdclass={"test": PyTest, "egg_info": EggInfo},
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
-    install_requires=[read_requirements("requirements.txt")],
+    install_requires=read_requirements("requirements/requirements.txt"),
     tests_require=test_requirements,
     python_requires=">=3.7",
     entry_points={"console_scripts": ["raiden = raiden.__main__:main"]},
