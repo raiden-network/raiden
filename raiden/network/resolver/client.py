@@ -60,7 +60,10 @@ def reveal_secret_with_resolver(
             log.debug(
                 "Stopped using resolver, transfer expired", resolver_endpoint=resolver_endpoint
             )
-            return False
+            # The locked transfer is expired now, so it makes no sense to continue processing it.
+            # When returning `False`, the event handler would contiue processing the events, which
+            # is not what is wanted here, so we return `True` to cancel
+            return True
 
         response = None
 
