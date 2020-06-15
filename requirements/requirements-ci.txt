@@ -80,7 +80,7 @@ lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
 macholib==1.14            # via -r requirements-ci.in
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
-marshmallow-dataclass==6.0.0  # via -r requirements-dev.txt
+marshmallow-dataclass==7.6.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
 marshmallow-polyfield==5.9  # via -r requirements-dev.txt
 marshmallow==3.6.1        # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
