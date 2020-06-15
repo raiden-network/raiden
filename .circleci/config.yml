@@ -435,8 +435,7 @@ jobs:
             done
 
             mkdir /tmp/artifacts
-            # For unknown reasons, this is not only tarred but also gzipped
-            tar cf /tmp/artifacts/test-logs-$CIRCLE_PR_NUMBER-$CIRCLE_NODE_INDEX.tar.gz "${files[@]}"
+            tar cfz /tmp/artifacts/test-logs-$CIRCLE_PR_NUMBER-$CIRCLE_NODE_INDEX.tar.gz "${files[@]}"
 
       - store_artifacts:
           path: /tmp/artifacts
