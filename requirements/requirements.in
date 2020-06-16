@@ -21,7 +21,7 @@ netifaces
 networkx
 psutil
 pysha3
-pytoml
+toml
 raiden-contracts
 raiden-webui
 requests
