@@ -6,14 +6,14 @@ from enum import EnumMeta
 from itertools import groupby
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, MutableMapping, Union
 
 import click
 import requests
 from click import Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
-from pytoml import TomlError, load
+from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
 
 from raiden.exceptions import ConfigurationError, InvalidChecksummedAddress
@@ -365,7 +365,7 @@ def apply_config_file(
     }
 
     config_file_path = Path(cli_params[config_file_option_name])
-    config_file_values: Dict[str, Any] = dict()
+    config_file_values: MutableMapping[str, Any] = dict()
     try:
         with config_file_path.open() as config_file:
             config_file_values = load(config_file)
@@ -388,7 +388,7 @@ def apply_config_file(
         else:
             raise ConfigurationError(f"Error opening config file: {ex}")
 
-    except TomlError as ex:
+    except TomlDecodeError as ex:
         raise ConfigurationError(f"Error loading config file: {ex}")
 
     for config_name, config_value in config_file_values.items():
