@@ -2,7 +2,9 @@
 Changelog
 =========
 
+* :release:`1.0.2-rc`
 * :feature:`-` Update WebUI to version 1.0.1 https://github.com/raiden-network/webui/releases/tag/v1.0.1
+* :bug:`6310` Fixed dependencies used in `setup.py`.
 
 * :release:`1.0.1`
 * :feature:`-` Update WebUI to version 1.0.0 https://github.com/raiden-network/webui/releases/tag/v1.0.0
