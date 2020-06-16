@@ -74,9 +74,6 @@ def read_requirements(path: str) -> List[str]:
 
 test_requirements: List[str] = []
 
-# Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
-version = "1.0.1"
-
 setup(
     name="raiden",
     description="",
@@ -92,7 +89,7 @@ setup(
     long_description_content_type="text/markdown",
     keywords="raiden",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
