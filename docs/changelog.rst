@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 1.0.1 https://github.com/raiden-network/webui/releases/tag/v1.0.1
+
 * :release:`1.0.1`
 * :feature:`-` Update WebUI to version 1.0.0 https://github.com/raiden-network/webui/releases/tag/v1.0.0
 * :feature:`6220` Make sure the configured PFS and Matrix servers use the same chain and smart contracts.
