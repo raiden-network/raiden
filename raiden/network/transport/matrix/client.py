@@ -808,7 +808,7 @@ class GMatrixClient(MatrixClient):
                         [
                             message
                             for message in sync_room["timeline"]["events"]
-                            if message["type"].starts_with("m.call.message")
+                            if message["type"].startswith("m.call.")
                         ],
                     )
                 )
@@ -829,7 +829,7 @@ class GMatrixClient(MatrixClient):
             self.handle_messages_callback(all_messages)
 
         if len(all_invites) > 0:
-            self.handle_invite_callback(all_invites)
+            self._handle_call_callback(all_invites)
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id

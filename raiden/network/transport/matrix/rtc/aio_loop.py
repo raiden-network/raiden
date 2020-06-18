@@ -2,12 +2,14 @@ import asyncio
 from dataclasses import dataclass
 from typing import Dict
 
+import structlog
 from aiortc import RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 
 from raiden.network.transport.matrix.rtc.aio_queue import AGTransceiver
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address
 
+log = structlog.get_logger(__name__)
 
 @dataclass
 class RTCPartner:
@@ -20,6 +22,7 @@ class RTCPartner:
 
 
 async def handle_event(ag_transceiver: AGTransceiver, peer_connections: Dict[Address, RTCPartner], event):
+    log.debug("received event from transport", ag_event=event)
     event_data = event["data"]
     event_type = event["type"]
     partner_address = event["address"]
@@ -31,10 +34,9 @@ async def handle_event(ag_transceiver: AGTransceiver, peer_connections: Dict[Add
     if event_type == "create_channel":
         await create_channel(rtc_partner, ag_transceiver, partner_address)
     if event_type == "message":
-        text = event_data["text"]
-        await send_message(rtc_partner, partner_address, text)
-    if event_type == "remote_description":
-        await set_remote_description(rtc_partner, event_data)
+        send_message(rtc_partner, event_data)
+    if event_type == "set_remote_description":
+        await set_remote_description(rtc_partner, ag_transceiver, event_data)
 
 
 async def create_channel(rtc_partner: RTCPartner, ag_transceiver: AGTransceiver, partner_address: Address):
@@ -61,14 +63,20 @@ async def create_channel(rtc_partner: RTCPartner, ag_transceiver: AGTransceiver,
 
 async def set_remote_description(rtc_partner: RTCPartner, ag_transceiver: AGTransceiver, description):
     remote_description = RTCSessionDescription(description['sdp'], description['type'])
+    sdp_type = description['type']
     pc = rtc_partner.pc
     await pc.setRemoteDescription(remote_description)
 
     @rtc_partner.pc.on("datachannel")
     def on_datachannel(channel):
         rtc_partner.channel = channel
+        print(f"received channel {channel.label}")
 
-    if rtc_partner.pc.localDescription is None:
+        @rtc_partner.channel.on("close")
+        def channel_closed():
+            rtc_partner.channel = None
+
+    if sdp_type == "offer":
         # send answer
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
@@ -84,15 +92,14 @@ async def set_remote_description(rtc_partner: RTCPartner, ag_transceiver: AGTran
 
 
 def send_message(rtc_partner: RTCPartner, message):
-
     channel = rtc_partner.channel
     if channel is not None and channel.readyState == "open":
         channel.send(message)
 
 
-def run_aiortc(transceiver: AGTransceiver):
+async def run_aiortc(transceiver: AGTransceiver):
 
-    peer_connections = dict()
+    peer_connections = transceiver.peer_connections
 
     while True:
         event = await transceiver.aget_event()

@@ -14,6 +14,7 @@ def make_wrapped_greenlet(target, *args, **kwargs):
 
 class AGTransceiver:
     def __init__(self):
+        self.peer_connections = dict()
         self.event_to_aio_queue = AGQueue()
         self.event_to_gevent_queue = AGQueue()
         self.message_to_aio_queue = AGQueue()

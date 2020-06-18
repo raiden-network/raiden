@@ -202,7 +202,7 @@ def test_make_client(monkeypatch):
         )
 
         make_client(
-            ignore_messages, ignore_member_join, [f"http://server{i}.xyz" for i in range(3)]
+            ignore_messages, ignore_member_join, ignore_messages, [f"http://server{i}.xyz" for i in range(3)]
         )
 
     mock_send = Mock(side_effect=lambda method, path, *args, **kwargs: True)
