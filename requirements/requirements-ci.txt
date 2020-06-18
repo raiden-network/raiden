@@ -148,7 +148,7 @@ raiden-webui==1.0.1       # via -r requirements-dev.txt
 readme-renderer==26.0     # via -r requirements-dev.txt
 regex==2020.6.8           # via -r requirements-dev.txt, black
 releases==1.6.3           # via -r requirements-dev.txt
-requests==2.23.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
+requests==2.24.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.15        # via -r requirements-dev.txt
 rlp==1.1.0                # via -r requirements-dev.txt, eth-account, eth-rlp, raiden-contracts
 s3cmd==2.1.0              # via -r requirements-ci.in
@@ -160,8 +160,8 @@ simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
 six==1.12.0               # via -r requirements-dev.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
 sortedcontainers==2.1.0   # via -r requirements-dev.txt, hypothesis, matrix-synapse
+sphinx-rtd-theme==0.5.0   # via -r requirements-dev.txt
 sphinx==3.1.1             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
-sphinx_rtd_theme==0.5.0   # via -r requirements-dev.txt
 sphinxcontrib-applehelp==1.0.2  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-devhelp==1.0.2  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-htmlhelp==1.0.3  # via -r requirements-dev.txt, sphinx

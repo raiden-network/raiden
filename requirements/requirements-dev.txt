@@ -66,7 +66,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==5.16.1        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.6.1  # via -r requirements.txt, pluggy
+importlib-metadata==1.6.1  # via pluggy
 incremental==17.5.0       # via treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via -r requirements.txt, traitlets
@@ -143,7 +143,7 @@ raiden-webui==1.0.1       # via -r requirements.txt
 readme-renderer==26.0     # via -r requirements-dev.in
 regex==2020.6.8           # via black
 releases==1.6.3           # via -r requirements-docs.txt
-requests==2.23.0          # via -r requirements-docs.txt, -r requirements.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
+requests==2.24.0          # via -r requirements-docs.txt, -r requirements.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.15        # via -r requirements-dev.in
 rlp==1.1.0                # via -r requirements.txt, eth-account, eth-rlp, raiden-contracts
 semantic-version==2.6.0   # via -r requirements-docs.txt, -r requirements.txt, py-solc, releases
@@ -154,8 +154,8 @@ simplejson==3.16.0        # via canonicaljson
 six==1.12.0               # via -r requirements-docs.txt, -r requirements.txt, astroid, astunparse, automat, bcrypt, bleach, canonicaljson, cryptography, flake8-tuple, flask-cors, flask-restful, ipfshttpclient, jsonschema, matrix-synapse, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, pytest-xdist, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-docs.txt, sphinx
 sortedcontainers==2.1.0   # via hypothesis, matrix-synapse
+sphinx-rtd-theme==0.5.0   # via -r requirements-docs.txt
 sphinx==3.1.1             # via -r requirements-docs.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
-sphinx_rtd_theme==0.5.0   # via -r requirements-docs.txt
 sphinxcontrib-applehelp==1.0.2  # via -r requirements-docs.txt, sphinx
 sphinxcontrib-devhelp==1.0.2  # via -r requirements-docs.txt, sphinx
 sphinxcontrib-htmlhelp==1.0.3  # via -r requirements-docs.txt, sphinx
@@ -185,7 +185,7 @@ werkzeug==1.0.1           # via -r requirements.txt, flask
 wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
-zipp==3.1.0               # via -r requirements.txt, importlib-metadata
+zipp==3.1.0               # via importlib-metadata
 zope.event==4.4           # via -r requirements.txt, gevent
 zope.interface==5.1.0     # via -r requirements.txt, gevent, twisted
 
