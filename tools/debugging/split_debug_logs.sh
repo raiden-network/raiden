@@ -27,7 +27,7 @@ process_node_log() {
 
     jq -c "select(.node==\"${node_address}\")" "${DEBUG_LOG_FILE}" > "${full_log}"
     jq -c "select((.state_changes | length) > 0 or (.raiden_events | length) > 0)" "${full_log}" > "${state_machine_log}"
-    python "${SCRIPT_DIR}"/state_machine_report.py "${state_machine_log}" > "${state_change_timestamps}"
+    "${SCRIPT_DIR}"/state_machine_report.py "${state_machine_log}" > "${state_change_timestamps}"
 }
 
 [ $# -ne 2 ] && {
