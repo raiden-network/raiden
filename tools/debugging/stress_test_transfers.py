@@ -3,6 +3,11 @@ from gevent import monkey  # isort:skip
 
 monkey.patch_all()  # isort:skip
 
+import asyncio  # isort:skip # noqa
+from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
+
+asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+
 import logging.config
 import os
 import os.path

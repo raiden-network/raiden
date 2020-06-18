@@ -13,7 +13,7 @@ from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock
 from gevent.pool import Pool
-from gevent.queue import Empty, JoinableQueue
+from gevent.queue import Empty, JoinableQueue, Queue
 from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
@@ -29,6 +29,8 @@ from raiden.network.transport.matrix.client import (
     Room,
     User,
 )
+from raiden.network.transport.matrix.rtc.aio_loop import aio_loop
+from raiden.network.transport.matrix.rtc.aio_queue import AGLock, AGTransceiver
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -114,6 +116,7 @@ class _RetryQueue(Runnable):
         self._message_queue: List[_RetryQueue._MessageData] = list()
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
+        self._rtc_lock = AGLock()
         self._idle_since: int = 0  # Counter of idle iterations
         super().__init__()
         self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
@@ -395,6 +398,10 @@ class MatrixTransport(Runnable):
         self._prioritize_broadcast_messages: bool = True
 
         self._invite_queue: List[Tuple[RoomID, dict]] = []
+
+        # web RTC
+        self.aio_gevent_transceiver = AGTransceiver()
+        self.aio_loop = gevent.spawn(aio_loop, ag_transceiver=self.aio_gevent_transceiver)
 
         self._address_mgr: UserAddressManager = UserAddressManager(
             client=self._client,
@@ -689,6 +696,62 @@ class MatrixTransport(Runnable):
             )
 
             self._send_with_retry(queue)
+
+    def initiate_rtc(self, partner_address):
+
+        retrier = self._get_retrier(partner_address)
+        event = {
+            "type": "create_channel",
+            "data": {},
+            "address": partner_address
+        }
+
+        self.aio_gevent_transceiver.send_event_to_aio(event)
+
+
+
+        retrier.enqueue_unordered()
+
+
+    def aio_event_consumer(self):
+
+        while True:
+            event = self.aio_gevent_transceiver.event_to_gevent_queue.get()
+            event_type = event["type"]
+            event_data = event["data"]
+            partner_address = event["address"]
+
+            room = self._get_room_for_address(partner_address)
+
+            if event_type == "local_description":
+                if event_data["type"] == "offer":
+                    self._client.api.invite(room.room_id, event_data)
+                elif event_data["type"] == "answer":
+                    self._client.api.answer(room.room_id, event_data)
+            if event_type == "message":
+                message = validate_userid_signature(event_data, partner_address)
+
+                    if isinstance(message, (Processed, SignedRetrieableMessage)) and message.sender:
+                        delivered_message = Delivered(
+                            delivered_message_identifier=message.message_identifier,
+                            signature=EMPTY_SIGNATURE,
+                        )
+                        self._raiden_service.sign(delivered_message)
+                        retrier = self._get_retrier(message.sender)
+                        retrier.enqueue_unordered(delivered_message)
+                    if self._environment is Environment.DEVELOPMENT:
+                        if isinstance(message, RetrieableMessage):
+                            self._counters["dispatch"][
+                                (message.__class__.__name__, message.message_identifier)
+                            ] += 1
+                        if isinstance(message, Processed):
+                            assert self._message_timing_keeper is not None, MYPY_ANNOTATION
+                            self._message_timing_keeper.finalize_message(message)
+                self.log.debug("Incoming message", message=message)
+                self._raiden_service.on_messages([message])
+
+
+
 
     def broadcast(self, room: str, message: Message) -> None:
         """Broadcast a message to a public room.
@@ -1139,7 +1202,7 @@ class MatrixTransport(Runnable):
             # TODO: Don't fetch messages from the broadcast rooms. #5535
             if not self._is_broadcast_room(room):
                 for text in room_messages:
-                    all_messages.extend(self._handle_text(room, text))
+                    all_messages.extend(self.handle_text(room, text))
 
         # Remove this #3254
         for message in all_messages:
@@ -1162,8 +1225,50 @@ class MatrixTransport(Runnable):
         self.log.debug("Incoming messages", messages=all_messages)
 
         self._raiden_service.on_messages(all_messages)
-
         return len(all_messages) > 0
+
+    def _validate_call_event(self, room, event):
+        # Ignore our own messages
+        sender_id = event["sender"]
+        if sender_id == self._user_id:
+            return []
+
+        user = self._client.get_user(sender_id)
+        self._displayname_cache.warm_users([user])
+
+        peer_address = validate_userid_signature(user)
+        if not peer_address:
+            self.log.debug(
+                "Ignoring message from user with an invalid display name signature",
+                peer_user=user.user_id,
+                room=room,
+            )
+            return []
+
+        if event["type"] == "m.call.invite":
+            description = event["content"]["offer"]
+            event = {
+                "type": "set_remote_description",
+                "data": description,
+            }
+
+        if event["type"] == "m.call.answer":
+            event = {
+                "type": "set_remote_description",
+                ""
+                "data": description,
+            }
+
+        return event
+
+    def handle_call_events(self, sync_messages: MatrixSyncMessages) -> None:
+        all_call_events = []
+        for room, call_events in sync_messages:
+            for call_event in call_events:
+                all_call_events.extend(self._validate_call_event(room, call_event))
+
+        for call_event in all_call_events:
+            self.aio_gevent_transceiver.send_event_to_aio(call_event)
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
@@ -1316,6 +1421,7 @@ class MatrixTransport(Runnable):
             self.log.debug(
                 "Fetching room members", room=room, partner_address=to_checksum_address(address)
             )
+            self.aio_gevent_transceiver.create_channel(address, self._get_retrier(address))
 
             def partner_joined(fetched_members: Optional[List[User]]) -> bool:
                 if fetched_members is None:

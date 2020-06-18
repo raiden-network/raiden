@@ -5,6 +5,12 @@ def main() -> None:
     import gevent.monkey
 
     gevent.monkey.patch_all()
+
+    import asyncio  # isort:skip # noqa
+    import raiden.network.transport.matrix.rtc.aiogevent as aiogevent  # isort:skip # noqa
+
+    asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+
     from raiden.ui.cli import run
 
     # auto_envvar_prefix on a @click.command will cause all options to be
