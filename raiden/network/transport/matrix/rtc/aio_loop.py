@@ -70,7 +70,7 @@ async def set_remote_description(rtc_partner: RTCPartner, ag_transceiver: AGTran
     @rtc_partner.pc.on("datachannel")
     def on_datachannel(channel):
         rtc_partner.channel = channel
-        print(f"received channel {channel.label}")
+        log.debug(f"received channel {channel.label}")
 
         @channel.on("close")
         def channel_closed():
@@ -99,6 +99,8 @@ def send_message(rtc_partner: RTCPartner, message):
     channel = rtc_partner.channel
     if channel is not None and channel.readyState == "open":
         channel.send(message)
+    else:
+        log.debug(f"Channel is not open. ReadyState: {channel.readyState}")
 
 
 async def run_aiortc(transceiver: AGTransceiver):
