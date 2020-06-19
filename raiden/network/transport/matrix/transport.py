@@ -702,6 +702,7 @@ class MatrixTransport(Runnable):
     def aio_event_consumer(self):
         while not self._stop_event.is_set():
             event = self.aio_gevent_transceiver.event_to_gevent_queue.get()
+            log.debug("Received event from aio", ag_event=event)
             event_type = event["type"]
             event_data = event["data"]
             partner_address = event["address"]
@@ -1289,12 +1290,12 @@ class MatrixTransport(Runnable):
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
     ) -> Optional[Room]:
-        msg = (
-            f"address not health checked: "
-            f"node: {self._user_id}, "
-            f"peer: {to_checksum_address(address)}"
-        )
-        assert address and self._address_mgr.is_address_known(address), msg
+        #msg = (
+        #    f"address not health checked: "
+        #    f"node: {self._user_id}, "
+        #    f"peer: {to_checksum_address(address)}"
+        #)
+        #assert address and self._address_mgr.is_address_known(address), msg
 
         room_candidates = []
         room_ids = self._get_room_ids_for_address(address)
@@ -1405,14 +1406,7 @@ class MatrixTransport(Runnable):
                 room.get_joined_members, verify_response=partner_joined, force_resync=True
             )
 
-            event = {
-                "type": "create_channel",
-                "data": {},
-                "address": address
-            }
 
-            self.aio_gevent_transceiver.send_event_to_aio(event)
-            log.debug("starting RTC")
 
             assert members is not None, "fetching members failed"
 
@@ -1444,6 +1438,14 @@ class MatrixTransport(Runnable):
             )
 
             self._set_room_id_for_address(address, room.room_id)
+
+            event = {
+                "type": "create_channel",
+                "data": {},
+                "address": address
+            }
+
+            self.aio_gevent_transceiver.send_event_to_aio(event)
 
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
             return room

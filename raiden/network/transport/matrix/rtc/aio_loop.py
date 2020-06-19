@@ -72,9 +72,13 @@ async def set_remote_description(rtc_partner: RTCPartner, ag_transceiver: AGTran
         rtc_partner.channel = channel
         print(f"received channel {channel.label}")
 
-        @rtc_partner.channel.on("close")
+        @channel.on("close")
         def channel_closed():
             rtc_partner.channel = None
+
+        @channel.on("message")
+        async def on_message(message):
+            await ag_transceiver.message_to_gevent_queue.aput(message)
 
     if sdp_type == "offer":
         # send answer
