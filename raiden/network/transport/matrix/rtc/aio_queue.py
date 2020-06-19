@@ -17,24 +17,15 @@ class AGTransceiver:
         self.peer_connections = dict()
         self.event_to_aio_queue = AGQueue()
         self.event_to_gevent_queue = AGQueue()
-        self.message_to_aio_queue = AGQueue()
-        self.message_to_gevent_queue = AGQueue()
 
     def send_event_to_aio(self, event):
         self.event_to_aio_queue.put(event)
 
     async def aget_event(self):
-        event = await self.event_to_aio_queue.aget()
-        return event
+        return await self.event_to_aio_queue.aget()
 
     async def send_event_to_gevent(self, event):
         await self.event_to_gevent_queue.aput(event)
-
-    def send_message_to_aio(self, message):
-        self.message_to_aio_queue.put(message)
-
-    async def send_message_to_gevent(self, message):
-        await self.message_to_gevent_queue.aput(message)
 
 
 class AGQueue(Queue):

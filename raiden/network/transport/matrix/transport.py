@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 from collections import Counter, defaultdict
@@ -13,7 +14,7 @@ from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock
 from gevent.pool import Pool
-from gevent.queue import Empty, JoinableQueue, Queue
+from gevent.queue import Empty, JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
@@ -29,7 +30,7 @@ from raiden.network.transport.matrix.client import (
     Room,
     User,
 )
-from raiden.network.transport.matrix.rtc.aio_loop import aio_loop
+from raiden.network.transport.matrix.rtc.aio_loop import run_aiortc
 from raiden.network.transport.matrix.rtc.aio_queue import AGLock, AGTransceiver
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
@@ -400,10 +401,6 @@ class MatrixTransport(Runnable):
 
         self._invite_queue: List[Tuple[RoomID, dict]] = []
 
-        # web RTC
-        self.aio_gevent_transceiver = AGTransceiver()
-        self.aio_loop = gevent.spawn(aio_loop, ag_transceiver=self.aio_gevent_transceiver)
-
         self._address_mgr: UserAddressManager = UserAddressManager(
             client=self._client,
             displayname_cache=self._displayname_cache,
@@ -448,6 +445,16 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
 
         self._address_mgr.start()
+
+        # web RTC
+        self.aio_gevent_transceiver = AGTransceiver()
+        assert asyncio.get_event_loop().is_running, "the loop must be running"
+        self.aio_loop = self._schedule_new_greenlet(
+            asyncio.get_event_loop().create_task,
+            run_aiortc(
+                self.aio_gevent_transceiver, self._raiden_service.address, self._stop_event,
+            ),
+        )
 
         try:
             login(
@@ -529,6 +536,13 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix stopping")
         self._stop_event.set()
         self._broadcast_event.set()
+
+        stop_event = {
+            "type": "stop",
+            "data": None,
+            "address": None,
+        }
+        self.aio_gevent_transceiver.send_event_to_aio(stop_event)
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -699,10 +713,10 @@ class MatrixTransport(Runnable):
 
             self._send_with_retry(queue)
 
-    def aio_event_consumer(self):
+    def aio_event_consumer(self) -> None:
         while not self._stop_event.is_set():
             event = self.aio_gevent_transceiver.event_to_gevent_queue.get()
-            log.debug("Received event from aio", ag_event=event)
+            self.log.debug("Received event from aio", ag_event=event)
             event_type = event["type"]
             event_data = event["data"]
             partner_address = event["address"]
@@ -710,12 +724,12 @@ class MatrixTransport(Runnable):
             room = self._get_room_for_address(partner_address)
 
             if event_type == "local_description":
-                if event_data["type"] == "offer":
+                if event_data["type"] == "offer" and room is not None:
                     self._client.api.invite(room.room_id, event_data)
-                elif event_data["type"] == "answer":
+                elif event_data["type"] == "answer" and room is not None:
                     self._client.api.answer(room.room_id, event_data)
-            if event_type == "message":
-                messages = validate_userid_signature(event_data, partner_address)
+            if event_type == "message" and not self._stop_event.is_set():
+                messages = validate_and_parse_message(event_data, partner_address)
                 self._process_messages(messages)
 
     def broadcast(self, room: str, message: Message) -> None:
@@ -1155,7 +1169,9 @@ class MatrixTransport(Runnable):
 
         return validate_and_parse_message(message["content"]["body"], peer_address)
 
-    def _process_messages(self, all_messages):
+    def _process_messages(self, all_messages: List[Message]) -> None:
+        assert self._raiden_service, "_process_messages must be called after start"
+
         # Remove this #3254
         for message in all_messages:
             if isinstance(message, (Processed, SignedRetrieableMessage)) and message.sender:
@@ -1195,7 +1211,7 @@ class MatrixTransport(Runnable):
         self._process_messages(all_messages)
         return len(all_messages) > 0
 
-    def _validate_call_event(self, room, event):
+    def _validate_call_event(self, room: Room, event: Dict) -> Dict:
         # Ignore our own messages
         sender_id = event["sender"]
         if sender_id == self._user_id:
@@ -1218,7 +1234,7 @@ class MatrixTransport(Runnable):
             aio_event = {
                 "type": "set_remote_description",
                 "data": description,
-                "address": peer_address
+                "address": peer_address,
             }
             return aio_event
 
@@ -1227,9 +1243,11 @@ class MatrixTransport(Runnable):
             aio_event = {
                 "type": "set_remote_description",
                 "data": description,
-                "address": peer_address
+                "address": peer_address,
             }
             return aio_event
+
+        return {}
 
     def handle_call_events(self, sync_messages: MatrixSyncMessages) -> None:
         all_call_events = []
@@ -1290,12 +1308,12 @@ class MatrixTransport(Runnable):
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
     ) -> Optional[Room]:
-        #msg = (
+        # msg = (
         #    f"address not health checked: "
         #    f"node: {self._user_id}, "
         #    f"peer: {to_checksum_address(address)}"
-        #)
-        #assert address and self._address_mgr.is_address_known(address), msg
+        # )
+        # assert address and self._address_mgr.is_address_known(address), msg
 
         room_candidates = []
         room_ids = self._get_room_ids_for_address(address)
@@ -1406,8 +1424,6 @@ class MatrixTransport(Runnable):
                 room.get_joined_members, verify_response=partner_joined, force_resync=True
             )
 
-
-
             assert members is not None, "fetching members failed"
 
             if not partner_joined(members):
@@ -1439,11 +1455,7 @@ class MatrixTransport(Runnable):
 
             self._set_room_id_for_address(address, room.room_id)
 
-            event = {
-                "type": "create_channel",
-                "data": {},
-                "address": address
-            }
+            event = {"type": "create_channel", "data": {}, "address": address}
 
             self.aio_gevent_transceiver.send_event_to_aio(event)
 

@@ -1,4 +1,5 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
+import gevent  # isort:skip # noqa
 from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
@@ -7,6 +8,7 @@ import asyncio  # isort:skip # noqa
 import raiden.network.transport.matrix.rtc.aiogevent as aiogevent  # isort:skip # noqa
 
 asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
 
 import contextlib
 import datetime
