@@ -14,7 +14,7 @@ from raiden.utils.typing import Address
 
 class DummyApi:
     def get_display_name(self, user_id):  # pylint: disable=no-self-use,unused-argument
-        return None
+        return "DUMMY_DISPLAYNAME"
 
 
 class DummyMatrixClient:
