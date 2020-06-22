@@ -135,11 +135,16 @@ class DisplayNameCache:
                     # have the profile for a given userid. The server response
                     # is roughly:
                     #
-                    #   {"errcode":"M_NOT_FOUND","error":"Profile was not found"}
+                    #   {"errcode":"M_NOT_FOUND","error":"Profile was not found"} or
+                    #   {"errcode":"M_UNKNOWN","error":"Failed to fetch profile"}
                     try:
                         user.get_display_name()
-                    except MatrixRequestError:
-                        raise TransportError("Could not get 'display_name' for user")
+                    except MatrixRequestError as ex:
+                        # We ignore the error here and set user presence: SERVER_ERROR at the
+                        # calling site
+                        log.error(
+                            f"Ignoring failed `get_display_name` for user {user}", exc_info=ex
+                        )
 
                 if user.displayname is not None:
                     self.userid_to_displayname[user.user_id] = user.displayname
@@ -409,17 +414,23 @@ class UserAddressManager:
             return
 
         self._displayname_cache.warm_users([user])
+        # If for any reason we cannot resolve the displayname, then there was a server error.
+        # Any properly logged in user that joined a room, will have a displayname.
+        # A reason for not resolving it could be rate limiting by the other server.
+        if user.displayname is None:
+            new_state = UserPresence.SERVER_ERROR
+            self._set_user_presence(user_id, new_state, presence_update_id)
+        else:
+            address = self._validate_userid_signature(user)
+            if not address:
+                return
 
-        address = self._validate_userid_signature(user)
-        if not address:
-            return
+            self.add_userid_for_address(address, user_id)
 
-        self.add_userid_for_address(address, user_id)
+            new_state = UserPresence(event["content"]["presence"])
 
-        new_state = UserPresence(event["content"]["presence"])
-
-        self._set_user_presence(user_id, new_state, presence_update_id)
-        self._maybe_address_reachability_changed(address)
+            self._set_user_presence(user_id, new_state, presence_update_id)
+            self._maybe_address_reachability_changed(address)
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
