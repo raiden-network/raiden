@@ -1,6 +1,7 @@
 import json
 
 import click
+import gevent
 import gevent.monkey
 import structlog
 from eth_account import Account
@@ -14,6 +15,7 @@ import asyncio  # isort:skip # noqa
 from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
 
 asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
 
 
 log = structlog.get_logger(__name__)

@@ -449,6 +449,7 @@ class MatrixTransport(Runnable):
         # web RTC
         self.aio_gevent_transceiver = AGTransceiver()
         assert asyncio.get_event_loop().is_running, "the loop must be running"
+        log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running)
         self.aio_loop = self._schedule_new_greenlet(
             asyncio.get_event_loop().create_task,
             run_aiortc(
@@ -476,7 +477,7 @@ class MatrixTransport(Runnable):
             node=to_checksum_address(self._raiden_service.address),
             transport_uuid=str(self._uuid),
         )
-
+        self._schedule_new_greenlet(self.aio_event_consumer)
         self._initialize_broadcast_rooms()
         self._initialize_first_sync()
         self._initialize_health_check(health_check_list)
@@ -497,7 +498,6 @@ class MatrixTransport(Runnable):
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
         self._schedule_new_greenlet(self._health_check_worker)
-        self._schedule_new_greenlet(self.aio_event_consumer)
 
     def _process_queued_invites(self) -> None:
         if self._invite_queue:
@@ -847,8 +847,20 @@ class MatrixTransport(Runnable):
             assert len(partner_address) <= 1, msg
             # should contain only one element which is the partner's address
             if len(partner_address) == 1 and partner_address[0] is not None:
+                self.log.debug(
+                    "Found room",
+                    room=room,
+                    aliases=room.aliases,
+                    members=room.get_joined_members(),
+                )
                 self._set_room_id_for_address(partner_address[0], room.room_id)
-
+                room_creator_address = my_place_or_yours(
+                    our_address=self._raiden_service.address, partner_address=partner_address[0]
+                )
+                if self._raiden_service.address == room_creator_address:
+                    event = {"type": "create_channel", "data": {}, "address": partner_address[0]}
+                    log.debug("Creating RTC Channel")
+                    self.aio_gevent_transceiver.send_event_to_aio(event)
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
@@ -1291,8 +1303,7 @@ class MatrixTransport(Runnable):
                 data=data.replace("\n", "\\n"),
             )
             if (
-                False
-                and receiver_address in self.aio_gevent_transceiver.peer_connections
+                receiver_address in self.aio_gevent_transceiver.peer_connections
                 and self.aio_gevent_transceiver.peer_connections[receiver_address].channel
                 and self.aio_gevent_transceiver.peer_connections[
                     receiver_address
@@ -1466,9 +1477,7 @@ class MatrixTransport(Runnable):
             )
 
             self._set_room_id_for_address(address, room.room_id)
-
             event = {"type": "create_channel", "data": {}, "address": address}
-
             self.aio_gevent_transceiver.send_event_to_aio(event)
 
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)

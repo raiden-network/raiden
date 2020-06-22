@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 from gevent import monkey  # isort:skip
+import argparse
+import os
+import time
+from dataclasses import dataclass
+from typing import Iterator, List
+
+import gevent
+
+from raiden.utils.nursery import Janitor, Nursery
 
 monkey.patch_all()  # isort:skip
 
@@ -7,14 +16,9 @@ import asyncio  # isort:skip # noqa
 from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
 
 asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
 
-import argparse
-import os
-import time
-from dataclasses import dataclass
-from typing import Iterator, List
 
-from raiden.utils.nursery import Janitor, Nursery
 
 CWD = os.path.dirname(os.path.abspath(__file__))
 GENERATE_MESSAGES_SCRIPT = os.path.join(CWD, "generate_messages.py")
