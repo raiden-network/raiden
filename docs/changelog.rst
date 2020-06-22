@@ -4,7 +4,7 @@ Changelog
 
 * :release:`1.0.2-rc`
 * :feature:`-` Update WebUI to version 1.0.1 https://github.com/raiden-network/webui/releases/tag/v1.0.1
-* :bug:`6310` Fixed dependencies used in `setup.py`.
+* :bug:`6310` Fixed dependencies used in ``setup.py``.
 
 * :release:`1.0.1`
 * :feature:`-` Update WebUI to version 1.0.0 https://github.com/raiden-network/webui/releases/tag/v1.0.0
@@ -48,7 +48,7 @@ Changelog
 * :feature:`5278` Always use private rooms in the matrix transport.
 * :feature:`5217` Fully support infura as an underlying ethereum rpc node.
 * :bug:`5064` Display a user-friendly error message when the PFS info request fails.
-* :bug:`5055` Fix withdraw messages deserialization when the messages are queued in `queueids_to_queues`.
+* :bug:`5055` Fix withdraw messages deserialization when the messages are queued in ``queueids_to_queues``.
 * :feature:`5053` Make mediation fees non-negative by default. This fixes some counter-intuitive behaviour.
 * :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
 * :feature:`-` Update WebUI to version 0.10.1 https://github.com/raiden-network/webui/releases/tag/v0.10.1
@@ -221,7 +221,7 @@ Changelog
 
 * :release:`0.15.0 <2018-10-27>`
 * :bug:`2905` Mediator task must wait for the expired message, not just for the lock to expire, otherwise the channel will be unsychronized.
-* :feature:`2909` Add explicit flag `--unrecoverable-error-should-crash` to control UnrecoverableError crashing behaviour.
+* :feature:`2909` Add explicit flag ``--unrecoverable-error-should-crash`` to control UnrecoverableError crashing behaviour.
 * :bug:`2894` Raiden will no longer miss confirmation blocks at restart and will emit the block state change only for confirmed blocks.
 * :feature:`2857` Respect the ``--environment-type`` for private chain setup.
 * :feature:`2858` Changed contract address argument names to be consistent with the names of the contracts in the contracts repository.
@@ -247,7 +247,7 @@ Changelog
 * :bug:`2662` Fix wrong deserialization of snapshots in special cases.
 * :bug:`2730` Refuse to send a transfer and ignore it during receiving, if its secret is already registered on-chain.
 * :feature:`2713` Added the protocol version in the Ping message.
-* :feature:`2708` Add `--showconfig` CLI flag which dumps all configuration values that will control Raiden behavior.
+* :feature:`2708` Add ``--showconfig`` CLI flag which dumps all configuration values that will control Raiden behavior.
 * :bug:`2720` A lock expired message must be considered invalid if the block in which the lock expired has not been confirmed.
 
 * :release:`0.12.0 <2018-10-05>`
