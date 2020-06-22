@@ -1,4 +1,5 @@
 import asyncio
+import time
 from dataclasses import dataclass
 from typing import Dict
 
@@ -67,6 +68,7 @@ async def create_channel(
             "Received message in aio kingdom",
             node=to_checksum_address(node_address),
             message=message,
+            time=time.time(),
         )
         await ag_transceiver.send_event_to_gevent(
             {"type": "message", "data": message, "address": partner_address}
@@ -96,6 +98,7 @@ async def set_remote_description(
                 "Received message in aio kingdom",
                 node=to_checksum_address(node_address),
                 message=message,
+                time=time.time(),
             )
             await ag_transceiver.send_event_to_gevent(
                 {"type": "message", "data": message, "address": rtc_partner.partner_address}
@@ -117,6 +120,12 @@ async def set_remote_description(
 def send_message(rtc_partner: RTCPartner, message, node_address):
     channel = rtc_partner.channel
     if channel is not None and channel.readyState == "open":
+        log.debug(
+            "sending message in aio kingdom",
+            node=to_checksum_address(node_address),
+            message=message,
+            time=time.time(),
+        )
         channel.send(message)
     else:
         log.debug(
