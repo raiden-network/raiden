@@ -1,6 +1,7 @@
 =========
 Changelog
 =========
+* :feature:`6252` Relax ULID time_monotonic resolution requirement to support WSL.
 
 * :release:`1.0.2-rc`
 * :feature:`-` Update WebUI to version 1.0.1 https://github.com/raiden-network/webui/releases/tag/v1.0.1
