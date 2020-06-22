@@ -80,6 +80,7 @@ class UserPresence(Enum):
     UNAVAILABLE = "unavailable"
     OFFLINE = "offline"
     UNKNOWN = "unknown"
+    SERVER_ERROR = "server_error"
 
 
 class AddressReachability(Enum):
@@ -287,7 +288,7 @@ class UserAddressManager:
             )
 
     def track_address_presence(
-        self, address: Address, user_ids: Union[Set[str], FrozenSet[str]] = frozenset()
+        self, address: Address, user_ids: Union[Set[str], FrozenSet[str]] = None
     ) -> None:
         """
         Update synthesized address presence state.
@@ -295,6 +296,8 @@ class UserAddressManager:
         Triggers callback (if any) in case the state has changed.
         """
         # Is this address already tracked for all given user_ids?
+        if user_ids is None:
+            user_ids = frozenset()
         state_known = (
             self.get_address_reachability_state(address).reachability
             != AddressReachability.UNKNOWN
