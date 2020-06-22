@@ -715,7 +715,10 @@ class MatrixTransport(Runnable):
 
     def aio_event_consumer(self) -> None:
         while not self._stop_event.is_set():
-            event = self.aio_gevent_transceiver.event_to_gevent_queue.get()
+            try:
+                event = self.aio_gevent_transceiver.event_to_gevent_queue.get(timeout=1.0)
+            except Empty:
+                continue
             self.log.debug("Received event from aio", ag_event=event)
             event_type = event["type"]
             event_data = event["data"]
@@ -1170,7 +1173,8 @@ class MatrixTransport(Runnable):
         return validate_and_parse_message(message["content"]["body"], peer_address)
 
     def _process_messages(self, all_messages: List[Message]) -> None:
-        assert self._raiden_service, "_process_messages must be called after start"
+        log.debug("raiden_service", raiden_service=self._raiden_service)
+        assert self._raiden_service is not None, "_process_messages must be called after start"
 
         # Remove this #3254
         for message in all_messages:
@@ -1286,7 +1290,15 @@ class MatrixTransport(Runnable):
                 room=room,
                 data=data.replace("\n", "\\n"),
             )
-            if self.aio_gevent_transceiver.peer_connections[receiver_address].channel:
+            if (
+                False
+                and receiver_address in self.aio_gevent_transceiver.peer_connections
+                and self.aio_gevent_transceiver.peer_connections[receiver_address].channel
+                and self.aio_gevent_transceiver.peer_connections[
+                    receiver_address
+                ].channel.readyState
+                == "open"
+            ):
                 event = {"type": "message", "data": data, "address": receiver_address}
                 self.aio_gevent_transceiver.send_event_to_aio(event)
             else:

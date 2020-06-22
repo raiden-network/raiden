@@ -133,7 +133,9 @@ async def run_aiortc(transceiver: AGTransceiver, node_address, stop_event):
     )
 
     while not stop_event.is_set():
-        event = await transceiver.aget_event()
+        event = await transceiver.aget_event(timeout=1.0)
+        if event["type"] == "timeout":
+            continue
         await handle_event(transceiver, peer_connections, event, node_address)
 
     log.debug(

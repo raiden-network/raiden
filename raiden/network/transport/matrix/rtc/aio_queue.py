@@ -1,11 +1,14 @@
+from asyncio import Future
+from typing import Callable
+
 import gevent
 from gevent.lock import Semaphore
-from gevent.queue import Queue
+from gevent.queue import Empty, Queue
 
 from raiden.network.transport.matrix.rtc import aiogevent
 
 
-def make_wrapped_greenlet(target, *args, **kwargs):
+def make_wrapped_greenlet(target: Callable, *args, **kwargs) -> Future:
     glet = gevent.Greenlet(target, *args, **kwargs)
     wrapped_glet = aiogevent.wrap_greenlet(glet)
     glet.start()
@@ -21,16 +24,20 @@ class AGTransceiver:
     def send_event_to_aio(self, event):
         self.event_to_aio_queue.put(event)
 
-    async def aget_event(self):
-        return await self.event_to_aio_queue.aget()
+    async def aget_event(self, timeout):
+        try:
+            event = await self.event_to_aio_queue.aget(timeout)
+        except Empty:
+            return {"type": "timeout"}
+        return event
 
     async def send_event_to_gevent(self, event):
         await self.event_to_gevent_queue.aput(event)
 
 
 class AGQueue(Queue):
-    async def aget(self):
-        return await make_wrapped_greenlet(self.get)
+    async def aget(self, timeout):
+        return await make_wrapped_greenlet(self.get, timeout=timeout)
 
     async def aput(self, item):
         await make_wrapped_greenlet(self.put, item)

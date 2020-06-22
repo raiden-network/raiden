@@ -1,3 +1,4 @@
+import time
 from http import HTTPStatus
 
 import grequests
@@ -77,6 +78,7 @@ def test_api_payments(
         "identifier": str(identifier),
     }
 
+    start_time = time.time()
     # Test a normal payment
     request = grequests.post(
         api_url_for(
@@ -87,6 +89,10 @@ def test_api_payments(
         ),
         json={"amount": str(amount), "identifier": str(identifier)},
     )
+    end_time = time.time()
+    print("-------------------")
+    print(f"TOOK {end_time-start_time}")
+    print("-------------------")
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response
     assert_proper_response(response)
