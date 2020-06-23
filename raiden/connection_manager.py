@@ -1,6 +1,6 @@
 import random
 from random import shuffle
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List
 
 import gevent
 import structlog
@@ -172,13 +172,15 @@ class ConnectionManager:  # pragma: no unittest
             self.joinable_funds_target = joinable_funds_target
 
             log_open_channels(self.raiden, self.registry_address, self.token_address, funds)
-            have_online_partners, potential_partners = self._have_online_channels_to_connect_to()
-            if not have_online_partners:
-                bootstrap_address = (
-                    self.BOOTSTRAP_ADDR
-                    if len(potential_partners) == 0
-                    else random.choice(potential_partners)
-                )
+            available_addresses = self._find_available_addresses(offline=False)
+            # no other nodes are online, we have to bootstrap the network
+            if not available_addresses:
+                potential_addresses = self._find_available_addresses(offline=True)
+                # if there are zero offline addresses, we use the virtual bootstrap peer
+                if not potential_addresses:
+                    bootstrap_address = self.BOOTSTRAP_ADDR
+                else:
+                    bootstrap_address = random.choice(potential_addresses)
                 log.info(
                     "Bootstrapping token network.",
                     node=to_checksum_address(self.raiden.address),
@@ -193,7 +195,7 @@ class ConnectionManager:  # pragma: no unittest
                         partner_address=bootstrap_address,
                     )
                 except DuplicatedChannelError:
-                    # If we have none else to connect to and connect got called twice
+                    # If we have no one else to connect to and connect got called twice
                     # then it's possible to already have channel with the bootstrap node.
                     # In that case do nothing
                     pass
@@ -317,21 +319,22 @@ class ConnectionManager:  # pragma: no unittest
             if self._funds_remaining > 0 and not self._leaving_state:
                 self._open_channels()
 
-    def _have_online_channels_to_connect_to(self) -> Tuple[bool, List[Address]]:
-        """Returns whether there are any possible new online channel partners to connect to
+    def _find_available_addresses(self, offline: bool = False) -> List[Address]:
+        """Returns any possible new channel partners to connect to.
 
-        If there are channels online the first element of the returned tuple is True
-        The second element is the list of all potential addresses to connect to(online and offline)
+        Args:
+            offline: if True, return offline addresses as fallback.
         """
         potential_addresses = self._find_new_partners()
-        have_online_channels = False
+        available_addresses = list()
         for address in potential_addresses:
             reachability = self.raiden.transport.force_check_address_reachability(address)
             if reachability == AddressReachability.REACHABLE:
-                have_online_channels = True
-                break
+                available_addresses.append(address)
 
-        return have_online_channels, potential_addresses
+        if offline and not available_addresses:
+            return potential_addresses
+        return available_addresses
 
     def _find_new_partners(self) -> List[Address]:
         """ Search the token network for potential channel partners. """
@@ -437,13 +440,13 @@ class ConnectionManager:  # pragma: no unittest
             for channel_state in open_channels
             if channel_state not in funded_channels
         ]
-        possible_new_partners = self._find_new_partners()
 
         # if we already met our target, break
         if len(funded_channels) >= self.initial_channel_target:
             return False
 
-        # if we didn't, but there's no nonfunded channels and no available partners
+        possible_new_partners = self._find_available_addresses(offline=False)
+        # if we didn't, but there are no nonfunded channels and no available partners
         # it means the network is smaller than our target, so we should also break
         if len(nonfunded_channels) == 0 and len(possible_new_partners) == 0:
             return False
@@ -456,14 +459,10 @@ class ConnectionManager:  # pragma: no unittest
         # until initial_channel_target of funded channels is met
         possible_partners = nonfunded_partners + possible_new_partners
         join_partners: List[Address] = []
-        # Also filter the possible partners by excluding offline addresses
         for possible_partner in possible_partners:
             if len(join_partners) == n_to_join:
                 break
-
-            reachability = self.raiden.transport.force_check_address_reachability(possible_partner)
-            if reachability == AddressReachability.REACHABLE:
-                join_partners.append(possible_partner)
+            join_partners.append(possible_partner)
 
         log.debug(
             "Spawning greenlets to join partners",
