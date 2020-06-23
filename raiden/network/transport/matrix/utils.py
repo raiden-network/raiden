@@ -421,17 +421,18 @@ class UserAddressManager:
         if user.displayname is None:
             new_state = UserPresence.SERVER_ERROR
             self._set_user_presence(user_id, new_state, presence_update_id)
-        else:
-            address = self._validate_userid_signature(user)
-            if not address:
-                return
+            return
 
-            self.add_userid_for_address(address, user_id)
+        address = self._validate_userid_signature(user)
+        if not address:
+            return
 
-            new_state = UserPresence(event["content"]["presence"])
+        self.add_userid_for_address(address, user_id)
 
-            self._set_user_presence(user_id, new_state, presence_update_id)
-            self._maybe_address_reachability_changed(address)
+        new_state = UserPresence(event["content"]["presence"])
+
+        self._set_user_presence(user_id, new_state, presence_update_id)
+        self._maybe_address_reachability_changed(address)
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
