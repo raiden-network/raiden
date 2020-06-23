@@ -440,6 +440,8 @@ class RaidenService(Runnable):
         # - Send pending message
         self.alarm.greenlet.link_exception(self.on_error)
         self.transport.greenlet.link_exception(self.on_error)
+        if self.api_server:
+            self.api_server.greenlet.link_exception(self.on_error)
         self._start_transport(chain_state)
         self._start_alarm_task()
 
