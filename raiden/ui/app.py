@@ -263,20 +263,7 @@ def run_app(
         cli_token_to_proportional_imbalance_fee=proportional_imbalance_fee,
         cli_cap_mediation_fees=cap_mediation_fees,
     )
-
-    config = RaidenConfig(chain_id=network_id, environment_type=environment_type)
-    config.console = console
-
-    config.blockchain.query_interval = blockchain_query_interval
-
-    config.mediation_fees = fee_config
-
-    config.services.monitoring_enabled = enable_monitoring
-    config.services.pathfinding_max_paths = pathfinding_max_paths
-
-    config.transport.server = matrix_server
-
-    config.rest_api = RestApiConfig(
+    rest_api_config = RestApiConfig(
         rest_api_enabled=rpc,
         web_ui_enabled=rpc and web_ui,
         cors_domain_list=domain_list,
@@ -285,11 +272,21 @@ def run_app(
         port=api_port,
     )
 
-    config.unrecoverable_error_should_crash = unrecoverable_error_should_crash
-    config.resolver_endpoint = resolver_endpoint
-
-    config.reveal_timeout = default_reveal_timeout
-    config.settle_timeout = default_settle_timeout
+    config = RaidenConfig(
+        chain_id=network_id,
+        environment_type=environment_type,
+        reveal_timeout=default_reveal_timeout,
+        settle_timeout=default_settle_timeout,
+        console=console,
+        mediation_fees=fee_config,
+        unrecoverable_error_should_crash=unrecoverable_error_should_crash,
+        resolver_endpoint=resolver_endpoint,
+        rest_api=rest_api_config,
+    )
+    config.blockchain.query_interval = blockchain_query_interval
+    config.services.monitoring_enabled = enable_monitoring
+    config.services.pathfinding_max_paths = pathfinding_max_paths
+    config.transport.server = matrix_server
 
     contracts = load_deployed_contracts_data(config, network_id)
 
