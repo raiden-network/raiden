@@ -105,6 +105,7 @@ USER_PRESENCE_TO_ADDRESS_REACHABILITY = {
     UserPresence.UNAVAILABLE: AddressReachability.REACHABLE,
     UserPresence.OFFLINE: AddressReachability.UNREACHABLE,
     UserPresence.UNKNOWN: AddressReachability.UNKNOWN,
+    UserPresence.SERVER_ERROR: AddressReachability.UNKNOWN,
 }
 
 
