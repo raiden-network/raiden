@@ -296,7 +296,7 @@ def timeout_for_setup_and_call(item):
 
     def report():
         gevent.util.print_run_info()
-        pytest.fail(f"Setup and Call timeout >{item.timeout_setup_and_call}s")
+        raise RetryTestError(f"Setup and Call timeout >{item.timeout_setup_and_call}s")
 
     def handler(signum, frame):  # pylint: disable=unused-argument
         report()
