@@ -7,7 +7,6 @@ import structlog
 from eth_typing import HexStr
 from eth_utils import to_canonical_address
 from gevent import Greenlet
-from gevent.event import Event
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -129,7 +128,6 @@ class ConnectionManager:  # pragma: no unittest
 
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
         self._retry_greenlet: Optional[Greenlet] = None
-        self._new_channel_signal = Event()
         self.api = RaidenAPI(raiden)
 
     def connect(
@@ -203,13 +201,6 @@ class ConnectionManager:  # pragma: no unittest
                     pass
             else:
                 self._open_channels()
-        no_retry_greenlet = (
-            self._retry_greenlet is None
-            or not self._retry_greenlet.started
-            or self._retry_greenlet.dead
-        )
-        if no_retry_greenlet:
-            self.retry_greenlet = spawn_named("cm-retry_connect", self.retry_connect)
 
     def leave(self, registry_address: TokenNetworkRegistryAddress) -> List[NettingChannelState]:
         """ Leave the token network.
@@ -241,9 +232,15 @@ class ConnectionManager:  # pragma: no unittest
                 self.raiden.alarm.sleep_time,
             )
 
-        # This will clear `retry_connect`:
-        self._new_channel_signal.set()
         return channels_to_close
+
+    def spawn_retry(self) -> Optional[Greenlet]:
+        """This makes sure, there is only one retry greenlet running at a time."""
+
+        if not self._retry_greenlet:
+            self._retry_greenlet = spawn_named("cm-retry_connect", self.retry_connect)
+            return self._retry_greenlet
+        return None
 
     def join_channel(self, partner_address: Address, partner_deposit: TokenAmount) -> None:
         """Will be called, when we were selected as channel partner by another
@@ -326,12 +323,9 @@ class ConnectionManager:  # pragma: no unittest
 
         If the connection manager has no funds, this is a noop.
         """
-        while not self._leaving_state:
-            self._new_channel_signal.get()
-            self._new_channel_signal.clear()
-            with self.lock:
-                if self._funds_remaining > 0 and not self._leaving_state:
-                    self._open_channels()
+        with self.lock:
+            if self._funds_remaining > 0 and not self._leaving_state:
+                self._open_channels()
 
     def _have_online_channels_to_connect_to(self) -> Tuple[bool, List[Address]]:
         """Returns whether there are any possible new online channel partners to connect to

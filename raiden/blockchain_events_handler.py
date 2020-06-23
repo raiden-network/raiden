@@ -24,7 +24,9 @@ def after_new_route_join_network(
     connection_manager = raiden.connection_manager_for_token_network(
         channelnew.token_network_address
     )
-    connection_manager._new_channel_signal.set()
+    retry_greenlet = connection_manager.spawn_retry()
+    if retry_greenlet is not None:
+        raiden.add_pending_greenlet(retry_greenlet)
 
 
 def after_new_channel_start_healthcheck(
