@@ -43,7 +43,7 @@ class Translator(dict):
     """ Dictionary class with re substitution capabilities. """
 
     def __init__(self, *args, **kwargs):
-        kwargs = dict((k.lower(), v) for k, v in args[0].items())
+        kwargs = {k.lower(): v for k, v in args[0].items()}
         super().__init__(kwargs)
         self._extra_keys: Dict[str, str] = dict()
         self._regex = None

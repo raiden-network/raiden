@@ -118,7 +118,7 @@ def create_model(balance, num_pending_locks=0):
     privkey, address = make_privkey_address()
 
     locks = [make_lock() for _ in range(num_pending_locks)]
-    pending_locks = list(bytes(lock.encoded) for lock in locks)
+    pending_locks = [bytes(lock.encoded) for lock in locks]
 
     our_model = PartnerStateModel(
         participant_address=address,

@@ -166,7 +166,7 @@ def test_sort_servers_closest(requests_responses):
     sorted_servers = sort_servers_closest(
         ["http://url0", "http://url1", "http://url2", "http://url3"], max_timeout=0.3
     )
-    rtts = list(round(rtt, 2) for rtt in sorted_servers.values())
+    rtts = [round(rtt, 2) for rtt in sorted_servers.values()]
 
     assert len(sorted_servers) == 2
     assert all(rtts) and rtts == sorted(rtts)

@@ -190,7 +190,7 @@ def get_token_identifiers(
 
     if token_network_registry is not None:
         token_addresses = token_network_registry.tokenaddresses_to_tokennetworkaddresses.keys()
-        return [token_address for token_address in token_addresses]
+        return list(token_addresses)
 
     return list()
 
