@@ -189,12 +189,12 @@ def get_pending_transfer_pairs(
     transfers_pair: List[MediationPairState],
 ) -> List[MediationPairState]:
     """ Return the transfer pairs that are not at a final state. """
-    pending_pairs = list(
+    pending_pairs = [
         pair
         for pair in transfers_pair
         if pair.payee_state not in STATE_TRANSFER_FINAL
         or pair.payer_state not in STATE_TRANSFER_FINAL
-    )
+    ]
     return pending_pairs
 
 

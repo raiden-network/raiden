@@ -45,7 +45,7 @@ if args.header:
 else:
     reader = csv.DictReader(sys.stdin)
 
-lines = list(list() for _ in range(len(args.line)))
+lines = [list() for _ in range(len(args.line))]
 
 if args.x:
     x_axis = list()
