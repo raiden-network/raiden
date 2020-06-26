@@ -771,90 +771,82 @@ def test_payment_events_endpoints(
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
 
+    # predefine events for later use in assertions
+    event_sent_1 = {
+        "event": "EventPaymentSentSuccess",
+        "identifier": str(identifier1),
+        "target": to_checksum_address(app1_address),
+        "token_address": to_checksum_address(token_address0),
+    }
+    event_sent_2 = {
+        "event": "EventPaymentSentSuccess",
+        "identifier": str(identifier2),
+        "target": to_checksum_address(app2_address),
+        "token_address": to_checksum_address(token_address2),
+    }
+    event_sent_3 = {
+        "event": "EventPaymentSentSuccess",
+        "identifier": str(identifier3),
+        "target": to_checksum_address(app1_address),
+        "token_address": to_checksum_address(token_address0),
+    }
+    event_sent_4 = {
+        "event": "EventPaymentSentSuccess",
+        "identifier": str(identifier4),
+        "target": to_checksum_address(app2_address),
+        "token_address": to_checksum_address(token_address0),
+    }
+    event_received_1 = {
+        "event": "EventPaymentReceivedSuccess",
+        "identifier": str(identifier1),
+        "initiator": to_checksum_address(app0_address),
+        "token_address": to_checksum_address(token_address0),
+    }
+    event_received_2 = {
+        "event": "EventPaymentReceivedSuccess",
+        "identifier": str(identifier2),
+        "initiator": to_checksum_address(app0_address),
+        "token_address": to_checksum_address(token_address2),
+    }
+    event_received_3 = {
+        "event": "EventPaymentReceivedSuccess",
+        "identifier": str(identifier3),
+        "initiator": to_checksum_address(app0_address),
+        "token_address": to_checksum_address(token_address0),
+    }
+    event_received_4 = {
+        "event": "EventPaymentReceivedSuccess",
+        "identifier": str(identifier4),
+        "initiator": to_checksum_address(app1_address),
+        "token_address": to_checksum_address(token_address0),
+    }
+
     # test app0 endpoint without (partner and token) for sender
     request = grequests.get(api_url_for(app0_server, "paymentresource"))
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier1),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier2),
-            "target": to_checksum_address(app2_address),
-            "token_address": to_checksum_address(token_address2),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier3),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+
+    assert must_have_event(json_response, event_sent_1)
+    assert must_have_event(json_response, event_sent_2)
+    assert must_have_event(json_response, event_sent_3)
 
     # test endpoint without (partner and token) for target1
     request = grequests.get(api_url_for(app1_server, "paymentresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier1),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier3),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier4),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_received_1)
+    assert must_have_event(json_response, event_received_3)
+    assert must_have_event(json_response, event_sent_4)
     # test endpoint without (partner and token) for target2
     request = grequests.get(api_url_for(app2_server, "paymentresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier2),
-            "token_address": to_checksum_address(token_address2),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier4),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_received_2)
+    assert must_have_event(json_response, event_received_4)
 
     # test endpoint without partner for app0
     request = grequests.get(
@@ -863,24 +855,9 @@ def test_payment_events_endpoints(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier1),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier3),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+
+    assert must_have_event(json_response, event_sent_1)
+    assert must_have_event(json_response, event_sent_3)
 
     # test endpoint without partner for app0 but with limit/offset to get only first
     request = grequests.get(
@@ -892,15 +869,7 @@ def test_payment_events_endpoints(
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
 
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier1),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_sent_1)
     assert len(json_response) == 1
 
     # test endpoint without partner for app0 but with limit/offset
@@ -917,14 +886,7 @@ def test_payment_events_endpoints(
     # this should return only payment 3, since payment 1 is offset
     # and payment 2 is of another token address
     assert len(json_response) == 1
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier3),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_sent_3)
 
     # test endpoint of app1 without partner for token_address
     request = grequests.get(
@@ -933,30 +895,9 @@ def test_payment_events_endpoints(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier1),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier3),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier4),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_events(json_response, event_received_1)
+    assert must_have_events(json_response, event_received_3)
+    assert must_have_events(json_response, event_sent_4)
 
     # test endpoint of app2 without partner for token_address
     request = grequests.get(
@@ -965,14 +906,7 @@ def test_payment_events_endpoints(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier4),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_events(json_response, event_received_4)
 
     # test endpoint of app2 without partner for token_address2
     request = grequests.get(
@@ -981,14 +915,7 @@ def test_payment_events_endpoints(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier2),
-            "token_address": to_checksum_address(token_address2),
-        },
-    )
+    assert must_have_events(json_response, event_received_2)
 
     # test endpoint for token_address0 and partner for app0
     request = grequests.get(
@@ -1003,24 +930,8 @@ def test_payment_events_endpoints(
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
     assert len(json_response) == 2
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier1),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier3),
-            "target": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_sent_1)
+    assert must_have_event(json_response, event_sent_3)
 
     request = grequests.get(
         api_url_for(
@@ -1034,15 +945,7 @@ def test_payment_events_endpoints(
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
     assert len(json_response) == 1
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier2),
-            "target": to_checksum_address(app2_address),
-            "token_address": to_checksum_address(token_address2),
-        },
-    )
+    assert must_have_event(json_response, event_sent_2)
 
     # test endpoint for token_address0 and partner for app1. Check both partners
     # to see that filtering works correctly
@@ -1058,15 +961,7 @@ def test_payment_events_endpoints(
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
     assert len(json_response) == 1
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentSentSuccess",
-            "identifier": str(identifier4),
-            "target": to_checksum_address(app2_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_sent_4)
 
     request = grequests.get(
         api_url_for(
@@ -1080,24 +975,8 @@ def test_payment_events_endpoints(
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
     assert len(json_response) == 2
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier1),
-            "initiator": to_checksum_address(app0_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier3),
-            "initiator": to_checksum_address(app0_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
+    assert must_have_event(json_response, event_received_1)
+    assert must_have_event(json_response, event_received_3)
 
     # test app1 checking payments to himself
     request = grequests.get(
@@ -1143,15 +1022,7 @@ def test_payment_events_endpoints(
 
     # app2 has one payment with app0 in token_address2
     assert len(json_response) == 1
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier2),
-            "initiator": to_checksum_address(app0_address),
-            "token_address": to_checksum_address(token_address2),
-        },
-    )
+    assert must_have_events(json_response, event_received_2)
 
     request = grequests.get(
         api_url_for(
@@ -1164,24 +1035,8 @@ def test_payment_events_endpoints(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_events(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier4),
-            "initiator": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address0),
-        },
-    )
-    assert not must_have_event(
-        json_response,
-        {
-            "event": "EventPaymentReceivedSuccess",
-            "identifier": str(identifier2),
-            "initiator": to_checksum_address(app1_address),
-            "token_address": to_checksum_address(token_address2),
-        },
-    )
+    assert must_have_events(json_response, event_received_4)
+    assert not must_have_event(json_response, event_received_2)
 
     # also add a test for filtering by wrong token address
     request = grequests.get(
