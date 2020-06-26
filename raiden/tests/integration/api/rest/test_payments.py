@@ -332,18 +332,7 @@ def test_api_payments_with_resolver(
     secret = factories.make_secret()
     secret_hash = sha256_secrethash(secret)
 
-    our_address = api_server_test_instance.rest_api.raiden_api.address
-
-    payment = {
-        "initiator_address": to_checksum_address(our_address),
-        "target_address": to_checksum_address(target_address),
-        "token_address": to_checksum_address(token_address),
-        "amount": str(amount),
-        "identifier": str(identifier),
-    }
-
     # payment with secret_hash when both resolver and initiator don't have the secret
-
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -359,10 +348,8 @@ def test_api_payments_with_resolver(
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
-    assert payment == payment
 
     # payment with secret where the resolver doesn't have the secret. Should work.
-
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -374,10 +361,8 @@ def test_api_payments_with_resolver(
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert payment == payment
 
     # payment with secret_hash where the resolver has the secret. Should work.
-
     secret = Secret(
         decode_hex("0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e")
     )
@@ -399,7 +384,6 @@ def test_api_payments_with_resolver(
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert payment == payment
 
 
 @raise_on_failure
