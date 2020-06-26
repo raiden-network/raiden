@@ -46,6 +46,7 @@ from raiden.api.v1.resources import (
     ConnectionsResource,
     MintTokenResource,
     PartnersResourceByTokenAddress,
+    PaymentEventsResource,
     PaymentResource,
     PendingTransfersResource,
     PendingTransfersResourceByTokenAddress,
@@ -144,8 +145,8 @@ URLS_V1 = [
     ),
     ("/connections/<hexaddress:token_address>", ConnectionsResource),
     ("/connections", ConnectionsInfoResource),
-    ("/payments", PaymentResource),
-    ("/payments/<hexaddress:token_address>", PaymentResource, "token_paymentresource"),
+    ("/payments", PaymentEventsResource, "paymentresource"),
+    ("/payments/<hexaddress:token_address>", PaymentEventsResource, "token_paymentresource"),
     (
         "/payments/<hexaddress:token_address>/<hexaddress:target_address>",
         PaymentResource,
