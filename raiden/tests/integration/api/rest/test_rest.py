@@ -1332,7 +1332,6 @@ def test_api_testnet_token_mint(api_server_test_instance: APIServer, token_addre
     user_address = factories.make_checksum_address()
     token_address = token_addresses[0]
     url = api_url_for(api_server_test_instance, "tokensmintresource", token_address=token_address)
-
     request = grequests.post(url, json=dict(to=user_address, value=1))
     response = request.send().response
     assert_response_with_code(response, HTTPStatus.OK)
@@ -1351,6 +1350,12 @@ def test_api_testnet_token_mint(api_server_test_instance: APIServer, token_addre
     request = grequests.post(url, json=dict(to=user_address[:-2], value=10))
     response = request.send().response
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    # trying to mint with no ETH
+    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
+    request = grequests.post(url, json=dict(to=user_address, value=1))
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.PAYMENT_REQUIRED)
 
 
 @raise_on_failure
