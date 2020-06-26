@@ -279,16 +279,6 @@ def test_api_payments_with_hash_no_secret(
     secret = to_hex(factories.make_secret())
     secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
 
-    our_address = api_server_test_instance.rest_api.raiden_api.address
-
-    payment = {
-        "initiator_address": to_checksum_address(our_address),
-        "target_address": to_checksum_address(target_address),
-        "token_address": to_checksum_address(token_address),
-        "amount": str(amount),
-        "identifier": str(identifier),
-    }
-
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -300,7 +290,27 @@ def test_api_payments_with_hash_no_secret(
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
-    assert payment == payment
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_payments_post_without_required_params(api_server_test_instance, token_addresses):
+    token_address = token_addresses[0]
+
+    request = grequests.post(api_url_for(api_server_test_instance, "paymentresource",),)
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.METHOD_NOT_ALLOWED)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_paymentresource",
+            token_address=to_checksum_address(token_address),
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.METHOD_NOT_ALLOWED)
 
 
 @raise_on_failure

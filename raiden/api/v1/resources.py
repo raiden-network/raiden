@@ -258,15 +258,27 @@ class ConnectionsInfoResource(BaseResource):
         )
 
 
-class PaymentResource(BaseResource):
+class PaymentEventsResource(BaseResource):
+    get_schema = RaidenEventsRequestSchema()
 
+    @if_api_available
+    def get(self, token_address: TokenAddress = None) -> Response:
+        kwargs = validate_query_params(self.get_schema)
+        return self.rest_api.get_raiden_events_payment_history_with_timestamps(
+            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
+            token_address=token_address,
+            **kwargs,
+        )
+
+
+class PaymentResource(BaseResource):
     post_schema = PaymentSchema(
         only=("amount", "identifier", "secret", "secret_hash", "lock_timeout")
     )
     get_schema = RaidenEventsRequestSchema()
 
     @if_api_available
-    def get(self, token_address: TokenAddress = None, target_address: Address = None) -> Response:
+    def get(self, token_address: TokenAddress, target_address: Address) -> Response:
         kwargs = validate_query_params(self.get_schema)
         return self.rest_api.get_raiden_events_payment_history_with_timestamps(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
