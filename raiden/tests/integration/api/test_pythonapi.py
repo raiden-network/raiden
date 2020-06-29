@@ -577,46 +577,6 @@ def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
 
 
 @raise_on_failure
-@pytest.mark.parametrize("deposit", [10])
-@pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize("number_of_nodes", [2])
-def test_create_monitoring_request(raiden_network, token_addresses):
-    app0, app1 = raiden_network
-    token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
-    token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry_address,
-        token_address=token_address,
-    )
-    assert token_network_address
-
-    payment_identifier = create_default_identifier()
-    transfer(
-        initiator_app=app1,
-        target_app=app0,
-        token_address=token_address,
-        amount=PaymentAmount(1),
-        identifier=payment_identifier,
-    )
-    chain_state = views.state_from_raiden(app0.raiden)
-    channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state, token_network_address, app1.raiden.address
-    )
-    assert channel_state
-    balance_proof = cast(BalanceProofSignedState, channel_state.partner_state.balance_proof)
-    api = RaidenAPI(app0.raiden)
-    request = api.create_monitoring_request(
-        balance_proof=balance_proof, reward_amount=TokenAmount(1)
-    )
-    assert request
-    as_dict = DictSerializer.serialize(request)
-    from_dict = DictSerializer.deserialize(as_dict)
-    assert DictSerializer.serialize(from_dict) == as_dict
-
-
-@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_token_addresses(raiden_network, token_addresses):

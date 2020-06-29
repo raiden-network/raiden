@@ -1283,30 +1283,6 @@ class RaidenAPI:  # pragma: no unittest
         returned_events.sort(key=lambda evt: evt.get("block_number"), reverse=True)
         return returned_events
 
-    def create_monitoring_request(
-        self, balance_proof: BalanceProofSignedState, reward_amount: TokenAmount
-    ) -> Optional[RequestMonitoring]:
-        """ This method can be used to create a `RequestMonitoring` message.
-        It will contain all data necessary for an external monitoring service to
-        - send an updateNonClosingBalanceProof transaction to the TokenNetwork contract,
-        for the `balance_proof` that we received from a channel partner.
-        - claim the `reward_amount` from the UDC.
-        """
-        # create RequestMonitoring message from the above + `reward_amount`
-
-        msg = "Default monitoring service address should not be None"
-        assert self.raiden.default_msc_address is not None, msg
-
-        monitor_request = RequestMonitoring.from_balance_proof_signed_state(
-            balance_proof=balance_proof,
-            non_closing_participant=self.raiden.address,
-            reward_amount=reward_amount,
-            monitoring_service_contract_address=self.raiden.default_msc_address,
-        )
-        # sign RequestMonitoring and return
-        monitor_request.sign(self.raiden.signer)
-        return monitor_request
-
     def get_pending_transfers(
         self, token_address: TokenAddress = None, partner_address: Address = None
     ) -> List[Dict[str, Any]]:
