@@ -1,12 +1,23 @@
 import structlog
 
 from raiden import constants
-from raiden.constants import BLOCK_ID_LATEST, RoutingMode
+from raiden.constants import (
+    BLOCK_ID_LATEST,
+    DAI_TOKEN_ADDRESS,
+    WETH_TOKEN_ADDRESS,
+    Environment,
+    RoutingMode,
+)
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
-from raiden.settings import MONITORING_REWARD
+from raiden.settings import (
+    MIN_MONITORING_AMOUNT_DAI,
+    MIN_MONITORING_AMOUNT_WETH,
+    MONITORING_REWARD,
+)
 from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState
+from raiden.transfer.channel import get_balance
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import ChainState
 from raiden.utils.formatting import to_checksum_address
@@ -93,6 +104,47 @@ def update_monitoring_service_from_balance_proof(
             f"the required monitoring service reward of {rdn_reward}"
         )
         return
+
+    # In production there should be no MonitoringRequest if
+    # channel balance is below a certain threshold. This is
+    # a naive approach that needs to be worked on in the future
+    if raiden.config.environment_type == Environment.PRODUCTION:
+        message = (
+            "Skipping update to Monitoring service. "
+            "Your channel balance {channel_balance} is less than "
+            "the required minimum balance of {min_balance} "
+            "that you have set before sending the MonitorRequest"
+        )
+
+        dai_token_network_address = views.get_token_network_address_by_token_address(
+            chain_state=chain_state,
+            token_network_registry_address=raiden.default_registry.address,
+            token_address=DAI_TOKEN_ADDRESS,
+        )
+        weth_token_network_address = views.get_token_network_address_by_token_address(
+            chain_state=chain_state,
+            token_network_registry_address=raiden.default_registry.address,
+            token_address=WETH_TOKEN_ADDRESS,
+        )
+        channel_balance = get_balance(
+            sender=channel_state.our_state, receiver=channel_state.partner_state,
+        )
+        if channel_state.canonical_identifier.token_network_address == dai_token_network_address:
+            if channel_balance < MIN_MONITORING_AMOUNT_DAI:
+                log.warning(
+                    message.format(
+                        channel_balance=channel_balance, min_balance=MIN_MONITORING_AMOUNT_DAI
+                    )
+                )
+                return
+        if channel_state.canonical_identifier.token_network_address == weth_token_network_address:
+            if channel_balance < MIN_MONITORING_AMOUNT_WETH:
+                log.warning(
+                    message.format(
+                        channel_balance=channel_balance, min_balance=MIN_MONITORING_AMOUNT_WETH
+                    )
+                )
+                return
 
     log.info(
         "Received new balance proof, creating message for Monitoring Service.",
