@@ -50,8 +50,9 @@ execnet==1.6.0            # via -r requirements-dev.txt, pytest-xdist
 fancycompleter==0.8       # via -r requirements-dev.txt, pdbpp
 filelock==3.0.12          # via -r requirements-dev.txt
 flake8-bugbear==20.1.4    # via -r requirements-dev.txt
+flake8-comprehensions==3.2.3  # via -r requirements-dev.txt
 flake8-tuple==0.4.1       # via -r requirements-dev.txt
-flake8==3.8.3             # via -r requirements-dev.txt, flake8-bugbear, flake8-tuple
+flake8==3.8.3             # via -r requirements-dev.txt, flake8-bugbear, flake8-comprehensions, flake8-tuple
 flaky==3.6.1              # via -r requirements-dev.txt
 flask-cors==3.0.8         # via -r requirements-dev.txt
 flask-restful==0.3.8      # via -r requirements-dev.txt
@@ -71,7 +72,7 @@ importlib-metadata==1.6.1  # via -r requirements-dev.txt, pluggy
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 ipfshttpclient==0.4.12    # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
-ipython==7.15.0           # via -r requirements-dev.txt
+ipython==7.16.1           # via -r requirements-dev.txt
 isort==4.3.21             # via -r requirements-dev.txt, pylint
 itsdangerous==1.1.0       # via -r requirements-dev.txt, flask
 jedi==0.17.0              # via -r requirements-dev.txt, ipython
