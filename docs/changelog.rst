@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :bug:`6217` Don't crash at ``/payments`` when no target address is given.
+* :feature:`-` Adds minimum required balance to send out MonitorRequest on mainnet
 * :bug:`6323` Handling no ETH exception in the minting endpoint.
 
 * :release:`1.0.2-rc`
