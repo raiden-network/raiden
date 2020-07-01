@@ -6,37 +6,38 @@ Changelog
 * :feature:`-` Adds minimum required balance to send out MonitorRequest on mainnet
 * :bug:`6323` Handling no ETH exception in the minting endpoint.
 
-* :release:`1.0.2-rc`
-* :feature:`-` Update WebUI to version 1.0.1 https://github.com/raiden-network/webui/releases/tag/v1.0.1
-* :bug:`6310` Fixed dependencies used in `setup.py`.
+* :release:`1.1.0 <2020-06-18>`
 
-* :release:`1.0.1`
+* :release:`1.0.2-rc <2020-06-17>`
+* :feature:`-` Update WebUI to version 1.0.1 https://github.com/raiden-network/webui/releases/tag/v1.0.1
+* :bug:`6310` Fixed dependencies used in ``setup.py``.
+
+* :release:`1.0.1 <2020-06-15>`
 * :feature:`-` Update WebUI to version 1.0.0 https://github.com/raiden-network/webui/releases/tag/v1.0.0
 * :feature:`6220` Make sure the configured PFS and Matrix servers use the same chain and smart contracts.
 * :bug:`6224` Fix ULID generation under Windows, nanosecond clock resolution is not necessary anymore.
 
-* :release:`1.0.0`
-
+* :release:`1.0.0 <2020-05-26>`
 * :feature:`-` Update WebUI to version 0.11.1 https://github.com/raiden-network/webui/releases/tag/v0.11.1
 
-* :release:`0.200.0-rc9`
+* :release:`0.200.0-rc9 <2020-05-19>`
 
-* :release:`0.200.0-rc8`
+* :release:`0.200.0-rc8 <2020-04-21>`
 * :feature:`5338` The number of blocks queried for events is now dynamically adjusted. This is necessary to prevent timeouts because the Ethereum client is overloaded.
 * :bug:`6082` Small bug fix, use of undefined variable.
 * :bug:`6083` Weakened byte code check to prevent errors with client pruning.
 * :bug:`6071` Fixed transport race condition which prevented a node to restart after a failure.
 * :bug:`6075` Fixed serialization problem for pending transactions.
 
-* :release:`0.200.0-rc7`
+* :release:`0.200.0-rc7 <2020-04-16>`
 * :bug:`6077` Fix missing requirement to build macOS binaries
 
-* :release:`0.200.0-rc6`
+* :release:`0.200.0-rc6 <2020-04-16>`
 * :bug:`6072` Always return valid JSON on the config endpoint, even when the REST API is starting.
 * :bug:`6067` Workaround gevent's bug on wait for single elements.
 * :bug:`6066` Workaround slow speed of geth on mainnet for eth_getLogs.
 
-* :release:`0.200.0-rc3`
+* :release:`0.200.0-rc3 <2020-03-26>`
 * :feature:`5281` Add a /status endpoint; start the API earlier and return 503 SERVICE UNAVAILABLE during the initial sync.
 * :feature:`4588` Remove the echo_node subcommand of the command line interface.
 * :bug:`5779` Handle the API exception when no further token networks can be registered by returning 403 FORBIDDEN.
@@ -52,7 +53,7 @@ Changelog
 * :feature:`5278` Always use private rooms in the matrix transport.
 * :feature:`5217` Fully support infura as an underlying ethereum rpc node.
 * :bug:`5064` Display a user-friendly error message when the PFS info request fails.
-* :bug:`5055` Fix withdraw messages deserialization when the messages are queued in `queueids_to_queues`.
+* :bug:`5055` Fix withdraw messages deserialization when the messages are queued in ``queueids_to_queues``.
 * :feature:`5053` Make mediation fees non-negative by default. This fixes some counter-intuitive behaviour.
 * :bug:`4835` Fix etherscan sync by passing user-agent in the HTTP request. The request was failing because etherscan is protected by Cloudflare.
 * :feature:`-` Update WebUI to version 0.10.1 https://github.com/raiden-network/webui/releases/tag/v0.10.1
@@ -225,7 +226,7 @@ Changelog
 
 * :release:`0.15.0 <2018-10-27>`
 * :bug:`2905` Mediator task must wait for the expired message, not just for the lock to expire, otherwise the channel will be unsychronized.
-* :feature:`2909` Add explicit flag `--unrecoverable-error-should-crash` to control UnrecoverableError crashing behaviour.
+* :feature:`2909` Add explicit flag ``--unrecoverable-error-should-crash`` to control UnrecoverableError crashing behaviour.
 * :bug:`2894` Raiden will no longer miss confirmation blocks at restart and will emit the block state change only for confirmed blocks.
 * :feature:`2857` Respect the ``--environment-type`` for private chain setup.
 * :feature:`2858` Changed contract address argument names to be consistent with the names of the contracts in the contracts repository.
@@ -251,7 +252,7 @@ Changelog
 * :bug:`2662` Fix wrong deserialization of snapshots in special cases.
 * :bug:`2730` Refuse to send a transfer and ignore it during receiving, if its secret is already registered on-chain.
 * :feature:`2713` Added the protocol version in the Ping message.
-* :feature:`2708` Add `--showconfig` CLI flag which dumps all configuration values that will control Raiden behavior.
+* :feature:`2708` Add ``--showconfig`` CLI flag which dumps all configuration values that will control Raiden behavior.
 * :bug:`2720` A lock expired message must be considered invalid if the block in which the lock expired has not been confirmed.
 
 * :release:`0.12.0 <2018-10-05>`
