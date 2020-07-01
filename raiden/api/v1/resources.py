@@ -71,6 +71,12 @@ class VersionResource(BaseResource):
         return self.rest_api.get_raiden_version()
 
 
+class ContractsResource(BaseResource):
+    @if_api_available
+    def get(self) -> Response:
+        return self.rest_api.get_contract_versions()
+
+
 class ChannelsResource(BaseResource):
 
     put_schema = ChannelPutSchema()

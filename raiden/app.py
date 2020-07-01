@@ -30,13 +30,13 @@ class App:  # pylint: disable=too-few-public-methods
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
         default_service_registry: Optional[ServiceRegistry],
+        default_user_deposit: Optional[UserDeposit],
         default_one_to_n_address: Optional[OneToNAddress],
         default_msc_address: Optional[MonitoringServiceAddress],
         transport: MatrixTransport,
         raiden_event_handler: EventHandler,
         message_handler: MessageHandler,
         routing_mode: RoutingMode,
-        user_deposit: UserDeposit = None,
         api_server: APIServer = None,
     ):
         raiden = RaidenService(
@@ -44,16 +44,16 @@ class App:  # pylint: disable=too-few-public-methods
             proxy_manager=proxy_manager,
             query_start_block=query_start_block,
             default_registry=default_registry,
-            default_one_to_n_address=default_one_to_n_address,
             default_secret_registry=default_secret_registry,
             default_service_registry=default_service_registry,
+            default_user_deposit=default_user_deposit,
+            default_one_to_n_address=default_one_to_n_address,
             default_msc_address=default_msc_address,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             routing_mode=routing_mode,
             config=config,
-            user_deposit=user_deposit,
             api_server=api_server,
         )
 
@@ -79,7 +79,6 @@ class App:  # pylint: disable=too-few-public-methods
             )
 
         self.config = config
-        self.user_deposit = user_deposit
         self.raiden = raiden
 
     def __repr__(self) -> str:

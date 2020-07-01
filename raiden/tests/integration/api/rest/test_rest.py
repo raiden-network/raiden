@@ -5,7 +5,7 @@ from http import HTTPStatus
 import gevent
 import grequests
 import pytest
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import is_checksum_address, to_checksum_address, to_hex
 from flask import url_for
 
 from raiden.api.rest import APIServer
@@ -44,7 +44,7 @@ from raiden.waiting import (
     wait_for_received_transfer_result,
     wait_for_token_network,
 )
-from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
+from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN, CONTRACTS_VERSION
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -188,6 +188,29 @@ def test_api_get_raiden_version(api_server_test_instance: APIServer):
     raiden_version = get_system_spec()["raiden"]
 
     assert get_json_response(response) == {"version": raiden_version}
+
+
+@raise_on_failure
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_get_contract_infos(api_server_test_instance: APIServer):
+    request = grequests.get(api_url_for(api_server_test_instance, "contractsresource"))
+    response = request.send().response
+    assert_proper_response(response)
+
+    json = get_json_response(response)
+
+    assert json["contracts_version"] == CONTRACTS_VERSION
+    for contract_name in [
+        "token_network_registry_address",
+        "secret_registry_address",
+        "service_registry_address",
+        "user_deposit_address",
+        "monitoring_service_address",
+        "one_to_n_address",
+    ]:
+        address = json[contract_name]
+        if address != "":
+            assert is_checksum_address(address)
 
 
 @raise_on_failure

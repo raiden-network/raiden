@@ -602,7 +602,7 @@ def test_monitoring_broadcast_messages(
         lambda *a, **kw: channel_state,
     )
     monkeypatch.setattr(raiden.transfer.channel, "get_balance", lambda *a, **kw: 123)
-    raiden_service.user_deposit.effective_balance.return_value = MONITORING_REWARD
+    raiden_service.default_user_deposit.effective_balance.return_value = MONITORING_REWARD
 
     update_monitoring_service_from_balance_proof(
         raiden=raiden_service,
@@ -702,7 +702,7 @@ def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
         lambda *a, **kw: fake_dai_token_network,
     )
 
-    raiden_service.user_deposit.effective_balance.return_value = MONITORING_REWARD
+    raiden_service.default_user_deposit.effective_balance.return_value = MONITORING_REWARD
 
     update_monitoring_service_from_balance_proof(
         raiden=raiden_service,

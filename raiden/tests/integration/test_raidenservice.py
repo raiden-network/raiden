@@ -83,12 +83,7 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
 )
 def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
-    raiden_network,
-    restart_node,
-    number_of_nodes,
-    token_addresses,
-    network_wait,
-    user_deposit_address,
+    raiden_network, restart_node, number_of_nodes, token_addresses, network_wait,
 ):
     """ Raiden must broadcast the latest known balance proof on restarts.
 
@@ -155,17 +150,15 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
+        default_user_deposit=app0.raiden.default_user_deposit,
+        default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_msc_address=app0.raiden.default_msc_address,
         transport=transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PFS,  # not private mode, otherwise no PFS updates are queued
-        user_deposit=app0.raiden.proxy_manager.user_deposit(
-            user_deposit_address, block_identifier=BLOCK_ID_LATEST
-        ),
     )
     restart_node(app0_restart)
 
@@ -220,9 +213,10 @@ def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
+        default_user_deposit=app0.raiden.default_user_deposit,
+        default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_msc_address=app0.raiden.default_msc_address,
         transport=app0.raiden.transport,
         raiden_event_handler=RaidenEventHandler(),

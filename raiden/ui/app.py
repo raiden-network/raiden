@@ -432,14 +432,14 @@ def run_app(
         query_start_block=smart_contracts_start_at,
         default_registry=raiden_bundle.token_network_registry,
         default_secret_registry=raiden_bundle.secret_registry,
-        default_one_to_n_address=one_to_n_address,
         default_service_registry=services_bundle.service_registry,
+        default_user_deposit=services_bundle.user_deposit,
+        default_one_to_n_address=one_to_n_address,
         default_msc_address=monitoring_service_address,
         transport=matrix_transport,
         raiden_event_handler=event_handler,
         message_handler=message_handler,
         routing_mode=routing_mode,
-        user_deposit=services_bundle.user_deposit,
         api_server=api_server,
     )
 

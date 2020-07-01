@@ -2,8 +2,9 @@
 Changelog
 =========
 
+* :feature:`5407` Add ``/contracts`` endpoint with information about the used contracts.
 * :bug:`6217` Don't crash at ``/payments`` when no target address is given.
-* :feature:`-` Adds minimum required balance to send out MonitorRequest on mainnet
+* :feature:`-` Adds minimum required balance to send out MonitorRequest on mainnet.
 * :bug:`6323` Handling no ETH exception in the minting endpoint.
 
 * :release:`1.1.0 <2020-06-18>`
