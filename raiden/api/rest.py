@@ -44,6 +44,7 @@ from raiden.api.v1.resources import (
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
+    ContractsResource,
     MintTokenResource,
     PartnersResourceByTokenAddress,
     PaymentEventsResource,
@@ -137,6 +138,7 @@ log = structlog.get_logger(__name__)
 URLS_V1 = [
     ("/address", AddressResource),
     ("/version", VersionResource),
+    ("/contracts", ContractsResource),
     ("/channels", ChannelsResource),
     ("/channels/<hexaddress:token_address>", ChannelsResourceByTokenAddress),
     (
@@ -524,6 +526,34 @@ class RestAPI:  # pragma: no unittest
     @classmethod
     def get_raiden_version(cls) -> Response:
         return api_response(result=dict(version=get_system_spec()["raiden"]))
+
+    def get_contract_versions(self) -> Response:
+        raiden = self.raiden_api.raiden
+        contracts = dict(
+            contracts_version=raiden.proxy_manager.contract_manager.contracts_version,
+            token_network_registry_address=to_checksum_address(raiden.default_registry.address),
+            secret_registry_address=to_checksum_address(raiden.default_secret_registry.address),
+            service_registry_address="",
+            user_deposit_address="",
+            monitoring_service_address="",
+            one_to_n_address="",
+        )
+        if raiden.default_service_registry is not None:
+            contracts["service_registry_address"] = to_checksum_address(
+                raiden.default_service_registry.address
+            )
+        if raiden.default_user_deposit is not None:
+            contracts["user_deposit_address"] = to_checksum_address(
+                raiden.default_user_deposit.address
+            )
+        if raiden.default_msc_address is not None:
+            contracts["monitoring_service_address"] = to_checksum_address(
+                raiden.default_msc_address
+            )
+        if raiden.default_one_to_n_address is not None:
+            contracts["one_to_n_address"] = to_checksum_address(raiden.default_one_to_n_address)
+
+        return api_response(result=contracts)
 
     def register_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress

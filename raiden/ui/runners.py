@@ -41,12 +41,17 @@ def run_services(options: Dict[str, Any]) -> None:
         )
     )
 
-    spawn_user_deposit_task = app.user_deposit and (
+    spawn_user_deposit_task = app.raiden.default_user_deposit and (
         options["pathfinding_service_address"] or options["enable_monitoring"]
     )
     if spawn_user_deposit_task:
         gevent_tasks.append(
-            spawn_named("check_rdn_deposits", check_rdn_deposits, app.raiden, app.user_deposit)
+            spawn_named(
+                "check_rdn_deposits",
+                check_rdn_deposits,
+                app.raiden,
+                app.raiden.default_user_deposit,
+            )
         )
 
     stop_event: AsyncResult[Optional[signal.Signals]]  # pylint: disable=no-member
