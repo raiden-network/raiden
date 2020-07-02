@@ -198,6 +198,7 @@ scenario:
           name: "Restarting node1"
           tasks:
             - start_node: 1
+            - wait: 100
       - parallel:
           name: "Checking for the node3 <-> node2 channel state"
           tasks:
