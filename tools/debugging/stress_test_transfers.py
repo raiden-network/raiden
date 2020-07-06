@@ -7,6 +7,7 @@ import logging.config
 import os
 import os.path
 import signal
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
@@ -15,6 +16,7 @@ from time import time
 from typing import Callable, Dict, Iterable, Iterator, List, NewType, NoReturn, Optional
 
 import gevent
+import gevent.os
 import requests
 import structlog
 from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
@@ -175,22 +177,23 @@ class Transfer:
     amount: Amount
 
 
-def get_address(base_url: str) -> str:
-    return requests.get(f"{base_url}/api/v1/address").text
+def is_ready(base_url: str) -> bool:
+    try:
+        result = requests.get(f"{base_url}/api/v1/status").json()
+        return result["status"] == "ready"
+    except KeyError:
+        log.info(f"Server {base_url} returned invalid json data.")
+    except requests.ConnectionError:
+        log.info(f"Waiting for the server {base_url} to start.")
+    except requests.RequestException:
+        log.exception(f"Request to server {base_url} failed.")
+
+    return False
 
 
-def wait_for_address_endpoint(base_url: str, retry_timeout: int) -> str:
-    """Keeps retrying the `/address` endpoint."""
-    while True:
-        try:
-            address = get_address(base_url)
-            log.info(f"{address} finished (re)starting and is ready")
-            return address
-        except requests.ConnectionError:
-            log.info(f"Waiting for the server {base_url} to start.")
-        except requests.RequestException:
-            log.exception(f"Request to server {base_url} failed.")
-
+def wait_for_status_ready(base_url: str, retry_timeout: int) -> None:
+    """Keeps polling for the `/status` endpoint until the status is `ready`."""
+    while not is_ready(base_url):
         gevent.sleep(retry_timeout)
 
     raise RuntimeError("Stopping")
@@ -216,7 +219,7 @@ def start_and_wait_for_server(
     )
 
     if process is not None:
-        wait_for_address_endpoint(running_url, retry_timeout)
+        wait_for_status_ready(running_url, retry_timeout)
         return RunningNode(process, node, running_url)
 
     return None
@@ -230,6 +233,21 @@ def start_and_wait_for_all_servers(
 ) -> Optional[List[RunningNode]]:
     """Starts all nodes under the nursery, returns a list of `RunningNode`s or
     None if the script is shuting down.
+
+    Important Note:
+
+    `None` is not always returned if the script is shutting down! Due to race
+    conditions it is possible for all processes to be spawned, and only
+    afterwards the nursery is closed. IOW: At this stage `None` will only be
+    returned if spawning the process fails (e.g. the binary name is wrong),
+    however, if the subprocess is spawned and runs for some time, and *then*
+    crashes, `None` will **not** be returned here (e.g. if the ethereum node is
+    not available). For the second case, the `stop_event` will be set.
+
+    Because of the above, for proper error handling, checking only the return
+    value is **not** sufficient. The most reliable approach is to execute new
+    logic in greenlets spawned with `spawn_under_watch` and let errors fall
+    through.
     """
     greenlets = set(
         nursery.spawn_under_watch(
@@ -311,7 +329,7 @@ def transfer_and_assert_successful(
     response = requests.post(post_url, json=json)
     elapsed = time() - start
 
-    assert response is not None
+    assert response is not None, "request.post returned None"
     is_json = response.headers["Content-Type"] == "application/json"
     assert is_json, response.headers["Content-Type"]
     assert response.status_code == HTTPStatus.OK, response.json()
@@ -479,11 +497,21 @@ def wait_for_balance(running_nodes: List[RunningNode]) -> None:
     This makes sure that we can run another iteration of the stress test
     """
     for node in running_nodes:
-        assert node.starting_balances
+        # TODO: Instead of an `assert` this code should rely use a different
+        # type which is guaranteed to always have the `starting_balances`
+        # attribute populated.
+        assert node.starting_balances, "The node must have the starting_balances prepoluated"
+
         balances = get_balance_for_node(node)
         while any(bal < start_bal for bal, start_bal in zip(balances, node.starting_balances)):
             gevent.sleep(0.1)
             balances = get_balance_for_node(node)
+
+
+def wait_for_user_input() -> None:
+    print("All nodes are ready! Press Enter to continue and perform the stress tests.")
+
+    gevent.os.tp_read(sys.stdin.fileno(), n=1)
 
 
 def run_stress_test(
@@ -568,6 +596,7 @@ def main() -> None:
     parser.add_argument("--wait-after-first-sync", default=False, action="store_true")
     parser.add_argument("--profiler-data-directory", default=None)
     parser.add_argument("--interface", default="127.0.0.1")
+    parser.add_argument("--iterations", default=5, type=int)
     parser.add_argument("config")
     args = parser.parse_args()
 
@@ -641,9 +670,9 @@ def main() -> None:
     # TODO: Determine the `capacity_lower_bound` by querying the nodes.
     capacity_lower_bound = 1130220
 
-    iterations = 5
     profiler_data_directory = args.profiler_data_directory
 
+    iterations = args.iterations
     if iterations is None:
         iteration_counter = count()
     else:
@@ -670,8 +699,7 @@ def main() -> None:
             return
 
         if args.wait_after_first_sync:
-            print("All nodes are ready! Press Enter to continue and perform the stress tests.")
-            input()
+            nursery.spawn_under_watch(wait_for_user_input).get()
 
         test_config = StressTestConfiguration(
             port_generator,
