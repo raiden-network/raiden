@@ -37,6 +37,7 @@ enable=
     gevent-joinall-raise-error,
     gevent-disable-wait,
     gevent-group-join,
+    gevent-input-forbidden,
     import-self,
     inconsistent-return-statements,
     no-member,
