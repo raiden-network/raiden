@@ -1,4 +1,5 @@
 from astroid.exceptions import InferenceError
+from astroid.scoped_nodes import Module
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
@@ -31,6 +32,65 @@ INPUT_FORBIDDEN_MSG = (
     "also the event loop, effectively bringing the process to a halt until input "
     "is given, this is usually not the intended behavior."
 )
+SYS_STDFDS_FORBIDDEN_ID = "gevent-sys-stdfds-forbidden"
+SYS_STDFDS_FORBIDDEN_MSG = (
+    "gevent does not monkey patch the `sys.std(io,err,out)`, this means these "
+    "interfaces must not be directly used otherwise the event loop will be "
+    "halted."
+)
+
+FD_FORBIDDEN_METHODS = (
+    "write",
+    "read",
+    "flush",
+    "truncate",
+)
+STDFDS = (
+    "stdin",
+    "stdout",
+    "stderr",
+)
+
+
+def is_sys_module(node):
+    try:
+        for inferred in node.infer():
+            if isinstance(inferred, Module) and inferred.name == "sys":
+                return True
+    except InferenceError:
+        pass
+
+    return False
+
+
+def is_sys_io(node):
+    # This detect usages of the form:
+    # >>> import sys
+    # >>> sys.stdin.read()
+    try:
+        return (
+            node.func.attrname in FD_FORBIDDEN_METHODS
+            and node.func.expr.attrname in STDFDS
+            and is_sys_module(node.func.expr.expr)
+        )
+    except AttributeError:
+        pass
+
+    # This detect usages of the form:
+    # >>> from sys import stdin
+    # >>> stdin.read()
+    try:
+        scope = node.func.expr.scope()
+        _, import_from = scope.lookup(node.func.expr.name)
+        return (
+            node.func.attrname in FD_FORBIDDEN_METHODS
+            and node.func.expr.name in STDFDS
+            and any(imp.modname == "sys" for imp in import_from)
+        )
+    except AttributeError:
+        pass
+
+    return False
 
 
 def is_input(inferred_func):
@@ -96,10 +156,15 @@ class GeventChecker(BaseChecker):
             JOINALL_RAISE_ERROR_ID,
             "`gevent.joinall` always need `raise_error=True` set.",
         ),
-        "E6498": (
+        "E6497": (
             INPUT_FORBIDDEN_MSG,
             INPUT_FORBIDDEN_ID,
             "The global `input()` must not be called since it blocks the event loop.",
+        ),
+        "E6498": (
+            SYS_STDFDS_FORBIDDEN_MSG,
+            SYS_STDFDS_FORBIDDEN_ID,
+            "The stdout, stderr, and stdin are not cooperative and must not be used directly.",
         ),
     }
 
@@ -129,6 +194,11 @@ class GeventChecker(BaseChecker):
 
         try:
             self._forbid_calls_to_input(node)
+        except InferenceError:
+            pass
+
+        try:
+            self._forbid_usage_of_sys_file_descriptors(node)
         except InferenceError:
             pass
 
@@ -230,3 +300,15 @@ class GeventChecker(BaseChecker):
         for inferred_func in node.func.infer():
             if is_input(inferred_func):
                 self.add_message(INPUT_FORBIDDEN_ID, node=node)
+
+    def _forbid_usage_of_sys_file_descriptors(self, node):
+        """This detect usages of the form:
+
+        >>> import sys
+        >>> sys.stdin.read()
+
+        >>> from sys import stdin
+        >>> stdin.read()
+        """
+        if is_sys_io(node):
+            self.add_message(SYS_STDFDS_FORBIDDEN_ID, node=node)
