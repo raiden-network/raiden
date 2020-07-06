@@ -1,5 +1,4 @@
 import json
-import sys
 from itertools import count
 from json import JSONDecodeError
 from typing import Mapping
@@ -57,7 +56,6 @@ def wait_for_sync_blockcypher(
     print(syncing_str.format(local_block, blockcypher_block), end="")
 
     for i in count():
-        sys.stdout.flush()
         gevent.sleep(sleep)
         local_block = rpc_client.block_number()
 
@@ -66,13 +64,13 @@ def wait_for_sync_blockcypher(
             blockcypher_block = blockcypher_query_with_retries(sleep)
 
             if blockcypher_block is None:
-                print(error_str)
+                print(error_str, flush=True)
                 return
 
             if local_block >= blockcypher_block - tolerance:
                 return
 
-        print(syncing_str.format(local_block, blockcypher_block), end="")
+        print(syncing_str.format(local_block, blockcypher_block), end="", flush=True)
 
     # add a newline so that the next print will start have it's own line
     print("")
@@ -106,8 +104,7 @@ def wait_for_sync_rpc_api(
         if i % 3 == 0:
             print("\r", end="")
 
-        print(".", end="")
-        sys.stdout.flush()
+        print(".", end="", flush=True)
 
         gevent.sleep(sleep)
 
