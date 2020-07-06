@@ -19,7 +19,7 @@ This script does not take into account fees, therefore it must use the no-fee PF
 Before using the stress test for the first time, you need to prepare the three nodes given in the config file:
 1. Create three accounts (e.g. with `geth account new`) and transfer some ETH to pay for the on-chain transactions.
 2. Adapt `tools/debugging/stress_test_transfers_config.ini` and `tools/debugging/channels_with_minimum_balance_config.json` to your node configuration.
-3. Uncomment the `input()` line in `stress_test_transfers.py` and start the script with the config file. Now the three nodes are running and you can use other scripts to interact with them.
+3. Run `stress_test_transfers.py` with the flag `--wait-after-first-sync`, this will start the nodes and notify you once they are initialized and available to be interacted with.
 4. Use `mint.sh` to mint tokens for the nodes (see section below).
 5. Use `channel_with_minimum_balance.py` to create the channels and deposit tokens into the channels (see section below).
 6. Now you can press enter to proceed past the `input` and start the stress test (or remove the `input()` line and start the script, again).
