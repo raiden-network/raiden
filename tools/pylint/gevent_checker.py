@@ -24,6 +24,17 @@ GROUP_JOIN_MSG = (
     "When calling `Group.join` or `Pool.join` the flag `raise_error` must be set to "
     "`True`, otherwise exceptions will go unoticed."
 )
+INPUT_FORBIDDEN_ID = "gevent-input-forbidden"
+INPUT_FORBIDDEN_MSG = (
+    "`input` is a global function, therefore it can not be monkeypatched, "
+    "calling this function will block not only the thread using `input()` but "
+    "also the event loop, effectively bringing the process to a halt until input "
+    "is given, this is usually not the intended behavior."
+)
+
+
+def is_input(inferred_func):
+    return inferred_func.name == "input" and inferred_func.callable()
 
 
 def is_gevent_joinall(inferred_func):
@@ -85,6 +96,11 @@ class GeventChecker(BaseChecker):
             JOINALL_RAISE_ERROR_ID,
             "`gevent.joinall` always need `raise_error=True` set.",
         ),
+        "E6498": (
+            INPUT_FORBIDDEN_MSG,
+            INPUT_FORBIDDEN_ID,
+            "The global `input()` must not be called since it blocks the event loop.",
+        ),
     }
 
     def visit_call(self, node):
@@ -108,6 +124,11 @@ class GeventChecker(BaseChecker):
 
         try:
             self._force_group_join_to_set_raise_error(node)
+        except InferenceError:
+            pass
+
+        try:
+            self._forbid_calls_to_input(node)
         except InferenceError:
             pass
 
@@ -200,3 +221,12 @@ class GeventChecker(BaseChecker):
 
                 if not is_raise_error_true:
                     self.add_message(JOINALL_ID, node=node)
+
+    def _forbid_calls_to_input(self, node):
+        """This detect usages of the form:
+
+            >>> input()
+        """
+        for inferred_func in node.func.infer():
+            if is_input(inferred_func):
+                self.add_message(INPUT_FORBIDDEN_ID, node=node)
