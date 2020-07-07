@@ -1,4 +1,3 @@
-import asyncio
 import time
 from dataclasses import dataclass
 from typing import Dict
@@ -25,7 +24,7 @@ class RTCPartner:
 
 async def handle_event(
     ag_transceiver: AGTransceiver, peer_connections: Dict[Address, RTCPartner], event, node_address
-):
+) -> None:
     log.debug(
         "received event from transport", ag_event=event, node=to_checksum_address(node_address)
     )
@@ -47,7 +46,7 @@ async def handle_event(
 
 async def create_channel(
     rtc_partner: RTCPartner, ag_transceiver: AGTransceiver, partner_address: Address, node_address
-):
+) -> None:
     pc = rtc_partner.pc
     rtc_partner.create_channel()
 
@@ -63,7 +62,7 @@ async def create_channel(
     await ag_transceiver.send_event_to_gevent(event)
 
     @rtc_partner.channel.on("message")
-    async def on_message(message):
+    async def on_message(message: [str, bytes]) -> None:  # pylint: disable=unused-variable
         log.debug(
             "Received message in aio kingdom",
             node=to_checksum_address(node_address),
@@ -77,19 +76,19 @@ async def create_channel(
 
 async def set_remote_description(
     rtc_partner: RTCPartner, ag_transceiver: AGTransceiver, description, node_address
-):
+) -> None:
     remote_description = RTCSessionDescription(description["sdp"], description["type"])
     sdp_type = description["type"]
     pc = rtc_partner.pc
     await pc.setRemoteDescription(remote_description)
 
     @rtc_partner.pc.on("datachannel")
-    def on_datachannel(channel):
+    def on_datachannel(channel):  # pylint: disable=unused-variable
         rtc_partner.channel = channel
         log.debug(f"received channel {channel.label}", node=to_checksum_address(node_address))
 
         @channel.on("close")
-        def channel_closed():
+        def channel_closed():  # pylint: disable=unused-variable
             rtc_partner.channel = None
 
         @channel.on("message")

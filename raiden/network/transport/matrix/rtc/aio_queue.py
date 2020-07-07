@@ -1,14 +1,16 @@
 from asyncio import Future
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import gevent
+from aiortc import RTCPeerConnection
 from gevent.lock import Semaphore
 from gevent.queue import Empty, Queue
 
 from raiden.network.transport.matrix.rtc import aiogevent
+from raiden.utils.typing import Address
 
 
-def make_wrapped_greenlet(target: Callable, *args, **kwargs) -> Future:
+def make_wrapped_greenlet(target: Callable, *args: Any, **kwargs: Any) -> Future:
     glet = gevent.Greenlet(target, *args, **kwargs)
     wrapped_glet = aiogevent.wrap_greenlet(glet)
     glet.start()
@@ -16,12 +18,12 @@ def make_wrapped_greenlet(target: Callable, *args, **kwargs) -> Future:
 
 
 class AGTransceiver:
-    def __init__(self):
-        self.peer_connections = dict()
+    def __init__(self) -> None:
+        self.peer_connections: Dict[Address, RTCPeerConnection] = dict()
         self.event_to_aio_queue = AGQueue()
         self.event_to_gevent_queue = AGQueue()
 
-    def send_event_to_aio(self, event):
+    def send_event_to_aio(self, event: Dict[str, Any]) -> None:
         self.event_to_aio_queue.put(event)
 
     async def aget_event(self, timeout):
@@ -31,7 +33,7 @@ class AGTransceiver:
             return {"type": "timeout"}
         return event
 
-    async def send_event_to_gevent(self, event):
+    async def send_event_to_gevent(self, event) -> None:
         await self.event_to_gevent_queue.aput(event)
 
 
@@ -39,7 +41,7 @@ class AGQueue(Queue):
     async def aget(self, timeout):
         return await make_wrapped_greenlet(self.get, timeout=timeout)
 
-    async def aput(self, item):
+    async def aput(self, item: Any) -> None:
         await make_wrapped_greenlet(self.put, item)
 
 

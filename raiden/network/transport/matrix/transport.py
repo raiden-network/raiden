@@ -30,8 +30,8 @@ from raiden.network.transport.matrix.client import (
     Room,
     User,
 )
-from raiden.network.transport.matrix.rtc.aio_loop import run_aiortc
 from raiden.network.transport.matrix.rtc.aio_queue import AGLock, AGTransceiver
+from raiden.network.transport.matrix.rtc.web_rtc import run_aiortc
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -821,6 +821,7 @@ class MatrixTransport(Runnable):
         )
         assert self._client.sync_thread is None, msg
         assert self._client.message_worker is None, msg
+        assert self._raiden_service is not None, "_raiden_service not set"
 
         # Call sync to fetch the inventory rooms and new invites, the sync
         # limit prevents fetching the messages.
@@ -854,13 +855,7 @@ class MatrixTransport(Runnable):
                     members=room.get_joined_members(),
                 )
                 self._set_room_id_for_address(partner_address[0], room.room_id)
-                room_creator_address = my_place_or_yours(
-                    our_address=self._raiden_service.address, partner_address=partner_address[0]
-                )
-                if self._raiden_service.address == room_creator_address:
-                    event = {"type": "create_channel", "data": {}, "address": partner_address[0]}
-                    log.debug("Creating RTC Channel")
-                    self.aio_gevent_transceiver.send_event_to_aio(event)
+                self._maybe_create_web_rtc_channel(partner_address[0])
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
@@ -1477,11 +1472,19 @@ class MatrixTransport(Runnable):
             )
 
             self._set_room_id_for_address(address, room.room_id)
-            event = {"type": "create_channel", "data": {}, "address": address}
-            self.aio_gevent_transceiver.send_event_to_aio(event)
+            self._maybe_create_web_rtc_channel(address)
 
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
             return room
+
+    def _maybe_create_web_rtc_channel(self, partner_address: Address):
+        room_creator_address = my_place_or_yours(
+            our_address=self._raiden_service.address, partner_address=partner_address
+        )
+        if self._raiden_service.address == room_creator_address:
+            event = {"type": "create_channel", "data": {}, "address": partner_address}
+            log.debug("Creating RTC Channel")
+            self.aio_gevent_transceiver.send_event_to_aio(event)
 
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(

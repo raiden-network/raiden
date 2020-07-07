@@ -830,7 +830,12 @@ def make_client(
     last_ex = None
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(
-            handle_messages_callback, handle_member_join_callback, handle_call_callback, server_url, *args, **kwargs
+            handle_messages_callback,
+            handle_member_join_callback,
+            handle_call_callback,
+            server_url,
+            *args,
+            **kwargs,
         )
 
         retries = 3
