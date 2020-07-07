@@ -95,6 +95,7 @@ def restart_app(app: App, restart_node: RestartNode) -> App:
     )
     raiden_event_handler = RaidenEventHandler()
     hold_handler = HoldRaidenEventHandler(raiden_event_handler)
+
     app = App(
         config=app.config,
         rpc_client=app.raiden.rpc_client,
@@ -103,10 +104,7 @@ def restart_app(app: App, restart_node: RestartNode) -> App:
         raiden_bundle=RaidenBundle(
             app.raiden.default_registry, app.raiden.default_secret_registry,
         ),
-        default_service_registry=app.raiden.default_service_registry,
-        default_user_deposit=app.raiden.default_user_deposit,
-        default_one_to_n_address=app.raiden.default_one_to_n_address,
-        default_msc_address=app.raiden.default_msc_address,
+        services_bundle=app.raiden.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=hold_handler,
         message_handler=MessageHandler(),

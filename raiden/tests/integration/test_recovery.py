@@ -177,10 +177,7 @@ def test_recovery_unhappy_case(
         raiden_bundle=RaidenBundle(
             app0.raiden.default_registry, app0.raiden.default_secret_registry
         ),
-        default_service_registry=app0.raiden.default_service_registry,
-        default_user_deposit=app0.raiden.default_user_deposit,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_msc_address=app0.raiden.default_msc_address,
+        services_bundle=app0.raiden.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
@@ -241,10 +238,7 @@ def test_recovery_blockchain_events(raiden_network, restart_node, token_addresse
         raiden_bundle=RaidenBundle(
             app0.raiden.default_registry, app0.raiden.default_secret_registry,
         ),
-        default_service_registry=app0.raiden.default_service_registry,
-        default_user_deposit=app0.raiden.default_user_deposit,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_msc_address=app0.raiden.default_msc_address,
+        services_bundle=app0.raiden.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,

@@ -153,10 +153,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         raiden_bundle=RaidenBundle(
             app0.raiden.default_registry, app0.raiden.default_secret_registry
         ),
-        default_service_registry=app0.raiden.default_service_registry,
-        default_user_deposit=app0.raiden.default_user_deposit,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_msc_address=app0.raiden.default_msc_address,
+        services_bundle=app0.raiden.default_services_bundle,
         transport=transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
@@ -217,10 +214,7 @@ def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
         raiden_bundle=RaidenBundle(
             app0.raiden.default_registry, app0.raiden.default_secret_registry
         ),
-        default_service_registry=app0.raiden.default_service_registry,
-        default_user_deposit=app0.raiden.default_user_deposit,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
-        default_msc_address=app0.raiden.default_msc_address,
+        services_bundle=app0.raiden.default_services_bundle,
         transport=app0.raiden.transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),

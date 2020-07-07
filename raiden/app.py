@@ -5,16 +5,14 @@ from raiden.constants import BLOCK_ID_LATEST, RoutingMode
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.message_handler import MessageHandler
 from raiden.network.proxies.proxy_manager import ProxyManager
-from raiden.network.proxies.service_registry import ServiceRegistry
-from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.settings import RaidenConfig
-from raiden.ui.startup import RaidenBundle
+from raiden.ui.startup import RaidenBundle, ServicesBundle
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import BlockNumber, MonitoringServiceAddress, OneToNAddress, Optional
+from raiden.utils.typing import BlockNumber, Optional
 
 log = structlog.get_logger(__name__)
 
@@ -27,10 +25,7 @@ class App:  # pylint: disable=too-few-public-methods
         proxy_manager: ProxyManager,
         query_start_block: BlockNumber,
         raiden_bundle: RaidenBundle,
-        default_service_registry: Optional[ServiceRegistry],
-        default_user_deposit: Optional[UserDeposit],
-        default_one_to_n_address: Optional[OneToNAddress],
-        default_msc_address: Optional[MonitoringServiceAddress],
+        services_bundle: Optional[ServicesBundle],
         transport: MatrixTransport,
         raiden_event_handler: EventHandler,
         message_handler: MessageHandler,
@@ -42,10 +37,7 @@ class App:  # pylint: disable=too-few-public-methods
             proxy_manager=proxy_manager,
             query_start_block=query_start_block,
             raiden_bundle=raiden_bundle,
-            default_service_registry=default_service_registry,
-            default_user_deposit=default_user_deposit,
-            default_one_to_n_address=default_one_to_n_address,
-            default_msc_address=default_msc_address,
+            services_bundle=services_bundle,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
