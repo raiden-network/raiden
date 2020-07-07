@@ -29,6 +29,7 @@ from raiden.tests.utils.transfer import (
     watch_for_unlock_failures,
 )
 from raiden.transfer import views
+from raiden.ui.startup import RaidenBundle
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
@@ -99,8 +100,9 @@ def restart_app(app: App, restart_node: RestartNode) -> App:
         rpc_client=app.raiden.rpc_client,
         proxy_manager=app.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app.raiden.default_registry,
-        default_secret_registry=app.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app.raiden.default_registry, app.raiden.default_secret_registry,
+        ),
         default_service_registry=app.raiden.default_service_registry,
         default_user_deposit=app.raiden.default_user_deposit,
         default_one_to_n_address=app.raiden.default_one_to_n_address,

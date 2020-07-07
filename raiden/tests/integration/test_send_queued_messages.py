@@ -20,6 +20,7 @@ from raiden.tests.utils.transfer import (
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
+from raiden.ui.startup import RaidenBundle
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
@@ -94,8 +95,9 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app0.raiden.default_registry, app0.raiden.default_secret_registry,
+        ),
         default_service_registry=app0.raiden.default_service_registry,
         default_user_deposit=app0.raiden.default_user_deposit,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
@@ -212,8 +214,9 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app0.raiden.default_registry, app0.raiden.default_secret_registry,
+        ),
         default_service_registry=app0.raiden.default_service_registry,
         default_user_deposit=app0.raiden.default_user_deposit,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
