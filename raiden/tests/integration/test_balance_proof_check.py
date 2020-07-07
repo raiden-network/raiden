@@ -2,7 +2,13 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import BLOCK_ID_LATEST, EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import (
+    BLOCK_ID_LATEST,
+    EMPTY_BALANCE_HASH,
+    EMPTY_MESSAGE_HASH,
+    EMPTY_SIGNATURE,
+)
+from raiden.raiden_service import RaidenService
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -11,7 +17,14 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
-from raiden.utils.typing import Nonce, PaymentAmount, PaymentID, TokenAmount, TokenNetworkAddress
+from raiden.utils.typing import (
+    List,
+    Nonce,
+    PaymentAmount,
+    PaymentID,
+    TokenAmount,
+    TokenNetworkAddress,
+)
 from raiden_contracts.constants import MessageTypeId
 
 
@@ -20,7 +33,7 @@ from raiden_contracts.constants import MessageTypeId
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_node_can_settle_if_close_didnt_use_any_balance_proof(
-    raiden_network, number_of_nodes, token_addresses, network_wait
+    raiden_network: List[RaidenService], number_of_nodes, token_addresses, network_wait
 ):
     """ A node must be able to settle a channel, even if the partner used an
     old balance proof to close it.
@@ -34,9 +47,9 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     """
     app0, app1 = raiden_network
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
-    registry_address = app0.raiden.default_registry.address
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
+    registry_address = app0.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state=chain_state,
         token_network_registry_address=token_network_registry_address,
@@ -57,7 +70,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
-    token_network_contract = app1.raiden.proxy_manager.token_network(
+    token_network_contract = app1.proxy_manager.token_network(
         token_network_address, BLOCK_ID_LATEST
     )
     empty_balance_proof = BalanceProof(
@@ -71,28 +84,31 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     closing_data = (
         empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
     )
-    closing_signature = app1.raiden.signer.sign(data=closing_data)
+    closing_signature = app1.signer.sign(data=closing_data)
 
     # app1 closes the channel with an empty hash instead of the expected hash
     # of the transferred amount from app0
     token_network_contract.close(
         channel_identifier=channel_identifier,
-        partner=app0.raiden.address,
-        balance_hash=EMPTY_HASH,
-        nonce=0,
-        additional_hash=EMPTY_HASH,
+        partner=app0.address,
+        balance_hash=EMPTY_BALANCE_HASH,
+        nonce=Nonce(0),
+        additional_hash=EMPTY_MESSAGE_HASH,
         non_closing_signature=EMPTY_SIGNATURE,
         closing_signature=closing_signature,
         given_block_identifier=BLOCK_ID_LATEST,
     )
     waiting.wait_for_settle(
-        raiden=app0.raiden,
+        raiden=app0,
         token_network_registry_address=registry_address,
         token_address=token_address,
         channel_ids=[channel_identifier],
-        retry_timeout=app0.raiden.alarm.sleep_time,
+        retry_timeout=app0.alarm.sleep_time,
     )
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
+    assert app0.wal, "app0 must have been started by the fixture and not stopped during the test."
+    state_changes = app0.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,
@@ -105,7 +121,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_node_can_settle_if_partner_does_not_call_update_transfer(
-    raiden_network, number_of_nodes, token_addresses, network_wait
+    raiden_network: List[RaidenService], number_of_nodes, token_addresses, network_wait
 ):
     """ A node must be able to settle a channel, even if the partner did not
     call update transfer.
@@ -120,9 +136,9 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
     """
     app0, app1 = raiden_network
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
-    registry_address = app0.raiden.default_registry.address
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
+    registry_address = app0.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state=chain_state,
         token_network_registry_address=token_network_registry_address,
@@ -141,22 +157,25 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
-    RaidenAPI(app0.raiden).channel_close(
+    RaidenAPI(app0).channel_close(
         registry_address=registry_address,
         token_address=token_address,
-        partner_address=app1.raiden.address,
+        partner_address=app1.address,
     )
 
     # app1 won't update the channel
 
     waiting.wait_for_settle(
-        raiden=app0.raiden,
+        raiden=app0,
         token_network_registry_address=registry_address,
         token_address=token_address,
         channel_ids=[channel_identifier],
-        retry_timeout=app0.raiden.alarm.sleep_time,
+        retry_timeout=app0.alarm.sleep_time,
     )
-    state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
+    assert app0.wal, "app0 must have been started by the fixture and not stopped during the test."
+    state_changes = app0.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
     assert search_for_item(
         state_changes,
         ContractReceiveChannelSettled,

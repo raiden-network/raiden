@@ -5,7 +5,6 @@ from enum import Enum
 import gevent
 from gevent.timeout import Timeout
 
-from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import SignedMessage
@@ -99,17 +98,17 @@ class TransferState(Enum):
     SECRET_REVEALED = "secret_revealed"
 
 
-def sign_and_inject(message: SignedMessage, signer: Signer, app: App) -> None:
+def sign_and_inject(message: SignedMessage, signer: Signer, app: RaidenService) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
-    MessageHandler().on_messages(app.raiden, [message])
+    MessageHandler().on_messages(app, [message])
 
 
 def get_channelstate(
-    app0: App, app1: App, token_network_address: TokenNetworkAddress
+    app0: RaidenService, app1: RaidenService, token_network_address: TokenNetworkAddress
 ) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(app0), token_network_address, app1.raiden.address
+        views.state_from_raiden(app0), token_network_address, app1.address
     )
     assert channel_state
     return channel_state
@@ -129,19 +128,19 @@ def watch_for_unlock_failures(*apps):
             failed_event = event
 
     for app in apps:
-        app.raiden.raiden_event_handler.pre_hooks.add(check)
+        app.raiden_event_handler.pre_hooks.add(check)
 
     try:
         yield
     finally:
         for app in apps:
-            app.raiden.raiden_event_handler.pre_hooks.remove(check)
+            app.raiden_event_handler.pre_hooks.remove(check)
         assert failed_event is None, f"Unexpected unlock failure: {str(failed_event)}"
 
 
 def transfer(
-    initiator_app: App,
-    target_app: App,
+    initiator_app: RaidenService,
+    target_app: RaidenService,
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
@@ -187,35 +186,35 @@ def transfer(
 
 
 def _transfer_unlocked(
-    initiator_app: App,
-    target_app: App,
+    initiator_app: RaidenService,
+    target_app: RaidenService,
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: Optional[float] = None,
     expect_unlock_failures: bool = False,
 ) -> SecretHash:
-    assert isinstance(target_app.raiden.message_handler, WaitForMessage)
+    assert isinstance(target_app.message_handler, WaitForMessage)
 
     if timeout is None:
         timeout = 10
 
-    wait_for_unlock = target_app.raiden.message_handler.wait_for_message(
+    wait_for_unlock = target_app.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
     )
 
-    token_network_registry_address = initiator_app.raiden.default_registry.address
+    token_network_registry_address = initiator_app.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=views.state_from_app(initiator_app),
+        chain_state=views.state_from_raiden(initiator_app),
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert token_network_address
     secret, secrethash = make_secret_with_hash()
-    payment_status = initiator_app.raiden.mediated_transfer_async(
+    payment_status = initiator_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
-        target=TargetAddress(target_app.raiden.address),
+        target=TargetAddress(target_app.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -226,8 +225,8 @@ def _transfer_unlocked(
         with Timeout(seconds=timeout):
             wait_for_unlock.get()
             msg = (
-                f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
-                f"to {to_checksum_address(target_app.raiden.address)} failed."
+                f"transfer from {to_checksum_address(initiator_app.address)} "
+                f"to {to_checksum_address(target_app.address)} failed."
             )
             assert payment_status.payment_done.get(), msg
 
@@ -235,15 +234,15 @@ def _transfer_unlocked(
 
 
 def _transfer_expired(
-    initiator_app: App,
-    target_app: App,
+    initiator_app: RaidenService,
+    target_app: RaidenService,
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: Optional[float] = None,
 ) -> SecretHash:
     assert identifier is not None, "The identifier must be provided"
-    assert isinstance(target_app.raiden.message_handler, WaitForMessage)
+    assert isinstance(target_app.message_handler, WaitForMessage)
 
     # This timeout has to be larger then the lock expiration. The lock
     # expiration unit is block numbers, and its value is defined relative to
@@ -255,21 +254,21 @@ def _transfer_expired(
         timeout = 90
 
     secret, secrethash = make_secret_with_hash()
-    wait_for_remove_expired_lock = target_app.raiden.message_handler.wait_for_message(
+    wait_for_remove_expired_lock = target_app.message_handler.wait_for_message(
         LockExpired, {"secrethash": secrethash}
     )
 
-    token_network_registry_address = initiator_app.raiden.default_registry.address
+    token_network_registry_address = initiator_app.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=views.state_from_app(initiator_app),
+        chain_state=views.state_from_raiden(initiator_app),
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert token_network_address
-    payment_status = initiator_app.raiden.start_mediated_transfer_with_secret(
+    payment_status = initiator_app.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        target=TargetAddress(target_app.raiden.address),
+        target=TargetAddress(target_app.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -278,8 +277,8 @@ def _transfer_expired(
     with Timeout(seconds=timeout):
         wait_for_remove_expired_lock.get()
         msg = (
-            f"transfer from {to_checksum_address(initiator_app.raiden.address)} "
-            f"to {to_checksum_address(target_app.raiden.address)} did not expire."
+            f"transfer from {to_checksum_address(initiator_app.address)} "
+            f"to {to_checksum_address(target_app.address)} did not expire."
         )
         assert payment_status.payment_done.get() is False, msg
 
@@ -287,8 +286,8 @@ def _transfer_expired(
 
 
 def _transfer_secret_not_requested(
-    initiator_app: App,
-    target_app: App,
+    initiator_app: RaidenService,
+    target_app: RaidenService,
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
@@ -299,22 +298,22 @@ def _transfer_secret_not_requested(
 
     secret, secrethash = make_secret_with_hash()
 
-    assert isinstance(target_app.raiden.raiden_event_handler, HoldRaidenEventHandler)
-    hold_secret_request = target_app.raiden.raiden_event_handler.hold(
+    assert isinstance(target_app.raiden_event_handler, HoldRaidenEventHandler)
+    hold_secret_request = target_app.raiden_event_handler.hold(
         SendSecretRequest, {"secrethash": secrethash}
     )
 
-    token_network_registry_address = initiator_app.raiden.default_registry.address
+    token_network_registry_address = initiator_app.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=views.state_from_app(initiator_app),
+        chain_state=views.state_from_raiden(initiator_app),
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert token_network_address
-    initiator_app.raiden.start_mediated_transfer_with_secret(
+    initiator_app.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        target=TargetAddress(target_app.raiden.address),
+        target=TargetAddress(target_app.address),
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
@@ -327,7 +326,7 @@ def _transfer_secret_not_requested(
 
 
 def transfer_and_assert_path(
-    path: List[App],
+    path: List[RaidenService],
     token_address: TokenAddress,
     amount: PaymentAmount,
     identifier: PaymentID,
@@ -345,22 +344,22 @@ def transfer_and_assert_path(
     secret, secrethash = make_secret_with_hash()
 
     first_app = path[0]
-    token_network_registry_address = first_app.raiden.default_registry.address
+    token_network_registry_address = first_app.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=views.state_from_app(first_app),
+        chain_state=views.state_from_raiden(first_app),
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
     assert token_network_address
 
     for app in path:
-        assert isinstance(app.raiden.message_handler, WaitForMessage)
+        assert isinstance(app.message_handler, WaitForMessage)
 
         msg = "The apps must be on the same token network registry"
-        assert app.raiden.default_registry.address == token_network_registry_address, msg
+        assert app.default_registry.address == token_network_registry_address, msg
 
         app_token_network_address = views.get_token_network_address_by_token_address(
-            chain_state=views.state_from_app(app),
+            chain_state=views.state_from_raiden(app),
             token_network_registry_address=token_network_registry_address,
             token_address=token_address,
         )
@@ -372,27 +371,27 @@ def transfer_and_assert_path(
     receiving = list()
     for from_app, to_app in pairs:
         from_channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state=views.state_from_app(from_app),
+            chain_state=views.state_from_raiden(from_app),
             token_network_address=token_network_address,
-            partner_address=to_app.raiden.address,
+            partner_address=to_app.address,
         )
         to_channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state=views.state_from_app(to_app),
+            chain_state=views.state_from_raiden(to_app),
             token_network_address=token_network_address,
-            partner_address=from_app.raiden.address,
+            partner_address=from_app.address,
         )
 
         msg = (
-            f"{to_checksum_address(from_app.raiden.address)} does not have a channel with "
-            f"{to_checksum_address(to_app.raiden.address)} needed to transfer through the "
-            f"path {[to_checksum_address(app.raiden.address) for app in path]}."
+            f"{to_checksum_address(from_app.address)} does not have a channel with "
+            f"{to_checksum_address(to_app.address)} needed to transfer through the "
+            f"path {[to_checksum_address(app.address) for app in path]}."
         )
         assert from_channel_state, msg
         assert to_channel_state, msg
 
         msg = (
-            f"channel among {to_checksum_address(from_app.raiden.address)} and "
-            f"{to_checksum_address(to_app.raiden.address)} must be open to be used for a "
+            f"channel among {to_checksum_address(from_app.address)} and "
+            f"{to_checksum_address(to_app.address)} must be open to be used for a "
             f"transfer"
         )
         assert channel.get_status(from_channel_state) == ChannelState.STATE_OPENED, msg
@@ -400,9 +399,9 @@ def transfer_and_assert_path(
 
         receiving.append((to_app, to_channel_state.identifier))
 
-    assert isinstance(app.raiden.message_handler, WaitForMessage)
+    assert isinstance(app.message_handler, WaitForMessage)
     results = set(
-        app.raiden.message_handler.wait_for_message(
+        app.message_handler.wait_for_message(
             Unlock,
             {
                 "channel_identifier": channel_identifier,
@@ -415,17 +414,17 @@ def transfer_and_assert_path(
     )
 
     last_app = path[-1]
-    payment_status = first_app.raiden.start_mediated_transfer_with_secret(
+    payment_status = first_app.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=amount,
-        target=TargetAddress(last_app.raiden.address),
+        target=TargetAddress(last_app.address),
         identifier=identifier,
         secret=secret,
     )
 
     msg = (
-        f"transfer from {to_checksum_address(first_app.raiden.address)} "
-        f"to {to_checksum_address(last_app.raiden.address)} for amount "
+        f"transfer from {to_checksum_address(first_app.address)} "
+        f"to {to_checksum_address(last_app.address)} for amount "
         f"{amount} failed"
     )
     exception = RuntimeError(msg + " due to Timeout")
@@ -439,8 +438,8 @@ def transfer_and_assert_path(
 
 def assert_deposit(
     token_network_address: TokenNetworkAddress,
-    app0: App,
-    app1: App,
+    app0: RaidenService,
+    app1: RaidenService,
     saved_state0: SavedState,
     saved_state1: SavedState,
 ) -> None:
@@ -460,10 +459,10 @@ def assert_deposit(
     block_number1 = views.block_number(saved_state1.state)
 
     channel0 = views.get_channelstate_by_token_network_and_partner(
-        saved_state0.state, token_network_address, app1.raiden.address
+        saved_state0.state, token_network_address, app1.address
     )
     channel1 = views.get_channelstate_by_token_network_and_partner(
-        saved_state1.state, token_network_address, app0.raiden.address
+        saved_state1.state, token_network_address, app0.address
     )
 
     assert channel0
@@ -492,10 +491,10 @@ def assert_deposit(
             },
         }
         node0_deposit_event = raiden_state_changes_search_for_item(
-            app0.raiden, ContractReceiveChannelDeposit, deposit_description
+            app0, ContractReceiveChannelDeposit, deposit_description
         )
         node1_deposit_event = raiden_state_changes_search_for_item(
-            app1.raiden, ContractReceiveChannelDeposit, deposit_description
+            app1, ContractReceiveChannelDeposit, deposit_description
         )
 
         is_partner_deposit_ignored = (
@@ -531,14 +530,14 @@ def assert_deposit(
                 "missed node0's deposit event even though it has seen a newer "
                 "confirmed block"
             )
-        elif not app1.raiden.alarm:
+        elif not app1.alarm:
             msg = (
                 "Node1 has not seen the block at which node0's deposit happened "
                 "and the alarm task is not running. Either the test stopped "
                 "the node before it had time or the node got killed because of "
                 "another error."
             )
-        elif not app0.raiden.alarm:
+        elif not app0.alarm:
             msg = (
                 "Node0 has not seen the block at which node0's deposit happened "
                 "and the alarm task is not running. Either the test stopped "
@@ -560,8 +559,8 @@ def assert_deposit(
 
         msg = (
             f"{msg}. "
-            f"node1={to_checksum_address(app1.raiden.address)} "
-            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"node1={to_checksum_address(app1.address)} "
+            f"node0={to_checksum_address(app0.address)} "
             f"block_number0={block_number0} "
             f"block_number1={block_number1} "
             f"state_change_id0={saved_state0.state_change_id} "
@@ -573,8 +572,8 @@ def assert_deposit(
 
 def assert_balance_proof(
     token_network_address: TokenNetworkAddress,
-    app0: App,
-    app1: App,
+    app0: RaidenService,
+    app1: RaidenService,
     saved_state0: SavedState,
     saved_state1: SavedState,
 ) -> None:
@@ -586,17 +585,17 @@ def assert_balance_proof(
         - It is important to do the validation on a fixed  state, that is why
           saved_state0 is used.
     """
-    assert app0.raiden.wal
-    assert app1.raiden.wal
+    assert app0.wal
+    assert app1.wal
 
-    assert app0.raiden.address == saved_state0.state.our_address
-    assert app1.raiden.address == saved_state1.state.our_address
+    assert app0.address == saved_state0.state.our_address
+    assert app1.address == saved_state1.state.our_address
 
     channel0 = views.get_channelstate_by_token_network_and_partner(
-        saved_state0.state, token_network_address, app1.raiden.address
+        saved_state0.state, token_network_address, app1.address
     )
     channel1 = views.get_channelstate_by_token_network_and_partner(
-        saved_state1.state, token_network_address, app0.raiden.address
+        saved_state1.state, token_network_address, app0.address
     )
 
     assert channel0
@@ -634,16 +633,16 @@ def assert_balance_proof(
         # before the alarm task fetches the corresponding event but while it
         # runs it does fetch it.
         sent_balance_proof = get_event_with_balance_proof_by_balance_hash(
-            storage=app0.raiden.wal.storage,
+            storage=app0.wal.storage,
             canonical_identifier=balanceproof0.canonical_identifier,
             balance_hash=balanceproof0.balance_hash,
-            recipient=app1.raiden.address,
+            recipient=app1.address,
         )
         received_balance_proof = get_state_change_with_balance_proof_by_locksroot(
-            storage=app1.raiden.wal.storage,
+            storage=app1.wal.storage,
             canonical_identifier=balanceproof0.canonical_identifier,
             locksroot=balanceproof0.locksroot,
-            sender=app0.raiden.address,
+            sender=app0.address,
         )
 
         if received_balance_proof is not None:
@@ -705,8 +704,8 @@ def assert_balance_proof(
 
         msg = (
             f"{msg}. "
-            f"node1={to_checksum_address(app1.raiden.address)} "
-            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"node1={to_checksum_address(app1.address)} "
+            f"node0={to_checksum_address(app0.address)} "
             f"state_change_id0={saved_state0.state_change_id} "
             f"state_change_id1={saved_state1.state_change_id}."
         )
@@ -726,8 +725,8 @@ def assert_balance_proof(
         msg = (
             f"The balance proof seems corrupted, the recipient has different "
             f"values than the sender. "
-            f"node1={to_checksum_address(app1.raiden.address)} "
-            f"node0={to_checksum_address(app0.raiden.address)} "
+            f"node1={to_checksum_address(app1.address)} "
+            f"node0={to_checksum_address(app0.address)} "
             f"state_change_id0={saved_state0.state_change_id} "
             f"state_change_id1={saved_state1.state_change_id}."
         )
@@ -769,10 +768,10 @@ def assert_channel_values(
 
 def assert_synced_channel_state(
     token_network_address: TokenNetworkAddress,
-    app0: App,
+    app0: RaidenService,
     balance0: Balance,
     pending_locks0: List[HashTimeLockState],
-    app1: App,
+    app1: RaidenService,
     balance1: Balance,
     pending_locks1: List[HashTimeLockState],
 ) -> None:
@@ -782,11 +781,11 @@ def assert_synced_channel_state(
         This assert does not work for an intermediate state, where one message
         hasn't been delivered yet or has been completely lost.
     """
-    assert app0.raiden.wal
-    assert app1.raiden.wal
+    assert app0.wal
+    assert app1.wal
 
-    saved_state0 = app0.raiden.wal.saved_state
-    saved_state1 = app1.raiden.wal.saved_state
+    saved_state0 = app0.wal.saved_state
+    saved_state1 = app1.wal.saved_state
 
     assert_deposit(token_network_address, app0, app1, saved_state0, saved_state1)
     assert_deposit(token_network_address, app1, app0, saved_state1, saved_state0)
@@ -795,10 +794,10 @@ def assert_synced_channel_state(
     assert_balance_proof(token_network_address, app0, app1, saved_state0, saved_state1)
 
     channel0 = views.get_channelstate_by_token_network_and_partner(
-        saved_state0.state, token_network_address, app1.raiden.address
+        saved_state0.state, token_network_address, app1.address
     )
     channel1 = views.get_channelstate_by_token_network_and_partner(
-        saved_state1.state, token_network_address, app0.raiden.address
+        saved_state1.state, token_network_address, app0.address
     )
 
     assert channel0
@@ -816,16 +815,16 @@ def assert_synced_channel_state(
 
 def assert_succeeding_transfer_invariants(
     token_network_address: TokenNetworkAddress,
-    app0: App,
+    app0: RaidenService,
     balance0: Balance,
     pending_locks0: List[HashTimeLockState],
-    app1: App,
+    app1: RaidenService,
     balance1: Balance,
     pending_locks1: List[HashTimeLockState],
 ) -> None:
     """ Channels are in synced states and no unlock failures have occurred. """
-    assert not has_unlock_failure(app0.raiden)
-    assert not has_unlock_failure(app1.raiden)
+    assert not has_unlock_failure(app0)
+    assert not has_unlock_failure(app1)
 
     assert_synced_channel_state(
         token_network_address, app0, balance0, pending_locks0, app1, balance1, pending_locks1

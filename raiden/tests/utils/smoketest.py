@@ -400,7 +400,7 @@ def setup_raiden(
         "environment_type": Environment.DEVELOPMENT,
     }
 
-    # Wait until the secret registry is confirmed, otherwise the App
+    # Wait until the secret registry is confirmed, otherwise the RaidenService
     # inialization will fail, needed for the check
     # `check_ethereum_confirmed_block_is_not_pruned`.
     current_block = client.block_number()
@@ -418,14 +418,14 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
     app = None
     try:
         app = run_app(**setup.args)
-        raiden_api = app.raiden.raiden_api
+        raiden_api = app.raiden_api
         assert raiden_api is not None  # for mypy
 
-        block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
+        block = BlockNumber(app.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
         # prerequisite checks. Wait a bit here to make sure that the confirmed
         # block hash contains the deployed token network or else things break
-        wait_for_block(raiden=app.raiden, block_number=block, retry_timeout=1.0)
+        wait_for_block(raiden=app, block_number=block, retry_timeout=1.0)
 
         raiden_api.channel_open(
             registry_address=TokenNetworkRegistryAddress(
@@ -446,7 +446,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
 
         print_step("Running smoketest")
 
-        raiden_service = app.raiden
+        raiden_service = app
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()
         events_token_addresses = [
             event["args"]["token_address"] for event in token_network_added_events
@@ -488,7 +488,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
     finally:
         if app is not None:
             app.stop()
-            app.raiden.greenlet.get()
+            app.greenlet.get()
 
 
 @contextmanager

@@ -178,9 +178,7 @@ def dont_handle_lock_expired_mock(app):
     def do_nothing(raiden, message):  # pylint: disable=unused-argument
         return []
 
-    return patch.object(
-        app.raiden.message_handler, "handle_message_lockexpired", side_effect=do_nothing
-    )
+    return patch.object(app.message_handler, "handle_message_lockexpired", side_effect=do_nothing)
 
 
 def dont_handle_node_change_network_state():

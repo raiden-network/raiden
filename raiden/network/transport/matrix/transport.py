@@ -356,7 +356,6 @@ class MatrixTransport(Runnable):
             )
 
         def _http_retry_delay() -> Iterable[float]:
-            # below constants are defined in raiden.app.App.DEFAULT_CONFIG
             return timeout_exponential_backoff(
                 self._config.retries_before_backoff,
                 self._config.retry_interval_initial,

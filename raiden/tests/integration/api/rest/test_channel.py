@@ -7,6 +7,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.api.rest import APIServer
 from raiden.constants import BLOCK_ID_LATEST, NULL_ADDRESS_HEX
+from raiden.raiden_service import RaidenService
 from raiden.tests.integration.api.rest.test_rest import DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
@@ -21,7 +22,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import check_dict_nested_attrs
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import List, TokenAmount
 from raiden.waiting import wait_for_participant_deposit
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
@@ -242,7 +243,7 @@ def test_api_channel_open_and_deposit(
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_channel_open_and_deposit_race(
     api_server_test_instance: APIServer,
-    raiden_network,
+    raiden_network: List[RaidenService],
     token_addresses,
     reveal_timeout,
     token_network_registry_address,
@@ -319,11 +320,11 @@ def test_api_channel_open_and_deposit_race(
     exception = Exception(f"Expected deposit not seen within {timeout_seconds}")
     with gevent.Timeout(seconds=timeout_seconds, exception=exception):
         wait_for_participant_deposit(
-            raiden=app0.raiden,
+            raiden=app0,
             token_network_registry_address=token_network_registry_address,
             token_address=token_address,
             partner_address=to_canonical_address(first_partner_address),
-            target_address=app0.raiden.address,
+            target_address=app0.address,
             target_balance=deposit_amount,
             retry_timeout=retry_timeout,
         )
@@ -688,11 +689,11 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize("deposit", [1000])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_channel_withdraw(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    partner_address = app1.raiden.address
+    partner_address = app1.address
 
     # Withdraw a 0 amount
     request = grequests.patch(
@@ -752,11 +753,14 @@ def test_api_channel_withdraw(
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_channel_set_reveal_timeout(
-    api_server_test_instance: APIServer, raiden_network, token_addresses, settle_timeout
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    settle_timeout,
 ):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
-    partner_address = app1.raiden.address
+    partner_address = app1.address
 
     request = grequests.patch(
         api_url_for(
@@ -796,13 +800,13 @@ def test_api_channel_set_reveal_timeout(
     assert_response_with_code(response, HTTPStatus.OK)
 
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
     )
     assert token_network_address
     channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app0.raiden),
+        chain_state=views.state_from_raiden(app0),
         token_network_address=token_network_address,
-        partner_address=app1.raiden.address,
+        partner_address=app1.address,
     )
     assert channel_state
 

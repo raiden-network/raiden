@@ -9,7 +9,6 @@ from eth_utils import denoms, to_canonical_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST, UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
@@ -38,7 +37,7 @@ ENDC = "\033[0m"
 
 
 def print_usage() -> None:
-    print(f"\tuse `{HEADER}app{OKBLUE}` to interact with the top level Raiden App API.")
+    print(f"\tuse `{HEADER}app{OKBLUE}` to interact with the top level Raiden API.")
     print(f"\t{OKBLUE}use `{HEADER}raiden{OKBLUE}` to interact with the raiden service.")
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
@@ -58,9 +57,9 @@ class Console(gevent.Greenlet):
     SIGSTP signal (e.g. via keyboard shortcut CTRL-Z).
     """
 
-    def __init__(self, app: App) -> None:
+    def __init__(self, raiden_service: RaidenService) -> None:
         super().__init__()
-        self.app = app
+        self.raiden_service = raiden_service
         self.console_locals: Dict[str, Any] = {}
 
     def _run(self) -> None:  # pylint: disable=method-hidden
@@ -96,13 +95,12 @@ class Console(gevent.Greenlet):
             for line in (err.getvalue().strip().split("\n") or [])[-n:]:
                 print(line)
 
-        tools = ConsoleTools(self.app.raiden)
+        tools = ConsoleTools(self.raiden_service)
 
         self.console_locals = {
-            "app": self.app,
-            "raiden": self.app.raiden,
+            "raiden": self.raiden_service,
             "denoms": denoms,
-            "proxy_manager": self.app.raiden.proxy_manager,
+            "proxy_manager": self.raiden_service.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
             "lastlog": lastlog,
@@ -221,7 +219,7 @@ class ConsoleTools:
             token_address_hex: hex encoded address of the token for the channel.
             peer_address_hex: hex encoded address of the channel peer.
             total_deposit: amount of total funding for the channel.
-            settle_timeout: amount of blocks for the settle time (if None use app defaults).
+            settle_timeout: amount of blocks for the settle time (if None use defaults).
 
         Return:
             netting_channel: the (newly opened) netting channel object.

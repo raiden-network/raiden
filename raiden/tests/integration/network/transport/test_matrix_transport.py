@@ -11,7 +11,6 @@ from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 
 import raiden
-from raiden.app import App
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_SIGNATURE,
@@ -280,7 +279,7 @@ def test_matrix_message_sync(matrix_transports):
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
-    raiden_chain: List[App], token_addresses, request
+    raiden_chain: List[RaidenService], token_addresses, request
 ):
     """Proxies exceptions must be forwarded by the transport."""
     if request.config.option.usepdb:
@@ -289,24 +288,24 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
     token_address = token_addresses[0]
 
     channel_state = views.get_channelstate_for(
-        chain_state=views.state_from_app(app0),
-        token_network_registry_address=app0.raiden.default_registry.address,
+        chain_state=views.state_from_raiden(app0),
+        token_network_registry_address=app0.default_registry.address,
         token_address=token_address,
-        partner_address=app1.raiden.address,
+        partner_address=app1.address,
     )
-    burn_eth(app0.raiden.rpc_client)
+    burn_eth(app0.rpc_client)
 
     def make_tx(*args, **kwargs):  # pylint: disable=unused-argument
         close_channel = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
-        app0.raiden.handle_and_track_state_changes([close_channel])
+        app0.handle_and_track_state_changes([close_channel])
 
-    app0.raiden.transport._client.add_presence_listener(make_tx)
+    app0.transport._client.add_presence_listener(make_tx)
 
     exception = ValueError("Exception was not raised from the transport")
     with pytest.raises(InsufficientEth), gevent.Timeout(10, exception=exception):
         # Change presence in peer app to trigger callback in app0
-        app1.raiden.transport._client.set_presence_state(UserPresence.UNAVAILABLE.value)
-        app0.raiden.greenlet.get()
+        app1.transport._client.set_presence_state(UserPresence.UNAVAILABLE.value)
+        app0.greenlet.get()
 
 
 def test_matrix_message_retry(
@@ -1260,7 +1259,9 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
 @pytest.mark.parametrize(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
-def test_transport_presence_updates(raiden_network, restart_node, retry_timeout):
+def test_transport_presence_updates(
+    raiden_network: List[RaidenService], restart_node, retry_timeout
+):
     """
     Create transports and test that matrix delivers presence updates
     in the presence of filters which ignore all event updates
@@ -1268,68 +1269,56 @@ def test_transport_presence_updates(raiden_network, restart_node, retry_timeout)
     """
     app0, app1, app2 = raiden_network
 
-    app0.raiden.transport.immediate_health_check_for(app1.raiden.address)
-    app0.raiden.transport.immediate_health_check_for(app2.raiden.address)
+    app0.transport.immediate_health_check_for(app1.address)
+    app0.transport.immediate_health_check_for(app2.address)
 
-    app1.raiden.transport.immediate_health_check_for(app0.raiden.address)
-    app1.raiden.transport.immediate_health_check_for(app2.raiden.address)
+    app1.transport.immediate_health_check_for(app0.address)
+    app1.transport.immediate_health_check_for(app2.address)
 
-    app2.raiden.transport.immediate_health_check_for(app0.raiden.address)
-    app2.raiden.transport.immediate_health_check_for(app1.raiden.address)
+    app2.transport.immediate_health_check_for(app0.address)
+    app2.transport.immediate_health_check_for(app1.address)
 
-    wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app0.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app0, app2.address, NetworkState.REACHABLE, retry_timeout)
 
-    wait_for_network_state(app1.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app1.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app1, app2.address, NetworkState.REACHABLE, retry_timeout)
 
-    wait_for_network_state(app2.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app2.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2, app0.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2, app1.address, NetworkState.REACHABLE, retry_timeout)
 
     # Stop app0
     app0.stop()
-    wait_for_network_state(
-        app1.raiden, app0.raiden.address, NetworkState.UNREACHABLE, retry_timeout
-    )
-    wait_for_network_state(
-        app2.raiden, app0.raiden.address, NetworkState.UNREACHABLE, retry_timeout
-    )
+    wait_for_network_state(app1, app0.address, NetworkState.UNREACHABLE, retry_timeout)
+    wait_for_network_state(app2, app0.address, NetworkState.UNREACHABLE, retry_timeout)
 
     # Restart app0
     restart_node(app0)
-    app0.raiden.transport.immediate_health_check_for(app1.raiden.address)
-    app0.raiden.transport.immediate_health_check_for(app2.raiden.address)
-    wait_for_network_state(app1.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app2.raiden, app0.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    app0.transport.immediate_health_check_for(app1.address)
+    app0.transport.immediate_health_check_for(app2.address)
+    wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2, app0.address, NetworkState.REACHABLE, retry_timeout)
 
     # Stop app1
     app1.stop()
-    wait_for_network_state(
-        app0.raiden, app1.raiden.address, NetworkState.UNREACHABLE, retry_timeout
-    )
-    wait_for_network_state(
-        app2.raiden, app1.raiden.address, NetworkState.UNREACHABLE, retry_timeout
-    )
+    wait_for_network_state(app0, app1.address, NetworkState.UNREACHABLE, retry_timeout)
+    wait_for_network_state(app2, app1.address, NetworkState.UNREACHABLE, retry_timeout)
 
     # Restart app1
     restart_node(app1)
-    app1.raiden.transport.immediate_health_check_for(app0.raiden.address)
-    app1.raiden.transport.immediate_health_check_for(app2.raiden.address)
-    wait_for_network_state(app0.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app2.raiden, app1.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    app1.transport.immediate_health_check_for(app0.address)
+    app1.transport.immediate_health_check_for(app2.address)
+    wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app2, app1.address, NetworkState.REACHABLE, retry_timeout)
 
     # Stop app2
     app2.stop()
-    wait_for_network_state(
-        app0.raiden, app2.raiden.address, NetworkState.UNREACHABLE, retry_timeout
-    )
-    wait_for_network_state(
-        app1.raiden, app2.raiden.address, NetworkState.UNREACHABLE, retry_timeout
-    )
+    wait_for_network_state(app0, app2.address, NetworkState.UNREACHABLE, retry_timeout)
+    wait_for_network_state(app1, app2.address, NetworkState.UNREACHABLE, retry_timeout)
 
     # Restart app0
     app2.start()
-    app2.raiden.transport.immediate_health_check_for(app0.raiden.address)
-    app2.raiden.transport.immediate_health_check_for(app1.raiden.address)
-    wait_for_network_state(app0.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app1.raiden, app2.raiden.address, NetworkState.REACHABLE, retry_timeout)
+    app2.transport.immediate_health_check_for(app0.address)
+    app2.transport.immediate_health_check_for(app1.address)
+    wait_for_network_state(app0, app2.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app1, app2.address, NetworkState.REACHABLE, retry_timeout)

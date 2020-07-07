@@ -4,9 +4,9 @@ from typing import cast
 import pytest
 
 from raiden import waiting
-from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
@@ -42,13 +42,13 @@ STATE_PRUNING = {
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
 def test_locksroot_loading_during_channel_settle_handling(
-    raiden_chain: List[App],
+    raiden_chain: List[RaidenService],
     restart_node: RestartNode,
     deploy_client: JSONRPCClient,
     token_addresses: List[TokenAddress],
 ) -> None:
     app0, app1 = raiden_chain
-    token_network_registry_address = app0.raiden.default_registry.address
+    token_network_registry_address = app0.default_registry.address
     token_address = token_addresses[0]
 
     transfer(
@@ -69,7 +69,7 @@ def test_locksroot_loading_during_channel_settle_handling(
     )
 
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=views.state_from_raiden(app0.raiden),
+        chain_state=views.state_from_raiden(app0),
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
     )
@@ -78,13 +78,13 @@ def test_locksroot_loading_during_channel_settle_handling(
         app0=app0, app1=app1, token_network_address=token_network_address
     )
 
-    channel = app0.raiden.proxy_manager.payment_channel(
+    channel = app0.proxy_manager.payment_channel(
         channel_state=channel_state, block_identifier=BLOCK_ID_LATEST
     )
     balance_proof = channel_state.partner_state.balance_proof
     assert balance_proof
     balance_proof = cast(BalanceProofSignedState, balance_proof)
-    block_number = app0.raiden.rpc_client.block_number()
+    block_number = app0.rpc_client.block_number()
 
     closing_data = pack_signed_balance_proof(
         msg_type=MessageTypeId.BALANCE_PROOF,
@@ -94,7 +94,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         canonical_identifier=balance_proof.canonical_identifier,
         partner_signature=balance_proof.signature,
     )
-    closing_signature = app0.raiden.signer.sign(data=closing_data)
+    closing_signature = app0.signer.sign(data=closing_data)
 
     channel.close(
         nonce=balance_proof.nonce,
@@ -105,12 +105,12 @@ def test_locksroot_loading_during_channel_settle_handling(
         block_identifier=block_number,
     )
 
-    close_block = app0.raiden.rpc_client.block_number()
+    close_block = app0.rpc_client.block_number()
 
     app0.stop()
 
     waiting.wait_for_settle(
-        raiden=app1.raiden,
+        raiden=app1,
         token_network_registry_address=token_network_registry_address,
         token_address=token_address,
         channel_ids=[channel_state.canonical_identifier.channel_identifier],
@@ -136,9 +136,9 @@ def test_locksroot_loading_during_channel_settle_handling(
     pruned_after_blocks = math.ceil(pruning_history * 1.5)
     pruned_block = BlockNumber(close_block + pruned_after_blocks)
 
-    waiting.wait_for_block(raiden=app1.raiden, block_number=pruned_block, retry_timeout=1)
+    waiting.wait_for_block(raiden=app1, block_number=pruned_block, retry_timeout=1)
 
-    channel = app0.raiden.proxy_manager.payment_channel(channel_state, BLOCK_ID_LATEST)
+    channel = app0.proxy_manager.payment_channel(channel_state, BLOCK_ID_LATEST)
 
     # make sure the block was pruned
     with pytest.raises(ValueError):
@@ -149,7 +149,7 @@ def test_locksroot_loading_during_channel_settle_handling(
     restart_node(app0)
 
     assert wait_for_state_change(
-        raiden=app0.raiden,
+        raiden=app0,
         item_type=ContractReceiveChannelSettled,
         attributes={"canonical_identifier": channel_state.canonical_identifier},
         retry_timeout=1,

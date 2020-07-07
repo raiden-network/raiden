@@ -11,6 +11,7 @@ from flask import url_for
 from raiden.api.rest import APIServer
 from raiden.constants import Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
+from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
@@ -30,14 +31,21 @@ from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID
+from raiden.utils.typing import (
+    BlockNumber,
+    FeeAmount,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TargetAddress,
+)
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -373,13 +381,13 @@ def test_query_partners_by_token(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_timestamp_format(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
-):
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+) -> None:
     _, app1 = raiden_network
     amount = 200
     identifier = 42
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     payment_url = api_url_for(
         api_server_test_instance,
@@ -417,7 +425,7 @@ def test_get_token_network_for_token(
     api_server_test_instance,
     token_amount,
     token_addresses,
-    raiden_network,
+    raiden_network: List[RaidenService],
     contract_manager,
     retry_timeout,
     unregistered_token,
@@ -429,8 +437,10 @@ def test_get_token_network_for_token(
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
     # Therefore, until that block is received.
     wait_for_block(
-        raiden=app0.raiden,
-        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        raiden=app0,
+        block_number=BlockNumber(
+            app0.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
         retry_timeout=retry_timeout,
     )
 
@@ -457,9 +467,7 @@ def test_get_token_network_for_token(
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
     token_network_address = get_json_response(register_response)["token_network_address"]
 
-    wait_for_token_network(
-        app0.raiden, app0.raiden.default_registry.address, new_token_address, 0.1
-    )
+    wait_for_token_network(app0, app0.default_registry.address, new_token_address, 0.1)
 
     # now it should return the token address
     token_request = grequests.get(
@@ -562,16 +570,16 @@ def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("number_of_tokens", [2])
 def test_payment_events_endpoints(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     app0, app1, app2 = raiden_network
 
     token_address0 = token_addresses[0]
     token_address2 = token_addresses[1]
 
-    app0_address = app0.raiden.address
-    app1_address = app1.raiden.address
-    app2_address = app2.raiden.address
+    app0_address = app0.address
+    app1_address = app1.address
+    app2_address = app2.address
 
     app0_server = api_server_test_instance
     app1_server = prepare_api_server(app1)
@@ -638,26 +646,26 @@ def test_payment_events_endpoints(
     request.send()
 
     timeout = block_offset_timeout(
-        app2.raiden, "Waiting for transfer received success in the WAL timed out"
+        app2, "Waiting for transfer received success in the WAL timed out"
     )
     with watch_for_unlock_failures(*raiden_network), timeout:
         result = wait_for_received_transfer_result(
-            app1.raiden, identifier1, amount1, app1.raiden.alarm.sleep_time, secrethash1
+            app1, identifier1, amount1, app1.alarm.sleep_time, secrethash1
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
         result = wait_for_received_transfer_result(
-            app2.raiden, identifier2, amount2, app2.raiden.alarm.sleep_time, secrethash2
+            app2, identifier2, amount2, app2.alarm.sleep_time, secrethash2
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
         result = wait_for_received_transfer_result(
-            app1.raiden, identifier3, amount3, app1.raiden.alarm.sleep_time, secrethash3
+            app1, identifier3, amount3, app1.alarm.sleep_time, secrethash3
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
         result = wait_for_received_transfer_result(
-            app2.raiden, identifier4, amount4, app2.raiden.alarm.sleep_time, secrethash4
+            app2, identifier4, amount4, app2.alarm.sleep_time, secrethash4
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
@@ -949,13 +957,13 @@ def test_payment_events_endpoints(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_channel_events_raiden(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     request = grequests.post(
         api_url_for(
@@ -974,11 +982,11 @@ def test_channel_events_raiden(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("enable_rest_api", [True])
-def test_pending_transfers_endpoint(raiden_network, token_addresses):
+def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_addresses):
     initiator, mediator, target = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
+        views.state_from_raiden(mediator), mediator.default_registry.address, token_address
     )
     assert token_network_address
 
@@ -988,14 +996,14 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     fee_margin = calculate_fee_margin(amount_to_send, expected_fee)
     # This is 0,4% of ~150, so ~1.2 which gets rounded to 1
     actual_fee = 1
-    identifier = 42
+    identifier = PaymentID(42)
 
     initiator_server = prepare_api_server(initiator)
     mediator_server = prepare_api_server(mediator)
     target_server = prepare_api_server(target)
 
-    target.raiden.message_handler = target_wait = WaitForMessage()
-    mediator.raiden.message_handler = mediator_wait = WaitForMessage()
+    target.message_handler = target_wait = WaitForMessage()
+    mediator.message_handler = mediator_wait = WaitForMessage()
 
     secret = factories.make_secret()
     secrethash = sha256_secrethash(secret)
@@ -1008,13 +1016,17 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     response = request.send().response
     assert response.status_code == 200 and response.content == b"[]"
 
-    target_hold = target.raiden.raiden_event_handler
+    target_hold = target.raiden_event_handler
+    assert isinstance(
+        target_hold, HoldRaidenEventHandler
+    ), "test app must use HoldRaidenEventHandler"
+
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
-    initiator.raiden.start_mediated_transfer_with_secret(
+    initiator.start_mediated_transfer_with_secret(
         token_network_address=token_network_address,
         amount=PaymentAmount(amount_to_send - expected_fee - fee_margin),
-        target=target.raiden.address,
+        target=TargetAddress(target.address),
         identifier=identifier,
         secret=secret,
     )
@@ -1038,7 +1050,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
 
     mediator_unlock = mediator_wait.wait_for_message(Unlock, {})
     target_unlock = target_wait.wait_for_message(Unlock, {})
-    target_hold.release_secretrequest_for(target.raiden, secrethash)
+    target_hold.release_secretrequest_for(target, secrethash)
     gevent.joinall({mediator_unlock, target_unlock}, raise_error=True)
 
     for server in (initiator_server, mediator_server, target_server):

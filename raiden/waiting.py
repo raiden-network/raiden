@@ -40,7 +40,6 @@ from raiden.utils.typing import (
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
-    from raiden.app import App
 
 log = structlog.get_logger(__name__)
 
@@ -188,8 +187,8 @@ def wait_for_participant_deposit(
 
 
 def wait_single_channel_deposit(
-    app_deposit: "App",
-    app_partner: "App",
+    app_deposit: "RaidenService",
+    app_partner: "RaidenService",
     registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     total_deposit: TokenAmount,
@@ -197,28 +196,28 @@ def wait_single_channel_deposit(
 ) -> None:
     """ Wait until a deposit of `total_deposit` for app_deposit is seen by both apps"""
     wait_for_participant_deposit(
-        raiden=app_deposit.raiden,
+        raiden=app_deposit,
         token_network_registry_address=registry_address,
         token_address=token_address,
-        partner_address=app_partner.raiden.address,
-        target_address=app_deposit.raiden.address,
+        partner_address=app_partner.address,
+        target_address=app_deposit.address,
         target_balance=total_deposit,
         retry_timeout=retry_timeout,
     )
     wait_for_participant_deposit(
-        raiden=app_partner.raiden,
+        raiden=app_partner,
         token_network_registry_address=registry_address,
         token_address=token_address,
-        partner_address=app_deposit.raiden.address,
-        target_address=app_deposit.raiden.address,
+        partner_address=app_deposit.address,
+        target_address=app_deposit.address,
         target_balance=total_deposit,
         retry_timeout=retry_timeout,
     )
 
 
 def wait_both_channel_deposit(
-    app_deposit: "App",
-    app_partner: "App",
+    app_deposit: "RaidenService",
+    app_partner: "RaidenService",
     registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
     total_deposit: TokenAmount,
