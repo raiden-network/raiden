@@ -31,6 +31,7 @@ from raiden.tests.utils.transfer import transfer
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import Block
+from raiden.ui.startup import RaidenBundle
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     BlockNumber,
@@ -149,8 +150,9 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app0.raiden.default_registry, app0.raiden.default_secret_registry
+        ),
         default_service_registry=app0.raiden.default_service_registry,
         default_user_deposit=app0.raiden.default_user_deposit,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
@@ -212,8 +214,9 @@ def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app0.raiden.default_registry, app0.raiden.default_secret_registry
+        ),
         default_service_registry=app0.raiden.default_service_registry,
         default_user_deposit=app0.raiden.default_user_deposit,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,

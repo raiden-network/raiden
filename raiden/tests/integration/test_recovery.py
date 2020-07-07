@@ -25,6 +25,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
+from raiden.ui.startup import RaidenBundle
 from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import BlockNumber, PaymentAmount, PaymentID
 
@@ -173,8 +174,9 @@ def test_recovery_unhappy_case(
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app0.raiden.default_registry, app0.raiden.default_secret_registry
+        ),
         default_service_registry=app0.raiden.default_service_registry,
         default_user_deposit=app0.raiden.default_user_deposit,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
@@ -236,8 +238,9 @@ def test_recovery_blockchain_events(raiden_network, restart_node, token_addresse
         rpc_client=app0.raiden.rpc_client,
         proxy_manager=app0.raiden.proxy_manager,
         query_start_block=BlockNumber(0),
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
+        raiden_bundle=RaidenBundle(
+            app0.raiden.default_registry, app0.raiden.default_secret_registry,
+        ),
         default_service_registry=app0.raiden.default_service_registry,
         default_user_deposit=app0.raiden.default_user_deposit,
         default_one_to_n_address=app0.raiden.default_one_to_n_address,
