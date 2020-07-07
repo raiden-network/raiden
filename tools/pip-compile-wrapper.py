@@ -329,7 +329,7 @@ def main() -> None:
     elif parsed.command == "upgrade":
         packages = set(parsed.packages)
         if not packages:
-            # This is a standalong script which is not using gevent
+            # This is a standalone script which is not using gevent
             resp = input(  # pylint: disable=gevent-input-forbidden
                 "Are you sure you want to upgrade ALL packages? [y/N] "
             )
