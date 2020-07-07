@@ -111,7 +111,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.ui.startup import RaidenBundle
+from raiden.ui.startup import RaidenBundle, ServicesBundle
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.gevent import spawn_named
 from raiden.utils.logging import redact_secret
@@ -125,8 +125,6 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     InitiatorAddress,
-    MonitoringServiceAddress,
-    OneToNAddress,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -309,10 +307,7 @@ class RaidenService(Runnable):
         proxy_manager: ProxyManager,
         query_start_block: BlockNumber,
         raiden_bundle: RaidenBundle,
-        default_service_registry: Optional[ServiceRegistry],
-        default_user_deposit: Optional[UserDeposit],
-        default_one_to_n_address: Optional[OneToNAddress],
-        default_msc_address: Optional[MonitoringServiceAddress],
+        services_bundle: Optional[ServicesBundle],
         transport: MatrixTransport,
         raiden_event_handler: EventHandler,
         message_handler: MessageHandler,
@@ -324,15 +319,31 @@ class RaidenService(Runnable):
         self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
+        one_to_n_address = None
+        monitoring_service_address = None
+        service_registry: Optional[ServiceRegistry] = None
+        user_deposit: Optional[UserDeposit] = None
+
+        if services_bundle:
+            if services_bundle.one_to_n:
+                one_to_n_address = services_bundle.one_to_n.address
+
+            if services_bundle.monitoring_service:
+                monitoring_service_address = services_bundle.monitoring_service.address
+
+            service_registry = services_bundle.service_registry
+            user_deposit = services_bundle.user_deposit
+
         self.rpc_client = rpc_client
         self.proxy_manager = proxy_manager
         self.default_registry = raiden_bundle.token_network_registry
         self.query_start_block = query_start_block
-        self.default_one_to_n_address = default_one_to_n_address
+        self.default_services_bundle = services_bundle
+        self.default_one_to_n_address = one_to_n_address
         self.default_secret_registry = raiden_bundle.secret_registry
-        self.default_service_registry = default_service_registry
-        self.default_user_deposit = default_user_deposit
-        self.default_msc_address = default_msc_address
+        self.default_service_registry = service_registry
+        self.default_user_deposit = user_deposit
+        self.default_msc_address = monitoring_service_address
         self.routing_mode = routing_mode
         self.config = config
 

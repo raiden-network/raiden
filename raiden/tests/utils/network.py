@@ -11,6 +11,7 @@ from raiden import waiting
 from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, Environment, RoutingMode
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
@@ -36,7 +37,7 @@ from raiden.transfer.views import (
     state_from_raiden,
 )
 from raiden.ui.app import start_api_server
-from raiden.ui.startup import RaidenBundle
+from raiden.ui.startup import RaidenBundle, ServicesBundle
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.typing import (
     Address,
@@ -449,16 +450,32 @@ def create_apps(
             secret_registry_address, block_identifier=BLOCK_ID_LATEST
         )
 
-        service_registry = None
-        if service_registry_address:
-            service_registry = proxy_manager.service_registry(
-                service_registry_address, block_identifier=BLOCK_ID_LATEST
-            )
-
-        user_deposit = None
+        services_bundle = None
         if user_deposit_address:
             user_deposit = proxy_manager.user_deposit(
                 user_deposit_address, block_identifier=BLOCK_ID_LATEST
+            )
+
+            service_registry: Optional[ServiceRegistry] = None
+            if service_registry_address:
+                service_registry = proxy_manager.service_registry(
+                    service_registry_address, block_identifier=BLOCK_ID_LATEST
+                )
+
+            monitoring_service = None
+            if monitoring_service_contract_address:
+                monitoring_service = proxy_manager.monitoring_service(
+                    monitoring_service_contract_address, block_identifier=BLOCK_ID_LATEST
+                )
+
+            one_to_n = None
+            if one_to_n_address:
+                one_to_n = proxy_manager.one_to_n(
+                    one_to_n_address, block_identifier=BLOCK_ID_LATEST
+                )
+
+            services_bundle = ServicesBundle(
+                user_deposit, service_registry, monitoring_service, one_to_n
             )
 
         # Use `TestMatrixTransport` that saves sent messages for assertions in tests
@@ -480,10 +497,7 @@ def create_apps(
             proxy_manager=proxy_manager,
             query_start_block=BlockNumber(0),
             raiden_bundle=RaidenBundle(registry, secret_registry),
-            default_service_registry=service_registry,
-            default_user_deposit=user_deposit,
-            default_one_to_n_address=one_to_n_address,
-            default_msc_address=monitoring_service_contract_address,
+            services_bundle=services_bundle,
             transport=transport,
             raiden_event_handler=hold_handler,
             message_handler=message_handler,
