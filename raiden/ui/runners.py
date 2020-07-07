@@ -31,27 +31,19 @@ def run_services(options: Dict[str, Any]) -> None:
         gevent_tasks.append(console)
 
     gevent_tasks.append(spawn_named("check_version", check_version, get_system_spec()["raiden"]))
-    gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, app.raiden))
+    gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, app))
     gevent_tasks.append(
         spawn_named(
-            "check_network_id",
-            check_network_id,
-            app.raiden.rpc_client.chain_id,
-            app.raiden.rpc_client.web3,
+            "check_network_id", check_network_id, app.rpc_client.chain_id, app.rpc_client.web3,
         )
     )
 
-    spawn_user_deposit_task = app.raiden.default_user_deposit and (
+    spawn_user_deposit_task = app.default_user_deposit and (
         options["pathfinding_service_address"] or options["enable_monitoring"]
     )
     if spawn_user_deposit_task:
         gevent_tasks.append(
-            spawn_named(
-                "check_rdn_deposits",
-                check_rdn_deposits,
-                app.raiden,
-                app.raiden.default_user_deposit,
-            )
+            spawn_named("check_rdn_deposits", check_rdn_deposits, app, app.default_user_deposit,)
         )
 
     stop_event: AsyncResult[Optional[signal.Signals]]  # pylint: disable=no-member
@@ -85,7 +77,7 @@ def run_services(options: Dict[str, Any]) -> None:
     # gevent.signal.signal(signal.SIGPIPE, sig_set)  # pylint: disable=no-member
 
     # quit if any task exits, successfully or not
-    app.raiden.greenlet.link(stop_event)
+    app.greenlet.link(stop_event)
     for task in gevent_tasks:
         task.link(stop_event)
 
@@ -98,10 +90,8 @@ def run_services(options: Dict[str, Any]) -> None:
         for task in gevent_tasks:
             task.kill()
 
-        app.raiden.stop()
+        app.stop()
 
-        gevent.joinall(
-            set(gevent_tasks + [app.raiden]), app.config.shutdown_timeout, raise_error=True
-        )
+        gevent.joinall(set(gevent_tasks + [app]), app.config.shutdown_timeout, raise_error=True)
 
         app.stop()

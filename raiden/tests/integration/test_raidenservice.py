@@ -4,7 +4,6 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.app import App
 from raiden.constants import (
     BLOCK_ID_LATEST,
     DISCOVERY_DEFAULT_ROOM,
@@ -18,6 +17,7 @@ from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_MEDIATION_FLAT_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
@@ -56,17 +56,15 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     """
     app0 = raiden_network[0]
 
-    app0.raiden.alarm.stop()
-    target_block_num = (
-        app0.raiden.rpc_client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
-    )
-    app0.raiden.proxy_manager.client.wait_until_block(target_block_num)
+    app0.alarm.stop()
+    target_block_num = app0.rpc_client.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+    app0.proxy_manager.client.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
-    app0.raiden._best_effort_synchronize(latest_block=latest_block)
+    latest_block = app0.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
+    app0._best_effort_synchronize(latest_block=latest_block)
     target_block_num = latest_block["number"]
 
-    app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+    app0_state_changes = app0.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     assert search_for_item(
         app0_state_changes,
@@ -84,7 +82,11 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
 )
 def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
-    raiden_network, restart_node, number_of_nodes, token_addresses, network_wait,
+    raiden_network: List[RaidenService],
+    restart_node,
+    number_of_nodes,
+    token_addresses,
+    network_wait,
 ):
     """ Raiden must broadcast the latest known balance proof on restarts.
 
@@ -109,7 +111,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     app0.stop()
 
     transport = MatrixTransport(
-        config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
+        config=app0.config.transport, environment=app0.config.environment_type
     )
     transport.send_async = Mock()  # type: ignore
     transport._send_raw = Mock()  # type: ignore
@@ -145,15 +147,13 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
 
     transport.start = start_transport  # type: ignore
 
-    app0_restart = App(
+    app0_restart = RaidenService(
         config=app0.config,
-        rpc_client=app0.raiden.rpc_client,
-        proxy_manager=app0.raiden.proxy_manager,
+        rpc_client=app0.rpc_client,
+        proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(
-            app0.raiden.default_registry, app0.raiden.default_secret_registry
-        ),
-        services_bundle=app0.raiden.default_services_bundle,
+        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry),
+        services_bundle=app0.default_services_bundle,
         transport=transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
@@ -167,7 +167,9 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain_services):
+def test_alarm_task_first_run_syncs_blockchain_events(
+    raiden_network: List[RaidenService], blockchain_services
+):
     """Raiden must synchronize with the blockchain events during
     initialization.
 
@@ -184,12 +186,10 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
     blockchain_services.proxy_manager.client.wait_until_block(target_block_number=target_block_num)
 
     # This is a bit brittle, it calls the same steps as `start` would do
-    app0.raiden._initialize_wal()
-    app0.raiden._synchronize_with_blockchain()
+    app0._initialize_wal()
+    app0._synchronize_with_blockchain()
 
-    channels = RaidenAPI(app0.raiden).get_channel_list(
-        registry_address=app0.raiden.default_registry.address
-    )
+    channels = RaidenAPI(app0).get_channel_list(registry_address=app0.default_registry.address)
     msg = "Initialization did not properly synchronize with the blockchain, channel is missing"
     assert len(channels) != 0, msg
 
@@ -198,7 +198,7 @@ def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
+def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[RaidenService]):
     """Raiden must throw a proper exception when the filelock of the DB is already taken.
 
     Test for https://github.com/raiden-network/raiden/issues/6079
@@ -206,16 +206,14 @@ def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
     app0, _ = raiden_network
 
     # Start a second app, that should throw an expection, as the lock is already taken
-    app0_2 = App(
+    app0_2 = RaidenService(
         config=app0.config,
-        rpc_client=app0.raiden.rpc_client,
-        proxy_manager=app0.raiden.proxy_manager,
+        rpc_client=app0.rpc_client,
+        proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(
-            app0.raiden.default_registry, app0.raiden.default_secret_registry
-        ),
-        services_bundle=app0.raiden.default_services_bundle,
-        transport=app0.raiden.transport,
+        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry),
+        services_bundle=app0.default_services_bundle,
+        transport=app0.transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PRIVATE,
@@ -227,7 +225,7 @@ def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[App]):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_fees_are_updated_during_startup(
-    raiden_network, restart_node, token_addresses, deposit, retry_timeout
+    raiden_network: List[RaidenService], restart_node, token_addresses, deposit, retry_timeout
 ) -> None:
     """
     Test that the supplied fee settings are correctly forwarded to all
@@ -238,21 +236,21 @@ def test_fees_are_updated_during_startup(
     token_address = token_addresses[0]
 
     def get_channel_state(app) -> NettingChannelState:
-        chain_state = views.state_from_app(app)
-        token_network_registry_address = app.raiden.default_registry.address
+        chain_state = views.state_from_raiden(app)
+        token_network_registry_address = app.default_registry.address
         token_network_address = views.get_token_network_address_by_token_address(
             chain_state, token_network_registry_address, token_address
         )
         assert token_network_address
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state, token_network_address, app1.raiden.address
+            chain_state, token_network_address, app1.address
         )
         assert channel_state
 
         return channel_state
 
     waiting.wait_both_channel_deposit(
-        app0, app1, app0.raiden.default_registry.address, token_address, deposit, retry_timeout
+        app0, app1, app0.default_registry.address, token_address, deposit, retry_timeout
     )
     # This is the imbalance penalty generated for the deposit
     # with DEFAULT_MEDIATION_PROPORTIONAL_IMBALANCE_FEE
@@ -287,13 +285,13 @@ def test_fees_are_updated_during_startup(
     assert channel_state.fee_schedule.proportional == DEFAULT_MEDIATION_PROPORTIONAL_FEE
     assert channel_state.fee_schedule.imbalance_penalty == default_imbalance_penalty
 
-    original_config = deepcopy(app0.raiden.config)
+    original_config = deepcopy(app0.config)
 
     # Now restart app0, and set new flat fee for that token network
     flat_fee = FeeAmount(100)
     app0.stop()
-    app0.raiden.config = deepcopy(original_config)
-    app0.raiden.config.mediation_fees.token_to_flat_fee[token_address] = flat_fee
+    app0.config = deepcopy(original_config)
+    app0.config.mediation_fees.token_to_flat_fee[token_address] = flat_fee
     restart_node(app0)
 
     channel_state = get_channel_state(app0)
@@ -304,8 +302,8 @@ def test_fees_are_updated_during_startup(
     # Now restart app0, and set new proportional fee
     prop_fee = ProportionalFeeAmount(123)
     app0.stop()
-    app0.raiden.config = deepcopy(original_config)
-    app0.raiden.config.mediation_fees.token_to_proportional_fee[token_address] = prop_fee
+    app0.config = deepcopy(original_config)
+    app0.config.mediation_fees.token_to_proportional_fee[token_address] = prop_fee
     restart_node(app0)
 
     channel_state = get_channel_state(app0)
@@ -315,8 +313,10 @@ def test_fees_are_updated_during_startup(
 
     # Now restart app0, and set new proportional imbalance fee
     app0.stop()
-    app0.raiden.config = deepcopy(original_config)
-    app0.raiden.config.mediation_fees.token_to_proportional_imbalance_fee[token_address] = 0.05e6
+    app0.config = deepcopy(original_config)
+    app0.config.mediation_fees.token_to_proportional_imbalance_fee[
+        token_address
+    ] = ProportionalFeeAmount(50_000)
     restart_node(app0)
 
     channel_state = get_channel_state(app0)

@@ -8,7 +8,6 @@ import structlog
 from gevent.event import AsyncResult
 
 from raiden.api.rest import APIServer
-from raiden.app import App
 from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)
@@ -26,11 +25,11 @@ def raise_on_failure(test_function: Callable) -> Callable:
         result = AsyncResult()
         raiden_services: List[RaidenService] = []
 
-        apps: List[App] = kwargs.get("raiden_network", kwargs.get("raiden_chain"))
+        apps: List[RaidenService] = kwargs.get("raiden_network", kwargs.get("raiden_chain"))
 
         if apps:
-            assert all(isinstance(app, App) for app in apps)
-            raiden_services = [app.raiden for app in apps]
+            assert all(isinstance(app, RaidenService) for app in apps)
+            raiden_services = apps
         else:
             api_server = kwargs.get("api_server_test_instance")
             if isinstance(api_server, APIServer):

@@ -1,11 +1,11 @@
 import pytest
 
 from raiden import waiting
-from raiden.app import App
 from raiden.constants import RoutingMode
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
@@ -41,7 +41,7 @@ from raiden.utils.typing import (
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
-    raiden_network: List[App],
+    raiden_network: List[RaidenService],
     restart_node: RestartNode,
     deposit: TokenAmount,
     token_addresses: List[TokenAddress],
@@ -50,8 +50,8 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
     """Test re-sending of undelivered messages on node restart"""
     app0, app1 = raiden_network
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
@@ -68,16 +68,16 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
         secrethash = sha256_secrethash(secret)
         transfers.append((create_default_identifier(), amount_per_transfer, secret, secrethash))
 
-        assert isinstance(app0.raiden.raiden_event_handler, HoldRaidenEventHandler)  # for mypy
-        app0.raiden.raiden_event_handler.hold(
+        assert isinstance(app0.raiden_event_handler, HoldRaidenEventHandler)  # for mypy
+        app0.raiden_event_handler.hold(
             SendLockedTransfer, {"transfer": {"lock": {"secrethash": secrethash}}}
         )
 
     for identifier, amount, secret, _ in transfers:
-        app0.raiden.mediated_transfer_async(
+        app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
-            target=TargetAddress(app1.raiden.address),
+            target=TargetAddress(app1.address),
             identifier=identifier,
             secret=secret,
         )
@@ -86,19 +86,17 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
 
     # Restart the app. The pending transfers must be processed.
     new_transport = MatrixTransport(
-        config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
+        config=app0.config.transport, environment=app0.config.environment_type
     )
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
-    app0_restart = App(
+    app0_restart = RaidenService(
         config=app0.config,
-        rpc_client=app0.raiden.rpc_client,
-        proxy_manager=app0.raiden.proxy_manager,
+        rpc_client=app0.rpc_client,
+        proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(
-            app0.raiden.default_registry, app0.raiden.default_secret_registry,
-        ),
-        services_bundle=app0.raiden.default_services_bundle,
+        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry,),
+        services_bundle=app0.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
@@ -113,29 +111,29 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
     # have completed, making it flaky.
     #
     # Make sure the transfers are in the queue and fail otherwise.
-    chain_state = views.state_from_raiden(app0_restart.raiden)
+    chain_state = views.state_from_raiden(app0_restart)
     for _, _, _, secrethash in transfers:
         msg = "The secrethashes of the pending transfers must be in the queue after a restart."
         assert secrethash in chain_state.payment_mapping.secrethashes_to_task, msg
 
-    timeout = block_offset_timeout(app1.raiden, "Timeout waiting for balance update of app0")
+    timeout = block_offset_timeout(app1, "Timeout waiting for balance update of app0")
     with watch_for_unlock_failures(*raiden_network), timeout:
         waiting.wait_for_payment_balance(
-            raiden=app0_restart.raiden,
+            raiden=app0_restart,
             token_network_registry_address=token_network_registry_address,
             token_address=token_address,
-            partner_address=app1.raiden.address,
-            target_address=app1.raiden.address,
+            partner_address=app1.address,
+            target_address=app1.address,
             target_balance=total_transferred_amount,
             retry_timeout=network_wait,
         )
         timeout.exception_to_throw = ValueError("Timeout waiting for balance update of app1")
         waiting.wait_for_payment_balance(
-            raiden=app1.raiden,
+            raiden=app1,
             token_network_registry_address=token_network_registry_address,
             token_address=token_address,
-            partner_address=app0_restart.raiden.address,
-            target_address=app1.raiden.address,
+            partner_address=app0_restart.address,
+            target_address=app1.address,
             target_balance=total_transferred_amount,
             retry_timeout=network_wait,
         )
@@ -157,7 +155,7 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
-    raiden_network: List[App],
+    raiden_network: List[RaidenService],
     restart_node: RestartNode,
     token_addresses: List[TokenAddress],
     network_wait: float,
@@ -176,14 +174,14 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     app0, app1 = raiden_network
 
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
     assert token_network_address
 
-    target_address = TargetAddress(app1.raiden.address)
+    target_address = TargetAddress(app1.address)
 
     # make a few transfers from app0 to app1
     amount = PaymentAmount(1)
@@ -193,11 +191,11 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         # Make sure the transfer is not completed
         secret = make_secret(identifier)
 
-        assert isinstance(app0.raiden.raiden_event_handler, HoldRaidenEventHandler)  # for mypy
-        app0.raiden.raiden_event_handler.hold(SendSecretReveal, {"secret": secret})
+        assert isinstance(app0.raiden_event_handler, HoldRaidenEventHandler)  # for mypy
+        app0.raiden_event_handler.hold(SendSecretReveal, {"secret": secret})
 
         identifier = identifier + 1
-        payment_status = app0.raiden.mediated_transfer_async(
+        payment_status = app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
             target=target_address,
@@ -206,17 +204,15 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         )
         assert payment_status.payment_identifier == identifier
 
-    app0_restart = App(
+    app0_restart = RaidenService(
         config=app0.config,
-        rpc_client=app0.raiden.rpc_client,
-        proxy_manager=app0.raiden.proxy_manager,
+        rpc_client=app0.rpc_client,
+        proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(
-            app0.raiden.default_registry, app0.raiden.default_secret_registry,
-        ),
-        services_bundle=app0.raiden.default_services_bundle,
+        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry,),
+        services_bundle=app0.default_services_bundle,
         transport=MatrixTransport(
-            config=app0.raiden.config.transport, environment=app0.raiden.config.environment_type
+            config=app0.config.transport, environment=app0.config.environment_type
         ),
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
@@ -231,7 +227,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     # Check that the payment statuses were restored properly after restart
     for identifier in range(spent_amount):
         identifier = PaymentID(identifier + 1)
-        mapping = app0_restart.raiden.targets_to_identifiers_to_statuses
+        mapping = app0_restart.targets_to_identifiers_to_statuses
         status = mapping[target_address][identifier]
         assert status.amount == 1
         assert status.payment_identifier == identifier
@@ -240,13 +236,13 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     restart_node(app1)  # now that our checks are done start app1 again
 
     with watch_for_unlock_failures(*raiden_network):
-        waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
+        waiting.wait_for_healthy(app0_restart, app1.address, network_wait)
 
         waiting.wait_for_payment_balance(
-            raiden=app1.raiden,
+            raiden=app1,
             token_network_registry_address=token_network_registry_address,
             token_address=token_address,
-            partner_address=app0_restart.raiden.address,
+            partner_address=app0_restart.address,
             target_address=Address(target_address),
             target_balance=spent_amount,
             retry_timeout=network_wait,
@@ -255,7 +251,5 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     # Check that payments are completed after both nodes come online after restart
     for identifier in range(spent_amount):
         assert raiden_events_search_for_item(
-            app0_restart.raiden,
-            EventPaymentSentSuccess,
-            {"identifier": identifier + 1, "amount": 1},
+            app0_restart, EventPaymentSentSuccess, {"identifier": identifier + 1, "amount": 1},
         )

@@ -6,6 +6,7 @@ from eth_utils import decode_hex, to_checksum_address, to_hex
 
 from raiden.api.rest import APIServer
 from raiden.constants import UINT64_MAX
+from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
@@ -19,7 +20,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transfer import watch_for_unlock_failures
 from raiden.utils.secrethash import sha256_secrethash
-from raiden.utils.typing import Secret
+from raiden.utils.typing import List, Secret
 
 DEFAULT_AMOUNT = "200"
 DEFAULT_ID = "42"
@@ -29,11 +30,11 @@ DEFAULT_ID = "42"
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_target_error(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
-):
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+) -> None:
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     # stop app1 to force an error
     app1.stop()
@@ -55,13 +56,16 @@ def test_api_payments_target_error(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments(
-    api_server_test_instance: APIServer, raiden_network, token_addresses, deposit
-):
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    deposit,
+) -> None:
     _, app1 = raiden_network
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -138,11 +142,11 @@ def test_api_payments(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_secret_hash_errors(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     secret = to_hex(factories.make_secret())
     bad_secret = "Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33"
     bad_secret_hash = "Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33"
@@ -223,11 +227,11 @@ def test_api_payments_secret_hash_errors(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_secret_no_hash(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     secret = to_hex(factories.make_secret())
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
@@ -261,11 +265,11 @@ def test_api_payments_with_secret_no_hash(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_hash_no_secret(
-    api_server_test_instance, raiden_network, token_addresses
+    api_server_test_instance, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     secret_hash = factories.make_secret_hash()
 
     request = grequests.post(
@@ -312,7 +316,7 @@ def test_api_payments_post_without_required_params(api_server_test_instance, tok
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_resolver(
     api_server_test_instance: APIServer,
-    raiden_network,
+    raiden_network: List[RaidenService],
     token_addresses,
     resolvers,  # pylint: disable=unused-argument
 ):
@@ -321,7 +325,7 @@ def test_api_payments_with_resolver(
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     secret_hash = factories.make_secret_hash()
 
     # payment with secret_hash when both resolver and initiator don't have the secret
@@ -382,11 +386,11 @@ def test_api_payments_with_resolver(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_secret_and_hash(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     secret, secret_hash = factories.make_secret_with_hash()
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
@@ -426,11 +430,11 @@ def test_api_payments_with_secret_and_hash(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_conflicts(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     payment_url = api_url_for(
         api_server_test_instance,
@@ -464,11 +468,11 @@ def test_api_payments_conflicts(
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("deposit", [1000])
 def test_api_payments_with_lock_timeout(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     number_of_nodes = 2
     reveal_timeout = number_of_nodes * 4 + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     settle_timeout = 39
@@ -547,11 +551,11 @@ def test_api_payments_with_lock_timeout(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_invalid_input(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
     settle_timeout = 39
 
     # Invalid identifier being 0 or negative

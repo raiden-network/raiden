@@ -4,12 +4,21 @@ import pytest
 from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
+from raiden.raiden_service import RaidenService
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import BlockTimeout as BlockOffset, PaymentAmount, PrivateKey, TokenAmount
+from raiden.utils.typing import (
+    BlockTimeout as BlockOffset,
+    InitiatorAddress,
+    List,
+    PaymentAmount,
+    PrivateKey,
+    TargetAddress,
+    TokenAmount,
+)
 from raiden.waiting import wait_for_block
 
 
@@ -73,31 +82,31 @@ def saturated_count(connection_managers, registry_address, token_address):
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
 @pytest.mark.parametrize("reveal_timeout", [3])
-def test_participant_selection(raiden_network, token_addresses):
+def test_participant_selection(raiden_network: List[RaidenService], token_addresses):
     # pylint: disable=too-many-locals
-    registry_address = raiden_network[0].raiden.default_registry.address
-    one_to_n_address = raiden_network[0].raiden.default_one_to_n_address
+    registry_address = raiden_network[0].default_registry.address
+    one_to_n_address = raiden_network[0].default_one_to_n_address
     token_address = token_addresses[0]
     # connect the first node - this will register the token and open the first channel
     # Since there is no other nodes available to connect to this call will do nothing more
-    RaidenAPI(raiden_network[0].raiden).token_network_connect(
+    RaidenAPI(raiden_network[0]).token_network_connect(
         registry_address=registry_address, token_address=token_address, funds=TokenAmount(100)
     )
 
     # Test invalid argument values
     with pytest.raises(InvalidAmount):
-        RaidenAPI(raiden_network[0].raiden).token_network_connect(
+        RaidenAPI(raiden_network[0]).token_network_connect(
             registry_address=registry_address, token_address=token_address, funds=TokenAmount(-1)
         )
     with pytest.raises(InvalidAmount):
-        RaidenAPI(raiden_network[0].raiden).token_network_connect(
+        RaidenAPI(raiden_network[0]).token_network_connect(
             registry_address=registry_address,
             token_address=token_address,
             funds=TokenAmount(100),
             joinable_funds_target=2,
         )
     with pytest.raises(InvalidAmount):
-        RaidenAPI(raiden_network[0].raiden).token_network_connect(
+        RaidenAPI(raiden_network[0]).token_network_connect(
             registry_address=registry_address,
             token_address=token_address,
             funds=TokenAmount(100),
@@ -106,21 +115,20 @@ def test_participant_selection(raiden_network, token_addresses):
 
     # Call the connect endpoint for all but the first node
     connect_greenlets = set(
-        gevent.spawn(
-            RaidenAPI(app.raiden).token_network_connect, registry_address, token_address, 100
-        )
+        gevent.spawn(RaidenAPI(app).token_network_connect, registry_address, token_address, 100)
         for app in raiden_network[1:]
     )
     gevent.joinall(connect_greenlets, raise_error=True)
 
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_raiden(raiden_network[0].raiden),
+        views.state_from_raiden(raiden_network[0]),
         token_network_registry_address=registry_address,
         token_address=token_address,
     )
+    assert token_network_address, "token_address must be registered by the fixtures."
+
     connection_managers = [
-        app.raiden.connection_manager_for_token_network(token_network_address)
-        for app in raiden_network
+        app.connection_manager_for_token_network(token_network_address) for app in raiden_network
     ]
 
     unsaturated_connection_managers = connection_managers[:]
@@ -138,20 +146,20 @@ def test_participant_selection(raiden_network, token_addresses):
 
     # ensure unpartitioned network
     for app in raiden_network:
-        node_state = views.state_from_raiden(app.raiden)
+        node_state = views.state_from_raiden(app)
         network_state = views.get_token_network_by_token_address(
             node_state, registry_address, token_address
         )
         assert network_state is not None
         for target in raiden_network:
-            if target.raiden.address == app.raiden.address:
+            if target.address == app.address:
                 continue
             _, routes, _ = routing.get_best_routes(
                 chain_state=node_state,
                 token_network_address=network_state.address,
                 one_to_n_address=one_to_n_address,
-                from_address=app.raiden.address,
-                to_address=target.raiden.address,
+                from_address=InitiatorAddress(app.address),
+                to_address=TargetAddress(target.address),
                 amount=PaymentAmount(1),
                 previous_address=None,
                 pfs_config=None,
@@ -161,7 +169,7 @@ def test_participant_selection(raiden_network, token_addresses):
 
     # create a transfer to the leaving node, so we have a channel to settle
     for app in raiden_network:
-        sender = app.raiden
+        sender = app
         sender_channel = next(
             (
                 channel_state
@@ -179,9 +187,7 @@ def test_participant_selection(raiden_network, token_addresses):
     registry_address = sender.default_registry.address
 
     receiver = next(
-        app.raiden
-        for app in raiden_network
-        if app.raiden.address == sender_channel.partner_state.address
+        app for app in raiden_network if app.address == sender_channel.partner_state.address
     )
 
     # assert there is a direct channel receiver -> sender (vv)
@@ -198,7 +204,11 @@ def test_participant_selection(raiden_network, token_addresses):
     with watch_for_unlock_failures(*raiden_network):
         amount = PaymentAmount(1)
         RaidenAPI(sender).transfer_and_wait(
-            registry_address, token_address, amount, receiver.address, transfer_timeout=10
+            registry_address,
+            token_address,
+            amount,
+            TargetAddress(receiver.address),
+            transfer_timeout=10,
         )
 
         with gevent.Timeout(
@@ -237,7 +247,9 @@ def test_participant_selection(raiden_network, token_addresses):
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [10])
 @pytest.mark.parametrize("reveal_timeout", [3])
-def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token_addresses):
+def test_connect_does_not_open_channels_with_offline_nodes(
+    raiden_network: List[RaidenService], token_addresses
+):
     """
     Test that using the connection manager to connect to a token network
     does not open channels with offline nodes
@@ -245,7 +257,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     Test for https://github.com/raiden-network/raiden/issues/5583
     """
     # pylint: disable=too-many-locals
-    registry_address = raiden_network[0].raiden.default_registry.address
+    registry_address = raiden_network[0].default_registry.address
     token_address = token_addresses[0]
     app0, app1, _, _ = raiden_network
     offline_node = app0
@@ -253,7 +265,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
 
     # connect the first node - this will register the token and open the first channel
     # Since there is no other nodes available to connect to this call will do nothing more
-    RaidenAPI(app0.raiden).token_network_connect(
+    RaidenAPI(app0).token_network_connect(
         registry_address=registry_address,
         token_address=token_address,
         funds=TokenAmount(100),
@@ -262,24 +274,26 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
 
     # First node will now go offline
     offline_node.stop()
-    offline_node.raiden.greenlet.get()
-    assert not offline_node.raiden
+    offline_node.greenlet.get()
+    assert not offline_node
 
     # Call the connect endpoint for the second node
-    RaidenAPI(app1.raiden).token_network_connect(
+    RaidenAPI(app1).token_network_connect(
         registry_address=registry_address,
         token_address=token_address,
         funds=TokenAmount(100),
         initial_channel_target=target_channels_num,
     )
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_raiden(app1.raiden),
+        views.state_from_raiden(app1),
         token_network_registry_address=registry_address,
         token_address=token_address,
     )
+    assert token_network_address, "token_address must be registered by the fixtures."
+
     # and wait until connections are done. This should connect to an offline node
     # and create the first online discoverable
-    manager = app1.raiden.connection_manager_for_token_network(token_network_address)
+    manager = app1.connection_manager_for_token_network(token_network_address)
     exception = AssertionError("Unsaturated connection manager", manager)
     with gevent.Timeout(120, exception):
         if not is_manager_saturated(manager, registry_address, token_address):
@@ -288,7 +302,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     # Call the connect endpoint for all but the two first nodes
     connect_greenlets = set(
         gevent.spawn(
-            RaidenAPI(app.raiden).token_network_connect,
+            RaidenAPI(app).token_network_connect,
             registry_address,
             token_address,
             100,
@@ -299,7 +313,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     gevent.joinall(connect_greenlets, raise_error=True)
 
     connection_managers = [
-        app.raiden.connection_manager_for_token_network(token_network_address)
+        app.connection_manager_for_token_network(token_network_address)
         for app in raiden_network[2:]
     ]
 
@@ -319,7 +333,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
 
     for app in raiden_network[2:]:
         # ensure that we did not open a channel with the offline node
-        node_state = views.state_from_raiden(app.raiden)
+        node_state = views.state_from_raiden(app)
         network_state = views.get_token_network_by_token_address(
             node_state, registry_address, token_address
         )
@@ -327,12 +341,12 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
         msg = "Each of the last 2 nodes should connect to 1 address"
         assert len(network_state.channelidentifiers_to_channels) == 1, msg
         for _, netchannel in network_state.channelidentifiers_to_channels.items():
-            assert netchannel.partner_state.address != offline_node.raiden.address
+            assert netchannel.partner_state.address != offline_node.address
 
     # Call the connect endpoint for all apps again to see this is handled fine.
     # This essentially checks that connecting to bootstrap/offline address again is not a problem
     for app in raiden_network[1:]:
-        RaidenAPI(app.raiden).token_network_connect(
+        RaidenAPI(app).token_network_connect(
             registry_address=registry_address,
             token_address=token_address,
             funds=TokenAmount(100),
@@ -343,7 +357,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_transfer_after_connect_works(raiden_network, token_addresses):
+def test_transfer_after_connect_works(raiden_network: List[RaidenService], token_addresses):
     """
     Test that payments work after joining a channel. This makes sure that the
     connection manager does not leave any partners in a half-healthchecked
@@ -351,20 +365,20 @@ def test_transfer_after_connect_works(raiden_network, token_addresses):
 
     Test for https://github.com/raiden-network/raiden/issues/5918
     """
-    registry_address = raiden_network[0].raiden.default_registry.address
+    registry_address = raiden_network[0].default_registry.address
     token_address = token_addresses[0]
     app0, app1, app2 = raiden_network
-    api0 = RaidenAPI(app0.raiden)
-    api1 = RaidenAPI(app1.raiden)
+    api0 = RaidenAPI(app0)
+    api1 = RaidenAPI(app1)
 
     # Open channel between node0 and node2 to not run into the bootstrapping
     # case when joining the token network
-    api0.channel_open(registry_address, token_address, app2.raiden.address)
+    api0.channel_open(registry_address, token_address, app2.address)
     # Make sure that app1 processed the block where channel open
     # happened. Otherwise the test becomes flaky because it does not see
     # potential participants in the network
-    current_block = app0.raiden.get_block_number()
-    wait_for_block(app1.raiden, current_block, 1)
+    current_block = app0.get_block_number()
+    wait_for_block(app1, current_block, 1)
 
     api1.token_network_connect(
         registry_address=registry_address,
@@ -377,6 +391,6 @@ def test_transfer_after_connect_works(raiden_network, token_addresses):
         registry_address=registry_address,
         token_address=token_address,
         amount=PaymentAmount(1),
-        target=app0.raiden.address,
+        target=TargetAddress(app0.address),
     ).payment_done.get()
     assert isinstance(payment_result, EventPaymentSentSuccess)

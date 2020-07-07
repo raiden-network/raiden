@@ -31,7 +31,6 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from raiden.app import App  # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
 
 # TODO: Either enforce immutability or make a copy of the values returned by
@@ -80,10 +79,6 @@ def state_from_raiden(raiden: "RaidenService") -> ChainState:  # pragma: no unit
     assert raiden.wal, "raiden.wal not set"
     # TODO: current_state should not be optional
     return raiden.wal.state_manager.current_state  # type: ignore
-
-
-def state_from_app(app: "App") -> ChainState:  # pragma: no unittest
-    return state_from_raiden(app.raiden)
 
 
 def get_pending_transactions(chain_state: ChainState) -> List[ContractSendEvent]:

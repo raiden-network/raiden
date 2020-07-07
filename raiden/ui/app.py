@@ -11,7 +11,6 @@ from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
 from raiden.constants import (
     BLOCK_ID_LATEST,
     DOC_URL,
@@ -35,6 +34,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetad
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
@@ -224,7 +224,7 @@ def run_app(
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
-) -> App:
+) -> RaidenService:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     token_network_registry_deployed_at: Optional[BlockNumber]
@@ -417,7 +417,7 @@ def run_app(
 
     message_handler = MessageHandler()
 
-    raiden_app = App(
+    raiden_service = RaidenService(
         config=config,
         rpc_client=rpc_client,
         proxy_manager=proxy_manager,
@@ -431,6 +431,6 @@ def run_app(
         api_server=api_server,
     )
 
-    raiden_app.start()
+    raiden_service.start()
 
-    return raiden_app
+    return raiden_service

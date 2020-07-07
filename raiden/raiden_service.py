@@ -44,6 +44,7 @@ from raiden.exceptions import (
     InvalidDBData,
     InvalidSecret,
     InvalidSecretHash,
+    InvalidSettleTimeout,
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
@@ -316,6 +317,32 @@ class RaidenService(Runnable):
         api_server: Optional[APIServer] = None,
     ) -> None:
         super().__init__()
+
+        # check that the settlement timeout fits the limits of the contract
+        settlement_timeout_min = raiden_bundle.token_network_registry.settlement_timeout_min(
+            BLOCK_ID_LATEST
+        )
+        settlement_timeout_max = raiden_bundle.token_network_registry.settlement_timeout_max(
+            BLOCK_ID_LATEST
+        )
+        invalid_settle_timeout = (
+            config.settle_timeout < settlement_timeout_min
+            or config.settle_timeout > settlement_timeout_max
+            or config.settle_timeout < config.reveal_timeout * 2
+        )
+        if invalid_settle_timeout:
+            raise InvalidSettleTimeout(
+                (
+                    "Settlement timeout for Registry contract {} must "
+                    "be in range [{}, {}], is {}"
+                ).format(
+                    to_checksum_address(raiden_bundle.token_network_registry.address),
+                    settlement_timeout_min,
+                    settlement_timeout_max,
+                    config.settle_timeout,
+                )
+            )
+
         self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
