@@ -4,6 +4,7 @@ from raiden.constants import LOCKSROOT_OF_NO_LOCKS, UINT256_MAX
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.typing import (
     BalanceHash,
+    BurntAmount,
     ChannelID,
     LockedAmount,
     Locksroot,
@@ -34,6 +35,7 @@ class BalanceProof:
         additional_hash: str = "0x%064x" % 0,
         chain_id: int = 1,
         signature: str = None,
+        burnt_amount: BurntAmount = BurntAmount(0),
         transferred_amount: TokenAmount = None,
         locked_amount: LockedAmount = LockedAmount(0),  # noqa
         locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS,
@@ -47,14 +49,16 @@ class BalanceProof:
         self.chain_id = chain_id
         self.signature = signature
 
-        if transferred_amount and locked_amount and locksroot and balance_hash:
+        if burnt_amount and transferred_amount and locked_amount and locksroot and balance_hash:
             assert 0 <= transferred_amount <= UINT256_MAX
+            assert 0 <= burnt_amount <= UINT256_MAX
             assert 0 <= locked_amount <= UINT256_MAX
             assert (
-                self.hash_balance_data(transferred_amount, locked_amount, locksroot)
+                self.hash_balance_data(burnt_amount, transferred_amount, locked_amount, locksroot)
                 == balance_hash
             )
 
+        self.burnt_amount = burnt_amount
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
@@ -74,10 +78,11 @@ class BalanceProof:
     def balance_hash(self) -> BalanceHash:
         if self._balance_hash:
             return self._balance_hash
-        if None not in (self.transferred_amount, self.locked_amount, self.locksroot):
+        if None not in (self.burnt_amount, self.transferred_amount, self.locked_amount, self.locksroot):
             assert isinstance(self.transferred_amount, int)
+            assert isinstance(self.burnt_amount, int)
             return self.hash_balance_data(
-                self.transferred_amount, self.locked_amount, self.locksroot
+                self.burnt_amount, self.transferred_amount, self.locked_amount, self.locksroot
             )
         raise ValueError("Can't compute balance hash")
 
@@ -87,6 +92,6 @@ class BalanceProof:
 
     @staticmethod
     def hash_balance_data(
-        transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
+        burnt_amount: BurntAmount, transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
     ) -> BalanceHash:
-        return hash_balance_data(transferred_amount, locked_amount, locksroot)
+        return hash_balance_data(burnt_amount, transferred_amount, locked_amount, locksroot)

@@ -9,6 +9,7 @@ def balanceproof_from_envelope(envelope_message: EnvelopeMessage) -> BalanceProo
     assert envelope_message.sender, "envelope_message must be signed"
     return BalanceProofSignedState(
         nonce=envelope_message.nonce,
+        burnt_amount=envelope_message.burnt_amount,
         transferred_amount=envelope_message.transferred_amount,
         locked_amount=envelope_message.locked_amount,
         locksroot=envelope_message.locksroot,

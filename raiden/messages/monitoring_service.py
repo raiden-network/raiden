@@ -57,6 +57,7 @@ class SignedBlindedBalanceProof:
             chain_id=balance_proof.chain_id,
             signature=balance_proof.signature,
             balance_hash=hash_balance_data(
+                balance_proof.burnt_amount,
                 balance_proof.transferred_amount,
                 balance_proof.locked_amount,
                 balance_proof.locksroot,

@@ -117,7 +117,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
-    typecheck,
+    typecheck, BurntAmount,
 )
 
 if TYPE_CHECKING:
@@ -464,7 +464,7 @@ def is_valid_balanceproof_signature(
     balance_proof: BalanceProofSignedState, sender_address: Address
 ) -> SuccessOrError:
     balance_hash = hash_balance_data(
-        balance_proof.transferred_amount, balance_proof.locked_amount, balance_proof.locksroot
+        balance_proof.burnt_amount, balance_proof.transferred_amount, balance_proof.locked_amount, balance_proof.locksroot
     )
 
     # The balance proof must be tied to a single channel instance, through the
@@ -1424,8 +1424,10 @@ def create_sendlockedtransfer(
 
     if our_balance_proof:
         transferred_amount = our_balance_proof.transferred_amount
+        burnt_amount = our_balance_proof.burnt_amount
     else:
         transferred_amount = TokenAmount(0)
+        burnt_amount = BurntAmount(0)
 
     msg = "caller must make sure the result wont overflow"
     assert transferred_amount + amount <= UINT256_MAX, msg
@@ -1439,6 +1441,7 @@ def create_sendlockedtransfer(
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
+        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
@@ -1494,6 +1497,8 @@ def create_unlock(
     msg = "the lock is pending, it must be in the pending locks"
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
+    burnt_amount = BurntAmount(our_balance_proof.burnt_amount)
+
 
     pending_locks = compute_locks_without(
         our_state.pending_locks, EncodedData(bytes(lock.encoded))
@@ -1513,6 +1518,7 @@ def create_unlock(
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
+        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
@@ -1710,6 +1716,7 @@ def create_sendexpiredlock(
 
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
+    burnt_amount = balance_proof.burnt_amount
 
     pending_locks = compute_locks_without(
         sender_end_state.pending_locks, EncodedData(bytes(locked_lock.encoded))
@@ -1724,6 +1731,7 @@ def create_sendexpiredlock(
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
+        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=updated_locked_amount,
         locksroot=locksroot,
