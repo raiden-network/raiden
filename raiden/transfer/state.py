@@ -69,7 +69,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
-    typecheck,
+    typecheck, BurntAmount, T_BurntAmount,
 )
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
@@ -393,6 +393,8 @@ class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
 
     address: Address
+    contract_balance: Balance
+    burnt_tokens: BurntAmount = field(default=BurntAmount(0))
     onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
     withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
         repr=False, default_factory=dict
@@ -433,12 +435,16 @@ class NettingChannelEndState(State):
 
         typecheck(self.address, T_Address)
         typecheck(self.contract_balance, T_TokenAmount)
+        typecheck(self.burnt_tokens, T_BurntAmount)
 
         if self.address == NULL_ADDRESS_BYTES:
             raise ValueError("address cannot be null.")
 
         if self.contract_balance < 0:
             raise ValueError("contract_balance cannot be negative.")
+
+        if self.burnt_tokens < 0:
+            raise ValueError("burnt_amount cannot be negative.")
 
     @property
     def contract_balance(self) -> Balance:
@@ -458,6 +464,11 @@ class NettingChannelEndState(State):
             return self.balance_proof.transferred_amount
         return TokenAmount(0)
 
+    @property
+    def burnt_amount(self) -> BurntAmount:
+        if self.balance_proof:
+            return self.balance_proof.burnt_amount
+        return BurntAmount(0)
 
 @dataclass
 class NettingChannelState(State):
@@ -541,6 +552,11 @@ class NettingChannelState(State):
         return self.our_state.total_withdraw
 
     @property
+    def our_total_burnt_tokens(self) -> BurntAmount:
+        # pylint: disable=E1101
+        return self.our_state.burnt_tokens
+
+    @property
     def partner_total_deposit(self) -> Balance:
         # pylint: disable=E1101
         return self.partner_state.contract_balance
@@ -549,6 +565,11 @@ class NettingChannelState(State):
     def partner_total_withdraw(self) -> WithdrawAmount:
         # pylint: disable=E1101
         return self.partner_state.total_withdraw
+
+    @property
+    def partner_burnt_tokens(self) -> BurntAmount:
+        # pylint: disable=E1101
+        return self.partner_state.burnt_tokens
 
 
 @dataclass

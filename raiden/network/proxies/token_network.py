@@ -69,7 +69,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     Tuple,
     WithdrawAmount,
-    typecheck,
+    typecheck, BurntAmount,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -2198,11 +2198,13 @@ class TokenNetwork:
     def settle(
         self,
         channel_identifier: ChannelID,
+        burnt_amount: BurntAmount,
         transferred_amount: TokenAmount,
         locked_amount: LockedAmount,
         locksroot: Locksroot,
         claim: Claim,
         partner: Address,
+        partner_burnt_amount: BurntAmount,
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
@@ -2263,11 +2265,13 @@ class TokenNetwork:
                     raise BrokenPreconditionError(msg)
 
                 our_balance_hash = hash_balance_data(
+                    burnt_amount=burnt_amount,
                     transferred_amount=transferred_amount,
                     locked_amount=locked_amount,
                     locksroot=locksroot,
                 )
                 partner_balance_hash = hash_balance_data(
+                    burnt_amount=partner_burnt_amount,
                     transferred_amount=partner_transferred_amount,
                     locked_amount=partner_locked_amount,
                     locksroot=partner_locksroot,
@@ -2284,11 +2288,13 @@ class TokenNetwork:
             log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
             self._settle(
                 channel_identifier=channel_identifier,
+                burnt_amount=burnt_amount,
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
                 locksroot=locksroot,
                 claim=claim,
                 partner=partner,
+                partner_burnt_amount = partner_burnt_amount,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,
@@ -2299,18 +2305,20 @@ class TokenNetwork:
     def _settle(
         self,
         channel_identifier: ChannelID,
+        burnt_amount: BurntAmount,
         transferred_amount: TokenAmount,
         locked_amount: LockedAmount,
         locksroot: Locksroot,
         claim: Claim,
         partner: Address,
+        partner_burnt_amount: BurntAmount,
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         partner_claim: Claim,
         log_details: Dict[Any, Any],
     ) -> None:
-
+        # ToDo implement burnt amount logic for Raiddit
         # The second participant transferred + locked amount must be higher
         our_maximum = transferred_amount + locked_amount
         partner_maximum = partner_transferred_amount + partner_locked_amount
@@ -2391,11 +2399,13 @@ class TokenNetwork:
                 )
 
                 our_balance_hash = hash_balance_data(
+                    burnt_amount=burnt_amount,
                     transferred_amount=transferred_amount,
                     locked_amount=locked_amount,
                     locksroot=locksroot,
                 )
                 partner_balance_hash = hash_balance_data(
+                    burnt_amount=partner_burnt_amount,
                     transferred_amount=partner_transferred_amount,
                     locked_amount=partner_locked_amount,
                     locksroot=partner_locksroot,
@@ -2461,11 +2471,13 @@ class TokenNetwork:
             )
 
             our_balance_hash = hash_balance_data(
+                burnt_amount=burnt_amount,
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
                 locksroot=locksroot,
             )
             partner_balance_hash = hash_balance_data(
+                burnt_amount=partner_burnt_amount,
                 transferred_amount=partner_transferred_amount,
                 locked_amount=partner_locked_amount,
                 locksroot=partner_locksroot,

@@ -14,6 +14,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     WithdrawAmount,
+    BurntAmount,
 )
 from raiden_contracts.contract_manager import ContractManager
 
@@ -173,10 +174,12 @@ class PaymentChannel:
 
     def settle(
         self,
+        burnt_amount: BurntAmount,
         transferred_amount: TokenAmount,
         locked_amount: LockedAmount,
         locksroot: Locksroot,
         claim: Claim,
+        partner_burnt_amount: BurntAmount,
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
@@ -186,11 +189,13 @@ class PaymentChannel:
         """ Settles the channel. """
         self.token_network.settle(
             channel_identifier=self.channel_identifier,
+            burnt_amount=burnt_amount,
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
             locksroot=locksroot,
             claim=claim,
             partner=self.participant2,
+            partner_burnt_amount=partner_burnt_amount,
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,

@@ -125,6 +125,9 @@ FeeAmount = NewType("FeeAmount", T_FeeAmount)
 T_ProportionalFeeAmount = int
 ProportionalFeeAmount = NewType("ProportionalFeeAmount", T_ProportionalFeeAmount)
 
+T_BurntAmount = int
+BurntAmount = NewType("BurntAmount", T_BurntAmount)
+
 T_LockedAmount = int
 LockedAmount = NewType("LockedAmount", T_LockedAmount)
 
