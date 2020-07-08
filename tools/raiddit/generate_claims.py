@@ -45,6 +45,7 @@ class Claim:
             token_network_address=to_checksum_address(self.token_network_address),
             owner=to_checksum_address(self.owner),
             partner=to_checksum_address(self.partner),
+            total_amount=self.total_amount,
             signature=to_hex(self.signature),
         )
 
