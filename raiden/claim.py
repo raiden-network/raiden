@@ -15,9 +15,17 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     SuccessfulTransactionState,
+    TokenNetworkGraphState,
+    TokenNetworkState,
     TransactionChannelDeposit,
+    TokenNetworkRegistryState,
 )
-from raiden.transfer.state_change import ContractReceiveChannelDeposit, ContractReceiveChannelNew
+from raiden.transfer.state_change import (
+    ContractReceiveChannelDeposit,
+    ContractReceiveChannelNew,
+    ContractReceiveNewTokenNetwork,
+    ContractReceiveNewTokenNetworkRegistry,
+)
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.signer import Signer
 from raiden.utils.typing import (
@@ -40,9 +48,42 @@ CLAIM_FILE_PATH = Path("./claims.json")
 DEFAULT_SETTLE_TIMEOUT = BlockTimeout(100)
 DEFAULT_REVEAL_TIMEOUT = BlockTimeout(50)
 TOKEN_ADDRESS = TokenAddress(to_canonical_address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"))
+TOKEN_NETWORK_ADDRESS = TokenNetworkAddress(
+    to_canonical_address("0x679131F591B4f369acB8cd8c51E68596806c3916")
+)
 TOKEN_NETWORK_REGISTRY = TokenNetworkRegistryAddress(
     to_canonical_address("0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D")
 )
+
+
+def create_new_token_network_events():
+
+    state_changes = list()
+
+    state_changes.append(
+        ContractReceiveNewTokenNetworkRegistry(
+            token_network_registry=TokenNetworkRegistryState(TOKEN_NETWORK_REGISTRY, []),
+            transaction_hash=TransactionHash(b""),
+            block_number=BlockNumber(0),
+            block_hash=BlockHash(b""),
+        )
+    )
+
+    state_changes.append(
+        ContractReceiveNewTokenNetwork(
+            token_network_registry_address=TOKEN_NETWORK_REGISTRY,
+            token_network=TokenNetworkState(
+                address=TOKEN_NETWORK_ADDRESS,
+                token_address=TOKEN_ADDRESS,
+                network_graph=TokenNetworkGraphState(TOKEN_NETWORK_ADDRESS),
+            ),
+            transaction_hash=TransactionHash(b""),
+            block_number=BlockNumber(0),
+            block_hash=BlockHash(b""),
+        )
+    )
+
+    return state_changes
 
 
 @dataclass
@@ -102,7 +143,7 @@ def filter_claims(claims: List[Dict[str, Any]], address: Address) -> List[Claim]
 
 def claims_to_blockchain_events(claims: List[Claim], address: Address) -> List[StateChange]:
 
-    state_changes = list()
+    state_changes = create_new_token_network_events()
 
     for claim in claims:
         our_state = NettingChannelEndState(

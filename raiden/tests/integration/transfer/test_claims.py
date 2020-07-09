@@ -6,6 +6,11 @@ from tools.raiddit.generate_claims import create_hub
 
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import views
+from raiden.transfer.state import TokenNetworkGraphState, TokenNetworkState
+from raiden.transfer.state_change import (
+    ContractReceiveNewTokenNetwork,
+    ContractReceiveNewTokenNetworkRegistry,
+)
 from raiden.utils.typing import TokenAddress, TokenNetworkAddress, TokenNetworkRegistryAddress
 
 
