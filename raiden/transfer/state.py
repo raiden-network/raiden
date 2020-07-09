@@ -40,6 +40,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
+    BurntAmount,
     ChainID,
     ChannelID,
     Dict,
@@ -57,6 +58,7 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
+    T_BurntAmount,
     T_ChainID,
     T_ChannelID,
     T_PaymentWithFeeAmount,
@@ -69,7 +71,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
-    typecheck, BurntAmount, T_BurntAmount,
+    typecheck,
 )
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
@@ -469,6 +471,7 @@ class NettingChannelEndState(State):
         if self.balance_proof:
             return self.balance_proof.burnt_amount
         return BurntAmount(0)
+
 
 @dataclass
 class NettingChannelState(State):

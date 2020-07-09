@@ -18,6 +18,7 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockHash,
     BlockNumber,
+    BurntAmount,
     Callable,
     ChainID,
     ChannelID,
@@ -32,6 +33,7 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
+    T_BurntAmount,
     T_LockedAmount,
     T_Locksroot,
     T_Signature,
@@ -41,7 +43,7 @@ from raiden.utils.typing import (
     TransactionHash,
     Tuple,
     TypeVar,
-    typecheck, BurntAmount, T_BurntAmount,
+    typecheck,
 )
 
 log = structlog.get_logger(__name__)

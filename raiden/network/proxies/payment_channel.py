@@ -7,6 +7,7 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockIdentifier,
     BlockTimeout,
+    BurntAmount,
     LockedAmount,
     Locksroot,
     Nonce,
@@ -14,7 +15,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     WithdrawAmount,
-    BurntAmount,
 )
 from raiden_contracts.contract_manager import ContractManager
 

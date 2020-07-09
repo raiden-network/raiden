@@ -35,7 +35,7 @@ class BalanceProof:
         additional_hash: str = "0x%064x" % 0,
         chain_id: int = 1,
         signature: str = None,
-        burnt_amount: BurntAmount = BurntAmount(0),
+        burnt_amount: BurntAmount = BurntAmount(0),  # noqa
         transferred_amount: TokenAmount = None,
         locked_amount: LockedAmount = LockedAmount(0),  # noqa
         locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS,
@@ -78,7 +78,12 @@ class BalanceProof:
     def balance_hash(self) -> BalanceHash:
         if self._balance_hash:
             return self._balance_hash
-        if None not in (self.burnt_amount, self.transferred_amount, self.locked_amount, self.locksroot):
+        if None not in (
+            self.burnt_amount,
+            self.transferred_amount,
+            self.locked_amount,
+            self.locksroot,
+        ):
             assert isinstance(self.transferred_amount, int)
             assert isinstance(self.burnt_amount, int)
             return self.hash_balance_data(
@@ -92,6 +97,9 @@ class BalanceProof:
 
     @staticmethod
     def hash_balance_data(
-        burnt_amount: BurntAmount, transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot
+        burnt_amount: BurntAmount,
+        transferred_amount: TokenAmount,
+        locked_amount: LockedAmount,
+        locksroot: Locksroot,
     ) -> BalanceHash:
         return hash_balance_data(burnt_amount, transferred_amount, locked_amount, locksroot)

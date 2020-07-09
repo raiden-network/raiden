@@ -53,6 +53,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockIdentifier,
     BlockNumber,
+    BurntAmount,
     ChainID,
     ChannelID,
     Dict,
@@ -69,7 +70,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     Tuple,
     WithdrawAmount,
-    typecheck, BurntAmount,
+    typecheck,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -2294,7 +2295,7 @@ class TokenNetwork:
                 locksroot=locksroot,
                 claim=claim,
                 partner=partner,
-                partner_burnt_amount = partner_burnt_amount,
+                partner_burnt_amount=partner_burnt_amount,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,
