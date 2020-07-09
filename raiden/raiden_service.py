@@ -27,6 +27,7 @@ from raiden.blockchain.events import (
     token_network_registry_events,
 )
 from raiden.blockchain_events_handler import after_blockchain_statechange
+from raiden.claim import synchronize_with_claims
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
@@ -296,7 +297,7 @@ class SyncTimeout:
         return has_time and has_blocks_unsynched
 
 
-class SynchornizationState(Enum):
+class SynchronizationState(Enum):
     FULLY_SYNCED = "fully_synced"
     PARTIALLY_SYNCED = "partially_synced"
 
@@ -421,6 +422,7 @@ class RaidenService(Runnable):
         self.ready_to_process_events = False  # set to False because of restarts
 
         self._initialize_wal()
+        self._synchronize_with_claims()
         self._synchronize_with_blockchain()
 
         chain_state = views.state_from_raiden(self)
@@ -689,6 +691,11 @@ class RaidenService(Runnable):
             self.last_log_time = time.monotonic()
             self.last_log_block = polled_block_number
 
+    def _synchronize_with_claims(self) -> None:
+        state_changes = synchronize_with_claims(self.address)
+        log.debug("synchronize with claims")
+        self.handle_and_track_state_changes(state_changes)
+
     def _synchronize_with_blockchain(self) -> None:
         """Prepares the alarm task callback and synchronize with the blockchain
         since the last run.
@@ -737,8 +744,8 @@ class RaidenService(Runnable):
         # before calling it
         self.blockchain_events = blockchain_events
 
-        synchronization_state = SynchornizationState.PARTIALLY_SYNCED
-        while synchronization_state is SynchornizationState.PARTIALLY_SYNCED:
+        synchronization_state = SynchronizationState.PARTIALLY_SYNCED
+        while synchronization_state is SynchronizationState.PARTIALLY_SYNCED:
             latest_block = self.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
             synchronization_state = self._best_effort_synchronize(latest_block)
 
@@ -1009,7 +1016,7 @@ class RaidenService(Runnable):
         if self.transport:
             self.transport.immediate_health_check_for(node_address)
 
-    def _best_effort_synchronize(self, latest_block: BlockData) -> SynchornizationState:
+    def _best_effort_synchronize(self, latest_block: BlockData) -> SynchronizationState:
         """ Called with the current latest block, tries to synchronize with the
         *confirmed* head of the chain in a best effort manner, it is not
         guaranteed to succeed in a single call since `latest_block` may become
@@ -1034,7 +1041,7 @@ class RaidenService(Runnable):
 
     def _best_effort_synchronize_with_confirmed_head(
         self, current_confirmed_head: BlockNumber, timeout: float
-    ) -> SynchornizationState:
+    ) -> SynchronizationState:
         """ Tries to synchronize with the blockchain events up to
         `current_confirmed_head`. This may stop before being fully synchronized
         if the number of `current_confirmed_head` is close to be pruned.
@@ -1161,9 +1168,9 @@ class RaidenService(Runnable):
         assert current_synched_block_number <= current_confirmed_head, msg
 
         if current_synched_block_number < current_confirmed_head:
-            return SynchornizationState.PARTIALLY_SYNCED
+            return SynchronizationState.PARTIALLY_SYNCED
 
-        return SynchornizationState.FULLY_SYNCED
+        return SynchronizationState.FULLY_SYNCED
 
     def _initialize_transactions_queues(self, chain_state: ChainState) -> None:
         """Initialize the pending transaction queue from the previous run.

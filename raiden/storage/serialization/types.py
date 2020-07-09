@@ -84,6 +84,7 @@ from raiden.utils.typing import (
 
 MESSAGE_NAME_TO_QUALIFIED_NAME = {
     "AuthenticatedMessage": "raiden.messages.abstract.AuthenticatedMessage",
+    "Claim": "raiden.claim.Claim",
     "Delivered": "raiden.messages.synchronization.Delivered",
     "EnvelopeMessage": "raiden.messages.transfers.EnvelopeMessage",
     "LockedTransferBase": "raiden.messages.transfers.LockedTransferBase",
