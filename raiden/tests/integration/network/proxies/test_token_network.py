@@ -31,7 +31,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_address
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Set, T_ChannelID
+from raiden.utils.typing import BurntAmount, Set, T_ChannelID
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
@@ -224,7 +224,7 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    msg = "Trying a deposit to an inexisting channel must fail."
+    msg = "Trying a deposit to an non-existing channel must fail."
     with pytest.raises(BrokenPreconditionError):
         c1_token_network_proxy.approve_and_set_total_deposit(
             given_block_identifier=BLOCK_ID_LATEST,
@@ -246,7 +246,7 @@ def test_token_network_proxy(
         empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
     )
 
-    msg = "Trying to close an inexisting channel must fail."
+    msg = "Trying to close an non-existing channel must fail."
     match = "The channel was not open at the provided block"
     with pytest.raises(RaidenUnrecoverableError, match=match):
         c1_token_network_proxy.close(
@@ -333,7 +333,6 @@ def test_token_network_proxy(
         total_deposit=10,
         partner=c2_client.address,
     )
-
     transferred_amount = 3
     balance_proof = BalanceProof(
         channel_identifier=channel_identifier,
@@ -462,25 +461,28 @@ def test_token_network_proxy(
     with pytest.raises(BrokenPreconditionError):
         c2_token_network_proxy.settle(
             channel_identifier=channel_identifier,
+            burnt_amount=BurntAmount(0),
             transferred_amount=invalid_transferred_amount,
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c1_client.address,
+            partner_burnt_amount=BurntAmount(0),
             partner_transferred_amount=transferred_amount,
             partner_locked_amount=0,
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier=BLOCK_ID_LATEST,
         )
         pytest.fail(msg)
-
     c2_token_network_proxy.settle(
         channel_identifier=channel_identifier,
         transferred_amount=0,
+        burnt_amount=BurntAmount(0),
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c1_client.address,
         partner_transferred_amount=transferred_amount,
         partner_locked_amount=0,
+        partner_burnt_amount=BurntAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=BLOCK_ID_LATEST,
     )
@@ -670,11 +672,13 @@ def test_token_network_proxy_update_transfer(
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
+            burnt_amount=BurntAmount(0),
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=transferred_amount_c2,
             partner_locked_amount=0,
+            partner_burnt_amount=BurntAmount(0),
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier=BLOCK_ID_LATEST,
         )
@@ -688,11 +692,13 @@ def test_token_network_proxy_update_transfer(
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=2,
+            burnt_amount=BurntAmount(0),
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=2,
             partner_locked_amount=0,
+            partner_burnt_amount=BurntAmount(0),
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier=BLOCK_ID_LATEST,
         )
@@ -701,11 +707,13 @@ def test_token_network_proxy_update_transfer(
     c1_token_network_proxy.settle(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
+        burnt_amount=BurntAmount(0),
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
         partner_transferred_amount=transferred_amount_c2,
         partner_locked_amount=0,
+        partner_burnt_amount=BurntAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=BLOCK_ID_LATEST,
     )
@@ -913,9 +921,11 @@ def test_token_network_actions_at_pruned_blocks(
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
+            burnt_amount=BurntAmount(0),
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
+            partner_burnt_amount=BurntAmount(0),
             partner_transferred_amount=0,
             partner_locked_amount=0,
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -931,10 +941,12 @@ def test_token_network_actions_at_pruned_blocks(
 
     c1_token_network_proxy.settle(
         channel_identifier=channel_identifier,
+        burnt_amount=BurntAmount(0),
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
+        partner_burnt_amount=BurntAmount(0),
         partner_transferred_amount=0,
         partner_locked_amount=0,
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
