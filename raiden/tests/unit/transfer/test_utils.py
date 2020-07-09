@@ -17,6 +17,10 @@ from raiden.utils.formatting import to_hex_address
             decode_hex("0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21"),
         ),
         (
+            (0, 0, EMPTY_HASH),
+            decode_hex("0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21"),
+        ),
+        (
             (1, 5, EMPTY_HASH),
             decode_hex("0xc6b26a4554afa01fb3409b3bd6e7605a1c1af45b7e644282c6ebf34eddb6f893"),
         ),
@@ -24,7 +28,7 @@ from raiden.utils.formatting import to_hex_address
     ),
 )
 def test_hash_balance_data(values, expected):
-    assert hash_balance_data(values[0], values[1], values[2]) == expected
+    assert hash_balance_data(values[0], values[1], values[2], values[3]) == expected
 
 
 def test_events_for_onchain_secretreveal_with_unfit_channels():

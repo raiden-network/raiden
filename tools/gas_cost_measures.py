@@ -15,13 +15,14 @@ from raiden.utils.packing import pack_balance_proof
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     AdditionalHash,
+    BurntAmount,
     ChainID,
     ChannelID,
     Dict,
     LockedAmount,
     Locksroot,
     Nonce,
-    TokenAmount, BurntAmount,
+    TokenAmount,
 )
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from raiden_contracts.utils.pending_transfers import get_pending_transfers_tree

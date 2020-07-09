@@ -93,6 +93,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
+    BurntAmount,
     ChainID,
     ChannelID,
     EncodedData,
@@ -117,7 +118,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
     WithdrawAmount,
-    typecheck, BurntAmount,
+    typecheck,
 )
 
 if TYPE_CHECKING:
@@ -464,7 +465,10 @@ def is_valid_balanceproof_signature(
     balance_proof: BalanceProofSignedState, sender_address: Address
 ) -> SuccessOrError:
     balance_hash = hash_balance_data(
-        balance_proof.burnt_amount, balance_proof.transferred_amount, balance_proof.locked_amount, balance_proof.locksroot
+        balance_proof.burnt_amount,
+        balance_proof.transferred_amount,
+        balance_proof.locked_amount,
+        balance_proof.locksroot,
     )
 
     # The balance proof must be tied to a single channel instance, through the
@@ -1498,7 +1502,6 @@ def create_unlock(
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
     burnt_amount = BurntAmount(our_balance_proof.burnt_amount)
-
 
     pending_locks = compute_locks_without(
         our_state.pending_locks, EncodedData(bytes(lock.encoded))
