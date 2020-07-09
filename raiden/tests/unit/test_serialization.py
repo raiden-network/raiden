@@ -299,10 +299,10 @@ def test_message_identical() -> None:
 
         # Uncomment this for one run if you intentionally changed the message
         # with open(filename, "w") as f:
-        #     json_msg = MessageSerializer.serialize(message)
-        #     # pretty print for more readable diffs
-        #     json_msg = json.dumps(json.loads(json_msg), indent=4, sort_keys=True)
-        #     f.write(json_msg)
+        #    json_msg = MessageSerializer.serialize(message)
+        #    # pretty print for more readable diffs
+        #    json_msg = json.dumps(json.loads(json_msg), indent=4, sort_keys=True)
+        #    f.write(json_msg)
 
         with open(filename) as f:
             saved_message_dict = JSONSerializer.deserialize(f.read())
