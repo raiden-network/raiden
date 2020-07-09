@@ -67,6 +67,7 @@ from raiden.utils.typing import (
     Balance,
     BlockNumber,
     BlockTimeout as BlockOffset,
+    BurntAmount,
     Callable,
     ChainID,
     FeeAmount,
@@ -934,6 +935,7 @@ def make_receive_transfer_mediated(
     lock: HashTimeLockState,
     pending_locks: PendingLocksState = None,
     locked_amount: Optional[PaymentWithFeeAmount] = None,
+    burnt_amount: Optional[BurntAmount] = BurntAmount(0),  # noqa
     chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
 
@@ -975,6 +977,7 @@ def make_receive_transfer_mediated(
         token_network_address=channel_state.token_network_address,
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
+        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=LockedAmount(locked_amount),
         recipient=channel_state.partner_state.address,
@@ -1008,6 +1011,7 @@ def make_receive_expired_lock(
     transferred_amount: TokenAmount,
     lock: HashTimeLockState,
     locked_amount: LockedAmount,
+    burnt_amount: BurntAmount = BurntAmount(0),  # noqa
     pending_locks: PendingLocksState = None,
     chain_id: ChainID = None,
 ) -> ReceiveLockExpired:
@@ -1031,6 +1035,7 @@ def make_receive_expired_lock(
         chain_id=chain_id,
         nonce=nonce,
         message_identifier=make_message_identifier(),
+        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=LockedAmount(locked_amount),
         locksroot=locksroot,

@@ -88,7 +88,7 @@ from raiden.utils.copy import deepcopy
 from raiden.utils.packing import pack_withdraw
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import EncodedData, LockedAmount
+from raiden.utils.typing import BurntAmount, EncodedData, LockedAmount
 
 PartnerStateModel = namedtuple(
     "PartnerStateModel",
@@ -485,6 +485,7 @@ def test_channelstate_receive_lockedtransfer():
         nonce=2,
         token_network_address=token_network_address,
         channel_identifier=channel_state.identifier,
+        burnt_amount=BurntAmount(0),
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -500,6 +501,7 @@ def test_channelstate_receive_lockedtransfer():
         nonce=2,
         token_network_address=token_network_address,
         channel_identifier=channel_state.identifier,
+        burnt_amount=BurntAmount(0),
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -766,6 +768,7 @@ def test_interwoven_transfers():
 
     block_number = 1000
     nonce = 0
+    burnt_amount = 0
     transferred_amount = 0
     locked_amount = 0
     our_model_current = our_model
@@ -852,6 +855,7 @@ def test_interwoven_transfers():
                 nonce=nonce,
                 token_network_address=token_network_address,
                 channel_identifier=channel_state.identifier,
+                burnt_amount=burnt_amount,
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
                 locksroot=locksroot,
