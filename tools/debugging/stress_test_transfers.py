@@ -13,7 +13,7 @@ from datetime import datetime
 from http import HTTPStatus
 from itertools import chain, count, product
 from time import time
-from typing import Callable, Dict, Iterable, Iterator, List, NewType, NoReturn, Optional
+from typing import Callable, Dict, Iterable, Iterator, List, NewType, Optional
 
 import gevent
 import gevent.os
@@ -200,8 +200,6 @@ def wait_for_status_ready(base_url: str, retry_timeout: int) -> None:
     """Keeps polling for the `/status` endpoint until the status is `ready`."""
     while not is_ready(base_url):
         gevent.sleep(retry_timeout)
-
-    raise RuntimeError("Stopping")
 
 
 def start_and_wait_for_server(
