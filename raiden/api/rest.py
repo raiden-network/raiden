@@ -130,6 +130,7 @@ from raiden.utils.typing import (
 
 log = structlog.get_logger(__name__)
 
+CHANNEL_NETWORK_STATE = "network_state"
 URLS_V1 = [
     ("/address", AddressResource),
     ("/version", VersionResource),
@@ -675,15 +676,9 @@ class RestAPI:  # pragma: no unittest
             except (DepositOverLimit, DepositMismatch, UnexpectedChannelState) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        channel_state = views.get_channelstate_for(
-            views.state_from_raiden(self.raiden_api.raiden),
-            registry_address,
-            token_address,
-            partner_address,
+        result = self._updated_chanel_state_from_addresses(
+            registry_address, partner_address, token_address
         )
-
-        result = self.channel_schema.dump(channel_state)
-
         return api_response(result=result, status_code=status_code)
 
     def connect(
@@ -728,10 +723,13 @@ class RestAPI:  # pragma: no unittest
             token_address=to_checksum_address(token_address),
         )
         closed_channels = self.raiden_api.token_network_leave(registry_address, token_address)
-        closed_channels = [
-            self.channel_schema.dump(channel_state) for channel_state in closed_channels
-        ]
-        return api_response(result=closed_channels)
+
+        closed_channels_result = list()
+        for channel_state in closed_channels:
+            result = self._updated_chanel_state(registry_address, channel_state)
+            closed_channels_result.append(result)
+
+        return api_response(result=closed_channels_result)
 
     def get_connection_managers_info(
         self, registry_address: TokenNetworkRegistryAddress
@@ -800,10 +798,12 @@ class RestAPI:  # pragma: no unittest
         )
         typecheck(raiden_service_result, list)
 
-        result = [
-            self.channel_schema.dump(channel_schema) for channel_schema in raiden_service_result
-        ]
-        return api_response(result=result)
+        channels_result = list()
+        for channel_state in raiden_service_result:
+            result = self._updated_chanel_state(registry_address, channel_state)
+            channels_result.append(result)
+
+        return api_response(result=channels_result)
 
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> Response:
         log.debug(
@@ -913,12 +913,9 @@ class RestAPI:  # pragma: no unittest
             partner_address=to_checksum_address(partner_address),
         )
         try:
-            channel_state = self.raiden_api.get_channel(
-                registry_address=registry_address,
-                token_address=token_address,
-                partner_address=partner_address,
+            result = self._updated_chanel_state_from_addresses(
+                registry_address, partner_address, token_address
             )
-            result = self.channel_schema.dump(channel_state)
             return api_response(result=result)
         except ChannelNotFound as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
@@ -1031,6 +1028,51 @@ class RestAPI:  # pragma: no unittest
         result = self.payment_schema.dump(payment)
         return api_response(result=result)
 
+    def _updated_chanel_state_from_addresses(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        partner_address: Address,
+        token_address: TokenAddress,
+    ) -> Optional[Dict]:
+        chain_state = views.state_from_raiden(self.raiden_api.raiden)
+        updated_channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if updated_channel_state:
+            result = self.channel_schema.dump(updated_channel_state)
+            result[CHANNEL_NETWORK_STATE] = views.get_node_network_status(
+                chain_state, updated_channel_state.partner_state.address,
+            ).value
+        else:
+            result = None
+
+        return result
+
+    def _updated_chanel_state(
+        self, registry_address: TokenNetworkRegistryAddress, channel_state: NettingChannelState
+    ) -> Optional[Dict]:
+        chain_state = views.state_from_raiden(self.raiden_api.raiden)
+        updated_channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=channel_state.token_address,
+            partner_address=channel_state.partner_state.address,
+        )
+
+        if updated_channel_state:
+            result = self.channel_schema.dump(updated_channel_state)
+            result[CHANNEL_NETWORK_STATE] = views.get_node_network_status(
+                chain_state, updated_channel_state.partner_state.address,
+            ).value
+        else:
+            result = None
+
+        return result
+
     def _deposit(
         self,
         registry_address: TokenNetworkRegistryAddress,
@@ -1069,11 +1111,7 @@ class RestAPI:  # pragma: no unittest
         except UnexpectedChannelState as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_chanel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _withdraw(
@@ -1108,11 +1146,7 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         # TODO handle InsufficientEth here
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_chanel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _set_channel_reveal_timeout(
@@ -1146,11 +1180,7 @@ class RestAPI:  # pragma: no unittest
         except InvalidRevealTimeout as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_chanel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _close(
@@ -1176,11 +1206,7 @@ class RestAPI:  # pragma: no unittest
         except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_chanel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def patch_channel(
