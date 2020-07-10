@@ -375,9 +375,11 @@ def do_transfers(
     # be called inside of `propagate_error`.
     current: greenlet = gevent.getcurrent()
 
-    def propagate_error(result: Greenlet) -> NoReturn:
-        current.throw(result.exception)
-        raise RuntimeError("Must not switch back, this greenlet is dead.")
+    # This can not use `throw`, `propagate_error` is linked with a
+    # `FailureSpawnedLink`, which means the code is not executed inside the
+    # Hub.
+    def propagate_error(result: Greenlet) -> None:
+        current.kill(result.exception)
 
     # TODO: This should return a dictionary, were the key is `(from, to)`  and
     # the amount is the sum of all transfer values, this can then be used to
@@ -392,10 +394,17 @@ def do_transfers(
             amount=transfer.amount,
         )
 
-        # Failure detection. Without linking to the exception, the loop would
-        # have to complete before the exception is re-raised, because this loop
-        # can be considerably large (in the tens of thousands), the delay is
-        # perceptible.
+        # Failure detection. Without linking the exception this loop would have
+        # to complete before `pool.join` can be called, since the loop can be
+        # considerably large (in the tens of thousands) the delay is
+        # perceptible, linking the exception will break the loop as soon as
+        # possible, this means the only use of the `join` bellow is to wait for
+        # all the greenlets to finish before returning.
+        #
+        # TODO: Consider abstracting by adding to the nursery a Pool
+        # implementation. The pool would spawn new greenlets as slots became
+        # available (just like the gevent's implementation), but it would stop
+        # if any of the spawned grenlets fails with an exception.
         task.link_exception(propagate_error)
 
     pool.join(raise_error=True)
