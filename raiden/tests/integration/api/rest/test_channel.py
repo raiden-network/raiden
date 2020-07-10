@@ -445,6 +445,7 @@ def test_api_channel_open_close_and_settle(
 
 
 @raise_on_failure
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/4803")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])

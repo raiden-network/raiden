@@ -75,7 +75,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    WithdrawAmount,
+    WithdrawAmount, BurntAmount,
 )
 
 if TYPE_CHECKING:
@@ -629,6 +629,65 @@ class RaidenAPI:  # pragma: no unittest
             raiden=self.raiden,
             canonical_identifier=channel_state.canonical_identifier,
             total_withdraw=total_withdraw,
+            retry_timeout=retry_timeout,
+        )
+
+    def set_total_channel_burn_amount(
+        self,
+        token_address: TokenAddress,
+        partner_address: Address,
+        total_burn: BurntAmount,
+        retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+    ) -> None:
+
+        chain_state = views.state_from_raiden(self.raiden)
+
+        #token_addresses = views.get_token_identifiers(chain_state, token_address)
+        channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if not is_binary_address(token_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for token in channel"
+            )
+
+        if not is_binary_address(partner_address):
+            raise InvalidBinaryAddress(
+                "Expected binary address format for partner in channel"
+            )
+
+        #if token_address not in token_addresses:
+            #raise UnknownTokenAddress("Unknown token address")
+
+        if channel_state is None:
+            raise NonexistingChannel("No channel with partner_address for the given token")
+
+        if total_burn <= channel_state.our_total_burnt_tokens:
+            raise WithdrawMismatch(f"Total burn {total_burn} did not increase")
+
+        current_balance = channel.get_balance(
+            sender=channel_state.our_state, receiver=channel_state.partner_state
+        )
+        amount_to_burn = total_burn - channel_state.our_total_burnt_tokens
+        if amount_to_burn > current_balance:
+            raise InsufficientFunds(
+                "The burn of {} is bigger than the current balance of {}".format(
+                    amount_to_burn, current_balance
+                )
+            )
+
+        self.raiden.burn(
+            canonical_identifier=channel_state.canonical_identifier, total_burn=total_burn
+        )
+        # TODO adjust waiting for burn
+        waiting.wait_for_burn_complete(
+            raiden=self.raiden,
+            canonical_identifier=channel_state.canonical_identifier,
+            total_burn=total_burn,
             retry_timeout=retry_timeout,
         )
 

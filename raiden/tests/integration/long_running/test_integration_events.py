@@ -228,6 +228,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, deposit, [])
 
 
+@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5678")
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])

@@ -391,12 +391,30 @@ class PendingWithdrawState:
 
 
 @dataclass
+class ExpiredBurnState:
+    total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
+    nonce: Nonce
+
+
+@dataclass
+class PendingBurnState:
+    total_burn: BurntAmount
+    expiration: BlockExpiration
+    nonce: Nonce
+
+
+@dataclass
 class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
 
     address: Address
     contract_balance: Balance
     burnt_tokens: BurntAmount = field(default=BurntAmount(0))
+    burns_pending: Dict[BurntAmount, PendingBurnState] = field(
+        repr=False, default_factory=dict
+    )
+    burns_expired: List[ExpiredBurnState] = field(repr=False, default_factory=list)
     onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
     withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
         repr=False, default_factory=dict

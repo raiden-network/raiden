@@ -263,6 +263,7 @@ class ChannelStateSchema(BaseSchema):
     state = fields.Method("get_state")
     total_deposit = fields.Method("get_total_deposit")
     total_withdraw = fields.Method("get_total_withdraw")
+    total_burn = fields.Method("get_total_burn")
 
     @staticmethod
     def get_partner_address(channel_state: NettingChannelState) -> str:
@@ -286,6 +287,11 @@ class ChannelStateSchema(BaseSchema):
         """Return our total withdraw from this channel"""
         return str(channel_state.our_total_withdraw)
 
+    @staticmethod
+    def get_total_burn(channel_state: NettingChannelState) -> str:
+        """Return our total burn amount from this channel"""
+        return str(channel_state.our_total_burnt_tokens)
+
 
 class ChannelPutSchema(BaseSchema):
     token_address = AddressField(required=True)
@@ -296,6 +302,7 @@ class ChannelPutSchema(BaseSchema):
 
 
 class ChannelPatchSchema(BaseSchema):
+    total_burn = IntegerToStringField(default=None, missing=None)
     total_deposit = IntegerToStringField(default=None, missing=None)
     total_withdraw = IntegerToStringField(default=None, missing=None)
     reveal_timeout = IntegerToStringField(default=None, missing=None)

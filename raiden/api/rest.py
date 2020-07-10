@@ -38,6 +38,7 @@ from raiden.api.v1.resources import (
     AddressResource,
     BlockchainEventsNetworkResource,
     BlockchainEventsTokenResource,
+    BurnResource,
     ChannelBlockchainEventsResource,
     ChannelsResource,
     ChannelsResourceByTokenAddress,
@@ -130,7 +131,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     WithdrawAmount,
     cast,
-    typecheck,
+    typecheck, BurntAmount,
 )
 
 log = structlog.get_logger(__name__)
@@ -1226,6 +1227,42 @@ class RestAPI:  # pragma: no unittest
             )
         except (NonexistingChannel, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
+        except (InsufficientFunds, WithdrawMismatch) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        # TODO handle InsufficientEth here
+
+        updated_channel_state = self.raiden_api.get_channel(
+            registry_address, channel_state.token_address, channel_state.partner_state.address
+        )
+
+        result = self.channel_schema.dump(updated_channel_state)
+        return api_response(result=result)
+
+    def _burn(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        channel_state: NettingChannelState,
+        total_burn: BurntAmount,
+    ) -> Response:
+        log.debug(
+            "Burning tokens in channel",
+            node=self.checksum_address,
+            registry_address=to_checksum_address(registry_address),
+            channel_identifier=channel_state.identifier,
+            total_withdraw=total_withdraw,
+        )
+
+        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+            return api_error(
+                errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
+            )
+
+        try:
+            self.raiden_api.set_total_channel_burn_amount(
+                channel_state.token_address,
+                channel_state.partner_state.address,
+                total_burn,
+            )
         except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         # TODO handle InsufficientEth here

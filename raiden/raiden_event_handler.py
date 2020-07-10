@@ -51,7 +51,7 @@ from raiden.transfer.events import (
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
-    SendWithdrawRequest,
+    SendWithdrawRequest, SendBurnConfirmation, SendBurnRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -171,6 +171,12 @@ class RaidenEventHandler(EventHandler):
             elif type(event) == SendWithdrawExpired:
                 assert isinstance(event, SendWithdrawExpired), MYPY_ANNOTATION
                 self.handle_send_withdrawexpired(raiden, event, message_queues)
+            elif type(event) == SendBurnRequest:
+                assert isinstance(event, SendBurnRequest), MYPY_ANNOTATION
+                self.handle_send_burnrequest(raiden, event, message_queues)
+            elif type(event) == SendBurnConfirmation:
+                assert isinstance(event, SendBurnConfirmation), MYPY_ANNOTATION
+                self.handle_send_burnconfirmation(raiden, event, message_queues)
             elif type(event) == SendProcessed:
                 assert isinstance(event, SendProcessed), MYPY_ANNOTATION
                 self.handle_send_processed(raiden, event, message_queues)
@@ -312,6 +318,26 @@ class RaidenEventHandler(EventHandler):
         withdraw_expired_message = message_from_sendevent(withdraw_expired_event)
         raiden.sign(withdraw_expired_message)
         message_queues[withdraw_expired_event.queue_identifier].append(withdraw_expired_message)
+
+    @staticmethod
+    def handle_send_burnrequest(
+        raiden: "RaidenService",
+        burn_request_event: SendBurnRequest,
+        message_queues: Dict[QueueIdentifier, List[Message]],
+    ) -> None:
+        burn_request_message = message_from_sendevent(burn_request_event)
+        raiden.sign(burn_request_message)
+        message_queues[burn_request_event.queue_identifier].append(burn_request_message)
+
+    @staticmethod
+    def handle_send_burnconfirmation(
+        raiden: "RaidenService",
+        burn_confirmation_event: SendBurnConfirmation,
+        message_queues: Dict[QueueIdentifier, List[Message]],
+    ) -> None:
+        burn_confirmation_message = message_from_sendevent(burn_confirmation_event)
+        raiden.sign(burn_confirmation_message)
+        message_queues[burn_confirmation_event.queue_identifier].append(burn_confirmation_message)
 
     @staticmethod
     def handle_send_processed(

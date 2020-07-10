@@ -30,7 +30,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    WithdrawAmount,
+    WithdrawAmount, BurntAmount,
 )
 
 # pylint: disable=too-many-arguments,too-few-public-methods
@@ -115,6 +115,38 @@ class ContractSendChannelWithdraw(ContractSendEvent):
             f"partner_signature: {to_hex(self.partner_signature)} "
             f">"
         )
+
+
+@dataclass(frozen=True)
+class SendBurnRequest(SendMessageEvent):
+    """ Event emitted if the netting channel balance proof must be updated. """
+
+    balance_proof: BalanceProofSignedState
+    expiration: BlockExpiration
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.balance_proof.canonical_identifier.token_network_address
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.balance_proof.channel_identifier
+
+
+@dataclass(frozen=True)
+class SendBurnConfirmation(SendMessageEvent):
+    """ Event emitted if the netting channel balance proof must be updated. """
+
+    balance_proof: BalanceProofSignedState
+    balance_proof_counter_signature: Signature
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.balance_proof.canonical_identifier.token_network_address
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.balance_proof.channel_identifier
 
 
 @dataclass(frozen=True)
