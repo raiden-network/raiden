@@ -26,7 +26,7 @@ from raiden.transfer.events import (
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
-    SendWithdrawRequest,
+    SendWithdrawRequest, SendBurnRequest,
 )
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -63,7 +63,7 @@ from raiden.transfer.state import (
     RouteState,
     TransactionExecutionStatus,
     UnlockPartialProofState,
-    message_identifier_from_prng,
+    message_identifier_from_prng, PendingBurnState,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -79,7 +79,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
-    ReceiveWithdrawRequest,
+    ReceiveWithdrawRequest, ActionChannelBurn,
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.formatting import to_checksum_address
@@ -410,6 +410,29 @@ def is_valid_withdraw(
     return is_valid_signature(
         data=packed, signature=withdraw_request.signature, sender_address=withdraw_request.sender
     )
+
+
+def is_valid_channel_total_burn(channel_total_withdraw: TokenAmount) -> bool:
+    """Sanity check for the channel's total burn.
+
+    The channel's total deposit is:
+
+        p1.total_deposit + p2.total_deposit
+
+    The channel's total withdraw is:
+
+        p1.total_withdraw + p2.total_withdraw
+
+    The smart contract forces:
+
+        - The channel's total deposit to fit in a UINT256.
+        - The channel's withdraw must be in the range [0,channel_total_deposit].
+
+    Because the `total_withdraw` must be in the range [0,channel_deposit], and
+    the maximum value for channel_deposit is UINT256, the overflow below must
+    never happen, otherwise there is a smart contract bug.
+    """
+    return channel_total_withdraw <= UINT256_MAX
 
 
 def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Optional[Secret]:
@@ -1094,6 +1117,34 @@ def is_valid_withdraw_expired(
         return SuccessOrError()
 
 
+def is_valid_action_burn(
+    channel_state: NettingChannelState, burn: ActionChannelBurn
+) -> SuccessOrError:
+    balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
+
+    burn_overflow = not is_valid_channel_total_burn(
+        TokenAmount(burn.total_burn + channel_state.partner_burnt_tokens)
+    )
+
+    burn_amount = burn.total_burn - channel_state.our_total_burnt_tokens
+    #if get_status(channel_state) != ChannelState.STATE_OPENED:
+    #    return SuccessOrError("Invalid withdraw, the channel is not opened")
+
+    if burn_amount <= 0:
+        return SuccessOrError(f"Total burn {burn.total_burn} did not increase")
+    elif balance < burn_amount:
+        return SuccessOrError(
+            f"Insufficient balance: {balance}. Requested {burn_amount} for burn"
+        )
+    elif burn_overflow:
+        return SuccessOrError(
+            f"The new total_burn {burn.total_burn} will cause an overflow"
+        )
+    else:
+        return SuccessOrError()
+
+## ToDo add burn confirmation
+
 def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmount:
     return TokenAmount(
         sum(
@@ -1704,6 +1755,58 @@ def send_withdraw_request(
     return events
 
 
+def send_burn_request(
+    channel_state: NettingChannelState,
+    total_burnt: BurntAmount,
+    block_number: BlockNumber,
+    pseudo_random_generator: random.Random,
+) -> List[Event]:
+    events: List[Event] = list()
+
+    if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
+        return events
+
+    nonce = get_next_nonce(channel_state.our_state)
+
+    expiration = get_safe_initial_expiration(
+        block_number=block_number, reveal_timeout=channel_state.reveal_timeout
+    )
+    burn_state = PendingBurnState(
+        total_burnt=total_burnt, nonce=nonce, expiration=expiration
+    )
+
+    channel_state.our_state.nonce = nonce
+    channel_state.our_state.burns_pending[burn_state.total_burn] = burn_state
+
+    get_current_balanceproof()
+    our_balance_proof = channel_state.our_state.balance_proof
+
+    msg = "total_burnt_amount does not match"
+    assert our_balance_proof.burnt_amount = total_burnt, msg
+
+    our_balance_proof_signed =
+
+    total_burn = withdraw_state.total_burn,
+    participant = channel_state.our_state.address,
+    nonce = channel_state.our_state.nonce,
+    expiration = burn_state,
+
+    burn_event = SendBurnRequest(
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_address,
+            channel_identifier=channel_state.identifier,
+        ),
+        recipient=channel_state.partner_state.address,
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        balance_proof=our_balance_proof_signed,
+    )
+
+    events.append(burn_event)
+
+    return events
+
+
 def create_sendexpiredlock(
     sender_end_state: NettingChannelEndState,
     locked_lock: LockType,
@@ -1954,6 +2057,39 @@ def handle_action_withdraw(
         ]
 
     return TransitionResult(channel_state, events)
+
+
+def handle_action_burn(
+    channel_state: NettingChannelState,
+    action_burn: ActionChannelBurn,
+) -> TransitionResult[NettingChannelState]:
+    events: List[Event] = list()
+
+    is_valid_burn = is_valid_action_burn(channel_state, action_burn)
+
+    if is_valid_burn:
+        ## Now change the state in the ChannelObject
+        channel_state.our_state.burnt_tokens += action_burn.total_burn
+        events = send_burn_request(
+            channel_state=channel_state,
+            total_withdraw=action_withdraw.total_withdraw,
+            block_number=block_number,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    else:
+        ## Todo fix that
+        error_msg = is_valid_burn.as_error_message
+        assert error_msg, "is_valid_action_burn should return error msg if not valid"
+        events = [
+            EventInvalidActionWithdraw(
+                attempted_burn=action_withdraw.total_withdraw, reason=error_msg
+            )
+        ]
+
+    return TransitionResult(channel_state, events)
+
+
+
 
 
 def handle_action_set_reveal_timeout(
@@ -2601,6 +2737,12 @@ def state_transition(
             action_withdraw=state_change,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
+        )
+    elif type(state_change) == ActionChannelBurn:
+        assert isinstance(state_change, ActionChannelBurn), MYPY_ANNOTATION
+        iteration = handle_action_burn(
+            channel_state=channel_state,
+            action_burn=state_change,
         )
     elif type(state_change) == ActionChannelSetRevealTimeout:
         assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION

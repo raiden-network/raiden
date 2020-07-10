@@ -4,7 +4,7 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
--e git+https://github.com/raiden-network/raiden-contracts@raiddit#egg=raiden-contracts  # via -r requirements.txt
+-e git+git://github.com/karlb/raiden-contracts.git@b360763e8b6a8f2972c000ae35265428e7653ef3#egg=raiden-contracts  # via -r requirements.txt
 alabaster==0.7.12         # via -r requirements-docs.txt, sphinx
 aniso8601==7.0.0          # via -r requirements.txt, flask-restful
 apipkg==1.5               # via execnet

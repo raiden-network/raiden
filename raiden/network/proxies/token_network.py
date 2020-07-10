@@ -249,6 +249,7 @@ class TokenNetwork:
                     participant2=partner,
                     block_identifier=given_block_identifier,
                 )
+
                 network_total_deposit = self.token.balance_of(
                     address=Address(self.address), block_identifier=given_block_identifier
                 )
@@ -261,9 +262,9 @@ class TokenNetwork:
             except BadFunctionCallOutput:
                 raise_on_call_returned_empty(given_block_identifier)
             else:
-                if existing_channel_identifier is not None:
+                if existing_channel_identifier is None:
                     raise BrokenPreconditionError(
-                        "A channel with the given partner address already exists."
+                        "Weired state, in Raiddit we should always have this"
                     )
                 if network_total_deposit >= limit:
                     raise BrokenPreconditionError(
@@ -309,8 +310,8 @@ class TokenNetwork:
                 participant2=partner,
                 block_identifier=failed_at_blockhash,
             )
-            if existing_channel_identifier is not None:
-                raise DuplicatedChannelError("Channel with given partner address already exists")
+            if existing_channel_identifier is None:
+                raise DuplicatedChannelError("Weired state, in Raiddit we should always have this")
 
             network_total_deposit = self.token.balance_of(
                 address=Address(self.address), block_identifier=failed_at_blockhash
@@ -345,10 +346,10 @@ class TokenNetwork:
                     participant2=partner,
                     block_identifier=failed_at_blockhash,
                 )
-                if existing_channel_identifier is not None:
-                    raise DuplicatedChannelError(
-                        "Channel with given partner address already exists"
-                    )
+                # if existing_channel_identifier is not None:
+                #    raise DuplicatedChannelError(
+                #        "Channel with given partner address already exists"
+                #    )
 
                 network_total_deposit = self.token.balance_of(
                     address=Address(self.address), block_identifier=failed_at_blockhash
@@ -391,7 +392,6 @@ class TokenNetwork:
             SamePeerAddress: If an both addresses are equal.
         """
         raise_if_invalid_address_pair(participant1, participant2)
-
         channel_identifier = self.proxy.functions.getChannelIdentifier(
             participant1=participant1, participant2=participant2
         ).call(block_identifier=block_identifier)
@@ -1585,7 +1585,6 @@ class TokenNetwork:
                     f"onchain_channel_identifier={channel_onchain_detail.channel_identifier}"
                 )
                 raise RaidenUnrecoverableError(msg)
-
             if channel_onchain_detail.state != ChannelState.OPENED:
                 msg = (
                     f"The channel was not open at the provided block "
@@ -1634,7 +1633,7 @@ class TokenNetwork:
                 non_closing_signature=non_closing_signature,
                 closing_signature=closing_signature,
             )
-
+            # breakpoint()
             if estimated_transaction is not None:
                 estimated_transaction.estimated_gas = safe_gas_limit(
                     estimated_transaction.estimated_gas,
@@ -2006,7 +2005,7 @@ class TokenNetwork:
 
             if detail.settle_block_number < failed_at_blocknumber:
                 raise RaidenRecoverableError(
-                    "update_transfer transation sent after settlement window"
+                    "update_transfer transaction sent after settlement window"
                 )
 
             # At this point it is known the channel is CLOSED on block
@@ -2216,7 +2215,6 @@ class TokenNetwork:
         # operations. E.g. this settle and a channel open.
         with self.channel_operations_lock[partner]:
             try:
-                breakpoint()
                 channel_onchain_detail = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
@@ -2325,6 +2323,7 @@ class TokenNetwork:
         our_maximum = transferred_amount + locked_amount
         partner_maximum = partner_transferred_amount + partner_locked_amount
         our_bp_is_larger = our_maximum > partner_maximum
+
         if our_bp_is_larger:
             kwargs = {
                 "participant1": partner,

@@ -46,7 +46,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
-    typecheck,
+    typecheck, BurntAmount,
 )
 
 
@@ -110,6 +110,18 @@ class ActionChannelWithdraw(StateChange):
 
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+
+@dataclass(frozen=True)
+class ActionChannelBurn(StateChange):
+    """ Burns funds from channel. """
+
+    canonical_identifier: CanonicalIdentifier
+    total_burn: BurntAmount
 
     @property
     def channel_identifier(self) -> ChannelID:

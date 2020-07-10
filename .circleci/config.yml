@@ -703,15 +703,15 @@ workflows:
           requires:
             - prepare-python-linux
 
-      - smoketest:
-          matrix:
-            parameters:
-              py-version: ["3.7", "3.8"]
-              transport-layer: ["matrix"]
-              environment-type: ["production", "development"]
-              blockchain-type: ["geth", "parity"]
-          requires:
-            - lint
+      #- smoketest:
+      #    matrix:
+      #      parameters:
+      #        py-version: ["3.7", "3.8"]
+      #        transport-layer: ["matrix"]
+      #        environment-type: ["production", "development"]
+      #        blockchain-type: ["geth", "parity"]
+      #    requires:
+      #      - lint
 
       - test:
           matrix:
@@ -752,7 +752,7 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest
+            #- smoketest
             - test
             - test-fuzz
             - shellcheck
@@ -897,15 +897,15 @@ workflows:
           requires:
             - prepare-python-linux
 
-      - smoketest:
-          matrix:
-            parameters:
-              py-version: ["3.7", "3.8"]
-              transport-layer: ["matrix"]
-              environment-type: ["production", "development"]
-              blockchain-type: ["geth", "parity"]
-          requires:
-            - lint
+      #- smoketest:
+      #    matrix:
+      #      parameters:
+      #        py-version: ["3.7", "3.8"]
+      #        transport-layer: ["matrix"]
+      #        environment-type: ["production", "development"]
+      #        blockchain-type: ["geth", "parity"]
+      #    requires:
+      #      - lint
 
       - test:
           matrix:
@@ -946,7 +946,7 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest
+          #  - smoketest
             - test
             - test-fuzz
             - shellcheck
