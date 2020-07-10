@@ -580,7 +580,7 @@ def run_stress_test(
                 pool_size=concurrency,
             )
 
-            wait_for_balance([path[INITIATOR] for path in plan.transfers])
+            wait_for_balance(running_nodes)
 
             # After each `do_transfers` the state of the system must be
             # reset, otherwise there is a bug in the planner or Raiden.
