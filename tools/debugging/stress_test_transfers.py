@@ -1,17 +1,13 @@
 #!/usr/bin/env python
-from gevent import monkey  # isort:skip
-
-monkey.patch_all()  # isort:skip
-
 import logging.config
 import os
 import os.path
 import signal
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from http import HTTPStatus
-from itertools import chain, count, product
+from itertools import chain, count, product, repeat
 from time import time
 from typing import Callable, Dict, Iterable, Iterator, List, NewType, Optional
 
@@ -26,13 +22,22 @@ from gevent.subprocess import DEVNULL, STDOUT, Popen
 from greenlet import greenlet
 
 from raiden.network.utils import get_free_port
+from raiden.transfer.state import NetworkState
 from raiden.utils.formatting import pex
 from raiden.utils.nursery import Janitor, Nursery
 from raiden.utils.typing import Address, Host, Port, TokenAmount
 
+from gevent import monkey  # isort:skip
+
+monkey.patch_all()  # isort:skip
+
+
 BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)
 URL = NewType("URL", str)
+TransferPath = List["RunningNode"]
+INITIATOR = 0
+TARGET = -1
 
 processors = [
     structlog.stdlib.add_logger_name,
@@ -91,7 +96,7 @@ TransferPlan = Iterator[Amount]
 
 PartialTransferPlanGenerator = Callable[[Amount], Iterator[PartialTransferPlan]]
 TransferPlanGenerator = Callable[[Amount], TransferPlan]
-Scheduler = Callable[[List["InitiatorAndTarget"], TransferPlan], Iterator["Transfer"]]
+Scheduler = Callable[[List[TransferPath], TransferPlan], Iterator["Transfer"]]
 
 
 @dataclass
@@ -125,15 +130,7 @@ class RunningNode:
     process: Popen
     config: NodeConfig
     url: URL
-    starting_balances: Dict[Address, TokenAmount] = field(default_factory=dict)
-
-
-@dataclass
-class InitiatorAndTarget:
-    """Description of the origin and target of a transfers."""
-
-    initiator: RunningNode
-    target: RunningNode
+    starting_balances: Dict[Address, TokenAmount]
 
 
 @dataclass
@@ -151,11 +148,10 @@ class StressTestPlan:
     # These values can NOT be iterables because they will be consumed multiple
     # times.
 
-    # List of `InitiatorAndTarget` that satisfy the following requirements:
+    # List of transfers, these must satisfy the following requirements:
     #
-    # - Every `InitiatorAndTarget` must have at LEAST
-    # `capacity_lower_bound` in every route.
-    initiator_target_pairs: List[List[InitiatorAndTarget]]
+    # - Every channel in the path must have at LEAST `capacity_lower_bound`.
+    transfers: List[TransferPath]
 
     # Different concurrency levels used to stress the system.
     concurrency: List[int]
@@ -166,14 +162,14 @@ class StressTestPlan:
     # - The plan MAY use UP TO the `capacity_lower_bound`, but no more.
     planners: List[TransferPlanGenerator]
 
-    # List of schedulers (functions that receive a `InitiatorAndTarget` and a
+    # List of schedulers (functions that receive a `TransferPath` and a
     # `TransferPlan`), and decide the order in which these should be executed.
     schedulers: List[Scheduler]
 
 
 @dataclass
 class Transfer:
-    from_to: InitiatorAndTarget
+    path: TransferPath
     amount: Amount
 
 
@@ -202,6 +198,28 @@ def wait_for_status_ready(base_url: str, retry_timeout: int) -> None:
         gevent.sleep(retry_timeout)
 
 
+def wait_for_reachable(transfers: List[TransferPath], token_address: str) -> None:
+    """ Wait until the nodes used for the transfers can see each other. """
+
+    # Deduplicate the URLs for the channels which need reachability testing
+    channels_not_reachable = set()
+    for transfer in transfers:
+        for payer, payee in zip(transfer, transfer[1:]):
+            channel_url = f"{payer.url}/api/v1/channels/{token_address}/{payee.config.address}"
+            channels_not_reachable.add(channel_url)
+
+    # Now wait until every reachability constraint is satisfied
+    while channels_not_reachable:
+        log.info(f"Waiting for reachability of partner nodes: {channels_not_reachable}")
+
+        for url in channels_not_reachable.copy():
+            response = requests.get(url, headers={"Content-Type": "application/json"})
+            data = response.json()
+
+            if data.get("network_state") == NetworkState.REACHABLE.value:
+                channels_not_reachable.remove(url)
+
+
 def start_and_wait_for_server(
     nursery: Nursery, port_generator: Iterator[Port], node: NodeConfig, retry_timeout: int
 ) -> Optional[RunningNode]:
@@ -223,7 +241,7 @@ def start_and_wait_for_server(
 
     if process is not None:
         wait_for_status_ready(running_url, retry_timeout)
-        return RunningNode(process, node, running_url)
+        return RunningNode(process, node, running_url, get_balance_for_node(running_url))
 
     return None
 
@@ -387,9 +405,9 @@ def do_transfers(
     for transfer in transfers:
         task: Greenlet = pool.spawn(
             transfer_and_assert_successful,
-            base_url=transfer.from_to.initiator.url,
+            base_url=transfer.path[INITIATOR].url,
             token_address=token_address,
-            target_address=transfer.from_to.target.config.address,
+            target_address=transfer.path[TARGET].config.address,
             payment_identifier=next(identifier_generator),
             amount=transfer.amount,
         )
@@ -412,17 +430,13 @@ def do_transfers(
 
 # TODO: Expand `paths_direct_transfers` to work with graphs. Any sequence of
 # paths from a graph that preserve the `capacity_lower_bound` will work.
-def paths_direct_transfers(running_nodes: List[RunningNode]) -> List[InitiatorAndTarget]:
+def paths_direct_transfers(running_nodes: List[RunningNode]) -> List[TransferPath]:
     """Given the list of `running_nodes`, where each adjacent pair has a channel open,
     return a list of `(from, to)` which will do a direct transfer using each
     channel.
     """
-    forward = [
-        InitiatorAndTarget(from_, to_) for from_, to_ in zip(running_nodes[:-1], running_nodes[1:])
-    ]
-    backward = [
-        InitiatorAndTarget(to_, from_) for from_, to_ in zip(running_nodes[:-1], running_nodes[1:])
-    ]
+    forward = [[from_, to_] for from_, to_ in zip(running_nodes[:-1], running_nodes[1:])]
+    backward = [[to_, from_] for from_, to_ in zip(running_nodes[:-1], running_nodes[1:])]
     return forward + backward
 
 
@@ -430,7 +444,7 @@ def paths_direct_transfers(running_nodes: List[RunningNode]) -> List[InitiatorAn
 # of paths from a graph that *do not* overlap will work with the current
 # assumptions. Overlapping paths are acceptable, iff the channels that overlap
 # have twice the `capacity_lower_bound`
-def paths_for_mediated_transfers(running_nodes: List[RunningNode]) -> List[InitiatorAndTarget]:
+def paths_for_mediated_transfers(running_nodes: List[RunningNode]) -> List[TransferPath]:
     """Given the list of `running_nodes`, where each adjacent pair has a channel open,
     return the a list with the pair `(from, to)` which are the furthest apart.
     """
@@ -439,29 +453,25 @@ def paths_for_mediated_transfers(running_nodes: List[RunningNode]) -> List[Initi
         "a chain with more than 3 running_nodes"
     )
     assert len(running_nodes) == 3, msg
-    return [InitiatorAndTarget(running_nodes[0], running_nodes[-1])] + [
-        InitiatorAndTarget(running_nodes[-1], running_nodes[0])
-    ]
+    return [list(running_nodes)] + [list(reversed(running_nodes))]
 
 
-def scheduler_preserve_order(
-    paths: List[InitiatorAndTarget], plan: TransferPlan
-) -> Iterator[Transfer]:
+def scheduler_preserve_order(paths: List[TransferPath], plan: TransferPlan) -> Iterator[Transfer]:
     """Execute the same plan for each path, in order.
 
     E.g.:
 
-    >>> paths = [(a, b), (b, c)]
+    >>> paths = [[a, b], [b, c]]
     >>> transfer_plan = [1,1]
     >>> scheduler_preserve_order(paths, transfer_plan)
-    ... [Transfer(InitiatorAndTarget(a, b), amount=1),
-    ...  Transfer(InitiatorAndTarget(a, b), amount=1),
-    ...  Transfer(InitiatorAndTarget(b, c), amount=1),
-    ...  Transfer(InitiatorAndTarget(b, c), amount=1)]
+    ... [Transfer([a, b], amount=1),
+    ...  Transfer([a, b], amount=1),
+    ...  Transfer([b, c], amount=1),
+    ...  Transfer([b, c], amount=1)]
     """
     # product works fine with generators
-    for from_to, transfer in product(paths, plan):
-        yield Transfer(from_to, Amount(transfer))
+    for path, transfer in product(paths, plan):
+        yield Transfer(path, Amount(transfer))
 
 
 def run_profiler(
@@ -489,18 +499,13 @@ def run_profiler(
     return profiler_processes
 
 
-def get_balance_for_node(node: RunningNode) -> Dict[Address, TokenAmount]:
-    response = requests.get(f"{node.url}/api/v1/channels")
+def get_balance_for_node(url: URL) -> Dict[Address, TokenAmount]:
+    response = requests.get(f"{url}/api/v1/channels")
     assert response.headers["Content-Type"] == "application/json", response.headers["Content-Type"]
     assert response.status_code == HTTPStatus.OK, response.json()
 
     response_data = response.json()
     return {channel["partner_address"]: channel["balance"] for channel in response_data}
-
-
-def get_starting_balances(running_nodes: List[RunningNode]) -> None:
-    for node in running_nodes:
-        node.starting_balances = get_balance_for_node(node)
 
 
 def wait_for_balance(running_nodes: List[RunningNode]) -> None:
@@ -509,15 +514,11 @@ def wait_for_balance(running_nodes: List[RunningNode]) -> None:
     This makes sure that we can run another iteration of the stress test
     """
     for node in running_nodes:
-        # TODO: Instead of an `assert` this code should rely use a different
-        # type which is guaranteed to always have the `starting_balances`
-        # attribute populated.
-        assert node.starting_balances, "The node must have the starting_balances prepoluated"
+        balances = get_balance_for_node(node.url)
 
-        balances = get_balance_for_node(node)
         while any(bal < start_bal for bal, start_bal in zip(balances, node.starting_balances)):
             gevent.sleep(0.1)
-            balances = get_balance_for_node(node)
+            balances = get_balance_for_node(node.url)
 
 
 def wait_for_user_input() -> None:
@@ -540,19 +541,17 @@ def run_stress_test(
         # The configuration has to be re-created on every iteration because the
         # port numbers change
         plan = StressTestPlan(
-            initiator_target_pairs=[paths_for_mediated_transfers(running_nodes)],
+            transfers=paths_for_mediated_transfers(running_nodes),
             concurrency=[50],
             planners=[do_fifty_transfer_up_to],
             schedulers=[scheduler_preserve_order],
         )
 
-        get_starting_balances([pair.initiator for pair in plan.initiator_target_pairs[0]])
-
         # TODO: Before running the first plan each node should be queried for
         # their channel status. The script should assert the open channels have
         # at least `capacity_lower_bound` together.
         for concurent_paths, concurrency, transfer_planner, scheduler in zip(
-            plan.initiator_target_pairs, plan.concurrency, plan.planners, plan.schedulers
+            repeat(plan.transfers), plan.concurrency, plan.planners, plan.schedulers
         ):
             log.info(
                 f"Starting run {concurent_paths}, {concurrency}, {transfer_planner}, {scheduler}"
@@ -569,6 +568,8 @@ def run_stress_test(
                     nursery, running_nodes, config.profiler_data_directory
                 )
 
+            wait_for_reachable(plan.transfers, config.token_address)
+
             # TODO: `do_transfers` should return the amount of tokens
             # transferred with each `(from, to)` pair, and the total amount
             # must be lower than the `capacity_lower_bound`.
@@ -579,7 +580,7 @@ def run_stress_test(
                 pool_size=concurrency,
             )
 
-            wait_for_balance([pair.initiator for pair in plan.initiator_target_pairs[0]])
+            wait_for_balance([path[INITIATOR] for path in plan.transfers])
 
             # After each `do_transfers` the state of the system must be
             # reset, otherwise there is a bug in the planner or Raiden.
