@@ -198,7 +198,9 @@ def wait_for_status_ready(base_url: str, retry_timeout: int) -> None:
         gevent.sleep(retry_timeout)
 
 
-def wait_for_reachable(transfers: List[TransferPath], token_address: str) -> None:
+def wait_for_reachable(
+    transfers: List[TransferPath], token_address: str, retry_timeout: int
+) -> None:
     """ Wait until the nodes used for the transfers can see each other. """
 
     # Deduplicate the URLs for the channels which need reachability testing
@@ -220,6 +222,9 @@ def wait_for_reachable(transfers: List[TransferPath], token_address: str) -> Non
             # condition in the Raiden client REST API.
             if data and data.get("network_state") == NetworkState.REACHABLE.value:
                 channels_not_reachable.remove(url)
+
+        if channels_not_reachable:
+            gevent.sleep(retry_timeout)
 
 
 def start_and_wait_for_server(
@@ -570,7 +575,7 @@ def run_stress_test(
                     nursery, running_nodes, config.profiler_data_directory
                 )
 
-            wait_for_reachable(plan.transfers, config.token_address)
+            wait_for_reachable(plan.transfers, config.token_address, config.retry_timeout)
 
             # TODO: `do_transfers` should return the amount of tokens
             # transferred with each `(from, to)` pair, and the total amount
