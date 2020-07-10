@@ -216,7 +216,9 @@ def wait_for_reachable(transfers: List[TransferPath], token_address: str) -> Non
             response = requests.get(url, headers={"Content-Type": "application/json"})
             data = response.json()
 
-            if data.get("network_state") == NetworkState.REACHABLE.value:
+            # The return data **may** be `None`, this looks like a race
+            # condition in the Raiden client REST API.
+            if data and data.get("network_state") == NetworkState.REACHABLE.value:
                 channels_not_reachable.remove(url)
 
 
