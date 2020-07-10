@@ -27,7 +27,7 @@ from raiden.blockchain.events import (
     token_network_registry_events,
 )
 from raiden.blockchain_events_handler import after_blockchain_statechange
-from raiden.claim import synchronize_with_claims
+from raiden.claim import get_state_changes_for_claims
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
@@ -422,11 +422,11 @@ class RaidenService(Runnable):
         self.ready_to_process_events = False  # set to False because of restarts
 
         self._initialize_wal()
-        self._synchronize_with_claims()
         self._synchronize_with_blockchain()
 
         chain_state = views.state_from_raiden(self)
 
+        self._initialize_claims()
         self._initialize_payment_statuses(chain_state)
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
@@ -691,8 +691,8 @@ class RaidenService(Runnable):
             self.last_log_time = time.monotonic()
             self.last_log_block = polled_block_number
 
-    def _synchronize_with_claims(self) -> None:
-        state_changes = synchronize_with_claims(self.address)
+    def _initialize_claims(self) -> None:
+        state_changes = get_state_changes_for_claims(self.address, self.default_registry.address)
         log.debug("synchronize with claims")
         self.handle_and_track_state_changes(state_changes)
 

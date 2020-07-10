@@ -344,7 +344,7 @@ def create_sequential_channels(raiden_apps: List[App], channels_per_node: int) -
         sequential pair in the list has an open channel with `deposit` for each
         participant.
     """
-    app_channels: AppChannels
+    app_channels: AppChannels = []
 
     num_nodes = len(raiden_apps)
 
@@ -353,9 +353,6 @@ def create_sequential_channels(raiden_apps: List[App], channels_per_node: int) -
 
     if channels_per_node not in (0, 1, 2, CHAIN):
         raise ValueError("can only create networks with 0, 1, 2 or CHAIN channels")
-
-    if channels_per_node == 0:
-        app_channels = list()
 
     if channels_per_node == 1:
         assert len(raiden_apps) % 2 == 0, "needs an even number of nodes"
@@ -399,10 +396,8 @@ def create_apps(
 ) -> List[App]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
-    services = blockchain_services
-
     apps = []
-    for idx, proxy_manager in enumerate(services):
+    for idx, proxy_manager in enumerate(blockchain_services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
         assert len(resolver_ports) > idx
         resolver_port = resolver_ports[idx]
