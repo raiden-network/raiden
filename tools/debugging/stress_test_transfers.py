@@ -180,13 +180,18 @@ class Transfer:
 def is_ready(base_url: str) -> bool:
     try:
         result = requests.get(f"{base_url}/api/v1/status").json()
-        return result["status"] == "ready"
     except KeyError:
         log.info(f"Server {base_url} returned invalid json data.")
     except requests.ConnectionError:
         log.info(f"Waiting for the server {base_url} to start.")
     except requests.RequestException:
         log.exception(f"Request to server {base_url} failed.")
+    else:
+        if result["status"] == "ready":
+            log.info(f"Server {base_url} ready.")
+            return True
+
+        log.info(f"Waiting for server {base_url} to become ready, status={result['status']}.")
 
     return False
 
