@@ -2216,6 +2216,7 @@ class TokenNetwork:
         # operations. E.g. this settle and a channel open.
         with self.channel_operations_lock[partner]:
             try:
+                breakpoint()
                 channel_onchain_detail = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
