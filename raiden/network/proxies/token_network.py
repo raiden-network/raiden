@@ -392,7 +392,7 @@ class TokenNetwork:
         raise_if_invalid_address_pair(participant1, participant2)
 
         channel_identifier = self.proxy.functions.getChannelIdentifier(
-            participant=participant1, partner=participant2
+            participant1=participant1, participant2=participant2
         ).call(block_identifier=block_identifier)
 
         if channel_identifier == 0:
