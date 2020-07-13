@@ -100,6 +100,18 @@ class Claim:
         return ChannelID(int.from_bytes(bytes=hashed_id, byteorder="big"))
 
 
+_DUMMY_ADDRESS = to_canonical_address("0x" + "0" * 40)
+
+
+EmptyClaim = Claim(
+    chain_id=ChainID(2 ** 256 - 1),
+    token_network_address=TokenNetworkAddress(_DUMMY_ADDRESS),
+    owner=Address(_DUMMY_ADDRESS),
+    partner=Address(_DUMMY_ADDRESS),
+    total_amount=TokenAmount(0),
+)
+
+
 def parse_claims_file() -> List[Claim]:
     if not CLAIM_FILE_PATH.exists():
         return []
@@ -127,7 +139,7 @@ def create_new_token_network_event(
             transaction_hash=TransactionHash(b""),
             block_number=BlockNumber(0),
             block_hash=BlockHash(b""),
-        ),
+        )
     ]
 
 
@@ -148,10 +160,10 @@ def claims_to_blockchain_events(
         # If node is channel participant, create NettingChannelState
         if node_address == claim.owner or node_address == claim.partner:
             our_state = NettingChannelEndState(
-                claim.owner if claim.owner == node_address else claim.partner, Balance(0),
+                claim.owner if claim.owner == node_address else claim.partner, Balance(0)
             )
             partner_state = NettingChannelEndState(
-                claim.partner if claim.owner == node_address else claim.owner, Balance(0),
+                claim.partner if claim.owner == node_address else claim.owner, Balance(0)
             )
 
             channel_state = NettingChannelState(

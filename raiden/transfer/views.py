@@ -1,4 +1,4 @@
-from raiden.claim import Claim
+from raiden.claim import Claim, EmptyClaim
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -52,7 +52,7 @@ def get_current_claim_by_token_network_and_partner(
     assert participant1, msg
     assert participant2, msg
     # FIXME: needs implementation
-    return Claim.DUMMY
+    return EmptyClaim
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
