@@ -4,7 +4,6 @@ from pathlib import Path
 from eth_typing import BlockNumber
 from eth_utils import denoms, to_hex
 
-import raiden_contracts.constants
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, MATRIX_AUTO_SELECT_SERVER, Environment
 from raiden.network.pathfinding import PFSConfig
 from raiden.utils.typing import (
@@ -86,7 +85,7 @@ MAX_MEDIATION_FEE_PERC: float = 0.2
 
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = BlockTimeout(3)
 
-RAIDEN_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
+RAIDEN_CONTRACT_VERSION = None
 
 MIN_REI_THRESHOLD = TokenAmount(55 * 10 ** 17)  # about 1.1$
 
