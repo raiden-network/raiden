@@ -16,7 +16,7 @@ from raiden.utils.typing import Any, ContextManager, Dict, List, Optional
 
 
 @pytest.fixture(scope="module")
-def cli_tests_contracts_version() -> str:
+def cli_tests_contracts_version() -> Optional[str]:
     return RAIDEN_CONTRACT_VERSION
 
 
