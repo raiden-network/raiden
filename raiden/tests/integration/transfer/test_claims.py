@@ -11,6 +11,7 @@ from raiden.transfer import views
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("create_claims", [True])
 def test_claims_create_channels(raiden_network: List[App]):
     app0, _ = raiden_network
 

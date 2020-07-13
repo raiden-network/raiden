@@ -196,10 +196,19 @@ def resolvers(resolver_ports):
 
 
 @pytest.fixture
-def claims(private_keys, chain_id):
+def create_claims() -> bool:
+    return False
+
+
+@pytest.fixture
+def claims(create_claims: bool, private_keys, chain_id):
+    if not create_claims:
+        return
+
     addresses = [privatekey_to_address(pkey) for pkey in private_keys]
     signer = make_signer()
 
+    claims_path = Path("./claims.json")
     create_hub_json(
         operator_signer=signer,
         token_network_address=make_token_network_address(),
@@ -207,8 +216,11 @@ def claims(private_keys, chain_id):
         hub_address=make_address(),
         num_users=len(addresses),
         addresses=addresses,
-        output_file=Path("./claims.json"),
+        output_file=claims_path,
     )
+    yield
+
+    claims_path.unlink()
 
 
 @pytest.fixture
