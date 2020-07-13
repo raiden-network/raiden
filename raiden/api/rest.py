@@ -916,6 +916,14 @@ class RestAPI:  # pragma: no unittest
             result = self._updated_chanel_state_from_addresses(
                 registry_address, partner_address, token_address
             )
+            if result is None:
+                msg = (
+                    f"Channel with partner '{to_checksum_address(partner_address)}' "
+                    f"for token '{to_checksum_address(token_address)}' could not be "
+                    f"found."
+                )
+                return api_error(errors=msg, status_code=HTTPStatus.NOT_FOUND)
+
             return api_response(result=result)
         except ChannelNotFound as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
