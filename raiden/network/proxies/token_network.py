@@ -6,6 +6,7 @@ from eth_utils import encode_hex, is_binary_address, to_canonical_address, to_he
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
+from raiden.claim import Claim
 from raiden.constants import (
     BLOCK_ID_LATEST,
     EMPTY_BALANCE_HASH,
@@ -2200,10 +2201,12 @@ class TokenNetwork:
         transferred_amount: TokenAmount,
         locked_amount: LockedAmount,
         locksroot: Locksroot,
+        claim: Claim,
         partner: Address,
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
+        partner_claim: Claim,
         given_block_identifier: BlockIdentifier,
     ) -> None:
         # `channel_operations_lock` is used to serialize conflicting channel
@@ -2284,10 +2287,12 @@ class TokenNetwork:
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
                 locksroot=locksroot,
+                claim=claim,
                 partner=partner,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,
+                partner_claim=partner_claim,
                 log_details=log_details,
             )
 
@@ -2297,10 +2302,12 @@ class TokenNetwork:
         transferred_amount: TokenAmount,
         locked_amount: LockedAmount,
         locksroot: Locksroot,
+        claim: Claim,
         partner: Address,
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
+        partner_claim: Claim,
         log_details: Dict[Any, Any],
     ) -> None:
 
@@ -2314,10 +2321,12 @@ class TokenNetwork:
                 "participant1_transferred_amount": partner_transferred_amount,
                 "participant1_locked_amount": partner_locked_amount,
                 "participant1_locksroot": partner_locksroot,
+                "participant1_claim": partner_claim,
                 "participant2": self.node_address,
                 "participant2_transferred_amount": transferred_amount,
                 "participant2_locked_amount": locked_amount,
                 "participant2_locksroot": locksroot,
+                "participant2_claim": claim,
             }
         else:
             kwargs = {
@@ -2325,10 +2334,12 @@ class TokenNetwork:
                 "participant1_transferred_amount": transferred_amount,
                 "participant1_locked_amount": locked_amount,
                 "participant1_locksroot": locksroot,
+                "participant1_claim": claim,
                 "participant2": partner,
                 "participant2_transferred_amount": partner_transferred_amount,
                 "participant2_locked_amount": partner_locked_amount,
                 "participant2_locksroot": partner_locksroot,
+                "participant2_claim": partner_claim,
             }
 
         estimated_transaction = self.client.estimate_gas(
