@@ -5,9 +5,11 @@ from pathlib import Path
 import gevent
 import pytest
 from gevent.event import AsyncResult
+from tools.raiddit.generate_claims import create_hub_json
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
+from raiden.tests.utils.factories import make_address, make_signer, make_token_network_address
 from raiden.tests.utils.network import (
     CHAIN,
     BlockchainServices,
@@ -22,6 +24,7 @@ from raiden.tests.utils.network import (
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.transport import ParsedURL
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
     BlockTimeout,
@@ -193,6 +196,22 @@ def resolvers(resolver_ports):
 
 
 @pytest.fixture
+def claims(private_keys, chain_id):
+    addresses = [privatekey_to_address(pkey) for pkey in private_keys]
+    signer = make_signer()
+
+    create_hub_json(
+        operator_signer=signer,
+        token_network_address=make_token_network_address(),
+        chain_id=chain_id,
+        hub_address=make_address(),
+        num_users=len(addresses),
+        addresses=addresses,
+        output_file=Path("./claims.json"),
+    )
+
+
+@pytest.fixture
 def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
@@ -222,6 +241,7 @@ def raiden_network(
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
     port_generator: Iterator[Port],
+    claims: None,  # pylint: disable=unused-argument
 ) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
