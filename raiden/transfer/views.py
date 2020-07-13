@@ -1,3 +1,4 @@
+from raiden.claim import Claim
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -36,6 +37,22 @@ if TYPE_CHECKING:
 
 # TODO: Either enforce immutability or make a copy of the values returned by
 #     the view functions
+
+
+def get_current_claim_by_token_network_and_partner(
+    chain_state: ChainState,
+    token_network_address: TokenNetworkAddress,
+    participant1: Address,
+    participant2: Address,
+) -> Claim:
+    """ Allows bi-directional lookup for claims in a given TokenNetwork. """
+    msg = "FIXME"
+    assert chain_state, msg
+    assert token_network_address, msg
+    assert participant1, msg
+    assert participant2, msg
+    # FIXME: needs implementation
+    return Claim.DUMMY
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
