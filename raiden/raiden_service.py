@@ -693,8 +693,10 @@ class RaidenService(Runnable):
 
     def _initialize_claims(self) -> None:
         state_changes = get_state_changes_for_claims(self.address, self.default_registry.address)
-        log.debug("synchronize with claims")
-        self.handle_and_track_state_changes(state_changes)
+
+        if state_changes:
+            log.debug("Processing claims")
+            self.handle_and_track_state_changes(state_changes)
 
     def _synchronize_with_blockchain(self) -> None:
         """Prepares the alarm task callback and synchronize with the blockchain

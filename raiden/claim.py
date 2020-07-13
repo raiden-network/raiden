@@ -101,6 +101,10 @@ class Claim:
 
 
 def parse_claims_file() -> List[Claim]:
+    if not CLAIM_FILE_PATH.exists():
+        return []
+
+    # TODO: add error handling
     claims_data = json.loads(CLAIM_FILE_PATH.read_text())
     return [
         DictSerializer.deserialize({"_type": "raiden.claim.Claim", **claim})
