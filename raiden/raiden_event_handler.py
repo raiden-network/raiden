@@ -71,6 +71,7 @@ from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import (
     get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
+    get_current_claim_by_token_network_and_partner,
     state_from_raiden,
 )
 from raiden.utils.formatting import to_checksum_address
@@ -721,6 +722,18 @@ class RaidenEventHandler(EventHandler):
 
         our_details = participants_details.our_details
         partner_details = participants_details.partner_details
+        our_claim = get_current_claim_by_token_network_and_partner(
+            chain_state=chain_state,
+            token_network_address=canonical_identifier.token_network_address,
+            participant1=payment_channel.participant1,
+            participant2=payment_channel.participant2,
+        )
+        partner_claim = get_current_claim_by_token_network_and_partner(
+            chain_state=chain_state,
+            token_network_address=canonical_identifier.token_network_address,
+            participant1=payment_channel.participant2,
+            participant2=payment_channel.participant1,
+        )
 
         log_details = {
             "chain_id": canonical_identifier.chain_identifier,
@@ -735,6 +748,7 @@ class RaidenEventHandler(EventHandler):
             "our_nonce": our_details.nonce,
             "our_locksroot": to_hex(our_details.locksroot),
             "our_locked_amount": our_details.locked_amount,
+            "our_claim": our_claim,
             "partner_deposit": partner_details.deposit,
             "partner_withdrawn": partner_details.withdrawn,
             "partner_is_closer": partner_details.is_closer,
@@ -742,6 +756,7 @@ class RaidenEventHandler(EventHandler):
             "partner_nonce": partner_details.nonce,
             "partner_locksroot": to_hex(partner_details.locksroot),
             "partner_locked_amount": partner_details.locked_amount,
+            "partner_claim": partner_claim,
         }
 
         if our_details.balance_hash != EMPTY_BALANCE_HASH:
@@ -794,9 +809,11 @@ class RaidenEventHandler(EventHandler):
                 transferred_amount=our_transferred_amount,
                 locked_amount=our_locked_amount,
                 locksroot=our_locksroot,
+                claim=our_claim,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,
+                partner_claim=partner_claim,
                 block_identifier=triggered_by_block_hash,
             )
         except InsufficientEth as e:
