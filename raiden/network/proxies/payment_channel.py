@@ -1,4 +1,5 @@
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
+from raiden.claim import Claim
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.transfer.state import NettingChannelState, PendingLocksState
 from raiden.utils.typing import (
@@ -195,9 +196,11 @@ class PaymentChannel:
         transferred_amount: TokenAmount,
         locked_amount: LockedAmount,
         locksroot: Locksroot,
+        claim: Claim,
         partner_transferred_amount: TokenAmount,
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
+        partner_claim: Claim,
         block_identifier: BlockIdentifier,
     ) -> None:
         """ Settles the channel. """
@@ -206,9 +209,11 @@ class PaymentChannel:
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,
             locksroot=locksroot,
+            claim=claim,
             partner=self.participant2,
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,
+            partner_claim=partner_claim,
             given_block_identifier=block_identifier,
         )
