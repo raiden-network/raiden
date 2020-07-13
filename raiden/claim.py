@@ -136,6 +136,9 @@ def claims_to_blockchain_events(
     node_address: Address,
     token_network_registry_address: TokenNetworkRegistryAddress,
 ) -> List[StateChange]:
+    if len(claims) == 0:
+        return []
+
     state_changes = create_new_token_network_event(
         token_network_registry_address, claims[0].token_network_address
     )
