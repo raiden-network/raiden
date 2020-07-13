@@ -47,7 +47,6 @@ from raiden_contracts.utils.type_aliases import ChainID, ChannelID, Signature, T
 CLAIM_FILE_PATH = Path("./claims.json")
 DEFAULT_SETTLE_TIMEOUT = BlockTimeout(100)
 DEFAULT_REVEAL_TIMEOUT = BlockTimeout(50)
-TOKEN_ADDRESS = TokenAddress(to_canonical_address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"))
 
 
 @dataclass
@@ -124,16 +123,22 @@ def parse_claims_file() -> List[Claim]:
     ]
 
 
-def create_new_token_network_event(
+def claims_to_blockchain_events(
+    claims: List[Claim],
+    node_address: Address,
     token_network_registry_address: TokenNetworkRegistryAddress,
     token_network_address: TokenNetworkAddress,
+    token_address: TokenAddress,
 ) -> List[StateChange]:
-    return [
+    if len(claims) == 0:
+        return []
+
+    state_changes: List[StateChange] = [
         ContractReceiveNewTokenNetwork(
             token_network_registry_address=token_network_registry_address,
             token_network=TokenNetworkState(
                 address=token_network_address,
-                token_address=TOKEN_ADDRESS,
+                token_address=token_address,
                 network_graph=TokenNetworkGraphState(token_network_address),
             ),
             transaction_hash=TransactionHash(b""),
@@ -141,19 +146,6 @@ def create_new_token_network_event(
             block_hash=BlockHash(b""),
         )
     ]
-
-
-def claims_to_blockchain_events(
-    claims: List[Claim],
-    node_address: Address,
-    token_network_registry_address: TokenNetworkRegistryAddress,
-) -> List[StateChange]:
-    if len(claims) == 0:
-        return []
-
-    state_changes = create_new_token_network_event(
-        token_network_registry_address, claims[0].token_network_address
-    )
 
     # TODO: check claim signature
     for claim in claims:
@@ -172,7 +164,7 @@ def claims_to_blockchain_events(
                     token_network_address=claim.token_network_address,
                     channel_identifier=claim.channel_id(),
                 ),
-                token_address=TOKEN_ADDRESS,
+                token_address=token_address,
                 token_network_registry_address=token_network_registry_address,
                 reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
                 settle_timeout=DEFAULT_SETTLE_TIMEOUT,
@@ -235,7 +227,12 @@ def claims_to_blockchain_events(
 
 
 def get_state_changes_for_claims(
-    node_address: Address, token_network_registry_address: TokenNetworkRegistryAddress
+    claims: List[Claim],
+    node_address: Address,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    token_network_address: TokenNetworkAddress,
+    token_address: TokenAddress,
 ) -> List[StateChange]:
-    claims = parse_claims_file()
-    return claims_to_blockchain_events(claims, node_address, token_network_registry_address)
+    return claims_to_blockchain_events(
+        claims, node_address, token_network_registry_address, token_network_address, token_address
+    )

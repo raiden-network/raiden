@@ -27,7 +27,7 @@ from raiden.blockchain.events import (
     token_network_registry_events,
 )
 from raiden.blockchain_events_handler import after_blockchain_statechange
-from raiden.claim import get_state_changes_for_claims
+from raiden.claim import Claim, get_state_changes_for_claims, parse_claims_file
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
@@ -692,11 +692,33 @@ class RaidenService(Runnable):
             self.last_log_block = polled_block_number
 
     def _initialize_claims(self) -> None:
-        state_changes = get_state_changes_for_claims(self.address, self.default_registry.address)
+        claims = parse_claims_file()
+        self.process_claims(claims)
+
+    def process_claims(self, claims: List[Claim]) -> None:
+        if not claims:
+            return
+
+        # FIXME: not all claims might have the same token
+        token_network_address = claims[0].token_network_address
+        token_network = views.get_token_network_by_address(
+            chain_state=views.state_from_raiden(self), token_network_address=token_network_address
+        )
+        assert token_network, "Token network not found"
+        token_address = token_network.token_address
+
+        state_changes = get_state_changes_for_claims(
+            claims=claims,
+            node_address=self.address,
+            token_network_registry_address=self.default_registry.address,
+            token_network_address=token_network_address,
+            token_address=token_address,
+        )
 
         if state_changes:
             log.debug("Processing claims")
             self.handle_and_track_state_changes(state_changes)
+            log.debug("Processed claims")
 
     def _synchronize_with_blockchain(self) -> None:
         """Prepares the alarm task callback and synchronize with the blockchain

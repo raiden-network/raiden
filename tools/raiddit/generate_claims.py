@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import click
 
@@ -67,6 +67,28 @@ def create_hub_json(
     output_file.write_text(json.dumps(claims_data))
 
 
+def generate_claims(
+    operator_signer: Signer,
+    token_network_address: TokenNetworkAddress,
+    chain_id: ChainID,
+    channels: List[Tuple[Address, Address, TokenAmount]],
+) -> List[Claim]:
+    claims = []
+
+    for p1, p2, amount in channels:
+        claim = Claim(
+            chain_id=chain_id,
+            token_network_address=token_network_address,
+            owner=p1,
+            partner=p2,
+            total_amount=amount,
+        )
+        claim.sign(operator_signer)
+        claims.append(claim)
+
+    return claims
+
+
 def create_hub_claims(
     operator_signer: Signer,
     token_network_address: TokenNetworkAddress,
@@ -75,32 +97,14 @@ def create_hub_claims(
     num_users: int,
     addresses: List[Address],
 ) -> List[Claim]:
-
     addresses.extend(make_address() for _ in range(num_users - len(addresses)))
-    claims = []
 
+    channels = []
     for address in addresses:
-        claim = Claim(
-            chain_id=chain_id,
-            token_network_address=token_network_address,
-            owner=address,
-            partner=hub_address,
-            total_amount=DEFAULT_TOKEN_AMOUNT,
-        )
-        claim.sign(operator_signer)
-        claims.append(claim)
+        channels.append((address, hub_address, DEFAULT_TOKEN_AMOUNT))
+        channels.append((hub_address, address, DEFAULT_TOKEN_AMOUNT))
 
-        reverse_claim = Claim(
-            chain_id=chain_id,
-            token_network_address=token_network_address,
-            owner=hub_address,
-            partner=address,
-            total_amount=DEFAULT_TOKEN_AMOUNT,
-        )
-        reverse_claim.sign(operator_signer)
-        claims.append(reverse_claim)
-
-    return claims
+    return generate_claims(operator_signer, token_network_address, chain_id, channels)
 
 
 if __name__ == "__main__":

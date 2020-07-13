@@ -16,6 +16,7 @@ import requests
 from eth_typing import URI, HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
+from tools.raiddit.generate_claims import generate_claims
 from web3 import HTTPProvider, Web3
 from web3.contract import Contract
 
@@ -47,6 +48,7 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
+from raiden.tests.utils.factories import make_signer
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
@@ -418,6 +420,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
     app = None
     try:
         app = run_app(**setup.args)
+        raiden_service = app.raiden
         raiden_api = app.raiden.raiden_api
         assert raiden_api is not None  # for mypy
 
@@ -427,26 +430,24 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
         # block hash contains the deployed token network or else things break
         wait_for_block(raiden=app.raiden, block_number=block, retry_timeout=1.0)
 
-        raiden_api.channel_open(
-            registry_address=TokenNetworkRegistryAddress(
-                setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
-            ),
-            token_address=TokenAddress(to_canonical_address(setup.token.address)),
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+        token_network_address = views.get_token_network_address_by_token_address(
+            views.state_from_raiden(raiden_service),
+            raiden_service.default_registry.address,
+            TokenAddress(to_canonical_address(setup.token.address)),
         )
-        raiden_api.set_total_channel_deposit(
-            registry_address=TokenNetworkRegistryAddress(
-                setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
-            ),
-            token_address=TokenAddress(to_canonical_address(setup.token.address)),
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
-            total_deposit=TEST_DEPOSIT_AMOUNT,
+        # create claims to open channel
+        claims = generate_claims(
+            operator_signer=make_signer(),
+            token_network_address=token_network_address,
+            chain_id=app.raiden.rpc_client.chain_id,
+            channels=[(app.raiden.address, ConnectionManager.BOOTSTRAP_ADDR, TEST_DEPOSIT_AMOUNT)],
         )
+        app.raiden.process_claims(claims)
+
         token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
 
         print_step("Running smoketest")
 
-        raiden_service = app.raiden
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()
         events_token_addresses = [
             event["args"]["token_address"] for event in token_network_added_events
