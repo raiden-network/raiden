@@ -181,10 +181,8 @@ commands:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-# hack: solving a inter-PR cache problem
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-2uPiIM_pNv5neMjXtHsw_aV6BQGcFOekCBcy7TJEkhI=
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v4-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v4-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
           command: |
@@ -204,7 +202,7 @@ commands:
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
       - save_cache:
-          key: python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          key: python-deps-v4-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
           - "~/venv-<< parameters.py-version >>-LINUX"
           - "~/venv-<< parameters.py-version >>-MACOS"
