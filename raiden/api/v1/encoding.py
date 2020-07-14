@@ -208,11 +208,6 @@ class BaseListSchema(Schema):
         return decoding_class(list_)
 
 
-class BlockchainEventsRequestSchema(BaseSchema):
-    from_block = IntegerToStringField(missing=None)
-    to_block = IntegerToStringField(missing=None)
-
-
 class RaidenEventsRequestSchema(BaseSchema):
     limit = IntegerToStringField(missing=None)
     offset = IntegerToStringField(missing=None)

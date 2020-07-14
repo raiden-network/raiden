@@ -9,7 +9,7 @@ from eth_utils import is_checksum_address, to_checksum_address, to_hex
 from flask import url_for
 
 from raiden.api.rest import APIServer
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.constants import Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
@@ -555,138 +555,6 @@ def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token
     assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
     json_response = get_json_response(response)
     assert "The account balance is below the estimated amount" in json_response["errors"]
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_network_events(api_server_test_instance: APIServer, token_addresses):
-    # let's create a new channel
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
-    channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
-    }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
-    )
-    response = request.send().response
-
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "blockchaineventsnetworkresource",
-            from_block=GENESIS_BLOCK_NUMBER,
-        )
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(get_json_response(response)) > 0
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_token_events(api_server_test_instance: APIServer, token_addresses):
-    # let's create a new channel
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
-    channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
-    }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
-    )
-    response = request.send().response
-
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "blockchaineventstokenresource",
-            token_address=token_address,
-            from_block=GENESIS_BLOCK_NUMBER,
-        )
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(get_json_response(response)) > 0
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_channel_events(api_server_test_instance: APIServer, token_addresses):
-    # let's create a new channel
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
-    channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
-    }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
-    )
-    response = request.send().response
-
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "tokenchanneleventsresourceblockchain",
-            token_address=token_address,
-            from_block=str(GENESIS_BLOCK_NUMBER),
-        )
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(get_json_response(response)) > 0
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_token_events_errors_for_unregistered_token(api_server_test_instance):
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "tokenchanneleventsresourceblockchain",
-            token_address="0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-            from_block="5",
-            to_block="20",
-        )
-    )
-    response = request.send().response
-    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "channelblockchaineventsresource",
-            token_address="0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-            partner_address="0x61C808D82A3Ac53231750daDc13c777b59313bD9",
-            from_block="5",
-            to_block="20",
-        )
-    )
-    response = request.send().response
-    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
 
 
 @raise_on_failure
