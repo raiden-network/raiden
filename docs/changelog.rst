@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 1.0.2 https://github.com/raiden-network/webui/releases/tag/v1.0.2
 * :feature:`5407` Add ``/contracts`` endpoint with information about the used contracts.
 * :bug:`6217` Don't crash at ``/payments`` when no target address is given.
 * :feature:`-` Adds minimum required balance to send out MonitorRequest on mainnet.
