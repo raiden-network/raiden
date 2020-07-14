@@ -36,9 +36,6 @@ from raiden.api.v1.encoding import (
 )
 from raiden.api.v1.resources import (
     AddressResource,
-    BlockchainEventsNetworkResource,
-    BlockchainEventsTokenResource,
-    ChannelBlockchainEventsResource,
     ChannelsResource,
     ChannelsResourceByTokenAddress,
     ChannelsResourceByTokenAndPartnerAddress,
@@ -60,7 +57,7 @@ from raiden.api.v1.resources import (
     VersionResource,
     create_blueprint,
 )
-from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
+from raiden.constants import UINT256_MAX, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -74,7 +71,6 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAmount,
     InvalidBinaryAddress,
-    InvalidBlockNumberInput,
     InvalidNumberInput,
     InvalidPaymentIdentifier,
     InvalidRevealTimeout,
@@ -114,7 +110,6 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     Any,
-    BlockIdentifier,
     BlockTimeout,
     Dict,
     Endpoint,
@@ -170,20 +165,6 @@ URLS_V1 = [
     ),
     ("/status", StatusResource),
     ("/shutdown", ShutdownResource),
-    ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
-    ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
-    (
-        "/_debug/blockchain_events/token_network_registries/<hexaddress:token_address>/channels",
-        ChannelBlockchainEventsResource,
-        "tokenchanneleventsresourceblockchain",
-    ),
-    (
-        (
-            "/_debug/blockchain_events/token_network_registries/"
-            "<hexaddress:token_address>/channels/<hexaddress:partner_address>"
-        ),
-        ChannelBlockchainEventsResource,
-    ),
     ("/_debug/raiden_events", RaidenInternalEventsResource),
     ("/_testing/tokens/<hexaddress:token_address>/mint", MintTokenResource, "tokensmintresource"),
 ]
@@ -884,51 +865,6 @@ class RestAPI:  # pragma: no unittest
             message = f'No token network registered for token "{pretty_address}"'
             return api_error(message, status_code=HTTPStatus.NOT_FOUND)
 
-    def get_blockchain_events_network(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> Response:
-        log.debug(
-            "Getting network events",
-            node=self.checksum_address,
-            registry_address=to_checksum_address(registry_address),
-            from_block=from_block,
-            to_block=to_block,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_network(
-                registry_address=registry_address, from_block=from_block, to_block=to_block
-            )
-        except InvalidBlockNumberInput as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
-
-        return api_response(result=normalize_events_list(raiden_service_result))
-
-    def get_blockchain_events_token_network(
-        self,
-        token_address: TokenAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> Response:
-        log.debug(
-            "Getting token network blockchain events",
-            node=self.checksum_address,
-            token_address=to_checksum_address(token_address),
-            from_block=from_block,
-            to_block=to_block,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_token_network(
-                token_address=token_address, from_block=from_block, to_block=to_block
-            )
-            return api_response(result=normalize_events_list(raiden_service_result))
-        except UnknownTokenAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-        except (InvalidBlockNumberInput, InvalidBinaryAddress) as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
-
     def get_raiden_events_payment_history_with_timestamps(
         self,
         registry_address: TokenNetworkRegistryAddress,
@@ -992,34 +928,6 @@ class RestAPI:  # pragma: no unittest
             )
         ]
         return api_response(result=events)
-
-    def get_blockchain_events_channel(
-        self,
-        token_address: TokenAddress,
-        partner_address: Address = None,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> Response:
-        log.debug(
-            "Getting channel blockchain events",
-            node=self.checksum_address,
-            token_address=to_checksum_address(token_address),
-            partner_address=optional_address_to_string(partner_address),
-            from_block=from_block,
-            to_block=to_block,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_channel(
-                token_address=token_address,
-                partner_address=partner_address,
-                from_block=from_block,
-                to_block=to_block,
-            )
-            return api_response(result=normalize_events_list(raiden_service_result))
-        except (InvalidBlockNumberInput, InvalidBinaryAddress) as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
-        except UnknownTokenAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_channel(
         self,

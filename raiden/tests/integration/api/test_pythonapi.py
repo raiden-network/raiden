@@ -23,35 +23,23 @@ from raiden.exceptions import (
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import must_have_event, wait_for_state_change
+from raiden.tests.utils.events import wait_for_state_change
 from raiden.tests.utils.factories import make_address
-from raiden.tests.utils.transfer import get_channelstate, transfer
+from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import channel, views
-from raiden.transfer.events import (
-    EventPaymentReceivedSuccess,
-    EventPaymentSentFailed,
-    EventPaymentSentSuccess,
-)
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.state import ChannelState, NetworkState
 from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveNewTokenNetwork,
 )
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
 )
-from raiden.utils.typing import (
-    BlockNumber,
-    List,
-    PaymentAmount,
-    PaymentID,
-    TokenAddress,
-    TokenAmount,
-)
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
+from raiden.utils.typing import BlockNumber, List, PaymentAmount, TokenAddress, TokenAmount
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -271,40 +259,6 @@ def test_transfer_with_invalid_address_type(raiden_network, token_addresses):
             target=target_address,  # type: ignore
             transfer_timeout=10,
         )
-
-
-@raise_on_failure
-@pytest.mark.parametrize("channels_per_node", [1])
-@pytest.mark.parametrize("number_of_nodes", [2])
-def test_api_channel_events(raiden_chain, token_addresses):
-    app0, app1 = raiden_chain
-    token_address = token_addresses[0]
-
-    amount = PaymentAmount(30)
-    transfer(
-        initiator_app=app0,
-        target_app=app1,
-        token_address=token_address,
-        amount=amount,
-        identifier=PaymentID(1),
-    )
-
-    app0_events = RaidenAPI(app0.raiden).get_blockchain_events_channel(
-        token_address, app1.raiden.address
-    )
-
-    assert must_have_event(app0_events, {"event": ChannelEvent.DEPOSIT})
-
-    app0_events = app0.raiden.wal.storage.get_events()
-    assert any(isinstance(event, EventPaymentSentSuccess) for event in app0_events)
-
-    app1_events = app1.raiden.wal.storage.get_events()
-    assert any(isinstance(event, EventPaymentReceivedSuccess) for event in app1_events)
-
-    app1_events = RaidenAPI(app1.raiden).get_blockchain_events_channel(
-        token_address, app0.raiden.address
-    )
-    assert must_have_event(app1_events, {"event": ChannelEvent.DEPOSIT})
 
 
 @raise_on_failure
@@ -705,23 +659,6 @@ def test_raidenapi_channel_lifecycle(
     channel12 = get_channelstate(node1, node2, token_network_address)
     assert channel.get_status(channel12) == ChannelState.STATE_OPENED
 
-    channel_event_list1 = api1.get_blockchain_events_channel(
-        token_address, channel12.partner_state.address
-    )
-    assert must_have_event(
-        channel_event_list1,
-        {
-            "event": ChannelEvent.OPENED,
-            "args": {
-                "participant1": to_checksum_address(api1.address),
-                "participant2": to_checksum_address(api2.address),
-            },
-        },
-    )
-
-    network_event_list1 = api1.get_blockchain_events_token_network(token_address)
-    assert must_have_event(network_event_list1, {"event": ChannelEvent.OPENED})
-
     registry_address = api1.raiden.default_registry.address
     # Check that giving a 0 total deposit is not accepted
     with pytest.raises(DepositMismatch):
@@ -754,33 +691,10 @@ def test_raidenapi_channel_lifecycle(
     assert api1.get_node_network_state(api2.address) == NetworkState.REACHABLE
     assert api2.get_node_network_state(api1.address) == NetworkState.REACHABLE
 
-    event_list2 = api1.get_blockchain_events_channel(
-        token_address, channel12.partner_state.address
-    )
-    assert must_have_event(
-        event_list2,
-        {
-            "event": ChannelEvent.DEPOSIT,
-            "args": {"participant": to_checksum_address(api1.address), "total_deposit": deposit},
-        },
-    )
-
     api1.channel_close(registry_address, token_address, api2.address)
 
     # Load the new state with the channel closed
     channel12 = get_channelstate(node1, node2, token_network_address)
-
-    event_list3 = api1.get_blockchain_events_channel(
-        token_address, channel12.partner_state.address
-    )
-    assert len(event_list3) > len(event_list2)
-    assert must_have_event(
-        event_list3,
-        {
-            "event": ChannelEvent.CLOSED,
-            "args": {"closing_participant": to_checksum_address(api1.address)},
-        },
-    )
     assert channel.get_status(channel12) == ChannelState.STATE_CLOSED
 
     with pytest.raises(UnexpectedChannelState):
