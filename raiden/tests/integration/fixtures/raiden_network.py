@@ -5,11 +5,16 @@ from pathlib import Path
 import gevent
 import pytest
 from gevent.event import AsyncResult
-from tools.raiddit.generate_claims import create_hub_json
+from tools.raiddit.generate_claims import ClaimGenerator, create_hub_json
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
-from raiden.tests.utils.factories import make_address, make_signer, make_token_network_address
+from raiden.tests.utils.factories import (
+    UNIT_CHAIN_ID,
+    make_address,
+    make_signer,
+    make_token_network_address,
+)
 from raiden.tests.utils.network import (
     CHAIN,
     BlockchainServices,
@@ -146,7 +151,12 @@ def raiden_chain(
 
     app_channels = create_sequential_channels(raiden_apps, channels_per_node)
 
+    claim_generator = ClaimGenerator(
+        operator_signer=make_signer(), chain_id=UNIT_CHAIN_ID, hub_address=None
+    )
+
     create_all_channels_for_network(
+        claim_generator=claim_generator,
         app_channels=app_channels,
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
@@ -162,6 +172,10 @@ def raiden_chain(
                 token_addresses=token_addresses,
                 deposit=deposit,
             )
+    # Here we make sure, all apps know all the routes
+    all_claims = claim_generator.claims()
+    for app in raiden_apps:
+        app.raiden.process_claims(all_claims)
 
     yield raiden_apps
 
@@ -307,7 +321,12 @@ def raiden_network(
 
     app_channels = create_network_channels(raiden_apps, channels_per_node)
 
+    claim_generator = ClaimGenerator(
+        operator_signer=make_signer(), chain_id=UNIT_CHAIN_ID, hub_address=None
+    )
+
     create_all_channels_for_network(
+        claim_generator=claim_generator,
         app_channels=app_channels,
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
@@ -329,6 +348,11 @@ def raiden_network(
 
         with gevent.Timeout(seconds=5, exception=exception):
             wait_for_alarm_start(raiden_apps)
+
+    # Here we make sure, all apps know all the routes
+    all_claims = claim_generator.claims()
+    for app in raiden_apps:
+        app.raiden.process_claims(all_claims)
 
     yield raiden_apps
 
