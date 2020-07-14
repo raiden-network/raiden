@@ -27,7 +27,7 @@ from raiden.blockchain.events import (
     token_network_registry_events,
 )
 from raiden.blockchain_events_handler import after_blockchain_statechange
-from raiden.claim import get_state_changes_for_claims
+from raiden.claim import get_state_changes_for_claims, parse_claims_file
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
@@ -100,7 +100,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, NetworkState, TokenNetworkRegistryState
+from raiden.transfer.state import ChainState, Claim, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelSetRevealTimeout,
@@ -692,11 +692,46 @@ class RaidenService(Runnable):
             self.last_log_block = polled_block_number
 
     def _initialize_claims(self) -> None:
-        state_changes = get_state_changes_for_claims(self.address, self.default_registry.address)
+        claims = parse_claims_file()
+        self.process_claims(claims)
+
+    def process_claims(self, claims: List[Claim]) -> None:
+        if not claims:
+            return
+
+        processable_claims = []
+        unprocessable_claims = []
+
+        chain_state = views.state_from_raiden(self)
+
+        # TODO: check claim signature
+        for claim in claims:
+            token_network_state = views.get_token_network_by_address(
+                chain_state=chain_state, token_network_address=claim.token_network_address
+            )
+
+            if token_network_state is None:
+                # Token network not yet known, save for later
+                unprocessable_claims.append(claim)
+            else:
+                # Token network is known, process directly
+                processable_claims.append(claim)
+
+        # TODO: is this safe or do we need a special state change?
+        chain_state.unresolved_claims.extend(unprocessable_claims)
+
+        # Create and process state changes
+        state_changes = get_state_changes_for_claims(
+            chain_state=chain_state,
+            claims=claims,
+            node_address=self.address,
+            token_network_registry_address=self.default_registry.address,
+        )
 
         if state_changes:
-            log.debug("Processing claims")
+            log.debug("Processing state changes for claims")
             self.handle_and_track_state_changes(state_changes)
+            log.debug("Processed state changes for claims")
 
     def _synchronize_with_blockchain(self) -> None:
         """Prepares the alarm task callback and synchronize with the blockchain

@@ -195,6 +195,7 @@ class ConsoleTools:
         )
 
         token_network_address = registry.add_token(
+            operator_address=to_canonical_address("0x" + "0" * 40),  # FIXME
             token_address=token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),

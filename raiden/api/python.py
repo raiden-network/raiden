@@ -1,6 +1,6 @@
 import gevent
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import is_binary_address, to_canonical_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
@@ -271,6 +271,7 @@ class RaidenAPI:  # pragma: no unittest
         )
 
         token_network_address = registry.add_token(
+            operator_address=to_canonical_address("0x" + "0" * 40),  # FIXME
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,

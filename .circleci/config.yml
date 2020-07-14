@@ -142,7 +142,7 @@ commands:
             echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}-purge
       - attach-and-link
       - run:
           name: Preparing environment
@@ -178,13 +178,13 @@ commands:
           py-version: << parameters.py-version >>
       - config-path
       - restore_cache:
-          key: pip-cache-{{ arch }}-<< parameters.py-version >>
+          key: pip-cache-{{ arch }}-<< parameters.py-version >>-purge
       - restore_cache:
           keys:
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}-purge
 # hack: solving a inter-PR cache problem
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-2uPiIM_pNv5neMjXtHsw_aV6BQGcFOekCBcy7TJEkhI=
-          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-2uPiIM_pNv5neMjXtHsw_aV6BQGcFOekCBcy7TJEkhI=-purge
+          - python-deps-v3-{{ arch }}-<< parameters.py-version >>-purge
       - run:
           name: Creating virtualenv
           command: |

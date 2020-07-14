@@ -6,7 +6,9 @@ from enum import Enum
 from random import Random
 
 import networkx
-from eth_utils import to_hex
+from eth_abi import encode_single
+from eth_utils import keccak, to_hex
+from web3 import Web3
 
 from raiden.constants import (
     EMPTY_SECRETHASH,
@@ -25,7 +27,8 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
-from raiden.utils.formatting import lpex, to_checksum_address
+from raiden.utils.formatting import lpex, to_checksum_address, to_hex_address
+from raiden.utils.signer import Signer
 from raiden.utils.typing import (
     Address,
     Any,
@@ -64,6 +67,7 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
+from raiden_contracts.utils.type_aliases import Signature
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
@@ -145,6 +149,57 @@ class TokenNetworkGraphState(State):
             and to_comparable_graph(self.network) == to_comparable_graph(other.network)
             and self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
+
+
+@dataclass(eq=True)
+class Claim(State):
+    chain_id: ChainID
+    token_network_address: TokenNetworkAddress
+    owner: Address
+    partner: Address
+    total_amount: TokenAmount
+    signature: Optional[Signature] = None
+
+    def pack(self) -> bytes:
+        return (
+            Web3.toBytes(hexstr=to_hex_address(self.token_network_address))
+            + encode_single("uint256", self.chain_id)
+            + Web3.toBytes(hexstr=to_hex_address(self.owner))
+            + Web3.toBytes(hexstr=to_hex_address(self.partner))
+            + encode_single("uint256", self.total_amount)
+        )
+
+    def sign(self, signer: Signer) -> None:
+        self.signature = signer.sign(data=self.pack())
+
+    def serialize(self) -> Dict[str, Any]:
+        assert self.signature is not None, "Claim not signed yet"
+        return dict(
+            chain_id=self.chain_id,
+            token_network_address=to_checksum_address(self.token_network_address),
+            owner=to_checksum_address(self.owner),
+            partner=to_checksum_address(self.partner),
+            total_amount=self.total_amount,
+            signature=to_hex(self.signature),
+        )
+
+    @property
+    def channel_id(self) -> ChannelID:
+        if self.owner < self.partner:
+            hashed_id = keccak(
+                encode_single("uint256", self.chain_id)
+                + self.token_network_address
+                + self.owner
+                + self.partner
+            )
+        else:
+            hashed_id = keccak(
+                encode_single("uint256", self.chain_id)
+                + self.token_network_address
+                + self.partner
+                + self.owner
+            )
+        return ChannelID(int.from_bytes(bytes=hashed_id, byteorder="big"))
 
 
 @dataclass
@@ -539,6 +594,7 @@ class ChainState(State):
     tokennetworkaddresses_to_tokennetworkregistryaddresses: Dict[
         TokenNetworkAddress, TokenNetworkRegistryAddress
     ] = field(repr=False, default_factory=dict)
+    unresolved_claims: List[Claim] = field(repr=False, default_factory=list)
 
     def __post_init__(self) -> None:
         typecheck(self.block_number, T_BlockNumber)

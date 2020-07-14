@@ -5,6 +5,7 @@ from pathlib import Path
 
 import gevent
 import structlog
+from tools.raiddit.generate_claims import ClaimGenerator
 from web3 import Web3
 
 from raiden import waiting
@@ -147,6 +148,7 @@ def check_channel(
 
 
 def payment_channel_open_and_deposit(
+    claim_generator: ClaimGenerator,
     app0: App,
     app1: App,
     token_address: TokenAddress,
@@ -165,16 +167,16 @@ def payment_channel_open_and_deposit(
         token_address=token_address, block_identifier=block_identifier
     )
     assert token_network_address, "request a channel for an unregistered token"
-    token_network_proxy = app0.raiden.proxy_manager.token_network(
-        token_network_address, block_identifier=BLOCK_ID_LATEST
+
+    claim = claim_generator.add_claim(
+        amount=deposit,
+        address=app0.raiden.address,
+        partner=app1.raiden.address,
+        token_network_address=token_network_address,
     )
 
-    channel_identifier, _, _ = token_network_proxy.new_netting_channel(
-        partner=app1.raiden.address,
-        settle_timeout=settle_timeout,
-        given_block_identifier=block_identifier,
-    )
-    assert channel_identifier
+    app0.raiden.process_claims([claim])
+    app1.raiden.process_claims([claim])
 
     if deposit != 0:
         for app, partner in [(app0, app1), (app1, app0)]:
@@ -189,40 +191,19 @@ def payment_channel_open_and_deposit(
             chain_state = state_from_raiden(app.raiden)
             canonical_identifier = CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
-                token_network_address=token_network_proxy.address,
-                channel_identifier=channel_identifier,
+                token_network_address=token_network_address,
+                channel_identifier=claim.channel_id,
             )
             channel_state = get_channelstate_by_canonical_identifier(
                 chain_state=chain_state, canonical_identifier=canonical_identifier
             )
             assert channel_state, "nodes dont share a channel"
 
-            # Use each app's own chain because of the private key / local signing
-            token = app.raiden.proxy_manager.token(token_address, BLOCK_ID_LATEST)
-            payment_channel_proxy = app.raiden.proxy_manager.payment_channel(
-                channel_state=channel_state, block_identifier=BLOCK_ID_LATEST
-            )
-
-            # This check can succeed and the deposit still fail, if channels are
-            # openned in parallel
-            previous_balance = token.balance_of(app.raiden.address)
-            assert previous_balance >= deposit
-
-            # the payment channel proxy will call approve
-            # token.approve(token_network_proxy.address, deposit)
-            payment_channel_proxy.approve_and_set_total_deposit(
-                total_deposit=deposit, block_identifier=BLOCK_ID_LATEST
-            )
-
-            # Balance must decrease by at least but not exactly `deposit` amount,
-            # because channels can be openned in parallel
-            new_balance = token.balance_of(app.raiden.address)
-            assert new_balance <= previous_balance - deposit
-
-        check_channel(app0, app1, token_network_proxy.address, settle_timeout, deposit)
+        check_channel(app0, app1, token_network_address, settle_timeout, deposit)
 
 
 def create_all_channels_for_network(
+    claim_generator: ClaimGenerator,
     app_channels: AppChannels,
     token_addresses: List[TokenAddress],
     channel_individual_deposit: TokenAmount,
@@ -234,6 +215,7 @@ def create_all_channels_for_network(
             greenlets.add(
                 gevent.spawn(
                     payment_channel_open_and_deposit,
+                    claim_generator,
                     app_pair[0],
                     app_pair[1],
                     token_address,
