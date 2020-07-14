@@ -1,4 +1,4 @@
-from raiden.claim import Claim, EmptyClaim
+from raiden.claim import EmptyClaim
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -6,6 +6,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask,
 from raiden.transfer.state import (
     ChainState,
     ChannelState,
+    Claim,
     NettingChannelState,
     NetworkState,
     QueueIdsToQueues,

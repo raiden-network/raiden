@@ -4,8 +4,8 @@ from typing import List, Tuple
 
 import click
 
-from raiden.claim import Claim
 from raiden.tests.utils.factories import make_address, make_signer
+from raiden.transfer.state import Claim
 from raiden.utils.cli import ADDRESS_TYPE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import Signer
