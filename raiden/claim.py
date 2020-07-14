@@ -29,6 +29,7 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     List,
+    Signature,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     TransactionHash,
@@ -42,7 +43,6 @@ DEFAULT_REVEAL_TIMEOUT = BlockTimeout(50)
 
 _DUMMY_ADDRESS = to_canonical_address("0x" + "0" * 40)
 
-
 EmptyClaim = Claim(
     chain_id=ChainID(2 ** 256 - 1),
     token_network_address=TokenNetworkAddress(_DUMMY_ADDRESS),
@@ -50,6 +50,7 @@ EmptyClaim = Claim(
     partner=Address(_DUMMY_ADDRESS),
     total_amount=TokenAmount(0),
 )
+EmptyClaim.signature = Signature(b"")
 
 
 def parse_claims_file() -> List[Claim]:
@@ -92,7 +93,7 @@ def get_state_changes_for_claims(
                 canonical_identifier=CanonicalIdentifier(
                     chain_identifier=claim.chain_id,
                     token_network_address=claim.token_network_address,
-                    channel_identifier=claim.channel_id(),
+                    channel_identifier=claim.channel_id,
                 ),
                 token_address=token_network_state.token_address,
                 token_network_registry_address=token_network_registry_address,
@@ -119,7 +120,7 @@ def get_state_changes_for_claims(
                     canonical_identifier=CanonicalIdentifier(
                         chain_identifier=claim.chain_id,
                         token_network_address=claim.token_network_address,
-                        channel_identifier=claim.channel_id(),
+                        channel_identifier=claim.channel_id,
                     ),
                     deposit_transaction=TransactionChannelDeposit(
                         participant_address=claim.owner,
@@ -144,7 +145,7 @@ def get_state_changes_for_claims(
                     canonical_identifier=CanonicalIdentifier(
                         chain_identifier=claim.chain_id,
                         token_network_address=claim.token_network_address,
-                        channel_identifier=claim.channel_id(),
+                        channel_identifier=claim.channel_id,
                     ),
                     participant1=claim.owner,
                     participant2=claim.partner,

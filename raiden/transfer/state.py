@@ -151,7 +151,7 @@ class TokenNetworkGraphState(State):
         )
 
 
-@dataclass
+@dataclass(eq=True)
 class Claim(State):
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
@@ -183,6 +183,7 @@ class Claim(State):
             signature=to_hex(self.signature),
         )
 
+    @property
     def channel_id(self) -> ChannelID:
         if self.owner < self.partner:
             hashed_id = keccak(
