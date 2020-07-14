@@ -100,6 +100,7 @@ class TokenNetworkRegistry:
 
     def add_token(
         self,
+        operator_address: Address,
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
@@ -219,6 +220,7 @@ class TokenNetworkRegistry:
 
         log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
         return self._add_token(
+            operator_address=operator_address,
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,
@@ -227,6 +229,7 @@ class TokenNetworkRegistry:
 
     def _add_token(
         self,
+        operator_address: Address,
         token_address: TokenAddress,
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
@@ -235,6 +238,7 @@ class TokenNetworkRegistry:
         token_network_address = None
 
         kwargs = {
+            "_claim_signer": operator_address,
             "_token_address": token_address,
             "_channel_participant_deposit_limit": channel_participant_deposit_limit,
             "_token_network_deposit_limit": token_network_deposit_limit,

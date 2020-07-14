@@ -23,6 +23,7 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import MONITORING_REWARD
+from raiden.tests.utils.factories import UNIT_OPERATOR_SIGNER
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
@@ -126,6 +127,7 @@ def register_token(
     token_contract = token_deploy_result()
 
     return token_network_registry_proxy.add_token(
+        operator_address=UNIT_OPERATOR_SIGNER.address,
         token_address=TokenAddress(to_canonical_address(token_contract.address)),
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,

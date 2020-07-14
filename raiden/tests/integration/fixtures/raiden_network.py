@@ -11,8 +11,8 @@ from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
+    UNIT_OPERATOR_SIGNER,
     make_address,
-    make_signer,
     make_token_network_address,
 )
 from raiden.tests.utils.network import (
@@ -152,7 +152,7 @@ def raiden_chain(
     app_channels = create_sequential_channels(raiden_apps, channels_per_node)
 
     claim_generator = ClaimGenerator(
-        operator_signer=make_signer(), chain_id=UNIT_CHAIN_ID, hub_address=None
+        operator_signer=UNIT_OPERATOR_SIGNER, chain_id=UNIT_CHAIN_ID, hub_address=None
     )
 
     create_all_channels_for_network(
@@ -220,7 +220,7 @@ def claims(create_claims: bool, private_keys, chain_id):
         return
 
     addresses = [privatekey_to_address(pkey) for pkey in private_keys]
-    signer = make_signer()
+    signer = UNIT_OPERATOR_SIGNER
 
     claims_path = Path("./claims.json")
     create_hub_json(
@@ -322,7 +322,7 @@ def raiden_network(
     app_channels = create_network_channels(raiden_apps, channels_per_node)
 
     claim_generator = ClaimGenerator(
-        operator_signer=make_signer(), chain_id=UNIT_CHAIN_ID, hub_address=None
+        operator_signer=UNIT_OPERATOR_SIGNER, chain_id=UNIT_CHAIN_ID, hub_address=None
     )
 
     create_all_channels_for_network(

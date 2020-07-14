@@ -48,7 +48,7 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.factories import make_signer
+from raiden.tests.utils.factories import UNIT_OPERATOR_SIGNER, make_signer
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
@@ -379,6 +379,7 @@ def setup_raiden(
     )
 
     registry.add_token(
+        operator_address=UNIT_OPERATOR_SIGNER.address,
         token_address=TokenAddress(to_canonical_address(token.address)),
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
