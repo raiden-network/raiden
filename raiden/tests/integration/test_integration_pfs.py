@@ -1,5 +1,6 @@
 import pytest
 from eth_utils import keccak
+from tools.raiddit.generate_claims import ClaimGenerator
 
 from raiden.api.python import RaidenAPI
 from raiden.app import App
@@ -70,7 +71,7 @@ def wait_all_apps(raiden_network: List[App]) -> None:
 )
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
-    raiden_network: List[App], token_addresses: List[TokenAddress]
+    raiden_network: List[App], token_addresses: List[TokenAddress], claim_generator: ClaimGenerator
 ) -> None:
     """
     We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
@@ -79,26 +80,25 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     The nodes open a channel but do not deposit. After deposit and
     withdraw it is checked that the correct messages are sent.
     """
+    token_address = token_addresses[0]
     app0, app1, app2 = raiden_network
     api0 = RaidenAPI(app0.raiden)
-    api0.channel_open(
-        token_address=token_addresses[0],
-        registry_address=app0.raiden.default_registry.address,
-        partner_address=app1.raiden.address,
-    )
-    wait_all_apps(raiden_network)
 
-    # There should be no messages sent at channel opening
-    assert len(get_messages(app0)) == 0
-    assert len(get_messages(app1)) == 0
-    assert len(get_messages(app2)) == 0
-
-    api0.set_total_channel_deposit(
-        token_address=token_addresses[0],
-        registry_address=app0.raiden.default_registry.address,
-        partner_address=app1.raiden.address,
-        total_deposit=TokenAmount(10),
+    chain_state = views.state_from_app(app0)
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state=chain_state,
+        token_address=token_address,
+        token_network_registry_address=app0.raiden.default_registry.address,
     )
+    assert token_network_address is not None
+    claims = claim_generator.add_2_claims(
+        token_network_address=token_network_address,
+        amounts=[10, 10],
+        address=app0.raiden.address,
+        partner=app1.raiden.address,
+    )
+    app0.raiden.process_claims(claims)
+    app1.raiden.process_claims(claims)
     wait_all_apps(raiden_network)
 
     # We expect a PFSCapacityUpdate and a PFSFeeUpdate after the deposit
