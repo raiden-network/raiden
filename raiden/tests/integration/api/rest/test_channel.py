@@ -57,6 +57,7 @@ def test_api_channel_status_channel_nonexistant(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_open_and_deposit(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -240,6 +241,7 @@ def test_api_channel_open_and_deposit(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_open_and_deposit_race(
     api_server_test_instance: APIServer,
     raiden_network,
@@ -497,6 +499,7 @@ def test_api_channel_close_insufficient_eth(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_open_channel_invalid_input(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -535,6 +538,7 @@ def test_api_channel_open_channel_invalid_input(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_state_change_errors(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -687,6 +691,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_withdraw(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
@@ -751,6 +756,7 @@ def test_api_channel_withdraw(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_set_reveal_timeout(
     api_server_test_instance: APIServer, raiden_network, token_addresses, settle_timeout
 ):
@@ -814,6 +820,7 @@ def test_api_channel_set_reveal_timeout(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("deposit", [DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_deposit_limit(
     api_server_test_instance,
     proxy_manager,
