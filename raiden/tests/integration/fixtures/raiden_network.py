@@ -160,7 +160,6 @@ def raiden_chain(
         app_channels=app_channels,
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
-        channel_settle_timeout=settle_timeout,
     )
 
     if start_raiden_apps:
@@ -330,7 +329,6 @@ def raiden_network(
         app_channels=app_channels,
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
-        channel_settle_timeout=settle_timeout,
     )
 
     if start_raiden_apps:
