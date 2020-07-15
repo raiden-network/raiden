@@ -151,7 +151,7 @@ class TokenNetworkGraphState(State):
         )
 
 
-@dataclass(eq=True)
+@dataclass(eq=True, order=True)
 class Claim(State):
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
