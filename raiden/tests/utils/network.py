@@ -117,15 +117,17 @@ def payment_channel_open_and_deposit(
     )
     assert token_network_address, "request a channel for an unregistered token"
 
-    claim = claim_generator.add_claim(
-        amount=deposit,
+    claims = claim_generator.add_2_claims(
+        amounts=[deposit, deposit],
         address=app0.raiden.address,
         partner=app1.raiden.address,
         token_network_address=token_network_address,
     )
 
-    app0.raiden.process_claims([claim])
-    app1.raiden.process_claims([claim])
+    app0.raiden.process_claims(claims)
+    app1.raiden.process_claims(claims)
+
+    assert claims[0].channel_id == claims[1].channel_id
 
     if deposit != 0:
         for app, partner in [(app0, app1), (app1, app0)]:
@@ -141,7 +143,7 @@ def payment_channel_open_and_deposit(
             canonical_identifier = CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
                 token_network_address=token_network_address,
-                channel_identifier=claim.channel_id,
+                channel_identifier=claims[0].channel_id,
             )
             channel_state = get_channelstate_by_canonical_identifier(
                 chain_state=chain_state, canonical_identifier=canonical_identifier
