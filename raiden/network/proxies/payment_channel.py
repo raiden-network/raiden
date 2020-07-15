@@ -1,4 +1,3 @@
-from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.transfer.state import Claim, NettingChannelState, PendingLocksState
 from raiden.utils.typing import (
@@ -16,7 +15,6 @@ from raiden.utils.typing import (
     TokenAmount,
     WithdrawAmount,
 )
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -49,24 +47,7 @@ class PaymentChannel:
 
     def settle_timeout(self) -> BlockTimeout:
         """ Returns the channels settle_timeout. """
-
-        # There is no way to get the settle timeout after the channel has been closed as
-        # we're saving gas. Therefore get the ChannelOpened event and get the timeout there.
-        filter_args = get_filter_args_for_specific_event_from_channel(
-            token_network_address=self.token_network.address,
-            channel_identifier=self.channel_identifier,
-            event_name=ChannelEvent.OPENED,
-            contract_manager=self.contract_manager,
-        )
-
-        events = self.client.web3.eth.getLogs(filter_args)
-        assert len(events) > 0, "No matching ChannelOpen event found."
-
-        # we want the latest event here, there might have been multiple channels
-        event = decode_event(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1]
-        )
-        return event["args"]["settle_timeout"]
+        return BlockTimeout(self.token_network.settlement_timeout_min())
 
     def opened(self, block_identifier: BlockIdentifier) -> bool:
         """ Returns if the channel is opened. """
