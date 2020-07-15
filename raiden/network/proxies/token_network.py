@@ -2320,12 +2320,12 @@ class TokenNetwork:
                 "participant1_transferred_amount": partner_transferred_amount,
                 "participant1_locked_amount": partner_locked_amount,
                 "participant1_locksroot": partner_locksroot,
-                "participant1_claim": partner_claim,
+                "participant1_claim": partner_claim.serialize(),
                 "participant2": self.node_address,
                 "participant2_transferred_amount": transferred_amount,
                 "participant2_locked_amount": locked_amount,
                 "participant2_locksroot": locksroot,
-                "participant2_claim": claim,
+                "participant2_claim": claim.serialize(),
             }
         else:
             kwargs = {
@@ -2333,12 +2333,12 @@ class TokenNetwork:
                 "participant1_transferred_amount": transferred_amount,
                 "participant1_locked_amount": locked_amount,
                 "participant1_locksroot": locksroot,
-                "participant1_claim": claim,
+                "participant1_claim": claim.serialize(),
                 "participant2": partner,
                 "participant2_transferred_amount": partner_transferred_amount,
                 "participant2_locked_amount": partner_locked_amount,
                 "participant2_locksroot": partner_locksroot,
-                "participant2_claim": partner_claim,
+                "participant2_claim": partner_claim.serialize(),
             }
 
         estimated_transaction = self.client.estimate_gas(
