@@ -727,6 +727,7 @@ class RaidenService(Runnable):
             node_address=self.address,
             token_network_registry_address=self.default_registry.address,
             settle_timeout=self.default_registry.settlement_timeout_min(BLOCK_ID_LATEST),
+            fee_config=self.config.mediation_fees,
         )
 
         if state_changes:

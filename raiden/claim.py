@@ -71,6 +71,7 @@ def get_state_changes_for_claims(
     node_address: Address,
     token_network_registry_address: TokenNetworkRegistryAddress,
     settle_timeout: BlockTimeout,
+    fee_config: MediationFeeConfig,
 ) -> List[StateChange]:
     state_changes: List[StateChange] = []
 
@@ -100,7 +101,12 @@ def get_state_changes_for_claims(
                 token_network_registry_address=token_network_registry_address,
                 reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
                 settle_timeout=settle_timeout,
-                fee_schedule=FeeScheduleState(),
+                fee_schedule=FeeScheduleState(
+                    cap_fees=fee_config.cap_meditation_fees,
+                    flat=fee_config.get_flat_fee(token_network_state.token_address),
+                    proportional=fee_config.get_proportional_fee(token_network_state.token_address)
+                    # no need to set the imbalance fee here, will be set during deposit
+                ),
                 our_state=our_state,
                 partner_state=partner_state,
                 open_transaction=SuccessfulTransactionState(BlockNumber(0)),
