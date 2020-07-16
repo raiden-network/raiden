@@ -154,57 +154,6 @@ class TokenNetworkGraphState(State):
         )
 
 
-@dataclass(eq=True, order=True)
-class Claim(State):
-    chain_id: ChainID
-    token_network_address: TokenNetworkAddress
-    owner: Address
-    partner: Address
-    total_amount: TokenAmount
-    signature: Optional[Signature] = None
-
-    def pack(self) -> bytes:
-        return (
-            Web3.toBytes(hexstr=to_hex_address(self.token_network_address))
-            + encode_single("uint256", self.chain_id)
-            + Web3.toBytes(hexstr=to_hex_address(self.owner))
-            + Web3.toBytes(hexstr=to_hex_address(self.partner))
-            + encode_single("uint256", self.total_amount)
-        )
-
-    def sign(self, signer: Signer) -> None:
-        self.signature = signer.sign(data=self.pack())
-
-    def serialize(self) -> Dict[str, Any]:
-        assert self.signature is not None, "Claim not signed yet"
-        return dict(
-            chain_id=self.chain_id,
-            token_network_address=to_checksum_address(self.token_network_address),
-            owner=to_checksum_address(self.owner),
-            partner=to_checksum_address(self.partner),
-            total_amount=self.total_amount,
-            signature=to_hex(self.signature),
-        )
-
-    @property
-    def channel_id(self) -> ChannelID:
-        if self.owner < self.partner:
-            hashed_id = keccak(
-                encode_single("uint256", self.chain_id)
-                + self.token_network_address
-                + self.owner
-                + self.partner
-            )
-        else:
-            hashed_id = keccak(
-                encode_single("uint256", self.chain_id)
-                + self.token_network_address
-                + self.partner
-                + self.owner
-            )
-        return ChannelID(int.from_bytes(bytes=hashed_id, byteorder="big"))
-
-
 @dataclass
 class HopState(State):
     """ Information about the next hop. """
@@ -340,7 +289,7 @@ def make_empty_pending_locks_state() -> PendingLocksState:
     return PendingLocksState(list())
 
 
-@dataclass(eq=True)
+@dataclass(eq=True, order=True)
 class Claim(State):
     chain_id: ChainID
     token_network_address: TokenNetworkAddress
