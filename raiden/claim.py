@@ -70,6 +70,7 @@ def get_state_changes_for_claims(
     claims: List[Claim],
     node_address: Address,
     token_network_registry_address: TokenNetworkRegistryAddress,
+    settle_timeout: BlockTimeout,
 ) -> List[StateChange]:
     state_changes: List[StateChange] = []
 
@@ -98,7 +99,7 @@ def get_state_changes_for_claims(
                 token_address=token_network_state.token_address,
                 token_network_registry_address=token_network_registry_address,
                 reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
-                settle_timeout=DEFAULT_SETTLE_TIMEOUT,
+                settle_timeout=settle_timeout,
                 fee_schedule=FeeScheduleState(),
                 our_state=our_state,
                 partner_state=partner_state,

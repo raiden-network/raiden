@@ -4,9 +4,12 @@ import gevent
 import grequests
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
+from tools.raiddit.generate_claims import ClaimGenerator
 
+from raiden import waiting
 from raiden.api.rest import APIServer
 from raiden.constants import BLOCK_ID_LATEST, NULL_ADDRESS_HEX
+from raiden.settings import DEFAULT_REVEAL_TIMEOUT
 from raiden.tests.integration.api.rest.test_rest import DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
@@ -21,7 +24,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import check_dict_nested_attrs
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import BlockTimeout, TokenAmount
 from raiden.waiting import wait_for_participant_deposit
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
@@ -57,6 +60,7 @@ def test_api_channel_status_channel_nonexistant(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_open_and_deposit(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -240,6 +244,7 @@ def test_api_channel_open_and_deposit(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_open_and_deposit_race(
     api_server_test_instance: APIServer,
     raiden_network,
@@ -442,36 +447,68 @@ def test_api_channel_open_close_and_settle(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.parametrize("register_tokens", [True])
 def test_api_channel_close_insufficient_eth(
-    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+    api_server_test_instance: APIServer,
+    claim_generator: ClaimGenerator,
+    settle_timeout_min: BlockTimeout,
 ):
 
+    raiden = api_server_test_instance.rest_api.raiden_api.raiden
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
+    balance = 10
+    chain_state = views.state_from_raiden(raiden)
+    token_network_address = list(
+        chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses.keys()
+    )[0]
+    token_network = views.get_token_network_by_address(
+        chain_state=chain_state, token_network_address=token_network_address
+    )
+    assert token_network is not None
+    token_address = token_network.token_address
+    claim = claim_generator.add_claim(
+        address=raiden.address,
+        partner=to_canonical_address(partner_address),
+        token_network_address=token_network_address,
+        amount=balance,
+    )
+    raiden.process_claims([claim])
+    waiting.wait_for_newchannel(
+        raiden=raiden,
+        token_network_registry_address=raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=to_canonical_address(partner_address),
+        retry_timeout=1,
+    )
+
+    channel_identifier = claim.channel_id
     channel_data_obj = {
         "partner_address": partner_address,
         "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
     }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
+    request = grequests.get(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=to_checksum_address(token_address),
+            partner_address=partner_address,
+        )
     )
     response = request.send().response
 
-    balance = 0
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-    channel_identifier = 1
     json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
         {
             "balance": str(balance),
             "state": ChannelState.STATE_OPENED.value,
-            "reveal_timeout": str(reveal_timeout),
+            "reveal_timeout": str(DEFAULT_REVEAL_TIMEOUT),
             "channel_identifier": str(channel_identifier),
-            "total_deposit": "0",
+            "total_deposit": "10",
+            "token_network_address": to_checksum_address(token_network_address),
+            "total_withdraw": "0",
+            "settle_timeout": str(settle_timeout_min),
         }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
@@ -482,7 +519,7 @@ def test_api_channel_close_insufficient_eth(
         api_url_for(
             api_server_test_instance,
             "channelsresourcebytokenandpartneraddress",
-            token_address=token_address,
+            token_address=to_checksum_address(token_address),
             partner_address=partner_address,
         ),
         json={"state": ChannelState.STATE_CLOSED.value},
@@ -497,6 +534,7 @@ def test_api_channel_close_insufficient_eth(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_open_channel_invalid_input(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -535,6 +573,7 @@ def test_api_channel_open_channel_invalid_input(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_state_change_errors(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -687,6 +726,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [1000])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_withdraw(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
@@ -751,6 +791,7 @@ def test_api_channel_withdraw(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_set_reveal_timeout(
     api_server_test_instance: APIServer, raiden_network, token_addresses, settle_timeout
 ):
@@ -814,6 +855,7 @@ def test_api_channel_set_reveal_timeout(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("deposit", [DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip(reason="not necessary for claims")
 def test_api_channel_deposit_limit(
     api_server_test_instance,
     proxy_manager,

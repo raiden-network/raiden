@@ -90,6 +90,7 @@ def raiden_chain(
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
     port_generator: Iterator[Port],
+    claim_generator: ClaimGenerator,
 ) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
@@ -151,16 +152,11 @@ def raiden_chain(
 
     app_channels = create_sequential_channels(raiden_apps, channels_per_node)
 
-    claim_generator = ClaimGenerator(
-        operator_signer=UNIT_OPERATOR_SIGNER, chain_id=UNIT_CHAIN_ID, hub_address=None
-    )
-
     create_all_channels_for_network(
         claim_generator=claim_generator,
         app_channels=app_channels,
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
-        channel_settle_timeout=settle_timeout,
     )
 
     if start_raiden_apps:
@@ -217,24 +213,24 @@ def create_claims() -> bool:
 @pytest.fixture
 def claims(create_claims: bool, private_keys, chain_id):
     if not create_claims:
-        return
+        yield
+    else:
+        addresses = [privatekey_to_address(pkey) for pkey in private_keys]
+        signer = UNIT_OPERATOR_SIGNER
 
-    addresses = [privatekey_to_address(pkey) for pkey in private_keys]
-    signer = UNIT_OPERATOR_SIGNER
+        claims_path = Path("./claims.json")
+        create_hub_json(
+            operator_signer=signer,
+            token_network_address=make_token_network_address(),
+            chain_id=chain_id,
+            hub_address=make_address(),
+            num_users=len(addresses),
+            addresses=addresses,
+            output_file=claims_path,
+        )
+        yield
 
-    claims_path = Path("./claims.json")
-    create_hub_json(
-        operator_signer=signer,
-        token_network_address=make_token_network_address(),
-        chain_id=chain_id,
-        hub_address=make_address(),
-        num_users=len(addresses),
-        addresses=addresses,
-        output_file=claims_path,
-    )
-    yield
-
-    claims_path.unlink()
+        claims_path.unlink()
 
 
 @pytest.fixture
@@ -330,7 +326,6 @@ def raiden_network(
         app_channels=app_channels,
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
-        channel_settle_timeout=settle_timeout,
     )
 
     if start_raiden_apps:

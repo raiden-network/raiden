@@ -40,17 +40,17 @@ from raiden.utils.typing import (
 # pylint: disable=too-many-locals
 
 
-def open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout):
+def open_and_wait_for_channels(app_channels, registry_address, token, deposit, claim_generator):
     greenlets = set()
     for first_app, second_app in app_channels:
         greenlets.add(
             gevent.spawn(
                 payment_channel_open_and_deposit,
+                claim_generator,
                 first_app,
                 second_app,
                 token,
                 deposit,
-                settle_timeout,
             )
         )
     gevent.joinall(greenlets, raise_error=True)
@@ -62,7 +62,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [64])  # default settlement is too low for 3 hops
-def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_timeout, deposit):
+def test_regression_unfiltered_routes(raiden_network, token_addresses, deposit, claim_generator):
     """ The transfer should proceed without triggering an assert.
 
     Transfers failed in networks where two or more paths to the destination are
@@ -79,7 +79,7 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
     #       +--> 3 ---+
     app_channels = [(app0, app1), (app1, app2), (app1, app3), (app3, app4), (app2, app4)]
 
-    open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
+    open_and_wait_for_channels(app_channels, registry_address, token, deposit, claim_generator)
     transfer(
         initiator_app=app0,
         target_app=app4,
@@ -241,7 +241,7 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_regression_payment_complete_after_refund_to_the_initiator(
-    raiden_network, token_addresses, settle_timeout, deposit
+    raiden_network, token_addresses, deposit, claim_generator
 ):
     """Regression test for issue #3915"""
     app0, app1, app2, app3, app4 = raiden_network
@@ -256,7 +256,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
     #  3 ------> 4
 
     app_channels = [(app0, app1), (app1, app2), (app0, app3), (app3, app4), (app4, app2)]
-    open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
+    open_and_wait_for_channels(app_channels, registry_address, token, deposit, claim_generator)
 
     # Use all deposit from app1->app2 to force a refund
     transfer(

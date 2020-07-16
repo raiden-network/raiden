@@ -32,6 +32,7 @@ from raiden.utils.typing import (
     Address,
     BlockIdentifier,
     BlockNumber,
+    BlockTimeout,
     Dict,
     SecretRegistryAddress,
     T_TargetAddress,
@@ -546,13 +547,13 @@ class TokenNetworkRegistry:
             )
         )
 
-    def settlement_timeout_min(self, block_identifier: BlockIdentifier) -> int:
+    def settlement_timeout_min(self, block_identifier: BlockIdentifier) -> BlockTimeout:
         """ Returns the minimal settlement timeout for the token network registry. """
         return self.proxy.functions.settlement_timeout_min().call(
             block_identifier=block_identifier
         )
 
-    def settlement_timeout_max(self, block_identifier: BlockIdentifier) -> int:
+    def settlement_timeout_max(self, block_identifier: BlockIdentifier) -> BlockTimeout:
         """ Returns the maximal settlement timeout for the token network registry. """
         return self.proxy.functions.settlement_timeout_max().call(
             block_identifier=block_identifier

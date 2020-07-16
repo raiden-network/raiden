@@ -41,6 +41,7 @@ from raiden_contracts.constants import (
 SIGNATURE_SIZE_IN_BITS = 520
 
 
+@pytest.mark.skip
 def test_token_network_deposit_race(
     token_network_proxy, private_keys, token_proxy, web3, contract_manager
 ):
@@ -87,6 +88,7 @@ def test_token_network_deposit_race(
         )
 
 
+@pytest.mark.skip
 def test_token_network_proxy(
     token_network_proxy, private_keys, token_proxy, chain_id, web3, contract_manager
 ):
@@ -725,6 +727,7 @@ def test_token_network_proxy_update_transfer(
         assert "getChannelIdentifier returned 0" in str(exc)
 
 
+@pytest.mark.skip
 def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_manager):
     """A test for https://github.com/raiden-network/raiden/issues/3566
 
@@ -944,6 +947,7 @@ def test_token_network_actions_at_pruned_blocks(
     )
 
 
+@pytest.mark.skip
 def test_concurrent_set_total_deposit(token_network_proxy: TokenNetwork) -> None:
     CHANNEL_COUNT = 3
     DEPOSIT_COUNT = 5

@@ -42,6 +42,7 @@ from raiden.constants import (  # isort:skip
 )
 from raiden.log_config import configure_logging  # isort:skip
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403  # isort:skip
+from raiden.tests.fixtures.raiddit import *  # noqa: F401,F403  # isort:skip
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403  # isort:skip
 from raiden.tests.utils.transport import make_requests_insecure  # isort:skip
 from raiden.utils.cli import LogLevelConfigType  # isort:skip

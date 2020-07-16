@@ -14,7 +14,7 @@ from raiden.exceptions import (
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.factories import make_token_address
+from raiden.tests.utils.factories import UNIT_OPERATOR_SIGNER, make_token_address
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.utils.typing import TokenAddress, TokenAmount, TokenNetworkRegistryAddress
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
@@ -63,6 +63,7 @@ def test_token_network_registry(
     # Registering a non-existing token network should fail
     with pytest.raises(AddressWithoutCode):
         token_network_registry_proxy.add_token(
+            operator_address=UNIT_OPERATOR_SIGNER.address,
             token_address=bad_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -86,6 +87,7 @@ def test_token_network_registry(
     with patch.object(Token, "total_supply", return_value=None):
         with pytest.raises(InvalidToken):
             token_network_registry_proxy.add_token(
+                operator_address=UNIT_OPERATOR_SIGNER.address,
                 token_address=test_token_address,
                 channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
                 token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -95,6 +97,7 @@ def test_token_network_registry(
     # Register a valid token
     preblockhash = deploy_client.get_confirmed_blockhash()
     token_network_address = token_network_registry_proxy.add_token(
+        operator_address=UNIT_OPERATOR_SIGNER.address,
         token_address=test_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -110,6 +113,7 @@ def test_token_network_registry(
     # because it is a race condition.
     with pytest.raises(RaidenRecoverableError):
         token_network_registry_proxy.add_token(
+            operator_address=UNIT_OPERATOR_SIGNER.address,
             token_address=test_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -190,6 +194,7 @@ def test_token_network_registry_with_zero_token_address(
     )
     with pytest.raises(InvalidTokenAddress, match="0x00..00 will fail"):
         token_network_registry_proxy.add_token(
+            operator_address=UNIT_OPERATOR_SIGNER.address,
             token_address=NULL_ADDRESS_BYTES,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -236,6 +241,7 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
 
     # Register a valid token, this is the last slot and should succeeded
     token_network_registry_proxy.add_token(
+        operator_address=UNIT_OPERATOR_SIGNER.address,
         token_address=first_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -258,6 +264,7 @@ def test_token_network_registry_allows_the_last_slot_to_be_used(
     # has to fail.
     with pytest.raises(MaxTokenNetworkNumberReached):
         token_network_registry_proxy.add_token(
+            operator_address=UNIT_OPERATOR_SIGNER.address,
             token_address=second_token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),

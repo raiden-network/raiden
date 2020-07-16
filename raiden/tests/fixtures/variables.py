@@ -16,7 +16,7 @@ from raiden.tests.utils.eth_node import EthNodeDescription
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.tests import unique_path
 from raiden.utils.typing import Iterator, Port, TokenAmount
-from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
+from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
@@ -56,7 +56,7 @@ def chain_id():
 
 @pytest.fixture
 def settle_timeout_min():
-    return TEST_SETTLE_TIMEOUT_MIN
+    return 20
 
 
 @pytest.fixture

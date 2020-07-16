@@ -26,7 +26,6 @@ from raiden.settings import (
     ServiceConfig,
 )
 from raiden.tests.utils.app import database_from_privatekey
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transport import ParsedURL, TestMatrixTransport
 from raiden.transfer import views
@@ -82,22 +81,13 @@ BlockchainServices = namedtuple(
 )
 
 
-def check_channel(
-    app1: App,
-    app2: App,
-    token_network_address: TokenNetworkAddress,
-    settle_timeout: BlockTimeout,
-    deposit_amount: TokenAmount,
-) -> None:
+def check_channel(app1: App, app2: App, token_network_address: TokenNetworkAddress,) -> None:
     channel_state1 = get_channelstate_by_token_network_and_partner(
         chain_state=state_from_raiden(app1.raiden),
         token_network_address=token_network_address,
         partner_address=app2.raiden.address,
     )
     assert channel_state1, "app1 does not have a channel with app2."
-    netcontract1 = app1.raiden.proxy_manager.payment_channel(
-        channel_state=channel_state1, block_identifier=BLOCK_ID_LATEST
-    )
 
     channel_state2 = get_channelstate_by_token_network_and_partner(
         chain_state=state_from_raiden(app2.raiden),
@@ -105,46 +95,6 @@ def check_channel(
         partner_address=app1.raiden.address,
     )
     assert channel_state2, "app2 does not have a channel with app1."
-    netcontract2 = app2.raiden.proxy_manager.payment_channel(
-        channel_state=channel_state2, block_identifier=BLOCK_ID_LATEST
-    )
-
-    # Check a valid settle timeout was used, the netting contract has an
-    # enforced minimum and maximum
-    assert settle_timeout == netcontract1.settle_timeout()
-    assert settle_timeout == netcontract2.settle_timeout()
-
-    if deposit_amount > 0:
-        assert netcontract1.can_transfer(BLOCK_ID_LATEST)
-        assert netcontract2.can_transfer(BLOCK_ID_LATEST)
-
-    app1_details = netcontract1.detail(BLOCK_ID_LATEST)
-    app2_details = netcontract2.detail(BLOCK_ID_LATEST)
-
-    assert (
-        app1_details.participants_data.our_details.address
-        == app2_details.participants_data.partner_details.address
-    )
-    assert (
-        app1_details.participants_data.partner_details.address
-        == app2_details.participants_data.our_details.address
-    )
-
-    assert (
-        app1_details.participants_data.our_details.deposit
-        == app2_details.participants_data.partner_details.deposit
-    )
-    assert (
-        app1_details.participants_data.partner_details.deposit
-        == app2_details.participants_data.our_details.deposit
-    )
-    assert app1_details.chain_id == app2_details.chain_id
-
-    assert app1_details.participants_data.our_details.deposit == deposit_amount
-    assert app1_details.participants_data.partner_details.deposit == deposit_amount
-    assert app2_details.participants_data.our_details.deposit == deposit_amount
-    assert app2_details.participants_data.partner_details.deposit == deposit_amount
-    assert app2_details.chain_id == UNIT_CHAIN_ID
 
 
 def payment_channel_open_and_deposit(
@@ -153,7 +103,6 @@ def payment_channel_open_and_deposit(
     app1: App,
     token_address: TokenAddress,
     deposit: TokenAmount,
-    settle_timeout: BlockTimeout,
 ) -> None:
     """ Open a new channel with app0 and app1 as participants """
     assert token_address
@@ -168,15 +117,17 @@ def payment_channel_open_and_deposit(
     )
     assert token_network_address, "request a channel for an unregistered token"
 
-    claim = claim_generator.add_claim(
-        amount=deposit,
+    claims = claim_generator.add_2_claims(
+        amounts=[deposit, deposit],
         address=app0.raiden.address,
         partner=app1.raiden.address,
         token_network_address=token_network_address,
     )
 
-    app0.raiden.process_claims([claim])
-    app1.raiden.process_claims([claim])
+    app0.raiden.process_claims(claims)
+    app1.raiden.process_claims(claims)
+
+    assert claims[0].channel_id == claims[1].channel_id
 
     if deposit != 0:
         for app, partner in [(app0, app1), (app1, app0)]:
@@ -192,14 +143,14 @@ def payment_channel_open_and_deposit(
             canonical_identifier = CanonicalIdentifier(
                 chain_identifier=chain_state.chain_id,
                 token_network_address=token_network_address,
-                channel_identifier=claim.channel_id,
+                channel_identifier=claims[0].channel_id,
             )
             channel_state = get_channelstate_by_canonical_identifier(
                 chain_state=chain_state, canonical_identifier=canonical_identifier
             )
             assert channel_state, "nodes dont share a channel"
 
-        check_channel(app0, app1, token_network_address, settle_timeout, deposit)
+        check_channel(app0, app1, token_network_address)
 
 
 def create_all_channels_for_network(
@@ -207,7 +158,6 @@ def create_all_channels_for_network(
     app_channels: AppChannels,
     token_addresses: List[TokenAddress],
     channel_individual_deposit: TokenAmount,
-    channel_settle_timeout: BlockTimeout,
 ) -> None:
     greenlets = set()
     for token_address in token_addresses:
@@ -220,7 +170,6 @@ def create_all_channels_for_network(
                     app_pair[1],
                     token_address,
                     channel_individual_deposit,
-                    channel_settle_timeout,
                 )
             )
     gevent.joinall(greenlets, raise_error=True)
