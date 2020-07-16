@@ -228,6 +228,7 @@ def test_token_registered_race(raiden_chain, retry_timeout, unregistered_token):
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.skip("Raiddit")
 def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     """ Test that the balance of a channel gets updated by the deposit() call
     immediately and without having to wait for the
@@ -399,6 +400,7 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
+@pytest.mark.skip("Raiddit")
 def test_participant_deposit_amount_must_be_smaller_than_the_limit(
     raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
 ) -> None:
@@ -484,6 +486,7 @@ def test_participant_deposit_amount_must_be_smaller_than_the_limit(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
+@pytest.mark.skip("Raiddit")
 def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
     raiden_network: List[App], contract_manager: ContractManager, retry_timeout: float
 ) -> None:
