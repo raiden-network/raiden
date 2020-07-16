@@ -1,6 +1,6 @@
 import collections
 from itertools import zip_longest
-from typing import Iterable, Tuple
+from typing import Any, Callable, Iterable, Tuple
 
 
 def merge_dict(to_update: dict, other_dict: dict) -> None:
@@ -25,3 +25,31 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     # from the iterator each time and produces the desired result.
     iterator = iter(arg)
     return zip_longest(iterator, iterator)
+
+
+class cached_property:
+    """ Same as functools.cached_property in python 3.8
+
+    See https://docs.python.org/3/library/functools.html#functools.cached_property.
+    Remove after upgrading to python3.8
+    """
+
+    def __init__(self, func: Callable) -> None:
+        self.func = func
+        self.__doc__ = func.__doc__
+
+    def __get__(self, instance: Any, cls: Any = None) -> Any:
+        if instance is None:
+            return self
+        attrname = self.func.__name__
+        try:
+            cache = instance.__dict__
+        except AttributeError:  # objects with __slots__ have no __dict__
+            msg = (
+                f"No '__dict__' attribute on {type(instance).__name__!r} "
+                f"instance to cache {attrname!r} property."
+            )
+            raise TypeError(msg) from None
+        if attrname not in cache:
+            cache[attrname] = self.func(instance)
+        return cache[attrname]

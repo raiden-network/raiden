@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import rlp
 from eth_utils import keccak
 
-from raiden.messages.abstract import cached_property
+from raiden.utils.datastructures import cached_property
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, List
 

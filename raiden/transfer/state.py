@@ -3,7 +3,6 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cached_property
 from random import Random
 
 import networkx
@@ -30,6 +29,7 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
+from raiden.utils.datastructures import cached_property
 from raiden.utils.formatting import lpex, to_checksum_address, to_hex_address
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import (
