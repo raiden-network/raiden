@@ -1,4 +1,3 @@
-from raiden.claim import EmptyClaim
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -13,6 +12,7 @@ from raiden.transfer.state import (
     TokenNetworkRegistryState,
     TokenNetworkState,
 )
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     TYPE_CHECKING,
@@ -38,22 +38,6 @@ if TYPE_CHECKING:
 
 # TODO: Either enforce immutability or make a copy of the values returned by
 #     the view functions
-
-
-def get_current_claim_by_token_network_and_partner(
-    chain_state: ChainState,
-    token_network_address: TokenNetworkAddress,
-    participant1: Address,
-    participant2: Address,
-) -> Claim:
-    """ Allows bi-directional lookup for claims in a given TokenNetwork. """
-    msg = "FIXME"
-    assert chain_state, msg
-    assert token_network_address, msg
-    assert participant1, msg
-    assert participant2, msg
-    # FIXME: needs implementation
-    return EmptyClaim
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
@@ -309,6 +293,21 @@ def get_channelstate_by_token_network_and_partner(
             channel_state = states[-1]
 
     return channel_state
+
+
+def get_current_claims_by_token_network_and_partner(
+    chain_state: ChainState, token_network_address: TokenNetworkAddress, partner: Address
+) -> Tuple[Claim, Claim]:
+    """ Allows bi-directional lookup for claims in a given TokenNetwork. """
+
+    channel_state = get_channelstate_by_token_network_and_partner(
+        chain_state, token_network_address, partner
+    )
+
+    msg = f"Channel with partner {to_checksum_address(partner)} not found in chain_state"
+    assert channel_state, msg
+
+    return channel_state.our_state.claim, channel_state.partner_state.claim
 
 
 def get_channelstate_by_canonical_identifier(

@@ -71,7 +71,7 @@ from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import (
     get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
-    get_current_claim_by_token_network_and_partner,
+    get_current_claims_by_token_network_and_partner,
     state_from_raiden,
 )
 from raiden.utils.formatting import to_checksum_address
@@ -722,17 +722,10 @@ class RaidenEventHandler(EventHandler):
 
         our_details = participants_details.our_details
         partner_details = participants_details.partner_details
-        our_claim = get_current_claim_by_token_network_and_partner(
+        our_claim, partner_claim = get_current_claims_by_token_network_and_partner(
             chain_state=chain_state,
             token_network_address=canonical_identifier.token_network_address,
-            participant1=payment_channel.participant1,
-            participant2=payment_channel.participant2,
-        )
-        partner_claim = get_current_claim_by_token_network_and_partner(
-            chain_state=chain_state,
-            token_network_address=canonical_identifier.token_network_address,
-            participant1=payment_channel.participant2,
-            participant2=payment_channel.participant1,
+            partner=partner_details.address,
         )
 
         log_details = {

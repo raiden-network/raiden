@@ -230,10 +230,14 @@ def test_endstate_update_contract_balance():
     end_state = NettingChannelEndState(node_address, balance1)
     assert end_state.contract_balance == balance1
 
-    channel.update_contract_balance(end_state, balance1 - 10)
+    claim = deepcopy(end_state.claim)
+    claim.total_amount = balance1 - 10
+
+    channel.update_contract_balance(end_state, balance1 - 10, claim)
     assert end_state.contract_balance == balance1
 
-    channel.update_contract_balance(end_state, balance1 + 10)
+    claim.total_amount = balance1 + 10
+    channel.update_contract_balance(end_state, balance1 + 10, claim)
     assert end_state.contract_balance == balance1 + 10
 
 

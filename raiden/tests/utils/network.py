@@ -148,7 +148,7 @@ def payment_channel_open_and_deposit(
             channel_state = get_channelstate_by_canonical_identifier(
                 chain_state=chain_state, canonical_identifier=canonical_identifier
             )
-            assert channel_state, "nodes dont share a channel"
+            assert channel_state, "nodes do not share a channel"
 
         check_channel(app0, app1, token_network_address)
 

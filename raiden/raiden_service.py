@@ -699,27 +699,9 @@ class RaidenService(Runnable):
         if not claims:
             return
 
-        processable_claims = []
-        unprocessable_claims = []
-
         chain_state = views.state_from_raiden(self)
 
         # TODO: check claim signature
-        for claim in claims:
-            token_network_state = views.get_token_network_by_address(
-                chain_state=chain_state, token_network_address=claim.token_network_address
-            )
-
-            if token_network_state is None:
-                # Token network not yet known, save for later
-                unprocessable_claims.append(claim)
-            else:
-                # Token network is known, process directly
-                processable_claims.append(claim)
-
-        # TODO: is this safe or do we need a special state change?
-        chain_state.unresolved_claims.extend(unprocessable_claims)
-
         # Create and process state changes
         state_changes = get_state_changes_for_claims(
             chain_state=chain_state,
