@@ -4,7 +4,9 @@ import gevent
 import grequests
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
+from tools.raiddit.generate_claims import ClaimGenerator
 
+from raiden import waiting
 from raiden.api.rest import APIServer
 from raiden.constants import BLOCK_ID_LATEST, NULL_ADDRESS_HEX
 from raiden.tests.integration.api.rest.test_rest import DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT
@@ -444,27 +446,54 @@ def test_api_channel_open_close_and_settle(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.parametrize("register_tokens", [True])
 def test_api_channel_close_insufficient_eth(
-    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+    api_server_test_instance: APIServer, reveal_timeout, claim_generator: ClaimGenerator
 ):
 
+    raiden = api_server_test_instance.rest_api.raiden_api.raiden
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
+    balance = 10
+    chain_state = views.state_from_raiden(raiden)
+    token_network_address = list(
+        chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses.keys()
+    )[0]
+    token_network = views.get_token_network_by_address(
+        chain_state=chain_state, token_network_address=token_network_address
+    )
+    assert token_network is not None
+    token_address = token_network.token_address
+    claim = claim_generator.add_claim(
+        address=raiden.address,
+        partner=to_canonical_address(partner_address),
+        token_network_address=token_network_address,
+        amount=balance,
+    )
+    raiden.process_claims([claim])
+    waiting.wait_for_newchannel(
+        raiden=raiden,
+        token_network_registry_address=raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=to_canonical_address(partner_address),
+        retry_timeout=1,
+    )
+
+    channel_identifier = claim.channel_id
     channel_data_obj = {
         "partner_address": partner_address,
         "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
     }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
+    request = grequests.get(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=to_checksum_address(token_address),
+            partner_address=partner_address,
+        )
     )
     response = request.send().response
 
-    balance = 0
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-    channel_identifier = 1
     json_response = get_json_response(response)
     expected_response = channel_data_obj.copy()
     expected_response.update(
@@ -484,7 +513,7 @@ def test_api_channel_close_insufficient_eth(
         api_url_for(
             api_server_test_instance,
             "channelsresourcebytokenandpartneraddress",
-            token_address=token_address,
+            token_address=to_checksum_address(token_address),
             partner_address=partner_address,
         ),
         json={"state": ChannelState.STATE_CLOSED.value},
