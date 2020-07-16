@@ -9,7 +9,11 @@ from eth_utils import keccak, remove_0x_prefix
 
 from raiden.constants import Environment, EthClient
 from raiden.network.utils import get_free_port
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    DEFAULT_RETRY_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
+)
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE
 from raiden.tests.utils.ci import shortened_artifacts_storage
 from raiden.tests.utils.eth_node import EthNodeDescription
@@ -39,13 +43,13 @@ def escape_for_format(string):
 
 
 @pytest.fixture
-def settle_timeout(reveal_timeout):
+def settle_timeout(reveal_timeout, settle_timeout_min):
     """
     NettingChannel default settle timeout for tests.
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    return reveal_timeout * 3
+    return settle_timeout_min + reveal_timeout * 3
 
 
 @pytest.fixture
@@ -56,7 +60,7 @@ def chain_id():
 
 @pytest.fixture
 def settle_timeout_min():
-    return 20
+    return DEFAULT_SETTLE_TIMEOUT
 
 
 @pytest.fixture
