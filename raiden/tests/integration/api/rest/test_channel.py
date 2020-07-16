@@ -24,7 +24,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import check_dict_nested_attrs
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
-from raiden.utils.typing import TokenAmount
+from raiden.utils.typing import BlockTimeout, TokenAmount
 from raiden.waiting import wait_for_participant_deposit
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
@@ -449,7 +449,9 @@ def test_api_channel_open_close_and_settle(
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("register_tokens", [True])
 def test_api_channel_close_insufficient_eth(
-    api_server_test_instance: APIServer, claim_generator: ClaimGenerator
+    api_server_test_instance: APIServer,
+    claim_generator: ClaimGenerator,
+    settle_timeout_min: BlockTimeout,
 ):
 
     raiden = api_server_test_instance.rest_api.raiden_api.raiden
@@ -506,7 +508,7 @@ def test_api_channel_close_insufficient_eth(
             "total_deposit": "10",
             "token_network_address": to_checksum_address(token_network_address),
             "total_withdraw": "0",
-            "settle_timeout": "5",
+            "settle_timeout": str(settle_timeout_min),
         }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
