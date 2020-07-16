@@ -2,36 +2,9 @@ from dataclasses import dataclass
 
 from raiden.exceptions import InvalidSignature
 from raiden.messages.cmdid import CmdId
+from raiden.utils.datastructures import cached_property
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, Any, Callable, ClassVar, MessageID, Optional, Signature
-
-
-class cached_property:
-    """ Same as functools.cached_property in python 3.8
-
-    See https://docs.python.org/3/library/functools.html#functools.cached_property.
-    Remove after upgrading to python3.8
-    """
-
-    def __init__(self, func: Callable) -> None:
-        self.func = func
-        self.__doc__ = func.__doc__
-
-    def __get__(self, instance: Any, cls: Any = None) -> Any:
-        if instance is None:
-            return self
-        attrname = self.func.__name__
-        try:
-            cache = instance.__dict__
-        except AttributeError:  # objects with __slots__ have no __dict__
-            msg = (
-                f"No '__dict__' attribute on {type(instance).__name__!r} "
-                f"instance to cache {attrname!r} property."
-            )
-            raise TypeError(msg) from None
-        if attrname not in cache:
-            cache[attrname] = self.func(instance)
-        return cache[attrname]
+from raiden.utils.typing import Address, Any, ClassVar, MessageID, Optional, Signature
 
 
 @dataclass(repr=False, eq=False)
