@@ -9,6 +9,7 @@ from tools.raiddit.generate_claims import ClaimGenerator
 from raiden import waiting
 from raiden.api.rest import APIServer
 from raiden.constants import BLOCK_ID_LATEST, NULL_ADDRESS_HEX
+from raiden.settings import DEFAULT_REVEAL_TIMEOUT
 from raiden.tests.integration.api.rest.test_rest import DEPOSIT_FOR_TEST_API_DEPOSIT_LIMIT
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
@@ -448,7 +449,7 @@ def test_api_channel_open_close_and_settle(
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("register_tokens", [True])
 def test_api_channel_close_insufficient_eth(
-    api_server_test_instance: APIServer, reveal_timeout, claim_generator: ClaimGenerator
+    api_server_test_instance: APIServer, claim_generator: ClaimGenerator
 ):
 
     raiden = api_server_test_instance.rest_api.raiden_api.raiden
@@ -500,9 +501,12 @@ def test_api_channel_close_insufficient_eth(
         {
             "balance": str(balance),
             "state": ChannelState.STATE_OPENED.value,
-            "reveal_timeout": str(reveal_timeout),
+            "reveal_timeout": str(DEFAULT_REVEAL_TIMEOUT),
             "channel_identifier": str(channel_identifier),
-            "total_deposit": "0",
+            "total_deposit": "10",
+            "token_network_address": to_checksum_address(token_network_address),
+            "total_withdraw": "0",
+            "settle_timeout": "5",
         }
     )
     assert check_dict_nested_attrs(json_response, expected_response)
