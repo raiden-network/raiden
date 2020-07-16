@@ -3,6 +3,7 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import cached_property
 from random import Random
 
 import networkx
@@ -10,6 +11,7 @@ from eth_abi import encode_single
 from eth_utils import keccak, to_hex
 from web3 import Web3
 
+from raiden.claim import EMPTY_CLAIM
 from raiden.constants import (
     EMPTY_SECRETHASH,
     LOCKSROOT_OF_NO_LOCKS,
@@ -17,6 +19,7 @@ from raiden.constants import (
     UINT64_MAX,
     UINT256_MAX,
 )
+from raiden.exceptions import InvalidSignature
 from raiden.transfer.architecture import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
@@ -28,7 +31,7 @@ from raiden.transfer.architecture import (
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.utils.formatting import lpex, to_checksum_address, to_hex_address
-from raiden.utils.signer import Signer
+from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import (
     Address,
     Any,
@@ -50,6 +53,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    Signature,
     T_Address,
     T_BlockHash,
     T_BlockNumber,
@@ -67,7 +71,6 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
-from raiden_contracts.utils.type_aliases import Signature
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
@@ -337,11 +340,78 @@ def make_empty_pending_locks_state() -> PendingLocksState:
     return PendingLocksState(list())
 
 
+@dataclass(eq=True)
+class Claim(State):
+    chain_id: ChainID
+    token_network_address: TokenNetworkAddress
+    owner: Address
+    partner: Address
+    total_amount: TokenAmount
+    signature: Optional[Signature] = None
+
+    def pack(self) -> bytes:
+        return (
+            Web3.toBytes(hexstr=to_hex_address(self.token_network_address))
+            + encode_single("uint256", self.chain_id)
+            + Web3.toBytes(hexstr=to_hex_address(self.owner))
+            + Web3.toBytes(hexstr=to_hex_address(self.partner))
+            + encode_single("uint256", self.total_amount)
+        )
+
+    def sign(self, signer: Signer) -> None:
+        self.signature = signer.sign(data=self.pack())
+
+    def serialize(self) -> Dict[str, Any]:
+        assert self.signature is not None, "Claim not signed yet"
+        return dict(
+            chain_id=self.chain_id,
+            token_network_address=to_checksum_address(self.token_network_address),
+            owner=to_checksum_address(self.owner),
+            partner=to_checksum_address(self.partner),
+            total_amount=self.total_amount,
+            signature=to_hex(self.signature),
+        )
+
+    @property
+    def channel_id(self) -> ChannelID:
+        if self.owner < self.partner:
+            hashed_id = keccak(
+                encode_single("uint256", self.chain_id)
+                + self.token_network_address
+                + self.owner
+                + self.partner
+            )
+        else:
+            hashed_id = keccak(
+                encode_single("uint256", self.chain_id)
+                + self.token_network_address
+                + self.partner
+                + self.owner
+            )
+        return ChannelID(int.from_bytes(bytes=hashed_id, byteorder="big"))
+
+    @cached_property
+    def sender(self) -> Optional[Address]:
+        if not self.signature:
+            return None
+        data_that_was_signed = self.pack()
+        message_signature = self.signature
+
+        try:
+            address: Optional[Address] = recover(
+                data=data_that_was_signed, signature=message_signature
+            )
+        except InvalidSignature:
+            address = None
+        return address
+
+
 @dataclass(order=True)
 class TransactionChannelDeposit(State):
     participant_address: Address
     contract_balance: TokenAmount
     deposit_block_number: BlockNumber
+    claim: Claim = field(default=EMPTY_CLAIM)
 
     def __post_init__(self) -> None:
         typecheck(self.participant_address, T_Address)
@@ -398,6 +468,7 @@ class NettingChannelEndState(State):
     )
     onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
     nonce: Nonce = field(default=Nonce(0))
+    claim: Claim = field(default=EMPTY_CLAIM)
 
     def __post_init__(self) -> None:
         typecheck(self.address, T_Address)
@@ -594,7 +665,6 @@ class ChainState(State):
     tokennetworkaddresses_to_tokennetworkregistryaddresses: Dict[
         TokenNetworkAddress, TokenNetworkRegistryAddress
     ] = field(repr=False, default_factory=dict)
-    unresolved_claims: List[Claim] = field(repr=False, default_factory=list)
 
     def __post_init__(self) -> None:
         typecheck(self.block_number, T_BlockNumber)

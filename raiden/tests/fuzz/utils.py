@@ -81,7 +81,7 @@ def action_init_initiator_to_action_init_target(
     from_hop = HopState(node_address=address, channel_identifier=channel.identifier)
     return ActionInitTarget(
         from_hop=from_hop, transfer=transfer, sender=address, balance_proof=transfer.balance_proof
-    )
+    )  # type: ignore
 
 
 @dataclass(frozen=True)
@@ -140,7 +140,7 @@ def locked_transfer_to_action_init_target(locked_transfer: LockedTransfer) -> Ac
     init_target_statechange = ActionInitTarget(
         from_hop=from_hop,
         transfer=from_transfer,
-        balance_proof=from_transfer.balance_proof,
+        balance_proof=from_transfer.balance_proof,  # type: ignore
         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 

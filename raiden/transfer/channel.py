@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
 
+from raiden.claim import EMPTY_CLAIM
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
@@ -53,6 +54,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChannelState,
+    Claim,
     ExpiredWithdrawState,
     HashTimeLockState,
     NettingChannelEndState,
@@ -1351,9 +1353,15 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
         channel_state.settle_transaction.result = TransactionExecutionStatus.SUCCESS
 
 
-def update_contract_balance(end_state: NettingChannelEndState, contract_balance: Balance) -> None:
-    if contract_balance > end_state.contract_balance:
+def update_contract_balance(
+    end_state: NettingChannelEndState, contract_balance: Balance, claim: Claim = EMPTY_CLAIM
+) -> None:
+    if (
+        contract_balance > end_state.contract_balance
+        and claim.total_amount > end_state.claim.total_amount
+    ):
         end_state.contract_balance = contract_balance
+        end_state.claim = claim
 
 
 def compute_locks_with(
@@ -2398,11 +2406,12 @@ def handle_channel_deposit(
 ) -> TransitionResult[NettingChannelState]:
     participant_address = state_change.deposit_transaction.participant_address
     contract_balance = Balance(state_change.deposit_transaction.contract_balance)
+    claim = state_change.deposit_transaction.claim
 
     if participant_address == channel_state.our_state.address:
-        update_contract_balance(channel_state.our_state, contract_balance)
+        update_contract_balance(channel_state.our_state, contract_balance, claim)
     elif participant_address == channel_state.partner_state.address:
-        update_contract_balance(channel_state.partner_state, contract_balance)
+        update_contract_balance(channel_state.partner_state, contract_balance, claim)
 
     # A deposit changes the total capacity of the channel and as such the fees need to change
     update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)

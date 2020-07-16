@@ -443,6 +443,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
             chain_id=app.raiden.rpc_client.chain_id,
             channels=[(app.raiden.address, ConnectionManager.BOOTSTRAP_ADDR, TEST_DEPOSIT_AMOUNT)],
         )
+
         app.raiden.process_claims(claims)
 
         token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore

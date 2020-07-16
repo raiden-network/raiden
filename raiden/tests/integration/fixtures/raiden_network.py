@@ -346,6 +346,7 @@ def raiden_network(
 
     # Here we make sure, all apps know all the routes
     all_claims = claim_generator.claims()
+
     for app in raiden_apps:
         app.raiden.process_claims(all_claims)
 

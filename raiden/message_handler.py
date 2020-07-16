@@ -247,7 +247,7 @@ class MessageHandler:
         balance_proof = balanceproof_from_envelope(message)
         lock_expired = ReceiveLockExpired(
             sender=balance_proof.sender,
-            balance_proof=balance_proof,
+            balance_proof=balance_proof,  # type: ignore
             secrethash=message.secrethash,
             message_identifier=message.message_identifier,
         )
@@ -273,7 +273,7 @@ class MessageHandler:
             state_changes.append(
                 ReceiveTransferCancelRoute(
                     transfer=from_transfer,
-                    balance_proof=from_transfer.balance_proof,
+                    balance_proof=from_transfer.balance_proof,  # type: ignore
                     sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
                 )
             )
@@ -287,7 +287,7 @@ class MessageHandler:
                 state_changes.append(
                     ActionTransferReroute(
                         transfer=from_transfer,
-                        balance_proof=from_transfer.balance_proof,  # pylint: disable=no-member
+                        balance_proof=from_transfer.balance_proof,  # type: ignore
                         sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
                         secret=random_secret(),
                     )
@@ -296,7 +296,7 @@ class MessageHandler:
             state_changes.append(
                 ReceiveTransferRefund(
                     transfer=from_transfer,
-                    balance_proof=from_transfer.balance_proof,
+                    balance_proof=from_transfer.balance_proof,  # type: ignore
                     sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
                 )
             )
@@ -341,7 +341,7 @@ class MessageHandler:
             init_target_statechange = ActionInitTarget(
                 from_hop=from_hop,
                 transfer=from_transfer,
-                balance_proof=from_transfer.balance_proof,
+                balance_proof=from_transfer.balance_proof,  # type: ignore
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
             )
             return [init_target_statechange]
@@ -363,7 +363,7 @@ class MessageHandler:
                 from_hop=from_hop,
                 route_states=route_states,
                 from_transfer=from_transfer,
-                balance_proof=from_transfer.balance_proof,
+                balance_proof=from_transfer.balance_proof,  # type: ignore
                 sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
             )
             return [init_mediator_statechange]

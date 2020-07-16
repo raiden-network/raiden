@@ -6,6 +6,7 @@ from eth_utils import encode_hex, is_binary_address, to_canonical_address, to_he
 from gevent.lock import RLock
 from web3.exceptions import BadFunctionCallOutput
 
+from raiden.claim import Claim
 from raiden.constants import (
     BLOCK_ID_LATEST,
     EMPTY_BALANCE_HASH,
@@ -36,7 +37,7 @@ from raiden.network.rpc.client import (
 )
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.state import Claim, PendingLocksState
+from raiden.transfer.state import PendingLocksState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.formatting import format_block_id, to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_signed_balance_proof, pack_withdraw

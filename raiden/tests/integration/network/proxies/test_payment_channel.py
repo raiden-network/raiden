@@ -2,7 +2,7 @@ import pytest
 from web3 import Web3
 
 from raiden.blockchain.events import get_all_netting_channel_events
-from raiden.claim import EmptyClaim
+from raiden.claim import EMPTY_CLAIM
 from raiden.constants import (
     BLOCK_ID_LATEST,
     EMPTY_BALANCE_HASH,
@@ -172,11 +172,11 @@ def test_payment_channel_proxy_basics(
         transferred_amount=TokenAmount(0),
         locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,
-        claim=EmptyClaim,
+        claim=EMPTY_CLAIM,
         partner_transferred_amount=TokenAmount(0),
         partner_locked_amount=LockedAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
-        partner_claim=EmptyClaim,
+        partner_claim=EMPTY_CLAIM,
         block_identifier=BLOCK_ID_LATEST,
     )
     assert channel_proxy_1.settled(BLOCK_ID_LATEST) is True

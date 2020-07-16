@@ -43,14 +43,15 @@ DEFAULT_REVEAL_TIMEOUT = BlockTimeout(50)
 
 _DUMMY_ADDRESS = to_canonical_address("0x" + "0" * 40)
 
-EmptyClaim = Claim(
+
+EMPTY_CLAIM = Claim(
     chain_id=ChainID(2 ** 256 - 1),
     token_network_address=TokenNetworkAddress(_DUMMY_ADDRESS),
     owner=Address(_DUMMY_ADDRESS),
     partner=Address(_DUMMY_ADDRESS),
     total_amount=TokenAmount(0),
 )
-EmptyClaim.signature = Signature(b"")
+EMPTY_CLAIM.signature = Signature(b"")
 
 
 def parse_claims_file() -> List[Claim]:
@@ -133,6 +134,7 @@ def get_state_changes_for_claims(
                         participant_address=claim.owner,
                         contract_balance=claim.total_amount,
                         deposit_block_number=BlockNumber(1),
+                        claim=claim,
                     ),
                     transaction_hash=TransactionHash(b""),
                     block_number=BlockNumber(1),
