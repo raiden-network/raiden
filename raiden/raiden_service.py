@@ -709,7 +709,7 @@ class RaidenService(Runnable):
 
         # TODO: check claim signature
         # Create and process state changes
-        state_changes, unprocessable_claims = get_state_changes_for_claims(
+        state_changes = get_state_changes_for_claims(
             chain_state=chain_state,
             claims=claims,
             node_address=self.address,
@@ -718,9 +718,6 @@ class RaidenService(Runnable):
             fee_config=self.config.mediation_fees,
             ignore_unrelated=ignore_unrelated,
         )
-
-        # TODO: is this safe or do we need a special state change?
-        chain_state.unresolved_claims.extend(unprocessable_claims)
 
         if state_changes:
             log.debug("Processing state changes for claims")

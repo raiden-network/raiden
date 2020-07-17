@@ -43,6 +43,7 @@ def test_raiddit(
     raiden_network: List[App],
     token_addresses: List[TokenAddress],
     claim_generator: ClaimGenerator,
+    ignore_unrelated_claims: bool,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -68,9 +69,9 @@ def test_raiddit(
             partner=app2.raiden.address,
         )
     )
-    app0.raiden.process_claims(claims)
-    app1.raiden.process_claims(claims)
-    app2.raiden.process_claims(claims)
+    app0.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
+    app1.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
+    app2.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     wait_all_apps(raiden_network)
 
     assert get_channel_balances(app0, app1, token_network_address) == (100, 100)
@@ -107,9 +108,9 @@ def test_raiddit(
             partner=app2.raiden.address,
         )
     )
-    app0.raiden.process_claims(claims)
-    app1.raiden.process_claims(claims)
-    app2.raiden.process_claims(claims)
+    app0.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
+    app1.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
+    app2.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     wait_all_apps(raiden_network)
 
     assert get_channel_balances(app0, app1, token_network_address) == (148, 252)

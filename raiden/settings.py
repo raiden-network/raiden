@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from eth_typing import BlockNumber
+from eth_typing import URI, BlockNumber
 from eth_utils import denoms, to_hex
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, MATRIX_AUTO_SELECT_SERVER, Environment
@@ -133,7 +133,7 @@ class MatrixTransportConfig:
     retry_interval_max: float
     broadcast_rooms: List[str]
     server: str
-    available_servers: List[str]
+    available_servers: List[URI]
     sync_timeout: int = DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
     sync_latency: int = DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY
 

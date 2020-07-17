@@ -1,6 +1,7 @@
 from typing import List
 
 import pytest
+from eth_typing import URI
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, Environment
 from raiden.network.transport import MatrixTransport
@@ -80,7 +81,7 @@ def matrix_transports(
     matrix_sync_timeout: int,
 ) -> Iterable[List[MatrixTransport]]:
     transports = []
-    local_matrix_servers_str = [str(server) for server in local_matrix_servers]
+    local_matrix_servers_uri = [URI(str(server)) for server in local_matrix_servers]
 
     for transport_index in range(number_of_transports):
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
@@ -92,7 +93,7 @@ def matrix_transports(
                     retry_interval_initial=retry_interval_initial,
                     retry_interval_max=retry_interval_max,
                     server=server,
-                    available_servers=local_matrix_servers_str,
+                    available_servers=local_matrix_servers_uri,
                     sync_timeout=matrix_sync_timeout,
                 ),
                 environment=Environment.DEVELOPMENT,

@@ -9,6 +9,7 @@ import click
 import gevent
 import requests
 import structlog
+from eth_typing import URI
 from eth_utils import decode_hex, to_canonical_address, to_hex
 from web3 import Web3
 
@@ -230,7 +231,7 @@ def configure_pfs_or_exit(
     node_network_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: TokenAmount,
-    matrix_servers: List[str],
+    matrix_servers: List[URI],
 ) -> PFSInfo:
     """
     Take in the given pfs_address argument, the service registry and find out a

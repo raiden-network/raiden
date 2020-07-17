@@ -2,6 +2,7 @@ from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest
+from eth_typing import URI
 from eth_utils import to_canonical_address
 
 from raiden.constants import Environment, RoutingMode
@@ -275,7 +276,7 @@ def test_setup_proxies_no_service_registry_but_pfs() -> None:
             pathfinding_max_paths=5,
         ),
     )
-    config.transport.available_servers = ["http://matrix.example.com"]
+    config.transport.available_servers = [URI("http://matrix.example.com")]
     contracts = load_deployed_contracts_data(config, chain_id)
     proxy_manager = MockProxyManager(node_address=make_address())
 
