@@ -4,13 +4,13 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
+from typing import cast
 
 import networkx
 from eth_abi import encode_single
 from eth_utils import keccak, to_hex
 from web3 import Web3
 
-from raiden.claim import EMPTY_CLAIM
 from raiden.constants import (
     EMPTY_SECRETHASH,
     LOCKSROOT_OF_NO_LOCKS,
@@ -360,12 +360,17 @@ class TransactionChannelDeposit(State):
     participant_address: Address
     contract_balance: TokenAmount
     deposit_block_number: BlockNumber
-    claim: Claim = field(default=EMPTY_CLAIM)
+    claim: Claim = field(default=cast(Claim, None))
 
     def __post_init__(self) -> None:
         typecheck(self.participant_address, T_Address)
         typecheck(self.contract_balance, T_TokenAmount)
         typecheck(self.deposit_block_number, T_BlockNumber)
+
+        if self.claim is None:
+            from raiden.claim import EMPTY_CLAIM  # type: ignore
+
+            self.claim = EMPTY_CLAIM
 
 
 @dataclass
@@ -417,7 +422,7 @@ class NettingChannelEndState(State):
     )
     onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
     nonce: Nonce = field(default=Nonce(0))
-    claim: Claim = field(default=EMPTY_CLAIM)
+    claim: Claim = field(default=cast(Claim, None))
 
     def __post_init__(self) -> None:
         typecheck(self.address, T_Address)
@@ -428,6 +433,11 @@ class NettingChannelEndState(State):
 
         if self.contract_balance < 0:
             raise ValueError("contract_balance cannot be negative.")
+
+        if self.claim is None:
+            from raiden.claim import EMPTY_CLAIM  # type: ignore
+
+            self.claim = EMPTY_CLAIM
 
     @property
     def offchain_total_withdraw(self) -> WithdrawAmount:

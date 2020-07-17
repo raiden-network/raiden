@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
 
-from raiden.claim import EMPTY_CLAIM
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, MediationFeeConfig
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
@@ -1354,8 +1353,13 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
 
 
 def update_contract_balance(
-    end_state: NettingChannelEndState, contract_balance: Balance, claim: Claim = EMPTY_CLAIM
+    end_state: NettingChannelEndState, contract_balance: Balance, claim: Claim = None
 ) -> None:
+    if claim is None:
+        from raiden.claim import EMPTY_CLAIM
+
+        claim = EMPTY_CLAIM
+
     if (
         contract_balance > end_state.contract_balance
         and claim.total_amount > end_state.claim.total_amount
