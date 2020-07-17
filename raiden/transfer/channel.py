@@ -1352,19 +1352,13 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
         channel_state.settle_transaction.result = TransactionExecutionStatus.SUCCESS
 
 
-def update_contract_balance(
-    end_state: NettingChannelEndState, contract_balance: Balance, claim: Claim = None
-) -> None:
+def update_contract_balance(end_state: NettingChannelEndState, claim: Claim = None) -> None:
     if claim is None:
         from raiden.claim import EMPTY_CLAIM
 
         claim = EMPTY_CLAIM
 
-    if (
-        contract_balance > end_state.contract_balance
-        and claim.total_amount > end_state.claim.total_amount
-    ):
-        end_state.contract_balance = contract_balance
+    if claim.total_amount > end_state.claim.total_amount:
         end_state.claim = claim
 
 
@@ -2409,13 +2403,12 @@ def handle_channel_deposit(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelDeposit
 ) -> TransitionResult[NettingChannelState]:
     participant_address = state_change.deposit_transaction.participant_address
-    contract_balance = Balance(state_change.deposit_transaction.contract_balance)
     claim = state_change.deposit_transaction.claim
 
     if participant_address == channel_state.our_state.address:
-        update_contract_balance(channel_state.our_state, contract_balance, claim)
+        update_contract_balance(channel_state.our_state, claim)
     elif participant_address == channel_state.partner_state.address:
-        update_contract_balance(channel_state.partner_state, contract_balance, claim)
+        update_contract_balance(channel_state.partner_state, claim)
 
     # A deposit changes the total capacity of the channel and as such the fees need to change
     update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)

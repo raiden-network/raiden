@@ -392,7 +392,6 @@ class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
 
     address: Address
-    contract_balance: Balance
     onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
     withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
         repr=False, default_factory=dict
@@ -438,6 +437,10 @@ class NettingChannelEndState(State):
             from raiden.claim import EMPTY_CLAIM  # type: ignore
 
             self.claim = EMPTY_CLAIM
+
+    @property
+    def contract_balance(self) -> Balance:
+        return Balance(self.claim.total_amount)
 
     @property
     def offchain_total_withdraw(self) -> WithdrawAmount:

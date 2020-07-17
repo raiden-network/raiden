@@ -24,7 +24,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.typing import (
     Address,
-    Balance,
     BlockHash,
     BlockNumber,
     BlockTimeout,
@@ -85,10 +84,10 @@ def get_state_changes_for_claims(
         # If node is channel participant, create NettingChannelState
         if node_address == claim.owner or node_address == claim.partner:
             our_state = NettingChannelEndState(
-                claim.owner if claim.owner == node_address else claim.partner, Balance(0)
+                claim.owner if claim.owner == node_address else claim.partner
             )
             partner_state = NettingChannelEndState(
-                claim.partner if claim.owner == node_address else claim.owner, Balance(0)
+                claim.partner if claim.owner == node_address else claim.owner
             )
 
             channel_state = NettingChannelState(
