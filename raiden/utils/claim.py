@@ -8,7 +8,6 @@ from structlog import get_logger
 
 from raiden.settings import MediationFeeConfig
 from raiden.storage.serialization import DictSerializer
-from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -93,8 +92,9 @@ def get_state_changes_for_claims(
     settle_timeout: BlockTimeout,
     fee_config: MediationFeeConfig,
     ignore_unrelated: bool = True,
-) -> Tuple[List[StateChange], List[Claim]]:
-    unprocessable_claims: List[Claim] = []
+) -> List[StateChange]:
+    from raiden.transfer import views
+
     state_changes: List[StateChange] = []
 
     for claim in claims:
@@ -103,7 +103,6 @@ def get_state_changes_for_claims(
             chain_state=chain_state, token_network_address=claim.token_network_address
         )
         if token_network_state is None:
-            unprocessable_claims.append(claim)
             continue
 
         # If node is channel participant, create NettingChannelState
@@ -184,7 +183,7 @@ def get_state_changes_for_claims(
                 )
             )
 
-    return state_changes, unprocessable_claims
+    return state_changes
 
 
 def create_hub_jsonl(

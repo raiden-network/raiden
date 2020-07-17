@@ -9,6 +9,7 @@ from uuid import uuid4
 import gevent
 import pkg_resources
 import structlog
+from eth_typing import URI
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock
@@ -348,7 +349,7 @@ class MatrixTransport(Runnable):
         if config.server == MATRIX_AUTO_SELECT_SERVER:
             available_servers = config.available_servers
         elif urlparse(config.server).scheme in {"http", "https"}:
-            available_servers = [config.server]
+            available_servers = [URI(config.server)]
         else:
             raise TransportError(
                 f"Invalid matrix server specified (valid values: "

@@ -13,6 +13,7 @@ import requests
 from click import Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
+from eth_typing import URI
 from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
 
@@ -423,7 +424,7 @@ def apply_config_file(
             cli_params[config_name_int] = config_value
 
 
-def get_matrix_servers(url: str) -> List[str]:
+def get_matrix_servers(url: str) -> List[URI]:
     """Fetch a list of matrix servers from a text url
 
     '-' prefixes (YAML list) are cleaned. Comment lines /^\\s*#/ are ignored
@@ -445,7 +446,7 @@ def get_matrix_servers(url: str) -> List[str]:
             continue
         if not line.startswith("http"):
             line = "https://" + line  # default schema
-        available_servers.append(line)
+        available_servers.append(URI(line))
     return available_servers
 
 

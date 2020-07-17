@@ -27,6 +27,7 @@ from uuid import UUID
 import gevent
 import structlog
 from cachetools import LRUCache, cached
+from eth_typing import URI
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -806,7 +807,7 @@ def sort_servers_closest(
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
     handle_member_join_callback: Callable[[Room], None],
-    servers: List[str],
+    servers: List[URI],
     *args: Any,
     **kwargs: Any,
 ) -> GMatrixClient:

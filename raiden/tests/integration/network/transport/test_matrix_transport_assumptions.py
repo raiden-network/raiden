@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import gevent
 import pytest
+from eth_typing import URI
 from matrix_client.errors import MatrixRequestError
 
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
@@ -50,7 +51,7 @@ def must_run_for_at_least(minimum_elapsed_time: float, msg: str) -> Generator:
 
 
 def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
-    client = make_client(ignore_messages, ignore_member_join, [server])
+    client = make_client(ignore_messages, ignore_member_join, [URI(server)])
     signer = factories.make_signer()
 
     login(client, signer)
