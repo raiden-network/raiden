@@ -27,7 +27,6 @@ from raiden.blockchain.events import (
     token_network_registry_events,
 )
 from raiden.blockchain_events_handler import after_blockchain_statechange
-from raiden.claim import get_state_changes_for_claims, parse_claims_file
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
@@ -115,6 +114,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.utils.claim import get_state_changes_for_claims, parse_claims_file
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.gevent import spawn_named
 from raiden.utils.logging import redact_secret

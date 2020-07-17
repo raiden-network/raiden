@@ -1,6 +1,5 @@
 import pytest
 from eth_utils import keccak
-from tools.raiddit.generate_claims import ClaimGenerator
 
 from raiden.api.python import RaidenAPI
 from raiden.app import App
@@ -23,6 +22,7 @@ from raiden.tests.utils.transport import TestMatrixTransport
 from raiden.transfer import views
 from raiden.transfer.state import TransactionChannelDeposit
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
+from raiden.utils.claim import ClaimGenerator
 from raiden.utils.typing import (
     List,
     LockedAmount,

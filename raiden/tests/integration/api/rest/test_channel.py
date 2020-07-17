@@ -4,7 +4,6 @@ import gevent
 import grequests
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
-from tools.raiddit.generate_claims import ClaimGenerator
 
 from raiden import waiting
 from raiden.api.rest import APIServer
@@ -24,6 +23,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import check_dict_nested_attrs
 from raiden.transfer import views
 from raiden.transfer.state import ChannelState
+from raiden.utils.claim import ClaimGenerator
 from raiden.utils.typing import BlockTimeout, TokenAmount
 from raiden.waiting import wait_for_participant_deposit
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN

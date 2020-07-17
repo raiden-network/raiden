@@ -28,6 +28,7 @@ from raiden.transfer.state import (
     NettingChannelState,
     SuccessfulTransactionState,
 )
+from raiden.utils.claim import EmptyClaim
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (

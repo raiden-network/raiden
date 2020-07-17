@@ -5,7 +5,6 @@ from pathlib import Path
 import gevent
 import pytest
 from gevent.event import AsyncResult
-from tools.raiddit.generate_claims import ClaimGenerator, create_hub_json
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
@@ -29,6 +28,7 @@ from raiden.tests.utils.network import (
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.transport import ParsedURL
+from raiden.utils.claim import ClaimGenerator, create_hub_jsonl
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,

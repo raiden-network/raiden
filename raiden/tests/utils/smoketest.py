@@ -16,7 +16,6 @@ import requests
 from eth_typing import URI, HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
-from tools.raiddit.generate_claims import generate_claims
 from web3 import HTTPProvider, Web3
 from web3.contract import Contract
 
@@ -54,6 +53,7 @@ from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_app
+from raiden.utils.claim import generate_claims
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.keys import privatekey_to_address
