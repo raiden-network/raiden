@@ -46,6 +46,7 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN, MessageTypeId
 from raiden_contracts.contract_manager import ContractManager
 
 
+@pytest.mark.skip("Raiddit")
 def test_payment_channel_proxy_basics(
     token_network_registry_address: TokenNetworkRegistryAddress,
     token_network_proxy: TokenNetwork,

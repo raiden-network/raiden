@@ -44,7 +44,6 @@ from raiden.waiting import wait_for_block, wait_for_settle
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
-@pytest.mark.parametrize("settle_timeout", [50])
 def test_refund_messages(raiden_chain, token_addresses, deposit):
     # The network has the following topology:
     #
