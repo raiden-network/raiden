@@ -98,8 +98,8 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
         address=app0.raiden.address,
         partner=app1.raiden.address,
     )
-    app0.raiden.process_claims(claims)
-    app1.raiden.process_claims(claims)
+    app0.raiden.process_claims({}, claims)
+    app1.raiden.process_claims({}, claims)
     wait_all_apps(raiden_network)
 
     # We expect a PFSCapacityUpdate and a PFSFeeUpdate after the deposit

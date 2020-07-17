@@ -171,7 +171,7 @@ def raiden_chain(
     # Here we make sure, all apps know all the routes
     all_claims = claim_generator.claims()
     for app in raiden_apps:
-        app.raiden.process_claims(all_claims)
+        app.raiden.process_claims({}, all_claims)
 
     yield raiden_apps
 
@@ -219,12 +219,11 @@ def claims(create_claims: bool, private_keys, chain_id):
         signer = UNIT_OPERATOR_SIGNER
 
         claims_path = Path("./claims.json")
-        create_hub_json(
+        create_hub_jsonl(
             operator_signer=signer,
             token_network_address=make_token_network_address(),
             chain_id=chain_id,
             hub_address=make_address(),
-            num_users=len(addresses),
             addresses=addresses,
             output_file=claims_path,
         )
@@ -348,7 +347,7 @@ def raiden_network(
     all_claims = claim_generator.claims()
 
     for app in raiden_apps:
-        app.raiden.process_claims(all_claims)
+        app.raiden.process_claims({}, all_claims)
 
     yield raiden_apps
 

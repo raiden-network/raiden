@@ -223,6 +223,7 @@ def run_app(
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
+    claims_path: Optional[Path],
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ) -> App:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -282,6 +283,7 @@ def run_app(
         unrecoverable_error_should_crash=unrecoverable_error_should_crash,
         resolver_endpoint=resolver_endpoint,
         rest_api=rest_api_config,
+        claims_path=claims_path,
     )
     config.blockchain.query_interval = blockchain_query_interval
     config.services.monitoring_enabled = enable_monitoring

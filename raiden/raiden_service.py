@@ -4,7 +4,7 @@ import random
 import time
 from collections import defaultdict
 from enum import Enum
-from typing import Any, Dict, List, NamedTuple, Set, Tuple, cast
+from typing import Any, Dict, Iterable, List, NamedTuple, Set, Tuple, cast
 from uuid import UUID
 
 import filelock
@@ -694,18 +694,21 @@ class RaidenService(Runnable):
             self.last_log_block = polled_block_number
 
     def _initialize_claims(self) -> None:
-        claims = parse_claims_file()
-        self.process_claims(claims)
+        if self.config.claims_path is not None:
+            operator_info, claims_generator = parse_claims_file(self.config.claims_path)
+            self.process_claims(operator_info, claims_generator)
 
-    def process_claims(self, claims: List[Claim]) -> None:
-        if not claims:
+    def process_claims(
+        self, operator_info: Optional[Dict[str, Any]], claims: Optional[Iterable[Claim]]
+    ) -> None:
+        if operator_info is None or claims is None:
             return
 
         chain_state = views.state_from_raiden(self)
 
         # TODO: check claim signature
         # Create and process state changes
-        state_changes = get_state_changes_for_claims(
+        state_changes, unprocessable_claims = get_state_changes_for_claims(
             chain_state=chain_state,
             claims=claims,
             node_address=self.address,
@@ -713,6 +716,9 @@ class RaidenService(Runnable):
             settle_timeout=self.default_registry.settlement_timeout_min(BLOCK_ID_LATEST),
             fee_config=self.config.mediation_fees,
         )
+
+        # TODO: is this safe or do we need a special state change?
+        chain_state.unresolved_claims.extend(unprocessable_claims)
 
         if state_changes:
             log.debug("Processing state changes for claims")
@@ -843,10 +849,11 @@ class RaidenService(Runnable):
         log.debug(
             "State changes",
             node=to_checksum_address(self.address),
-            state_changes=[
-                redact_secret(DictSerializer.serialize(state_change))
-                for state_change in state_changes
-            ],
+            # state_changes=[
+            #     redact_secret(DictSerializer.serialize(state_change))
+            #     for state_change in state_changes
+            # ],
+            state_changes_count=len(state_changes),
         )
 
         old_state = views.state_from_raiden(self)

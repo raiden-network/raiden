@@ -6,6 +6,7 @@ import textwrap
 import traceback
 from enum import Enum
 from io import StringIO
+from pathlib import Path
 from tempfile import NamedTemporaryFile, mktemp
 from typing import Any, AnyStr, Callable, Optional
 
@@ -220,6 +221,12 @@ def options(func: Callable) -> Callable:
             default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
             show_default=True,
             type=click.FloatRange(min=0.1),
+        ),
+        option(
+            "--claims-file-path",
+            type=click.Path(exists=True, dir_okay=False, resolve_path=True),
+            help="Path to a claims file",
+            default="claims.jsonl",
         ),
         option_group(
             "Channel-specific Options",
@@ -609,6 +616,12 @@ def run(ctx: Context, **kwargs: Any) -> None:
     # Name used in the exception handlers, make sure the kwargs contains the
     # key with the correct name by always running it.
     name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
+
+    claims_file = kwargs.pop("claims_file_path")
+    if claims_file is not None:
+        kwargs["claims_path"] = Path(claims_file)
+    else:
+        kwargs["claims_path"] = None
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did

@@ -185,6 +185,7 @@ class RaidenConfig:
 
     contracts_path: Path = contracts_precompiled_path(RAIDEN_CONTRACT_VERSION)
     database_path: DatabasePath = ":memory:"
+    claims_path: Optional[Path] = None
 
     blockchain: BlockchainConfig = BlockchainConfig()
     mediation_fees: MediationFeeConfig = MediationFeeConfig()
