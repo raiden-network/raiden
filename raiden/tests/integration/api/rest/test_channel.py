@@ -458,7 +458,7 @@ def test_api_channel_close_insufficient_eth(
     raiden = api_server_test_instance.rest_api.raiden_api.raiden
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    balance = 10
+    balance = TokenAmount(10)
     chain_state = views.state_from_raiden(raiden)
     token_network_address = list(
         chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses.keys()
@@ -474,7 +474,7 @@ def test_api_channel_close_insufficient_eth(
         token_network_address=token_network_address,
         amount=balance,
     )
-    raiden.process_claims([claim])
+    raiden.process_claims({}, [claim])
     waiting.wait_for_newchannel(
         raiden=raiden,
         token_network_registry_address=raiden.default_registry.address,

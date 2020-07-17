@@ -58,6 +58,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     TYPE_CHECKING,
     Address,
     AddressHex,
@@ -436,6 +437,8 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
             raiden_service.default_registry.address,
             TokenAddress(to_canonical_address(setup.token.address)),
         )
+        assert token_network_address is not None, MYPY_ANNOTATION
+
         # create claims to open channel
         claims = generate_claims(
             operator_signer=make_signer(),
@@ -443,8 +446,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
             chain_id=app.raiden.rpc_client.chain_id,
             channels=[(app.raiden.address, ConnectionManager.BOOTSTRAP_ADDR, TEST_DEPOSIT_AMOUNT)],
         )
-
-        app.raiden.process_claims(claims)
+        app.raiden.process_claims({}, claims)
 
         token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
 

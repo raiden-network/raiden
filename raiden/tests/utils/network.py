@@ -118,14 +118,14 @@ def payment_channel_open_and_deposit(
     assert token_network_address, "request a channel for an unregistered token"
 
     claims = claim_generator.add_2_claims(
-        amounts=[deposit, deposit],
+        amounts=(deposit, deposit),
         address=app0.raiden.address,
         partner=app1.raiden.address,
         token_network_address=token_network_address,
     )
 
-    app0.raiden.process_claims(claims)
-    app1.raiden.process_claims(claims)
+    app0.raiden.process_claims({}, claims)
+    app1.raiden.process_claims({}, claims)
 
     assert claims[0].channel_id == claims[1].channel_id
 
