@@ -55,6 +55,7 @@ def test_raiddit(
     ignore_unrelated_claims: bool,
     settle_timeout: BlockTimeout,
     retry_timeout,
+    ignore_unrelated_claims: bool,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
