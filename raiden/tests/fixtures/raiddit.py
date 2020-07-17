@@ -1,7 +1,7 @@
 import pytest
-from tools.raiddit.generate_claims import ClaimGenerator
 
 from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_OPERATOR_SIGNER
+from raiden.utils.claim import ClaimGenerator
 
 
 @pytest.fixture

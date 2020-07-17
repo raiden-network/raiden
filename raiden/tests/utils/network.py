@@ -5,7 +5,6 @@ from pathlib import Path
 
 import gevent
 import structlog
-from tools.raiddit.generate_claims import ClaimGenerator
 from web3 import Web3
 
 from raiden import waiting
@@ -36,6 +35,7 @@ from raiden.transfer.views import (
     state_from_raiden,
 )
 from raiden.ui.app import start_api_server
+from raiden.utils.claim import ClaimGenerator
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.typing import (
     Address,
@@ -81,7 +81,7 @@ BlockchainServices = namedtuple(
 )
 
 
-def check_channel(app1: App, app2: App, token_network_address: TokenNetworkAddress,) -> None:
+def check_channel(app1: App, app2: App, token_network_address: TokenNetworkAddress) -> None:
     channel_state1 = get_channelstate_by_token_network_and_partner(
         chain_state=state_from_raiden(app1.raiden),
         token_network_address=token_network_address,
