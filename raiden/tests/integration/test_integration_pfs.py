@@ -93,7 +93,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     assert token_network_address is not None
     claims = claim_generator.add_2_claims(
         token_network_address=token_network_address,
-        amounts=[10, 10],
+        amounts=(TokenAmount(10), TokenAmount(10)),
         address=app0.raiden.address,
         partner=app1.raiden.address,
     )
