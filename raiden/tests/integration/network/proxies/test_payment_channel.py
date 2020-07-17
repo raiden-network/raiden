@@ -31,7 +31,6 @@ from raiden.transfer.state import (
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
-    Balance,
     BlockNumber,
     BlockTimeout,
     ChainID,
@@ -92,10 +91,8 @@ def test_payment_channel_proxy_basics(
         reveal_timeout=reveal_timeout,
         settle_timeout=BlockTimeout(TEST_SETTLE_TIMEOUT_MIN),
         fee_schedule=FeeScheduleState(),
-        our_state=NettingChannelEndState(
-            address=token_network_proxy.client.address, contract_balance=Balance(0)
-        ),
-        partner_state=NettingChannelEndState(address=partner, contract_balance=Balance(0)),
+        our_state=NettingChannelEndState(address=token_network_proxy.client.address),
+        partner_state=NettingChannelEndState(address=partner),
         open_transaction=SuccessfulTransactionState(finished_block_number=BlockNumber(0)),
     )
     channel_proxy_1 = proxy_manager.payment_channel(
@@ -209,10 +206,8 @@ def test_payment_channel_proxy_basics(
         reveal_timeout=reveal_timeout,
         settle_timeout=BlockTimeout(TEST_SETTLE_TIMEOUT_MIN),
         fee_schedule=FeeScheduleState(),
-        our_state=NettingChannelEndState(
-            address=token_network_proxy.client.address, contract_balance=Balance(0)
-        ),
-        partner_state=NettingChannelEndState(address=partner, contract_balance=Balance(0)),
+        our_state=NettingChannelEndState(address=token_network_proxy.client.address),
+        partner_state=NettingChannelEndState(address=partner),
         open_transaction=SuccessfulTransactionState(finished_block_number=BlockNumber(0)),
     )
     channel_proxy_2 = proxy_manager.payment_channel(

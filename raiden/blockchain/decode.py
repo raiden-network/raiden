@@ -49,7 +49,6 @@ from raiden.transfer.state_change import (
     ContractReceiveUpdateTransfer,
 )
 from raiden.utils.typing import (
-    Balance,
     BlockNumber,
     BlockTimeout,
     Dict,
@@ -141,8 +140,8 @@ def contractreceivechannelnew_from_event(
     identifier = args["channel_identifier"]
     token_network_address = TokenNetworkAddress(event.originating_contract)
 
-    our_state = NettingChannelEndState(new_channel_details.our_address, Balance(0))
-    partner_state = NettingChannelEndState(new_channel_details.partner_address, Balance(0))
+    our_state = NettingChannelEndState(new_channel_details.our_address)
+    partner_state = NettingChannelEndState(new_channel_details.partner_address)
 
     open_transaction = SuccessfulTransactionState(block_number, None)
 
