@@ -113,7 +113,8 @@ def update_monitoring_service_from_balance_proof(
             "Skipping update to Monitoring service. "
             "Your channel balance {channel_balance} is less than "
             "the required minimum balance of {min_balance} "
-            "that you have set before sending the MonitorRequest"
+            "that you have set before sending the MonitorRequest,"
+            " token address {token_address}"
         )
 
         dai_token_network_address = views.get_token_network_address_by_token_address(
@@ -133,7 +134,9 @@ def update_monitoring_service_from_balance_proof(
             if channel_balance < MIN_MONITORING_AMOUNT_DAI:
                 log.warning(
                     message.format(
-                        channel_balance=channel_balance, min_balance=MIN_MONITORING_AMOUNT_DAI
+                        channel_balance=channel_balance,
+                        min_balance=MIN_MONITORING_AMOUNT_DAI,
+                        token_address=to_checksum_address(DAI_TOKEN_ADDRESS)
                     )
                 )
                 return
@@ -141,7 +144,9 @@ def update_monitoring_service_from_balance_proof(
             if channel_balance < MIN_MONITORING_AMOUNT_WETH:
                 log.warning(
                     message.format(
-                        channel_balance=channel_balance, min_balance=MIN_MONITORING_AMOUNT_WETH
+                        channel_balance=channel_balance,
+                        min_balance=MIN_MONITORING_AMOUNT_WETH,
+                        token_address=to_checksum_address(WETH_TOKEN_ADDRESS)
                     )
                 )
                 return
