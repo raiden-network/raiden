@@ -227,7 +227,7 @@ def test_endstate_update_contract_balance():
     balance1 = 101
     node_address = make_address()
 
-    end_state = NettingChannelEndState(node_address,)
+    end_state = NettingChannelEndState(node_address)
     assert end_state.contract_balance == balance1
 
     claim = deepcopy(end_state.claim)

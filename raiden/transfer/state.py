@@ -424,6 +424,12 @@ class NettingChannelEndState(State):
     claim: Claim = field(default=cast(Claim, None))
 
     def __post_init__(self) -> None:
+
+        if self.claim is None:
+            from raiden.claim import EMPTY_CLAIM  # type: ignore
+
+            self.claim = EMPTY_CLAIM
+
         typecheck(self.address, T_Address)
         typecheck(self.contract_balance, T_TokenAmount)
 
@@ -432,11 +438,6 @@ class NettingChannelEndState(State):
 
         if self.contract_balance < 0:
             raise ValueError("contract_balance cannot be negative.")
-
-        if self.claim is None:
-            from raiden.claim import EMPTY_CLAIM  # type: ignore
-
-            self.claim = EMPTY_CLAIM
 
     @property
     def contract_balance(self) -> Balance:
