@@ -5,6 +5,7 @@ from raiden.utils.typing import (
     Address,
     BalanceHash,
     BlockExpiration,
+    BurnAmount,
     ChainID,
     MonitoringServiceAddress,
     Nonce,
@@ -100,4 +101,21 @@ def pack_withdraw(
         participant=to_hex_address(participant),
         amount_to_withdraw=TokenAmount(total_withdraw),
         expiration_block=expiration_block,
+    )
+
+
+def pack_burn(
+    canonical_identifier: CanonicalIdentifier, participant: Address, total_burn: BurnAmount,
+) -> bytes:
+    """Packs burn data to be signed
+
+    Packs the given arguments in a byte array in the same configuration the
+    contracts expect the signed data to have.
+    """
+    return (
+        canonical_identifier.token_network_address
+        + canonical_identifier.chain_identifier.to_bytes(32, byteorder="big")
+        + canonical_identifier.channel_identifier.to_bytes(32, byteorder="big")
+        + participant
+        + total_burn.to_bytes(32, byteorder="big")
     )

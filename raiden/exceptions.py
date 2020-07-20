@@ -148,6 +148,10 @@ class WithdrawMismatch(RaidenRecoverableError):
     """ Raised when the requested withdraw is larger than actual channel balance. """
 
 
+class BurnMismatch(RaidenRecoverableError):
+    """ Raised when the requested withdraw is larger than actual channel balance. """
+
+
 class InvalidChecksummedAddress(RaidenError):
     """Raised when the user provided address is not a str or the value is not
     properly checksummed.

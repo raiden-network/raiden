@@ -146,7 +146,6 @@ def test_restore_queueids_to_queues(chain_state, netting_channel_state):
     ]
 
     chain_state.queueids_to_queues[queue_identifier] = messages
-
     serialized_chain_state = JSONSerializer.serialize(chain_state)
 
     deserialized_chain_state = JSONSerializer.deserialize(serialized_chain_state)

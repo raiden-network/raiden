@@ -13,18 +13,18 @@ from raiden.utils.formatting import to_hex_address
     "values,expected",
     (
         (
-            (0, 0, 0, EMPTY_HASH),
-            decode_hex("0x012893657d8eb2efad4de0a91bcd0e39ad9837745dec3ea923737ea803fc8e3d"),
+            (0, 0, EMPTY_HASH),
+            decode_hex("0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21"),
         ),
         (
-            (1, 5, 0, EMPTY_HASH),
-            decode_hex("0x083303327a0997343edb1947fb70029b743c5391c0f1151a5befe342beb47709"),
+            (1, 5, EMPTY_HASH),
+            decode_hex("0xc6b26a4554afa01fb3409b3bd6e7605a1c1af45b7e644282c6ebf34eddb6f893"),
         ),
-        ((0, 0, 0, LOCKSROOT_OF_NO_LOCKS), bytes(32)),
+        ((0, 0, LOCKSROOT_OF_NO_LOCKS), bytes(32)),
     ),
 )
 def test_hash_balance_data(values, expected):
-    assert hash_balance_data(values[0], values[1], values[2], values[3]) == expected
+    assert hash_balance_data(values[0], values[1], values[2]) == expected
 
 
 def test_events_for_onchain_secretreveal_with_unfit_channels():

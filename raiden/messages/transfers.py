@@ -25,7 +25,6 @@ from raiden.utils.typing import (
     AdditionalHash,
     Address,
     BlockExpiration,
-    BurntAmount,
     ChainID,
     ChannelID,
     ClassVar,
@@ -48,7 +47,6 @@ from raiden.utils.typing import (
 def assert_envelope_values(
     nonce: int,
     channel_identifier: ChannelID,
-    burnt_amount: BurntAmount,
     transferred_amount: TokenAmount,
     locked_amount: LockedAmount,
     locksroot: Locksroot,
@@ -64,12 +62,6 @@ def assert_envelope_values(
 
     if channel_identifier > UINT256_MAX:
         raise ValueError("channel id is too large")
-
-    if burnt_amount < 0:
-        raise ValueError("burnt_amount cannot be negative")
-
-    if burnt_amount > UINT256_MAX:
-        raise ValueError("burnt_amount is too large")
 
     if transferred_amount < 0:
         raise ValueError("transferred_amount cannot be negative")
@@ -171,7 +163,6 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
     chain_id: ChainID
     nonce: Nonce
-    burnt_amount: BurntAmount
     transferred_amount: TokenAmount
     locked_amount: LockedAmount
     locksroot: Locksroot
@@ -182,7 +173,6 @@ class EnvelopeMessage(SignedRetrieableMessage):
         assert_envelope_values(
             self.nonce,
             self.channel_identifier,
-            self.burnt_amount,
             self.transferred_amount,
             self.locked_amount,
             self.locksroot,
@@ -194,7 +184,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
     def _data_to_sign(self) -> bytes:
         balance_hash = hash_balance_data(
-            self.burnt_amount, self.transferred_amount, self.locked_amount, self.locksroot
+            self.transferred_amount, self.locked_amount, self.locksroot
         )
         balance_proof_packed = pack_balance_proof(
             nonce=self.nonce,
@@ -304,7 +294,6 @@ class Unlock(EnvelopeMessage):
             nonce=balance_proof.nonce,
             token_network_address=balance_proof.token_network_address,
             channel_identifier=balance_proof.channel_identifier,
-            burnt_amount=balance_proof.burnt_amount,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
             locksroot=balance_proof.locksroot,
@@ -409,7 +398,6 @@ class LockedTransferBase(EnvelopeMessage):
             token_network_address=balance_proof.token_network_address,
             token=transfer.token,
             channel_identifier=balance_proof.channel_identifier,
-            burnt_amount=balance_proof.burnt_amount,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
             recipient=event.recipient,
@@ -518,7 +506,6 @@ class LockExpired(EnvelopeMessage):
             nonce=balance_proof.nonce,
             token_network_address=balance_proof.token_network_address,
             channel_identifier=balance_proof.channel_identifier,
-            burnt_amount=balance_proof.burnt_amount,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
             locksroot=balance_proof.locksroot,

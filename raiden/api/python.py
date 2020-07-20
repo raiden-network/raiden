@@ -14,6 +14,7 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
+    BurnMismatch,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -39,6 +40,7 @@ from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import Event, StateChange, TransferTask
+from raiden.transfer.channel import get_max_burn_participant
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
@@ -57,6 +59,7 @@ from raiden.utils.typing import (
     Any,
     BlockIdentifier,
     BlockTimeout,
+    BurnAmount,
     ChannelID,
     Dict,
     InitiatorAddress,
@@ -75,7 +78,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    WithdrawAmount, BurntAmount,
+    WithdrawAmount,
 )
 
 if TYPE_CHECKING:
@@ -634,56 +637,57 @@ class RaidenAPI:  # pragma: no unittest
 
     def set_total_channel_burn_amount(
         self,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
         partner_address: Address,
-        total_burn: BurntAmount,
+        total_burn: BurnAmount,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> None:
 
         chain_state = views.state_from_raiden(self.raiden)
 
-        #token_addresses = views.get_token_identifiers(chain_state, token_address)
+        token_addresses = views.get_token_identifiers(chain_state, registry_address)
         channel_state = views.get_channelstate_for(
             chain_state=chain_state,
             token_network_registry_address=registry_address,
             token_address=token_address,
             partner_address=partner_address,
         )
+        if channel_state is None:
+            raise NonexistingChannel("No channel with partner_address for the given token")
+
+        current_max_burn = get_max_burn_participant(channel_state.our_state)
 
         if not is_binary_address(token_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for token in channel"
-            )
+            raise InvalidBinaryAddress("Expected binary address format for token in channel")
 
         if not is_binary_address(partner_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for partner in channel"
-            )
+            raise InvalidBinaryAddress("Expected binary address format for partner in channel")
 
-        #if token_address not in token_addresses:
-            #raise UnknownTokenAddress("Unknown token address")
+        if token_address not in token_addresses:
+            raise UnknownTokenAddress("Unknown token address")
 
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        if total_burn <= channel_state.our_total_burnt_tokens:
-            raise WithdrawMismatch(f"Total burn {total_burn} did not increase")
+        if total_burn <= current_max_burn:
+            raise BurnMismatch(f"Total burn {total_burn} did not increase")
 
         current_balance = channel.get_balance(
             sender=channel_state.our_state, receiver=channel_state.partner_state
         )
-        amount_to_burn = total_burn - channel_state.our_total_burnt_tokens
+
+        amount_to_burn = total_burn - current_max_burn
         if amount_to_burn > current_balance:
             raise InsufficientFunds(
-                "The burn of {} is bigger than the current balance of {}".format(
-                    amount_to_burn, current_balance
-                )
+                f"The burn of {amount_to_burn} is bigger than "
+                f"the current balance of {current_balance}"
             )
 
         self.raiden.burn(
             canonical_identifier=channel_state.canonical_identifier, total_burn=total_burn
         )
-        # TODO adjust waiting for burn
+
         waiting.wait_for_burn_complete(
             raiden=self.raiden,
             canonical_identifier=channel_state.canonical_identifier,

@@ -59,7 +59,6 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
-    BurntAmount,
     ChainID,
     ChannelID,
     ClassVar,
@@ -647,7 +646,6 @@ UNIT_TRANSFER_DESCRIPTION = create(TransferDescriptionProperties(secret=UNIT_SEC
 @dataclass(frozen=True)
 class BalanceProofProperties(Properties):
     nonce: Nonce = EMPTY
-    burnt_amount: BurntAmount = EMPTY
     transferred_amount: TokenAmount = EMPTY
     locked_amount: TokenAmount = EMPTY
     locksroot: Locksroot = EMPTY
@@ -662,7 +660,6 @@ class BalanceProofProperties(Properties):
 
 BalanceProofProperties.DEFAULTS = BalanceProofProperties(
     nonce=1,
-    burnt_amount=BurntAmount(0),
     transferred_amount=TokenAmount(UNIT_TRANSFER_AMOUNT),
     locked_amount=LockedAmount(0),
     locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -749,7 +746,6 @@ def make_signed_balance_proof_from_unsigned(
     unsigned: BalanceProofUnsignedState, signer: Signer, additional_hash: AdditionalHash = None
 ) -> BalanceProofSignedState:
     balance_hash = hash_balance_data(
-        burnt_amount=unsigned.burnt_amount,
         transferred_amount=unsigned.transferred_amount,
         locked_amount=unsigned.locked_amount,
         locksroot=unsigned.locksroot,
@@ -770,7 +766,6 @@ def make_signed_balance_proof_from_unsigned(
 
     return BalanceProofSignedState(
         nonce=unsigned.nonce,
-        burnt_amount=unsigned.burnt_amount,
         transferred_amount=unsigned.transferred_amount,
         locked_amount=unsigned.locked_amount,
         locksroot=unsigned.locksroot,
@@ -788,7 +783,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
     signer = LocalSigner(params.pop("pkey"))
 
     if params["signature"] is GENERATE:
-        keys = ("burnt_amount", "transferred_amount", "locked_amount", "locksroot")
+        keys = ("transferred_amount", "locked_amount", "locksroot")
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
         data_to_sign = pack_balance_proof(
@@ -820,9 +815,7 @@ class LockedTransferUnsignedStateProperties(BalanceProofProperties):
 LockedTransferUnsignedStateProperties.DEFAULTS = LockedTransferUnsignedStateProperties(
     **create_properties(
         BalanceProofProperties(
-            locked_amount=UNIT_TRANSFER_AMOUNT,
-            transferred_amount=TokenAmount(0),
-            burnt_amount=BurntAmount(0),
+            locked_amount=UNIT_TRANSFER_AMOUNT, transferred_amount=TokenAmount(0),
         )
     ).__dict__,
     amount=UNIT_TRANSFER_AMOUNT,
@@ -848,8 +841,6 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         transfer = replace(transfer, locksroot=keccak(lock.encoded))
 
     balance_proof_properties = transfer.extract(BalanceProofProperties)
-    if properties.burnt_amount == EMPTY:
-        balance_proof_properties = replace(balance_proof_properties, burnt_amount=BurntAmount(0))
     if properties.transferred_amount == EMPTY:
         balance_proof_properties = replace(
             balance_proof_properties, transferred_amount=TokenAmount(0)
@@ -939,8 +930,6 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         locked_transfer.locked_amount = transfer.amount
     if properties.transferred_amount == EMPTY:
         locked_transfer.transferred_amount = 0
-    if properties.burnt_amount == EMPTY:
-        locked_transfer.burnt_amount = 0
 
     locked_transfer.sign(signer)
 
@@ -1082,7 +1071,6 @@ def make_signed_transfer_for(
             canonical_identifier=channel_state.canonical_identifier,
             locked_amount=properties.amount,
             transferred_amount=0,
-            burnt_amount=BurntAmount(0),
         )
     else:
         transfer_properties = LockedTransferUnsignedStateProperties(
@@ -1090,7 +1078,6 @@ def make_signed_transfer_for(
             canonical_identifier=channel_state.canonical_identifier,
             locked_amount=properties.locked_amount,
             transferred_amount=properties.transferred_amount,
-            burnt_amount=properties.burnt_amount,
         )
 
     transfer_properties.__dict__.pop("route_states", None)

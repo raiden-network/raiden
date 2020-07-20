@@ -76,7 +76,6 @@ def make_signed_balance_proof_from_counter(counter):
 def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
     return BalanceProofUnsignedState(
         nonce=next(counter),
-        burnt_amount=next(counter),
         transferred_amount=next(counter),
         locked_amount=next(counter),
         locksroot=Locksroot(keccak(next(counter).to_bytes(1, "big"))),

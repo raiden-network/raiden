@@ -14,6 +14,7 @@ from raiden.transfer.events import (
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
     ContractSendSecretReveal,
+    SendBurnRequest,
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import (
@@ -42,6 +43,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask,
 from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelBurn,
     ActionChannelClose,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
@@ -59,6 +61,8 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
+    ReceiveBurnConfirmation,
+    ReceiveBurnRequest,
     ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
@@ -439,7 +443,9 @@ def maybe_add_tokennetwork(
 
 def inplace_delete_message_queue(
     chain_state: ChainState,
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
+    state_change: Union[
+        ReceiveDelivered, ReceiveProcessed, ReceiveBurnConfirmation, ReceiveWithdrawConfirmation
+    ],
     queueid: QueueIdentifier,
 ) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
@@ -459,7 +465,9 @@ def inplace_delete_message_queue(
 
 def inplace_delete_message(
     message_queue: List[SendMessageEvent],
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
+    state_change: Union[
+        ReceiveDelivered, ReceiveProcessed, ReceiveBurnConfirmation, ReceiveWithdrawConfirmation
+    ],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
@@ -472,6 +480,10 @@ def inplace_delete_message(
         # the withdraw request.
         if isinstance(message, SendWithdrawRequest):
             if not isinstance(state_change, ReceiveWithdrawConfirmation):
+                continue
+
+        if isinstance(message, SendBurnRequest):
+            if not isinstance(state_change, ReceiveBurnConfirmation):
                 continue
 
         message_found = (
@@ -715,6 +727,31 @@ def handle_receive_withdraw_expired(
     )
 
 
+def handle_receive_burn_request(
+    chain_state: ChainState, state_change: ReceiveBurnRequest
+) -> TransitionResult[ChainState]:
+    return subdispatch_by_canonical_id(
+        chain_state=chain_state,
+        canonical_identifier=state_change.canonical_identifier,
+        state_change=state_change,
+    )
+
+
+def handle_receive_burn_confirmation(
+    chain_state: ChainState, state_change: ReceiveBurnConfirmation
+) -> TransitionResult[ChainState]:
+    iteration = subdispatch_by_canonical_id(
+        chain_state=chain_state,
+        canonical_identifier=state_change.canonical_identifier,
+        state_change=state_change,
+    )
+    # Clean up any pending SendBurnRequest messages
+    for queueid in list(chain_state.queueids_to_queues.keys()):
+        inplace_delete_message_queue(chain_state, state_change, queueid)
+
+    return iteration
+
+
 def handle_receive_lock_expired(
     chain_state: ChainState, state_change: ReceiveLockExpired
 ) -> TransitionResult[ChainState]:
@@ -779,6 +816,13 @@ def handle_state_change(
             iteration = handle_token_network_action(chain_state, state_change)
         elif type(state_change) == ActionChannelWithdraw:
             assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
+            iteration = subdispatch_by_canonical_id(
+                chain_state=chain_state,
+                canonical_identifier=state_change.canonical_identifier,
+                state_change=state_change,
+            )
+        elif type(state_change) == ActionChannelBurn:
+            assert isinstance(state_change, ActionChannelBurn), MYPY_ANNOTATION
             iteration = subdispatch_by_canonical_id(
                 chain_state=chain_state,
                 canonical_identifier=state_change.canonical_identifier,
@@ -849,6 +893,12 @@ def handle_state_change(
         elif type(state_change) == ContractReceiveUpdateTransfer:
             assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
             iteration = handle_token_network_action(chain_state, state_change)
+        elif type(state_change) == ReceiveBurnRequest:
+            assert isinstance(state_change, ReceiveBurnRequest), MYPY_ANNOTATION
+            iteration = handle_receive_burn_request(chain_state, state_change)
+        elif type(state_change) == ReceiveBurnConfirmation:
+            assert isinstance(state_change, ReceiveBurnConfirmation), MYPY_ANNOTATION
+            iteration = handle_receive_burn_confirmation(chain_state, state_change)
         elif type(state_change) == ReceiveDelivered:
             assert isinstance(state_change, ReceiveDelivered), MYPY_ANNOTATION
             iteration = handle_receive_delivered(chain_state, state_change)
@@ -879,7 +929,6 @@ def handle_state_change(
         elif type(state_change) == ReceiveWithdrawExpired:
             assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
             iteration = handle_receive_withdraw_expired(chain_state, state_change)
-
     chain_state = iteration.new_state
     assert chain_state is not None, "chain_state must be set"
     return iteration

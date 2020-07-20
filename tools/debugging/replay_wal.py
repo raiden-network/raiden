@@ -84,7 +84,6 @@ class Translator(dict):
             try:
                 return dict.__getitem__(self, alt)
             except KeyError:
-                # breakpoint()
                 raise e
 
     def __call__(self, match):

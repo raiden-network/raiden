@@ -16,7 +16,6 @@ from raiden.tests.utils.transfer import sign_and_inject
 from raiden.transfer import views
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
-    BurntAmount,
     LockedAmount,
     Locksroot,
     Nonce,
@@ -68,7 +67,6 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         nonce=Nonce(1),
         channel_identifier=canonical_identifier.channel_identifier,
         token_network_address=token_network_address,
-        burnt_amount=BurntAmount(0),
         transferred_amount=amount,
         locked_amount=LockedAmount(0),
         locksroot=locksroot,

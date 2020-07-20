@@ -40,7 +40,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
-    BurntAmount,
+    BurnAmount,
     ChainID,
     ChannelID,
     Dict,
@@ -58,7 +58,6 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_BurntAmount,
     T_ChainID,
     T_ChannelID,
     T_PaymentWithFeeAmount,
@@ -377,31 +376,27 @@ class TransactionChannelDeposit(State):
 
 
 @dataclass
-class ExpiredWithdrawState:
+class ExpiredWithdrawState(State):
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
 
 
 @dataclass
-class PendingWithdrawState:
+class PendingWithdrawState(State):
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
 
 
 @dataclass
-class ExpiredBurnState:
-    total_withdraw: WithdrawAmount
-    expiration: BlockExpiration
+class ConfirmedBurntByPartnerState(State):
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_burn: BurnAmount
     nonce: Nonce
-
-
-@dataclass
-class PendingBurnState:
-    total_burn: BurntAmount
-    expiration: BlockExpiration
-    nonce: Nonce
+    signature: Signature
+    participant: Address
 
 
 @dataclass
@@ -409,12 +404,8 @@ class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
 
     address: Address
-    contract_balance: Balance
-    burnt_tokens: BurntAmount = field(default=BurntAmount(0))
-    burns_pending: Dict[BurntAmount, PendingBurnState] = field(
-        repr=False, default_factory=dict
-    )
-    burns_expired: List[ExpiredBurnState] = field(repr=False, default_factory=list)
+    confirmed_burnt: Optional[ConfirmedBurntByPartnerState] = field(default=None)
+    pending_burn: List[BurnAmount] = field(repr=False, default_factory=list)
     onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
     withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
         repr=False, default_factory=dict
@@ -455,16 +446,12 @@ class NettingChannelEndState(State):
 
         typecheck(self.address, T_Address)
         typecheck(self.contract_balance, T_TokenAmount)
-        typecheck(self.burnt_tokens, T_BurntAmount)
 
         if self.address == NULL_ADDRESS_BYTES:
             raise ValueError("address cannot be null.")
 
         if self.contract_balance < 0:
             raise ValueError("contract_balance cannot be negative.")
-
-        if self.burnt_tokens < 0:
-            raise ValueError("burnt_amount cannot be negative.")
 
     @property
     def contract_balance(self) -> Balance:
@@ -483,12 +470,6 @@ class NettingChannelEndState(State):
         if self.balance_proof:
             return self.balance_proof.transferred_amount
         return TokenAmount(0)
-
-    @property
-    def burnt_amount(self) -> BurntAmount:
-        if self.balance_proof:
-            return self.balance_proof.burnt_amount
-        return BurntAmount(0)
 
 
 @dataclass
@@ -573,11 +554,6 @@ class NettingChannelState(State):
         return self.our_state.total_withdraw
 
     @property
-    def our_total_burnt_tokens(self) -> BurntAmount:
-        # pylint: disable=E1101
-        return self.our_state.burnt_tokens
-
-    @property
     def partner_total_deposit(self) -> Balance:
         # pylint: disable=E1101
         return self.partner_state.contract_balance
@@ -586,11 +562,6 @@ class NettingChannelState(State):
     def partner_total_withdraw(self) -> WithdrawAmount:
         # pylint: disable=E1101
         return self.partner_state.total_withdraw
-
-    @property
-    def partner_burnt_tokens(self) -> BurntAmount:
-        # pylint: disable=E1101
-        return self.partner_state.burnt_tokens
 
 
 @dataclass

@@ -1,4 +1,5 @@
 from raiden.messages.abstract import Message
+from raiden.messages.burn import BurnConfirmation, BurnRequest
 from raiden.messages.synchronization import Processed
 from raiden.messages.transfers import (
     LockedTransfer,
@@ -11,6 +12,8 @@ from raiden.messages.transfers import (
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.events import (
+    SendBurnConfirmation,
+    SendBurnRequest,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -46,6 +49,12 @@ def message_from_sendevent(send_event: SendMessageEvent) -> Message:
     elif type(send_event) == SendLockExpired:
         assert isinstance(send_event, SendLockExpired), MYPY_ANNOTATION
         return LockExpired.from_event(send_event)
+    elif type(send_event) == SendBurnRequest:
+        assert isinstance(send_event, SendBurnRequest), MYPY_ANNOTATION
+        return BurnRequest.from_event(send_event)
+    elif type(send_event) == SendBurnConfirmation:
+        assert isinstance(send_event, SendBurnConfirmation), MYPY_ANNOTATION
+        return BurnConfirmation.from_event(send_event)
     elif type(send_event) == SendWithdrawRequest:
         assert isinstance(send_event, SendWithdrawRequest), MYPY_ANNOTATION
         return WithdrawRequest.from_event(send_event)

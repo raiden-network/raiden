@@ -24,7 +24,6 @@ from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecre
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
 from raiden.utils.typing import (
     BlockExpiration,
-    BurntAmount,
     InitiatorAddress,
     List,
     LockedAmount,
@@ -163,7 +162,6 @@ def test_regression_multiple_revealsecret(
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
 
     payment_identifier = PaymentID(1)
-    burnt_amount = BurntAmount(0)
     secret, secrethash = make_secret_with_hash()
     expiration = BlockExpiration(app0.raiden.get_block_number() + 100)
     lock_amount = PaymentWithFeeAmount(10)
@@ -179,7 +177,6 @@ def test_regression_multiple_revealsecret(
         token_network_address=token_network_address,
         token=token,
         channel_identifier=channelstate_0_1.identifier,
-        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=LockedAmount(lock_amount),
         recipient=app1.raiden.address,
@@ -208,7 +205,6 @@ def test_regression_multiple_revealsecret(
         nonce=Nonce(mediated_transfer.nonce + 1),
         token_network_address=token_network_address,
         channel_identifier=channelstate_0_1.identifier,
-        burnt_amount=burnt_amount,
         transferred_amount=TokenAmount(lock_amount),
         locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,

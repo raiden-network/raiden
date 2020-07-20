@@ -26,6 +26,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
+    BurnAmount,
     ChainID,
     ChannelID,
     Locksroot,
@@ -46,7 +47,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
-    typecheck, BurntAmount,
+    typecheck,
 )
 
 
@@ -121,7 +122,7 @@ class ActionChannelBurn(StateChange):
     """ Burns funds from channel. """
 
     canonical_identifier: CanonicalIdentifier
-    total_burn: BurntAmount
+    total_burn: BurnAmount
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -425,6 +426,46 @@ class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
     total_withdraw: WithdrawAmount
     nonce: Nonce
     expiration: BlockExpiration
+    signature: Signature
+    participant: Address
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+
+@dataclass(frozen=True)
+class ReceiveBurnRequest(AuthenticatedSenderStateChange):
+    """ A BurnRequest received. """
+
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_burn: BurnAmount
+    nonce: Nonce
+    signature: Signature
+    participant: Address
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+
+@dataclass(frozen=True)
+class ReceiveBurnConfirmation(AuthenticatedSenderStateChange):
+    """ A BurnConfirmation was received. """
+
+    message_identifier: MessageID
+    canonical_identifier: CanonicalIdentifier
+    total_burn: BurnAmount
+    nonce: Nonce
     signature: Signature
     participant: Address
 
