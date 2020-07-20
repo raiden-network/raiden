@@ -61,6 +61,17 @@ def routing_mode():
 
 
 @pytest.fixture
+def ignore_unrelated_claims():
+    """ Processing claims for all participants can be resource expensive. By default, we
+    ignore claims, where our address is not part of it.
+    This fixture allows to enable the complete internal graph creation on a per test basis, by
+    setting
+        @pytest.mark.parametrize('ignore_unrelated_claims', [False])
+    """
+    return True
+
+
+@pytest.fixture
 def raiden_chain(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
@@ -91,6 +102,7 @@ def raiden_chain(
     enable_rest_api: bool,
     port_generator: Iterator[Port],
     claim_generator: ClaimGenerator,
+    ignore_unrelated_claims: bool,
 ) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
@@ -171,7 +183,7 @@ def raiden_chain(
     # Here we make sure, all apps know all the routes
     all_claims = claim_generator.claims()
     for app in raiden_apps:
-        app.raiden.process_claims({}, all_claims)
+        app.raiden.process_claims({}, all_claims, ignore_unrelated=ignore_unrelated_claims)
 
     yield raiden_apps
 
@@ -263,6 +275,7 @@ def raiden_network(
     enable_rest_api: bool,
     port_generator: Iterator[Port],
     claims: None,  # pylint: disable=unused-argument
+    ignore_unrelated_claims: bool,
 ) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -347,7 +360,7 @@ def raiden_network(
     all_claims = claim_generator.claims()
 
     for app in raiden_apps:
-        app.raiden.process_claims({}, all_claims)
+        app.raiden.process_claims({}, all_claims, ignore_unrelated=ignore_unrelated_claims)
 
     yield raiden_apps
 
