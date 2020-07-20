@@ -5,7 +5,7 @@ from functools import singledispatch
 from hashlib import sha256
 from operator import itemgetter
 
-from eth_utils import keccak
+from eth_utils import keccak, to_canonical_address
 
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX, UINT256_MAX
 from raiden.messages.decode import balanceproof_from_envelope
@@ -346,6 +346,19 @@ def make_hop_from_channel(channel_state: NettingChannelState = EMPTY) -> HopStat
 def make_hop_to_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
     channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
     return HopState(channel_state.our_state.address, channel_state.identifier)
+
+
+def make_claim(balance: int = 0) -> Claim:
+    _DUMMY_ADDRESS = to_canonical_address("0x" + "0" * 40)
+    dummy_claim = Claim(
+        chain_id=ChainID(2 ** 256 - 1),
+        token_network_address=TokenNetworkAddress(_DUMMY_ADDRESS),
+        owner=Address(_DUMMY_ADDRESS),
+        partner=Address(_DUMMY_ADDRESS),
+        total_amount=TokenAmount(balance),
+    )
+    dummy_claim.signature = Signature(b"")
+    return dummy_claim
 
 
 # CONSTANTS
