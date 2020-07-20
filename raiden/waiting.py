@@ -94,6 +94,7 @@ def wait_for_block(
 
         log.debug("wait_for_block", current_block_number=current, **log_details)
         gevent.sleep(retry_timeout)
+        gevent.idle()
         current = raiden.get_block_number()
 
 
