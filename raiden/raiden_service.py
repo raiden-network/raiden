@@ -691,13 +691,16 @@ class RaidenService(Runnable):
             self.last_log_time = time.monotonic()
             self.last_log_block = polled_block_number
 
-    def _initialize_claims(self) -> None:
+    def _initialize_claims(self, ignore_unrelated: bool = True) -> None:
         if self.config.claims_path is not None:
             operator_info, claims_generator = parse_claims_file(self.config.claims_path)
-            self.process_claims(operator_info, claims_generator)
+            self.process_claims(operator_info, claims_generator, ignore_unrelated=ignore_unrelated)
 
     def process_claims(
-        self, operator_info: Optional[Dict[str, Any]], claims: Optional[Iterable[Claim]]
+        self,
+        operator_info: Optional[Dict[str, Any]],
+        claims: Optional[Iterable[Claim]],
+        ignore_unrelated: bool = True,
     ) -> None:
         if operator_info is None or claims is None:
             return
@@ -713,6 +716,7 @@ class RaidenService(Runnable):
             token_network_registry_address=self.default_registry.address,
             settle_timeout=self.default_registry.settlement_timeout_min(BLOCK_ID_LATEST),
             fee_config=self.config.mediation_fees,
+            ignore_unrelated=ignore_unrelated,
         )
 
         # TODO: is this safe or do we need a special state change?

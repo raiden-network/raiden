@@ -92,6 +92,7 @@ def get_state_changes_for_claims(
     token_network_registry_address: TokenNetworkRegistryAddress,
     settle_timeout: BlockTimeout,
     fee_config: MediationFeeConfig,
+    ignore_unrelated: bool = True,
 ) -> Tuple[List[StateChange], List[Claim]]:
     unprocessable_claims: List[Claim] = []
     state_changes: List[StateChange] = []
@@ -167,7 +168,7 @@ def get_state_changes_for_claims(
 
         # Node is not a participant, just store routing information
         # No need to add a deposit state change here
-        else:
+        elif not ignore_unrelated:
             state_changes.append(
                 ContractReceiveRouteNew(
                     transaction_hash=TransactionHash(b""),
