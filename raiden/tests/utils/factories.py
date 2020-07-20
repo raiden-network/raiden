@@ -28,6 +28,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
+    Claim,
     HopState,
     NettingChannelEndState,
     NettingChannelState,
@@ -511,7 +512,17 @@ NettingChannelEndStateProperties.OUR_STATE = NettingChannelEndStateProperties(
 @create.register(NettingChannelEndStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> NettingChannelEndState:
     args = _properties_to_kwargs(properties, defaults or NettingChannelEndStateProperties.DEFAULTS)
-    state = NettingChannelEndState(args["address"] or make_address(), args["balance"])
+
+    claim = Claim(
+        chain_id=UNIT_CHAIN_ID,
+        token_network_address=make_token_network_address(),
+        owner=args["address"] or make_address(),
+        partner=make_address(),
+        total_amount=args["balance"],
+        signature=make_signature(),
+    )
+
+    state = NettingChannelEndState(args["address"] or make_address(), claim=claim)
 
     pending_locks = args["pending_locks"] or None
     if pending_locks:
