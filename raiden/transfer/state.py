@@ -340,7 +340,7 @@ class Claim(State):
         return ChannelID(int.from_bytes(bytes=hashed_id, byteorder="big"))
 
     @cached_property
-    def sender(self) -> Optional[Address]:
+    def signer(self) -> Optional[Address]:
         if not self.signature:
             return None
         data_that_was_signed = self.pack()

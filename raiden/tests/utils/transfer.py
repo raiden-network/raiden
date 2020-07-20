@@ -152,7 +152,7 @@ def transfer(
     """ Nice to read shortcut to make successful mediated transfer.
 
     Note:
-        Only the initiator and target are synched.
+        Only the initiator and target are synced.
     """
     if transfer_state is TransferState.UNLOCKED:
         return _transfer_unlocked(
