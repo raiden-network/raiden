@@ -62,6 +62,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, c
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [64])  # default settlement is too low for 3 hops
+@pytest.mark.skip("Raiddit")
 def test_regression_unfiltered_routes(raiden_network, token_addresses, deposit, claim_generator):
     """ The transfer should proceed without triggering an assert.
 
@@ -240,6 +241,7 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.skip("Raiddit")
 def test_regression_payment_complete_after_refund_to_the_initiator(
     raiden_network, token_addresses, deposit, claim_generator
 ):

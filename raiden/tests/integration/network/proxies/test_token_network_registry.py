@@ -24,6 +24,7 @@ from raiden_contracts.contract_manager import ContractManager
 # Disable the default tokens
 @pytest.mark.parametrize("number_of_tokens", [0])
 @pytest.mark.parametrize("register_tokens", [False])
+@pytest.mark.skip("Raiddit")
 def test_token_network_registry(
     deploy_client: JSONRPCClient,
     contract_manager: ContractManager,

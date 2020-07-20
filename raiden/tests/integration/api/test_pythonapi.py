@@ -277,6 +277,7 @@ def test_transfer_with_invalid_address_type(raiden_network, token_addresses):
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_api_channel_events(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
@@ -364,6 +365,7 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("reveal_timeout", [8])
 @pytest.mark.parametrize("settle_timeout", [30])
+@pytest.mark.skip("Raiddit")
 def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unused-argument
     raiden_network, token_addresses, reveal_timeout, retry_timeout
 ):
@@ -633,6 +635,7 @@ def run_test_token_addresses(raiden_network, token_addresses):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.skip("Raiddit")
 def test_raidenapi_channel_lifecycle(
     raiden_network, token_addresses, deposit, retry_timeout, settle_timeout_max
 ):

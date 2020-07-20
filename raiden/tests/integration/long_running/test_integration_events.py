@@ -150,6 +150,7 @@ def wait_both_channel_open(app0, app1, registry_address, token_address, retry_ti
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.skip("Raiddit")
 def test_channel_new(raiden_chain, retry_timeout, token_addresses):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
@@ -174,6 +175,7 @@ def test_channel_new(raiden_chain, retry_timeout, token_addresses):
 @pytest.mark.parametrize("privatekey_seed", ["event_new_channel:{}"])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.skip("Raiddit")
 def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
@@ -229,6 +231,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.skip("Raiddit")
 def test_query_events(
     raiden_chain,
     token_addresses,
@@ -409,6 +412,7 @@ def test_query_events(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.skip("Raiddit")
 def test_secret_revealed_on_chain(
     raiden_chain, deposit, settle_timeout, token_addresses, retry_interval_initial
 ):

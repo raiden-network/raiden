@@ -104,6 +104,7 @@ def is_channel_registered(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_settle_is_automatically_called(
     raiden_network: List[App], token_addresses: List[TokenAddress]
 ) -> None:
@@ -307,6 +308,7 @@ def test_lock_expiry(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_batch_unlock(
     raiden_network: List[App],
     token_addresses: List[TokenAddress],
@@ -475,6 +477,7 @@ def test_batch_unlock(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_channel_withdraw(
     raiden_network: List[App],
     token_addresses: List[TokenAddress],
@@ -641,6 +644,7 @@ def test_channel_withdraw_expired(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.skip("Raiddit")
 def test_settled_lock(
     token_addresses: List[TokenAddress], raiden_network: List[App], deposit: TokenAmount
 ) -> None:
@@ -910,6 +914,7 @@ def test_start_end_attack(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_automatic_dispute(
     raiden_network: List[App], deposit: TokenAmount, token_addresses: List[TokenAddress]
 ) -> None:
@@ -987,6 +992,7 @@ def test_automatic_dispute(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_batch_unlock_after_restart(raiden_network, restart_node, token_addresses, deposit):
     """Simulate the case where:
     - A sends B a transfer
@@ -1144,6 +1150,7 @@ def test_batch_unlock_after_restart(raiden_network, restart_node, token_addresse
 @expect_failure
 @pytest.mark.parametrize("number_of_nodes", (2,))
 @pytest.mark.parametrize("channels_per_node", (1,))
+@pytest.mark.skip("Raiddit")
 def test_handle_insufficient_eth(raiden_network, restart_node, token_addresses, caplog):
     app0, app1 = raiden_network
     token = token_addresses[0]

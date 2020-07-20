@@ -19,6 +19,7 @@ from raiden_contracts.constants import MessageTypeId
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     raiden_network, number_of_nodes, token_addresses, network_wait
 ):
@@ -104,6 +105,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_node_can_settle_if_partner_does_not_call_update_transfer(
     raiden_network, number_of_nodes, token_addresses, network_wait
 ):

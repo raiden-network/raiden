@@ -346,6 +346,7 @@ def test_api_channel_open_and_deposit_race(
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_api_channel_open_close_and_settle(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):

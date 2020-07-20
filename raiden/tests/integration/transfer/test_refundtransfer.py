@@ -304,6 +304,7 @@ def test_refund_transfer(raiden_chain, token_addresses, deposit, retry_timeout):
 @pytest.mark.parametrize("privatekey_seed", ["test_different_view_of_last_bp_during_unlock:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.skip("Raiddit")
 def test_different_view_of_last_bp_during_unlock(
     raiden_chain: List[App], restart_node, token_addresses, deposit, retry_timeout, blockchain_type
 ):

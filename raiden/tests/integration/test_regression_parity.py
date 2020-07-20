@@ -41,6 +41,7 @@ STATE_PRUNING = {
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
+@pytest.mark.skip("Raiddit")
 def test_locksroot_loading_during_channel_settle_handling(
     raiden_chain: List[App],
     restart_node: RestartNode,

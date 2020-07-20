@@ -168,6 +168,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.skip("Raiddit")
 def test_alarm_task_first_run_syncs_blockchain_events(raiden_network, blockchain_services):
     """Raiden must synchronize with the blockchain events during
     initialization.
