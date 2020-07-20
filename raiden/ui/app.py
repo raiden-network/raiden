@@ -223,7 +223,7 @@ def run_app(
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
-    claims_path: Optional[Path],
+    claims_path: Optional[Path] = None,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ) -> App:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument

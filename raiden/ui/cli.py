@@ -226,7 +226,6 @@ def options(func: Callable) -> Callable:
             "--claims-file-path",
             type=click.Path(exists=True, dir_okay=False, resolve_path=True),
             help="Path to a claims file",
-            default="claims.jsonl",
         ),
         option_group(
             "Channel-specific Options",
