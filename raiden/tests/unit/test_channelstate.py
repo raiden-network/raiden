@@ -7,6 +7,7 @@ from itertools import cycle
 import pytest
 from eth_utils import keccak
 
+from raiden.claim import EMPTY_CLAIM
 from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.transfers import Lock, Unlock
@@ -225,9 +226,11 @@ def test_new_end_state():
 def test_endstate_update_contract_balance():
     """The balance must be monotonic."""
     balance1 = 101
+    claim = deepcopy(EMPTY_CLAIM)
+    claim.total_amount = balance1
     node_address = make_address()
 
-    end_state = NettingChannelEndState(node_address)
+    end_state = NettingChannelEndState(node_address, claim=claim)
     assert end_state.contract_balance == balance1
 
     claim = deepcopy(end_state.claim)
@@ -257,7 +260,7 @@ def test_channelstate_update_contract_balance():
     balance1_new = our_model1.balance + deposit_amount
 
     deposit_transaction = TransactionChannelDeposit(
-        our_model1.participant_address, balance1_new, deposit_block_number
+        our_model1.participant_address, balance1_new, deposit_block_number,
     )
     state_change = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
@@ -1495,7 +1498,7 @@ def test_update_transfer():
 
 
 def test_get_amount_locked():
-    state = NettingChannelEndState(address=make_address(), contract_balance=0)
+    state = NettingChannelEndState(address=make_address())
 
     assert channel.get_amount_locked(state) == 0
 

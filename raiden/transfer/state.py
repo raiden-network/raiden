@@ -371,6 +371,7 @@ class TransactionChannelDeposit(State):
             from raiden.claim import EMPTY_CLAIM  # type: ignore
 
             self.claim = EMPTY_CLAIM
+            self.claim.total_amount = Balance(self.contract_balance)
 
 
 @dataclass
