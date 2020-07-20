@@ -33,7 +33,6 @@ from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
-    BurntAmount,
     ChainID,
     List,
     LockedAmount,
@@ -167,7 +166,6 @@ def test_payment_channel_proxy_basics(
     )
 
     channel_proxy_1.settle(
-        burnt_amount=BurntAmount(0),
         transferred_amount=TokenAmount(0),
         locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,

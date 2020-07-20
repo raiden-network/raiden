@@ -24,7 +24,6 @@ from raiden.transfer import views
 from raiden.transfer.state import TransactionChannelDeposit
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
 from raiden.utils.typing import (
-    BurntAmount,
     List,
     LockedAmount,
     Locksroot,
@@ -312,7 +311,6 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
         nonce=Nonce(2),
         token_network_address=canonical_identifier.token_network_address,
         channel_identifier=canonical_identifier.channel_identifier,
-        burnt_amount=BurntAmount(0),
         transferred_amount=TokenAmount(400),
         locked_amount=LockedAmount(0),
         locksroot=Locksroot(keccak(b"")),
@@ -338,7 +336,6 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
         nonce=Nonce(2),
         token_network_address=canonical_identifier.token_network_address,
         channel_identifier=canonical_identifier.channel_identifier,
-        burnt_amount=BurntAmount(0),
         transferred_amount=TokenAmount(500),
         locked_amount=LockedAmount(0),
         locksroot=Locksroot(keccak(b"")),

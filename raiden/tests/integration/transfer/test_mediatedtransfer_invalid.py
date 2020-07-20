@@ -26,7 +26,6 @@ from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
-    BurntAmount,
     InitiatorAddress,
     LockedAmount,
     Nonce,
@@ -96,7 +95,6 @@ def test_receive_lockedtransfer_invalidnonce(
 
     amount = 10
     payment_identifier = PaymentID(1)
-    burnt_amount = BurntAmount(0)
     secrethash = transfer(
         initiator_app=app0,
         target_app=app2,
@@ -116,7 +114,6 @@ def test_receive_lockedtransfer_invalidnonce(
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        burnt_amount=BurntAmount(burnt_amount),
         transferred_amount=TokenAmount(amount),
         locked_amount=LockedAmount(amount),
         recipient=app1.raiden.address,
@@ -172,7 +169,6 @@ def test_receive_lockedtransfer_invalidsender(
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        burnt_amount=BurntAmount(0),
         transferred_amount=TokenAmount(0),
         locked_amount=lock_amount,
         recipient=app0.raiden.address,
@@ -219,7 +215,6 @@ def test_receive_lockedtransfer_invalidrecipient(
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        burnt_amount=BurntAmount(0),
         transferred_amount=TokenAmount(0),
         locked_amount=lock_amount,
         recipient=invalid_recipient,
@@ -275,7 +270,6 @@ def test_received_lockedtransfer_closedchannel(
         token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel0.identifier,
-        burnt_amount=BurntAmount(0),
         transferred_amount=TokenAmount(0),
         locked_amount=lock_amount,
         recipient=app1.raiden.address,

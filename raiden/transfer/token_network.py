@@ -4,6 +4,7 @@ from raiden.transfer import channel
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
+    ActionChannelBurn,
     ActionChannelClose,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
@@ -16,6 +17,8 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
+    ReceiveBurnConfirmation,
+    ReceiveBurnRequest,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
@@ -27,12 +30,15 @@ from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, List, U
 StateChangeWithChannelID = Union[
     ActionChannelClose,
     ActionChannelWithdraw,
+    ActionChannelBurn,
     ActionChannelSetRevealTimeout,
     ContractReceiveChannelClosed,
     ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
     ContractReceiveChannelWithdraw,
+    ReceiveBurnConfirmation,
+    ReceiveBurnRequest,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawRequest,
     ReceiveWithdrawExpired,
@@ -96,6 +102,22 @@ def handle_channel_close(
 def handle_channel_withdraw(
     token_network_state: TokenNetworkState,
     state_change: ActionChannelWithdraw,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
+def handle_channel_burn(
+    token_network_state: TokenNetworkState,
+    state_change: ActionChannelBurn,
     block_number: BlockNumber,
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
@@ -361,6 +383,38 @@ def handle_receive_channel_withdraw_expired(
     )
 
 
+def handle_receive_burn_request(
+    token_network_state: TokenNetworkState,
+    state_change: ReceiveBurnRequest,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
+def handle_receive_channel_burn_confirmation(
+    token_network_state: TokenNetworkState,
+    state_change: ReceiveBurnConfirmation,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
 def state_transition(
     token_network_state: TokenNetworkState,
     state_change: StateChange,
@@ -383,6 +437,15 @@ def state_transition(
     elif type(state_change) == ActionChannelWithdraw:
         assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
         iteration = handle_channel_withdraw(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    elif type(state_change) == ActionChannelBurn:
+        assert isinstance(state_change, ActionChannelBurn), MYPY_ANNOTATION
+        iteration = handle_channel_burn(
             token_network_state=token_network_state,
             state_change=state_change,
             block_number=block_number,
@@ -494,5 +557,22 @@ def state_transition(
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
-
+    elif type(state_change) == ReceiveBurnRequest:
+        assert isinstance(state_change, ReceiveBurnRequest), MYPY_ANNOTATION
+        iteration = handle_receive_burn_request(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    elif type(state_change) == ReceiveBurnConfirmation:
+        assert isinstance(state_change, ReceiveBurnConfirmation), MYPY_ANNOTATION
+        iteration = handle_receive_channel_burn_confirmation(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
     return iteration

@@ -38,7 +38,6 @@ from raiden.api.v1.resources import (
     AddressResource,
     BlockchainEventsNetworkResource,
     BlockchainEventsTokenResource,
-    BurnResource,
     ChannelBlockchainEventsResource,
     ChannelsResource,
     ChannelsResourceByTokenAddress,
@@ -67,6 +66,7 @@ from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     APIServerPortInUseError,
     BrokenPreconditionError,
+    BurnMismatch,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -117,6 +117,7 @@ from raiden.utils.typing import (
     Any,
     BlockIdentifier,
     BlockTimeout,
+    BurnAmount,
     Dict,
     Endpoint,
     List,
@@ -131,7 +132,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     WithdrawAmount,
     cast,
-    typecheck, BurntAmount,
+    typecheck,
 )
 
 log = structlog.get_logger(__name__)
@@ -1242,35 +1243,34 @@ class RestAPI:  # pragma: no unittest
         self,
         registry_address: TokenNetworkRegistryAddress,
         channel_state: NettingChannelState,
-        total_burn: BurntAmount,
+        total_burn: BurnAmount,
     ) -> Response:
         log.debug(
             "Burning tokens in channel",
             node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
-            total_withdraw=total_withdraw,
+            total_burn=total_burn,
         )
 
-        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+        if channel.get_status(channel_state) == ChannelState.STATE_CLOSED:
             return api_error(
-                errors="Can't withdraw from a closed channel", status_code=HTTPStatus.CONFLICT
+                errors="Can't burn from a closed channel", status_code=HTTPStatus.CONFLICT
             )
 
         try:
             self.raiden_api.set_total_channel_burn_amount(
+                registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
                 total_burn,
             )
-        except (InsufficientFunds, WithdrawMismatch) as e:
+        except (InsufficientFunds, BurnMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-        # TODO handle InsufficientEth here
 
         updated_channel_state = self.raiden_api.get_channel(
             registry_address, channel_state.token_address, channel_state.partner_state.address
         )
-
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result)
 
@@ -1349,6 +1349,7 @@ class RestAPI:  # pragma: no unittest
         partner_address: Address,
         total_deposit: TokenAmount = None,
         total_withdraw: WithdrawAmount = None,
+        total_burn: BurnAmount = None,
         reveal_timeout: BlockTimeout = None,
         state: str = None,
     ) -> Response:
@@ -1362,22 +1363,17 @@ class RestAPI:  # pragma: no unittest
             reveal_timeout=reveal_timeout,
             state=state,
         )
+        is_channel_open_required = (
+            reveal_timeout is not None
+            or total_deposit is not None
+            or total_withdraw is not None
+            or total_burn is not None
+        )
 
-        if reveal_timeout is not None and state is not None:
+        if is_channel_open_required and state is not None:
             return api_error(
-                errors="Can not update a channel's reveal timeout and state at the same time",
-                status_code=HTTPStatus.CONFLICT,
-            )
-
-        if total_deposit is not None and state is not None:
-            return api_error(
-                errors="Can not update a channel's total deposit and state at the same time",
-                status_code=HTTPStatus.CONFLICT,
-            )
-
-        if total_withdraw is not None and state is not None:
-            return api_error(
-                errors="Can not update a channel's total withdraw and state at the same time",
+                errors="Can not update a channel's state and one of "
+                "total withdraw, deposit, burn at the same time",
                 status_code=HTTPStatus.CONFLICT,
             )
 
@@ -1408,14 +1404,22 @@ class RestAPI:  # pragma: no unittest
                 status_code=HTTPStatus.CONFLICT,
             )
 
-        if total_deposit and total_deposit < 0:
+        if total_deposit and total_deposit <= 0:
             return api_error(
-                errors="Amount to deposit must not be negative.", status_code=HTTPStatus.CONFLICT
+                errors="Amount to deposit must not be smaller or equal to 0.",
+                status_code=HTTPStatus.CONFLICT,
             )
 
-        if total_withdraw and total_withdraw < 0:
+        if total_withdraw and total_withdraw <= 0:
             return api_error(
-                errors="Amount to withdraw must not be negative.", status_code=HTTPStatus.CONFLICT
+                errors="Amount to withdraw must not be smaller or equal to 0.",
+                status_code=HTTPStatus.CONFLICT,
+            )
+
+        if total_burn and total_burn <= 0:
+            return api_error(
+                errors="Amount to burn must not be smaller or equal to 0.",
+                status_code=HTTPStatus.CONFLICT,
             )
 
         empty_request = (
@@ -1423,13 +1427,14 @@ class RestAPI:  # pragma: no unittest
             and state is None
             and total_withdraw is None
             and reveal_timeout is None
+            and total_burn is None
         )
         if empty_request:
             return api_error(
                 errors=(
                     "Nothing to do. Should either provide "
-                    "'total_deposit', 'total_withdraw', 'reveal_timeout' or "
-                    "'state' argument"
+                    "'total_deposit', 'total_withdraw', 'reveal_timeout', "
+                    "'total_burn', or 'state' argument"
                 ),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
@@ -1456,6 +1461,9 @@ class RestAPI:  # pragma: no unittest
 
         elif total_withdraw is not None:
             result = self._withdraw(registry_address, channel_state, total_withdraw)
+
+        elif total_burn is not None:
+            result = self._burn(registry_address, channel_state, total_burn)
 
         elif reveal_timeout is not None:
             result = self._set_channel_reveal_timeout(

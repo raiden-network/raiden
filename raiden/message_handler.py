@@ -6,6 +6,7 @@ from gevent.pool import Pool
 from raiden import routing
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
 from raiden.messages.abstract import Message
+from raiden.messages.burn import BurnConfirmation, BurnRequest
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.messages.transfers import (
@@ -33,6 +34,8 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import HopState
 from raiden.transfer.state_change import (
+    ReceiveBurnConfirmation,
+    ReceiveBurnRequest,
     ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
@@ -106,6 +109,14 @@ class MessageHandler:
             elif type(message) == WithdrawExpired:
                 assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
                 pool.apply_async(self.handle_message_withdraw_expired, (raiden, message))
+
+            elif type(message) == BurnRequest:
+                assert isinstance(message, BurnRequest), MYPY_ANNOTATION
+                pool.apply_async(self.handle_message_burn_request, (raiden, message))
+
+            elif type(message) == BurnConfirmation:
+                assert isinstance(message, BurnConfirmation), MYPY_ANNOTATION
+                pool.apply_async(self.handle_message_burn_confirmation, (raiden, message))
 
             elif type(message) == Delivered:
                 assert isinstance(message, Delivered), MYPY_ANNOTATION
@@ -204,6 +215,46 @@ class MessageHandler:
             expiration=message.expiration,
         )
         return [withdraw_expired]
+
+    @staticmethod
+    def handle_message_burn_request(
+        raiden: "RaidenService", message: BurnRequest  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
+        assert message.sender, "message must be signed"
+        burn_request = ReceiveBurnRequest(
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=message.chain_id,
+                token_network_address=message.token_network_address,
+                channel_identifier=message.channel_identifier,
+            ),
+            message_identifier=message.message_identifier,
+            total_burn=message.total_burn,
+            sender=message.sender,
+            participant=message.participant,
+            nonce=message.nonce,
+            signature=message.signature,
+        )
+        return [burn_request]
+
+    @staticmethod
+    def handle_message_burn_confirmation(
+        raiden: "RaidenService", message: BurnConfirmation  # pylint: disable=unused-argument
+    ) -> List[StateChange]:
+        assert message.sender, "message must be signed"
+        burn_confirmation = ReceiveBurnConfirmation(
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=message.chain_id,
+                token_network_address=message.token_network_address,
+                channel_identifier=message.channel_identifier,
+            ),
+            message_identifier=message.message_identifier,
+            total_burn=message.total_burn,
+            sender=message.sender,
+            participant=message.participant,
+            nonce=message.nonce,
+            signature=message.signature,
+        )
+        return [burn_confirmation]
 
     @staticmethod
     def handle_message_secretrequest(

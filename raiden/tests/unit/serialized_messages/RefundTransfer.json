@@ -1,5 +1,4 @@
 {
-    "burnt_amount": 0,
     "chain_id": "337",
     "channel_identifier": "1338",
     "initiator": "0x696e69746961746f72696e69746961746f72696e",
@@ -24,7 +23,7 @@
     "nonce": "1",
     "payment_identifier": "1",
     "recipient": "0x7461726765747461726765747461726765747461",
-    "signature": "0xbc037282f0ec88b6ef8bd4efa194da0fbe9aceca8a086bf02ce61fe47092c3682be33e8c82eb4fee6bea799b511e3f6ce5fe2dfe3578e97967d7f493d6518b0e1b",
+    "signature": "0x047a559bc8103fa39c10c572fa67f7ddb31a06bee2084d8d80e2b32311fddb2f7f2c8d93ac32f779987feb6531ebcacc66cc6ca5f4bedc932e5a80a23d4d33ca1c",
     "target": "0x7461726765747461726765747461726765747461",
     "token": "0x746f6b656e746f6b656e746f6b656e746f6b656e",
     "token_network_address": "0x6e6574776f726b6e6574776f726b6e6574776f72",

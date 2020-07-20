@@ -17,6 +17,7 @@ from raiden.utils.typing import (
     Address,
     BlockExpiration,
     BlockTimeout,
+    BurnAmount,
     ChannelID,
     InitiatorAddress,
     List,
@@ -30,7 +31,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    WithdrawAmount, BurntAmount,
+    WithdrawAmount,
 )
 
 # pylint: disable=too-many-arguments,too-few-public-methods
@@ -121,32 +122,34 @@ class ContractSendChannelWithdraw(ContractSendEvent):
 class SendBurnRequest(SendMessageEvent):
     """ Event emitted if the netting channel balance proof must be updated. """
 
-    balance_proof: BalanceProofSignedState
-    expiration: BlockExpiration
+    total_burn: BurnAmount
+    participant: Address
+    nonce: Nonce
 
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.balance_proof.canonical_identifier.token_network_address
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.balance_proof.channel_identifier
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"total_withdraw: {self.total_burn} "
+            f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
+            f">"
+        )
 
 
 @dataclass(frozen=True)
 class SendBurnConfirmation(SendMessageEvent):
     """ Event emitted if the netting channel balance proof must be updated. """
 
-    balance_proof: BalanceProofSignedState
-    balance_proof_counter_signature: Signature
+    total_burn: BurnAmount
+    participant: Address
+    nonce: Nonce
 
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.balance_proof.canonical_identifier.token_network_address
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.balance_proof.channel_identifier
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"total_withdraw: {self.total_burn} "
+            f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
+            f">"
+        )
 
 
 @dataclass(frozen=True)
@@ -409,6 +412,30 @@ class EventInvalidActionWithdraw(Event):
     """ Event emitted when an invalid withdraw is initiated. """
 
     attempted_withdraw: WithdrawAmount
+    reason: str
+
+
+@dataclass(frozen=True)
+class EventInvalidActionBurn(Event):
+    """ Event emitted when an invalid burn is initiated. """
+
+    attempted_burn: BurnAmount
+    reason: str
+
+
+@dataclass(frozen=True)
+class EventInvalidReceivedBurnRequest(Event):
+    """ Event emitted when an invalid burn request is received. """
+
+    attempted_burn: BurnAmount
+    reason: str
+
+
+@dataclass(frozen=True)
+class EventInvalidReceivedBurnConfirmation(Event):
+    """ Event emitted when an invalid burn confirmation is received. """
+
+    attempted_burn: BurnAmount
     reason: str
 
 

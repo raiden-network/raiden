@@ -25,6 +25,8 @@ from raiden.transfer.events import (
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
     ContractSendSecretReveal,
+    SendBurnConfirmation,
+    SendBurnRequest,
     SendMessageEvent,
     SendProcessed,
     SendWithdrawConfirmation,
@@ -50,6 +52,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
+    BurnAmount,
     ChainID,
     ChannelID,
     EncodedData,
@@ -105,6 +108,8 @@ MESSAGE_NAME_TO_QUALIFIED_NAME = {
     "WithdrawConfirmation": "raiden.messages.withdraw.WithdrawConfirmation",
     "WithdrawExpired": "raiden.messages.withdraw.WithdrawExpired",
     "WithdrawRequest": "raiden.messages.withdraw.WithdrawRequest",
+    "BurnConfirmation": "raiden.messages.burn.BurnConfirmation",
+    "BurnRequest": "raiden.messages.burn.BurnRequest",
 }
 
 
@@ -147,6 +152,7 @@ _native_to_marshmallow.update(
         PaymentWithFeeAmount: IntegerToStringField,
         TransferID: IntegerToStringField,
         WithdrawAmount: IntegerToStringField,
+        BurnAmount: IntegerToStringField,
         Optional[BlockNumber]: OptionalIntegerToStringField,  # type: ignore
         # Integers which should be converted to strings
         # This is done for querying purposes as sqlite
@@ -171,6 +177,8 @@ _native_to_marshmallow.update(
                 SendUnlock,
                 SendSecretRequest,
                 SendRefundTransfer,
+                SendBurnRequest,
+                SendBurnConfirmation,
                 SendWithdrawRequest,
                 SendWithdrawConfirmation,
                 SendWithdrawExpired,

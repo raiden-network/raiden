@@ -22,7 +22,7 @@ networkx
 psutil
 pysha3
 toml
--e git+git://github.com/karlb/raiden-contracts.git@b360763e8b6a8f2972c000ae35265428e7653ef3#egg=raiden-contracts
+-e git+https://github.com/raiden-network/raiden-contracts@raiddit#egg=raiden-contracts
 raiden-webui
 requests
 structlog

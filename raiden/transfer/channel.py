@@ -14,8 +14,11 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
+    EventInvalidActionBurn,
     EventInvalidActionSetRevealTimeout,
     EventInvalidActionWithdraw,
+    EventInvalidReceivedBurnConfirmation,
+    EventInvalidReceivedBurnRequest,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
@@ -23,10 +26,12 @@ from raiden.transfer.events import (
     EventInvalidReceivedWithdraw,
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
+    SendBurnConfirmation,
+    SendBurnRequest,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
-    SendWithdrawRequest, SendBurnRequest,
+    SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -54,6 +59,7 @@ from raiden.transfer.state import (
     BalanceProofUnsignedState,
     ChannelState,
     Claim,
+    ConfirmedBurntByPartnerState,
     ExpiredWithdrawState,
     HashTimeLockState,
     NettingChannelEndState,
@@ -63,9 +69,10 @@ from raiden.transfer.state import (
     RouteState,
     TransactionExecutionStatus,
     UnlockPartialProofState,
-    message_identifier_from_prng, PendingBurnState,
+    message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
+    ActionChannelBurn,
     ActionChannelClose,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
@@ -76,14 +83,16 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveUpdateTransfer,
+    ReceiveBurnConfirmation,
+    ReceiveBurnRequest,
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
-    ReceiveWithdrawRequest, ActionChannelBurn,
+    ReceiveWithdrawRequest,
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.packing import pack_balance_proof, pack_withdraw
+from raiden.utils.packing import pack_balance_proof, pack_burn, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -93,7 +102,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
-    BurntAmount,
+    BurnAmount,
     ChainID,
     ChannelID,
     EncodedData,
@@ -412,27 +421,16 @@ def is_valid_withdraw(
     )
 
 
-def is_valid_channel_total_burn(channel_total_withdraw: TokenAmount) -> bool:
+def is_total_burn_overflowing(our_burn: BurnAmount, partner_burn: BurnAmount) -> bool:
     """Sanity check for the channel's total burn.
-
-    The channel's total deposit is:
-
-        p1.total_deposit + p2.total_deposit
-
-    The channel's total withdraw is:
-
-        p1.total_withdraw + p2.total_withdraw
 
     The smart contract forces:
 
-        - The channel's total deposit to fit in a UINT256.
-        - The channel's withdraw must be in the range [0,channel_total_deposit].
+        - The channel's total burn to fit in a UINT256.
 
-    Because the `total_withdraw` must be in the range [0,channel_deposit], and
-    the maximum value for channel_deposit is UINT256, the overflow below must
-    never happen, otherwise there is a smart contract bug.
     """
-    return channel_total_withdraw <= UINT256_MAX
+    channel_total_burn = our_burn + partner_burn
+    return channel_total_burn > UINT256_MAX
 
 
 def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Optional[Secret]:
@@ -488,10 +486,7 @@ def is_valid_balanceproof_signature(
     balance_proof: BalanceProofSignedState, sender_address: Address
 ) -> SuccessOrError:
     balance_hash = hash_balance_data(
-        balance_proof.burnt_amount,
-        balance_proof.transferred_amount,
-        balance_proof.locked_amount,
-        balance_proof.locksroot,
+        balance_proof.transferred_amount, balance_proof.locked_amount, balance_proof.locksroot,
     )
 
     # The balance proof must be tied to a single channel instance, through the
@@ -1117,33 +1112,115 @@ def is_valid_withdraw_expired(
         return SuccessOrError()
 
 
-def is_valid_action_burn(
-    channel_state: NettingChannelState, burn: ActionChannelBurn
+def is_valid_burn_request(
+    channel_state: NettingChannelState, burn_request: ReceiveBurnRequest
 ) -> SuccessOrError:
-    balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
-
-    burn_overflow = not is_valid_channel_total_burn(
-        TokenAmount(burn.total_burn + channel_state.partner_burnt_tokens)
+    expected_nonce = get_next_nonce(channel_state.partner_state)
+    distributable = get_distributable(
+        sender=channel_state.partner_state, receiver=channel_state.our_state
     )
 
-    burn_amount = burn.total_burn - channel_state.our_total_burnt_tokens
-    #if get_status(channel_state) != ChannelState.STATE_OPENED:
-    #    return SuccessOrError("Invalid withdraw, the channel is not opened")
+    burn_overflow = is_total_burn_overflowing(
+        burn_request.total_burn, get_max_burn_participant(channel_state.partner_state)
+    )
 
-    if burn_amount <= 0:
-        return SuccessOrError(f"Total burn {burn.total_burn} did not increase")
-    elif balance < burn_amount:
+    burn_amount = burn_request.total_burn - get_max_burn_participant(channel_state.our_state)
+
+    if channel_state.canonical_identifier != burn_request.canonical_identifier:
+        return SuccessOrError("Invalid canonical identifier provided in burn request")
+    elif get_status(channel_state) != ChannelState.STATE_OPENED:
+        return SuccessOrError("Channel not open, cannot burn")
+    elif burn_request.participant != channel_state.partner_state.address:
+        return SuccessOrError("Invalid participant, it must be the partner address")
+    elif burn_request.sender != channel_state.partner_state.address:
+        return SuccessOrError("Invalid sender, burn request must be sent by the partner.")
+    elif burn_amount <= 0:
+        return SuccessOrError(f"Total burn {burn_request.total_burn} did not increase")
+    elif distributable < burn_amount:
         return SuccessOrError(
-            f"Insufficient balance: {balance}. Requested {burn_amount} for burn"
+            f"Insufficient balance: {distributable}. Requested {burn_amount} for burn"
+        )
+    elif burn_request.nonce != expected_nonce:
+        return SuccessOrError(
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {burn_request.nonce}."
         )
     elif burn_overflow:
         return SuccessOrError(
-            f"The new total_burn {burn.total_burn} will cause an overflow"
+            f"The new total_burn {burn_request.total_burn} will cause an overflow"
         )
     else:
         return SuccessOrError()
 
-## ToDo add burn confirmation
+
+def is_valid_burn_confirmation(
+    channel_state: NettingChannelState, received_burn: ReceiveBurnConfirmation
+) -> SuccessOrError:
+
+    if received_burn.total_burn in channel_state.our_state.pending_burn:
+        return SuccessOrError(
+            f"Received burn confirmation {received_burn.total_burn} "
+            f"was not found in burn states"
+        )
+
+    channel_state.our_state.pending_burn.index(received_burn.total_burn)
+
+    expected_nonce = get_next_nonce(channel_state.partner_state)
+
+    packed = pack_burn(
+        canonical_identifier=received_burn.canonical_identifier,
+        participant=received_burn.participant,
+        total_burn=received_burn.total_burn,
+    )
+
+    is_valid_burnt_signature = is_valid_signature(
+        data=packed, signature=received_burn.signature, sender_address=received_burn.sender
+    )
+    if not is_valid_burnt_signature:
+        return SuccessOrError(
+            f"Invalid burn confirmation {is_valid_burnt_signature.as_error_message}"
+        )
+
+    if channel_state.canonical_identifier != received_burn.canonical_identifier:
+        return SuccessOrError("Invalid canonical identifier provided in burn request")
+
+    elif received_burn.nonce != expected_nonce:
+        return SuccessOrError(
+            f"Nonce did not change sequentially, expected: {expected_nonce} "
+            f"got: {received_burn.nonce}."
+        )
+    elif received_burn.sender != channel_state.partner_state.address:
+        return SuccessOrError("Invalid sender, burn confirmation must be sent by the partner.")
+    else:
+        return SuccessOrError()
+
+
+def is_valid_action_burn(
+    channel_state: NettingChannelState, burn: ActionChannelBurn
+) -> SuccessOrError:
+    distributable = get_distributable(
+        sender=channel_state.our_state, receiver=channel_state.partner_state
+    )
+
+    burn_overflow = is_total_burn_overflowing(
+        burn.total_burn, get_max_burn_participant(channel_state.partner_state)
+    )
+
+    burn_amount = burn.total_burn - get_max_burn_participant(channel_state.our_state)
+
+    if get_status(channel_state) != ChannelState.STATE_OPENED:
+        return SuccessOrError("Invalid withdraw, the channel is not opened")
+    if burn_amount <= 0:
+        return SuccessOrError(f"Total burn {burn.total_burn} did not increase")
+    elif distributable < burn_amount:
+        return SuccessOrError(
+            f"Insufficient balance: {distributable}. Requested {burn_amount} for burn"
+        )
+    elif burn_overflow:
+        return SuccessOrError(f"The new total_burn {burn.total_burn} will cause an overflow")
+    else:
+        return SuccessOrError()
+
 
 def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmount:
     return TokenAmount(
@@ -1222,6 +1299,8 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
     """
     sender_transferred_amount = 0
     receiver_transferred_amount = 0
+    max_pending_burn = 0
+    confirmed_burn = 0
 
     if sender.balance_proof:
         sender_transferred_amount = sender.balance_proof.transferred_amount
@@ -1229,9 +1308,16 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
     if receiver.balance_proof:
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
+    if sender.pending_burn:
+        max_pending_burn = max(sender.pending_burn)
+
+    if sender.confirmed_burnt:
+        confirmed_burn = sender.confirmed_burnt.total_burn
+
     return Balance(
         sender.contract_balance
         - max(sender.offchain_total_withdraw, sender.onchain_total_withdraw)
+        - max(max_pending_burn, confirmed_burn)
         - sender_transferred_amount
         + receiver_transferred_amount
     )
@@ -1270,7 +1356,7 @@ def get_distributable(
     """
     _, _, transferred_amount, locked_amount = get_current_balanceproof(sender)
 
-    distributable = get_balance(sender, receiver) - get_amount_locked(sender)
+    distributable = get_balance(sender, receiver) - locked_amount
 
     overflow_limit = max(UINT256_MAX - transferred_amount - locked_amount, 0)
 
@@ -1361,6 +1447,20 @@ def get_status(channel_state: NettingChannelState) -> ChannelState:
         result = ChannelState.STATE_OPENED
 
     return result
+
+
+def get_max_burn_participant(participant_state: NettingChannelEndState) -> BurnAmount:
+    pending_burn = BurnAmount(max(participant_state.pending_burn, default=0))
+    if participant_state.confirmed_burnt:
+        return BurnAmount(max(pending_burn, participant_state.confirmed_burnt.total_burn,))
+    return pending_burn
+
+
+def get_max_burn_channel(channel_state: NettingChannelState) -> BurnAmount:
+    return BurnAmount(
+        get_max_burn_participant(channel_state.our_state)
+        + get_max_burn_participant(channel_state.partner_state)
+    )
 
 
 def _del_unclaimed_lock(end_state: NettingChannelEndState, secrethash: SecretHash) -> None:
@@ -1479,10 +1579,8 @@ def create_sendlockedtransfer(
 
     if our_balance_proof:
         transferred_amount = our_balance_proof.transferred_amount
-        burnt_amount = our_balance_proof.burnt_amount
     else:
         transferred_amount = TokenAmount(0)
-        burnt_amount = BurntAmount(0)
 
     msg = "caller must make sure the result wont overflow"
     assert transferred_amount + amount <= UINT256_MAX, msg
@@ -1496,7 +1594,6 @@ def create_sendlockedtransfer(
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
-        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
@@ -1552,7 +1649,6 @@ def create_unlock(
     msg = "the lock is pending, it must be in the pending locks"
     assert our_balance_proof is not None, msg
     transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
-    burnt_amount = BurntAmount(our_balance_proof.burnt_amount)
 
     pending_locks = compute_locks_without(
         our_state.pending_locks, EncodedData(bytes(lock.encoded))
@@ -1572,7 +1668,6 @@ def create_unlock(
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
-        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
@@ -1757,39 +1852,19 @@ def send_withdraw_request(
 
 def send_burn_request(
     channel_state: NettingChannelState,
-    total_burnt: BurntAmount,
-    block_number: BlockNumber,
+    total_burn: BurnAmount,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
     events: List[Event] = list()
 
-    if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
-        return events
+    msg = "Total burn_amount must be monotonically increasing"
+    assert total_burn not in channel_state.our_state.pending_burn, msg
+    msg = "Channel must be open"
+    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
 
     nonce = get_next_nonce(channel_state.our_state)
-
-    expiration = get_safe_initial_expiration(
-        block_number=block_number, reveal_timeout=channel_state.reveal_timeout
-    )
-    burn_state = PendingBurnState(
-        total_burnt=total_burnt, nonce=nonce, expiration=expiration
-    )
-
     channel_state.our_state.nonce = nonce
-    channel_state.our_state.burns_pending[burn_state.total_burn] = burn_state
-
-    get_current_balanceproof()
-    our_balance_proof = channel_state.our_state.balance_proof
-
-    msg = "total_burnt_amount does not match"
-    assert our_balance_proof.burnt_amount = total_burnt, msg
-
-    our_balance_proof_signed =
-
-    total_burn = withdraw_state.total_burn,
-    participant = channel_state.our_state.address,
-    nonce = channel_state.our_state.nonce,
-    expiration = burn_state,
+    channel_state.our_state.pending_burn.append(total_burn)
 
     burn_event = SendBurnRequest(
         canonical_identifier=CanonicalIdentifier(
@@ -1799,7 +1874,9 @@ def send_burn_request(
         ),
         recipient=channel_state.partner_state.address,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
-        balance_proof=our_balance_proof_signed,
+        total_burn=total_burn,
+        participant=channel_state.our_state.address,
+        nonce=channel_state.our_state.nonce,
     )
 
     events.append(burn_event)
@@ -1822,7 +1899,6 @@ def create_sendexpiredlock(
 
     assert balance_proof is not None, "there should be a balance proof because a lock is expiring"
     transferred_amount = balance_proof.transferred_amount
-    burnt_amount = balance_proof.burnt_amount
 
     pending_locks = compute_locks_without(
         sender_end_state.pending_locks, EncodedData(bytes(locked_lock.encoded))
@@ -1837,7 +1913,6 @@ def create_sendexpiredlock(
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
-        burnt_amount=burnt_amount,
         transferred_amount=transferred_amount,
         locked_amount=updated_locked_amount,
         locksroot=locksroot,
@@ -2062,34 +2137,25 @@ def handle_action_withdraw(
 def handle_action_burn(
     channel_state: NettingChannelState,
     action_burn: ActionChannelBurn,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
     is_valid_burn = is_valid_action_burn(channel_state, action_burn)
 
     if is_valid_burn:
-        ## Now change the state in the ChannelObject
-        channel_state.our_state.burnt_tokens += action_burn.total_burn
+        # Pending burn will be added in send_burn_request()
         events = send_burn_request(
             channel_state=channel_state,
-            total_withdraw=action_withdraw.total_withdraw,
-            block_number=block_number,
+            total_burn=action_burn.total_burn,
             pseudo_random_generator=pseudo_random_generator,
         )
     else:
-        ## Todo fix that
         error_msg = is_valid_burn.as_error_message
         assert error_msg, "is_valid_action_burn should return error msg if not valid"
-        events = [
-            EventInvalidActionWithdraw(
-                attempted_burn=action_withdraw.total_withdraw, reason=error_msg
-            )
-        ]
+        events = [EventInvalidActionBurn(attempted_burn=action_burn.total_burn, reason=error_msg)]
 
     return TransitionResult(channel_state, events)
-
-
-
 
 
 def handle_action_set_reveal_timeout(
@@ -2252,6 +2318,78 @@ def handle_receive_withdraw_expired(
             attempted_withdraw=withdraw_expired.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw_expired]
+
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_burn_request(
+    channel_state: NettingChannelState, burn_request: ReceiveBurnRequest
+) -> TransitionResult[NettingChannelState]:
+    is_valid = is_valid_burn_request(channel_state=channel_state, burn_request=burn_request)
+    if is_valid:
+        channel_state.partner_state.confirmed_burnt = ConfirmedBurntByPartnerState(
+            message_identifier=burn_request.message_identifier,
+            canonical_identifier=burn_request.canonical_identifier,
+            total_burn=burn_request.total_burn,
+            nonce=burn_request.nonce,
+            signature=burn_request.signature,
+            participant=burn_request.participant,
+        )
+        channel_state.partner_state.nonce = burn_request.nonce
+
+        channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
+        send_burn = SendBurnConfirmation(
+            canonical_identifier=channel_state.canonical_identifier,
+            recipient=channel_state.partner_state.address,
+            message_identifier=burn_request.message_identifier,
+            total_burn=burn_request.total_burn,
+            participant=channel_state.partner_state.address,
+            nonce=channel_state.our_state.nonce,
+        )
+
+        events: List[Event] = [send_burn]
+    else:
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_burn_request should return error msg if not valid"
+        invalid_burn_request = EventInvalidReceivedBurnRequest(
+            attempted_burn=burn_request.total_burn, reason=error_msg
+        )
+        events = [invalid_burn_request]
+
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_burn_confirmation(
+    channel_state: NettingChannelState, burn: ReceiveBurnConfirmation,
+) -> TransitionResult[NettingChannelState]:
+    is_valid = is_valid_burn_confirmation(channel_state=channel_state, received_burn=burn)
+
+    events: List[Event]
+    if is_valid:
+        channel_state.partner_state.nonce = burn.nonce
+        events = [
+            SendProcessed(
+                recipient=channel_state.partner_state.address,
+                message_identifier=burn.message_identifier,
+                canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+            )
+        ]
+        channel_state.our_state.confirmed_burnt = ConfirmedBurntByPartnerState(
+            message_identifier=burn.message_identifier,
+            canonical_identifier=burn.canonical_identifier,
+            total_burn=burn.total_burn,
+            nonce=burn.nonce,
+            signature=burn.signature,
+            participant=burn.participant,
+        )
+        channel_state.our_state.pending_burn.remove(burn.total_burn)
+    else:
+        error_msg = is_valid.as_error_message
+        assert error_msg, "is_valid_burn_confirmation should return error msg if not valid"
+        invalid_burn = EventInvalidReceivedBurnConfirmation(
+            attempted_burn=burn.total_burn, reason=error_msg
+        )
+        events = [invalid_burn]
 
     return TransitionResult(channel_state, events)
 
@@ -2642,7 +2780,9 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     assert our_balance >= 0, msg
     assert partner_balance >= 0, msg
 
-    channel_capacity = get_capacity(channel_state)
+    """This weired check is only for the Raiddit Challenge!!!
+    """
+    channel_capacity = get_capacity(channel_state) - get_max_burn_channel(channel_state)
     msg = "The whole deposit of the channel has to be accounted for."
     assert our_balance + partner_balance == channel_capacity, msg
 
@@ -2743,6 +2883,7 @@ def state_transition(
         iteration = handle_action_burn(
             channel_state=channel_state,
             action_burn=state_change,
+            pseudo_random_generator=pseudo_random_generator,
         )
     elif type(state_change) == ActionChannelSetRevealTimeout:
         assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
@@ -2785,7 +2926,16 @@ def state_transition(
         iteration = handle_receive_withdraw_expired(
             channel_state=channel_state, withdraw_expired=state_change, block_number=block_number
         )
-
+    elif type(state_change) == ReceiveBurnRequest:
+        assert isinstance(state_change, ReceiveBurnRequest), MYPY_ANNOTATION
+        iteration = handle_receive_burn_request(
+            channel_state=channel_state, burn_request=state_change
+        )
+    elif type(state_change) == ReceiveBurnConfirmation:
+        assert isinstance(state_change, ReceiveBurnConfirmation), MYPY_ANNOTATION
+        iteration = handle_receive_burn_confirmation(
+            channel_state=channel_state, burn=state_change,
+        )
     if iteration.new_state is not None:
         sanity_check(iteration.new_state)
 

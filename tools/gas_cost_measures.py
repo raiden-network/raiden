@@ -15,7 +15,6 @@ from raiden.utils.packing import pack_balance_proof
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     AdditionalHash,
-    BurntAmount,
     ChainID,
     ChannelID,
     Dict,
@@ -178,7 +177,6 @@ def find_max_pending_transfers(gas_limit) -> None:
         )
 
         balance_hash = hash_balance_data(
-            burnt_amount=BurntAmount(0),
             transferred_amount=TokenAmount(3000),
             locked_amount=LockedAmount(2000),
             locksroot=Locksroot(pending_transfers_tree.hash_of_packed_transfers),

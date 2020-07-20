@@ -18,7 +18,6 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockHash,
     BlockNumber,
-    BurntAmount,
     Callable,
     ChainID,
     ChannelID,
@@ -33,7 +32,6 @@ from raiden.utils.typing import (
     T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_BurntAmount,
     T_LockedAmount,
     T_Locksroot,
     T_Signature,
@@ -302,7 +300,6 @@ class BalanceProofUnsignedState(State):
     """ Balance proof from the local node without the signature. """
 
     nonce: Nonce
-    burnt_amount: BurntAmount
     transferred_amount: TokenAmount
     locked_amount: LockedAmount
     locksroot: Locksroot
@@ -311,7 +308,6 @@ class BalanceProofUnsignedState(State):
 
     def __post_init__(self) -> None:
         typecheck(self.nonce, int)
-        typecheck(self.burnt_amount, T_BurntAmount)
         typecheck(self.transferred_amount, T_TokenAmount)
         typecheck(self.locked_amount, T_TokenAmount)
         typecheck(self.locksroot, T_Locksroot)
@@ -321,12 +317,6 @@ class BalanceProofUnsignedState(State):
 
         if self.nonce > UINT64_MAX:
             raise ValueError("nonce is too large")
-
-        if self.burnt_amount < 0:
-            raise ValueError("burnt_amount cannot be negative")
-
-        if self.burnt_amount > UINT256_MAX:
-            raise ValueError("burnt_amount is too large")
 
         if self.transferred_amount < 0:
             raise ValueError("transferred_amount cannot be negative")
@@ -340,7 +330,6 @@ class BalanceProofUnsignedState(State):
         self.canonical_identifier.validate()
 
         self.balance_hash = hash_balance_data(
-            burnt_amount=self.burnt_amount,
             transferred_amount=self.transferred_amount,
             locked_amount=self.locked_amount,
             locksroot=self.locksroot,
@@ -366,7 +355,6 @@ class BalanceProofSignedState(State):
     """
 
     nonce: Nonce
-    burnt_amount: BurntAmount
     transferred_amount: TokenAmount
     locked_amount: LockedAmount
     locksroot: Locksroot
@@ -378,7 +366,6 @@ class BalanceProofSignedState(State):
 
     def __post_init__(self) -> None:
         typecheck(self.nonce, int)
-        typecheck(self.burnt_amount, T_BurntAmount)
         typecheck(self.transferred_amount, T_TokenAmount)
         typecheck(self.locked_amount, T_LockedAmount)
         typecheck(self.locksroot, T_Locksroot)
@@ -391,12 +378,6 @@ class BalanceProofSignedState(State):
 
         if self.nonce > UINT64_MAX:
             raise ValueError("nonce is too large")
-
-        if self.burnt_amount < 0:
-            raise ValueError("burnt_amount cannot be negative")
-
-        if self.burnt_amount > UINT256_MAX:
-            raise ValueError("burnt_amount is too large")
 
         if self.transferred_amount < 0:
             raise ValueError("transferred_amount cannot be negative")
@@ -416,7 +397,6 @@ class BalanceProofSignedState(State):
         self.canonical_identifier.validate()
 
         self.balance_hash = hash_balance_data(
-            burnt_amount=self.burnt_amount,
             transferred_amount=self.transferred_amount,
             locked_amount=self.locked_amount,
             locksroot=self.locksroot,
@@ -439,7 +419,6 @@ class BalanceProofSignedState(State):
             f"{self.__class__.__name__}< "
             f"nonce: {self.nonce} transferred_amount: {self.transferred_amount} "
             f"locked_amount: {self.locked_amount} locksroot: {to_hex(self.locksroot)} "
-            f"burnt_amount: {self.burnt_amount} "
             f"message_hash: {to_hex(self.message_hash)} signature: {to_hex(self.signature)} "
             f"sender: {to_checksum_address(self.sender)} "
             f"canonical_identifier: {self.canonical_identifier} "

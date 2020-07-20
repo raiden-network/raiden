@@ -31,13 +31,13 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_address
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import BurntAmount, Set
+from raiden.utils.typing import Set
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
     MessageTypeId,
 )
-from raiden_contracts.utils.type_aliases import TokenAmount
+from raiden_contracts.utils.type_aliases import T_ChannelID, TokenAmount
 
 SIGNATURE_SIZE_IN_BITS = 520
 
@@ -235,49 +235,49 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    # empty_balance_proof = BalanceProof(
-    #    channel_identifier=100,
-    #    token_network_address=c1_token_network_proxy.address,
-    #    balance_hash=EMPTY_BALANCE_HASH,
-    #    nonce=0,
-    #    chain_id=chain_id,
-    #    transferred_amount=0,
-    # )
-    # closing_data = (
-    #    empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
-    # )
+    empty_balance_proof = BalanceProof(
+        channel_identifier=100,
+        token_network_address=c1_token_network_proxy.address,
+        balance_hash=EMPTY_BALANCE_HASH,
+        nonce=0,
+        chain_id=chain_id,
+        transferred_amount=0,
+    )
+    closing_data = (
+        empty_balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + EMPTY_SIGNATURE
+    )
 
-    # msg = "Trying to close an non-existing channel must fail."
-    # match = "The channel was not open at the provided block"
-    # with pytest.raises(RaidenUnrecoverableError, match=match):
-    #    c1_token_network_proxy.close(
-    #        channel_identifier=100,
-    #        partner=c2_client.address,
-    #        balance_hash=EMPTY_HASH,
-    #        nonce=0,
-    #        additional_hash=EMPTY_HASH,
-    #        non_closing_signature=EMPTY_SIGNATURE,
-    #        closing_signature=c1_signer.sign(data=closing_data),
-    #        given_block_identifier=BLOCK_ID_LATEST,
-    #    )
-    #    pytest.fail(msg)
+    msg = "Trying to close an non-existing channel must fail."
+    match = "The channel was not open at the provided block"
+    with pytest.raises(RaidenUnrecoverableError, match=match):
+        c1_token_network_proxy.close(
+            channel_identifier=100,
+            partner=c2_client.address,
+            balance_hash=EMPTY_HASH,
+            nonce=0,
+            additional_hash=EMPTY_HASH,
+            non_closing_signature=EMPTY_SIGNATURE,
+            closing_signature=c1_signer.sign(data=closing_data),
+            given_block_identifier=BLOCK_ID_LATEST,
+        )
+        pytest.fail(msg)
 
     channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier=BLOCK_ID_LATEST,
     )
-    # msg = "new_netting_channel did not return a valid channel id"
-    # assert isinstance(channel_identifier, T_ChannelID), msg
+    msg = "new_netting_channel did not return a valid channel id"
+    assert isinstance(channel_identifier, T_ChannelID), msg
 
-    # msg = "multiple channels with the same peer are not allowed"
-    # with pytest.raises(BrokenPreconditionError):
-    #    c1_token_network_proxy.new_netting_channel(
-    #        partner=c2_client.address,
-    #        settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
-    #        given_block_identifier=BLOCK_ID_LATEST,
-    #    )
-    #    pytest.fail(msg)
+    msg = "multiple channels with the same peer are not allowed"
+    with pytest.raises(BrokenPreconditionError):
+        c1_token_network_proxy.new_netting_channel(
+            partner=c2_client.address,
+            settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
+            given_block_identifier=BLOCK_ID_LATEST,
+        )
+        pytest.fail(msg)
 
     assert (
         c1_token_network_proxy.get_channel_identifier_or_none(
@@ -461,12 +461,10 @@ def test_token_network_proxy(
     with pytest.raises(BrokenPreconditionError):
         c2_token_network_proxy.settle(
             channel_identifier=channel_identifier,
-            burnt_amount=BurntAmount(0),
             transferred_amount=invalid_transferred_amount,
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c1_client.address,
-            partner_burnt_amount=BurntAmount(0),
             partner_transferred_amount=transferred_amount,
             partner_locked_amount=0,
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -476,13 +474,11 @@ def test_token_network_proxy(
     c2_token_network_proxy.settle(
         channel_identifier=channel_identifier,
         transferred_amount=0,
-        burnt_amount=BurntAmount(0),
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c1_client.address,
         partner_transferred_amount=transferred_amount,
         partner_locked_amount=0,
-        partner_burnt_amount=BurntAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=BLOCK_ID_LATEST,
     )
@@ -670,13 +666,11 @@ def test_token_network_proxy_update_transfer(
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
-            burnt_amount=BurntAmount(0),
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=transferred_amount_c2,
             partner_locked_amount=0,
-            partner_burnt_amount=BurntAmount(0),
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier=BLOCK_ID_LATEST,
         )
@@ -690,13 +684,11 @@ def test_token_network_proxy_update_transfer(
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=2,
-            burnt_amount=BurntAmount(0),
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
             partner_transferred_amount=2,
             partner_locked_amount=0,
-            partner_burnt_amount=BurntAmount(0),
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
             given_block_identifier=BLOCK_ID_LATEST,
         )
@@ -705,13 +697,11 @@ def test_token_network_proxy_update_transfer(
     c1_token_network_proxy.settle(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
-        burnt_amount=BurntAmount(0),
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
         partner_transferred_amount=transferred_amount_c2,
         partner_locked_amount=0,
-        partner_burnt_amount=BurntAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=BLOCK_ID_LATEST,
     )
@@ -916,11 +906,9 @@ def test_token_network_actions_at_pruned_blocks(
         c1_token_network_proxy.settle(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount_c1,
-            burnt_amount=BurntAmount(0),
             locked_amount=0,
             locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner=c2_client.address,
-            partner_burnt_amount=BurntAmount(0),
             partner_transferred_amount=0,
             partner_locked_amount=0,
             partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -936,12 +924,10 @@ def test_token_network_actions_at_pruned_blocks(
 
     c1_token_network_proxy.settle(
         channel_identifier=channel_identifier,
-        burnt_amount=BurntAmount(0),
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
         locksroot=LOCKSROOT_OF_NO_LOCKS,
         partner=c2_client.address,
-        partner_burnt_amount=BurntAmount(0),
         partner_transferred_amount=0,
         partner_locked_amount=0,
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,

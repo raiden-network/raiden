@@ -8,7 +8,6 @@ from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.utils.typing import (
     Any,
     BalanceHash,
-    BurntAmount,
     LockedAmount,
     Locksroot,
     SecretHash,
@@ -23,10 +22,7 @@ if TYPE_CHECKING:
 
 
 def hash_balance_data(
-    burnt_amount: BurntAmount,
-    transferred_amount: TokenAmount,
-    locked_amount: LockedAmount,
-    locksroot: Locksroot,
+    transferred_amount: TokenAmount, locked_amount: LockedAmount, locksroot: Locksroot,
 ) -> BalanceHash:
     assert locksroot != b"", "Can't hash empty locksroot"
     assert len(locksroot) == 32, "Locksroot has wrong length"
@@ -34,8 +30,7 @@ def hash_balance_data(
         return BalanceHash(EMPTY_HASH)
 
     return keccak(
-        burnt_amount.to_bytes(32, byteorder="big")
-        + transferred_amount.to_bytes(32, byteorder="big")
+        transferred_amount.to_bytes(32, byteorder="big")
         + locked_amount.to_bytes(32, byteorder="big")
         + locksroot
     )

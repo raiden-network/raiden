@@ -925,3 +925,65 @@ def test_api_channel_deposit_limit(
         json_response["errors"]
         == "Deposit of 75000000000000001 is larger than the channel participant deposit limit"
     )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("deposit", [1000])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_channel_burn(api_server_test_instance: APIServer, raiden_network, token_addresses):
+    _, app1 = raiden_network
+    token_address = token_addresses[0]
+    partner_address = app1.raiden.address
+
+    # burn a 0 amount
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_burn="0"),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # Burn an amount larger than balance
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_burn="1500"),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # Burn a valid amount
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_burn="750"),
+    )
+    response = request.send().response
+    assert_response_with_code(response, HTTPStatus.OK)
+
+    # Burn same amount as before which would sum up to more than the balance
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_burn="750"),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)

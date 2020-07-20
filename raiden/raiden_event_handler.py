@@ -48,10 +48,12 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
+    SendBurnConfirmation,
+    SendBurnRequest,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
-    SendWithdrawRequest, SendBurnConfirmation, SendBurnRequest,
+    SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -793,12 +795,10 @@ class RaidenEventHandler(EventHandler):
                 )
 
             our_balance_proof = event_record.data.balance_proof  # type: ignore
-            our_burnt_amount = our_balance_proof.burnt_amount
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
             our_locksroot = our_balance_proof.locksroot
         else:
-            our_burnt_amount = 0
             our_transferred_amount = 0
             our_locked_amount = 0
             our_locksroot = LOCKSROOT_OF_NO_LOCKS
@@ -817,24 +817,20 @@ class RaidenEventHandler(EventHandler):
                 )
 
             partner_balance_proof = state_change_record.data.balance_proof  # type: ignore
-            partner_burnt_amount = partner_balance_proof.burnt_amount
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
             partner_locksroot = partner_balance_proof.locksroot
         else:
-            partner_burnt_amount = 0
             partner_transferred_amount = 0
             partner_locked_amount = 0
             partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         try:
             payment_channel.settle(
-                burnt_amount=our_burnt_amount,
                 transferred_amount=our_transferred_amount,
                 locked_amount=our_locked_amount,
                 locksroot=our_locksroot,
                 claim=our_claim,
-                partner_burnt_amount=partner_burnt_amount,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,

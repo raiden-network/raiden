@@ -26,7 +26,6 @@ from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils.typing import (
     Address,
-    BurntAmount,
     ChannelID,
     List,
     LockedAmount,
@@ -71,13 +70,10 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     channel_state.partner_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
 
     def detail_participants(_participant1, _participant2, _block_identifier, _channel_identifier):
-        burnt_amount = BurntAmount(0)
         transferred_amount = TokenAmount(1)
         locked_amount = LockedAmount(1)
         locksroot = make_locksroot()
-        balance_hash = hash_balance_data(
-            burnt_amount, transferred_amount, locked_amount, locksroot
-        )
+        balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         our_details = ParticipantDetails(
             address=raiden.address,
             deposit=TokenAmount(5),
@@ -89,13 +85,10 @@ def test_handle_contract_send_channelunlock_already_unlocked():
             locked_amount=locked_amount,
         )
 
-        burnt_amount = BurntAmount(0)
         transferred_amount = TokenAmount(1)
         locked_amount = LockedAmount(1)
         # Let's mock here that partner locksroot is 0x0
-        balance_hash = hash_balance_data(
-            burnt_amount, transferred_amount, locked_amount, locksroot
-        )
+        balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         partner_details = ParticipantDetails(
             address=participant,
             deposit=TokenAmount(5),

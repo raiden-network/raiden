@@ -20,12 +20,14 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
+    ReceiveBurnConfirmation,
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,
     BlockNumber,
+    BurnAmount,
     Callable,
     ChannelID,
     PaymentAmount,
@@ -599,4 +601,42 @@ def wait_for_withdraw_complete(
                 return
 
         log.debug("wait_for_withdraw_complete", **log_details)
+        gevent.sleep(retry_timeout)
+
+
+def wait_for_burn_complete(
+    raiden: "RaidenService",
+    canonical_identifier: CanonicalIdentifier,
+    total_burn: BurnAmount,
+    retry_timeout: float,
+) -> None:
+    """Wait until a burn with a specific identifier and amount
+    is seen in the WAL.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    log_details = {
+        "canonical_identifier": canonical_identifier,
+        "target_total_burn": total_burn,
+    }
+    assert raiden, TRANSPORT_ERROR_MSG
+    assert raiden.wal, TRANSPORT_ERROR_MSG
+    assert raiden.transport, TRANSPORT_ERROR_MSG
+    stream = raiden.wal.storage.get_state_changes_stream(retry_timeout=retry_timeout)
+
+    while True:
+        state_changes = next(stream)
+
+        for state_change in state_changes:
+            found = (
+                isinstance(state_change, ReceiveBurnConfirmation)
+                and state_change.total_burn == total_burn
+                and state_change.canonical_identifier == canonical_identifier
+            )
+
+            if found:
+                return
+
+        log.debug("wait_for_burn_complete", **log_details)
         gevent.sleep(retry_timeout)

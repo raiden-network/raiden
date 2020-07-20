@@ -103,6 +103,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import ChainState, Claim, NetworkState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelBurn,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
@@ -112,7 +113,7 @@ from raiden.transfer.state_change import (
     ContractReceiveNewTokenNetworkRegistry,
     ReceiveUnlock,
     ReceiveWithdrawExpired,
-    ReceiveWithdrawRequest, ActionChannelBurn,
+    ReceiveWithdrawRequest,
 )
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.gevent import spawn_named
@@ -126,6 +127,7 @@ from raiden.utils.typing import (
     Address,
     BlockNumber,
     BlockTimeout,
+    BurnAmount,
     InitiatorAddress,
     MonitoringServiceAddress,
     OneToNAddress,
@@ -141,7 +143,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
-    typecheck, BurntAmount,
+    typecheck,
 )
 from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
@@ -1610,9 +1612,7 @@ class RaidenService(Runnable):
 
         self.handle_and_track_state_changes([init_withdraw])
 
-    def burn(
-        self, canonical_identifier: CanonicalIdentifier, total_burn: BurntAmount
-    ) -> None:
+    def burn(self, canonical_identifier: CanonicalIdentifier, total_burn: BurnAmount) -> None:
         init_burn = ActionChannelBurn(
             canonical_identifier=canonical_identifier, total_burn=total_burn
         )
