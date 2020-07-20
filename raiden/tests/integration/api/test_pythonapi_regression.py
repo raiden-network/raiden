@@ -12,6 +12,7 @@ from raiden.utils.typing import PaymentAmount, PaymentID, TargetAddress
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
+@pytest.mark.skip("Raiddit")
 def test_close_regression(raiden_network, deposit, token_addresses):
     """ The python api was using the wrong balance proof to close the channel,
     thus the close was failing if a transfer was made.

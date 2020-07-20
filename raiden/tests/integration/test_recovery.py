@@ -107,6 +107,7 @@ def test_recovery_happy_case(
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.skip("Raiddit")
 def test_recovery_unhappy_case(
     raiden_network,
     restart_node,

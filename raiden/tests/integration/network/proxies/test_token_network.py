@@ -506,6 +506,7 @@ def test_token_network_proxy(
         pytest.fail(msg)
 
 
+@pytest.mark.skip("Raiddit")
 def test_token_network_proxy_update_transfer(
     token_network_proxy, private_keys, token_proxy, chain_id, web3, contract_manager
 ):
@@ -769,6 +770,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
     assert not c1_client.can_query_state_for_block(block_hash)
 
 
+@pytest.mark.skip("Raiddit")
 def test_token_network_actions_at_pruned_blocks(
     token_network_proxy, private_keys, token_proxy, web3, chain_id, contract_manager
 ):

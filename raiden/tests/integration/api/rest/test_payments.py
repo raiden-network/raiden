@@ -463,6 +463,7 @@ def test_api_payments_conflicts(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("deposit", [1000])
+@pytest.mark.skip("Raiddit")
 def test_api_payments_with_lock_timeout(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):

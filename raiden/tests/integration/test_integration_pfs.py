@@ -70,6 +70,7 @@ def wait_all_apps(raiden_network: List[App]) -> None:
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
+@pytest.mark.skip("Raiddit")
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     raiden_network: List[App], token_addresses: List[TokenAddress], claim_generator: ClaimGenerator
 ) -> None:

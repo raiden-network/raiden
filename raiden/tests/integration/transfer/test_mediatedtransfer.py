@@ -493,6 +493,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 @pytest.mark.parametrize("case_no", range(8))
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [4])
+@pytest.mark.skip("Raiddit")
 def test_mediated_transfer_with_fees(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait, case_no
 ):

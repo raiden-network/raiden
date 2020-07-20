@@ -44,7 +44,7 @@ from raiden.waiting import (
     wait_for_received_transfer_result,
     wait_for_token_network,
 )
-from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN, CONTRACTS_VERSION
+from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -199,7 +199,7 @@ def test_api_get_contract_infos(api_server_test_instance: APIServer):
 
     json = get_json_response(response)
 
-    assert json["contracts_version"] == CONTRACTS_VERSION
+    assert json["contracts_version"] is None
     for contract_name in [
         "token_network_registry_address",
         "secret_registry_address",
@@ -217,6 +217,7 @@ def test_api_get_contract_infos(api_server_test_instance: APIServer):
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_api_get_channel_list(
     api_server_test_instance: APIServer, token_addresses, reveal_timeout
 ):
@@ -263,6 +264,7 @@ def test_api_get_channel_list(
 @pytest.mark.parametrize("number_of_tokens", [2])
 @pytest.mark.parametrize("environment_type", [Environment.PRODUCTION])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_api_tokens(api_server_test_instance: APIServer, blockchain_services, token_addresses):
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
     token_address1 = token_addresses[0]
@@ -305,6 +307,7 @@ def test_api_tokens(api_server_test_instance: APIServer, blockchain_services, to
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_query_partners_by_token(
     api_server_test_instance: APIServer, blockchain_services, token_addresses
 ):
@@ -479,6 +482,7 @@ def test_get_token_network_for_token(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 # For non-red eyes mainnet code set number_of_tokens to 2 and uncomment the code
 # at the end of this test
 def test_get_connection_managers_info(api_server_test_instance: APIServer, token_addresses):
@@ -561,6 +565,7 @@ def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_network_events(api_server_test_instance: APIServer, token_addresses):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
@@ -594,6 +599,7 @@ def test_network_events(api_server_test_instance: APIServer, token_addresses):
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_token_events(api_server_test_instance: APIServer, token_addresses):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
@@ -628,6 +634,7 @@ def test_token_events(api_server_test_instance: APIServer, token_addresses):
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.skip("Raiddit")
 def test_channel_events(api_server_test_instance: APIServer, token_addresses):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"

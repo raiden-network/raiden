@@ -239,6 +239,7 @@ def test_receive_lockedtransfer_invalidrecipient(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("settle_timeout", [30])
+@pytest.mark.skip("Raiddit")
 def test_received_lockedtransfer_closedchannel(
     raiden_network, reveal_timeout, token_addresses, deposit
 ):
