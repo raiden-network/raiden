@@ -335,6 +335,7 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
 
 
 @raise_on_failure
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 @pytest.mark.parametrize("number_of_nodes", (3,))
 @pytest.mark.parametrize("channels_per_node", (CHAIN,))
 def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: List[TokenAddress]):
