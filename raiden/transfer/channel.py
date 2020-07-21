@@ -1509,7 +1509,7 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
 
 def update_contract_balance(end_state: NettingChannelEndState, claim: Claim = None) -> None:
     if claim is None:
-        from raiden.claim import EMPTY_CLAIM
+        from raiden.utils.claim import EMPTY_CLAIM
 
         claim = EMPTY_CLAIM
 
