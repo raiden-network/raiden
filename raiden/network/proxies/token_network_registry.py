@@ -226,6 +226,7 @@ class TokenNetworkRegistry:
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,
             log_details=log_details,
+            given_block_identifier=given_block_identifier,
         )
 
     def _add_token(
@@ -235,6 +236,7 @@ class TokenNetworkRegistry:
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
         log_details: Dict[Any, Any],
+        given_block_identifier: BlockIdentifier,
     ) -> TokenNetworkAddress:
         token_network_address = None
 
@@ -514,6 +516,35 @@ class TokenNetworkRegistry:
                 f"reason. Reference block {failed_at_blockhash} "
                 f"{failed_at_blocknumber}."
             )
+
+        token_proxy = Token(
+            jsonrpc_client=self.rpc_client,
+            token_address=token_address,
+            contract_manager=self.proxy_manager.contract_manager,
+            block_identifier=given_block_identifier,
+        )
+        estimated_transaction = self.rpc_client.estimate_gas(
+            token_proxy.proxy,
+            "setTokenNetwork",
+            log_details,
+            **{"_token_network": token_network_address},
+        )
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas, 59039
+            )
+
+            transaction_sent = self.rpc_client.transact(estimated_transaction)
+            transaction_mined = self.rpc_client.poll_transaction(transaction_sent)
+            receipt = transaction_mined.receipt
+
+            if not was_transaction_successfully_mined(transaction_mined):
+                failed_at_blocknumber = BlockNumber(receipt["blockNumber"])
+                raise RaidenUnrecoverableError(
+                    f"TokenNetwork was registered, but the Token could not register the authorized"
+                    f"minting address. Reference block {failed_at_blockhash}."
+                )
+
         return token_network_address
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
