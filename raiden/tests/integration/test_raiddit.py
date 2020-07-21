@@ -4,6 +4,7 @@ import gevent
 import pytest
 from eth_typing import BlockNumber
 
+import raiden.utils.claim
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST
@@ -45,9 +46,10 @@ def get_channel_balances(
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_nodes", [3])
-@pytest.mark.parametrize("settle_timeout_min", [100])
-@pytest.mark.parametrize("settle_timeout", [101])
-@pytest.mark.parametrize("reveal_timeout", [20])
+@pytest.mark.parametrize("settle_timeout_min", [30])
+@pytest.mark.parametrize("settle_timeout", [30])
+@pytest.mark.parametrize("reveal_timeout", [10])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_raiddit(
     raiden_network: List[App],
     token_addresses: List[TokenAddress],
@@ -55,14 +57,13 @@ def test_raiddit(
     ignore_unrelated_claims: bool,
     settle_timeout: BlockTimeout,
     retry_timeout,
-    ignore_unrelated_claims: bool,
-    settle_timeout: BlockTimeout,
-    retry_timeout,
+    monkeypatch,
 ):
+    monkeypatch.setattr(raiden.utils.claim, "DEFAULT_REVEAL_TIMEOUT", 6)
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     token_proxy: Token = app0.raiden.proxy_manager.token(
-        token_address=token_address, block_identifier=BLOCK_ID_LATEST,
+        token_address=token_address, block_identifier=BLOCK_ID_LATEST
     )
 
     chain_state = views.state_from_app(app0)
@@ -77,20 +78,20 @@ def test_raiddit(
     balance2 = token_proxy.balance_of(app2.raiden.address)
 
     # Generate initial claims and test that a transfer works
-    claims = claim_generator.add_2_claims(
+    claim_generator.add_2_claims(
         token_network_address=token_network_address,
         amounts=(TokenAmount(100), TokenAmount(100)),
         address=app0.raiden.address,
         partner=app1.raiden.address,
     )
-    claims.extend(
-        claim_generator.add_2_claims(
-            token_network_address=token_network_address,
-            amounts=(TokenAmount(100), TokenAmount(100)),
-            address=app1.raiden.address,
-            partner=app2.raiden.address,
-        )
+
+    claim_generator.add_2_claims(
+        token_network_address=token_network_address,
+        amounts=(TokenAmount(100), TokenAmount(100)),
+        address=app1.raiden.address,
+        partner=app2.raiden.address,
     )
+    claims = claim_generator.claims()
     app0.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     app1.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     app2.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
@@ -139,20 +140,19 @@ def test_raiddit(
     assert token_proxy.balance_of(app2.raiden.address) - balance2 == 152
 
     # Create a second pair of claims and do another transfer
-    claims = claim_generator.add_2_claims(
+    claim_generator.add_2_claims(
         token_network_address=token_network_address,
         amounts=(TokenAmount(200), TokenAmount(200)),
         address=app0.raiden.address,
         partner=app1.raiden.address,
     )
-    claims.extend(
-        claim_generator.add_2_claims(
-            token_network_address=token_network_address,
-            amounts=(TokenAmount(200), TokenAmount(200)),
-            address=app1.raiden.address,
-            partner=app2.raiden.address,
-        )
+    claim_generator.add_2_claims(
+        token_network_address=token_network_address,
+        amounts=(TokenAmount(200), TokenAmount(200)),
+        address=app1.raiden.address,
+        partner=app2.raiden.address,
     )
+    claims = claim_generator.claims()
     app0.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     app1.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     app2.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
