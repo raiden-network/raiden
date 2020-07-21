@@ -368,7 +368,7 @@ class TransactionChannelDeposit(State):
         typecheck(self.deposit_block_number, T_BlockNumber)
 
         if self.claim is None:
-            from raiden.claim import EMPTY_CLAIM  # type: ignore
+            from raiden.utils.claim import EMPTY_CLAIM  # type: ignore
 
             self.claim = EMPTY_CLAIM
             self.claim.total_amount = Balance(self.contract_balance)
@@ -427,7 +427,7 @@ class NettingChannelEndState(State):
     def __post_init__(self) -> None:
 
         if self.claim is None:
-            from raiden.claim import EMPTY_CLAIM  # type: ignore
+            from raiden.utils.claim import EMPTY_CLAIM  # type: ignore
 
             self.claim = EMPTY_CLAIM
 

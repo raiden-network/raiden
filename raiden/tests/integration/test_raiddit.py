@@ -2,13 +2,13 @@ from typing import List, Tuple
 
 import gevent
 import pytest
-from tools.raiddit.generate_claims import ClaimGenerator
 
 from raiden.app import App
 from raiden.tests.integration.test_integration_pfs import wait_all_apps
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transfer import transfer
 from raiden.transfer import channel, views
+from raiden.utils.claim import ClaimGenerator
 from raiden.utils.typing import (
     Balance,
     PaymentAmount,
