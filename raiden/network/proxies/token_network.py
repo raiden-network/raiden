@@ -2414,11 +2414,12 @@ class TokenNetwork:
                 # if there is a local ChannelState instance it is properly
                 # validated and the data is confirmed.
 
-                if channel_onchain_detail.state in (ChannelState.SETTLED, ChannelState.REMOVED):
+                if channel_onchain_detail.state in (
+                    ChannelState.NONEXISTENT,
+                    ChannelState.SETTLED,
+                    ChannelState.REMOVED,
+                ):
                     raise RaidenRecoverableError("Channel is already settled")
-
-                if channel_onchain_detail.state == ChannelState.OPENED:
-                    raise RaidenUnrecoverableError("Channel is still open. It cannot be settled")
 
                 is_settle_window_over = (
                     channel_onchain_detail.state == ChannelState.CLOSED
