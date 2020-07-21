@@ -335,37 +335,37 @@ jobs:
           path: /tmp/smoketest.log
           destination: smoketest-logs
 
-  scenario-player-integration-test:
-    parameters:
-      py-version:
-        <<: *py-version-template
-
-    executor:
-      name: docker
-      py-version: << parameters.py-version >>
-
-    steps:
-      - attach-and-link:
-          py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
-      - run:
-          name: Checkout Scenario Player
-          command: |
-            git clone https://github.com/raiden-network/scenario-player.git
-      - run:
-          name: Install dependencies
-          command: |
-            make -C scenario-player install-dev
-      - run:
-          name: Run Unit Tests
-          command: |
-            make -C scenario-player unit-tests
-      - run:
-          name: Run Smoketest
-          command: |
-            cd scenario-player
-            scenario_player smoketest
+#  scenario-player-integration-test:
+#    parameters:
+#      py-version:
+#        <<: *py-version-template
+#
+#    executor:
+#      name: docker
+#      py-version: << parameters.py-version >>
+#
+#    steps:
+#      - attach-and-link:
+#          py-version: << parameters.py-version >>
+#      - conditional-skip
+#      - config-path
+#      - run:
+#          name: Checkout Scenario Player
+#          command: |
+#            git clone https://github.com/raiden-network/scenario-player.git
+#      - run:
+#          name: Install dependencies
+#          command: |
+#            make -C scenario-player install-dev
+#      - run:
+#          name: Run Unit Tests
+#          command: |
+#            make -C scenario-player unit-tests
+#      - run:
+#          name: Run Smoketest
+#          command: |
+#            cd scenario-player
+#            scenario_player smoketest
 
   test:
     parameters:
@@ -732,14 +732,14 @@ workflows:
           requires:
             - lint
 
-      - scenario-player-integration-test:
-          name: scenario-player-integration-test
-          py-version: "3.7"
-          requires:
-            - smoketest
-            - test
-            - test-fuzz
-            - shellcheck
+#      - scenario-player-integration-test:
+#          name: scenario-player-integration-test
+#          py-version: "3.7"
+#          requires:
+#            - smoketest
+#            - test
+#            - test-fuzz
+#            - shellcheck
 
       - test:
           matrix:
@@ -759,7 +759,7 @@ workflows:
 
       - finalize:
           requires:
-            - scenario-player-integration-test
+#            - scenario-player-integration-test
             - test-integration
 
   deploy-release:
@@ -926,14 +926,14 @@ workflows:
           requires:
             - lint
 
-      - scenario-player-integration-test:
-          name: scenario-player-integration-test
-          py-version: "3.7"
-          requires:
-            - smoketest
-            - test
-            - test-fuzz
-            - shellcheck
+#      - scenario-player-integration-test:
+#          name: scenario-player-integration-test
+#          py-version: "3.7"
+#          requires:
+#            - smoketest
+#            - test
+#            - test-fuzz
+#            - shellcheck
 
       - test:
           matrix:
@@ -953,7 +953,7 @@ workflows:
 
       - finalize:
           requires:
-          - scenario-player-integration-test
+#          - scenario-player-integration-test
           - test-integration
 
       - build-binary-linux:
