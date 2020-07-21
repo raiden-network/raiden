@@ -136,7 +136,7 @@ def test_raiddit(
     wait_all_apps(raiden_network)
 
     assert token_proxy.balance_of(app0.raiden.address) - balance0 == 48
-    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 100
+    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 200
     assert token_proxy.balance_of(app2.raiden.address) - balance2 == 152
 
     # Create a second pair of claims and do another transfer
