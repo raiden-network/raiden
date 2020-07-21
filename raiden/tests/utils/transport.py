@@ -386,7 +386,7 @@ def matrix_server_starter(
 
             log.debug("Synapse command", command=synapse_cmd)
 
-            startup_timeout = 10
+            startup_timeout = 30
             sleep = 0.1
 
             executor = HTTPExecutor(

@@ -17,6 +17,7 @@ usage() {
 
 process_node_log() {
     node_address="$1"
+    echo "Processing '${node_address}'"
 
     node_folder="${OUTPUT_FOLDER}/${node_address}"
     full_log="${node_folder}/full.log"
@@ -27,7 +28,7 @@ process_node_log() {
 
     jq -c "select(.node==\"${node_address}\")" "${DEBUG_LOG_FILE}" > "${full_log}"
     jq -c "select((.state_changes | length) > 0 or (.raiden_events | length) > 0)" "${full_log}" > "${state_machine_log}"
-    python "${SCRIPT_DIR}"/state_machine_report.py "${state_machine_log}" > "${state_change_timestamps}"
+    "${SCRIPT_DIR}"/state_machine_report.py "${state_machine_log}" > "${state_change_timestamps}"
 }
 
 [ $# -ne 2 ] && {
@@ -65,13 +66,8 @@ mkdir -p "${OUTPUT_FOLDER}"
 export DEBUG_LOG_FILE OUTPUT_FOLDER SCRIPT_DIR SHELL
 export -f process_node_log
 
-for node_address in $(jq -r '.node' "${DEBUG_LOG_FILE}" | grep -v null | sort -u); do
-    echo "Processing '${node_address}'"
-
-    # In 'semaphore' mode parallel acts like a worker pool
-    # '-j+0' means use as many jobs as there are cores
-    parallel --semaphore -j+0 'process_node_log '"${node_address}"
-done;
+jq -r '.node' "${DEBUG_LOG_FILE}" | (grep -v null || true) | sort -u | \
+parallel process_node_log
 
 echo "Processing logs without a node address"
 jq "select(.node==null)" "${DEBUG_LOG_FILE}" > "${OUTPUT_FOLDER}/unknown.log"

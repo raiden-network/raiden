@@ -1,5 +1,3 @@
-from typing import cast
-
 import gevent
 import pytest
 from eth_utils import to_canonical_address
@@ -23,15 +21,12 @@ from raiden.exceptions import (
     UnknownTokenAddress,
 )
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.factories import make_address
-from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import channel, views
-from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
@@ -48,7 +43,6 @@ from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
 )
-from raiden.utils.transfers import create_default_identifier
 from raiden.utils.typing import (
     BlockNumber,
     List,
@@ -574,46 +568,6 @@ def test_deposit_amount_must_be_smaller_than_the_token_network_limit(
             "The deposit must fail if the requested deposit exceeds the token "
             "network deposit limit."
         )
-
-
-@raise_on_failure
-@pytest.mark.parametrize("deposit", [10])
-@pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize("number_of_nodes", [2])
-def test_create_monitoring_request(raiden_network, token_addresses):
-    app0, app1 = raiden_network
-    token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
-    token_network_address = views.get_token_network_address_by_token_address(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry_address,
-        token_address=token_address,
-    )
-    assert token_network_address
-
-    payment_identifier = create_default_identifier()
-    transfer(
-        initiator_app=app1,
-        target_app=app0,
-        token_address=token_address,
-        amount=PaymentAmount(1),
-        identifier=payment_identifier,
-    )
-    chain_state = views.state_from_raiden(app0.raiden)
-    channel_state = views.get_channelstate_by_token_network_and_partner(
-        chain_state, token_network_address, app1.raiden.address
-    )
-    assert channel_state
-    balance_proof = cast(BalanceProofSignedState, channel_state.partner_state.balance_proof)
-    api = RaidenAPI(app0.raiden)
-    request = api.create_monitoring_request(
-        balance_proof=balance_proof, reward_amount=TokenAmount(1)
-    )
-    assert request
-    as_dict = DictSerializer.serialize(request)
-    from_dict = DictSerializer.deserialize(as_dict)
-    assert DictSerializer.serialize(from_dict) == as_dict
 
 
 @raise_on_failure

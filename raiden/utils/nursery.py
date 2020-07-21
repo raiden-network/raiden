@@ -75,7 +75,16 @@ class Janitor:
         class ProcessNursery(Nursery):
             @staticmethod
             def exec_under_watch(process_args: List[str], **kwargs: Any) -> Optional[Popen]:
-                assert not kwargs.get("shell", False), "Janitor does not work with shell=True"
+                msg = (
+                    "The Janitor can not work with `shell=True`. When that flag "
+                    "is used a proxy shell process is used to start the real "
+                    "target process, the result is that the Janitor will monitor "
+                    "and kill the proxy shell instead of the target, once the "
+                    "shell is killed the real targets are kept around as "
+                    "orphans, which is exactly what the Janitor is trying to "
+                    "prevent from happening."
+                )
+                assert not kwargs.get("shell", False), msg
 
                 def subprocess_stopped(result: AsyncResult) -> None:
                     if janitor._exit_in_progress:
@@ -130,14 +139,20 @@ class Janitor:
             def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
                 greenlet = gevent.spawn(function, *args, **kwargs)
 
+                def kill_grenlet(_result: AsyncResult) -> None:
+                    # gevent.GreenletExit must **not** be used here, since that
+                    # exception is considered a successful run and it is not
+                    # re-raised on calls to `get`
+                    exception = RuntimeError("Janitor is stopping")
+                    greenlet.throw(exception)
+
                 # The Event.rawlink is executed inside the Hub thread, which
                 # does validation and *raises on blocking calls*, to go around
                 # this a new greenlet has to be spawned, that in turn will
                 # raise the exception.
-                def spawn_to_kill() -> None:
-                    gevent.spawn(greenlet.throw, gevent.GreenletExit())
+                callback = SpawnedLink(kill_grenlet)
 
-                janitor._stop.rawlink(lambda _stop: spawn_to_kill())
+                janitor._stop.rawlink(callback)
                 return greenlet
 
             @staticmethod

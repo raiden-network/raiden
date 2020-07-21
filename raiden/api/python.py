@@ -35,7 +35,6 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     WithdrawMismatch,
 )
-from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel, views
@@ -46,13 +45,7 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import (
-    BalanceProofSignedState,
-    ChainState,
-    ChannelState,
-    NettingChannelState,
-    NetworkState,
-)
+from raiden.transfer.state import ChainState, ChannelState, NettingChannelState, NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.transfer.views import get_token_network_by_address
 from raiden.utils.formatting import to_checksum_address
@@ -1128,7 +1121,8 @@ class RaidenAPI:  # pragma: no unittest
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
-        token_address: TokenAddress = None,
+        registry_address: TokenNetworkRegistryAddress,
+        token_address: Optional[TokenAddress] = None,
         target_address: Address = None,
         limit: int = None,
         offset: int = None,
@@ -1138,6 +1132,17 @@ class RaidenAPI:  # pragma: no unittest
                 "Expected binary address format for token in get_raiden_events_payment_history"
             )
 
+        chain_state = views.state_from_raiden(self.raiden)
+        token_network_address = None
+        if token_address:
+            token_network_address = views.get_token_network_address_by_token_address(
+                chain_state=chain_state,
+                token_network_registry_address=registry_address,
+                token_address=token_address,
+            )
+            if not token_network_address:
+                raise InvalidTokenAddress("Token address does not match a Raiden token network")
+
         if target_address and not is_binary_address(target_address):
             raise InvalidBinaryAddress(
                 "Expected binary address format for "
@@ -1145,18 +1150,20 @@ class RaidenAPI:  # pragma: no unittest
             )
 
         assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
-        events = self.raiden.wal.storage.get_events_with_timestamps(
+
+        event_types = [
+            "raiden.transfer.events.EventPaymentReceivedSuccess",
+            "raiden.transfer.events.EventPaymentSentFailed",
+            "raiden.transfer.events.EventPaymentSentSuccess",
+        ]
+
+        events = self.raiden.wal.storage.get_raiden_events_payment_history_with_timestamps(
+            event_types=event_types,
             limit=limit,
             offset=offset,
-            filters=[
-                ("_type", "raiden.transfer.events.EventPaymentReceivedSuccess"),
-                ("_type", "raiden.transfer.events.EventPaymentSentFailed"),
-                ("_type", "raiden.transfer.events.EventPaymentSentSuccess"),
-            ],
-            logical_and=False,
+            token_network_address=token_network_address,
+            partner_address=target_address,
         )
-
-        chain_state = views.state_from_raiden(self.raiden)
         events = [
             e
             for e in events
@@ -1167,21 +1174,7 @@ class RaidenAPI:  # pragma: no unittest
                 token_address=token_address,
             )
         ]
-
         return events
-
-    def get_raiden_events_payment_history(
-        self,
-        token_address: TokenAddress = None,
-        target_address: Address = None,
-        limit: int = None,
-        offset: int = None,
-    ) -> List[Event]:
-        timestamped_events = self.get_raiden_events_payment_history_with_timestamps(
-            token_address=token_address, target_address=target_address, limit=limit, offset=offset
-        )
-
-        return [event.wrapped_event for event in timestamped_events]
 
     def get_raiden_internal_events_with_timestamps(
         self, limit: int = None, offset: int = None
@@ -1282,30 +1275,6 @@ class RaidenAPI:  # pragma: no unittest
             )
         returned_events.sort(key=lambda evt: evt.get("block_number"), reverse=True)
         return returned_events
-
-    def create_monitoring_request(
-        self, balance_proof: BalanceProofSignedState, reward_amount: TokenAmount
-    ) -> Optional[RequestMonitoring]:
-        """ This method can be used to create a `RequestMonitoring` message.
-        It will contain all data necessary for an external monitoring service to
-        - send an updateNonClosingBalanceProof transaction to the TokenNetwork contract,
-        for the `balance_proof` that we received from a channel partner.
-        - claim the `reward_amount` from the UDC.
-        """
-        # create RequestMonitoring message from the above + `reward_amount`
-
-        msg = "Default monitoring service address should not be None"
-        assert self.raiden.default_msc_address is not None, msg
-
-        monitor_request = RequestMonitoring.from_balance_proof_signed_state(
-            balance_proof=balance_proof,
-            non_closing_participant=self.raiden.address,
-            reward_amount=reward_amount,
-            monitoring_service_contract_address=self.raiden.default_msc_address,
-        )
-        # sign RequestMonitoring and return
-        monitor_request.sign(self.raiden.signer)
-        return monitor_request
 
     def get_pending_transfers(
         self, token_address: TokenAddress = None, partner_address: Address = None

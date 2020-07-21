@@ -7,6 +7,7 @@ from types import TracebackType
 from typing import Generator
 
 import gevent
+from eth_utils import to_normalized_address
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
@@ -16,6 +17,7 @@ from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.transfer.architecture import Event, State, StateChange
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import (
+    Address,
     Any,
     DatabasePath,
     Dict,
@@ -26,6 +28,7 @@ from raiden.utils.typing import (
     NewType,
     Optional,
     RaidenDBVersion,
+    TokenNetworkAddress,
     Tuple,
     Type,
     TypeVar,
@@ -663,6 +666,97 @@ class SQLiteStorage:
         cursor.executemany("UPDATE state_events SET data=? WHERE identifier=?", events_data)
         self.maybe_commit()
 
+    def get_raiden_events_payment_history_with_timestamps(
+        self,
+        event_types: List[str],
+        limit: int = None,
+        offset: int = None,
+        token_network_address: TokenNetworkAddress = None,
+        partner_address: Address = None,
+    ) -> List[TimestampedEvent]:
+
+        limit, offset = _sanitize_limit_and_offset(limit, offset)
+        cursor = self.conn.cursor()
+        args: List = list(event_types)
+        sql_helper = ",".join("?" * len(event_types))
+
+        if token_network_address and partner_address:
+            query = """
+                SELECT
+                    data, timestamp
+                FROM
+                    state_events
+                WHERE
+                    json_extract(data, '$._type') IN ({})
+                AND
+                    json_extract(data, '$.token_network_address') LIKE ?
+                AND
+                    (
+                    json_extract(data, '$.target') LIKE ?
+                    OR
+                    json_extract(data, '$.initiator') LIKE ?
+                    )
+                ORDER BY identifier
+                ASC LIMIT ? OFFSET ?
+                """
+            args.append(to_normalized_address(token_network_address))
+            # We need to append partner_address two times
+            # since it is used in the OR statement
+            args.append(to_normalized_address(partner_address))
+            args.append(to_normalized_address(partner_address))
+        elif token_network_address and not partner_address:
+            query = """
+                SELECT
+                    data, timestamp
+                FROM
+                    state_events
+                WHERE
+                    json_extract(data, '$._type') IN ({})
+                AND
+                    json_extract(data, '$.token_network_address') LIKE ?
+                ORDER BY identifier
+                ASC LIMIT ? OFFSET ?
+                """
+            args.append(to_normalized_address(token_network_address))
+        elif partner_address and not token_network_address:
+            query = """
+                SELECT
+                    data, timestamp
+                FROM
+                    state_events
+                WHERE
+                    json_extract(data, '$._type') IN ({})
+                AND
+                    (
+                    json_extract(data, '$.target') LIKE ?
+                    OR
+                    json_extract(data, '$.initiator') LIKE ?
+                    )
+                ORDER BY identifier
+                ASC LIMIT ? OFFSET ?
+                """
+            # We need to append partner_address two times
+            # since it is used in the OR statement
+            args.append(to_normalized_address(partner_address))
+            args.append(to_normalized_address(partner_address))
+        else:
+            query = """
+                SELECT
+                    data, timestamp
+                FROM
+                    state_events
+                WHERE
+                    json_extract(data, '$._type') IN ({})
+                ORDER BY identifier
+                ASC LIMIT ? OFFSET ?
+                """
+
+        query = query.format(sql_helper)
+        args.append(limit)
+        args.append(offset)
+        cursor.execute(query, args)
+        return [TimestampedEvent(entry[0], entry[1]) for entry in cursor]
+
     def get_events_with_timestamps(
         self,
         limit: int = None,
@@ -868,6 +962,27 @@ class SerializedSQLiteStorage:
         return [
             state_change_record.data
             for state_change_record in self.get_statechanges_records_by_range(db_range=db_range)
+        ]
+
+    def get_raiden_events_payment_history_with_timestamps(
+        self,
+        event_types: List[str],
+        limit: int = None,
+        offset: int = None,
+        token_network_address: TokenNetworkAddress = None,
+        partner_address: Address = None,
+    ) -> List[TimestampedEvent]:
+
+        events = self.database.get_raiden_events_payment_history_with_timestamps(
+            event_types=event_types,
+            limit=limit,
+            offset=offset,
+            token_network_address=token_network_address,
+            partner_address=partner_address,
+        )
+        return [
+            TimestampedEvent(self.serializer.deserialize(event.wrapped_event), event.log_time)
+            for event in events
         ]
 
     def get_events_with_timestamps(

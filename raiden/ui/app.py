@@ -263,20 +263,7 @@ def run_app(
         cli_token_to_proportional_imbalance_fee=proportional_imbalance_fee,
         cli_cap_mediation_fees=cap_mediation_fees,
     )
-
-    config = RaidenConfig(chain_id=network_id, environment_type=environment_type)
-    config.console = console
-
-    config.blockchain.query_interval = blockchain_query_interval
-
-    config.mediation_fees = fee_config
-
-    config.services.monitoring_enabled = enable_monitoring
-    config.services.pathfinding_max_paths = pathfinding_max_paths
-
-    config.transport.server = matrix_server
-
-    config.rest_api = RestApiConfig(
+    rest_api_config = RestApiConfig(
         rest_api_enabled=rpc,
         web_ui_enabled=rpc and web_ui,
         cors_domain_list=domain_list,
@@ -285,11 +272,21 @@ def run_app(
         port=api_port,
     )
 
-    config.unrecoverable_error_should_crash = unrecoverable_error_should_crash
-    config.resolver_endpoint = resolver_endpoint
-
-    config.reveal_timeout = default_reveal_timeout
-    config.settle_timeout = default_settle_timeout
+    config = RaidenConfig(
+        chain_id=network_id,
+        environment_type=environment_type,
+        reveal_timeout=default_reveal_timeout,
+        settle_timeout=default_settle_timeout,
+        console=console,
+        mediation_fees=fee_config,
+        unrecoverable_error_should_crash=unrecoverable_error_should_crash,
+        resolver_endpoint=resolver_endpoint,
+        rest_api=rest_api_config,
+    )
+    config.blockchain.query_interval = blockchain_query_interval
+    config.services.monitoring_enabled = enable_monitoring
+    config.services.pathfinding_max_paths = pathfinding_max_paths
+    config.transport.server = matrix_server
 
     contracts = load_deployed_contracts_data(config, network_id)
 
@@ -435,14 +432,14 @@ def run_app(
         query_start_block=smart_contracts_start_at,
         default_registry=raiden_bundle.token_network_registry,
         default_secret_registry=raiden_bundle.secret_registry,
-        default_one_to_n_address=one_to_n_address,
         default_service_registry=services_bundle.service_registry,
+        default_user_deposit=services_bundle.user_deposit,
+        default_one_to_n_address=one_to_n_address,
         default_msc_address=monitoring_service_address,
         transport=matrix_transport,
         raiden_event_handler=event_handler,
         message_handler=message_handler,
         routing_mode=routing_mode,
-        user_deposit=services_bundle.user_deposit,
         api_server=api_server,
     )
 

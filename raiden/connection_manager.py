@@ -1,11 +1,12 @@
 import random
 from random import shuffle
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import gevent
 import structlog
 from eth_typing import HexStr
 from eth_utils import to_canonical_address
+from gevent import Greenlet
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -126,6 +127,7 @@ class ConnectionManager:  # pragma: no unittest
         self.token_address = token_network_state.token_address
 
         self.lock = Semaphore()  #: protects self.funds and self.initial_channel_target
+        self._retry_greenlet: Optional[Greenlet] = None
         self.api = RaidenAPI(raiden)
 
     def connect(
@@ -231,6 +233,14 @@ class ConnectionManager:  # pragma: no unittest
             )
 
         return channels_to_close
+
+    def spawn_retry(self) -> Optional[Greenlet]:
+        """This makes sure, there is only one retry greenlet running at a time."""
+
+        if not self._retry_greenlet:
+            self._retry_greenlet = spawn_named("cm-retry_connect", self.retry_connect)
+            return self._retry_greenlet
+        return None
 
     def join_channel(self, partner_address: Address, partner_deposit: TokenAmount) -> None:
         """Will be called, when we were selected as channel partner by another

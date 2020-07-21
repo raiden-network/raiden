@@ -312,6 +312,7 @@ class RaidenService(Runnable):
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
         default_service_registry: Optional[ServiceRegistry],
+        default_user_deposit: Optional[UserDeposit],
         default_one_to_n_address: Optional[OneToNAddress],
         default_msc_address: Optional[MonitoringServiceAddress],
         transport: MatrixTransport,
@@ -319,7 +320,6 @@ class RaidenService(Runnable):
         message_handler: MessageHandler,
         routing_mode: RoutingMode,
         config: RaidenConfig,
-        user_deposit: UserDeposit = None,
         api_server: Optional[APIServer] = None,
     ) -> None:
         super().__init__()
@@ -333,6 +333,7 @@ class RaidenService(Runnable):
         self.default_one_to_n_address = default_one_to_n_address
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
+        self.default_user_deposit = default_user_deposit
         self.default_msc_address = default_msc_address
         self.routing_mode = routing_mode
         self.config = config
@@ -340,8 +341,6 @@ class RaidenService(Runnable):
         self.signer: Signer = LocalSigner(self.rpc_client.privkey)
         self.address = self.signer.address
         self.transport = transport
-
-        self.user_deposit = user_deposit
 
         self.alarm = AlarmTask(
             proxy_manager=proxy_manager, sleep_time=self.config.blockchain.query_interval
@@ -440,6 +439,8 @@ class RaidenService(Runnable):
         # - Send pending message
         self.alarm.greenlet.link_exception(self.on_error)
         self.transport.greenlet.link_exception(self.on_error)
+        if self.api_server:
+            self.api_server.greenlet.link_exception(self.on_error)
         self._start_transport(chain_state)
         self._start_alarm_task()
 

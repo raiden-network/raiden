@@ -436,7 +436,7 @@ class SuccessOrError:
     """
 
     def __init__(self, *error_messages: str) -> None:
-        self.error_messages: List[str] = [msg for msg in error_messages]
+        self.error_messages = list(error_messages)
 
     def __bool__(self) -> bool:
         return self.ok

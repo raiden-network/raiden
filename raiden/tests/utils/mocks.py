@@ -186,7 +186,7 @@ class MockRaidenService:
             chain_id=self.rpc_client.chain_id, environment_type=Environment.DEVELOPMENT
         )
 
-        self.user_deposit = Mock()
+        self.default_user_deposit = Mock()
         self.default_registry = Mock()
         self.default_registry.address = factories.make_address()
         self.default_one_to_n_address = factories.make_address()

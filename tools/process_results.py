@@ -71,7 +71,7 @@ def process_results(results_dir, plot_filename):
         )
     )
 
-    times = [time for time in range(initial_time, last_time)]  # + 1 ?
+    times = list(range(initial_time, last_time))  # + 1 ?
 
     if plot_filename:
         try:

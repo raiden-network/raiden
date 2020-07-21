@@ -10,7 +10,7 @@ attrs==19.3.0             # via jsonschema
 backcall==0.1.0           # via ipython
 base58==2.0.0             # via multiaddr
 bitarray==1.2.1           # via eth-account
-cachetools==4.1.0         # via -r requirements.in
+cachetools==4.1.1         # via -r requirements.in
 certifi==2019.3.9         # via requests
 cffi==1.12.3              # via coincurve
 chardet==3.0.4            # via requests
@@ -37,10 +37,9 @@ greenlet==0.4.16          # via gevent
 guppy3==3.0.10.post1      # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
-importlib-metadata==1.6.1  # via jsonschema
 ipfshttpclient==0.4.12    # via web3
 ipython-genutils==0.2.0   # via traitlets
-ipython==7.15.0           # via -r requirements.in
+ipython==7.16.1           # via -r requirements.in
 itsdangerous==1.1.0       # via flask
 jedi==0.17.0              # via ipython
 jinja2==2.10.1            # via flask
@@ -50,7 +49,7 @@ markupsafe==1.1.1         # via jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements.in
 marshmallow-enum==1.5.1   # via -r requirements.in
 marshmallow-polyfield==5.9  # via -r requirements.in
-marshmallow==3.6.1        # via -r requirements.in, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
+marshmallow==3.7.0        # via -r requirements.in, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
 matrix-client==0.3.2      # via -r requirements.in
 mirakuru==2.1.2           # via -r requirements.in
 multiaddr==0.0.9          # via ipfshttpclient
@@ -76,8 +75,8 @@ pyrsistent==0.15.7        # via jsonschema
 pysha3==1.0.2             # via -r requirements.in
 pytz==2019.1              # via flask-restful
 raiden-contracts==0.37.1  # via -r requirements.in
-raiden-webui==1.0.1       # via -r requirements.in
-requests==2.23.0          # via -r requirements.in, ipfshttpclient, matrix-client, web3
+raiden-webui==1.0.2       # via -r requirements.in
+requests==2.24.0          # via -r requirements.in, ipfshttpclient, matrix-client, web3
 rlp==1.1.0                # via eth-account, eth-rlp, raiden-contracts
 semantic-version==2.6.0   # via py-solc
 semver==2.8.1             # via raiden-contracts
@@ -86,15 +85,14 @@ structlog==20.1.0         # via -r requirements.in
 toml==0.10.1              # via -r requirements.in
 toolz==0.9.0              # via cytoolz
 traitlets==4.3.2          # via ipython
-typing-extensions==3.7.4.2  # via -r requirements.in, web3
+typing-extensions==3.7.4.2  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
 wcwidth==0.1.9            # via prompt-toolkit
-web3==5.11.0              # via -r requirements.in, raiden-contracts
+web3==5.11.1              # via -r requirements.in, raiden-contracts
 websockets==8.1           # via web3
 werkzeug==1.0.1           # via flask
-zipp==3.1.0               # via importlib-metadata
 zope.event==4.4           # via gevent
 zope.interface==5.1.0     # via gevent
 

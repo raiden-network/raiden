@@ -34,12 +34,23 @@ from raiden.network.transport.matrix.utils import (
 )
 from raiden.raiden_service import RaidenService
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
-from raiden.settings import MONITORING_REWARD, MatrixTransportConfig, RaidenConfig, ServiceConfig
+from raiden.settings import (
+    MIN_MONITORING_AMOUNT_DAI,
+    MONITORING_REWARD,
+    MatrixTransportConfig,
+    RaidenConfig,
+    ServiceConfig,
+)
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
-from raiden.tests.utils.factories import HOP1, make_privkeys_ordered
+from raiden.tests.utils.factories import (
+    HOP1,
+    CanonicalIdentifierProperties,
+    NettingChannelEndStateProperties,
+    make_privkeys_ordered,
+)
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
@@ -47,10 +58,11 @@ from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, Qu
 from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Dict, List, cast
+from raiden.utils.typing import Address, Dict, List, TokenNetworkAddress, cast
 from raiden.waiting import wait_for_network_state
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
+
 TIMEOUT_MESSAGE_RECEIVE = 15
 
 
@@ -590,7 +602,7 @@ def test_monitoring_broadcast_messages(
         lambda *a, **kw: channel_state,
     )
     monkeypatch.setattr(raiden.transfer.channel, "get_balance", lambda *a, **kw: 123)
-    raiden_service.user_deposit.effective_balance.return_value = MONITORING_REWARD
+    raiden_service.default_user_deposit.effective_balance.return_value = MONITORING_REWARD
 
     update_monitoring_service_from_balance_proof(
         raiden=raiden_service,
@@ -604,6 +616,104 @@ def test_monitoring_broadcast_messages(
         while ms_room.send_text.call_count < 1:
             gevent.idle()
     assert ms_room.send_text.call_count == 1
+
+    transport.stop()
+    transport.greenlet.get()
+
+
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
+)
+@pytest.mark.parametrize(
+    "channel_balance_dai, expected_messages",
+    [[MIN_MONITORING_AMOUNT_DAI - 1, 0], [MIN_MONITORING_AMOUNT_DAI, 1]],
+)
+def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
+    local_matrix_servers,
+    retry_interval_initial,
+    retry_interval_max,
+    retries_before_backoff,
+    monkeypatch,
+    broadcast_rooms,
+    channel_balance_dai,
+    expected_messages,
+):
+    """
+    Test that in PRODUCTION on DAI and WETH RaidenService broadcast RequestMonitoring messages
+    to MONITORING_BROADCASTING_ROOM room on newly received balance proofs only when
+    min threshold of channel balance is met
+    """
+    transport = MatrixTransport(
+        config=MatrixTransportConfig(
+            broadcast_rooms=broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
+            retries_before_backoff=retries_before_backoff,
+            retry_interval_initial=retry_interval_initial,
+            retry_interval_max=retry_interval_max,
+            server=local_matrix_servers[0],
+            available_servers=[local_matrix_servers[0]],
+        ),
+        environment=Environment.PRODUCTION,
+    )
+    transport._client.api.retry_timeout = 0
+    transport._send_raw = MagicMock()
+    raiden_service = MockRaidenService(None)
+    raiden_service.config = RaidenConfig(
+        chain_id=1234,
+        environment_type=Environment.PRODUCTION,
+        services=ServiceConfig(monitoring_enabled=True),
+    )
+
+    transport.start(raiden_service, [], None)
+
+    ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
+    ms_room = transport._broadcast_rooms.get(ms_room_name)
+    assert isinstance(ms_room, Room)
+    ms_room.send_text = MagicMock(spec=ms_room.send_text)
+
+    raiden_service.transport = transport
+    transport.log = MagicMock()
+
+    fake_dai_token_network = TokenNetworkAddress(b"daidaidaidai")
+    HOP1_BALANCE_PROOF_DAI = factories.BalanceProofSignedStateProperties(
+        pkey=factories.HOP1_KEY,
+        canonical_identifier=factories.create(
+            CanonicalIdentifierProperties(token_network_address=fake_dai_token_network)
+        ),
+    )
+    balance_proof = factories.create(HOP1_BALANCE_PROOF_DAI)
+    channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            canonical_identifier=CanonicalIdentifierProperties(
+                token_network_address=fake_dai_token_network
+            ),
+            our_state=NettingChannelEndStateProperties(balance=channel_balance_dai),
+        )
+    )
+    channel_state.our_state.balance_proof = balance_proof
+    channel_state.partner_state.balance_proof = balance_proof
+    monkeypatch.setattr(
+        raiden.transfer.views,
+        "get_channelstate_by_canonical_identifier",
+        lambda *a, **kw: channel_state,
+    )
+    monkeypatch.setattr(
+        raiden.transfer.views,
+        "get_token_network_address_by_token_address",
+        lambda *a, **kw: fake_dai_token_network,
+    )
+
+    raiden_service.default_user_deposit.effective_balance.return_value = MONITORING_REWARD
+
+    update_monitoring_service_from_balance_proof(
+        raiden=raiden_service,
+        chain_state=None,
+        new_balance_proof=balance_proof,
+        non_closing_participant=HOP1,
+    )
+    # need a sleep here because it might take some time until message reaches room
+    gevent.sleep(2)
+
+    assert ms_room.send_text.call_count == expected_messages
 
     transport.stop()
     transport.greenlet.get()

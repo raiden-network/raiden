@@ -1,9 +1,8 @@
-from hashlib import sha256
 from http import HTTPStatus
 
 import grequests
 import pytest
-from eth_utils import decode_hex, encode_hex, to_bytes, to_checksum_address, to_hex
+from eth_utils import decode_hex, to_checksum_address, to_hex
 
 from raiden.api.rest import APIServer
 from raiden.constants import UINT64_MAX
@@ -22,6 +21,9 @@ from raiden.tests.utils.transfer import watch_for_unlock_failures
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import Secret
 
+DEFAULT_AMOUNT = "200"
+DEFAULT_ID = "42"
+
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
@@ -30,8 +32,6 @@ def test_api_payments_target_error(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 200
-    identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
 
@@ -45,7 +45,7 @@ def test_api_payments_target_error(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier)},
+        json={"amount": DEFAULT_AMOUNT, "identifier": DEFAULT_ID},
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
@@ -141,8 +141,6 @@ def test_api_payments_secret_hash_errors(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 200
-    identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
     secret = to_hex(factories.make_secret())
@@ -158,7 +156,7 @@ def test_api_payments_secret_hash_errors(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret": short_secret},
+        json={"amount": DEFAULT_AMOUNT, "identifier": DEFAULT_ID, "secret": short_secret},
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
@@ -170,7 +168,7 @@ def test_api_payments_secret_hash_errors(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret": bad_secret},
+        json={"amount": DEFAULT_AMOUNT, "identifier": DEFAULT_ID, "secret": bad_secret},
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
@@ -183,8 +181,8 @@ def test_api_payments_secret_hash_errors(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
-            "identifier": str(identifier),
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
             "secret_hash": short_secret_hash,
         },
     )
@@ -198,11 +196,7 @@ def test_api_payments_secret_hash_errors(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={
-            "amount": str(amount),
-            "identifier": str(identifier),
-            "secret_hash": bad_secret_hash,
-        },
+        json={"amount": DEFAULT_AMOUNT, "identifier": DEFAULT_ID, "secret_hash": bad_secret_hash},
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
@@ -215,8 +209,8 @@ def test_api_payments_secret_hash_errors(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
-            "identifier": str(identifier),
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
             "secret": secret,
             "secret_hash": secret,
         },
@@ -232,8 +226,6 @@ def test_api_payments_with_secret_no_hash(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 100
-    identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
     secret = to_hex(factories.make_secret())
@@ -244,8 +236,8 @@ def test_api_payments_with_secret_no_hash(
         "initiator_address": to_checksum_address(our_address),
         "target_address": to_checksum_address(target_address),
         "token_address": to_checksum_address(token_address),
-        "amount": str(amount),
-        "identifier": str(identifier),
+        "amount": DEFAULT_AMOUNT,
+        "identifier": DEFAULT_ID,
     }
 
     request = grequests.post(
@@ -255,7 +247,7 @@ def test_api_payments_with_secret_no_hash(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret": secret},
+        json={"amount": DEFAULT_AMOUNT, "identifier": DEFAULT_ID, "secret": secret},
     )
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response
@@ -272,22 +264,9 @@ def test_api_payments_with_hash_no_secret(
     api_server_test_instance, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 200
-    identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = to_hex(factories.make_secret())
-    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
-
-    our_address = api_server_test_instance.rest_api.raiden_api.address
-
-    payment = {
-        "initiator_address": to_checksum_address(our_address),
-        "target_address": to_checksum_address(target_address),
-        "token_address": to_checksum_address(token_address),
-        "amount": str(amount),
-        "identifier": str(identifier),
-    }
+    secret_hash = factories.make_secret_hash()
 
     request = grequests.post(
         api_url_for(
@@ -296,11 +275,35 @@ def test_api_payments_with_hash_no_secret(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret_hash": secret_hash},
+        json={
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
+            "secret_hash": to_hex(secret_hash),
+        },
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
-    assert payment == payment
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_payments_post_without_required_params(api_server_test_instance, token_addresses):
+    token_address = token_addresses[0]
+
+    request = grequests.post(api_url_for(api_server_test_instance, "paymentresource",),)
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.METHOD_NOT_ALLOWED)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_paymentresource",
+            token_address=to_checksum_address(token_address),
+        ),
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.METHOD_NOT_ALLOWED)
 
 
 @raise_on_failure
@@ -319,21 +322,9 @@ def test_api_payments_with_resolver(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = factories.make_secret()
-    secret_hash = sha256_secrethash(secret)
-
-    our_address = api_server_test_instance.rest_api.raiden_api.address
-
-    payment = {
-        "initiator_address": to_checksum_address(our_address),
-        "target_address": to_checksum_address(target_address),
-        "token_address": to_checksum_address(token_address),
-        "amount": str(amount),
-        "identifier": str(identifier),
-    }
+    secret_hash = factories.make_secret_hash()
 
     # payment with secret_hash when both resolver and initiator don't have the secret
-
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -344,15 +335,13 @@ def test_api_payments_with_resolver(
         json={
             "amount": str(amount),
             "identifier": str(identifier),
-            "secret_hash": encode_hex(secret_hash),
+            "secret_hash": to_hex(secret_hash),
         },
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
-    assert payment == payment
 
     # payment with secret where the resolver doesn't have the secret. Should work.
-
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -360,14 +349,12 @@ def test_api_payments_with_resolver(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret": encode_hex(secret)},
+        json={"amount": str(amount), "identifier": str(identifier), "secret": to_hex(secret_hash)},
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert payment == payment
 
     # payment with secret_hash where the resolver has the secret. Should work.
-
     secret = Secret(
         decode_hex("0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e")
     )
@@ -383,13 +370,12 @@ def test_api_payments_with_resolver(
         json={
             "amount": str(amount),
             "identifier": str(identifier),
-            "secret_hash": encode_hex(secret_hash),
+            "secret_hash": to_hex(secret_hash),
         },
     )
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert payment == payment
 
 
 @raise_on_failure
@@ -399,12 +385,9 @@ def test_api_payments_with_secret_and_hash(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 100
-    identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = to_hex(factories.make_secret())
-    secret_hash = to_hex(sha256(to_bytes(hexstr=secret)).digest())
+    secret, secret_hash = factories.make_secret_with_hash()
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -412,8 +395,8 @@ def test_api_payments_with_secret_and_hash(
         "initiator_address": to_checksum_address(our_address),
         "target_address": to_checksum_address(target_address),
         "token_address": to_checksum_address(token_address),
-        "amount": str(amount),
-        "identifier": str(identifier),
+        "amount": DEFAULT_AMOUNT,
+        "identifier": DEFAULT_ID,
     }
 
     request = grequests.post(
@@ -424,10 +407,10 @@ def test_api_payments_with_secret_and_hash(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
-            "identifier": str(identifier),
-            "secret": secret,
-            "secret_hash": secret_hash,
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
+            "secret": to_hex(secret),
+            "secret_hash": to_hex(secret_hash),
         },
     )
     with watch_for_unlock_failures(*raiden_network):
@@ -435,8 +418,8 @@ def test_api_payments_with_secret_and_hash(
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
-    assert secret == json_response["secret"]
-    assert secret_hash == json_response["secret_hash"]
+    assert to_hex(secret) == json_response["secret"]
+    assert to_hex(secret_hash) == json_response["secret_hash"]
 
 
 @raise_on_failure
@@ -479,12 +462,11 @@ def test_api_payments_conflicts(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.parametrize("deposit", [1000])
 def test_api_payments_with_lock_timeout(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 100
-    identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
     number_of_nodes = 2
@@ -500,8 +482,8 @@ def test_api_payments_with_lock_timeout(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
-            "identifier": str(identifier),
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
             "lock_timeout": str(reveal_timeout),
         },
     )
@@ -517,8 +499,8 @@ def test_api_payments_with_lock_timeout(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
-            "identifier": str(identifier),
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
             "lock_timeout": str(2 * reveal_timeout),
         },
     )
@@ -535,8 +517,8 @@ def test_api_payments_with_lock_timeout(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
-            "identifier": str(identifier),
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
             "lock_timeout": str(settle_timeout),
         },
     )
@@ -551,7 +533,11 @@ def test_api_payments_with_lock_timeout(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": amount, "identifier": identifier, "lock_timeout": settle_timeout + 1},
+        json={
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
+            "lock_timeout": settle_timeout + 1,
+        },
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
@@ -564,7 +550,6 @@ def test_api_payments_with_invalid_input(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
     _, app1 = raiden_network
-    amount = 100
     token_address = token_addresses[0]
     target_address = app1.raiden.address
     settle_timeout = 39
@@ -577,7 +562,7 @@ def test_api_payments_with_invalid_input(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": "0", "lock_timeout": str(settle_timeout)},
+        json={"amount": DEFAULT_AMOUNT, "identifier": "0", "lock_timeout": str(settle_timeout)},
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
@@ -589,7 +574,7 @@ def test_api_payments_with_invalid_input(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": "-1", "lock_timeout": str(settle_timeout)},
+        json={"amount": DEFAULT_AMOUNT, "identifier": "-1", "lock_timeout": str(settle_timeout)},
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
@@ -602,7 +587,7 @@ def test_api_payments_with_invalid_input(
             target_address=to_checksum_address(target_address),
         ),
         json={
-            "amount": str(amount),
+            "amount": DEFAULT_AMOUNT,
             "identifier": str(UINT64_MAX + 1),
             "lock_timeout": str(settle_timeout),
         },

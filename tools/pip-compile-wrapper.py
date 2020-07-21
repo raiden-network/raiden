@@ -135,8 +135,7 @@ def _run_pip_compile(
         str(target_path),
         str(source_path.relative_to(working_path)),
     ]
-    print(f"Compiling {source_path.name}...", end="")
-    sys.stdout.flush()
+    print(f"Compiling {source_path.name}...", end="", flush=True)
     if verbose:
         print(f"\nRunning command: {' '.join(shlex.quote(c) for c in command)}")
     env = os.environ.copy()
@@ -238,8 +237,7 @@ def _ensure_pip_tools() -> None:
         )
         if not pip_tools_req:
             raise RuntimeError(f"Package 'pip-tools' not found in {REQUIREMENTS_SOURCE_DEV}")
-        print(f"Installing {pip_tools_req}...", end="")
-        sys.stdout.flush()
+        print(f"Installing {pip_tools_req}...", end="", flush=True)
         process = subprocess.run(
             [sys.executable, "-m", "pip", "install", pip_tools_req],
             stdout=subprocess.PIPE,
@@ -331,7 +329,10 @@ def main() -> None:
     elif parsed.command == "upgrade":
         packages = set(parsed.packages)
         if not packages:
-            resp = input("Are you sure you want to upgrade ALL packages? [y/N] ")
+            # This is a standalone script which is not using gevent
+            resp = input(  # pylint: disable=gevent-input-forbidden
+                "Are you sure you want to upgrade ALL packages? [y/N] "
+            )
             if resp.lower() != "y":
                 print("Aborting")
                 sys.exit(1)

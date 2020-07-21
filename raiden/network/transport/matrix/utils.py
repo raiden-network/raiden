@@ -80,6 +80,7 @@ class UserPresence(Enum):
     UNAVAILABLE = "unavailable"
     OFFLINE = "offline"
     UNKNOWN = "unknown"
+    SERVER_ERROR = "server_error"
 
 
 class AddressReachability(Enum):
@@ -104,6 +105,7 @@ USER_PRESENCE_TO_ADDRESS_REACHABILITY = {
     UserPresence.UNAVAILABLE: AddressReachability.REACHABLE,
     UserPresence.OFFLINE: AddressReachability.UNREACHABLE,
     UserPresence.UNKNOWN: AddressReachability.UNKNOWN,
+    UserPresence.SERVER_ERROR: AddressReachability.UNKNOWN,
 }
 
 
@@ -134,11 +136,16 @@ class DisplayNameCache:
                     # have the profile for a given userid. The server response
                     # is roughly:
                     #
-                    #   {"errcode":"M_NOT_FOUND","error":"Profile was not found"}
+                    #   {"errcode":"M_NOT_FOUND","error":"Profile was not found"} or
+                    #   {"errcode":"M_UNKNOWN","error":"Failed to fetch profile"}
                     try:
                         user.get_display_name()
-                    except MatrixRequestError:
-                        raise TransportError("Could not get 'display_name' for user")
+                    except MatrixRequestError as ex:
+                        # We ignore the error here and set user presence: SERVER_ERROR at the
+                        # calling site
+                        log.error(
+                            f"Ignoring failed `get_display_name` for user {user}", exc_info=ex
+                        )
 
                 if user.displayname is not None:
                     self.userid_to_displayname[user.user_id] = user.displayname
@@ -287,7 +294,7 @@ class UserAddressManager:
             )
 
     def track_address_presence(
-        self, address: Address, user_ids: Union[Set[str], FrozenSet[str]] = frozenset()
+        self, address: Address, user_ids: Union[Set[str], FrozenSet[str]] = None
     ) -> None:
         """
         Update synthesized address presence state.
@@ -295,6 +302,8 @@ class UserAddressManager:
         Triggers callback (if any) in case the state has changed.
         """
         # Is this address already tracked for all given user_ids?
+        if user_ids is None:
+            user_ids = frozenset()
         state_known = (
             self.get_address_reachability_state(address).reachability
             != AddressReachability.UNKNOWN
@@ -406,6 +415,13 @@ class UserAddressManager:
             return
 
         self._displayname_cache.warm_users([user])
+        # If for any reason we cannot resolve the displayname, then there was a server error.
+        # Any properly logged in user that joined a room, will have a displayname.
+        # A reason for not resolving it could be rate limiting by the other server.
+        if user.displayname is None:
+            new_state = UserPresence.SERVER_ERROR
+            self._set_user_presence(user_id, new_state, presence_update_id)
+            return
 
         address = self._validate_userid_signature(user)
         if not address:

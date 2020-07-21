@@ -44,8 +44,10 @@ from raiden.api.v1.resources import (
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
+    ContractsResource,
     MintTokenResource,
     PartnersResourceByTokenAddress,
+    PaymentEventsResource,
     PaymentResource,
     PendingTransfersResource,
     PendingTransfersResourceByTokenAddress,
@@ -136,6 +138,7 @@ log = structlog.get_logger(__name__)
 URLS_V1 = [
     ("/address", AddressResource),
     ("/version", VersionResource),
+    ("/contracts", ContractsResource),
     ("/channels", ChannelsResource),
     ("/channels/<hexaddress:token_address>", ChannelsResourceByTokenAddress),
     (
@@ -144,8 +147,8 @@ URLS_V1 = [
     ),
     ("/connections/<hexaddress:token_address>", ConnectionsResource),
     ("/connections", ConnectionsInfoResource),
-    ("/payments", PaymentResource),
-    ("/payments/<hexaddress:token_address>", PaymentResource, "token_paymentresource"),
+    ("/payments", PaymentEventsResource, "paymentresource"),
+    ("/payments/<hexaddress:token_address>", PaymentEventsResource, "token_paymentresource"),
     (
         "/payments/<hexaddress:token_address>/<hexaddress:target_address>",
         PaymentResource,
@@ -524,6 +527,34 @@ class RestAPI:  # pragma: no unittest
     def get_raiden_version(cls) -> Response:
         return api_response(result=dict(version=get_system_spec()["raiden"]))
 
+    def get_contract_versions(self) -> Response:
+        raiden = self.raiden_api.raiden
+        contracts = dict(
+            contracts_version=raiden.proxy_manager.contract_manager.contracts_version,
+            token_network_registry_address=to_checksum_address(raiden.default_registry.address),
+            secret_registry_address=to_checksum_address(raiden.default_secret_registry.address),
+            service_registry_address="",
+            user_deposit_address="",
+            monitoring_service_address="",
+            one_to_n_address="",
+        )
+        if raiden.default_service_registry is not None:
+            contracts["service_registry_address"] = to_checksum_address(
+                raiden.default_service_registry.address
+            )
+        if raiden.default_user_deposit is not None:
+            contracts["user_deposit_address"] = to_checksum_address(
+                raiden.default_user_deposit.address
+            )
+        if raiden.default_msc_address is not None:
+            contracts["monitoring_service_address"] = to_checksum_address(
+                raiden.default_msc_address
+            )
+        if raiden.default_one_to_n_address is not None:
+            contracts["one_to_n_address"] = to_checksum_address(raiden.default_one_to_n_address)
+
+        return api_response(result=contracts)
+
     def register_token(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
     ) -> Response:
@@ -588,6 +619,8 @@ class RestAPI:  # pragma: no unittest
             self.raiden_api.mint_token_for(token_address=token_address, to=to, value=value)
         except MintFailed as e:
             return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
+        except InsufficientEth as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         return api_response(status_code=HTTPStatus.OK, result={})
 
@@ -898,6 +931,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
+        registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress = None,
         target_address: Address = None,
         limit: int = None,
@@ -913,13 +947,14 @@ class RestAPI:  # pragma: no unittest
         )
         try:
             service_result = self.raiden_api.get_raiden_events_payment_history_with_timestamps(
+                registry_address=registry_address,
                 token_address=token_address,
                 target_address=target_address,
                 limit=limit,
                 offset=offset,
             )
-        except (InvalidNumberInput, InvalidBinaryAddress) as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
+        except (InvalidNumberInput, InvalidBinaryAddress, InvalidTokenAddress) as e:
+            return api_error(str(e), status_code=HTTPStatus.BAD_REQUEST)
 
         result = []
         chain_state = views.state_from_raiden(self.raiden_api.raiden)
