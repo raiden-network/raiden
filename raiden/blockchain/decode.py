@@ -232,6 +232,7 @@ def contractreceivechannelclosed_from_event(
 
     # The from address is included in the ChannelClosed event as the
     # closing_participant field
+    # `burn_amount` is only required for the monitoring service, ignore it here
     return ContractReceiveChannelClosed(
         transaction_from=args["closing_participant"],
         canonical_identifier=canonical_identifier,
@@ -264,6 +265,7 @@ def contractreceiveupdatetransfer_from_event(
     data = event.event_data
     args = data["args"]
 
+    # `burn_amount` is only required for the monitoring service, ignore it here
     return ContractReceiveUpdateTransfer(
         canonical_identifier=channel_state.canonical_identifier,
         nonce=args["nonce"],

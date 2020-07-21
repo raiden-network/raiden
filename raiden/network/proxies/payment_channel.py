@@ -7,6 +7,7 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockIdentifier,
     BlockTimeout,
+    BurnAmount,
     LockedAmount,
     Locksroot,
     Nonce,
@@ -120,6 +121,7 @@ class PaymentChannel:
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
+        burnt_amount: BurnAmount,
         closing_signature: Signature,
         block_identifier: BlockIdentifier,
     ) -> None:
@@ -131,6 +133,7 @@ class PaymentChannel:
             nonce=nonce,
             additional_hash=additional_hash,
             non_closing_signature=non_closing_signature,
+            burnt_amount=burnt_amount,
             closing_signature=closing_signature,
             given_block_identifier=block_identifier,
         )
@@ -141,6 +144,7 @@ class PaymentChannel:
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
         partner_signature: Signature,
+        burnt_amount: BurnAmount,
         signature: Signature,
         block_identifier: BlockIdentifier,
     ) -> None:
@@ -152,6 +156,7 @@ class PaymentChannel:
             nonce=nonce,
             additional_hash=additional_hash,
             closing_signature=partner_signature,
+            burnt_amount=burnt_amount,
             non_closing_signature=signature,
             given_block_identifier=block_identifier,
         )

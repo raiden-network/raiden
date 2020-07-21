@@ -53,6 +53,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockIdentifier,
     BlockNumber,
+    BurnAmount,
     ChainID,
     ChannelID,
     Dict,
@@ -1494,6 +1495,7 @@ class TokenNetwork:
         nonce: Nonce,
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
+        burnt_amount: BurnAmount,
         closing_signature: Signature,
         given_block_identifier: BlockIdentifier,
     ) -> None:
@@ -1601,6 +1603,7 @@ class TokenNetwork:
             nonce=nonce,
             additional_hash=additional_hash,
             non_closing_signature=non_closing_signature,
+            burnt_amount=burnt_amount,
             closing_signature=closing_signature,
             log_details=log_details,
         )
@@ -1613,6 +1616,7 @@ class TokenNetwork:
         nonce: Nonce,
         additional_hash: AdditionalHash,
         non_closing_signature: Signature,
+        burnt_amount: BurnAmount,
         closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
@@ -1630,6 +1634,7 @@ class TokenNetwork:
                 nonce=nonce,
                 additional_hash=additional_hash,
                 non_closing_signature=non_closing_signature,
+                burnt_amount=burnt_amount,
                 closing_signature=closing_signature,
             )
             if estimated_transaction is not None:
@@ -1723,6 +1728,7 @@ class TokenNetwork:
         nonce: Nonce,
         additional_hash: AdditionalHash,
         closing_signature: Signature,
+        burnt_amount: BurnAmount,
         non_closing_signature: Signature,
         given_block_identifier: BlockIdentifier,
     ) -> None:
@@ -1838,6 +1844,7 @@ class TokenNetwork:
             nonce=nonce,
             additional_hash=additional_hash,
             closing_signature=closing_signature,
+            burnt_amount=burnt_amount,
             non_closing_signature=non_closing_signature,
             log_details=log_details,
         )
@@ -1850,6 +1857,7 @@ class TokenNetwork:
         nonce: Nonce,
         additional_hash: AdditionalHash,
         closing_signature: Signature,
+        burnt_amount: BurnAmount,
         non_closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
@@ -1864,6 +1872,7 @@ class TokenNetwork:
             nonce=nonce,
             additional_hash=additional_hash,
             closing_signature=closing_signature,
+            burnt_amount=burnt_amount,
             non_closing_signature=non_closing_signature,
         )
 

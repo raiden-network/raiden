@@ -33,6 +33,7 @@ from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
+    BurnAmount,
     ChainID,
     List,
     LockedAmount,
@@ -140,6 +141,7 @@ def test_payment_channel_proxy_basics(
         balance_hash=EMPTY_BALANCE_HASH,
         additional_hash=EMPTY_MESSAGE_HASH,
         non_closing_signature=EMPTY_SIGNATURE,
+        burnt_amount=BurnAmount(0),
         closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
         block_identifier=BLOCK_ID_LATEST,
     )
@@ -224,6 +226,7 @@ def test_payment_channel_proxy_basics(
             balance_hash=EMPTY_BALANCE_HASH,
             additional_hash=EMPTY_MESSAGE_HASH,
             non_closing_signature=EMPTY_SIGNATURE,
+            burnt_amount=BurnAmount(0),
             closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
             block_identifier=block_before_close,
         )
@@ -236,6 +239,7 @@ def test_payment_channel_proxy_basics(
             balance_hash=EMPTY_BALANCE_HASH,
             additional_hash=EMPTY_MESSAGE_HASH,
             non_closing_signature=EMPTY_SIGNATURE,
+            burnt_amount=BurnAmount(0),
             closing_signature=LocalSigner(private_keys[1]).sign(data=closing_data),
             block_identifier=BLOCK_ID_LATEST,
         )

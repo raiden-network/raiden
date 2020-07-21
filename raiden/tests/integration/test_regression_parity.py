@@ -17,7 +17,14 @@ from raiden.transfer import views
 from raiden.transfer.architecture import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.utils.packing import pack_signed_balance_proof
-from raiden.utils.typing import BlockNumber, List, PaymentAmount, PaymentID, TokenAddress
+from raiden.utils.typing import (
+    BlockNumber,
+    BurnAmount,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TokenAddress,
+)
 from raiden_contracts.constants import MessageTypeId
 
 pytestmark = pytest.mark.usefixtures("skip_if_not_parity")
@@ -102,6 +109,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         balance_hash=balance_proof.balance_hash,
         additional_hash=balance_proof.message_hash,
         non_closing_signature=balance_proof.signature,
+        burnt_amount=BurnAmount(0),
         closing_signature=closing_signature,
         block_identifier=block_number,
     )

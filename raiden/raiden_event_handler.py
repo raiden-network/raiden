@@ -83,6 +83,7 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     BlockIdentifier,
+    BurnAmount,
     Dict,
     List,
     Nonce,
@@ -497,11 +498,16 @@ class RaidenEventHandler(EventHandler):
             channel_state=channel_state, block_identifier=confirmed_block_identifier
         )
 
+        burnt_amount = BurnAmount(0)
+        if channel_state.our_state.confirmed_burnt is not None:
+            burnt_amount = channel_state.our_state.confirmed_burnt.total_burn
+
         channel_proxy.close(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=message_hash,
             non_closing_signature=signature_in_proof,
+            burnt_amount=burnt_amount,
             closing_signature=our_signature,
             block_identifier=channel_close_event.triggered_by_block_hash,
         )
@@ -540,12 +546,17 @@ class RaidenEventHandler(EventHandler):
             )
             our_signature = raiden.signer.sign(data=non_closing_data)
 
+            burnt_amount = BurnAmount(0)
+            if channel_state.our_state.confirmed_burnt is not None:
+                burnt_amount = channel_state.our_state.confirmed_burnt.total_burn
+
             try:
                 channel.update_transfer(
                     nonce=balance_proof.nonce,
                     balance_hash=balance_proof.balance_hash,
                     additional_hash=balance_proof.message_hash,
                     partner_signature=balance_proof.signature,
+                    burnt_amount=burnt_amount,
                     signature=our_signature,
                     block_identifier=channel_update_event.triggered_by_block_hash,
                 )
