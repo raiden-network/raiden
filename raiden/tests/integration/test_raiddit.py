@@ -113,15 +113,14 @@ def test_raiddit(
     assert get_channel_balances(app1, app2, token_network_address) == (48, 152)
 
     api1 = RaidenAPI(app1.raiden)
-    # TODO: add a burn here
-    # api1.set_total_channel_burn_amount(
-    #     registry_address=token_network_registry_address,
-    #     token_address=token_address,
-    #     partner_address=app0.raiden.address,
-    #     total_burn=BurnAmount(50),
-    # )
-    # assert get_channel_balances(app0, app1, token_network_address) == (48, 102)
-    # assert get_channel_balances(app1, app2, token_network_address) == (48, 152)
+    api1.set_total_channel_burn_amount(
+        registry_address=token_network_registry_address,
+        token_address=token_address,
+        partner_address=app0.raiden.address,
+        total_burn=BurnAmount(10),
+    )
+    assert get_channel_balances(app0, app1, token_network_address) == (48, 142)
+    assert get_channel_balances(app1, app2, token_network_address) == (48, 152)
 
     # Close channels and check on-chain balances
     api1.channel_close(
@@ -144,7 +143,7 @@ def test_raiddit(
     wait_all_apps(raiden_network)
 
     assert token_proxy.balance_of(app0.raiden.address) - balance0 == 48
-    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 200
+    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 190
     assert token_proxy.balance_of(app2.raiden.address) - balance2 == 152
 
     # Create a second pair of claims and do another transfer
@@ -166,7 +165,7 @@ def test_raiddit(
     app2.raiden.process_claims({}, claims, ignore_unrelated=ignore_unrelated_claims)
     wait_all_apps(raiden_network)
 
-    assert get_channel_balances(app0, app1, token_network_address) == (100, 100)
+    assert get_channel_balances(app0, app1, token_network_address) == (100, 90)
     assert get_channel_balances(app1, app2, token_network_address) == (100, 100)
 
     transfer(
@@ -177,7 +176,7 @@ def test_raiddit(
         identifier=PaymentID(43),
     )
     gevent.sleep(1)
-    assert get_channel_balances(app0, app1, token_network_address) == (152, 48)
+    assert get_channel_balances(app0, app1, token_network_address) == (152, 38)
     assert get_channel_balances(app1, app2, token_network_address) == (152, 48)
 
     # settle once more, check on-chain balances
@@ -193,7 +192,7 @@ def test_raiddit(
     )
 
     assert token_proxy.balance_of(app0.raiden.address) - balance0 == 48
-    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 200
+    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 190
     assert token_proxy.balance_of(app2.raiden.address) - balance2 == 152
 
     settle_block = BlockNumber(app0.raiden.rpc_client.block_number() + settle_timeout + 5)
@@ -201,6 +200,6 @@ def test_raiddit(
     wait_all_apps(raiden_network)
 
     assert token_proxy.balance_of(app0.raiden.address) - balance0 == 200
-    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 400
+    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 390
     assert token_proxy.balance_of(app2.raiden.address) - balance2 == 200
 
