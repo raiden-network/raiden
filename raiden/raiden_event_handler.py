@@ -53,7 +53,7 @@ from raiden.transfer.events import (
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
-    SendWithdrawRequest,
+    SendWithdrawRequest, EventInvalidReceivedBurnConfirmation,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -109,6 +109,7 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedWithdrawExpired,
     EventInvalidReceivedWithdrawRequest,
     EventInvalidReceivedWithdraw,
+    EventInvalidReceivedBurnConfirmation,
     EventRouteFailed,
 )
 
