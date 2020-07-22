@@ -6,6 +6,7 @@ import click
 from eth_utils import to_canonical_address
 from structlog import get_logger
 
+from raiden.constants import BLOCK_ID_LATEST
 from raiden.settings import MediationFeeConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.transfer.architecture import StateChange
@@ -22,6 +23,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ContractReceiveChannelDeposit,
     ContractReceiveChannelNew,
+    ContractReceiveChannelWithdraw,
     ContractReceiveRouteNew,
 )
 from raiden.utils.formatting import to_checksum_address
@@ -91,6 +93,7 @@ def get_state_changes_for_claims(
     token_network_registry_address: TokenNetworkRegistryAddress,
     settle_timeout: BlockTimeout,
     fee_config: MediationFeeConfig,
+    proxy_manager: Any,  # FIXME: remove import cycle
     ignore_unrelated: bool = True,
 ) -> List[StateChange]:
     from raiden.transfer import views
@@ -107,11 +110,18 @@ def get_state_changes_for_claims(
 
         # If node is channel participant, create NettingChannelState
         if node_address == claim.owner or node_address == claim.partner:
+            token_network_proxy = proxy_manager.token_network(
+                token_network_state.address, BLOCK_ID_LATEST
+            )
+            details = token_network_proxy._detail_participant(
+                claim.channel_id, claim.owner, claim.partner, BLOCK_ID_LATEST
+            )
+
             our_state = NettingChannelEndState(
-                claim.owner if claim.owner == node_address else claim.partner
+                address=claim.owner if claim.owner == node_address else claim.partner,
             )
             partner_state = NettingChannelEndState(
-                claim.partner if claim.owner == node_address else claim.owner
+                address=claim.partner if claim.owner == node_address else claim.owner,
             )
 
             channel_state = NettingChannelState(
@@ -137,32 +147,47 @@ def get_state_changes_for_claims(
                 settle_transaction=None,
             )
 
-            state_changes.append(
-                ContractReceiveChannelNew(
-                    channel_state=channel_state,
-                    transaction_hash=TransactionHash(b""),
-                    block_number=BlockNumber(0),
-                    block_hash=BlockHash(b""),
-                )
-            )
-            state_changes.append(
-                ContractReceiveChannelDeposit(
-                    canonical_identifier=CanonicalIdentifier(
-                        chain_identifier=claim.chain_id,
-                        token_network_address=claim.token_network_address,
-                        channel_identifier=claim.channel_id,
+            state_changes.extend(
+                [
+                    ContractReceiveChannelNew(
+                        channel_state=channel_state,
+                        transaction_hash=TransactionHash(b""),
+                        block_number=BlockNumber(0),
+                        block_hash=BlockHash(b""),
                     ),
-                    deposit_transaction=TransactionChannelDeposit(
-                        participant_address=claim.owner,
-                        contract_balance=claim.total_amount,
-                        deposit_block_number=BlockNumber(1),
-                        claim=claim,
+                    # Fake the deposit with the claims value
+                    ContractReceiveChannelDeposit(
+                        canonical_identifier=CanonicalIdentifier(
+                            chain_identifier=claim.chain_id,
+                            token_network_address=claim.token_network_address,
+                            channel_identifier=claim.channel_id,
+                        ),
+                        deposit_transaction=TransactionChannelDeposit(
+                            participant_address=claim.owner,
+                            contract_balance=claim.total_amount,
+                            deposit_block_number=BlockNumber(1),
+                            claim=claim,
+                        ),
+                        transaction_hash=TransactionHash(b""),
+                        block_number=BlockNumber(1),
+                        block_hash=BlockHash(b""),
+                        fee_config=MediationFeeConfig(),
                     ),
-                    transaction_hash=TransactionHash(b""),
-                    block_number=BlockNumber(1),
-                    block_hash=BlockHash(b""),
-                    fee_config=MediationFeeConfig(),
-                )
+                    # Fake the already withdrawn amount
+                    ContractReceiveChannelWithdraw(
+                        canonical_identifier=CanonicalIdentifier(
+                            chain_identifier=claim.chain_id,
+                            token_network_address=claim.token_network_address,
+                            channel_identifier=claim.channel_id,
+                        ),
+                        participant=claim.owner,
+                        total_withdraw=details.withdrawn,
+                        transaction_hash=TransactionHash(b""),
+                        block_number=BlockNumber(1),
+                        block_hash=BlockHash(b""),
+                        fee_config=MediationFeeConfig(),
+                    ),
+                ]
             )
 
         # Node is not a participant, just store routing information
