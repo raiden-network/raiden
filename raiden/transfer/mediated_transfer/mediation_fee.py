@@ -266,7 +266,9 @@ def calculate_imbalance_fees(
     The penalty term takes the following value at the extrema:
     channel_capacity * (proportional_imbalance_fee / 1_000_000)
     """
-    assert channel_capacity >= 0, "channel_capacity must be larger than zero"
+    if channel_capacity < 0:
+        return None
+
     assert proportional_imbalance_fee >= 0, "prop. imbalance fee must be larger than zero"
 
     if proportional_imbalance_fee == 0:
