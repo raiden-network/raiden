@@ -21,7 +21,7 @@ from raiden.utils.typing import (
     PaymentID,
     TokenAddress,
     TokenAmount,
-    TokenNetworkAddress,
+    TokenNetworkAddress, BurnAmount,
 )
 from raiden.waiting import wait_for_block
 
@@ -112,10 +112,18 @@ def test_raiddit(
     assert get_channel_balances(app0, app1, token_network_address) == (48, 152)
     assert get_channel_balances(app1, app2, token_network_address) == (48, 152)
 
+    api1 = RaidenAPI(app1.raiden)
     # TODO: add a burn here
+    # api1.set_total_channel_burn_amount(
+    #     registry_address=token_network_registry_address,
+    #     token_address=token_address,
+    #     partner_address=app0.raiden.address,
+    #     total_burn=BurnAmount(50),
+    # )
+    # assert get_channel_balances(app0, app1, token_network_address) == (48, 102)
+    # assert get_channel_balances(app1, app2, token_network_address) == (48, 152)
 
     # Close channels and check on-chain balances
-    api1 = RaidenAPI(app1.raiden)
     api1.channel_close(
         registry_address=token_network_registry_address,
         token_address=token_address,
@@ -172,4 +180,27 @@ def test_raiddit(
     assert get_channel_balances(app0, app1, token_network_address) == (152, 48)
     assert get_channel_balances(app1, app2, token_network_address) == (152, 48)
 
-    # TODO: settle once more, check on-chain balances
+    # settle once more, check on-chain balances
+    api1.channel_close(
+        registry_address=token_network_registry_address,
+        token_address=token_address,
+        partner_address=app0.raiden.address,
+    )
+    api1.channel_close(
+        registry_address=token_network_registry_address,
+        token_address=token_address,
+        partner_address=app2.raiden.address,
+    )
+
+    assert token_proxy.balance_of(app0.raiden.address) - balance0 == 48
+    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 200
+    assert token_proxy.balance_of(app2.raiden.address) - balance2 == 152
+
+    settle_block = BlockNumber(app0.raiden.rpc_client.block_number() + settle_timeout + 5)
+    wait_for_block(app0.raiden, settle_block, retry_timeout)
+    wait_all_apps(raiden_network)
+
+    assert token_proxy.balance_of(app0.raiden.address) - balance0 == 200
+    assert token_proxy.balance_of(app1.raiden.address) - balance1 == 400
+    assert token_proxy.balance_of(app2.raiden.address) - balance2 == 200
+
