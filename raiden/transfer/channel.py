@@ -3,6 +3,7 @@ import random
 from enum import Enum
 from typing import TYPE_CHECKING
 
+import structlog
 from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
@@ -2646,12 +2647,16 @@ def handle_channel_settled(
         our_locksroot = state_change.our_onchain_locksroot
         partner_locksroot = state_change.partner_onchain_locksroot
 
-        should_clear_channel = (
-            our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
-        )
+        # Channel should be open again, delete all transaction statuses
+        channel_state.settle_transaction = None
+        channel_state.close_transaction = None
 
-        if should_clear_channel:
-            return TransitionResult(None, events)
+        # should_clear_channel = (
+        #     our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
+        # )
+        #
+        # if should_clear_channel:
+        #     return TransitionResult(None, events)
 
         channel_state.our_state.onchain_locksroot = our_locksroot
         channel_state.partner_state.onchain_locksroot = partner_locksroot
@@ -2765,12 +2770,12 @@ def handle_channel_batch_unlock(
             partner_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
 
         # only clear the channel state once all unlocks have been done
-        no_unlock_left_to_do = our_state.onchain_locksroot == Locksroot(
-            LOCKSROOT_OF_NO_LOCKS
-        ) and partner_state.onchain_locksroot == Locksroot(LOCKSROOT_OF_NO_LOCKS)
-
-        if no_unlock_left_to_do:
-            new_channel_state = None
+        # no_unlock_left_to_do = our_state.onchain_locksroot == Locksroot(
+        #     LOCKSROOT_OF_NO_LOCKS
+        # ) and partner_state.onchain_locksroot == Locksroot(LOCKSROOT_OF_NO_LOCKS)
+        #
+        # if no_unlock_left_to_do:
+        #     new_channel_state = None
 
     return TransitionResult(new_channel_state, events)
 
