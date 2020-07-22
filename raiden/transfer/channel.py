@@ -2798,7 +2798,8 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     partner_balance = get_balance(partner_state, our_state)
 
     # msg = (
-    #     "The balance can never be negative, that would be equivalent to a loan or a double spend."
+    #     "The balance can never be negative, that would be equivalent "
+    #     "to a loan or a double spend."
     # )
     # assert our_balance >= 0, msg
     # assert partner_balance >= 0, msg
