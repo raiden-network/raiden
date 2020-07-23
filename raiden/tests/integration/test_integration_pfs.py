@@ -146,6 +146,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_pfs_send_capacity_updates_during_mediated_transfer(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):

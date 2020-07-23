@@ -82,6 +82,7 @@ def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_receive_lockedtransfer_invalidnonce(
     raiden_network, number_of_nodes, deposit, token_addresses, reveal_timeout, network_wait
 ):

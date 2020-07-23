@@ -44,6 +44,7 @@ from raiden.waiting import wait_for_block, wait_for_settle
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_refund_messages(raiden_chain, token_addresses, deposit):
     # The network has the following topology:
     #
@@ -118,6 +119,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 @pytest.mark.parametrize("privatekey_seed", ["test_refund_transfer:{}"])
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_refund_transfer(raiden_chain, token_addresses, deposit, retry_timeout):
     """A failed transfer must send a refund back.
 
@@ -512,6 +514,7 @@ def test_different_view_of_last_bp_during_unlock(
 @pytest.mark.parametrize("number_of_nodes", [4])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_refund_transfer_after_2nd_hop(
     raiden_chain, number_of_nodes, token_addresses, deposit, network_wait
 ):
