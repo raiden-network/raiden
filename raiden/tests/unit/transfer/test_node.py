@@ -70,6 +70,7 @@ from raiden.transfer.views import get_networks
 from raiden.utils.copy import deepcopy
 
 
+@pytest.mark.skip("Raiddit")
 def test_is_transaction_effect_satisfied(
     chain_state, token_network_address, netting_channel_state
 ):
