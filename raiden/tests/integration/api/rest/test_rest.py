@@ -700,6 +700,7 @@ def test_token_events_errors_for_unregistered_token(api_server_test_instance):
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("number_of_tokens", [2])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_payment_events_endpoints(
     api_server_test_instance: APIServer, raiden_network, token_addresses
 ):
@@ -1113,6 +1114,7 @@ def test_channel_events_raiden(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_pending_transfers_endpoint(raiden_network, token_addresses):
     initiator, mediator, target = raiden_network
     token_address = token_addresses[0]

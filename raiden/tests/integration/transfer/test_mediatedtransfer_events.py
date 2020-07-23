@@ -17,6 +17,7 @@ from raiden.waiting import wait_until
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_mediated_transfer_events(raiden_network, number_of_nodes, token_addresses, network_wait):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]

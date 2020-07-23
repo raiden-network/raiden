@@ -93,6 +93,7 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, deposit, 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_regression_revealsecret_after_secret(
     raiden_network: List[App], token_addresses: List[TokenAddress]
 ) -> None:

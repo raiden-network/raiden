@@ -52,6 +52,7 @@ from raiden.waiting import wait_for_block
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_mediated_transfer(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
@@ -163,6 +164,7 @@ def test_locked_transfer_secret_registered_onchain(
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_mediated_transfer_with_entire_deposit(
     raiden_network, number_of_nodes, token_addresses, deposit, network_wait
 ) -> None:
@@ -337,6 +339,7 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", (3,))
 @pytest.mark.parametrize("channels_per_node", (CHAIN,))
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: List[TokenAddress]):
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
@@ -409,6 +412,7 @@ def test_mediated_transfer_calls_pfs(raiden_chain: List[App], token_addresses: L
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("ignore_unrelated_claims", [False])
 def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
     raiden_network, number_of_nodes, deposit, token_addresses, network_wait
 ):
