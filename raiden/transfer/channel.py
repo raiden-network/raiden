@@ -3,7 +3,6 @@ import random
 from enum import Enum
 from typing import TYPE_CHECKING
 
-import structlog
 from eth_utils import encode_hex, keccak, to_hex
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
@@ -134,8 +133,6 @@ from raiden.utils.typing import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # noqa: F401
-
-log = structlog.get_logger(__name__)
 
 # This should be changed to `Union[str, PendingLocksState]`
 PendingLocksStateOrError = Tuple[bool, Optional[str], Optional[PendingLocksState]]
@@ -2692,14 +2689,6 @@ def handle_channel_deposit(
     participant_address = state_change.deposit_transaction.participant_address
     claim = state_change.deposit_transaction.claim
 
-    log.warn(
-        "deposit",
-        our_deposit=channel_state.our_state.claim.total_amount,
-        our_withdraw=channel_state.our_state.total_withdraw,
-        partner_deposit=channel_state.partner_state.claim.total_amount,
-        partner_withdraw=channel_state.partner_state.total_withdraw,
-    )
-
     if participant_address == channel_state.our_state.address:
         update_contract_balance(channel_state.our_state, claim)
     elif participant_address == channel_state.partner_state.address:
@@ -2717,14 +2706,6 @@ def handle_channel_withdraw(
     track of this not to go lower than the on-chain value. The value is set to
     onchain_total_withdraw and the corresponding withdraw_state is cleared.
     """
-    log.warn(
-        "withdraw",
-        our_deposit=channel_state.our_state.claim.total_amount,
-        our_withdraw=channel_state.our_state.total_withdraw,
-        partner_deposit=channel_state.partner_state.claim.total_amount,
-        partner_withdraw=channel_state.partner_state.total_withdraw,
-    )
-
     participants = (channel_state.our_state.address, channel_state.partner_state.address)
     if state_change.participant not in participants:
         return TransitionResult(channel_state, list())
