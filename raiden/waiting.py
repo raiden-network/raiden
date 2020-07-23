@@ -14,7 +14,6 @@ from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
-    ChainState,
     ChannelState,
     NettingChannelEndState,
     NetworkState,
