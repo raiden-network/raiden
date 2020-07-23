@@ -17,6 +17,7 @@ from raiden.utils.claim import ClaimGenerator
 from raiden.utils.typing import (
     Balance,
     BlockTimeout,
+    BurnAmount,
     PaymentAmount,
     PaymentID,
     TokenAddress,
