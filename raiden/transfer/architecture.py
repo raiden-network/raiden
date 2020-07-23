@@ -452,3 +452,9 @@ class SuccessOrError:
     @property
     def as_error_message(self) -> str:
         return " / ".join(self.error_messages)
+
+    def __repr__(self) -> str:
+        if self.ok:
+            return "<SuccessOrError: OK>"
+        else:
+            return f"<SuccessOrError: ERROR: {self.error_messages}>"
