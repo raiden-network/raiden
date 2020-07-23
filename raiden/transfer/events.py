@@ -146,7 +146,7 @@ class SendBurnConfirmation(SendMessageEvent):
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}< "
-            f"total_withdraw: {self.total_burn} "
+            f"total_burn: {self.total_burn} "
             f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
             f">"
         )

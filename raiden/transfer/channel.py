@@ -93,7 +93,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.packing import pack_balance_proof, pack_burn, pack_withdraw
+from raiden.utils.packing import pack_balance_proof, pack_burn_confirmation, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -481,7 +481,6 @@ def is_valid_signature(
     is_correct_sender = sender_address == signer_address
     if is_correct_sender:
         return SuccessOrError()
-
     return SuccessOrError("Signature was valid but the expected address does not match.")
 
 
@@ -1159,8 +1158,7 @@ def is_valid_burn_request(
 def is_valid_burn_confirmation(
     channel_state: NettingChannelState, received_burn: ReceiveBurnConfirmation
 ) -> SuccessOrError:
-
-    if received_burn.total_burn in channel_state.our_state.pending_burn:
+    if received_burn.total_burn not in channel_state.our_state.pending_burn:
         return SuccessOrError(
             f"Received burn confirmation {received_burn.total_burn} "
             f"was not found in burn states"
@@ -1170,12 +1168,11 @@ def is_valid_burn_confirmation(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    packed = pack_burn(
+    packed = pack_burn_confirmation(
         canonical_identifier=received_burn.canonical_identifier,
         participant=received_burn.participant,
         total_burn=received_burn.total_burn,
     )
-
     is_valid_burnt_signature = is_valid_signature(
         data=packed, signature=received_burn.signature, sender_address=received_burn.sender
     )

@@ -691,6 +691,7 @@ class RaidenAPI:  # pragma: no unittest
         waiting.wait_for_burn_complete(
             raiden=self.raiden,
             canonical_identifier=channel_state.canonical_identifier,
+            chain_state=chain_state,
             total_burn=total_burn,
             retry_timeout=retry_timeout,
         )

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, List
 import gevent
 import structlog
 
+from raiden.api.exceptions import NonexistingChannel
 from raiden.storage.restore import get_state_change_with_transfer_by_secrethash
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
@@ -13,6 +14,7 @@ from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
+    ChainState,
     ChannelState,
     NettingChannelEndState,
     NetworkState,
@@ -20,7 +22,6 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
-    ReceiveBurnConfirmation,
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
@@ -608,6 +609,7 @@ def wait_for_withdraw_complete(
 def wait_for_burn_complete(
     raiden: "RaidenService",
     canonical_identifier: CanonicalIdentifier,
+    chain_state: ChainState,
     total_burn: BurnAmount,
     retry_timeout: float,
 ) -> None:
@@ -624,20 +626,15 @@ def wait_for_burn_complete(
     assert raiden, TRANSPORT_ERROR_MSG
     assert raiden.wal, TRANSPORT_ERROR_MSG
     assert raiden.transport, TRANSPORT_ERROR_MSG
-    stream = raiden.wal.storage.get_state_changes_stream(retry_timeout=retry_timeout)
 
     while True:
-        state_changes = next(stream)
-
-        for state_change in state_changes:
-            found = (
-                isinstance(state_change, ReceiveBurnConfirmation)
-                and state_change.total_burn == total_burn
-                and state_change.canonical_identifier == canonical_identifier
-            )
-
-            if found:
+        channel_state = views.get_channelstate_by_canonical_identifier(
+            canonical_identifier=canonical_identifier, chain_state=chain_state
+        )
+        if channel_state is None:
+            raise NonexistingChannel("No channel with partner_address for the given token")
+        if channel_state.our_state.confirmed_burnt:
+            if channel_state.our_state.confirmed_burnt.total_burn == total_burn:
                 return
-
         log.debug("wait_for_burn_complete", **log_details)
         gevent.sleep(retry_timeout)
