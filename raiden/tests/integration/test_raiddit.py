@@ -22,7 +22,7 @@ from raiden.utils.typing import (
     PaymentID,
     TokenAddress,
     TokenAmount,
-    TokenNetworkAddress, BurnAmount,
+    TokenNetworkAddress,
 )
 from raiden.waiting import wait_for_block
 
@@ -203,4 +203,3 @@ def test_raiddit(
     assert token_proxy.balance_of(app0.raiden.address) - balance0 == 200
     assert token_proxy.balance_of(app1.raiden.address) - balance1 == 390
     assert token_proxy.balance_of(app2.raiden.address) - balance2 == 200
-

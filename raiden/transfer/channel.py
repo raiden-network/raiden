@@ -1164,8 +1164,6 @@ def is_valid_burn_confirmation(
             f"was not found in burn states"
         )
 
-    channel_state.our_state.pending_burn.index(received_burn.total_burn)
-
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
     packed = pack_burn_confirmation(
@@ -1178,7 +1176,7 @@ def is_valid_burn_confirmation(
     )
     if not is_valid_burnt_signature:
         return SuccessOrError(
-            f"Invalid burn confirmation {is_valid_burnt_signature.as_error_message}"
+            f"Invalid burn confirmation: {is_valid_burnt_signature.as_error_message}"
         )
 
     if channel_state.canonical_identifier != received_burn.canonical_identifier:

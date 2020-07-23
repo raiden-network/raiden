@@ -37,6 +37,7 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
     EventInvalidActionSetRevealTimeout,
     EventInvalidActionWithdraw,
+    EventInvalidReceivedBurnConfirmation,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
@@ -53,7 +54,7 @@ from raiden.transfer.events import (
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
-    SendWithdrawRequest, EventInvalidReceivedBurnConfirmation,
+    SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
