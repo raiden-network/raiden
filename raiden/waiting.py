@@ -609,7 +609,6 @@ def wait_for_withdraw_complete(
 def wait_for_burn_complete(
     raiden: "RaidenService",
     canonical_identifier: CanonicalIdentifier,
-    chain_state: ChainState,
     total_burn: BurnAmount,
     retry_timeout: float,
 ) -> None:
@@ -628,6 +627,7 @@ def wait_for_burn_complete(
     assert raiden.transport, TRANSPORT_ERROR_MSG
 
     while True:
+        chain_state = views.state_from_raiden(raiden)
         channel_state = views.get_channelstate_by_canonical_identifier(
             canonical_identifier=canonical_identifier, chain_state=chain_state
         )
