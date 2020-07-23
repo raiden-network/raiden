@@ -2734,7 +2734,7 @@ def handle_channel_batch_unlock(
     new_channel_state: Optional[NettingChannelState] = channel_state
     # Unlock is allowed by the smart contract only on a settled channel.
     # Ignore the unlock if the channel was not closed yet.
-    if get_status(channel_state) == ChannelState.STATE_SETTLED:
+    if get_status(channel_state) in (ChannelState.STATE_OPENED, ChannelState.STATE_SETTLED):
 
         our_state = channel_state.our_state
         partner_state = channel_state.partner_state
