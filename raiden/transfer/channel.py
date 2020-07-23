@@ -2780,8 +2780,7 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     # assert our_balance >= 0, msg
     # assert partner_balance >= 0, msg
 
-    """This weired check is only for the Raiddit Challenge!!!
-    """
+    # This weired check is only for the Raiddit Challenge!!!
     channel_capacity = get_capacity(channel_state) - get_max_burn_channel(channel_state)
     msg = "The whole deposit of the channel has to be accounted for."
     assert our_balance + partner_balance == channel_capacity, msg
