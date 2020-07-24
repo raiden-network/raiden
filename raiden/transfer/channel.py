@@ -2773,6 +2773,8 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     our_balance = get_balance(our_state, partner_state)
     partner_balance = get_balance(partner_state, our_state)
 
+    # Raiddit: As we store the settled tranferred amounts in the contracts the balaces
+    # (total_claim - total_withdraw) can be negative.
     # msg = (
     #     "The balance can never be negative, that would be equivalent "
     #     "to a loan or a double spend."
