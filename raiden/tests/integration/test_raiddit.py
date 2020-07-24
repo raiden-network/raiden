@@ -4,7 +4,6 @@ import gevent
 import pytest
 from eth_typing import BlockNumber
 
-import raiden.utils.claim
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST
@@ -58,9 +57,7 @@ def test_raiddit(
     ignore_unrelated_claims: bool,
     settle_timeout: BlockTimeout,
     retry_timeout,
-    monkeypatch,
 ):
-    monkeypatch.setattr(raiden.utils.claim, "DEFAULT_REVEAL_TIMEOUT", 6)
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     token_proxy: Token = app0.raiden.proxy_manager.token(
