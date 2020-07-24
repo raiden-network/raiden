@@ -69,7 +69,7 @@ def get_best_routes(
     error_no_route = 0
     error_no_capacity = 0
     error_not_online = 0
-    error_direct = None
+    # error_direct = None
     shortest_routes: List[Neighbour] = list()
 
     # Always use a direct channel if available:
@@ -97,7 +97,7 @@ def get_best_routes(
                 )
                 return (None, [direct_route], None)
 
-            error_direct = is_usable
+            # error_direct = is_usable
 
     latest_channel_opened_at = BlockNumber(0)
     for partner_address in all_neighbors:
@@ -147,33 +147,35 @@ def get_best_routes(
                     )
                     heappush(shortest_routes, neighbour)
 
-    if not shortest_routes:
-        qty_channels = sum(
-            len(token_network.partneraddresses_to_channelidentifiers[partner_address])
-            for partner_address in all_neighbors
-        )
-        error_msg = (
-            f"None of the existing channels could be used to complete the "
-            f"transfer. From the {qty_channels} existing channels. "
-            f"{error_closed} are closed. {error_not_online} are not online. "
-            f"{error_no_route} don't have a route to the target in the given "
-            f"token network. {error_no_capacity} don't have enough capacity for "
-            f"the requested transfer."
-        )
-        if error_direct is not None:
-            error_msg += f"direct channel {error_direct}."
+    # Only works when the client has a view of the full topology.
+    #
+    # if not shortest_routes:
+    #     qty_channels = sum(
+    #         len(token_network.partneraddresses_to_channelidentifiers[partner_address])
+    #         for partner_address in all_neighbors
+    #     )
+    #     error_msg = (
+    #         f"None of the existing channels could be used to complete the "
+    #         f"transfer. From the {qty_channels} existing channels. "
+    #         f"{error_closed} are closed. {error_not_online} are not online. "
+    #         f"{error_no_route} don't have a route to the target in the given "
+    #         f"token network. {error_no_capacity} don't have enough capacity for "
+    #         f"the requested transfer."
+    #     )
+    #     if error_direct is not None:
+    #         error_msg += f"direct channel {error_direct}."
 
-        log.warning(
-            "None of the existing channels could be used to complete the transfer",
-            from_address=to_checksum_address(from_address),
-            to_address=to_checksum_address(to_address),
-            error_closed=error_closed,
-            error_no_route=error_no_route,
-            error_no_capacity=error_no_capacity,
-            error_direct=error_direct,
-            error_not_online=error_not_online,
-        )
-        return (error_msg, list(), None)
+    #     log.warning(
+    #         "None of the existing channels could be used to complete the transfer",
+    #         from_address=to_checksum_address(from_address),
+    #         to_address=to_checksum_address(to_address),
+    #         error_closed=error_closed,
+    #         error_no_route=error_no_route,
+    #         error_no_capacity=error_no_capacity,
+    #         error_direct=error_direct,
+    #         error_not_online=error_not_online,
+    #     )
+    #     return (error_msg, list(), None)
 
     if pfs_config is not None and one_to_n_address is not None:
         pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
