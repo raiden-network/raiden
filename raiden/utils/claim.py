@@ -45,7 +45,6 @@ log = get_logger(__name__)
 
 
 DEFAULT_SETTLE_TIMEOUT = BlockTimeout(100)
-DEFAULT_REVEAL_TIMEOUT = BlockTimeout(50)
 DEFAULT_TOKEN_AMOUNT = TokenAmount(100)
 
 
@@ -92,6 +91,7 @@ def get_state_changes_for_claims(
     node_address: Address,
     token_network_registry_address: TokenNetworkRegistryAddress,
     settle_timeout: BlockTimeout,
+    reveal_timeout: BlockTimeout,
     fee_config: MediationFeeConfig,
     proxy_manager: Any,  # FIXME: remove import cycle
     ignore_unrelated: bool = True,
@@ -132,7 +132,7 @@ def get_state_changes_for_claims(
                 ),
                 token_address=token_network_state.token_address,
                 token_network_registry_address=token_network_registry_address,
-                reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
+                reveal_timeout=reveal_timeout,
                 settle_timeout=settle_timeout,
                 fee_schedule=FeeScheduleState(
                     cap_fees=fee_config.cap_meditation_fees,
