@@ -234,7 +234,7 @@ def options(func: Callable) -> Callable:
                 help="Sets the default reveal timeout to be used to newly created channels",
                 default=DEFAULT_REVEAL_TIMEOUT,
                 show_default=True,
-                type=click.IntRange(min=20),
+                type=click.IntRange(min=10),
             ),
             option(
                 "--default-settle-timeout",
