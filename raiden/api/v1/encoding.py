@@ -263,6 +263,7 @@ class ChannelStateSchema(BaseSchema):
     state = fields.Method("get_state")
     total_deposit = fields.Method("get_total_deposit")
     total_withdraw = fields.Method("get_total_withdraw")
+    total_burn = fields.Method("get_total_burn")
 
     @staticmethod
     def get_partner_address(channel_state: NettingChannelState) -> str:
@@ -285,6 +286,13 @@ class ChannelStateSchema(BaseSchema):
     def get_total_withdraw(channel_state: NettingChannelState) -> str:
         """Return our total withdraw from this channel"""
         return str(channel_state.our_total_withdraw)
+
+    @staticmethod
+    def get_total_burn(channel_state: NettingChannelState) -> str:
+        """Return our total withdraw from this channel"""
+        if channel_state.our_state.confirmed_burnt:
+            return str(channel_state.our_state.confirmed_burnt.total_burn)
+        return str(0)
 
 
 class ChannelPutSchema(BaseSchema):
