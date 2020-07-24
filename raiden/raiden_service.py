@@ -717,6 +717,7 @@ class RaidenService(Runnable):
             node_address=self.address,
             token_network_registry_address=self.default_registry.address,
             settle_timeout=self.default_registry.settlement_timeout_min(BLOCK_ID_LATEST),
+            reveal_timeout=self.config.reveal_timeout,
             fee_config=self.config.mediation_fees,
             proxy_manager=self.proxy_manager,
             ignore_unrelated=ignore_unrelated,
