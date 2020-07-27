@@ -1560,7 +1560,7 @@ class RaidenService(Runnable):
                 f" That secret is already registered onchain."
             )
 
-        self.async_start_health_check_for(Address(target))
+        self.immediate_health_check_for(Address(target))
 
         # Checks if there is a payment in flight with the same payment_id and
         # target. If there is such a payment and the details match, instead of
