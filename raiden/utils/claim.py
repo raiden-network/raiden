@@ -218,6 +218,7 @@ def create_hub_jsonl(
     hub_address: Address,
     addresses: List[Address],
     output_file: Path,
+    token_amount: TokenAmount = DEFAULT_TOKEN_AMOUNT,
 ) -> None:
     with output_file.open("wt") as output_fd:
         output_fd.write(
@@ -231,7 +232,7 @@ def create_hub_jsonl(
         output_fd.write("\n")
 
         claims = create_hub_claims(
-            operator_signer, token_network_address, chain_id, hub_address, addresses
+            operator_signer, token_network_address, chain_id, hub_address, addresses, token_amount
         )
         with click.progressbar(
             claims, label="Generating claims", length=len(addresses) * 2
@@ -247,11 +248,12 @@ def create_hub_claims(
     chain_id: ChainID,
     hub_address: Address,
     addresses: List[Address],
+    token_amount: TokenAmount = DEFAULT_TOKEN_AMOUNT,
 ) -> Generator[Claim, None, None]:
     channels = []
     for address in addresses:
-        channels.append((address, hub_address, DEFAULT_TOKEN_AMOUNT))
-        channels.append((hub_address, address, DEFAULT_TOKEN_AMOUNT))
+        channels.append((address, hub_address, token_amount))
+        channels.append((hub_address, address, token_amount))
 
     yield from generate_claims(operator_signer, token_network_address, chain_id, channels)
 
