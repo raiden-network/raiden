@@ -425,10 +425,10 @@ class RaidenService(Runnable):
 
         self._initialize_wal()
         self._synchronize_with_blockchain()
+        self._initialize_claims()
 
         chain_state = views.state_from_raiden(self)
 
-        self._initialize_claims()
         self._initialize_payment_statuses(chain_state)
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
