@@ -43,6 +43,8 @@ def hub(
     addresses = list(addresses)
     addresses.extend(make_address() for _ in range(users - len(addresses)))
 
+    if not isinstance(output_file, Path):
+        output_file = Path(output_file)  # type: ignore
     create_hub_jsonl(signer, token_network_address, chain_id, hub_address, addresses, output_file)
 
 
