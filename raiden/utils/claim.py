@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, Generator, Iterable, Optional, Tuple
 
 import click
+import gevent
 from eth_utils import to_canonical_address
 from structlog import get_logger
 
@@ -18,6 +19,7 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     SuccessfulTransactionState,
+    TokenNetworkState,
     TransactionChannelDeposit,
 )
 from raiden.transfer.state_change import (
@@ -85,6 +87,93 @@ def parse_claims_file(
     return operator_info, iterate_claims()
 
 
+def _get_state_changes_for_claim(
+    claim: Claim,
+    node_address: Address,
+    token_network_state: TokenNetworkState,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    settle_timeout: BlockTimeout,
+    reveal_timeout: BlockTimeout,
+    fee_config: MediationFeeConfig,
+    proxy_manager: Any,  # FIXME: remove import cycle
+) -> List[StateChange]:
+    token_network_proxy = proxy_manager.token_network(token_network_state.address, BLOCK_ID_LATEST)
+    details = token_network_proxy._detail_participant(
+        claim.channel_id, claim.owner, claim.partner, BLOCK_ID_LATEST
+    )
+
+    our_state = NettingChannelEndState(
+        address=claim.owner if claim.owner == node_address else claim.partner,
+    )
+    partner_state = NettingChannelEndState(
+        address=claim.partner if claim.owner == node_address else claim.owner,
+    )
+
+    channel_state = NettingChannelState(
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=claim.chain_id,
+            token_network_address=claim.token_network_address,
+            channel_identifier=claim.channel_id,
+        ),
+        token_address=token_network_state.token_address,
+        token_network_registry_address=token_network_registry_address,
+        reveal_timeout=reveal_timeout,
+        settle_timeout=settle_timeout,
+        fee_schedule=FeeScheduleState(
+            cap_fees=fee_config.cap_meditation_fees,
+            flat=fee_config.get_flat_fee(token_network_state.token_address),
+            proportional=fee_config.get_proportional_fee(token_network_state.token_address)
+            # no need to set the imbalance fee here, will be set during deposit
+        ),
+        our_state=our_state,
+        partner_state=partner_state,
+        open_transaction=SuccessfulTransactionState(BlockNumber(0)),
+        close_transaction=None,
+        settle_transaction=None,
+    )
+
+    return [
+        ContractReceiveChannelNew(
+            channel_state=channel_state,
+            transaction_hash=TransactionHash(b""),
+            block_number=BlockNumber(0),
+            block_hash=BlockHash(b""),
+        ),
+        # Fake the deposit with the claims value
+        ContractReceiveChannelDeposit(
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=claim.chain_id,
+                token_network_address=claim.token_network_address,
+                channel_identifier=claim.channel_id,
+            ),
+            deposit_transaction=TransactionChannelDeposit(
+                participant_address=claim.owner,
+                contract_balance=claim.total_amount,
+                deposit_block_number=BlockNumber(1),
+                claim=claim,
+            ),
+            transaction_hash=TransactionHash(b""),
+            block_number=BlockNumber(1),
+            block_hash=BlockHash(b""),
+            fee_config=MediationFeeConfig(),
+        ),
+        # Fake the already withdrawn amount
+        ContractReceiveChannelWithdraw(
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=claim.chain_id,
+                token_network_address=claim.token_network_address,
+                channel_identifier=claim.channel_id,
+            ),
+            participant=claim.owner,
+            total_withdraw=details.withdrawn,
+            transaction_hash=TransactionHash(b""),
+            block_number=BlockNumber(1),
+            block_hash=BlockHash(b""),
+            fee_config=MediationFeeConfig(),
+        ),
+    ]
+
+
 def get_state_changes_for_claims(
     chain_state: ChainState,
     claims: Iterable[Claim],
@@ -99,6 +188,7 @@ def get_state_changes_for_claims(
     from raiden.transfer import views
 
     state_changes: List[StateChange] = []
+    pool = gevent.pool.Pool(4)
 
     for claim in claims:
 
@@ -110,86 +200,22 @@ def get_state_changes_for_claims(
 
         # If node is channel participant, create NettingChannelState
         if node_address == claim.owner or node_address == claim.partner:
-            token_network_proxy = proxy_manager.token_network(
-                token_network_state.address, BLOCK_ID_LATEST
-            )
-            details = token_network_proxy._detail_participant(
-                claim.channel_id, claim.owner, claim.partner, BLOCK_ID_LATEST
-            )
-
-            our_state = NettingChannelEndState(
-                address=claim.owner if claim.owner == node_address else claim.partner,
-            )
-            partner_state = NettingChannelEndState(
-                address=claim.partner if claim.owner == node_address else claim.owner,
-            )
-
-            channel_state = NettingChannelState(
-                canonical_identifier=CanonicalIdentifier(
-                    chain_identifier=claim.chain_id,
-                    token_network_address=claim.token_network_address,
-                    channel_identifier=claim.channel_id,
-                ),
-                token_address=token_network_state.token_address,
-                token_network_registry_address=token_network_registry_address,
-                reveal_timeout=reveal_timeout,
-                settle_timeout=settle_timeout,
-                fee_schedule=FeeScheduleState(
-                    cap_fees=fee_config.cap_meditation_fees,
-                    flat=fee_config.get_flat_fee(token_network_state.token_address),
-                    proportional=fee_config.get_proportional_fee(token_network_state.token_address)
-                    # no need to set the imbalance fee here, will be set during deposit
-                ),
-                our_state=our_state,
-                partner_state=partner_state,
-                open_transaction=SuccessfulTransactionState(BlockNumber(0)),
-                close_transaction=None,
-                settle_transaction=None,
-            )
-
-            state_changes.extend(
-                [
-                    ContractReceiveChannelNew(
-                        channel_state=channel_state,
-                        transaction_hash=TransactionHash(b""),
-                        block_number=BlockNumber(0),
-                        block_hash=BlockHash(b""),
-                    ),
-                    # Fake the deposit with the claims value
-                    ContractReceiveChannelDeposit(
-                        canonical_identifier=CanonicalIdentifier(
-                            chain_identifier=claim.chain_id,
-                            token_network_address=claim.token_network_address,
-                            channel_identifier=claim.channel_id,
-                        ),
-                        deposit_transaction=TransactionChannelDeposit(
-                            participant_address=claim.owner,
-                            contract_balance=claim.total_amount,
-                            deposit_block_number=BlockNumber(1),
+            pool.start(
+                gevent.Greenlet(
+                    lambda: state_changes.extend(
+                        _get_state_changes_for_claim(
                             claim=claim,
-                        ),
-                        transaction_hash=TransactionHash(b""),
-                        block_number=BlockNumber(1),
-                        block_hash=BlockHash(b""),
-                        fee_config=MediationFeeConfig(),
-                    ),
-                    # Fake the already withdrawn amount
-                    ContractReceiveChannelWithdraw(
-                        canonical_identifier=CanonicalIdentifier(
-                            chain_identifier=claim.chain_id,
-                            token_network_address=claim.token_network_address,
-                            channel_identifier=claim.channel_id,
-                        ),
-                        participant=claim.owner,
-                        total_withdraw=details.withdrawn,
-                        transaction_hash=TransactionHash(b""),
-                        block_number=BlockNumber(1),
-                        block_hash=BlockHash(b""),
-                        fee_config=MediationFeeConfig(),
-                    ),
-                ]
+                            node_address=node_address,
+                            token_network_state=token_network_state,
+                            token_network_registry_address=token_network_registry_address,
+                            settle_timeout=settle_timeout,
+                            reveal_timeout=reveal_timeout,
+                            fee_config=fee_config,
+                            proxy_manager=proxy_manager,
+                        )
+                    )
+                )
             )
-
         # Node is not a participant, just store routing information
         # No need to add a deposit state change here
         elif not ignore_unrelated:
@@ -207,6 +233,8 @@ def get_state_changes_for_claims(
                     participant2=claim.partner,
                 )
             )
+
+    pool.join(raise_error=True)
 
     return state_changes
 
