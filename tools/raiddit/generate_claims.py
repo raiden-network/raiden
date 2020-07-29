@@ -45,7 +45,15 @@ def hub(
 
     if not isinstance(output_file, Path):
         output_file = Path(output_file)  # type: ignore
-    create_hub_jsonl(signer, token_network_address, chain_id, hub_address, addresses, output_file)
+
+    create_hub_jsonl(
+        operator_signer=signer,
+        token_network_address=token_network_address,
+        chain_id=chain_id,
+        hub_address=hub_address,
+        addresses=addresses,
+        output_file=output_file,
+    )
 
 
 if __name__ == "__main__":
