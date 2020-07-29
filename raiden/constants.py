@@ -117,7 +117,7 @@ class EthClient(Enum):
     PARITY = "parity"
 
 
-SNAPSHOT_STATE_CHANGES_COUNT = 500
+SNAPSHOT_STATE_CHANGES_COUNT = 10_000
 
 # An arbitrary limit for transaction size in Raiden, added in PR #1990
 TRANSACTION_GAS_LIMIT_UPPER_BOUND = int(0.4 * 3_141_592)
