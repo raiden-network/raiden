@@ -1,4 +1,5 @@
 import json
+from itertools import islice
 from pathlib import Path
 from typing import Any, Dict, Generator, Iterable, Optional, Tuple
 
@@ -219,6 +220,7 @@ def create_hub_jsonl(
     addresses: List[Address],
     output_file: Path,
     token_amount: TokenAmount = DEFAULT_TOKEN_AMOUNT,
+    num_direct_channels: int = 0,
 ) -> None:
     with output_file.open("wt") as output_fd:
         output_fd.write(
@@ -232,7 +234,13 @@ def create_hub_jsonl(
         output_fd.write("\n")
 
         claims = create_hub_claims(
-            operator_signer, token_network_address, chain_id, hub_address, addresses, token_amount
+            operator_signer=operator_signer,
+            token_network_address=token_network_address,
+            chain_id=chain_id,
+            hub_address=hub_address,
+            num_direct_channels=num_direct_channels,
+            addresses=addresses,
+            token_amount=token_amount,
         )
         with click.progressbar(
             claims, label="Generating claims", length=len(addresses) * 2
@@ -249,8 +257,16 @@ def create_hub_claims(
     hub_address: Address,
     addresses: List[Address],
     token_amount: TokenAmount = DEFAULT_TOKEN_AMOUNT,
+    num_direct_channels: int = 0,
 ) -> Generator[Claim, None, None]:
     channels = []
+
+    # Open direct channels for node pairs, i.e. (0, 1), (1, 2), (2, 3)
+    # Nodes still are connected to the hub
+    for partner1, partner2 in islice(zip(addresses, addresses[1:]), num_direct_channels):
+        channels.append((partner1, partner2, token_amount))
+        channels.append((partner2, partner1, token_amount))
+
     for address in addresses:
         channels.append((address, hub_address, token_amount))
         channels.append((hub_address, address, token_amount))
