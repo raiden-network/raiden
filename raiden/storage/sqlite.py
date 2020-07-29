@@ -334,7 +334,7 @@ class SQLiteStorage:
         return int(result[0][0])
 
     def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
-        """Write `state_changes` to the database and returns the correspoding IDs."""
+        """Write `state_changes` to the database and returns the corresponding IDs."""
         ulid_factory = self._ulid_factory(StateChangeID)
 
         state_change_data = list()
