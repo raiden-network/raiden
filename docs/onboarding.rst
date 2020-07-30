@@ -261,7 +261,7 @@ On the sender's side for the messages in the unordered queue:
 
 Receiving a ``Delivered`` is enough to `remove <https://github.com/raiden-network/raiden/blob/9790bfd76de3f63a8c2e8e2a99eeabdbcd6df867/raiden/transfer/node.py#L531>`_ them from the queue triggering the transport to stop retrying sending them.
 
-On the sender's side for the specific queues they’ll wait for the `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`_ message, signaling not only that the message was delivered, but also that the processing of the respective state change occurred successfully, or else keep retrying. If a ``Processed`` is received the the specific queue is `cleared <https://github.com/raiden-network/raiden/blob/9790bfd76de3f63a8c2e8e2a99eeabdbcd6df867/raiden/transfer/node.py#L735>`_.
+On the sender's side for the specific queues they’ll wait for the `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`_ message, signaling not only that the message was delivered, but also that the processing of the respective state change occurred successfully, or else keep retrying. If a ``Processed`` is received the specific queue is `cleared <https://github.com/raiden-network/raiden/blob/9790bfd76de3f63a8c2e8e2a99eeabdbcd6df867/raiden/transfer/node.py#L735>`_.
 
 So, for a specific queue message, e.g. a ``LockedTransfer`` in a specific channel:
 

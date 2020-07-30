@@ -747,7 +747,7 @@ class RaidenAPI:  # pragma: no unittest
         if total_deposit <= channel_state.our_state.contract_balance:
             raise DepositMismatch("Total deposit did not increase.")
 
-        # If this check succeeds it does not imply the the `deposit` will
+        # If this check succeeds it does not imply the `deposit` will
         # succeed, since the `deposit` transaction may race with another
         # transaction.
         if not (balance >= addendum):

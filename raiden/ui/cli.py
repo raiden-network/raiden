@@ -578,7 +578,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
             | assume all risk related thereto and hereby release, waive, discharge   |
             | and covenant not to hold liable Brainbot Labs Establishment or any of  |
             | its officers, employees or affiliates from and for any direct or       |
-            | indirect damage resulting from the the software or the use thereof.    |
+            | indirect damage resulting from the software or the use thereof.        |
             | Such to the extent as permissible by applicable laws and regulations.  |
             |                                                                        |
             | Privacy warning: Please be aware, that by using the Raiden Client,     |
