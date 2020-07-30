@@ -138,14 +138,22 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     return compiled_contracts
 
 
-def deploy_rpc_test_contract(
-    deploy_client: JSONRPCClient, name: str
-) -> Tuple[Contract, TxReceipt]:
+def compile_test_smart_contract(name: str) -> Tuple[Dict[str, Any], str]:
+    """ Compiles the smart contract `name`. """
     contract_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "smart_contracts", f"{name}.sol")
     )
     contracts = compile_files_cwd([contract_path])
     contract_key = os.path.basename(contract_path) + ":" + name
+
+    return contracts, contract_key
+
+
+def deploy_rpc_test_contract(
+    deploy_client: JSONRPCClient, name: str
+) -> Tuple[Contract, TxReceipt]:
+
+    contracts, contract_key = compile_test_smart_contract(name)
 
     contract_proxy, receipt = deploy_client.deploy_single_contract(
         contract_name=name, contract=contracts[contract_key]
