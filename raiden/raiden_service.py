@@ -230,11 +230,7 @@ def initiator_init(
     if feedback_token is not None:
         for route_state in routes:
             key = tuple(route_state.route)
-            if key in raiden.route_to_feedback_token:
-                raiden.route_to_feedback_token[key].append(feedback_token)
-            else:
-                raiden.route_to_feedback_token[key] = [feedback_token]
-
+            raiden.route_to_feedback_token.setdefault(key, []).append(feedback_token)
     return error_msg, ActionInitInitiator(transfer_state, routes)
 
 
