@@ -229,7 +229,11 @@ def initiator_init(
     # Only prepare feedback when token is available
     if feedback_token is not None:
         for route_state in routes:
-            raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
+            key = tuple(route_state.route)
+            if key in raiden.route_to_feedback_token:
+                raiden.route_to_feedback_token[key].append(feedback_token)
+            else:
+                raiden.route_to_feedback_token[key] = [feedback_token]
 
     return error_msg, ActionInitInitiator(transfer_state, routes)
 
@@ -396,7 +400,7 @@ class RaidenService(Runnable):
         self.payment_identifier_lock = gevent.lock.Semaphore()
 
         # A list is not hashable, so use tuple as key here
-        self.route_to_feedback_token: Dict[Tuple[Address, ...], UUID] = dict()
+        self.route_to_feedback_token: Dict[Tuple[Address, ...], List[Optional[UUID]]] = dict()
 
         # Flag used to skip the processing of all Raiden events during the
         # startup.
