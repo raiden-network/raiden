@@ -659,6 +659,7 @@ def assert_failed_pfs_request(
                 assert post_paths.call_count == expected_requests
 
 
+@pytest.mark.skip("Raiddit")
 def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_address):
     addresses, chain_state, channel_states, _, token_network_state = happy_path_fixture
     address1, _, _, _ = addresses
