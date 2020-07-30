@@ -23,7 +23,6 @@ from raiden.utils.typing import (
     OneToNAddress,
     Optional,
     PaymentAmount,
-    PaymentWithFeeAmount,
     PrivateKey,
     TargetAddress,
     TokenNetworkAddress,
@@ -72,32 +71,33 @@ def get_best_routes(
     # error_direct = None
     shortest_routes: List[Neighbour] = list()
 
+    # Always request routes from PFS
     # Always use a direct channel if available:
     # - There are no race conditions and the capacity is guaranteed to be
     #   available.
     # - There will be no mediation fees
     # - The transfer will be faster
-    if to_address in all_neighbors:
-        for channel_id in token_network.partneraddresses_to_channelidentifiers[
-            Address(to_address)
-        ]:
-            channel_state = token_network.channelidentifiers_to_channels[channel_id]
-
-            # direct channels don't have fees
-            payment_with_fee_amount = PaymentWithFeeAmount(amount)
-            is_usable = channel.is_channel_usable_for_new_transfer(
-                channel_state, payment_with_fee_amount, None
-            )
-
-            if is_usable is channel.ChannelUsability.USABLE:
-                direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)],
-                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
-                    estimated_fee=FeeAmount(0),
-                )
-                return (None, [direct_route], None)
-
-            # error_direct = is_usable
+    # if to_address in all_neighbors:
+    #     for channel_id in token_network.partneraddresses_to_channelidentifiers[
+    #         Address(to_address)
+    #     ]:
+    #         channel_state = token_network.channelidentifiers_to_channels[channel_id]
+    #
+    #         # direct channels don't have fees
+    #         payment_with_fee_amount = PaymentWithFeeAmount(amount)
+    #         is_usable = channel.is_channel_usable_for_new_transfer(
+    #             channel_state, payment_with_fee_amount, None
+    #         )
+    #
+    #         if is_usable is channel.ChannelUsability.USABLE:
+    #             direct_route = RouteState(
+    #                 route=[Address(from_address), Address(to_address)],
+    #                 forward_channel_id=channel_state.canonical_identifier.channel_identifier,
+    #                 estimated_fee=FeeAmount(0),
+    #             )
+    #             return (None, [direct_route], None)
+    #
+    #         # error_direct = is_usable
 
     latest_channel_opened_at = BlockNumber(0)
     for partner_address in all_neighbors:
