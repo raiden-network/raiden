@@ -809,7 +809,7 @@ def test_refund_transfer_no_more_routes():
     assert search_for_item(iteration.events, SendProcessed, {}) is not None
     assert iteration.new_state, "payment task should be there waiting for next block"
 
-    # process the the block after lock expiration
+    # process the block after lock expiration
     current_state = iteration.new_state
     state_change = Block(
         block_number=expiry_block + 1, gas_limit=1, block_hash=factories.make_transaction_hash()
