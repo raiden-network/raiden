@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720">
+    <style>line, path, circle,rect,polygon {
+                          stroke: black;
+                          stroke-width: 2;
+                          stroke-opacity: 1;
+                          fill-opacity: 1;
+                          stroke-linecap: round;
+                          stroke-linejoin: miter;
+                        }
+
+                    text {
+                        fill: black;
+                        }
+                        rect.backdrop{
+                            stroke: none;
+                            fill: white;
+                        }
+                        .broken{
+                            stroke-dasharray: 8;
+                        }
+                        .filled{
+                            fill: black;
+                        }
+                        .bg_filled{
+                            fill: white;
+                        }
+                        .nofill{
+                            fill: white;
+                        }
+
+                        text {
+                         font-family: monospace;
+                         font-size: 14px;
+                        }
+
+                        .end_marked_arrow{
+                            marker-end: url(#arrow);
+                         }
+                        .start_marked_arrow{
+                            marker-start: url(#arrow);
+                         }
+
+                        .end_marked_diamond{
+                            marker-end: url(#diamond);
+                         }
+                        .start_marked_diamond{
+                            marker-start: url(#diamond);
+                         }
+
+                        .end_marked_circle{
+                            marker-end: url(#circle);
+                         }
+                        .start_marked_circle{
+                            marker-start: url(#circle);
+                         }
+
+                        .end_marked_open_circle{
+                            marker-end: url(#open_circle);
+                         }
+                        .start_marked_open_circle{
+                            marker-start: url(#open_circle);
+                         }
+
+                        .end_marked_big_open_circle{
+                            marker-end: url(#big_open_circle);
+                         }
+                        .start_marked_big_open_circle{
+                            marker-start: url(#big_open_circle);
+                         }
+
+                         
+                        </style>
+    <defs>
+        <marker id="arrow" viewBox="-2 -2 8 8" refX="4" refY="2" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 0,4 4,2 0,0"></polygon>
+        </marker>
+        <marker id="diamond" viewBox="-2 -2 8 8" refX="4" refY="2" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,2 2,0 4,2 2,4 0,2"></polygon>
+        </marker>
+        <marker id="circle" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <circle cx="4" cy="4" r="2" class="filled"></circle>
+        </marker>
+        <marker id="open_circle" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <circle cx="4" cy="4" r="2" class="bg_filled"></circle>
+        </marker>
+        <marker id="big_open_circle" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <circle cx="4" cy="4" r="3" class="bg_filled"></circle>
+        </marker>
+    </defs>
+    <rect class="backdrop" x="0" y="0" width="960" height="720"></rect>
+    <rect x="716" y="344" width="200" height="64" class="solid nofill" rx="0"></rect>
+    <text x="738" y="380" class="">Path</text>
+    <text x="778" y="380" class="">Finding</text>
+    <text x="842" y="380" class="">Service</text>
+    <line x1="564" y1="24" x2="564" y2="80" class="solid end_marked_arrow"></line>
+    <text x="706" y="28" class="">Claim</text>
+    <text x="754" y="28" class="">Distribution</text>
+    <text x="570" y="60" class="">funds</text>
+    <text x="650" y="60" class="">virtual</text>
+    <text x="714" y="60" class="">channels</text>
+    <text x="882" y="60" class="">defines</text>
+    <text x="882" y="76" class="">the</text>
+    <text x="882" y="92" class="">network</text>
+    <text x="282" y="108" class="">initiate</text>
+    <text x="882" y="108" class="">topology</text>
+    <text x="282" y="124" class="">&amp;</text>
+    <text x="298" y="124" class="">settle</text>
+    <polygon points="272,132 264,136 272,140" class="filled"></polygon>
+    <polygon points="648,132 640,136 648,140" class="filled"></polygon>
+    <line x1="648" y1="136" x2="836" y2="136" class="solid"></line>
+    <line x1="836" y1="136" x2="836" y2="336" class="solid end_marked_arrow"></line>
+    <text x="682" y="156" class="">Routing</text>
+    <text x="746" y="156" class="">Requests</text>
+    <text x="682" y="172" class="">HTTP</text>
+    <text x="626" y="348" class="">update</text>
+    <text x="346" y="364" class="">Raiddit</text>
+    <line x1="532" y1="352" x2="532" y2="584" class="solid"></line>
+    <line x1="556" y1="352" x2="556" y2="472" class="solid"></line>
+    <line x1="580" y1="352" x2="580" y2="376" class="solid"></line>
+    <text x="626" y="364" class="">balances</text>
+    <text x="346" y="380" class="">Protocol</text>
+    <line x1="580" y1="376" x2="712" y2="376" class="solid end_marked_arrow"></line>
+    <polygon points="928,372 920,376 928,380" class="filled"></polygon>
+    <text x="346" y="396" class="">p2p</text>
+    <text x="378" y="396" class="">messaging</text>
+    <line x1="588" y1="384" x2="588" y2="464" class="solid"></line>
+    <line x1="460" y1="416" x2="460" y2="432" class="solid"></line>
+    <text x="146" y="444" class="">...</text>
+    <text x="618" y="444" class="">request</text>
+    <text x="618" y="460" class="">monitoring</text>
+    <line x1="556" y1="472" x2="712" y2="472" class="solid end_marked_arrow"></line>
+    <line x1="588" y1="480" x2="588" y2="576" class="solid"></line>
+    <text x="618" y="556" class="">publish</text>
+    <text x="618" y="572" class="">burn</text>
+    <text x="658" y="572" class="">proofs</text>
+    <line x1="532" y1="584" x2="720" y2="584" class="solid end_marked_arrow"></line>
+    <text x="490" y="604" class="">Transport</text>
+    <path d="M 496,608 A 16,16 0,0,0 496,624" class="nofill"></path>
+    <text x="498" y="620" class="">Matrix</text>
+    <path d="M 552,608 A 16,16 0,0,1 552,624" class="nofill"></path>
+    <text x="58" y="652" class="">watching</text>
+    <text x="130" y="652" class="">Blockchain</text>
+    <text x="218" y="652" class="">for</text>
+    <text x="250" y="652" class="">burn</text>
+    <text x="290" y="652" class="">fulfillment</text>
+    <text x="58" y="684" class="">watching</text>
+    <text x="130" y="684" class="">Blockchain</text>
+    <text x="218" y="684" class="">for</text>
+    <text x="250" y="684" class="">posting</text>
+    <text x="314" y="684" class="">user</text>
+    <text x="354" y="684" class="">balances</text>
+    <text x="618" y="60" class="">the</text>
+    <text x="354" y="108" class="">close</text>
+    <text x="74" y="124" class="">Raiddit</text>
+    <text x="74" y="140" class="">Smart</text>
+    <text x="122" y="140" class="">Contracts</text>
+    <path d="M 80,144 A 16,16 0,0,0 80,160" class="nofill"></path>
+    <text x="82" y="156" class="">Ethereum</text>
+    <text x="154" y="156" class="">Blockchain</text>
+    <text x="466" y="124" class="">Raiddit</text>
+    <text x="530" y="124" class="">Client</text>
+    <path d="M 240,144 A 16,16 0,0,1 240,160" class="nofill"></path>
+    <text x="490" y="156" class="">Software</text>
+    <line x1="56" y1="216" x2="64" y2="216" class="solid"></line>
+    <text x="74" y="220" class="">define</text>
+    <text x="130" y="220" class="">the</text>
+    <text x="162" y="220" class="">protocol</text>
+    <line x1="56" y1="248" x2="64" y2="248" class="solid"></line>
+    <text x="74" y="252" class="">define</text>
+    <text x="130" y="252" class="">settlement</text>
+    <text x="218" y="252" class="">rules</text>
+    <line x1="56" y1="280" x2="64" y2="280" class="solid"></line>
+    <text x="74" y="284" class="">mint</text>
+    <text x="114" y="284" class="">&amp;</text>
+    <text x="130" y="284" class="">payout</text>
+    <text x="186" y="284" class="">tokens</text>
+    <text x="242" y="284" class="">on</text>
+    <text x="266" y="284" class="">settlement</text>
+    <text x="138" y="396" class="">Other</text>
+    <text x="186" y="396" class="">Raiddit</text>
+    <text x="250" y="396" class="">Clients</text>
+    <text x="746" y="492" class="">Monitoring</text>
+    <text x="834" y="492" class="">Service</text>
+    <text x="770" y="604" class="">Burn</text>
+    <text x="810" y="604" class="">Monitor</text>
+    <g>
+        <line x1="684" y1="8" x2="868" y2="8" class="solid"></line>
+        <line x1="684" y1="8" x2="684" y2="40" class="solid"></line>
+        <line x1="868" y1="8" x2="868" y2="40" class="solid"></line>
+        <line x1="564" y1="24" x2="684" y2="24" class="solid"></line>
+        <line x1="868" y1="24" x2="948" y2="24" class="solid"></line>
+        <line x1="948" y1="24" x2="948" y2="376" class="solid"></line>
+        <line x1="684" y1="40" x2="868" y2="40" class="solid"></line>
+        <line x1="928" y1="376" x2="948" y2="376" class="solid"></line>
+    </g>
+    <g>
+        <line x1="36" y1="88" x2="260" y2="88" class="solid"></line>
+        <line x1="36" y1="88" x2="36" y2="664" class="solid"></line>
+        <line x1="260" y1="88" x2="260" y2="184" class="solid"></line>
+        <line x1="4" y1="136" x2="36" y2="136" class="solid"></line>
+        <line x1="4" y1="136" x2="4" y2="696" class="solid"></line>
+        <line x1="36" y1="184" x2="260" y2="184" class="solid"></line>
+        <line x1="716" y1="456" x2="916" y2="456" class="solid"></line>
+        <line x1="716" y1="456" x2="716" y2="520" class="solid"></line>
+        <line x1="916" y1="456" x2="916" y2="520" class="solid"></line>
+        <line x1="916" y1="472" x2="948" y2="472" class="solid"></line>
+        <line x1="948" y1="472" x2="948" y2="696" class="solid"></line>
+        <line x1="716" y1="520" x2="916" y2="520" class="solid"></line>
+        <line x1="4" y1="696" x2="948" y2="696" class="solid"></line>
+        <line x1="724" y1="568" x2="908" y2="568" class="solid"></line>
+        <line x1="724" y1="568" x2="724" y2="632" class="solid"></line>
+        <line x1="908" y1="568" x2="908" y2="632" class="solid"></line>
+        <line x1="724" y1="632" x2="908" y2="632" class="solid"></line>
+        <line x1="788" y1="632" x2="788" y2="664" class="solid"></line>
+        <line x1="36" y1="664" x2="788" y2="664" class="solid"></line>
+    </g>
+    <g>
+        <line x1="404" y1="88" x2="636" y2="88" class="solid"></line>
+        <line x1="404" y1="88" x2="404" y2="184" class="solid"></line>
+        <line x1="636" y1="88" x2="636" y2="184" class="solid"></line>
+        <line x1="272" y1="136" x2="404" y2="136" class="solid"></line>
+        <line x1="404" y1="184" x2="636" y2="184" class="solid"></line>
+        <line x1="500" y1="184" x2="500" y2="336" class="solid"></line>
+        <line x1="532" y1="184" x2="532" y2="336" class="solid"></line>
+        <line x1="556" y1="184" x2="556" y2="336" class="solid"></line>
+        <line x1="580" y1="184" x2="580" y2="336" class="solid"></line>
+    </g>
+    <g>
+        <line x1="460" y1="344" x2="588" y2="344" class="solid"></line>
+        <line x1="460" y1="344" x2="460" y2="400" class="solid"></line>
+        <line x1="588" y1="344" x2="588" y2="368" class="solid"></line>
+    </g>
+    <g>
+        <line x1="108" y1="360" x2="332" y2="360" class="solid"></line>
+        <line x1="108" y1="360" x2="108" y2="424" class="solid"></line>
+        <line x1="332" y1="360" x2="332" y2="424" class="solid"></line>
+        <line x1="108" y1="424" x2="356" y2="424" class="solid"></line>
+        <line x1="124" y1="424" x2="124" y2="456" class="solid"></line>
+        <line x1="356" y1="424" x2="356" y2="456" class="solid"></line>
+        <line x1="124" y1="456" x2="356" y2="456" class="solid"></line>
+        <line x1="500" y1="352" x2="500" y2="408" class="solid"></line>
+        <line x1="332" y1="408" x2="500" y2="408" class="solid"></line>
+        <line x1="484" y1="408" x2="484" y2="440" class="solid"></line>
+        <line x1="356" y1="440" x2="484" y2="440" class="solid"></line>
+    </g>
+    <g>
+        <line x1="460" y1="448" x2="460" y2="648" class="solid"></line>
+        <line x1="588" y1="592" x2="588" y2="648" class="solid"></line>
+        <line x1="460" y1="648" x2="588" y2="648" class="solid"></line>
+    </g>
+</svg>
