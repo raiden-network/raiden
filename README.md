@@ -2,7 +2,7 @@
   <img style="height: 78px;" src="./docs/images/raiddit-logo-black.png"/>
 </h1>
 
-[![](http://img.youtube.com/vi/1wAbCnD-M_I/0.jpg)](http://www.youtube.com/watch?v=1wAbCnD-M_I)
+[![](https://i9.ytimg.com/vi/402U0CVrjyE/mq1.jpg?sqp=CNDBkfkF&rs=AOn4CLDLolyLBRujKTdFEKnYsNI_cf3oPg&retry=3)](https://youtu.be/402U0CVrjyE)
 
 <div>
   <p class="medium">
