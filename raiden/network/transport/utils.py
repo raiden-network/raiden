@@ -1,4 +1,4 @@
-from raiden.utils.typing import Iterator
+from typing import Iterator
 
 
 def timeout_exponential_backoff(retries: int, timeout: float, maximum: float) -> Iterator[float]:

@@ -170,8 +170,8 @@ def test_assumption_user_goes_offline_if_sync_is_not_called_within_35s(local_mat
     assert len(tracker3.address_presence) == 0, msg_no_sync
 
     room: Room = client1.create_room("test", is_public=True)
-    client2.join_room(room.aliases[0])
-    client3.join_room(room.aliases[0])
+    client2.join_room(room.canonical_alias)
+    client3.join_room(room.canonical_alias)
 
     client1.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
     client2.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
@@ -224,7 +224,7 @@ def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
     client2.add_presence_listener(tracker2.presence_listener)
 
     room: Room = client1.create_room("test", is_public=True)
-    client2.join_room(room.aliases[0])
+    client2.join_room(room.canonical_alias)
 
     client2.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
     client1.blocking_sync(timeout_ms=SHORT_TIMEOUT_MS, latency_ms=SHORT_TIMEOUT_MS)
@@ -312,7 +312,7 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
     for local_server in local_matrix_servers[1:]:
         client = new_client(ignore_messages, ignore_member_join, local_server)
         assert public_room.room_id not in client.rooms
-        client.join_room(public_room.aliases[0])
+        client.join_room(public_room.canonical_alias)
         assert public_room.room_id in client.rooms
 
         alias_on_current_server = f"#{room_alias_prefix}:{local_server.netloc}"
