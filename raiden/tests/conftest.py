@@ -6,21 +6,14 @@ monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
 import contextlib
 import datetime
 import os
-import re
 import signal
 import subprocess
 import sys
-import tempfile
 import time
-from pathlib import Path
 
 import gevent
 import pytest
 import structlog
-from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
-from _pytest.tmpdir import get_user
-
-from raiden.tests.integration.exception import RetryTestError
 
 # Execute these before the raiden imports because rewrites can't work after the
 # module has been imported.
@@ -43,6 +36,7 @@ from raiden.constants import (  # isort:skip
 from raiden.log_config import configure_logging  # isort:skip
 from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403  # isort:skip
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403  # isort:skip
+from raiden.tests.integration.exception import RetryTestError  # isort:skip
 from raiden.tests.utils.transport import make_requests_insecure  # isort:skip
 from raiden.utils.cli import LogLevelConfigType  # isort:skip
 from raiden.utils.debugging import enable_gevent_monitoring_signal  # isort:skip
@@ -502,53 +496,11 @@ def pytest_runtest_teardown(item):
 
 
 if sys.platform == "darwin":
-    # On macOS the temp directory base path is already very long.
-    # To avoid failures on ipc tests (ipc path length is limited to 104/108 chars on macOS/linux)
-    # we override the pytest tmpdir machinery to produce shorter paths.
+    # On macOS the default temp directory base path is very long (a privacy feature).
+    # Since ipc path length is limited to 104/108 chars on macOS/linux and geth uses ipc sockets
+    # that are located below the per-test tempdir we override the pytest basetemp dir (it it's not
+    # set by the user) to point it to the public /tmp dir in order to produce shorter paths.
 
-    @pytest.fixture(scope="session", autouse=True)
-    def _tmpdir_short():
-        """Shorten tmpdir paths"""
-        from _pytest.tmpdir import TempPathFactory
-
-        def getbasetemp(self):
-            """ return base temporary directory. """
-            if self._basetemp is None:
-                if self._given_basetemp is not None:
-                    basetemp = Path(self._given_basetemp)
-                    ensure_reset_dir(basetemp)
-                else:
-                    from_env = os.environ.get("PYTEST_DEBUG_TEMPROOT")
-                    temproot = Path(from_env or tempfile.gettempdir())
-                    user = get_user() or "unknown"
-                    # use a sub-directory in the temproot to speed-up
-                    # make_numbered_dir() call
-                    rootdir = temproot.joinpath(f"pyt-{user}")
-                    rootdir.mkdir(exist_ok=True)
-                    basetemp = make_numbered_dir_with_cleanup(
-                        prefix="", root=rootdir, keep=3, lock_timeout=LOCK_TIMEOUT
-                    )
-                assert basetemp is not None
-                self._basetemp = t = basetemp
-                self._trace("new basetemp", t)
-                return t
-            else:
-                return self._basetemp
-
-        TempPathFactory.getbasetemp = getbasetemp
-
-    @pytest.fixture
-    def tmpdir(request, tmpdir_factory):
-        """Return a temporary directory path object
-        which is unique to each test function invocation,
-        created as a sub directory of the base temporary
-        directory.  The returned object is a `py.path.local`_
-        path object.
-        """
-        name = request.node.name
-        name = re.sub(r"[\W]", "_", name)
-        MAXVAL = 15
-        if len(name) > MAXVAL:
-            name = name[:MAXVAL]
-        tdir = tmpdir_factory.mktemp(name, numbered=True)
-        return tdir
+    def pytest_configure(config) -> None:
+        if config.option.basetemp is None:
+            config.option.basetemp = f"/tmp/pytest-of-{os.getlogin():.6s}"

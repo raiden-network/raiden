@@ -5,6 +5,8 @@ import pytest
 from raiden.settings import RAIDEN_CONTRACT_VERSION
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
+__all__ = ("contracts_path", "contract_manager")
+
 
 @pytest.fixture
 def contracts_path() -> Path:
