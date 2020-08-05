@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -6,7 +7,7 @@ from binascii import unhexlify
 from collections import defaultdict
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
-from itertools import chain
+from json.decoder import JSONDecodeError
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT
 from tempfile import mkdtemp
@@ -20,7 +21,6 @@ from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from structlog import get_logger
 from synapse.handlers.auth import AuthHandler
-from twisted.internet import defer
 
 from raiden.constants import Environment
 from raiden.messages.abstract import Message
@@ -31,7 +31,8 @@ from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Iterable, Port, Signature
+from raiden.utils.typing import Iterable, Port
+from raiden_contracts.utils.type_aliases import Signature
 
 log = get_logger(__name__)
 
@@ -94,22 +95,15 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
         client = new_client(ignore_messages, ignore_member_join, server)
 
         # A user must join the room to create the room in the federated server
-        room = client.join_room(room.aliases[0])
+        room = client.join_room(room.canonical_alias)
 
-        # Since #5892 `join_room()` only populates server-local aliases but we need all here
-        room.update_aliases()
         server_name = server.netloc
         alias = f"#{broadcast_room_name}:{server_name}"
 
         msg = "Setting up the room alias must not fail, otherwise the test can not run."
         assert room.add_room_alias(alias), msg
 
-        room_state = client.api.get_room_state(room.room_id)
-        all_aliases = chain.from_iterable(
-            event["content"]["aliases"]
-            for event in room_state
-            if event["type"] == "m.room.aliases"
-        )
+        all_aliases = client.api.get_aliases(room.room_id).get("aliases", [])
 
         msg = "The new alias must be added, otherwise the Raiden node won't be able to find it."
         assert alias in all_aliases, msg
@@ -145,59 +139,68 @@ class ParsedURL(str):
 class AdminUserAuthProvider:
     __version__ = "0.1"
 
-    def __init__(self, config, account_handler):
+    def __init__(self, config, account_handler) -> None:  # type: ignore
         self.account_handler = account_handler
         self.log = logging.getLogger(__name__)
-        self.credentials = config["admin_credentials"]
+        if "credentials_file" in config:
+            credentials_file = Path(config["credentials_file"])
+            if not credentials_file.exists():
+                raise AssertionError(f"Credentials file '{credentials_file}' is missing.")
+            try:
+                self.credentials = json.loads(credentials_file.read_text())
+            except (JSONDecodeError, UnicodeDecodeError, OSError) as ex:
+                raise AssertionError(
+                    f"Could not read credentials file '{credentials_file}': {ex}"
+                ) from ex
+        elif "admin_credentials" in config:
+            self.credentials = config["admin_credentials"]
+        else:
+            raise AssertionError(
+                "Either 'credentials_file' or 'admin_credentials' must be specified in "
+                "auth provider config."
+            )
 
         msg = "Keys 'username' and 'password' expected in credentials."
         assert "username" in self.credentials, msg
         assert "password" in self.credentials, msg
 
-    @defer.inlineCallbacks
-    def check_password(self, user_id: str, password: str):
+    async def check_password(self, user_id: str, password: str) -> bool:
         if not password:
             self.log.error("No password provided, user=%r", user_id)
-            defer.returnValue(False)
+            return False
 
         username = user_id.partition(":")[0].strip("@")
         if username == self.credentials["username"] and password == self.credentials["password"]:
             self.log.info("Logging in well known admin user")
-            user_exists = yield self.account_handler.check_user_exists(user_id)
+            user_exists = await self.account_handler.check_user_exists(user_id)
             if not user_exists:
                 self.log.info("First well known admin user login, registering: user=%r", user_id)
-                user_id = yield self.account_handler._hs.get_registration_handler().register_user(
+                await self.account_handler._hs.get_registration_handler().register_user(
                     localpart=username, admin=True
                 )
-                _, access_token = yield self.account_handler.register_device(user_id)
-                yield user_id, access_token
-            defer.returnValue(True)
-
-        self.log.error("Unknown user '%s', ignoring.", user_id)
-        defer.returnValue(False)
+            return True
+        return False
 
     @staticmethod
-    def parse_config(config):
+    def parse_config(config: Any) -> Any:
         return config
 
 
-# Used from within synapse during tests
 class EthAuthProvider:
     __version__ = "0.1"
     _user_re = re.compile(r"^@(0x[0-9a-f]{40}):(.+)$")
     _password_re = re.compile(r"^0x[0-9a-f]{130}$")
 
-    def __init__(self, config, account_handler):
+    def __init__(self, config, account_handler) -> None:  # type: ignore
         self.account_handler = account_handler
         self.config = config
         self.hs_hostname = self.account_handler._hs.hostname
         self.log = logging.getLogger(__name__)
 
-    @defer.inlineCallbacks
-    def check_password(self, user_id, password):
+    async def check_password(self, user_id: str, password: str) -> bool:
         if not password:
             self.log.error("no password provided, user=%r", user_id)
-            defer.returnValue(False)
+            return False
 
         if not self._password_re.match(password):
             self.log.error(
@@ -205,7 +208,7 @@ class EthAuthProvider:
                 "lowercase, 65-bytes hash. user=%r",
                 user_id,
             )
-            defer.returnValue(False)
+            return False
 
         signature = Signature(unhexlify(password[2:]))
 
@@ -216,7 +219,7 @@ class EthAuthProvider:
                 "lowercase address. user=%r",
                 user_id,
             )
-            defer.returnValue(False)
+            return False
 
         user_addr_hex = user_match.group(1)
         user_addr = unhexlify(user_addr_hex[2:])
@@ -226,19 +229,20 @@ class EthAuthProvider:
             self.log.error(
                 "invalid account password/signature. user=%r, signer=%r", user_id, rec_addr
             )
-            defer.returnValue(False)
+            return False
 
         localpart = user_id.split(":", 1)[0][1:]
         self.log.info("eth login! valid signature. user=%r", user_id)
 
-        if not (yield self.account_handler.check_user_exists(user_id)):
-            self.log.info("first user login, registering: user=%r", user_id)
-            yield self.account_handler.register(localpart=localpart)
+        if not (await self.account_handler.check_user_exists(user_id)):
+            self.log.info("First login, creating new user: user=%r", user_id)
+            registered_user_id = await self.account_handler.register_user(localpart=localpart)
+            await self.account_handler.register_device(registered_user_id, device_id="raiden")
 
-        defer.returnValue(True)
+        return True
 
     @staticmethod
-    def parse_config(config):
+    def parse_config(config: Any) -> Any:
         return config
 
 
@@ -248,10 +252,11 @@ class NoTLSFederationMonkeyPatchProvider:
 
     This is used by the integration tests to avoid the need for tls certificates.
     It's implemented as an auth provider since that's a handy way to inject code into the
-    synapse process.
+    Synapse process.
 
-    It works by replacing ``synapse.crypto.context_factory.ClientTLSOptionsFactory`` with an
-    object that returns ``None`` when instantiated.
+    It works by replacing ``synapse.crypto.context_factory.FederationPolicyForHTTPS`` with an
+    object that returns ``None`` when instantiated which causes a non-TLS socket to be used
+    inside the Synapse federation machinery.
     """
 
     __version__ = "0.1"
@@ -267,7 +272,7 @@ class NoTLSFederationMonkeyPatchProvider:
     ) -> None:
         pass
 
-    def check_password(  # pylint: disable=unused-argument,no-self-use
+    async def check_password(  # pylint: disable=unused-argument,no-self-use
         self, user_id: str, password: str
     ) -> bool:
         return False
@@ -276,7 +281,7 @@ class NoTLSFederationMonkeyPatchProvider:
     def parse_config(config: Dict[str, Any]) -> Dict[str, Any]:
         from synapse.crypto import context_factory
 
-        context_factory.ClientTLSOptionsFactory = NoTLSFederationMonkeyPatchProvider.NoTLSFactory
+        context_factory.FederationPolicyForHTTPS = NoTLSFederationMonkeyPatchProvider.NoTLSFactory
         return config
 
 
