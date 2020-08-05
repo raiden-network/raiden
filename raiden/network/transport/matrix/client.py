@@ -4,7 +4,7 @@ from datetime import datetime
 from functools import wraps
 from itertools import repeat
 from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
-from urllib.parse import quote, urlparse
+from urllib.parse import quote
 from uuid import UUID, uuid4
 
 import gevent
@@ -54,6 +54,7 @@ class Room(MatrixRoom):
         super().__init__(client, room_id)
         self._members: Dict[str, User] = {}
         self.aliases: List[str]
+        self.canonical_alias: str
 
     def get_joined_members(self, force_resync: bool = False) -> List[User]:
         """ Return a list of members of this room. """
@@ -81,38 +82,39 @@ class Room(MatrixRoom):
         self._members.pop(user_id, None)
 
     def __repr__(self) -> str:
-        return f"<Room id={self.room_id!r} aliases={self.aliases!r}>"
+        return f"<Room id={self.room_id!r} canonical_alias={self.canonical_alias!r}>"
 
-    def update_local_aliases(self) -> bool:
-        """ Fetch server local aliases for the room.
+    def update_local_alias(self) -> bool:
+        """ Fetch the server local canonical alias for the room.
 
         This is an optimization over the general `update_aliases()` method which fetches the
         entire room state (which can be large in Raiden) and then discards all non-alias events.
 
-        Unfortunately due to a limitation in the Matrix API it's not possible to query for all
-        aliases of a room. Only aliases for a specific server can be fetched, see:
-        https://github.com/matrix-org/synapse/issues/6908
+        With MSC2432[1] implemented only ``m.room.canonical_alias`` events exist.
+        They represent the server local canonical_alias.
 
-        Since in Raiden we always have server local aliases set, this method is sufficient for our
-        use case.
+        Since in Raiden broadcast rooms always have a server local alias set, this method is
+        sufficient for our use case.
+
+        [1] https://github.com/matrix-org/matrix-doc/pull/2432
 
         Returns:
-            boolean: True if the aliases changed, False if not
+            boolean: True if the canonical_alias changed, False if not
         """
-        server_name = urlparse(self.client.api.base_url).netloc
         changed = False
 
         try:
             response = self.client.api.get_room_state_type(
-                self.room_id, "m.room.aliases", server_name
+                self.room_id, "m.room.canonical_alias", ""
             )
         except MatrixRequestError:
             return False
 
-        if "aliases" in response:
-            if self.aliases != response["aliases"]:
-                self.aliases = response["aliases"]
-                changed = True
+        server_sent_alias = response.get("alias")
+        if server_sent_alias is not None and self.canonical_alias != server_sent_alias:
+            self.canonical_alias = server_sent_alias
+            changed = True
+
         return changed
 
 
@@ -226,6 +228,22 @@ class GMatrixHttpApi(MatrixHttpApi):
 
     def get_presence(self, user_id: str) -> Dict[str, Any]:
         return self._send("GET", f"/presence/{quote(user_id)}/status")
+
+    def get_aliases(self, room_id: str) -> Dict[str, Any]:
+        """
+        Perform GET /rooms/{room_id}/aliases.
+
+        Requires Synapse >= 1.11.0 which implements the (as of yet) unstable MSC2432 room alias
+        semantics change.
+        """
+        return self._send(
+            "GET",
+            f"/rooms/{room_id}/aliases",
+            api_path="/_matrix/client/unstable/org.matrix.msc2432",
+        )
+
+    def __repr__(self) -> str:
+        return f"<GMatrixHttpApi base_url={self.base_url}>"
 
 
 class GMatrixClient(MatrixClient):
@@ -527,8 +545,8 @@ class GMatrixClient(MatrixClient):
         if room_id not in self.rooms:
             self.rooms[room_id] = Room(self, room_id)
         room = self.rooms[room_id]
-        if not room.aliases:
-            room.update_local_aliases()
+        if not room.canonical_alias:
+            room.update_local_alias()
         return room
 
     def get_user_presence(self, user_id: str) -> Optional[str]:

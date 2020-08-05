@@ -810,7 +810,10 @@ class MatrixTransport(Runnable):
                 self._set_room_id_for_address(partner_address[0], room.room_id)
 
             self.log.debug(
-                "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
+                "Found room",
+                room=room,
+                canonical_alias=room.canonical_alias,
+                members=room.get_joined_members(),
             )
 
     def _leave_unexpected_rooms(
@@ -829,7 +832,7 @@ class MatrixTransport(Runnable):
             self.log.warning(
                 "Leaving Room",
                 reason=reason,
-                room_aliases=room.aliases,
+                canonical_alias=room.canonical_alias,
                 room_id=room.room_id,
                 partners=[to_string_representation(partner) for partner in partners],
             )
@@ -1046,7 +1049,7 @@ class MatrixTransport(Runnable):
         self.log.debug(
             "Joined from invite",
             room_id=room_id,
-            aliases=room.aliases,
+            canonical_alias=room.canonical_alias,
             inviting_address=to_checksum_address(peer_address),
         )
 
@@ -1057,7 +1060,7 @@ class MatrixTransport(Runnable):
     def _handle_member_join(self, room: Room) -> None:
         if self._is_broadcast_room(room):
             raise AssertionError(
-                f"Broadcast room events should be filtered in syncs: {room.aliases}."
+                f"Broadcast room events should be filtered in syncs: {room.canonical_alias}."
                 f"Joined Broadcast Rooms: {list(self._broadcast_rooms.keys())}"
                 f"Should be joined to: {self._config.broadcast_rooms}"
             )
@@ -1104,7 +1107,7 @@ class MatrixTransport(Runnable):
         if self._is_broadcast_room(room):
             # This must not happen. Nodes must not listen on broadcast rooms.
             raise RuntimeError(
-                f"Received message in broadcast room {room.aliases[0]}. Sending user: {user}"
+                f"Received message in broadcast room {room.canonical_alias}. Sending user: {user}"
             )
 
         if not self._address_mgr.is_address_known(peer_address):
@@ -1366,10 +1369,9 @@ class MatrixTransport(Runnable):
             return room
 
     def _is_broadcast_room(self, room: Room) -> bool:
-        return any(
-            suffix in room_alias
-            for suffix in self._config.broadcast_rooms
-            for room_alias in room.aliases
+        has_alias = room.canonical_alias is not None
+        return has_alias and any(
+            suffix in room.canonical_alias for suffix in self._config.broadcast_rooms
         )
 
     def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
