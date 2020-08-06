@@ -356,6 +356,14 @@ jobs:
           command: |
             make -C scenario-player install-dev
       - run:
+          name: Set Locale
+          command: |
+            echo 'export LANGUAGE=en_US.UTF-8' >> ${BASH_ENV}
+            echo 'export LANG=en_US.UTF-8' >> ${BASH_ENV}
+            echo 'export LC_ALL=en_US.UTF-8' >> ${BASH_ENV}
+            locale-gen en_US.UTF-8
+            sudo dpkg-reconfigure locales
+      - run:
           name: Run Unit Tests
           command: |
             make -C scenario-player unit-tests
