@@ -525,12 +525,12 @@ def inspect_client_error(
     return ClientErrorInspectResult.PROPAGATE_ERROR
 
 
-class ParityCallType(Enum):
+class CallType(Enum):
     ESTIMATE_GAS = 1
     CALL = 2
 
 
-def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallType) -> bool:
+def check_value_error(value_error: ValueError, call_type: CallType) -> bool:
     """
     For parity and geth >= v1.9.15, failing calls and functions do not return
     None if the transaction will fail but instead throw a ValueError exception.
@@ -544,11 +544,11 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
         return False
 
     expected_errors = {
-        ParityCallType.ESTIMATE_GAS: [
+        CallType.ESTIMATE_GAS: [
             # parity
             (-32016, "The execution failed due to an exception"),
         ],
-        ParityCallType.CALL: [
+        CallType.CALL: [
             # geth
             (-32000, "invalid opcode: opcode 0xfe not defined"),
             (-32000, "execution reverted"),
@@ -558,7 +558,7 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     }
 
     if call_type not in expected_errors:
-        raise ValueError("Called check_value_error_for_parity() with illegal call type")
+        raise ValueError("Called check_value_error() with illegal call type")
 
     for expected_code, expected_msg in expected_errors[call_type]:
         if error_data["code"] == expected_code and expected_msg in error_data["message"]:
@@ -594,7 +594,7 @@ def patched_web3_eth_estimate_gas(
     try:
         result = self.web3.manager.request_blocking(RPCEndpoint("eth_estimateGas"), params)
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
+        if check_value_error(e, CallType.ESTIMATE_GAS):
             result = None
         else:
             # else the error is not denoting estimate gas failure and is something else
@@ -619,7 +619,7 @@ def patched_web3_eth_call(
             RPCEndpoint("eth_call"), [transaction, block_identifier]
         )
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.CALL):
+        if check_value_error(e, CallType.CALL):
             result = ""
         else:
             # else the error is not denoting a revert, something is wrong
@@ -654,7 +654,7 @@ def estimate_gas_for_function(
     try:
         gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
+        if check_value_error(e, CallType.ESTIMATE_GAS):
             gas_estimate = Wei(0)
         else:
             # else the error is not denoting estimate gas failure and is something else
