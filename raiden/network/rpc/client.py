@@ -532,8 +532,8 @@ class ParityCallType(Enum):
 
 def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallType) -> bool:
     """
-    For parity failing calls and functions do not return None if the transaction
-    will fail but instead throw a ValueError exception.
+    For parity and geth >= v1.9.15, failing calls and functions do not return
+    None if the transaction will fail but instead throw a ValueError exception.
 
     This function checks the thrown exception to see if it's the correct one and
     if yes returns True, if not returns False
@@ -543,26 +543,26 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     except json.JSONDecodeError:
         return False
 
-    if call_type == ParityCallType.ESTIMATE_GAS:
-        code_checks_out = error_data["code"] == -32016
-        message_checks_out = "The execution failed due to an exception" in error_data["message"]
-    elif call_type == ParityCallType.CALL:
-        # TODO: refactor
-        # TODO: rename
-        if (
-            error_data["code"] == -32000
-            and "invalid opcode: opcode 0xfe not defined" in error_data["message"]
-        ):
-            return True
-        if error_data["code"] == -32000 and "execution reverted" in error_data["message"]:
-            return True
-        code_checks_out = error_data["code"] == -32015
-        message_checks_out = "VM execution error" in error_data["message"]
-    else:
+    expected_errors = {
+        ParityCallType.ESTIMATE_GAS: [
+            # parity
+            (-32016, "The execution failed due to an exception"),
+        ],
+        ParityCallType.CALL: [
+            # geth
+            (-32000, "invalid opcode: opcode 0xfe not defined"),
+            (-32000, "execution reverted"),
+            # parity
+            (-32015, "VM execution error"),
+        ],
+    }
+
+    if call_type not in expected_errors:
         raise ValueError("Called check_value_error_for_parity() with illegal call type")
 
-    if code_checks_out and message_checks_out:
-        return True
+    for expected_code, expected_msg in expected_errors[call_type]:
+        if error_data["code"] == expected_code and expected_msg in error_data["message"]:
+            return True
 
     return False
 
