@@ -481,7 +481,11 @@ def inspect_client_error(
             if "insufficient funds" in error["message"]:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
 
-            if "always failing transaction" in error["message"]:
+            if (
+                "always failing transaction" in error["message"]
+                or "execution reverted" in error["message"]
+                or "invalid opcode: opcode 0xfe not defined" in error["message"]
+            ):
                 return ClientErrorInspectResult.ALWAYS_FAIL
 
             if "replacement transaction underpriced" in error["message"]:
@@ -543,6 +547,15 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
         code_checks_out = error_data["code"] == -32016
         message_checks_out = "The execution failed due to an exception" in error_data["message"]
     elif call_type == ParityCallType.CALL:
+        # TODO: refactor
+        # TODO: rename
+        if (
+            error_data["code"] == -32000
+            and "invalid opcode: opcode 0xfe not defined" in error_data["message"]
+        ):
+            return True
+        if error_data["code"] == -32000 and "execution reverted" in error_data["message"]:
+            return True
         code_checks_out = error_data["code"] == -32015
         message_checks_out = "VM execution error" in error_data["message"]
     else:
