@@ -141,7 +141,7 @@ def check_parity_version_for_tests(blockchain_type):
         return
 
     parity_version_string, _ = subprocess.Popen(
-        ["parity", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        ["openethereum", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
     supported, _, our_version = is_supported_client(parity_version_string.decode())
     if not supported:
