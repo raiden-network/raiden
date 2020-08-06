@@ -586,11 +586,11 @@ jobs:
           name: Update Formula
           command: |
             source .circleci/get_archive_tag.sh
-            export UPDATED_SHA256=$(openssl dgst -sha256 dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip)
-            export FORMULA_FILE="homebrew-raiden/raiden.rb"
-            sed -i.bak -r "s/[0-9]+\.[0-9]+\.[0-9]+(-?rc.)?/${ARCHIVE_TAG/v/}/g" ${FORMULA_FILE}
-            sed -i.bak -r "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256: -64}\"/g" ${FORMULA_FILE}
-            rm ${FORMULA_FILE}.bak
+            python3 homebrew-raiden/render_template.py \
+              --version "${ARCHIVE_TAG}" \
+              --archive-file "dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip" \
+              --template-file "homebrew-raiden/raiden.rb.template" \
+              --target-file "homebrew-raiden/raiden.rb"
       - run:
           name: Commit and Push Updated Formula
           command: |
