@@ -44,11 +44,11 @@ templates:
     GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.18-f5382591.tar.gz'
     GETH_MD5_MACOS: '431801613e16ec14beba38926546d270'
     GETH_VERSION: '1.9.18'
-    PARITY_URL_LINUX: 'https://releases.parity.io/ethereum/v2.7.2/x86_64-unknown-linux-gnu/parity'
-    PARITY_SHA256_LINUX: 'fe992f0c9b229a4406e82b9ff6d388f4acb4d6ce2782cb79b7bc379e7965ae34'
-    PARITY_URL_MACOS: 'https://releases.parity.io/ethereum/v2.7.2/x86_64-apple-darwin/parity'
-    PARITY_SHA256_MACOS: '2d0de1bf66f5ae693e44c474065fc9a24957463ee33c075731b06ce930139a61'
-    PARITY_VERSION: 'v2.7.2'
+    PARITY_URL_LINUX: 'https://github.com/openethereum/openethereum/releases/download/v3.0.1/openethereum-linux-v3.0.1.zip'
+    PARITY_SHA256_LINUX: '8dd753058e5db77ffaede5a53418005f9c8133212448e11df9169a651cdac997'
+    PARITY_URL_MACOS: 'https://github.com/openethereum/openethereum/releases/download/v3.0.1/openethereum-macos-v3.0.1.zip'
+    PARITY_SHA256_MACOS: 'f41cb1f49727ccf09e4f34b964fdfa9ad3802a046f6acd6c349a41020cdcf1c7'
+    PARITY_VERSION: 'v3.0.1'
     SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.6.3/solc-static-linux'
     SOLC_VERSION: 'v0.6.3'
 
@@ -142,7 +142,7 @@ commands:
             echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v7-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -157,7 +157,7 @@ commands:
             .circleci/fetch_geth_parity_solc.sh
             ln -sfn ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v4-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v7-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-LINUX"
             - "~/.local-MACOS"

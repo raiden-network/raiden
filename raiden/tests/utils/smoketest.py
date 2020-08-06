@@ -241,7 +241,15 @@ def setup_testchain(
     eth_client: EthClient, free_port_generator: Iterator[Port], base_datadir: str, base_logdir: str
 ) -> Iterator[Dict[str, Any]]:
 
-    ensure_executable(eth_client.value)
+    # This mapping exists to facilitate the transition from parity to
+    # openethereum. When all traces of parity are remove, just use
+    # ``eth_client.value`` again.
+    eth_client_to_executable = {
+        EthClient.GETH: "geth",
+        EthClient.PARITY: "openethereum",
+    }
+
+    ensure_executable(eth_client_to_executable[eth_client])
 
     rpc_port = next(free_port_generator)
     p2p_port = next(free_port_generator)

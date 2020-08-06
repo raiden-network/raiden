@@ -169,7 +169,7 @@ def parity_to_cmd(
         "bootnodes": "bootnodes",
     }
 
-    cmd = ["parity"]
+    cmd = ["openethereum"]
 
     for config, option in node_config.items():
         if config in node:

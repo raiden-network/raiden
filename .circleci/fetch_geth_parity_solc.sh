@@ -34,11 +34,12 @@ if [[ ! -x ${GETH_PATH} ]]; then
 fi
 ln -sfn "${GETH_PATH}" "${LOCAL_BASE}"/bin/geth
 
-PARITY_PATH="${LOCAL_BASE}/bin/parity-${OS_NAME}-${PARITY_VERSION}"
+PARITY_PATH="${LOCAL_BASE}/bin/openethereum-${OS_NAME}-${PARITY_VERSION}"
 if [[ ! -x ${PARITY_PATH} ]]; then
   mkdir -p ${LOCAL_BASE}/bin
   PARITY_URL_VAR="PARITY_URL_${OS_NAME}"
-  curl -L "${!PARITY_URL_VAR}" > "${PARITY_PATH}"
+  curl -L "${!PARITY_URL_VAR}" > /tmp/openethereum.zip
+  unzip -p /tmp/openethereum.zip openethereum > "${PARITY_PATH}"
   chmod 775 "${PARITY_PATH}"
 
   PARITY_SHA256_VAR="PARITY_SHA256_${OS_NAME}"
@@ -50,7 +51,7 @@ if [[ ! -x ${PARITY_PATH} ]]; then
       fi
   fi
 fi
-ln -sfn "${PARITY_PATH}" "${LOCAL_BASE}"/bin/parity
+ln -sfn "${PARITY_PATH}" "${LOCAL_BASE}"/bin/openethereum
 
 # Only deal with solc for Linux since it's only used for testing
 if [[ ${OS_NAME} != "LINUX" ]]; then

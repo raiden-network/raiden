@@ -57,7 +57,7 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
     Returns a tuple with 3 elements:
     (supported_or_not, none_or_EthClient, none_or_our_version_str)
     """
-    if client_version.startswith("Parity"):
+    if client_version.startswith("Parity") or client_version.startswith("OpenEthereum"):
         # Parity has Parity// at web3.clientVersion and Parity/ prefix at parity --version
         matches = re.search(r"/+v(\d+\.\d+\.\d+)", client_version)
         if matches is None:
