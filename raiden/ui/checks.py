@@ -4,22 +4,13 @@ import structlog
 from web3 import Web3
 
 from raiden.accounts import AccountManager
-from raiden.constants import (
-    EMPTY_SECRETHASH,
-    HIGHEST_SUPPORTED_GETH_VERSION,
-    HIGHEST_SUPPORTED_PARITY_VERSION,
-    LOWEST_SUPPORTED_GETH_VERSION,
-    LOWEST_SUPPORTED_PARITY_VERSION,
-    SQLITE_MIN_REQUIRED_VERSION,
-    Environment,
-)
-from raiden.exceptions import EthNodeInterfaceError, RaidenError
+from raiden.constants import EMPTY_SECRETHASH, SQLITE_MIN_REQUIRED_VERSION, Environment
+from raiden.exceptions import RaidenError
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
-from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.typing import (
     Address,
     BlockNumber,
@@ -52,26 +43,6 @@ def check_sql_version() -> None:
     if not assert_sqlite_version():
         version = "{}.{}.{}".format(*SQLITE_MIN_REQUIRED_VERSION)
         raise RaidenError(f"SQLite3 should be at least version {version}")
-
-
-def check_ethereum_client_is_supported(web3: Web3) -> None:
-    try:
-        node_version = web3.clientVersion
-    except ValueError:
-        raise EthNodeInterfaceError(
-            "The underlying ethereum node does not have the web3 rpc interface "
-            "enabled. Please run it with '--http.api eth,net,web3' for geth "
-            "and '--jsonrpc-apis=eth,net,web3,parity' for parity."
-        )
-
-    supported, our_client, our_version = is_supported_client(node_version)
-    if not supported:
-        raise RaidenError(
-            f"You need a Byzantium enabled ethereum node. Parity >= "
-            f"{LOWEST_SUPPORTED_PARITY_VERSION} <= {HIGHEST_SUPPORTED_PARITY_VERSION}"
-            f" or Geth >= {LOWEST_SUPPORTED_GETH_VERSION} <= {HIGHEST_SUPPORTED_GETH_VERSION}"
-            f" but you have {our_version} {our_client}"
-        )
 
 
 def check_ethereum_has_accounts(account_manager: AccountManager) -> None:
