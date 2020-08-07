@@ -30,21 +30,15 @@ def support_check(
     highest_supported_version_string: str,
     lowest_supported_version_string: str,
 ) -> bool:
+    """ Check if the eth client version is in the supported range
 
-    # TODO: Is there any better way to get major/minor/patch version from a Version object?
-    # Currently we use this private member which is not ideal. release is a tuple.
-    # Example: (1, 9, 0)
-    our_minor_num = our_version._version.release[1]
-
-    highest_supported_version: Version = parse_version(highest_supported_version_string)
-    highest_supported_min_num = highest_supported_version._version.release[1]
+    If every client strictly adhered to semver, we would only compare major
+    version numbers, here. Unfortunately, we had patch-level changes break
+    Raiden. So we actually check all version components, now.
+    """
     if our_version < parse_version(lowest_supported_version_string):
         return False
-
-    if our_version > highest_supported_version:
-        if our_minor_num == highest_supported_min_num:
-            return True
-        # else
+    if our_version > parse_version(highest_supported_version_string):
         return False
 
     return True
