@@ -87,12 +87,10 @@ def run_test_check_json_rpc_geth():
     g4, _, v4 = is_supported_client("Geth/v2.0.3-unstable-e9295163/linux-amd64/go1.9.1")
     g5, _, v5 = is_supported_client("Geth/v11.55.86-unstable-e9295163/linux-amd64/go1.9.1")
     g6, _, v6 = is_supported_client("Geth/v999.999.999-unstable-e9295163/linux-amd64/go1.9.1")
-    # Test that patch version upgrades are not triggering the non-supported check
-    g7, _, v7 = is_supported_client("Geth/v1.9.3-unstable-e9295163/linux-amd64/go1.9.1")
     g8, _, v8 = is_supported_client("Geth/v1.9.0-stable-52f24617/linux-amd64/go1.12.7")
     g9, _, v9 = is_supported_client("Geth/v1.9.0-unstable-3d3e83ec-20190611/linux-amd64/go1.12.5")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3, g7, g8, g9])
+    assert all([g1, g2, g3, g8, g9])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.3"
     assert v2 == "1.7.2"
@@ -100,7 +98,6 @@ def run_test_check_json_rpc_geth():
     assert v4 == "2.0.3"
     assert v5 == "11.55.86"
     assert v6 == "999.999.999"
-    assert v7 == "1.9.3"
     assert v8 == "1.9.0"
     assert v9 == "1.9.0"
 
@@ -147,15 +144,11 @@ def run_test_check_json_rpc_parity():
     g6, _, v6 = is_supported_client(
         "Parity//v99.994.975-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
-    # Test that patch version upgrades are not triggering the non-supported check
-    g7, _, v7 = is_supported_client(
-        "Parity//v2.5.8-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
-    )
     g8, _, v8 = is_supported_client(
         "Parity//v2.5.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     assert client is EthClient.PARITY
-    assert all([g1, g2, g3, g7, g8])
+    assert all([g1, g2, g3, g8])
     assert not any([g4, g5, g6])
     assert v1 == "1.7.6"
     assert v2 == "1.7.7"
@@ -163,7 +156,6 @@ def run_test_check_json_rpc_parity():
     assert v4 == "2.9.7"
     assert v5 == "23.94.75"
     assert v6 == "99.994.975"
-    assert v7 == "2.5.8"
     assert v8 == "2.5.0"
 
     b1, client, v1 = is_supported_client(
