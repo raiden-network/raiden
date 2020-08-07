@@ -1039,8 +1039,10 @@ class JSONRPCClient:
         version = web3.clientVersion
         supported, eth_node, _ = is_supported_client(version)
 
-        if not supported or eth_node is None:
-            raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
+        if eth_node is None:
+            raise EthNodeInterfaceError(f'Unsupported Ethereum client "{version}"')
+        if not supported:
+            log.warn(f'Unsupported Ethereum client version "{version}"')
 
         address = privatekey_to_address(privkey)
         available_nonce = discover_next_available_nonce(web3, eth_node, address)
