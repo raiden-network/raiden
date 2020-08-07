@@ -45,7 +45,6 @@ from raiden.settings import (
     ServiceConfig,
 )
 from raiden.ui.checks import (
-    check_ethereum_client_is_supported,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
     check_ethereum_network_id,
@@ -238,7 +237,6 @@ def run_raiden_service(
 
     check_sql_version()
     check_ethereum_has_accounts(account_manager)
-    check_ethereum_client_is_supported(web3)
     check_ethereum_network_id(network_id, web3)
 
     address, privatekey = get_account_and_private_key(account_manager, address, password_file)

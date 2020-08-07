@@ -13,13 +13,10 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils import factories
 from raiden.ui.app import rpc_normalized_endpoint
-from raiden.ui.checks import (
-    check_ethereum_client_is_supported,
-    check_ethereum_network_id,
-    check_synced,
-)
+from raiden.ui.checks import check_ethereum_network_id, check_synced
 from raiden.ui.cli import ETH_NETWORKID_OPTION, ETH_RPC_CONFIG_OPTION
 from raiden.utils.cli import NetworkChoiceType, group, option
+from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     BlockNumber,
@@ -128,7 +125,8 @@ def main(output_directory, network_id, eth_rpc_endpoint, contracts_version):
     web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
 
     try:
-        check_ethereum_client_is_supported(web3)
+        supported, _, _ = is_supported_client(web3.clientVersion)
+        assert supported, "Unsupported eth client"
     except ConnectionError:
         click.secho(
             f"Couldn't connect to the ethereum node, double check it is running "
