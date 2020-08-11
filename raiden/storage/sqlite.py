@@ -159,6 +159,24 @@ def _filter_from_dict(current: Dict[str, Any]) -> Dict[str, Any]:
     return filter_
 
 
+def write_state_changes(
+    ulid_factory: ULIDMonotonicFactory, cursor: sqlite3.Cursor, state_changes: List[str]
+) -> List[StateChangeID]:
+    """Write `state_changes` to the database and returns the corresponding IDs."""
+
+    state_change_data = list()
+    state_change_ids = list()
+    for state_change in state_changes:
+        new_id = ulid_factory.new()
+        state_change_ids.append(new_id)
+        state_change_data.append((new_id, state_change))
+
+    query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
+    cursor.executemany(query, state_change_data)
+
+    return state_change_ids
+
+
 def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
     """
     Converts a query object to a valid SQL string
@@ -334,18 +352,14 @@ class SQLiteStorage:
         return int(result[0][0])
 
     def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
-        """Write `state_changes` to the database and returns the correspoding IDs."""
+        """Write `state_changes` to the database and returns the corresponding IDs."""
+        assert not self.in_transaction()
         ulid_factory = self._ulid_factory(StateChangeID)
 
-        state_change_data = list()
-        state_change_ids = list()
-        for state_change in state_changes:
-            new_id = ulid_factory.new()
-            state_change_ids.append(new_id)
-            state_change_data.append((new_id, state_change))
-
-        query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
-        self.conn.executemany(query, state_change_data)
+        with self.transaction() as cursor:
+            state_change_ids = write_state_changes(
+                ulid_factory=ulid_factory, cursor=cursor, state_changes=state_changes
+            )
         self.maybe_commit()
 
         return state_change_ids
@@ -807,22 +821,27 @@ class SQLiteStorage:
         self.maybe_commit()
 
     def maybe_commit(self) -> None:
+        # commit implicit transaction open by autocommit, see https://docs.python.org/3/library/sqlite3.html#controlling-transactions
         if not self.in_transaction:
             self.conn.commit()
 
     @contextmanager
-    def transaction(self) -> Generator[None, None, None]:
-        cursor = self.conn.cursor()
-        self.in_transaction = True
-        try:
-            cursor.execute("BEGIN")
-            yield
-            cursor.execute("COMMIT")
-        except:  # noqa
-            cursor.execute("ROLLBACK")
-            raise
-        finally:
-            self.in_transaction = False
+    def transaction(self) -> Iterator[sqlite3.Cursor]:
+        """
+        Opens a database transaction, nested transactions are not allowed in SQLite and will raise an exception, see https://www.sqlite.org/lang_transaction.html#transactions
+        """
+        with self.conn as cursor:
+            try:
+                # Todo there is a race condition!!1
+                # It is possible for the tx to be open and the flag set to False
+                # flag can be set by multiple threads, todo: add a lock
+                msg = "concurrent transactions are not supported"
+                assert not self.in_transaction, msg
+
+                self.in_transaction = True
+                yield cursor
+            finally:
+                self.in_transaction = False
 
     def close(self) -> None:
         if not hasattr(self, "conn"):
@@ -841,6 +860,36 @@ class SQLiteStorage:
         traceback: Optional[TracebackType],
     ) -> None:  # pylint: disable=unused-arguments
         self.close()
+
+
+class Transaction:
+    """
+
+    Open Issue ToDo: xyz
+    """
+
+    def __init__(self, ulid_factory: ULIDMonotonicFactory, cursor: sqlite3.Cursor):
+        self.ulid_factory = ulid_factory
+        self.cursor = cursor
+
+    def write_state_changes_and_corresponding_events(
+        self, state_change: StateChange, events: List[Event]
+    ):
+
+        all_state_change_ids = write_state_changes(
+            ulid_factory=self.ulid_factory, cursor=self.cursor, state_changes=[state_change]
+        )
+
+        msg = "Write state_changes did not return an ID for every state_change"
+        assert len(all_state_change_ids) == 1, msg
+
+        state_change_id = all_state_change_ids[0]
+        flattened_id_to_events = [(state_change_id, event) for event in events]
+
+        # The update must be done with a single operation, to make sure
+        # that readers will have a consistent view of it.
+        self.saved_state = SavedState(latest_state_change_id, self.state_manager.current_state)
+        self.cursor.write_state_changes(flattened_id_to_events)
 
 
 class SerializedSQLiteStorage:
@@ -867,6 +916,11 @@ class SerializedSQLiteStorage:
 
     def log_run(self) -> None:
         self.database.log_run()
+
+    @contextmanager
+    def transaction(self):
+        with self.database.transaction() as cursor:
+            yield Transaction(cursor=cursor)
 
     def write_state_changes(self, state_changes: List[StateChange]) -> List[StateChangeID]:
         serialized_data = [

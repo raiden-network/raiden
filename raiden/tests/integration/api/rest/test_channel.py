@@ -429,7 +429,7 @@ def test_api_channel_open_close_and_settle(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CONFLICT)
 
-    # Try to create channel with the same partner again before previous channnel settles
+    # Try to create channel with the same partner again before previous channel settles
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
@@ -668,8 +668,9 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert_proper_response(response)
-
+    breakpoint()
     # let's try to deposit to a settled channel
+    # TODO channel is not settled only closed
     request = grequests.patch(
         api_url_for(
             api_server_test_instance,

@@ -243,7 +243,15 @@ class StateManager(Generic[ST]):
         self.state_transition = state_transition
         self.current_state = current_state
 
-    def dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[List[Event]]]:
+    def copy(self) -> "StateManager[ST]":
+        # The state objects must be treated as immutable, so make a copy of the
+        # current state and pass the copy to the state machine to be modified.
+        before_copy = time.time()
+        copy_state = deepcopy(self.current_state)
+        log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
+        return StateManager(self.state_transition, copy_state)
+
+    def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
         """ Apply the `state_change` in the current machine and return the
         resulting events.
 
@@ -256,33 +264,21 @@ class StateManager(Generic[ST]):
             It's the upper layer's responsibility to decided how to handle
             these events.
         """
-        if not state_changes:
-            raise ValueError("dispatch called with an empty state_changes list")
 
-        # The state objects must be treated as immutable, so make a copy of the
-        # current state and pass the copy to the state machine to be modified.
-        before_copy = time.time()
-        next_state = deepcopy(self.current_state)
-        log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
+        iteration = self.state_transition(self.current_state, state_change)
 
-        # Update the current state by applying the state changes
-        events: List[List[Event]] = list()
-        for state_change in state_changes:
-            iteration = self.state_transition(next_state, state_change)
+        typecheck(iteration, TransitionResult)
+        for e in iteration.events:
+            typecheck(e, Event)
+        typecheck(iteration.new_state, State)
 
-            typecheck(iteration, TransitionResult)
-            for e in iteration.events:
-                typecheck(e, Event)
-            typecheck(iteration.new_state, State)
-
-            # Skipping the copy because this value is internal
-            events.append(iteration.events)
-            next_state = iteration.new_state
+        # Skipping the copy because this value is internal
+        next_state = iteration.new_state
 
         assert next_state is not None, "State transition did not yield new state"
         self.current_state = next_state
 
-        return iteration.new_state, events
+        return next_state, iteration.events
 
     def __eq__(self, other: Any) -> bool:
         return (

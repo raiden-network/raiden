@@ -1,3 +1,5 @@
+from abc import abstractmethod, ABC
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 import gevent.lock
@@ -95,6 +97,14 @@ class SavedState(Generic[ST]):
     state: ST
 
 
+class AtomicStateChangeDispatcher(ABC, Generic[ST]):
+    @abstractmethod
+    def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
+        """
+        EXPLAIN THE REASONING BEHIND THAT CLASS
+        """
+
+
 class WriteAheadLog(Generic[ST]):
     saved_state: SavedState[ST]
 
@@ -108,36 +118,27 @@ class WriteAheadLog(Generic[ST]):
         # execution order.
         self._lock = gevent.lock.Semaphore()
 
-    def log_and_dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[Event]]:
-        """ Log and apply a state change.
-
-        This function will first write the state change to the write-ahead-log,
-        in case of a node crash the state change can be recovered and replayed
-        to restore the node state.
-
-        Events produced by applying state change are also saved.
+    @contextmanager
+    def process_state_change_atomically(self) -> AtomicStateChangeDispatcher:
         """
 
-        with self._lock:
-            all_state_change_ids = self.storage.write_state_changes(state_changes)
+        """
+        class _AtomicStateChangeDispatcher(AtomicStateChangeDispatcher, Generic[ST]):
+            def __init__(self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage) -> None:
+                self.state_manager = state_manager
+                self.storage = storage
 
-            latest_state, all_events = self.state_manager.dispatch(state_changes)
-            latest_state_change_id = all_state_change_ids[-1]
+            def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
+                next_state, events = self.state_manager.dispatch(state_change)
+                self._write_state_changes_and_corresponding_events(state_change, events)
+                return next_state, events
 
-            # The update must be done with a single operation, to make sure
-            # that readers will have a consistent view of it.
-            self.saved_state = SavedState(latest_state_change_id, latest_state)
+            def _save_data(self, data: List[ST, List[Event]]):
 
-            event_data = list()
-            flattened_events = list()
-            for state_change_id, events in zip(all_state_change_ids, all_events):
-                flattened_events.extend(events)
-                for event in events:
-                    event_data.append((state_change_id, event))
 
-            self.storage.write_events(event_data)
-
-        return latest_state, flattened_events
+        with self._lock, self.storage as transaction:
+            copied_state = self.state_manager.copy()
+            yield _AtomicStateChangeDispatcher(state_manager=copied_state, transaction=transaction)
 
     def snapshot(self, statechange_qty: int) -> None:
         """ Snapshot the application state.

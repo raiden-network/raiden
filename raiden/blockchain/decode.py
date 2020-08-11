@@ -21,7 +21,10 @@ from raiden.blockchain.state import (
     get_contractreceiveupdatetransfer_data_from_event,
 )
 from raiden.constants import EMPTY_LOCKSROOT, LOCKSROOT_OF_NO_LOCKS
-from raiden.settings import MediationFeeConfig
+from raiden.network.proxies.proxy_manager import ProxyManager
+from raiden.settings import MediationFeeConfig, RaidenConfig
+from raiden.storage.sqlite import SerializedSQLiteStorage
+from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -34,6 +37,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransactionChannelDeposit,
     TransactionExecutionStatus,
+    ChainState,
 )
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
@@ -338,19 +342,18 @@ def contractreceivechannelbatchunlock_from_event(
 
 
 def blockchainevent_to_statechange(
-    raiden: "RaidenService",
+    raiden_config: RaidenConfig,
+    proxy_manager: ProxyManager,
+    raiden_storage: SerializedSQLiteStorage,
+    chain_state: ChainState,
     event: DecodedEvent,
     current_confirmed_head: BlockNumber,
     pendingtokenregistration: Dict[
         TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
     ],
 ) -> List[StateChange]:  # pragma: no unittest
-    msg = "The state of the node has to be primed before blockchain events can be processed."
-    assert raiden.wal, msg
 
     event_name = event.event_data["event"]
-    chain_state = views.state_from_raiden(raiden)
-    proxy_manager = raiden.proxy_manager
 
     state_changes: List[StateChange] = []
 
@@ -365,9 +368,9 @@ def blockchainevent_to_statechange(
         )
 
         if new_channel_details is not None:
-            fee_config: MediationFeeConfig = raiden.config.mediation_fees
+            fee_config: MediationFeeConfig = raiden_config.mediation_fees
             channel_config = ChannelConfig(
-                reveal_timeout=raiden.config.reveal_timeout,
+                reveal_timeout=raiden_config.reveal_timeout,
                 fee_schedule=FeeScheduleState(
                     cap_fees=fee_config.cap_meditation_fees,
                     flat=fee_config.get_flat_fee(new_channel_details.token_address),
@@ -383,11 +386,11 @@ def blockchainevent_to_statechange(
             state_changes.append(contractreceiveroutenew_from_event(event))
 
     elif event_name == ChannelEvent.DEPOSIT:
-        deposit = contractreceivechanneldeposit_from_event(event, raiden.config.mediation_fees)
+        deposit = contractreceivechanneldeposit_from_event(event, raiden_config.mediation_fees)
         state_changes.append(deposit)
 
     elif event_name == ChannelEvent.WITHDRAW:
-        withdraw = contractreceivechannelwithdraw_from_event(event, raiden.config.mediation_fees)
+        withdraw = contractreceivechannelwithdraw_from_event(event, raiden_config.mediation_fees)
         state_changes.append(withdraw)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:
@@ -425,7 +428,7 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.UNLOCKED:
         canonical_identifier = get_contractreceivechannelbatchunlock_data_from_event(
-            chain_state, raiden.wal.storage, event
+            chain_state, raiden_storage, event
         )
 
         if canonical_identifier is not None:

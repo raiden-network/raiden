@@ -8,6 +8,7 @@ import pytest
 from eth_utils import is_checksum_address, to_checksum_address, to_hex
 from flask import url_for
 
+from raiden import waiting
 from raiden.api.rest import APIServer
 from raiden.constants import Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
@@ -28,7 +29,7 @@ from raiden.tests.integration.fixtures.smartcontracts import RED_EYES_PER_CHANNE
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
-from raiden.tests.utils.events import must_have_event, must_have_events
+from raiden.tests.utils.events import must_have_event, must_have_events, check_dict_nested_attrs
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
@@ -217,9 +218,10 @@ def test_api_get_contract_infos(api_server_test_instance: APIServer):
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.parametrize("settle_timeout", [30])
 def test_api_get_channel_list(
-    api_server_test_instance: APIServer, token_addresses, reveal_timeout
-):
+    api_server_test_instance: APIServer, token_addresses, reveal_timeout, settle_timeout
+) -> None:
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
 
     request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
@@ -231,7 +233,6 @@ def test_api_get_channel_list(
 
     # let's create a new channel
     token_address = token_addresses[0]
-    settle_timeout = 1650
     channel_data_obj = {
         "partner_address": partner_address,
         "token_address": to_checksum_address(token_address),
@@ -243,7 +244,6 @@ def test_api_get_channel_list(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
     response = request.send().response
-
     assert_proper_response(response, HTTPStatus.CREATED)
 
     request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
@@ -255,6 +255,72 @@ def test_api_get_channel_list(
     assert channel_info["token_address"] == to_checksum_address(token_address)
     assert channel_info["total_deposit"] == "0"
     assert "token_network_address" in channel_info
+
+    # Channel Resource should list channels that are closed but not settled yet
+
+    # When channel is closed, it should appear on channel list
+    # Let's close the channel
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json={"state": ChannelState.STATE_CLOSED.value},
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    expected_response = {
+        "token_network_address": channel_info["token_network_address"],
+        "channel_identifier": channel_info["channel_identifier"],
+        "partner_address": partner_address,
+        "token_address": channel_info["token_address"],
+        "settle_timeout": channel_info["settle_timeout"],
+        "reveal_timeout": channel_info["reveal_timeout"],
+        "state": ChannelState.STATE_CLOSED.value,
+        "balance": channel_info["balance"],
+        "total_deposit": channel_info["total_deposit"],
+    }
+    assert check_dict_nested_attrs(get_json_response(response), expected_response)
+
+    # check channel list (channel should appear since it is only closed)
+    request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+
+    json_response = get_json_response(response)
+    expected_response = {
+        "token_network_address": channel_info["token_network_address"],
+        "channel_identifier": channel_info["channel_identifier"],
+        "partner_address": partner_address,
+        "token_address": channel_info["token_address"],
+        "settle_timeout": channel_info["settle_timeout"],
+        "reveal_timeout": channel_info["reveal_timeout"],
+        "state": ChannelState.STATE_CLOSED.value,
+        "balance": channel_info["balance"],
+        "total_deposit": channel_info["total_deposit"],
+    }
+    assert check_dict_nested_attrs(json_response[0], expected_response)
+
+    # check list again after settlement, should be empty
+    raiden0 = api_server_test_instance.rest_api.raiden_api.raiden
+
+    with gevent.Timeout(settle_timeout * 2):
+        waiting.wait_for_settle(
+            raiden0,
+            raiden0.default_registry.address,
+            token_address,
+            [int(channel_info["channel_identifier"])],
+            raiden0.alarm.sleep_time,
+        )
+
+    request = grequests.get(api_url_for(api_server_test_instance, "channelsresource"))
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+
+    json_response = get_json_response(response)
+    assert json_response == []
 
 
 @raise_on_failure

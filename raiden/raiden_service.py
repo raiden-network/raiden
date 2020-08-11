@@ -1085,58 +1085,61 @@ class RaidenService(Runnable):
                 TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
             ] = dict()
 
-            state_changes: List[StateChange] = list()
-            for event in poll_result.events:
-                # Important: `blockchainevent_to_statechange` has to be called
-                # with the block of the current confirmed head! An unconfirmed
-                # block could lead to the wrong state being dispatched because
-                # of reorgs, and older blocks are not sufficient to fix
-                # problems with pruning, the `SyncTimeout` is used to ensure
-                # the `current_confirmed_head` stays valid.
-                state_changes.extend(
-                    blockchainevent_to_statechange(
-                        self, event, current_confirmed_head, pendingtokenregistration
+            with self.wal.process_state_change_atomically() as dispatcher:
+                for event in poll_result.events:
+                    # Important: `blockchainevent_to_statechange` has to be called
+                    # with the block of the current confirmed head! An unconfirmed
+                    # block could lead to the wrong state being dispatched because
+                    # of reorgs, and older blocks are not sufficient to fix
+                    # problems with pruning, the `SyncTimeout` is used to ensure
+                    # the `current_confirmed_head` stays valid.
+                    state_changes = blockchainevent_to_statechange(
+                        raiden_config=self.config,
+                        proxy_manager=self.proxy_manager,
+                        raiden_storage=dispatcher.transaction,
+                        event, current_confirmed_head, pendingtokenregistration
                     )
-                )
+                    for state_change in state_changes:
+                        dispatcher.dispatch(state_change)
 
-            # On restarts the node has to pick up all events generated since the
-            # last run. To do this the node will set the filters' from_block to
-            # the value of the latest block number known to have *all* events
-            # processed.
-            #
-            # To guarantee the above the node must either:
-            #
-            # - Dispatch the state changes individually, leaving the Block
-            # state change last, so that it knows all the events for the
-            # given block have been processed. On restarts this can result in
-            # the same event being processed twice.
-            # - Dispatch all the smart contract events together with the Block
-            # state change in a single transaction, either all or nothing will
-            # be applied, and on a restart the node picks up from where it
-            # left.
-            #
-            # The approach used below is to dispatch the Block and the
-            # blockchain events in a single transaction. This is the preferred
-            # approach because it guarantees that no events will be missed and
-            # it fixes race conditions on the value of the block number value,
-            # that can lead to crashes.
-            #
-            # Example: The user creates a new channel with an initial deposit
-            # of X tokens. This is done with two operations, the first is to
-            # open the new channel, the second is to deposit the requested
-            # tokens in it. Once the node fetches the event for the new channel,
-            # it will immediately request the deposit, which leaves a window for
-            # a race condition. If the Block state change was not yet
-            # processed, the block hash used as the triggering block for the
-            # deposit will be off-by-one, and it will point to the block
-            # immediately before the channel existed. This breaks a proxy
-            # precondition which crashes the client.
-            block_state_change = Block(
-                block_number=poll_result.polled_block_number,
-                gas_limit=poll_result.polled_block_gas_limit,
-                block_hash=poll_result.polled_block_hash,
-            )
-            state_changes.append(block_state_change)
+                # On restarts the node has to pick up all events generated since the
+                # last run. To do this the node will set the filters' from_block to
+                # the value of the latest block number known to have *all* events
+                # processed.
+                #
+                # To guarantee the above the node must either:
+                #
+                # - Dispatch the state changes individually, leaving the Block
+                # state change last, so that it knows all the events for the
+                # given block have been processed. On restarts this can result in
+                # the same event being processed twice.
+                # - Dispatch all the smart contract events together with the Block
+                # state change in a single transaction, either all or nothing will
+                # be applied, and on a restart the node picks up from where it
+                # left.
+                #
+                # The approach used below is to dispatch the Block and the
+                # blockchain events in a single transaction. This is the preferred
+                # approach because it guarantees that no events will be missed and
+                # it fixes race conditions on the value of the block number value,
+                # that can lead to crashes.
+                #
+                # Example: The user creates a new channel with an initial deposit
+                # of X tokens. This is done with two operations, the first is to
+                # open the new channel, the second is to deposit the requested
+                # tokens in it. Once the node fetches the event for the new channel,
+                # it will immediately request the deposit, which leaves a window for
+                # a race condition. If the Block state change was not yet
+                # processed, the block hash used as the triggering block for the
+                # deposit will be off-by-one, and it will point to the block
+                # immediately before the channel existed. This breaks a proxy
+                # precondition which crashes the client.
+                block_state_change = Block(
+                    block_number=poll_result.polled_block_number,
+                    gas_limit=poll_result.polled_block_gas_limit,
+                    block_hash=poll_result.polled_block_hash,
+                )
+                state_changes.append(block_state_change)
 
             # It's important to /not/ block here, because this function can
             # be called from the alarm task greenlet, which should not
