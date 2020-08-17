@@ -193,7 +193,7 @@ def start_api_server(
     return api_server
 
 
-def run_app(
+def run_raiden_service(
     address: Address,
     keystore_path: str,
     gas_price: Callable,
