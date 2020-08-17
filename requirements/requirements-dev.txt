@@ -31,7 +31,7 @@ coincurve==13.0.0         # via -r requirements.txt, raiden-contracts
 colorama==0.4.3           # via -r requirements.txt
 colour==0.1.5             # via -r requirements-dev.in
 constantly==15.1.0        # via twisted
-coverage==5.2             # via -r requirements-dev.in
+coverage==5.2.1           # via -r requirements-dev.in
 cryptography==2.8         # via pyopenssl, service-identity
 cytoolz==0.10.1           # via -r requirements.txt, eth-keyfile, eth-utils
 daemonize==2.5.0          # via matrix-synapse
