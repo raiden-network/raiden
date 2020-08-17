@@ -51,7 +51,7 @@ from raiden.tests.utils.smartcontracts import deploy_token
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
-from raiden.ui.app import run_app
+from raiden.ui.app import run_raiden_service
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.keys import privatekey_to_address
@@ -417,7 +417,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
 
     app = None
     try:
-        app = run_app(**setup.args)
+        app = run_raiden_service(**setup.args)
         raiden_api = app.raiden_api
         assert raiden_api is not None  # for mypy
 

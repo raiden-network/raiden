@@ -247,7 +247,7 @@ def test_query_events(
     events = get_contract_events(
         proxy_manager=app0.proxy_manager,
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-        contract_address=registry_address,
+        contract_address=Address(registry_address),
     )
 
     assert must_have_event(
@@ -267,7 +267,7 @@ def test_query_events(
         events = get_contract_events(
             proxy_manager=app0.proxy_manager,
             abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-            contract_address=app0.raiden.default_registry.address,
+            contract_address=Address(app0.default_registry.address),
             from_block=BlockNumber(999999998),
             to_block=BlockNumber(999999999),
         )
@@ -280,7 +280,7 @@ def test_query_events(
     events = get_contract_events(
         proxy_manager=app0.proxy_manager,
         abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-        contract_address=manager0.address,
+        contract_address=Address(manager0.address),
     )
 
     _event = must_have_event(
@@ -302,7 +302,7 @@ def test_query_events(
         events = get_contract_events(
             proxy_manager=app0.proxy_manager,
             abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            contract_address=manager0.address,
+            contract_address=Address(manager0.address),
             from_block=BlockNumber(999999998),
             to_block=BlockNumber(999999999),
         )

@@ -26,7 +26,7 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import wait_for_state_change
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.protocol import HoldRaidenEventHandler
-from raiden.tests.utils.transfer import get_channelstate, transfer
+from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
@@ -45,12 +45,11 @@ from raiden.utils.typing import (
     BlockTimeout,
     List,
     PaymentAmount,
-    PaymentID,
     TargetAddress,
     TokenAddress,
     TokenAmount,
 )
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -282,6 +281,7 @@ def test_transfer_with_invalid_address_type(raiden_network: List[RaidenService],
         )
 
 
+@raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 def test_insufficient_funds(raiden_network: List[RaidenService], token_addresses, deposit):
