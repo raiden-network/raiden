@@ -1118,6 +1118,7 @@ def test_batch_unlock_after_restart(
             sender=alice_bob_channel_state.our_state.address,
         )
 
+    alice_app.stop()
     restart_node(alice_app)
 
     with gevent.Timeout(timeout):

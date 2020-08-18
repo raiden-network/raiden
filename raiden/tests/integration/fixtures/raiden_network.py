@@ -305,10 +305,10 @@ class RestartNode:
     def link_exception_to(self, result: AsyncResult) -> None:
         self.async_result = result
 
-    def __call__(self, app: RaidenService) -> None:
+    def __call__(self, service: RaidenService) -> None:
         if self.async_result is not None:
-            app.greenlet.link_exception(self.async_result)
-        app.start()
+            service.greenlet.link_exception(self.async_result)
+        service.start()
 
 
 @pytest.fixture
