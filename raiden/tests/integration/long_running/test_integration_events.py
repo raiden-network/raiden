@@ -6,13 +6,7 @@ from web3._utils.events import construct_event_topic_set
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
-from raiden.blockchain.events import (
-    ALL_EVENTS,
-    get_all_netting_channel_events,
-    get_contract_events,
-    get_token_network_events,
-    get_token_network_registry_events,
-)
+from raiden.blockchain.events import get_all_netting_channel_events, get_contract_events
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -52,6 +46,7 @@ from raiden.utils.typing import (
 from raiden.waiting import wait_until
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
@@ -253,11 +248,10 @@ def test_query_events(
         views.state_from_app(app0), registry_address, token_address
     )
 
-    events = get_token_network_registry_events(
+    events = get_contract_events(
         proxy_manager=app0.raiden.proxy_manager,
-        token_network_registry_address=registry_address,
-        contract_manager=contract_manager,
-        events=ALL_EVENTS,
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        contract_address=registry_address,
     )
 
     assert must_have_event(
@@ -274,11 +268,10 @@ def test_query_events(
     if blockchain_type == "geth":
         # FIXME: This is apparently meant to verify that querying nonexisting blocks
         # returns an empty list, which is not true for parity.
-        events = get_token_network_registry_events(
+        events = get_contract_events(
             proxy_manager=app0.raiden.proxy_manager,
-            token_network_registry_address=app0.raiden.default_registry.address,
-            contract_manager=contract_manager,
-            events=ALL_EVENTS,
+            abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+            contract_address=app0.raiden.default_registry.address,
             from_block=BlockNumber(999999998),
             to_block=BlockNumber(999999999),
         )
@@ -288,11 +281,10 @@ def test_query_events(
 
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
-    events = get_token_network_events(
+    events = get_contract_events(
         proxy_manager=app0.raiden.proxy_manager,
-        token_network_address=manager0.address,
-        contract_manager=contract_manager,
-        events=ALL_EVENTS,
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_address=manager0.address,
     )
 
     _event = must_have_event(
@@ -311,11 +303,10 @@ def test_query_events(
 
     if blockchain_type == "geth":
         # see above
-        events = get_token_network_events(
+        events = get_contract_events(
             proxy_manager=app0.raiden.proxy_manager,
-            token_network_address=manager0.address,
-            contract_manager=contract_manager,
-            events=ALL_EVENTS,
+            abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            contract_address=manager0.address,
             from_block=BlockNumber(999999998),
             to_block=BlockNumber(999999999),
         )

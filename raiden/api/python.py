@@ -2,16 +2,9 @@ import gevent
 import structlog
 from eth_utils import is_binary_address
 
-import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import (
-    BLOCK_ID_LATEST,
-    GENESIS_BLOCK_NUMBER,
-    NULL_ADDRESS_BYTES,
-    UINT64_MAX,
-    UINT256_MAX,
-)
+from raiden.constants import NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositMismatch,
@@ -1183,98 +1176,6 @@ class RaidenAPI:  # pragma: no unittest
         return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 
     transfer = transfer_and_wait
-
-    def get_blockchain_events_network(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
-        events = blockchain_events.get_token_network_registry_events(
-            proxy_manager=self.raiden.proxy_manager,
-            token_network_registry_address=registry_address,
-            contract_manager=self.raiden.contract_manager,
-            events=blockchain_events.ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-        return sorted(events, key=lambda evt: evt.get("block_number"), reverse=True)
-
-    def get_blockchain_events_token_network(
-        self,
-        token_address: TokenAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
-        """Returns a list of blockchain events corresponding to the token_address."""
-
-        if not is_binary_address(token_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for token in get_blockchain_events_token_network"
-            )
-
-        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
-        token_network_address = self.raiden.default_registry.get_token_network(
-            token_address=token_address, block_identifier=confirmed_block_identifier
-        )
-
-        if token_network_address is None:
-            raise UnknownTokenAddress("Token address is not known.")
-
-        returned_events = blockchain_events.get_token_network_events(
-            proxy_manager=self.raiden.proxy_manager,
-            token_network_address=token_network_address,
-            contract_manager=self.raiden.contract_manager,
-            events=blockchain_events.ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-        for event in returned_events:
-            if event.get("args"):
-                event["args"] = dict(event["args"])
-
-        returned_events.sort(key=lambda evt: evt.get("block_number"), reverse=True)
-        return returned_events
-
-    def get_blockchain_events_channel(
-        self,
-        token_address: TokenAddress,
-        partner_address: Address = None,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> List[Dict]:
-        if not is_binary_address(token_address):
-            raise InvalidBinaryAddress(
-                "Expected binary address format for token in get_blockchain_events_channel"
-            )
-        confirmed_block_identifier = views.get_confirmed_blockhash(self.raiden)
-        token_network_address = self.raiden.default_registry.get_token_network(
-            token_address=token_address, block_identifier=confirmed_block_identifier
-        )
-        if token_network_address is None:
-            raise UnknownTokenAddress("Token address is not known.")
-
-        channel_list = self.get_channel_list(
-            registry_address=self.raiden.default_registry.address,
-            token_address=token_address,
-            partner_address=partner_address,
-        )
-        returned_events = []
-        for channel_state in channel_list:
-            returned_events.extend(
-                blockchain_events.get_all_netting_channel_events(
-                    proxy_manager=self.raiden.proxy_manager,
-                    token_network_address=token_network_address,
-                    netting_channel_identifier=channel_state.identifier,
-                    contract_manager=self.raiden.contract_manager,
-                    from_block=from_block,
-                    to_block=to_block,
-                )
-            )
-        returned_events.sort(key=lambda evt: evt.get("block_number"), reverse=True)
-        return returned_events
 
     def get_pending_transfers(
         self, token_address: TokenAddress = None, partner_address: Address = None

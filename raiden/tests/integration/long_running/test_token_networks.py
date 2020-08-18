@@ -113,13 +113,13 @@ def test_participant_selection(raiden_network, token_addresses):
     )
     gevent.joinall(connect_greenlets, raise_error=True)
 
-    token_network_registry_address = views.get_token_network_address_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
         token_network_registry_address=registry_address,
         token_address=token_address,
     )
     connection_managers = [
-        app.raiden.connection_manager_for_token_network(token_network_registry_address)
+        app.raiden.connection_manager_for_token_network(token_network_address)
         for app in raiden_network
     ]
 
@@ -272,14 +272,14 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
         funds=TokenAmount(100),
         initial_channel_target=target_channels_num,
     )
-    token_network_registry_address = views.get_token_network_address_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(app1.raiden),
         token_network_registry_address=registry_address,
         token_address=token_address,
     )
     # and wait until connections are done. This should connect to an offline node
     # and create the first online discoverable
-    manager = app1.raiden.connection_manager_for_token_network(token_network_registry_address)
+    manager = app1.raiden.connection_manager_for_token_network(token_network_address)
     exception = AssertionError("Unsaturated connection manager", manager)
     with gevent.Timeout(120, exception):
         if not is_manager_saturated(manager, registry_address, token_address):
@@ -299,7 +299,7 @@ def test_connect_does_not_open_channels_with_offline_nodes(raiden_network, token
     gevent.joinall(connect_greenlets, raise_error=True)
 
     connection_managers = [
-        app.raiden.connection_manager_for_token_network(token_network_registry_address)
+        app.raiden.connection_manager_for_token_network(token_network_address)
         for app in raiden_network[2:]
     ]
 

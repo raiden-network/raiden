@@ -481,7 +481,11 @@ def inspect_client_error(
             if "insufficient funds" in error["message"]:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
 
-            if "always failing transaction" in error["message"]:
+            if (
+                "always failing transaction" in error["message"]
+                or "execution reverted" in error["message"]
+                or "invalid opcode: opcode 0xfe not defined" in error["message"]
+            ):
                 return ClientErrorInspectResult.ALWAYS_FAIL
 
             if "replacement transaction underpriced" in error["message"]:
@@ -521,15 +525,15 @@ def inspect_client_error(
     return ClientErrorInspectResult.PROPAGATE_ERROR
 
 
-class ParityCallType(Enum):
+class CallType(Enum):
     ESTIMATE_GAS = 1
     CALL = 2
 
 
-def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallType) -> bool:
+def check_value_error(value_error: ValueError, call_type: CallType) -> bool:
     """
-    For parity failing calls and functions do not return None if the transaction
-    will fail but instead throw a ValueError exception.
+    For parity and geth >= v1.9.15, failing calls and functions do not return
+    None if the transaction will fail but instead throw a ValueError exception.
 
     This function checks the thrown exception to see if it's the correct one and
     if yes returns True, if not returns False
@@ -539,17 +543,26 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     except json.JSONDecodeError:
         return False
 
-    if call_type == ParityCallType.ESTIMATE_GAS:
-        code_checks_out = error_data["code"] == -32016
-        message_checks_out = "The execution failed due to an exception" in error_data["message"]
-    elif call_type == ParityCallType.CALL:
-        code_checks_out = error_data["code"] == -32015
-        message_checks_out = "VM execution error" in error_data["message"]
-    else:
-        raise ValueError("Called check_value_error_for_parity() with illegal call type")
+    expected_errors = {
+        CallType.ESTIMATE_GAS: [
+            # parity
+            (-32016, "The execution failed due to an exception"),
+        ],
+        CallType.CALL: [
+            # geth
+            (-32000, "invalid opcode: opcode 0xfe not defined"),
+            (-32000, "execution reverted"),
+            # parity
+            (-32015, "VM execution error"),
+        ],
+    }
 
-    if code_checks_out and message_checks_out:
-        return True
+    if call_type not in expected_errors:
+        raise ValueError("Called check_value_error() with illegal call type")
+
+    for expected_code, expected_msg in expected_errors[call_type]:
+        if error_data["code"] == expected_code and expected_msg in error_data["message"]:
+            return True
 
     return False
 
@@ -581,7 +594,7 @@ def patched_web3_eth_estimate_gas(
     try:
         result = self.web3.manager.request_blocking(RPCEndpoint("eth_estimateGas"), params)
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
+        if check_value_error(e, CallType.ESTIMATE_GAS):
             result = None
         else:
             # else the error is not denoting estimate gas failure and is something else
@@ -606,7 +619,7 @@ def patched_web3_eth_call(
             RPCEndpoint("eth_call"), [transaction, block_identifier]
         )
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.CALL):
+        if check_value_error(e, CallType.CALL):
             result = ""
         else:
             # else the error is not denoting a revert, something is wrong
@@ -641,7 +654,7 @@ def estimate_gas_for_function(
     try:
         gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
+        if check_value_error(e, CallType.ESTIMATE_GAS):
             gas_estimate = Wei(0)
         else:
             # else the error is not denoting estimate gas failure and is something else
