@@ -23,11 +23,13 @@ from raiden.tests.utils.network import (
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.transport import ParsedURL
 from raiden.utils.typing import (
+    BlockNumber,
     BlockTimeout,
     ChainID,
     Iterable,
     Iterator,
     List,
+    MonitoringServiceAddress,
     OneToNAddress,
     Optional,
     Port,
@@ -55,6 +57,7 @@ def raiden_chain(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Optional[OneToNAddress],
+    monitoring_service_address: MonitoringServiceAddress,
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -102,6 +105,7 @@ def raiden_chain(
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
         user_deposit_address=user_deposit_address,
+        monitoring_service_contract_address=monitoring_service_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         database_basedir=base_datadir,
@@ -120,7 +124,7 @@ def raiden_chain(
         port_generator=port_generator,
     )
 
-    confirmed_block = raiden_apps[0].confirmation_blocks + 1
+    confirmed_block = BlockNumber(raiden_apps[0].confirmation_blocks + 1)
     blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
     if start_raiden_apps:
@@ -188,6 +192,7 @@ def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Optional[OneToNAddress],
+    monitoring_service_address: MonitoringServiceAddress,
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -228,6 +233,7 @@ def raiden_network(
         service_registry_address=service_registry_address,
         one_to_n_address=one_to_n_address,
         user_deposit_address=user_deposit_address,
+        monitoring_service_contract_address=monitoring_service_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         database_basedir=base_datadir,
@@ -245,7 +251,7 @@ def raiden_network(
         port_generator=port_generator,
     )
 
-    confirmed_block = raiden_apps[0].confirmation_blocks + 1
+    confirmed_block = BlockNumber(raiden_apps[0].confirmation_blocks + 1)
     blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
     if start_raiden_apps:

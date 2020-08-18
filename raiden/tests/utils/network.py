@@ -1,5 +1,5 @@
 """ Utilities to set-up a Raiden network. """
-from collections import namedtuple
+from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 
@@ -10,7 +10,9 @@ from web3 import Web3
 from raiden import waiting
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, Environment, RoutingMode
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
+from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
@@ -48,6 +50,7 @@ from raiden.utils.typing import (
     Iterable,
     Iterator,
     List,
+    MonitoringServiceAddress,
     OneToNAddress,
     Optional,
     Port,
@@ -69,16 +72,15 @@ AppChannels = Iterable[Tuple[RaidenService, RaidenService]]
 log = structlog.get_logger(__name__)
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
-BlockchainServices = namedtuple(
-    "BlockchainServices",
-    (
-        "deploy_registry",
-        "secret_registry",
-        "service_registry",
-        "proxy_manager",
-        "blockchain_services",
-    ),
-)
+
+
+@dataclass
+class BlockchainServices:
+    deploy_registry: TokenNetworkRegistry
+    secret_registry: SecretRegistry
+    service_registry: Optional[ServiceRegistry]
+    proxy_manager: ProxyManager
+    blockchain_services: List[ProxyManager]
 
 
 def check_channel(
@@ -378,12 +380,13 @@ def create_sequential_channels(
 def create_apps(
     chain_id: ChainID,
     contracts_path: Path,
-    blockchain_services: BlockchainServices,
+    blockchain_services: List[ProxyManager],
     token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Optional[OneToNAddress],
     secret_registry_address: SecretRegistryAddress,
     service_registry_address: Optional[ServiceRegistryAddress],
     user_deposit_address: Optional[UserDepositAddress],
+    monitoring_service_contract_address: MonitoringServiceAddress,
     reveal_timeout: BlockTimeout,
     settle_timeout: BlockTimeout,
     database_basedir: str,
@@ -402,10 +405,8 @@ def create_apps(
 ) -> List[RaidenService]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
-    services = blockchain_services
-
     apps = []
-    for idx, proxy_manager in enumerate(services):
+    for idx, proxy_manager in enumerate(blockchain_services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
         assert len(resolver_ports) > idx
         resolver_port = resolver_ports[idx]
@@ -464,6 +465,10 @@ def create_apps(
                 )
 
             monitoring_service = None
+            if monitoring_service_contract_address:
+                monitoring_service = proxy_manager.monitoring_service(
+                    monitoring_service_contract_address, block_identifier=BLOCK_ID_LATEST
+                )
 
             one_to_n = None
             if one_to_n_address:
@@ -525,7 +530,7 @@ def jsonrpc_services(
     proxy_manager: ProxyManager,
     private_keys: List[PrivateKey],
     secret_registry_address: SecretRegistryAddress,
-    service_registry_address: ServiceRegistryAddress,
+    service_registry_address: Optional[ServiceRegistryAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
     web3: Web3,
     contract_manager: ContractManager,
