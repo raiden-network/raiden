@@ -13,6 +13,7 @@ from raiden.constants import (
     UINT256_MAX,
     Environment,
 )
+from raiden.network.proxies.monitoring_service import MonitoringService
 from raiden.network.proxies.one_to_n import OneToN
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
@@ -31,6 +32,7 @@ from raiden.utils.typing import (
     Callable,
     ChainID,
     List,
+    MonitoringServiceAddress,
     OneToNAddress,
     Optional,
     PrivateKey,
@@ -45,6 +47,7 @@ from raiden.utils.typing import (
 )
 from raiden_contracts.constants import (
     CONTRACT_CUSTOM_TOKEN,
+    CONTRACT_MONITORING_SERVICE,
     CONTRACT_ONE_TO_N,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
@@ -64,6 +67,7 @@ class ServicesSmartContracts:
     one_to_n_proxy: OneToN
     user_deposit_proxy: UserDeposit
     service_registry_proxy: ServiceRegistry
+    monitoring_service: MonitoringService
 
 
 @dataclass
@@ -182,6 +186,35 @@ def deploy_one_to_n(
     )
     return proxy_manager.one_to_n(
         OneToNAddress(to_canonical_address(contract.address)), BlockNumber(receipt["blockNumber"])
+    )
+
+
+def deploy_monitoring_service(
+    token_deploy_result: Callable[[], Contract],
+    user_deposit_deploy_result: Callable[[], UserDeposit],
+    service_registry_deploy_result: Callable[[], ServiceRegistry],
+    token_network_registry_deploy_result: Callable[[], TokenNetworkRegistry],
+    deploy_client: JSONRPCClient,
+    contract_manager: ContractManager,
+    proxy_manager: ProxyManager,
+) -> MonitoringService:
+    token_contract = token_deploy_result()
+    token_network_registry_proxy = token_network_registry_deploy_result()
+    user_deposit_proxy = user_deposit_deploy_result()
+    service_registry_proxy = service_registry_deploy_result()
+    contract, receipt = deploy_client.deploy_single_contract(
+        contract_name=CONTRACT_MONITORING_SERVICE,
+        contract=contract_manager.get_contract(CONTRACT_MONITORING_SERVICE),
+        constructor_parameters=[
+            token_contract.address,
+            service_registry_proxy.address,
+            user_deposit_proxy.address,
+            token_network_registry_proxy.address,
+        ],
+    )
+    return proxy_manager.monitoring_service(
+        MonitoringServiceAddress(to_canonical_address(contract.address)),
+        BlockNumber(receipt["blockNumber"]),
     )
 
 
@@ -355,6 +388,18 @@ def deploy_smart_contract_bundle_concurrently(
         )
         greenlets.add(one_to_n_deploy_greenlet)
 
+        monitoring_service_deploy_greenlet = gevent.spawn(
+            deploy_monitoring_service,
+            token_deploy_result=utility_token_deploy_greenlet.get,
+            user_deposit_deploy_result=user_deposit_deploy_greenlet.get,
+            service_registry_deploy_result=service_registry_deploy_greenlet.get,
+            token_network_registry_deploy_result=token_network_registry_deploy_greenlet.get,
+            deploy_client=deploy_client,
+            contract_manager=contract_manager,
+            proxy_manager=proxy_manager,
+        )
+        greenlets.add(monitoring_service_deploy_greenlet)
+
         for transfer_to in participants:
             transfer_grenlet = gevent.spawn(
                 transfer_user_deposit_tokens,
@@ -377,6 +422,7 @@ def deploy_smart_contract_bundle_concurrently(
         user_deposit_proxy = user_deposit_deploy_greenlet.get()
         service_registry_proxy = service_registry_deploy_greenlet.get()
         utility_token_contract = utility_token_deploy_greenlet.get()
+        monitoring_service_proxy = monitoring_service_deploy_greenlet.get()
 
         utility_token_proxy = Token(
             deploy_client, utility_token_contract.address, contract_manager, BLOCK_ID_LATEST
@@ -395,6 +441,7 @@ def deploy_smart_contract_bundle_concurrently(
             one_to_n_proxy=one_to_n_proxy,
             user_deposit_proxy=user_deposit_proxy,
             service_registry_proxy=service_registry_proxy,
+            monitoring_service=monitoring_service_proxy,
         )
 
     return FixtureSmartContracts(
@@ -474,6 +521,19 @@ def one_to_n_address_fixture(
 
     if services_smart_contracts:
         return services_smart_contracts.one_to_n_proxy.address
+
+    return None
+
+
+@pytest.fixture(name="monitoring_service_address")
+def monitoring_service_address_fixture(
+    deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
+) -> Optional[MonitoringServiceAddress]:
+    """ Deploy OneToN contract and return the address """
+    services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
+
+    if services_smart_contracts:
+        return services_smart_contracts.monitoring_service.address
 
     return None
 
