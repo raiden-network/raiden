@@ -239,7 +239,7 @@ class SecretRegistry:
             if estimated_transaction is not None:
                 assert msg, "Unexpected control flow, an exception should have been raised."
                 error = (
-                    f"Sending the the transaction for registerSecretBatch "
+                    f"Sending the transaction for registerSecretBatch "
                     f"failed with: `{msg}`.  This happens if the same ethereum "
                     f"account is being used by more than one program which is not "
                     f"supported."
