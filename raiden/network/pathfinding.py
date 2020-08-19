@@ -29,6 +29,7 @@ from raiden.exceptions import (
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
 from raiden.utils.formatting import to_checksum_address
+from raiden.utils.http import TimeoutHTTPAdapter
 from raiden.utils.signer import LocalSigner
 from raiden.utils.system import get_system_spec
 from raiden.utils.transfers import to_rdn
@@ -134,13 +135,16 @@ USER_AGENT_STR = (
 
 session = Session()
 session.headers["User-Agent"] = USER_AGENT_STR
+timeout_adapter = TimeoutHTTPAdapter(timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+session.mount("http://", timeout_adapter)
+session.mount("https://", timeout_adapter)
 
 MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
 def get_pfs_info(url: str) -> PFSInfo:
     try:
-        response = session.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+        response = session.get(f"{url}/api/v1/info")
         infos = get_response_json(response)
         matrix_server_info = urlparse(infos["matrix_server"])
 
@@ -391,7 +395,6 @@ def get_last_iou(
                 timestamp=timestamp,
                 signature=signature,
             ),
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
 
         data = json.loads(response.content).get("last_iou")
@@ -510,9 +513,7 @@ def post_pfs_paths(
 ) -> Tuple[List[Dict[str, Any]], UUID]:
     try:
         response = session.post(
-            f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths",
-            json=payload,
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+            f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths", json=payload
         )
     except RequestException as e:
         raise ServiceRequestFailed(
@@ -689,7 +690,6 @@ def post_pfs_feedback(
         session.post(
             f"{pfs_config.info.url}/api/v1/{to_checksum_address(token_network_address)}/feedback",
             json=payload,
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
     except RequestException as e:
         log.warning(
