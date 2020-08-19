@@ -1,17 +1,22 @@
 from unittest.mock import patch
 
 import pytest
-import requests
 from eth_utils import (
     is_canonical_address,
     is_same_address,
     to_canonical_address,
     to_checksum_address,
 )
+from requests.exceptions import RequestException
 
 from raiden.constants import MATRIX_AUTO_SELECT_SERVER, RoutingMode
 from raiden.exceptions import RaidenError
-from raiden.network.pathfinding import PFSInfo, check_pfs_for_production, configure_pfs_or_exit
+from raiden.network.pathfinding import (
+    PFSInfo,
+    check_pfs_for_production,
+    configure_pfs_or_exit,
+    session,
+)
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
@@ -77,7 +82,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # Asking for auto address
     # To make this deterministic we need to patch the random selection function
     patch_random = patch("raiden.network.pathfinding.get_random_pfs", return_value="http://foo")
-    with patch.object(requests, "get", return_value=response), patch_random:
+    with patch.object(session, "get", return_value=response), patch_random:
         config = configure_pfs_or_exit(
             pfs_url=MATRIX_AUTO_SELECT_SERVER,
             routing_mode=RoutingMode.PFS,
@@ -92,7 +97,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     # Configuring a valid given address
     given_address = "http://foo"
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(session, "get", return_value=response):
         config = configure_pfs_or_exit(
             pfs_url=given_address,
             routing_mode=RoutingMode.PFS,
@@ -109,7 +114,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # Bad address, should exit the program
     bad_address = "http://badaddress"
     with pytest.raises(RaidenError):
-        with patch.object(requests, "get", side_effect=requests.RequestException()):
+        with patch.object(session, "get", side_effect=RequestException()):
             # Configuring a given address
             _ = configure_pfs_or_exit(
                 pfs_url=bad_address,
@@ -124,7 +129,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # Addresses of token network registries of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
     with pytest.raises(RaidenError):
-        with patch.object(requests, "get", return_value=response):
+        with patch.object(session, "get", return_value=response):
             _ = configure_pfs_or_exit(
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
@@ -140,7 +145,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # ChainIDs of pfs and client conflict, should exit the client
     response = mocked_json_response(response_data=json_data)
     with pytest.raises(RaidenError):
-        with patch.object(requests, "get", return_value=response):
+        with patch.object(session, "get", return_value=response):
             configure_pfs_or_exit(
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
@@ -154,7 +159,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # Wrong matrix server
     response = mocked_json_response(response_data=json_data)
     with pytest.raises(RaidenError, match="matrix server"):
-        with patch.object(requests, "get", return_value=response):
+        with patch.object(session, "get", return_value=response):
             configure_pfs_or_exit(
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
