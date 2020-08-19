@@ -673,7 +673,7 @@ class SQLiteStorage:
         offset: int = None,
         token_network_address: TokenNetworkAddress = None,
         partner_address: Address = None,
-    ) -> List[TimestampedEvent]:
+    ) -> List[Tuple[str, datetime]]:
 
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
@@ -755,7 +755,7 @@ class SQLiteStorage:
         args.append(limit)
         args.append(offset)
         cursor.execute(query, args)
-        return [TimestampedEvent(entry[0], entry[1]) for entry in cursor]
+        return [(entry[0], entry[1]) for entry in cursor]
 
     def get_events_with_timestamps(
         self,
@@ -763,12 +763,12 @@ class SQLiteStorage:
         offset: int = None,
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
-    ) -> List[TimestampedEvent]:
+    ) -> List[Tuple[str, datetime]]:
         entries = self._query_events(
             limit=limit, offset=offset, filters=filters, logical_and=logical_and
         )
 
-        return [TimestampedEvent(entry[0], entry[1]) for entry in entries]
+        return [(entry[0], entry[1]) for entry in entries]
 
     def get_events(self, limit: int = None, offset: int = None) -> List[str]:
         entries = self._query_events(limit, offset)
@@ -981,8 +981,8 @@ class SerializedSQLiteStorage:
             partner_address=partner_address,
         )
         return [
-            TimestampedEvent(self.serializer.deserialize(event.wrapped_event), event.log_time)
-            for event in events
+            TimestampedEvent(self.serializer.deserialize(data), timestamp)
+            for data, timestamp in events
         ]
 
     def get_events_with_timestamps(
@@ -996,8 +996,8 @@ class SerializedSQLiteStorage:
             limit=limit, offset=offset, filters=filters, logical_and=logical_and
         )
         return [
-            TimestampedEvent(self.serializer.deserialize(event.wrapped_event), event.log_time)
-            for event in events
+            TimestampedEvent(self.serializer.deserialize(data), timestamp)
+            for data, timestamp in events
         ]
 
     def get_events(self, limit: int = None, offset: int = None) -> List[Event]:

@@ -1161,7 +1161,7 @@ class RaidenAPI:  # pragma: no unittest
             e
             for e in events
             if event_filter_for_payments(
-                event=e.wrapped_event,
+                event=e.event,
                 chain_state=chain_state,
                 partner_address=target_address,
                 token_address=token_address,

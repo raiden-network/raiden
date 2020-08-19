@@ -39,14 +39,19 @@ of the easy of conversion.
 6- https://tools.ietf.org/html/rfc4122.html
 7- https://github.com/ulid/spec
 """
-from collections import namedtuple
+from dataclasses import dataclass
+from datetime import datetime
 
 from raiden.transfer.architecture import Event
 
 
-class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time")):
+@dataclass
+class TimestampedEvent:
+    event: Event
+    log_time: datetime
+
     def __getattr__(self, item: str) -> Event:
-        return getattr(self.wrapped_event, item)
+        return getattr(self.event, item)
 
 
 DB_CREATE_SETTINGS = """

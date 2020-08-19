@@ -334,7 +334,7 @@ class EventPaymentSchema(BaseSchema):
         serialized_event = self.dump(event)
         token_network = get_token_network_by_address(
             chain_state=chain_state,
-            token_network_address=event.wrapped_event.token_network_address,
+            token_network_address=event.event.token_network_address,  # type: ignore
         )
         assert token_network, "Token network object should be registered if we got events with it"
         serialized_event["token_address"] = to_checksum_address(token_network.token_address)
