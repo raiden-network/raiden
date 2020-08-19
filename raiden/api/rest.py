@@ -895,23 +895,21 @@ class RestAPI:  # pragma: no unittest
         result = []
         chain_state = views.state_from_raiden(self.raiden_api.raiden)
         for event in service_result:
-            if isinstance(event.wrapped_event, EventPaymentSentSuccess):
+            if isinstance(event.event, EventPaymentSentSuccess):
                 serialized_event = self.sent_success_payment_schema.serialize(
                     chain_state=chain_state, event=event
                 )
-            elif isinstance(event.wrapped_event, EventPaymentSentFailed):
+            elif isinstance(event.event, EventPaymentSentFailed):
                 serialized_event = self.failed_payment_schema.serialize(
                     chain_state=chain_state, event=event
                 )
-            elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
+            elif isinstance(event.event, EventPaymentReceivedSuccess):
                 serialized_event = self.received_success_payment_schema.serialize(
                     chain_state=chain_state, event=event
                 )
             else:
                 log.warning(
-                    "Unexpected event",
-                    node=self.checksum_address,
-                    unexpected_event=event.wrapped_event,
+                    "Unexpected event", node=self.checksum_address, unexpected_event=event.event,
                 )
 
             result.append(serialized_event)

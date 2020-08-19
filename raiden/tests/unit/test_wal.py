@@ -2,6 +2,7 @@ import os
 import random
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import pytest
 
@@ -135,12 +136,13 @@ def test_timestamped_event():
     event = EventPaymentSentFailed(
         make_token_network_registry_address(), make_address(), 1, make_address(), "whatever"
     )
-    log_time = "2018-09-07T20:02:35.000"
+    log_time = datetime.fromisoformat("2018-09-07T20:02:35.000")
 
     timestamped = TimestampedEvent(event, log_time)
     assert timestamped.log_time == log_time
-    assert timestamped.reason == timestamped.wrapped_event.reason == "whatever"
-    assert timestamped.identifier == 1
+    assert isinstance(timestamped.event, EventPaymentSentFailed)
+    assert timestamped.reason == timestamped.event.reason == "whatever"
+    assert timestamped.identifier == timestamped.event.identifier == 1
 
 
 def test_write_read_events():
@@ -164,7 +166,7 @@ def test_write_read_events():
 
     latest_event = new_events[-1]
     assert isinstance(latest_event, TimestampedEvent)
-    assert isinstance(latest_event.wrapped_event, EventPaymentSentFailed)
+    assert isinstance(latest_event.event, EventPaymentSentFailed)
 
 
 def test_restore_without_snapshot():
