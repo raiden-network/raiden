@@ -231,7 +231,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the web3 rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3"
+            "enabled. Please run it with '--http.api eth,net,web3'"
         )
 
     try:
@@ -239,7 +239,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the eth rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3"
+            "enabled. Please run it with '--http.api eth,net,web3'"
         )
 
     try:
@@ -247,7 +247,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the net rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3"
+            "enabled. Please run it with '--http.api eth,net,web3'"
         )
 
 

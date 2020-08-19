@@ -85,22 +85,21 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
     Return:
         cmd-args list
     """
-    node_config = [
-        "nodekeyhex",
-        "port",
-        "rpcport",
-        "bootnodes",
-        "minerthreads",
-        "unlock",
-        "password",
-    ]
+    node_config = {
+        "nodekeyhex": "nodekeyhex",
+        "port": "port",
+        "rpcport": "http.port",
+        "bootnodes": "bootnodes",
+        "minerthreads": "minerthreads",
+        "unlock": "unlock",
+        "password": "password",
+    }
 
     cmd = ["geth"]
 
-    for config in node_config:
+    for config, option in node_config.items():
         if config in node:
-            value = node[config]
-            cmd.extend([f"--{config}", str(value)])
+            cmd.extend([f"--{option}", str(node[config])])
 
     # Add parameters that are only required in newer versions
     geth_version_string, _ = subprocess.Popen(
@@ -128,10 +127,10 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
     # configuration flag.
     cmd.extend(
         [
-            "--rpc",
-            "--rpcapi",
+            "--http",
+            "--http.api",
             "eth,net,web3,personal,debug",
-            "--rpcaddr",
+            "--http.addr",
             "127.0.0.1",
             "--networkid",
             str(chain_id),
