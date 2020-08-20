@@ -16,7 +16,7 @@ from raiden.ui.app import rpc_normalized_endpoint
 from raiden.ui.checks import check_ethereum_network_id, check_synced
 from raiden.ui.cli import ETH_NETWORKID_OPTION, ETH_RPC_CONFIG_OPTION
 from raiden.utils.cli import NetworkChoiceType, group, option
-from raiden.utils.ethereum_clients import is_supported_client
+from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     BlockNumber,
@@ -126,7 +126,7 @@ def main(output_directory, network_id, eth_rpc_endpoint, contracts_version):
 
     try:
         supported, _, _ = is_supported_client(web3.clientVersion)
-        assert supported, "Unsupported eth client"
+        assert supported is VersionSupport.SUPPORTED, "Unsupported eth client"
     except ConnectionError:
         click.secho(
             f"Couldn't connect to the ethereum node, double check it is running "

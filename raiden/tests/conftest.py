@@ -15,6 +15,8 @@ import gevent
 import pytest
 import structlog
 
+from raiden.utils.ethereum_clients import VersionSupport
+
 # Execute these before the raiden imports because rewrites can't work after the
 # module has been imported.
 pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
@@ -126,7 +128,7 @@ def check_geth_version_for_tests(blockchain_type):
         ["geth", "version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
     supported, _, our_version = is_supported_client(geth_version_string.decode())
-    if not supported:
+    if supported is VersionSupport.UNSUPPORTED:
         pytest.exit(
             f"You are trying to run tests with an unsupported GETH version. "
             f"Your Version: {our_version} "
@@ -144,7 +146,7 @@ def check_parity_version_for_tests(blockchain_type):
         ["openethereum", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).communicate()
     supported, _, our_version = is_supported_client(parity_version_string.decode())
-    if not supported:
+    if supported is VersionSupport.UNSUPPORTED:
         pytest.exit(
             f"You are trying to run tests with an unsupported PARITY version. "
             f"Your Version: {our_version} "

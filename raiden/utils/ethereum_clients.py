@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 
 from pkg_resources import parse_version
 from pkg_resources.extern.packaging.version import Version
@@ -11,6 +12,12 @@ from raiden.constants import (
     EthClient,
 )
 from raiden.utils.typing import Optional, Tuple
+
+
+class VersionSupport(Enum):
+    SUPPORTED = "supported"
+    WARN = "warn"
+    UNSUPPORTED = "unsupported"
 
 
 def parse_geth_version(client_version: str) -> Optional[tuple]:
@@ -29,7 +36,7 @@ def support_check(
     our_version: Version,
     highest_supported_version_string: str,
     lowest_supported_version_string: str,
-) -> bool:
+) -> VersionSupport:
     """ Check if the eth client version is in the supported range
 
     If every client strictly adhered to semver, we would only compare major
@@ -37,14 +44,16 @@ def support_check(
     Raiden. So we actually check all version components, now.
     """
     if our_version < parse_version(lowest_supported_version_string):
-        return False
+        return VersionSupport.UNSUPPORTED
     if our_version > parse_version(highest_supported_version_string):
-        return False
+        return VersionSupport.WARN
 
-    return True
+    return VersionSupport.SUPPORTED
 
 
-def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient], Optional[str]]:
+def is_supported_client(
+    client_version: str,
+) -> Tuple[VersionSupport, Optional[EthClient], Optional[str]]:
     """Takes a client version string either from `web3.clientVersion` or from
     `geth version` or `parity --version` and sees if it is supported.
 
@@ -55,7 +64,7 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
         # Parity has Parity// at web3.clientVersion and Parity/ prefix at parity --version
         matches = re.search(r"/+v(\d+\.\d+\.\d+)", client_version)
         if matches is None:
-            return False, None, None
+            return VersionSupport.UNSUPPORTED, None, None
 
         our_parity_version = parse_version(matches.groups()[0])
         supported = support_check(
@@ -67,7 +76,7 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
     elif client_version.startswith("Geth"):
         our_geth_version = parse_geth_version(client_version)
         if our_geth_version is None:
-            return False, None, None
+            return VersionSupport.UNSUPPORTED, None, None
         supported = support_check(
             our_version=our_geth_version,
             highest_supported_version_string=HIGHEST_SUPPORTED_GETH_VERSION,
@@ -75,4 +84,4 @@ def is_supported_client(client_version: str) -> Tuple[bool, Optional[EthClient],
         )
         return supported, EthClient.GETH, str(our_geth_version)
 
-    return False, None, None
+    return VersionSupport.UNSUPPORTED, None, None
