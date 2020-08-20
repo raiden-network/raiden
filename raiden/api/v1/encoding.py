@@ -1,6 +1,5 @@
 import binascii
-import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from eth_utils import (
     is_0x_prefixed,
@@ -91,20 +90,6 @@ class AddressField(fields.Field):
             raise self.make_error("null_address")
 
         return value
-
-
-class TimeStampField(fields.DateTime):
-    def _serialize(
-        self, value: Optional[datetime.datetime], attr: Any, obj: Any, **kwargs
-    ) -> Optional[str]:
-        if value is not None:
-            return value.isoformat()
-        return None
-
-    def _deserialize(self, value, attr, data, **kwargs) -> Optional[datetime.datetime]:
-        if value is not None:
-            return datetime.datetime.fromisoformat(value)
-        return None
 
 
 class SecretField(fields.Field):
@@ -327,7 +312,7 @@ class ConnectionsConnectSchema(BaseSchema):
 class EventPaymentSchema(BaseSchema):
     block_number = IntegerToStringField()
     identifier = IntegerToStringField()
-    log_time = TimeStampField()
+    log_time = fields.DateTime()
     token_address = AddressField(missing=None)
 
     def serialize(self, chain_state: ChainState, event: TimestampedEvent) -> Dict[str, Any]:
