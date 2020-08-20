@@ -272,7 +272,7 @@ def test_transfer_with_invalid_address_type(raiden_network: List[RaidenService],
     # Enforce sandwich encoding. Calling `transfer` with a non binary address
     # raises an exception
     with pytest.raises(InvalidBinaryAddress):
-        RaidenAPI(app0).transfer(
+        RaidenAPI(app0).transfer_and_wait(
             app0.default_registry.address,
             token_address,
             PaymentAmount(10),
@@ -288,7 +288,7 @@ def test_insufficient_funds(raiden_network: List[RaidenService], token_addresses
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    result = RaidenAPI(app0).transfer(
+    result = RaidenAPI(app0).transfer_and_wait(
         app0.default_registry.address,
         token_address,
         deposit + 1,
@@ -354,7 +354,7 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
     app1.raiden_event_handler.hold(SendSecretRequest, {})
 
     greenlet = gevent.spawn(
-        RaidenAPI(app0).transfer,
+        RaidenAPI(app0).transfer_and_wait,
         app0.default_registry.address,
         token_address,
         1,
@@ -749,7 +749,7 @@ def test_same_addresses_for_payment(raiden_network: List[RaidenService], token_a
     token_address = token_addresses[0]
 
     with pytest.raises(SamePeerAddress):
-        api0.transfer(
+        api0.transfer_and_wait(
             registry_address=registry_address,
             token_address=token_address,
             target=TargetAddress(app0.address),
