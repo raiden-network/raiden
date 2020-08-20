@@ -65,7 +65,7 @@ from raiden.exceptions import (
     ReplacementTransactionUnderpriced,
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
-from raiden.utils.ethereum_clients import is_supported_client
+from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.smart_contracts import safe_gas_limit
@@ -1039,9 +1039,9 @@ class JSONRPCClient:
         version = web3.clientVersion
         supported, eth_node, _ = is_supported_client(version)
 
-        if eth_node is None:
+        if eth_node is None or supported is VersionSupport.UNSUPPORTED:
             raise EthNodeInterfaceError(f'Unsupported Ethereum client "{version}"')
-        if not supported:
+        if supported is VersionSupport.WARN:
             log.warn(f'Unsupported Ethereum client version "{version}"')
 
         address = privatekey_to_address(privkey)

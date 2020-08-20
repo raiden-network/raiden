@@ -18,7 +18,7 @@ from raiden.exceptions import (
 )
 from raiden.ui import cli
 from raiden.ui.cli import ReturnCode
-from raiden.utils.ethereum_clients import is_supported_client
+from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 
 
 @pytest.fixture
@@ -75,7 +75,7 @@ def test_run_error_reporting(cli_runner, monkeypatch):
 
 def test_check_is_supported_unknown_client():
     supported, client, version = is_supported_client("Aleth//v1.2.1")
-    assert not supported
+    assert supported is VersionSupport.UNSUPPORTED
     assert not client
     assert not version
 
@@ -90,8 +90,8 @@ def run_test_check_json_rpc_geth():
     g8, _, v8 = is_supported_client("Geth/v1.9.0-stable-52f24617/linux-amd64/go1.12.7")
     g9, _, v9 = is_supported_client("Geth/v1.9.0-unstable-3d3e83ec-20190611/linux-amd64/go1.12.5")
     assert client is EthClient.GETH
-    assert all([g1, g2, g3, g8, g9])
-    assert not any([g4, g5, g6])
+    assert {g1, g2, g3, g8, g9} == {VersionSupport.SUPPORTED}
+    assert {g4, g5, g6} == {VersionSupport.WARN}
     assert v1 == "1.7.3"
     assert v2 == "1.7.2"
     assert v3 == "1.8.2"
@@ -106,13 +106,13 @@ def run_test_check_json_rpc_geth():
     b3, _, v3 = is_supported_client("Geth/v0.0.0-unstable-e9295163/linux-amd64/go1.9.1")
     b4, _, _ = is_supported_client("Geth/v0.0.0-unstable-e9295163/linux-amd64/go1.9.1")
     assert client is EthClient.GETH
-    assert not any([b1, b2, b3, b4])
+    assert {b1, b2, b3, b4} == {VersionSupport.UNSUPPORTED}
     assert v1 == "1.7.1"
     assert v2 == "0.7.1"
     assert v3 == "0.0.0"
 
     supported, client, version = is_supported_client("Geth/faultyversion")
-    assert not supported
+    assert supported is VersionSupport.UNSUPPORTED
     assert not client
     assert not version
 
@@ -148,8 +148,8 @@ def run_test_check_json_rpc_parity():
         "Parity//v2.5.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     assert client is EthClient.PARITY
-    assert all([g1, g2, g3, g8])
-    assert not any([g4, g5, g6])
+    assert {g1, g2, g3, g8} == {VersionSupport.SUPPORTED}
+    assert {g4, g5, g6} == {VersionSupport.WARN}
     assert v1 == "1.7.6"
     assert v2 == "1.7.7"
     assert v3 == "1.8.7"
@@ -174,7 +174,7 @@ def run_test_check_json_rpc_parity():
         "Parity//v0.0.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     assert client is EthClient.PARITY
-    assert not any([b1, b2, b3, b4, b5])
+    assert {b1, b2, b3, b4, b5} == {VersionSupport.UNSUPPORTED}
     assert v1 == "1.7.5"
     assert v2 == "1.5.1"
     assert v3 == "0.7.1"
@@ -182,7 +182,7 @@ def run_test_check_json_rpc_parity():
     assert v5 == "0.0.0"
 
     supported, client, version = is_supported_client("Parity//faultyversion")
-    assert not supported
+    assert supported is VersionSupport.UNSUPPORTED
     assert not client
     assert not version
 
