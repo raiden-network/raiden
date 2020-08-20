@@ -1013,7 +1013,7 @@ class RestAPI:  # pragma: no unittest
             identifier = create_default_identifier()
 
         try:
-            payment_status = self.raiden_api.transfer(
+            payment_status = self.raiden_api.transfer_and_wait(
                 registry_address=registry_address,
                 token_address=token_address,
                 target=target_address,

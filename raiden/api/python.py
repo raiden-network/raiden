@@ -1175,8 +1175,6 @@ class RaidenAPI:  # pragma: no unittest
         assert self.raiden.wal, "Raiden service has to be started for the API to be usable."
         return self.raiden.wal.storage.get_events_with_timestamps(limit=limit, offset=offset)
 
-    transfer = transfer_and_wait
-
     def get_pending_transfers(
         self, token_address: TokenAddress = None, partner_address: Address = None
     ) -> List[Dict[str, Any]]:
