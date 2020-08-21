@@ -538,13 +538,13 @@ class BlockchainEvents:
         TNR    ####--*---
         TN           --*-
                      ^ ^
-                     | new channel openned
+                     | new channel opened
                      |
                      new token network registered
 
         For this example, the current batch is fetching the range `[4, 9]`. In
         this range a new token is registered at block 6, at block 8 a new
-        channel is openned in the new network.
+        channel is opened in the new network.
 
         If the events of the new TN are *not* queried, block 9 will be
         confirmed after processing the batch which adds the TN, and iff the
@@ -608,7 +608,7 @@ class BlockchainEvents:
                 ]
                 result.extend(decoded_events)
 
-                # Go throught he results and create the child filters, if
+                # Go through the results and create the child filters, if
                 # necessary.
                 #
                 # The generator result is converted to a list because we need

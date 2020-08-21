@@ -430,7 +430,7 @@ def test_api_channel_open_close_and_settle(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CONFLICT)
 
-    # Try to create channel with the same partner again before previous channnel settles
+    # Try to create channel with the same partner again before previous channel settles
     request = grequests.put(
         api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
     )
