@@ -73,7 +73,7 @@ incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 iniconfig==1.0.1          # via -r requirements-dev.txt, pytest
 ipfshttpclient==0.6.0.post1  # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
-ipython==7.16.1           # via -r requirements-dev.txt
+ipython==7.17.0           # via -r requirements-dev.txt
 isort==4.3.21             # via -r requirements-dev.txt, pylint
 itsdangerous==1.1.0       # via -r requirements-dev.txt, flask
 jedi==0.17.0              # via -r requirements-dev.txt, ipython

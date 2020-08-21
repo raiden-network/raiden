@@ -39,7 +39,7 @@ hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
 ipfshttpclient==0.6.0.post1  # via web3
 ipython-genutils==0.2.0   # via traitlets
-ipython==7.16.1           # via -r requirements.in
+ipython==7.17.0           # via -r requirements.in
 itsdangerous==1.1.0       # via flask
 jedi==0.17.0              # via ipython
 jinja2==2.10.1            # via flask
