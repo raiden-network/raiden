@@ -18,19 +18,27 @@ from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_MEDIATION_FLAT_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
+from raiden.tests.integration.fixtures.raiden_network import RestartNode
+from raiden.tests.integration.test_integration_pfs import wait_all_apps
 from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
 from raiden.transfer import views
 from raiden.transfer.state import NettingChannelState
-from raiden.transfer.state_change import Block
+from raiden.transfer.state_change import (
+    Block,
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelNew,
+    ContractReceiveRouteClosed,
+)
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     BlockNumber,
@@ -39,6 +47,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     ProportionalFeeAmount,
+    TokenAddress,
     Type,
 )
 
@@ -351,3 +360,57 @@ def test_fees_are_updated_during_startup(
     ]
 
     assert channel_state.fee_schedule.imbalance_penalty == full_imbalance_penalty
+
+
+@pytest.mark.xfail(reason="Pending fix")
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("number_of_tokens", [1])
+def test_blockchain_event_processed_interleaved(
+    raiden_network: List[RaidenService],
+    token_addresses: List[TokenAddress],
+    restart_node: RestartNode,
+):
+    """ Blockchain events must be transformed into state changes and processed by
+    the state machine interleaved.
+
+    Otherwise problems arise when the creation of the state change is dependent
+    on the state of the state machine.
+
+    Regression test for: https://github.com/raiden-network/raiden/issues/6444
+    """
+    app0, app1 = raiden_network
+
+    app1.stop()
+
+    api0 = RaidenAPI(app0)
+    channel_id = api0.channel_open(
+        registry_address=app0.default_registry.address,
+        token_address=token_addresses[0],
+        partner_address=app1.address,
+    )
+    api0.channel_close(
+        registry_address=app0.default_registry.address,
+        token_address=token_addresses[0],
+        partner_address=app1.address,
+    )
+
+    # Restart node 1
+    restart_node(app1)
+    wait_all_apps(raiden_network)
+
+    # Check correct events
+    assert app1.wal, "app1.wal not set"
+    app1_state_changes = app1.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
+    assert search_for_item(
+        app1_state_changes, ContractReceiveChannelNew, {"channel_identifier": channel_id}
+    )
+
+    assert search_for_item(
+        app1_state_changes, ContractReceiveChannelClosed, {"channel_identifier": channel_id}
+    )
+    assert not search_for_item(
+        app1_state_changes, ContractReceiveRouteClosed, {"channel_identifier": channel_id}
+    )
