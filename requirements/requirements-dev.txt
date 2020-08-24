@@ -126,7 +126,7 @@ pycryptodome==3.8.2       # via -r requirements.txt, eth-hash, eth-keyfile
 pyflakes==2.2.0           # via flake8
 pygments==2.6.1           # via -r requirements-docs.txt, -r requirements.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via twisted
-pylint==2.5.3             # via -r requirements-dev.in
+pylint==2.6.0             # via -r requirements-dev.in
 pymacaroons==0.13.0       # via matrix-synapse
 pynacl==1.3.0             # via matrix-synapse, pymacaroons, signedjson
 pyopenssl==19.0.0         # via matrix-synapse, twisted
