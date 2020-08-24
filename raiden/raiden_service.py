@@ -799,6 +799,12 @@ class RaidenService(Runnable):
         if len(state_changes) == 0:
             return
 
+        # It's important to /not/ block here, because this function can
+        # be called from the alarm task greenlet, which should not
+        # starve. This was a problem when the node decided to send a new
+        # transaction, since the proxies block until the transaction is
+        # mined and confirmed (e.g. the settle window is over and the
+        # node sends the settle transaction).
         for greenlet in self.handle_state_changes(state_changes):
             self.add_pending_greenlet(greenlet)
 
@@ -1080,8 +1086,6 @@ class RaidenService(Runnable):
                 TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
             ] = dict()
 
-            state_changes: List[StateChange] = list()
-            chain_state = views.state_from_raiden(self)
             assert self.wal, "raiden.wal not set"
             for event in poll_result.events:
                 # Important: `blockchainevent_to_statechange` has to be called
@@ -1090,12 +1094,12 @@ class RaidenService(Runnable):
                 # of reorgs, and older blocks are not sufficient to fix
                 # problems with pruning, the `SyncTimeout` is used to ensure
                 # the `current_confirmed_head` stays valid.
-                state_changes.extend(
+                self.handle_and_track_state_changes(
                     blockchainevent_to_statechange(
                         raiden_config=self.config,
                         proxy_manager=self.proxy_manager,
                         raiden_storage=self.wal.storage,
-                        chain_state=chain_state,
+                        chain_state=views.state_from_raiden(self),
                         event=event,
                         current_confirmed_head=current_confirmed_head,
                         pendingtokenregistration=pendingtokenregistration,
@@ -1139,15 +1143,7 @@ class RaidenService(Runnable):
                 gas_limit=poll_result.polled_block_gas_limit,
                 block_hash=poll_result.polled_block_hash,
             )
-            state_changes.append(block_state_change)
-
-            # It's important to /not/ block here, because this function can
-            # be called from the alarm task greenlet, which should not
-            # starve. This was a problem when the node decided to send a new
-            # transaction, since the proxies block until the transaction is
-            # mined and confirmed (e.g. the settle window is over and the
-            # node sends the settle transaction).
-            self.handle_and_track_state_changes(state_changes)
+            self.handle_and_track_state_changes([block_state_change])
 
             self._log_sync_progress(poll_result.polled_block_number, current_confirmed_head)
 
