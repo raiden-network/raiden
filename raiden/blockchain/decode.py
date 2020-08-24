@@ -54,7 +54,6 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     Dict,
-    List,
     Optional,
     SecretRegistryAddress,
     TokenAddress,
@@ -345,14 +344,11 @@ def blockchainevent_to_statechange(
     pendingtokenregistration: Dict[
         TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
     ],
-) -> List[StateChange]:  # pragma: no unittest
+) -> Optional[StateChange]:  # pragma: no unittest
     event_name = event.event_data["event"]
-    state_changes: List[StateChange] = []
 
     if event_name == EVENT_TOKEN_NETWORK_CREATED:
-        state_changes.append(
-            contractreceivenewtokennetwork_from_event(event, pendingtokenregistration)
-        )
+        return contractreceivenewtokennetwork_from_event(event, pendingtokenregistration)
 
     elif event_name == ChannelEvent.OPENED:
         new_channel_details = get_contractreceivechannelnew_data_from_event(
@@ -373,32 +369,28 @@ def blockchainevent_to_statechange(
             channel_new = contractreceivechannelnew_from_event(
                 new_channel_details, channel_config, event
             )
-            state_changes.append(channel_new)
+            return channel_new
         else:
-            state_changes.append(contractreceiveroutenew_from_event(event))
+            return contractreceiveroutenew_from_event(event)
 
     elif event_name == ChannelEvent.DEPOSIT:
-        deposit = contractreceivechanneldeposit_from_event(event, raiden_config.mediation_fees)
-        state_changes.append(deposit)
+        return contractreceivechanneldeposit_from_event(event, raiden_config.mediation_fees)
 
     elif event_name == ChannelEvent.WITHDRAW:
-        withdraw = contractreceivechannelwithdraw_from_event(event, raiden_config.mediation_fees)
-        state_changes.append(withdraw)
+        return contractreceivechannelwithdraw_from_event(event, raiden_config.mediation_fees)
 
     elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:
         channel_state = get_contractreceiveupdatetransfer_data_from_event(chain_state, event)
         if channel_state:
-            state_changes.append(contractreceiveupdatetransfer_from_event(channel_state, event))
+            return contractreceiveupdatetransfer_from_event(channel_state, event)
 
     elif event_name == ChannelEvent.CLOSED:
         canonical_identifier = get_contractreceivechannelclosed_data_from_event(chain_state, event)
 
         if canonical_identifier is not None:
-            state_changes.append(
-                contractreceivechannelclosed_from_event(canonical_identifier, event)
-            )
+            return contractreceivechannelclosed_from_event(canonical_identifier, event)
         else:
-            state_changes.append(contractreceiverouteclosed_from_event(event))
+            return contractreceiverouteclosed_from_event(event)
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(
@@ -409,14 +401,12 @@ def blockchainevent_to_statechange(
         )
 
         if channel_settle_state:
-            state_changes.append(
-                contractreceivechannelsettled_from_event(channel_settle_state, event)
-            )
+            return contractreceivechannelsettled_from_event(channel_settle_state, event)
         else:
             log.debug("Discarding settle event, we're not part of it", raiden_event=event)
 
     elif event_name == EVENT_SECRET_REVEALED:
-        state_changes.append(contractreceivesecretreveal_from_event(event))
+        return contractreceivesecretreveal_from_event(event)
 
     elif event_name == ChannelEvent.UNLOCKED:
         canonical_identifier = get_contractreceivechannelbatchunlock_data_from_event(
@@ -424,13 +414,11 @@ def blockchainevent_to_statechange(
         )
 
         if canonical_identifier is not None:
-            state_changes.append(
-                contractreceivechannelbatchunlock_from_event(canonical_identifier, event)
-            )
+            return contractreceivechannelbatchunlock_from_event(canonical_identifier, event)
         else:
             log.debug("Discarding unlock event, we're not part of it", raiden_event=event)
 
     else:
         log.error("Unknown event type", raiden_event=event)
 
-    return state_changes
+    return None
