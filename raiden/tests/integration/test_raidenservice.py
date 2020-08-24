@@ -362,7 +362,6 @@ def test_fees_are_updated_during_startup(
     assert channel_state.fee_schedule.imbalance_penalty == full_imbalance_penalty
 
 
-@pytest.mark.xfail(reason="Pending fix")
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
