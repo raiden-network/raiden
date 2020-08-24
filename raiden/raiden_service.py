@@ -98,9 +98,8 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, NetworkState, TokenNetworkRegistryState
+from raiden.transfer.state import ChainState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
-    ActionChangeNodeNetworkState,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     ActionInitChain,
@@ -1018,10 +1017,6 @@ class RaidenService(Runnable):
                 log.error(str(e))
             else:
                 raise
-
-    def set_node_network_state(self, node_address: Address, network_state: NetworkState) -> None:
-        state_change = ActionChangeNodeNetworkState(node_address, network_state)
-        self.handle_and_track_state_changes([state_change])
 
     def async_start_health_check_for(self, node_address: Address) -> None:
         """Start health checking `node_address`.

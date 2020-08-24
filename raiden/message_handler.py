@@ -137,7 +137,7 @@ class MessageHandler:
                         balance_proof.nonce,
                     )
 
-                return (0, 0)
+                return 0, 0
 
             all_state_changes.sort(key=by_canonical_identifier)
 
