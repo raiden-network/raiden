@@ -1122,6 +1122,8 @@ class RaidenService(Runnable):
             ] = dict()
 
             state_changes: List[StateChange] = list()
+            chain_state = views.state_from_raiden(self)
+            assert self.wal, "raiden.wal not set"
             for event in poll_result.events:
                 # Important: `blockchainevent_to_statechange` has to be called
                 # with the block of the current confirmed head! An unconfirmed
@@ -1131,7 +1133,13 @@ class RaidenService(Runnable):
                 # the `current_confirmed_head` stays valid.
                 state_changes.extend(
                     blockchainevent_to_statechange(
-                        self, event, current_confirmed_head, pendingtokenregistration
+                        raiden_config=self.config,
+                        proxy_manager=self.proxy_manager,
+                        raiden_storage=self.wal.storage,
+                        chain_state=chain_state,
+                        event=event,
+                        current_confirmed_head=current_confirmed_head,
+                        pendingtokenregistration=pendingtokenregistration,
                     )
                 )
 
