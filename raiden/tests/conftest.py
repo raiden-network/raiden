@@ -308,12 +308,20 @@ def timeout_for_setup_and_call(item):
     # - pytest_runtest_setup is the first called, it follows the call to
     # pytest_runtest_protocol, which validates and sets the timeout values.
     # - pytest_runtest_call is the second call, and it will only run if the
-    # setup was succesfull, i.e. a timeout did not happen. This implies that
+    # setup was succesful, i.e. a timeout did not happen. This implies that
     # the remaining_timeout is positive.
     remaining_timeout = item.remaining_timeout
 
     started_at = time.time()
-    signal.setitimer(signal.ITIMER_REAL, remaining_timeout)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, remaining_timeout)
+    except signal.ItimerError:
+        # For some reason we do get bad remaining_timeout values, even though
+        # the comment above is correct that remaining_timeout is checked to be
+        # positive. Maybe we can find out what is going wrong once we see the
+        # value that causes the error. Once we found the problem, this
+        # try/except should be removed.
+        raise Exception(f"Bad parameter {remaining_timeout!r} for setitimer!")
 
     yield
 
@@ -327,7 +335,7 @@ def timeout_for_setup_and_call(item):
     # It is possible for elapsed to be negative, this can happen if the
     # time.time clock and the clock used by the signal are different. To
     # guarantee the next iteration will only have positive values, raise an
-    # exception, failling the setup and skiping the call.
+    # exception, failing the setup and skipping the call.
     item.remaining_timeout -= elapsed
     if item.remaining_timeout < 0:
         report()
