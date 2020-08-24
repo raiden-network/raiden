@@ -1094,17 +1094,17 @@ class RaidenService(Runnable):
                 # of reorgs, and older blocks are not sufficient to fix
                 # problems with pruning, the `SyncTimeout` is used to ensure
                 # the `current_confirmed_head` stays valid.
-                self.handle_and_track_state_changes(
-                    blockchainevent_to_statechange(
-                        raiden_config=self.config,
-                        proxy_manager=self.proxy_manager,
-                        raiden_storage=self.wal.storage,
-                        chain_state=views.state_from_raiden(self),
-                        event=event,
-                        current_confirmed_head=current_confirmed_head,
-                        pendingtokenregistration=pendingtokenregistration,
-                    )
+                maybe_state_change = blockchainevent_to_statechange(
+                    raiden_config=self.config,
+                    proxy_manager=self.proxy_manager,
+                    raiden_storage=self.wal.storage,
+                    chain_state=views.state_from_raiden(self),
+                    event=event,
+                    current_confirmed_head=current_confirmed_head,
+                    pendingtokenregistration=pendingtokenregistration,
                 )
+                if maybe_state_change is not None:
+                    self.handle_and_track_state_changes([maybe_state_change])
 
             # On restarts the node has to pick up all events generated since the
             # last run. To do this the node will set the filters' from_block to
