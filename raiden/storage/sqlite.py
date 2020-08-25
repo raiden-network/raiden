@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from types import TracebackType
-from typing import Generator
 
 import gevent
 from eth_utils import to_normalized_address
@@ -249,6 +248,24 @@ class SQLiteStorage:
         # Reference: https://github.com/python/mypy/issues/4928
         self._ulid_factories: Dict = dict()
 
+        self._lock = gevent.lock.Semaphore()
+
+    @contextmanager
+    def transaction(self) -> Iterator[sqlite3.Connection]:
+        """
+        Opens a database transaction and `COMMIT`s or `ROLLBACK`s when exiting.
+
+        Should be used for all data modification statements.
+
+        Nested transactions are not allowed in SQLite and will raise an exception.
+        See https://www.sqlite.org/lang_transaction.html#transactions
+
+        COMMIT is called when the context manager exits. See
+        https://docs.python.org/3/library/sqlite3.html#using-the-connection-as-a-context-manager
+        """
+        with self._lock, self.conn as connection:
+            yield connection
+
     def _ulid_factory(self, id_type: Type[ID]) -> ULIDMonotonicFactory[ID]:
         """Return an ULID Factory for a specific table.
 
@@ -299,19 +316,17 @@ class SQLiteStorage:
         return factory
 
     def update_version(self) -> None:
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'INSERT OR REPLACE INTO settings(name, value) VALUES("version", ?)',
-            (str(RAIDEN_DB_VERSION),),
-        )
-        self.maybe_commit()
+        with self.transaction() as tx:
+            tx.execute(
+                'INSERT OR REPLACE INTO settings(name, value) VALUES("version", ?)',
+                (str(RAIDEN_DB_VERSION),),
+            )
 
     def log_run(self) -> None:
         """ Log timestamp and raiden version to help with debugging """
         version = get_system_spec()["raiden"]
-        cursor = self.conn.cursor()
-        cursor.execute("INSERT INTO runs(raiden_version) VALUES (?)", [version])
-        self.maybe_commit()
+        with self.transaction() as tx:
+            tx.execute("INSERT INTO runs(raiden_version) VALUES (?)", [version])
 
     def get_version(self) -> RaidenDBVersion:
         cursor = self.conn.cursor()
@@ -345,8 +360,9 @@ class SQLiteStorage:
             state_change_data.append((new_id, state_change))
 
         query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
-        self.conn.executemany(query, state_change_data)
-        self.maybe_commit()
+
+        with self.transaction() as tx:
+            tx.executemany(query, state_change_data)
 
         return state_change_ids
 
@@ -359,8 +375,9 @@ class SQLiteStorage:
             "INSERT INTO state_snapshot (identifier, statechange_id, statechange_qty, data) "
             "VALUES(?, ?, ?, ?)"
         )
-        self.conn.execute(query, (snapshot_id, statechange_id, statechange_qty, snapshot))
-        self.maybe_commit()
+
+        with self.transaction() as tx:
+            tx.execute(query, (snapshot_id, statechange_id, statechange_qty, snapshot))
 
         return snapshot_id
 
@@ -373,16 +390,16 @@ class SQLiteStorage:
             "   identifier, source_statechange_id, data"
             ") VALUES(?, ?, ?)"
         )
-        self.conn.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
-        self.maybe_commit()
+        with self.transaction() as tx:
+            tx.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
 
         return events_ids
 
     def delete_state_changes(self, state_changes_to_delete: List[Tuple[StateChangeID]]) -> None:
-        self.conn.executemany(
-            "DELETE FROM state_changes WHERE identifier = ?", state_changes_to_delete
-        )
-        self.maybe_commit()
+        with self.transaction() as tx:
+            tx.executemany(
+                "DELETE FROM state_changes WHERE identifier = ?", state_changes_to_delete
+            )
 
     def get_snapshot_before_state_change(
         self, state_change_identifier: StateChangeID
@@ -564,14 +581,6 @@ class SQLiteStorage:
             offset += result_length
             yield result
 
-    def update_state_changes(self, state_changes_data: List[Tuple[str, int]]) -> None:
-        """Given a list of identifier/data state tuples update them in the DB"""
-        cursor = self.conn.cursor()
-        cursor.executemany(
-            "UPDATE state_changes SET data=? WHERE identifier=?", state_changes_data
-        )
-        self.maybe_commit()
-
     def get_statechanges_records_by_range(
         self, db_range: Range[StateChangeID]
     ) -> List[StateChangeEncodedRecord]:
@@ -659,12 +668,6 @@ class SQLiteStorage:
             result_length = len(result)
             offset += result_length
             yield result
-
-    def update_events(self, events_data: List[Tuple[str, int]]) -> None:
-        """Given a list of identifier/data event tuples update them in the DB"""
-        cursor = self.conn.cursor()
-        cursor.executemany("UPDATE state_events SET data=? WHERE identifier=?", events_data)
-        self.maybe_commit()
 
     def get_raiden_events_payment_history_with_timestamps(
         self,
@@ -778,52 +781,6 @@ class SQLiteStorage:
         entries = self._get_state_changes(limit, offset)
         return [entry.data for entry in entries]
 
-    def get_snapshots(self) -> List[SnapshotEncodedRecord]:
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT identifier, statechange_qty, statechange_id, data FROM state_snapshot"
-        )
-
-        return [
-            SnapshotEncodedRecord(snapshot[0], snapshot[1], snapshot[2], snapshot[3])
-            for snapshot in cursor
-        ]
-
-    def update_snapshot(self, identifier: SnapshotID, new_snapshot: str) -> None:
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "UPDATE state_snapshot SET data=? WHERE identifier=?", (new_snapshot, identifier)
-        )
-        self.maybe_commit()
-
-    def update_snapshots(self, snapshots_data: List[Tuple[str, SnapshotID]]) -> None:
-        """Given a list of snapshot data, update them in the DB
-
-        The snapshots_data should be a list of tuples of snapshots data
-        and identifiers in that order.
-        """
-        cursor = self.conn.cursor()
-        cursor.executemany("UPDATE state_snapshot SET data=? WHERE identifier=?", snapshots_data)
-        self.maybe_commit()
-
-    def maybe_commit(self) -> None:
-        if not self.in_transaction:
-            self.conn.commit()
-
-    @contextmanager
-    def transaction(self) -> Generator[None, None, None]:
-        cursor = self.conn.cursor()
-        self.in_transaction = True
-        try:
-            cursor.execute("BEGIN")
-            yield
-            cursor.execute("COMMIT")
-        except:  # noqa
-            cursor.execute("ROLLBACK")
-            raise
-        finally:
-            self.in_transaction = False
-
     def close(self) -> None:
         if not hasattr(self, "conn"):
             raise RuntimeError("The database connection was closed already.")
@@ -885,7 +842,6 @@ class SerializedSQLiteStorage:
         """ Save events.
 
         Args:
-            state_change_identifier: Id of the state change that generate these events.
             events: List of Event objects.
         """
         events_data = [

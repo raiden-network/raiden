@@ -433,21 +433,6 @@ def test_log_run():
     store.close()
 
 
-@pytest.fixture
-def storage():
-    state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
-    state_changes_data = json.loads(state_changes_file.read_text())
-
-    with SQLiteStorage(":memory:") as storage:
-        storage.write_state_changes(
-            state_changes=[
-                json.dumps(state_change_record[1]) for state_change_record in state_changes_data
-            ]
-        )
-
-        yield storage
-
-
 def test_batch_query_state_changes():
     state_changes_file = Path(__file__).parent / "test_data" / "db_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
@@ -548,14 +533,6 @@ def test_batch_query_event_records():
     assert len(events) == 2
 
     storage.close()
-
-
-def test_storage_get_and_update(storage):
-    other_storage = SQLiteStorage(":memory:")
-    data = storage.get_events()
-    event_data = [(item, number) for number, item in enumerate(data)]
-    other_storage.update_events(event_data)
-    assert other_storage
 
 
 def test_storage_close():
