@@ -135,7 +135,6 @@ from raiden.utils.typing import (
     SecretHash,
     SecretRegistryAddress,
     TargetAddress,
-    TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     WithdrawAmount,
@@ -1082,10 +1081,6 @@ class RaidenService(Runnable):
                 # No blocks could be fetched (due to timeout), retry
                 continue
 
-            pendingtokenregistration: Dict[
-                TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
-            ] = dict()
-
             assert self.wal, "raiden.wal not set"
             for event in poll_result.events:
                 # Important: `blockchainevent_to_statechange` has to be called
@@ -1101,7 +1096,6 @@ class RaidenService(Runnable):
                     chain_state=views.state_from_raiden(self),
                     event=event,
                     current_confirmed_head=current_confirmed_head,
-                    pendingtokenregistration=pendingtokenregistration,
                 )
                 if maybe_state_change is not None:
                     self.handle_and_track_state_changes([maybe_state_change])

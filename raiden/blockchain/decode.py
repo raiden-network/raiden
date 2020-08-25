@@ -53,13 +53,11 @@ from raiden.utils.typing import (
     Balance,
     BlockNumber,
     BlockTimeout,
-    Dict,
     Optional,
     SecretRegistryAddress,
     TokenAddress,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    Tuple,
 )
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
@@ -80,9 +78,6 @@ class ChannelConfig:
 
 def contractreceivenewtokennetwork_from_event(
     event: DecodedEvent,
-    pendingtokenregistration: Dict[
-        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
-    ],
 ) -> ContractReceiveNewTokenNetwork:
     data = event.event_data
     args = data["args"]
@@ -90,11 +85,6 @@ def contractreceivenewtokennetwork_from_event(
     token_network_address = args["token_network_address"]
     token_address = TokenAddress(args["token_address"])
     token_network_registry_address = TokenNetworkRegistryAddress(event.originating_contract)
-
-    pendingtokenregistration[token_network_address] = (
-        token_network_registry_address,
-        token_address,
-    )
 
     return ContractReceiveNewTokenNetwork(
         token_network_registry_address=token_network_registry_address,
@@ -341,19 +331,14 @@ def blockchainevent_to_statechange(
     chain_state: ChainState,
     event: DecodedEvent,
     current_confirmed_head: BlockNumber,
-    pendingtokenregistration: Dict[
-        TokenNetworkAddress, Tuple[TokenNetworkRegistryAddress, TokenAddress]
-    ],
 ) -> Optional[StateChange]:  # pragma: no unittest
     event_name = event.event_data["event"]
 
     if event_name == EVENT_TOKEN_NETWORK_CREATED:
-        return contractreceivenewtokennetwork_from_event(event, pendingtokenregistration)
+        return contractreceivenewtokennetwork_from_event(event)
 
     elif event_name == ChannelEvent.OPENED:
-        new_channel_details = get_contractreceivechannelnew_data_from_event(
-            chain_state=chain_state, event=event, pendingtokenregistration=pendingtokenregistration
-        )
+        new_channel_details = get_contractreceivechannelnew_data_from_event(chain_state, event)
 
         if new_channel_details is not None:
             fee_config = raiden_config.mediation_fees
@@ -366,10 +351,7 @@ def blockchainevent_to_statechange(
                     # no need to set the imbalance fee here, will be set during deposit
                 ),
             )
-            channel_new = contractreceivechannelnew_from_event(
-                new_channel_details, channel_config, event
-            )
-            return channel_new
+            return contractreceivechannelnew_from_event(new_channel_details, channel_config, event)
         else:
             return contractreceiveroutenew_from_event(event)
 
