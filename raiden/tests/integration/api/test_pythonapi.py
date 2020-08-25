@@ -142,7 +142,7 @@ def test_register_token_insufficient_eth(
         )
 
 
-@pytest.mark.skip(reason="flaky, see https://github.com/raiden-network/raiden/issues/5744")
+@pytest.mark.flaky
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_nodes", [2])
