@@ -824,8 +824,24 @@ class RaidenService(Runnable):
         )
 
         old_state = views.state_from_raiden(self)
-        new_state, raiden_event_list = self.wal.log_and_dispatch(state_changes)
+        new_state, events = self.wal.log_and_dispatch(state_changes)
 
+        return self._trigger_state_change_effects(
+            old_state=old_state, new_state=new_state, state_changes=state_changes, events=events,
+        )
+
+    def _trigger_state_change_effects(
+        self,
+        old_state: ChainState,
+        new_state: ChainState,
+        state_changes: List[StateChange],
+        events: List[Event],
+    ) -> List[Greenlet]:
+        """Trigger effects that are based on processed state changes.
+
+        Examples are MS/PFS updates, transport communication channel updates
+        and presence checks.
+        """
         # For safety of the mediation the monitoring service must be updated
         # before the balance proof is sent. Otherwise a timing attack would be
         # possible, where an attacker would mediate a transfer through a node,
@@ -838,7 +854,6 @@ class RaidenService(Runnable):
         # all state changes to produce and send only unique messages. Assumption is
         # that the latest related state_change defines the correct messages.
         # Goal is to reduce messages.
-
         monitoring_updates: Dict[CanonicalIdentifier, BalanceProofStateChange] = dict()
         pfs_fee_updates: Set[CanonicalIdentifier] = set()
         pfs_capacity_updates: Set[CanonicalIdentifier] = set()
@@ -860,7 +875,7 @@ class RaidenService(Runnable):
                 else:
                     pfs_capacity_updates.add(canonical_identifier)
 
-        for event in raiden_event_list:
+        for event in events:
             if isinstance(event, PFS_UPDATE_FEE_EVENTS):
                 pfs_fee_updates.add(event.canonical_identifier)
             elif isinstance(event, PFS_UPDATE_CAPACITY_EVENTS):
@@ -888,9 +903,7 @@ class RaidenService(Runnable):
         log.debug(
             "Raiden events",
             node=to_checksum_address(self.address),
-            raiden_events=[
-                redact_secret(DictSerializer.serialize(event)) for event in raiden_event_list
-            ],
+            raiden_events=[redact_secret(DictSerializer.serialize(event)) for event in events],
         )
 
         self.state_change_qty += len(state_changes)
@@ -899,7 +912,7 @@ class RaidenService(Runnable):
             self.snapshot()
 
         if self.ready_to_process_events:
-            return self.async_handle_events(chain_state=new_state, raiden_events=raiden_event_list)
+            return self.async_handle_events(chain_state=new_state, raiden_events=events)
         else:
             return list()
 
@@ -1074,6 +1087,10 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events, msg
 
+        old_state = views.state_from_raiden(self)
+        state_changes = []
+        raiden_events = []
+
         guard = SyncTimeout(current_confirmed_head, timeout)
         while guard.should_continue(self.blockchain_events.last_fetched_block):
             poll_result = self.blockchain_events.fetch_logs_in_batch(current_confirmed_head)
@@ -1082,64 +1099,88 @@ class RaidenService(Runnable):
                 continue
 
             assert self.wal, "raiden.wal not set"
-            for event in poll_result.events:
-                # Important: `blockchainevent_to_statechange` has to be called
-                # with the block of the current confirmed head! An unconfirmed
-                # block could lead to the wrong state being dispatched because
-                # of reorgs, and older blocks are not sufficient to fix
-                # problems with pruning, the `SyncTimeout` is used to ensure
-                # the `current_confirmed_head` stays valid.
-                maybe_state_change = blockchainevent_to_statechange(
-                    raiden_config=self.config,
-                    proxy_manager=self.proxy_manager,
-                    raiden_storage=self.wal.storage,
-                    chain_state=views.state_from_raiden(self),
-                    event=event,
-                    current_confirmed_head=current_confirmed_head,
-                )
-                if maybe_state_change is not None:
-                    self.handle_and_track_state_changes([maybe_state_change])
+            with self.wal.process_state_change_atomically() as dispatcher:
+                for event in poll_result.events:
+                    # Important: `blockchainevent_to_statechange` has to be called
+                    # with the block of the current confirmed head! An unconfirmed
+                    # block could lead to the wrong state being dispatched because
+                    # of reorgs, and older blocks are not sufficient to fix
+                    # problems with pruning, the `SyncTimeout` is used to ensure
+                    # the `current_confirmed_head` stays valid.
+                    maybe_state_change = blockchainevent_to_statechange(
+                        raiden_config=self.config,
+                        proxy_manager=self.proxy_manager,
+                        raiden_storage=self.wal.storage,  # FXIME: use more recent
+                        chain_state=dispatcher.latest_state(),
+                        event=event,
+                        current_confirmed_head=current_confirmed_head,
+                    )
+                    if maybe_state_change is not None:
+                        events = dispatcher.dispatch(maybe_state_change)
 
-            # On restarts the node has to pick up all events generated since the
-            # last run. To do this the node will set the filters' from_block to
-            # the value of the latest block number known to have *all* events
-            # processed.
-            #
-            # To guarantee the above the node must either:
-            #
-            # - Dispatch the state changes individually, leaving the Block
-            # state change last, so that it knows all the events for the
-            # given block have been processed. On restarts this can result in
-            # the same event being processed twice.
-            # - Dispatch all the smart contract events together with the Block
-            # state change in a single transaction, either all or nothing will
-            # be applied, and on a restart the node picks up from where it
-            # left.
-            #
-            # The approach used below is to dispatch the Block and the
-            # blockchain events in a single transaction. This is the preferred
-            # approach because it guarantees that no events will be missed and
-            # it fixes race conditions on the value of the block number value,
-            # that can lead to crashes.
-            #
-            # Example: The user creates a new channel with an initial deposit
-            # of X tokens. This is done with two operations, the first is to
-            # open the new channel, the second is to deposit the requested
-            # tokens in it. Once the node fetches the event for the new channel,
-            # it will immediately request the deposit, which leaves a window for
-            # a race condition. If the Block state change was not yet
-            # processed, the block hash used as the triggering block for the
-            # deposit will be off-by-one, and it will point to the block
-            # immediately before the channel existed. This breaks a proxy
-            # precondition which crashes the client.
-            block_state_change = Block(
-                block_number=poll_result.polled_block_number,
-                gas_limit=poll_result.polled_block_gas_limit,
-                block_hash=poll_result.polled_block_hash,
-            )
-            self.handle_and_track_state_changes([block_state_change])
+                        state_changes.append(maybe_state_change)
+                        raiden_events.extend(events)
+
+                # On restarts the node has to pick up all events generated since the
+                # last run. To do this the node will set the filters' from_block to
+                # the value of the latest block number known to have *all* events
+                # processed.
+                #
+                # To guarantee the above the node must either:
+                #
+                # - Dispatch the state changes individually, leaving the Block
+                # state change last, so that it knows all the events for the
+                # given block have been processed. On restarts this can result in
+                # the same event being processed twice.
+                # - Dispatch all the smart contract events together with the Block
+                # state change in a single transaction, either all or nothing will
+                # be applied, and on a restart the node picks up from where it
+                # left.
+                #
+                # The approach used below is to dispatch the Block and the
+                # blockchain events in a single transaction. This is the preferred
+                # approach because it guarantees that no events will be missed and
+                # it fixes race conditions on the value of the block number value,
+                # that can lead to crashes.
+                #
+                # Example: The user creates a new channel with an initial deposit
+                # of X tokens. This is done with two operations, the first is to
+                # open the new channel, the second is to deposit the requested
+                # tokens in it. Once the node fetches the event for the new channel,
+                # it will immediately request the deposit, which leaves a window for
+                # a race condition. If the Block state change was not yet
+                # processed, the block hash used as the triggering block for the
+                # deposit will be off-by-one, and it will point to the block
+                # immediately before the channel existed. This breaks a proxy
+                # precondition which crashes the client.
+                block_state_change = Block(
+                    block_number=poll_result.polled_block_number,
+                    gas_limit=poll_result.polled_block_gas_limit,
+                    block_hash=poll_result.polled_block_hash,
+                )
+                events = dispatcher.dispatch(block_state_change)
+                state_changes.append(block_state_change)
+                raiden_events.extend(events)
 
             self._log_sync_progress(poll_result.polled_block_number, current_confirmed_head)
+
+        log.debug(
+            "State changes",
+            node=to_checksum_address(self.address),
+            state_changes=[
+                redact_secret(DictSerializer.serialize(state_change))
+                for state_change in state_changes
+            ],
+        )
+
+        event_greenlets = self._trigger_state_change_effects(
+            old_state=old_state,
+            new_state=views.state_from_raiden(self),
+            state_changes=state_changes,
+            events=raiden_events,
+        )
+        for greenlet in event_greenlets:
+            self.add_pending_greenlet(greenlet)
 
         current_synched_block_number = self.get_block_number()
 
