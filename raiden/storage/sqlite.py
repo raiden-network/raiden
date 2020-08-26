@@ -212,6 +212,36 @@ def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
     return query_where_str, args
 
 
+def write_state_change(
+    ulid_factory: ULIDMonotonicFactory, cursor: sqlite3.Cursor, state_change: str
+) -> StateChangeID:
+    """Write `state_change` to the database and returns the corresponding ID."""
+
+    query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
+
+    new_id = ulid_factory.new()
+    cursor.execute(query, (new_id, state_change))
+
+    return new_id
+
+
+def write_events(
+    ulid_factory: ULIDMonotonicFactory,
+    cursor: sqlite3.Cursor,
+    events: List[Tuple[StateChangeID, str]],
+) -> List[EventID]:
+    events_ids: List[EventID] = list()
+
+    query = (
+        "INSERT INTO state_events("
+        "   identifier, source_statechange_id, data"
+        ") VALUES(?, ?, ?)"
+    )
+    cursor.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
+
+    return events_ids
+
+
 class SQLiteStorage:
     def __init__(self, database_path: DatabasePath):
         sqlite3.register_adapter(ULID, adapt_ulid_identifier)
@@ -885,8 +915,7 @@ class SerializedSQLiteStorage:
         """ Save events.
 
         Args:
-            state_change_identifier: Id of the state change that generate these events.
-            events: List of Event objects.
+            events: List of Event objects and the corresponding state change id.
         """
         events_data = [
             (state_change_id, self.serializer.serialize(event))
