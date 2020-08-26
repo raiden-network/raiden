@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass
 
 import gevent.lock
@@ -6,9 +8,12 @@ import structlog
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.sqlite import (
     LOW_STATECHANGE_ULID,
+    EventID,
     Range,
     SerializedSQLiteStorage,
     StateChangeID,
+    write_events,
+    write_state_change,
 )
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
 from raiden.utils.formatting import to_checksum_address
@@ -16,6 +21,7 @@ from raiden.utils.logging import redact_secret
 from raiden.utils.typing import (
     Address,
     Callable,
+    Generator,
     Generic,
     List,
     Optional,
@@ -95,6 +101,16 @@ class SavedState(Generic[ST]):
     state: ST
 
 
+class AtomicStateChangeDispatcher(ABC, Generic[ST]):
+    @abstractmethod
+    def dispatch(self, state_change: StateChange) -> List[Event]:
+        pass
+
+    @abstractmethod
+    def latest_state(self) -> ST:
+        pass
+
+
 class WriteAheadLog(Generic[ST]):
     saved_state: SavedState[ST]
 
@@ -107,6 +123,76 @@ class WriteAheadLog(Generic[ST]):
         # scheduling is undetermined, a lock is necessary to protect the
         # execution order.
         self._lock = gevent.lock.Semaphore()
+
+    @contextmanager
+    def process_state_change_atomically(
+        self,
+    ) -> Generator[AtomicStateChangeDispatcher, None, None]:
+        # FIXME: fix mypy annotation
+        class _AtomicStateChangeDispatcher(AtomicStateChangeDispatcher, Generic[ST]):  # type: ignore  # noqa
+            def __init__(
+                self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage
+            ) -> None:
+                self.state_manager = state_manager
+                self.storage = storage
+
+                self.last_state_change_id: Optional[StateChangeID] = None
+
+            def dispatch(self, state_change: StateChange) -> List[Event]:
+                _, events = self.state_manager.dispatch2(state_change)
+                state_change_id = self.write_state_change_and_events(state_change, events)
+
+                self.last_state_change_id = state_change_id
+
+                return events
+
+            def latest_state(self) -> ST:
+                assert self.state_manager.current_state is not None, "state is None"
+                return self.state_manager.current_state
+
+            def write_state_change_and_events(
+                self, state_change: StateChange, events: List[Event]
+            ) -> StateChangeID:
+                cursor = self.storage.database.conn.cursor()
+
+                state_change_id = write_state_change(
+                    ulid_factory=self.storage.database._ulid_factory(StateChangeID),
+                    cursor=cursor,
+                    state_change=self.storage.serializer.serialize(state_change),
+                )
+
+                event_data = list()
+                for event in events:
+                    event_data.append((state_change_id, self.storage.serializer.serialize(event)))
+
+                write_events(
+                    ulid_factory=self.storage.database._ulid_factory(EventID),
+                    cursor=cursor,
+                    events=event_data,
+                )
+
+                return state_change_id
+
+        with self._lock:
+            copied_state_manager = self.state_manager.copy()
+
+            with self.storage.database.transaction():
+                dispatcher = _AtomicStateChangeDispatcher(
+                    state_manager=copied_state_manager, storage=self.storage,
+                )
+                yield dispatcher
+
+            self.state_manager = copied_state_manager
+
+            # When no state change was applied, do not update saved state
+            if dispatcher.last_state_change_id is not None:
+                # The update must be done with a single operation, to make sure
+                # that readers will have a consistent view of it.
+
+                assert self.state_manager.current_state is not None, "state is None"
+                self.saved_state = SavedState(
+                    dispatcher.last_state_change_id, self.state_manager.current_state
+                )
 
     def log_and_dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[Event]]:
         """ Log and apply a state change.
