@@ -13,8 +13,9 @@ def get_project_root() -> str:
 def get_system_spec() -> Dict[str, Any]:
     """Collect information about the system and installation.
     """
-    import pkg_resources
     import platform
+
+    import pkg_resources
 
     if sys.platform == "darwin":
         system_info = "macOS {} {}".format(platform.mac_ver()[0], platform.architecture()[0])

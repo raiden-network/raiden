@@ -43,19 +43,19 @@ else:
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.transfer.state import (  # noqa: F401
-        HashTimeLockState,
-        NettingChannelState,
-        UnlockPartialProofState,
-        NetworkState,
-    )
+    from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError  # noqa: F401
+    from raiden.messages.monitoring_service import SignedBlindedBalanceProof  # noqa: F401
     from raiden.transfer.mediated_transfer.state import (  # noqa: F401
         InitiatorTransferState,
         LockedTransferSignedState,
         LockedTransferUnsignedState,
     )
-    from raiden.messages.monitoring_service import SignedBlindedBalanceProof  # noqa: F401
-    from raiden.exceptions import RaidenUnrecoverableError, RaidenRecoverableError  # noqa: F401
+    from raiden.transfer.state import (  # noqa: F401
+        HashTimeLockState,
+        NettingChannelState,
+        NetworkState,
+        UnlockPartialProofState,
+    )
 
 
 MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the variable"

@@ -68,9 +68,9 @@ def mock_matrix(
     retries_before_backoff,
 ):
 
+    from raiden.network.transport.matrix import transport as transport_module
     from raiden.network.transport.matrix.client import GMatrixClient
     from raiden.network.transport.matrix.utils import UserPresence
-    from raiden.network.transport.matrix import transport as transport_module
 
     def make_client_monkey(
         handle_messages_callback, handle_member_join_callback, servers, *args, **kwargs
