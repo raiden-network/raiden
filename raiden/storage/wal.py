@@ -194,37 +194,6 @@ class WriteAheadLog(Generic[ST]):
                     dispatcher.last_state_change_id, self.state_manager.current_state
                 )
 
-    def log_and_dispatch(self, state_changes: List[StateChange]) -> Tuple[ST, List[Event]]:
-        """ Log and apply a state change.
-
-        This function will first write the state change to the write-ahead-log,
-        in case of a node crash the state change can be recovered and replayed
-        to restore the node state.
-
-        Events produced by applying state change are also saved.
-        """
-
-        with self._lock:
-            all_state_change_ids = self.storage.write_state_changes(state_changes)
-
-            latest_state, all_events = self.state_manager.dispatch(state_changes)
-            latest_state_change_id = all_state_change_ids[-1]
-
-            # The update must be done with a single operation, to make sure
-            # that readers will have a consistent view of it.
-            self.saved_state = SavedState(latest_state_change_id, latest_state)
-
-            event_data = list()
-            flattened_events = list()
-            for state_change_id, events in zip(all_state_change_ids, all_events):
-                flattened_events.extend(events)
-                for event in events:
-                    event_data.append((state_change_id, event))
-
-            self.storage.write_events(event_data)
-
-        return latest_state, flattened_events
-
     def snapshot(self, statechange_qty: int) -> None:
         """ Snapshot the application state.
 
