@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import json
 import os
 import sys
@@ -179,7 +180,6 @@ def options(func: Callable) -> Callable:
             help="hex encoded address of the User Deposit contract.",
             type=ADDRESS_TYPE,
         ),
-        option("--console", help="Start the interactive raiden console", is_flag=True),
         option(
             ETH_NETWORKID_OPTION,
             help=(
@@ -504,6 +504,11 @@ def options(func: Callable) -> Callable:
             ),
         ),
     ]
+
+    if importlib.util.find_spec("IPython"):
+        options_.append(
+            option("--console", help="Start the interactive raiden console", is_flag=True)
+        )
 
     for option_ in reversed(options_):
         func = option_(func)

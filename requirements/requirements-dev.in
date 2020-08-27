@@ -32,6 +32,7 @@ responses
 flaky
 
 # Debugging
+ipython
 pdbpp
 colour
 py-spy
