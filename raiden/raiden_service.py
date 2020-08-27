@@ -824,10 +824,18 @@ class RaidenService(Runnable):
         )
 
         old_state = views.state_from_raiden(self)
-        new_state, events = self.wal.log_and_dispatch(state_changes)
+        raiden_events = []
+
+        with self.wal.process_state_change_atomically() as dispatcher:
+            for state_change in state_changes:
+                events = dispatcher.dispatch(state_change)
+                raiden_events.extend(events)
 
         return self._trigger_state_change_effects(
-            old_state=old_state, new_state=new_state, state_changes=state_changes, events=events,
+            old_state=old_state,
+            new_state=views.state_from_raiden(self),
+            state_changes=state_changes,
+            events=raiden_events,
         )
 
     def _trigger_state_change_effects(

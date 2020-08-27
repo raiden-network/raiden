@@ -59,6 +59,12 @@ def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
     return wal
 
 
+def dispatch(wal: WriteAheadLog, state_changes: List[StateChange]):
+    with wal.process_state_change_atomically() as dispatcher:
+        for state_change in state_changes:
+            dispatcher.dispatch(state_change)
+
+
 def test_connect_to_corrupt_db(tmpdir):
     serializer = JSONSerializer
     dbpath = os.path.join(tmpdir, "log.db")
@@ -103,13 +109,13 @@ def test_write_read_log() -> None:
     state_changes1 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count1 = len(state_changes1)
 
-    wal.log_and_dispatch([block])
+    dispatch(wal, [block])
 
     state_changes2 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count2 = len(state_changes2)
     assert count1 + 1 == count2
 
-    wal.log_and_dispatch([contract_receive_unlock])
+    dispatch(wal, [contract_receive_unlock])
 
     state_changes3 = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     count3 = len(state_changes3)
@@ -171,13 +177,13 @@ def test_restore_without_snapshot():
     wal = new_wal(state_transition_noop)
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
-    wal.log_and_dispatch([block1])
+    dispatch(wal, [block1])
 
     block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
-    wal.log_and_dispatch([block2])
+    dispatch(wal, [block2])
 
     block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
-    wal.log_and_dispatch([block3])
+    dispatch(wal, [block3])
 
     _, _, newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
@@ -196,7 +202,7 @@ def test_restore_without_snapshot_in_batches():
     block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
     block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
-    wal.log_and_dispatch([block1, block2, block3])
+    dispatch(wal, [block1, block2, block3])
 
     _, _, newwal = restore_to_state_change(
         transition_function=state_transtion_acc,
@@ -215,19 +221,19 @@ def test_get_snapshot_before_state_change() -> None:
     block1 = Block(
         block_number=BlockNumber(5), gas_limit=BlockGasLimit(1), block_hash=make_block_hash()
     )
-    wal.log_and_dispatch([block1])
+    dispatch(wal, [block1])
     wal.snapshot(1)
 
     block2 = Block(
         block_number=BlockNumber(7), gas_limit=BlockGasLimit(1), block_hash=make_block_hash()
     )
-    wal.log_and_dispatch([block2])
+    dispatch(wal, [block2])
     wal.snapshot(2)
 
     block3 = Block(
         block_number=BlockNumber(8), gas_limit=BlockGasLimit(1), block_hash=make_block_hash()
     )
-    wal.log_and_dispatch([block3])
+    dispatch(wal, [block3])
     wal.snapshot(3)
 
     snapshot = wal.storage.get_snapshot_before_state_change(HIGH_STATECHANGE_ULID)

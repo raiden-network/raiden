@@ -210,8 +210,9 @@ class MockRaidenService:
             our_address=self.rpc_client.address,
             chain_id=self.rpc_client.chain_id,
         )
+        with self.wal.process_state_change_atomically() as dispatcher:
+            dispatcher.dispatch(state_change)
 
-        self.wal.log_and_dispatch([state_change])
         self.transport = Mock()
 
     def on_messages(self, messages):
