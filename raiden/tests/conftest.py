@@ -316,10 +316,10 @@ def timeout_for_setup_and_call(item):
     # - pytest_runtest_call is the second call, and it will only run if the
     # setup was succesfull, i.e. a timeout did not happen. This implies that
     # the remaining_timeout is positive.
-    remaining_timeout = item.remaining_timeout
+    item.remaining_timeout = item.timeout_setup_and_call
 
     started_at = time.time()
-    signal.setitimer(signal.ITIMER_REAL, remaining_timeout)
+    signal.setitimer(signal.ITIMER_REAL, item.remaining_timeout)
 
     yield
 
@@ -403,7 +403,6 @@ def set_item_timeouts(item):
         raise Exception("timeout_limit_teardown must not be negative")
 
     item.timeout_setup_and_call = timeout_setup_and_call
-    item.remaining_timeout = timeout_setup_and_call
     item.timeout_teardown = timeout_teardown
 
 
