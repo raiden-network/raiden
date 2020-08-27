@@ -310,18 +310,10 @@ def timeout_for_setup_and_call(item):
     # - pytest_runtest_call is the second call, and it will only run if the
     # setup was succesful, i.e. a timeout did not happen. This implies that
     # the remaining_timeout is positive.
-    remaining_timeout = item.remaining_timeout
+    item.remaining_timeout = item.timeout_setup_and_call
 
     started_at = time.time()
-    try:
-        signal.setitimer(signal.ITIMER_REAL, remaining_timeout)
-    except signal.ItimerError:
-        # For some reason we do get bad remaining_timeout values, even though
-        # the comment above is correct that remaining_timeout is checked to be
-        # positive. Maybe we can find out what is going wrong once we see the
-        # value that causes the error. Once we found the problem, this
-        # try/except should be removed.
-        raise Exception(f"Bad parameter {remaining_timeout!r} for setitimer!")
+    signal.setitimer(signal.ITIMER_REAL, item.remaining_timeout)
 
     yield
 
@@ -405,7 +397,6 @@ def set_item_timeouts(item):
         raise Exception("timeout_limit_teardown must not be negative")
 
     item.timeout_setup_and_call = timeout_setup_and_call
-    item.remaining_timeout = timeout_setup_and_call
     item.timeout_teardown = timeout_teardown
 
 
