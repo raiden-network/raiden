@@ -78,8 +78,8 @@ def process_results(results_dir, plot_filename):
             import matplotlib
 
             matplotlib.use("Agg")
-            import matplotlib.pyplot as plt
             import matplotlib.dates as md
+            import matplotlib.pyplot as plt
 
             print("Writing plot to '{}'...".format(plot_filename))
             dates = [datetime.fromtimestamp(ts) for ts in times]
