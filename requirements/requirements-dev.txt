@@ -44,7 +44,7 @@ eth-keyfile==0.5.1        # via -r requirements.txt, eth-account
 eth-keys==0.3.3           # via -r requirements.txt, eth-account, eth-keyfile
 eth-rlp==0.1.2            # via -r requirements.txt, eth-account
 eth-typing==2.2.1         # via -r requirements.txt, eth-abi, eth-keys, eth-utils, raiden-contracts, web3
-eth-utils==1.9.3          # via -r requirements.txt, eth-abi, eth-account, eth-keyfile, eth-keys, eth-rlp, hexbytes, raiden-contracts, rlp, web3
+eth-utils==1.9.4          # via -r requirements.txt, eth-abi, eth-account, eth-keyfile, eth-keys, eth-rlp, hexbytes, raiden-contracts, rlp, web3
 execnet==1.6.0            # via pytest-xdist
 fancycompleter==0.8       # via pdbpp
 filelock==3.0.12          # via -r requirements.txt
@@ -67,7 +67,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==5.21.0        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==1.7.0  # via -r requirements.txt, flake8, flake8-comprehensions, jsonschema, pluggy, pytest
+importlib-metadata==1.7.0  # via pluggy
 incremental==17.5.0       # via treq, twisted
 iniconfig==1.0.1          # via pytest
 ipfshttpclient==0.6.0.post1  # via -r requirements.txt, web3
@@ -173,8 +173,8 @@ toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
-typed-ast==1.4.0          # via astroid, black, mypy
-typing-extensions==3.7.4.2  # via -r requirements.txt, matrix-synapse, mypy, signedjson, web3
+typed-ast==1.4.0          # via black, mypy
+typing-extensions==3.7.4.2  # via -r requirements.txt, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
@@ -187,7 +187,7 @@ werkzeug==1.0.1           # via -r requirements.txt, flask
 wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
-zipp==3.1.0               # via -r requirements.txt, importlib-metadata
+zipp==3.1.0               # via importlib-metadata
 zope.event==4.4           # via -r requirements.txt, gevent
 zope.interface==5.1.0     # via -r requirements.txt, gevent, twisted
 

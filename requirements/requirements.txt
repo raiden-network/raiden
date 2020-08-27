@@ -25,7 +25,7 @@ eth-keyfile==0.5.1        # via -r requirements.in, eth-account
 eth-keys==0.3.3           # via -r requirements.in, eth-account, eth-keyfile
 eth-rlp==0.1.2            # via eth-account
 eth-typing==2.2.1         # via eth-abi, eth-keys, eth-utils, raiden-contracts, web3
-eth-utils==1.9.3          # via -r requirements.in, eth-abi, eth-account, eth-keyfile, eth-keys, eth-rlp, hexbytes, raiden-contracts, rlp, web3
+eth-utils==1.9.4          # via -r requirements.in, eth-abi, eth-account, eth-keyfile, eth-keys, eth-rlp, hexbytes, raiden-contracts, rlp, web3
 filelock==3.0.12          # via -r requirements.in
 flask-cors==3.0.8         # via -r requirements.in
 flask-restful==0.3.8      # via -r requirements.in
@@ -36,7 +36,6 @@ greenlet==0.4.16          # via gevent
 guppy3==3.0.10.post1      # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
-importlib-metadata==1.7.0  # via jsonschema
 ipfshttpclient==0.6.0.post1  # via web3
 itsdangerous==1.1.0       # via flask
 jinja2==2.10.1            # via flask
@@ -75,14 +74,13 @@ six==1.12.0               # via flask-cors, flask-restful, jsonschema, multiaddr
 structlog==20.1.0         # via -r requirements.in
 toml==0.10.1              # via -r requirements.in
 toolz==0.9.0              # via cytoolz
-typing-extensions==3.7.4.2  # via -r requirements.in, web3
+typing-extensions==3.7.4.2  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
 web3==5.12.0              # via -r requirements.in, raiden-contracts
 websockets==8.1           # via web3
 werkzeug==1.0.1           # via flask
-zipp==3.1.0               # via importlib-metadata
 zope.event==4.4           # via gevent
 zope.interface==5.1.0     # via gevent
 
