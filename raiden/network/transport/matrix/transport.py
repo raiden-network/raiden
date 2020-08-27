@@ -31,7 +31,8 @@ from raiden.network.transport.matrix.client import (
     User,
 )
 from raiden.network.transport.matrix.rtc.aio_queue import AGLock, AGTransceiver
-from raiden.network.transport.matrix.rtc.web_rtc import run_aiortc
+from raiden.network.transport.matrix.rtc.aiogevent import yield_future
+from raiden.network.transport.matrix.rtc.web_rtc import create_channel, run_aiortc
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -1214,13 +1215,18 @@ class MatrixTransport(Runnable):
 
         all_messages: List[Message] = list()
         for room, room_messages in sync_messages:
-            # TODO: Don't fetch messages from the broadcast rooms. #5535
-            if not self._is_broadcast_room(room):
-                for text in room_messages:
-                    all_messages.extend(self._handle_text(room, text))
+            for text in room_messages:
+                all_messages.extend(self._handle_text(room, text))
 
         self._process_messages(all_messages)
         return len(all_messages) > 0
+
+    def _handle_web_rtc_messages(
+        self, message_data: Dict[str, bytes], partner_address: Address
+    ) -> None:
+        if not self._stop_event.is_set():
+            messages = validate_and_parse_message(message_data, partner_address)
+            self._process_messages(messages)
 
     def _validate_call_event(self, room: Room, event: Dict) -> Dict:
         # Ignore our own messages
@@ -1482,9 +1488,19 @@ class MatrixTransport(Runnable):
             our_address=self._raiden_service.address, partner_address=partner_address
         )
         if self._raiden_service.address == room_creator_address:
-            event = {"type": "create_channel", "data": {}, "address": partner_address}
-            log.debug("Creating RTC Channel")
-            self.aio_gevent_transceiver.send_event_to_aio(event)
+            log.debug("Creating RTC channel")
+            offer = yield_future(
+                asyncio.ensure_future(
+                    create_channel(
+                        self.aio_gevent_transceiver,
+                        partner_address,
+                        self._raiden_service.address,
+                        self._handle_web_rtc_messages,
+                    )
+                )
+            )
+            room = self._get_room_for_address(partner_address)
+            self._client.api.invite(room.room_id, offer)
 
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(

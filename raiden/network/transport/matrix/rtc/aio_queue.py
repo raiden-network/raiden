@@ -2,11 +2,11 @@ from asyncio import Future
 from typing import Any, Callable, Dict
 
 import gevent
-from aiortc import RTCPeerConnection
 from gevent.lock import Semaphore
 from gevent.queue import Empty, Queue
 
 from raiden.network.transport.matrix.rtc import aiogevent
+from raiden.network.transport.matrix.rtc.web_rtc import RTCPartner
 from raiden.utils.typing import Address
 
 
@@ -19,7 +19,7 @@ def make_wrapped_greenlet(target: Callable, *args: Any, **kwargs: Any) -> Future
 
 class AGTransceiver:
     def __init__(self) -> None:
-        self.peer_connections: Dict[Address, RTCPeerConnection] = dict()
+        self.peer_connections: Dict[Address, RTCPartner] = dict()
         self.event_to_aio_queue = AGQueue()
         self.event_to_gevent_queue = AGQueue()
 

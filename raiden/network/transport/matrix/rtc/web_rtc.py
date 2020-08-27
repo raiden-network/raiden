@@ -1,11 +1,12 @@
 import time
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional
 
 import structlog
 from aiortc import RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 
 from raiden.network.transport.matrix.rtc.aio_queue import AGTransceiver
+from raiden.network.transport.matrix.utils import my_place_or_yours
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address
 
@@ -16,10 +17,15 @@ log = structlog.get_logger(__name__)
 class RTCPartner:
     partner_address: Address
     pc: RTCPeerConnection
-    channel: RTCDataChannel = None
+    channel: Optional[RTCDataChannel] = None
 
-    def create_channel(self) -> None:
-        self.channel = self.pc.createDataChannel(to_checksum_address(self.partner_address))
+    def create_channel(self, node_address) -> None:
+        lower_address = my_place_or_yours(node_address, self.partner_address)
+        higher_address = self.partner_address if lower_address == node_address else node_address
+        channel_name = (
+            f"{to_checksum_address(lower_address)}|{to_checksum_address(higher_address)}"
+        )
+        self.channel = self.pc.createDataChannel(channel_name)
 
 
 async def handle_event(
@@ -37,7 +43,7 @@ async def handle_event(
     rtc_partner = peer_connections[partner_address]
 
     if event_type == "create_channel":
-        await create_channel(rtc_partner, ag_transceiver, partner_address, node_address)
+        await create_channel(ag_transceiver, partner_address, node_address)
     if event_type == "message":
         send_message(rtc_partner, event_data, node_address)
     if event_type == "set_remote_description":
@@ -45,33 +51,35 @@ async def handle_event(
 
 
 async def create_channel(
-    rtc_partner: RTCPartner, ag_transceiver: AGTransceiver, partner_address: Address, node_address
-) -> None:
+    ag_transceiver: AGTransceiver, partner_address: Address, node_address, handle_message_callback
+) -> RTCSessionDescription:
+
+    peer_connections = ag_transceiver.peer_connections
+    if partner_address not in peer_connections:
+        peer_connections[partner_address] = RTCPartner(partner_address, RTCPeerConnection(), None)
+
+    rtc_partner = peer_connections[partner_address]
     pc = rtc_partner.pc
-    rtc_partner.create_channel()
+    rtc_partner.create_channel(node_address)
 
     offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
 
-    event = {
-        "type": "local_description",
-        "data": {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type},
-        "address": partner_address,
-    }
-
-    await ag_transceiver.send_event_to_gevent(event)
+    msg = "Channel must be created already"
+    assert rtc_partner.channel is not None, msg
 
     @rtc_partner.channel.on("message")
-    async def on_message(message: [str, bytes]) -> None:  # pylint: disable=unused-variable
+    def on_message(message: Dict[str, bytes]) -> None:
         log.debug(
             "Received message in aio kingdom",
             node=to_checksum_address(node_address),
             message=message,
             time=time.time(),
         )
-        await ag_transceiver.send_event_to_gevent(
-            {"type": "message", "data": message, "address": partner_address}
-        )
+
+        handle_message_callback(message, partner_address)
+
+    return offer
 
 
 async def set_remote_description(
@@ -128,7 +136,7 @@ def send_message(rtc_partner: RTCPartner, message, node_address):
         channel.send(message)
     else:
         log.debug(
-            f"Channel is not open. ReadyState: {channel.readyState}",
+            f"Channel is not open. ReadyState: {channel.readyState if channel is not None else 'No channel exists'}",
             node=to_checksum_address(node_address),
         )
 
