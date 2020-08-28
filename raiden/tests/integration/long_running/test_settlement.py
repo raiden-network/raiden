@@ -229,7 +229,7 @@ def test_lock_expiry(
         LockExpired, {"secrethash": transfer_1_secrethash}
     )
 
-    alice_app.start_mediated_transfer_with_secret(
+    alice_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         target=target,
@@ -279,7 +279,7 @@ def test_lock_expiry(
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
-    alice_app.start_mediated_transfer_with_secret(
+    alice_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         target=target,
@@ -348,7 +348,7 @@ def test_batch_unlock(
 
     secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
-    alice_app.start_mediated_transfer_with_secret(
+    alice_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=PaymentAmount(alice_to_bob_amount),
         target=TargetAddress(bob_address),
@@ -491,7 +491,7 @@ def test_channel_withdraw(
     target = TargetAddress(bob_app.address)
     secret = factories.make_secret()
 
-    payment_status = alice_app.start_mediated_transfer_with_secret(
+    payment_status = alice_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         target=target,
@@ -569,7 +569,7 @@ def test_channel_withdraw_expired(
     target = TargetAddress(bob_app.address)
     secret = factories.make_secret()
 
-    payment_status = alice_app.start_mediated_transfer_with_secret(
+    payment_status = alice_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         target=target,
@@ -668,7 +668,7 @@ def test_settled_lock(
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
-    app0.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=target,
@@ -758,7 +758,7 @@ def test_automatic_secret_registration(
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
     locked_transfer_received = message_handler.wait_for_message(LockedTransfer, {})
 
-    app0.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=target,
@@ -832,7 +832,7 @@ def test_start_end_attack(
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
-    app0.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=target,
@@ -1030,7 +1030,7 @@ def test_batch_unlock_after_restart(
         secrethash=bob_transfer_secrethash
     )
 
-    alice_app.start_mediated_transfer_with_secret(
+    alice_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         target=TargetAddress(bob_app.address),
@@ -1038,7 +1038,7 @@ def test_batch_unlock_after_restart(
         secret=alice_transfer_secret,
     )
 
-    bob_app.start_mediated_transfer_with_secret(
+    bob_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=alice_to_bob_amount,
         target=TargetAddress(alice_app.address),
