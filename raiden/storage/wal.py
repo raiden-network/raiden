@@ -81,7 +81,8 @@ def restore_to_state_change(
             ],
             node=to_checksum_address(node_address),
         )
-        wal.state_manager.dispatch(unapplied_state_changes)
+        for state_change in unapplied_state_changes:
+            wal.state_manager.dispatch(state_change)
 
     return state_change_qty, len(unapplied_state_changes), wal
 
@@ -139,7 +140,7 @@ class WriteAheadLog(Generic[ST]):
                 self.last_state_change_id: Optional[StateChangeID] = None
 
             def dispatch(self, state_change: StateChange) -> List[Event]:
-                _, events = self.state_manager.dispatch2(state_change)
+                _, events = self.state_manager.dispatch(state_change)
                 state_change_id = self.write_state_change_and_events(state_change, events)
 
                 self.last_state_change_id = state_change_id
