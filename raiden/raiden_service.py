@@ -98,7 +98,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, TokenNetworkRegistryState
+from raiden.transfer.state import ChainState, RouteState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
@@ -194,6 +194,7 @@ def initiator_init(
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
     lock_timeout: BlockTimeout = None,
+    routes: List[RouteState] = None,
 ) -> Tuple[Optional[str], ActionInitInitiator]:
     transfer_state = TransferDescriptionWithSecretState(
         token_network_registry_address=raiden.default_registry.address,
@@ -207,22 +208,25 @@ def initiator_init(
         lock_timeout=lock_timeout,
     )
 
-    error_msg, routes, feedback_token = routing.get_best_routes(
-        chain_state=views.state_from_raiden(raiden),
-        token_network_address=token_network_address,
-        one_to_n_address=raiden.default_one_to_n_address,
-        from_address=InitiatorAddress(raiden.address),
-        to_address=target_address,
-        amount=transfer_amount,
-        previous_address=None,
-        pfs_config=raiden.config.pfs_config,
-        privkey=raiden.privkey,
-    )
+    error_msg = None
 
-    # Only prepare feedback when token is available
-    if feedback_token is not None:
-        for route_state in routes:
-            raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
+    if routes is None:
+        error_msg, routes, feedback_token = routing.get_best_routes(
+            chain_state=views.state_from_raiden(raiden),
+            token_network_address=token_network_address,
+            one_to_n_address=raiden.default_one_to_n_address,
+            from_address=InitiatorAddress(raiden.address),
+            to_address=target_address,
+            amount=transfer_amount,
+            previous_address=None,
+            pfs_config=raiden.config.pfs_config,
+            privkey=raiden.privkey,
+        )
+
+        # Only prepare feedback when token is available
+        if feedback_token is not None:
+            for route_state in routes:
+                raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
 
     return error_msg, ActionInitInitiator(transfer_state, routes)
 
@@ -1523,6 +1527,7 @@ class RaidenService(Runnable):
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
+        routes: List[RouteState] = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
@@ -1610,6 +1615,7 @@ class RaidenService(Runnable):
             token_network_address=token_network_address,
             target_address=target,
             lock_timeout=lock_timeout,
+            routes=routes,
         )
 
         # FIXME: Dispatch the state change even if there are no routes to

@@ -53,6 +53,7 @@ from raiden.transfer.state import (
     HashTimeLockState,
     NettingChannelState,
     PendingLocksState,
+    RouteState,
     make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
@@ -147,6 +148,7 @@ def transfer(
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
     expect_unlock_failures: bool = False,
+    route: List[Address] = None,
 ) -> SecretHash:
     """ Nice to read shortcut to make successful mediated transfer.
 
@@ -154,6 +156,16 @@ def transfer(
         Only the initiator and target are synched.
     """
     if transfer_state is TransferState.UNLOCKED:
+        if route:
+            token_network = views.get_token_network_by_token_address(
+                views.state_from_raiden(initiator_app),
+                initiator_app.default_registry.address,
+                token_address,
+            )
+            forward_channel_id = token_network.partneraddresses_to_channelidentifiers[route[1]][0]
+            routes = [RouteState(route=route, forward_channel_id=forward_channel_id)]
+        else:
+            routes = None
         return _transfer_unlocked(
             initiator_app=initiator_app,
             target_app=target_app,
@@ -162,6 +174,7 @@ def transfer(
             identifier=identifier,
             timeout=timeout,
             expect_unlock_failures=expect_unlock_failures,
+            routes=routes,
         )
     elif transfer_state is TransferState.EXPIRED:
         return _transfer_expired(
@@ -193,6 +206,7 @@ def _transfer_unlocked(
     identifier: PaymentID,
     timeout: Optional[float] = None,
     expect_unlock_failures: bool = False,
+    routes: List[RouteState] = None,
 ) -> SecretHash:
     assert isinstance(target_app.message_handler, WaitForMessage)
 
@@ -218,6 +232,7 @@ def _transfer_unlocked(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
+        routes=routes,
     )
 
     apps = [initiator_app, target_app]
