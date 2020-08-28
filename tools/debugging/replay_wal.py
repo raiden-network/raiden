@@ -12,7 +12,6 @@ The ignored state changes will still be applied, but they will just not be print
 import json
 import re
 from contextlib import closing
-from itertools import chain
 
 import click
 from eth_utils import encode_hex, is_address, to_canonical_address
@@ -215,7 +214,7 @@ def replay_wal(
 
     for _, state_change in enumerate(all_state_changes):
         # Dispatching the state changes one-by-one to easy debugging
-        _, events = wal.state_manager.dispatch([state_change])
+        _, events = wal.state_manager.dispatch(state_change)
 
         chain_state = wal.state_manager.current_state
         msg = "Chain state must never be cleared up."
@@ -236,7 +235,7 @@ def replay_wal(
         # and inspect the state.
         ###
         print_state_change(state_change, translator=translator)
-        print_events(chain.from_iterable(events), translator=translator)
+        print_events(events, translator=translator)
 
         # Enable to print color coded presence state of channel partners
         # print_presence_view(chain_state, translator)
