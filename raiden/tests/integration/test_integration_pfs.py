@@ -179,6 +179,7 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
         amount=amount,
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
+        route=[app0.address, app1.address, app2.address],
     )
 
     with block_timeout_for_transfer_by_secrethash(app1, secrethash):

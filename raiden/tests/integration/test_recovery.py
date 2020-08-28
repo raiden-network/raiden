@@ -140,6 +140,7 @@ def test_recovery_unhappy_case(
             amount=amount,
             identifier=PaymentID(identifier),
             timeout=network_wait * number_of_nodes,
+            route=[app0.address, app1.address, app2.address],
         )
 
     app0.stop()

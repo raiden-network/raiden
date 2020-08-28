@@ -22,6 +22,7 @@ from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_un
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
+from raiden.transfer.state import RouteState
 from raiden.utils.typing import (
     BlockExpiration,
     InitiatorAddress,
@@ -88,6 +89,7 @@ def test_regression_unfiltered_routes(
         token_address=token,
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
+        route=[app0.address, app1.address, app2.address, app4.address],
     )
 
 
@@ -104,16 +106,24 @@ def test_regression_revealsecret_after_secret(
     token = token_addresses[0]
     identifier = PaymentID(1)
     token_network_registry_address = app0.default_registry.address
-    token_network_address = views.get_token_network_address_by_token_address(
+    token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(app0), token_network_registry_address, token
     )
-    assert token_network_address, "The fixtures must register the token"
+    assert token_network, "The fixtures must register the token"
 
     payment_status = app0.mediated_transfer_async(
-        token_network_address,
+        token_network.address,
         amount=PaymentAmount(1),
         target=TargetAddress(app2.address),
         identifier=identifier,
+        routes=[
+            RouteState(
+                route=[app0.address, app1.address, app2.address],
+                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
+                    app1.address
+                ][0],
+            )
+        ],
     )
     with watch_for_unlock_failures(*raiden_network):
         assert payment_status.payment_done.wait()
