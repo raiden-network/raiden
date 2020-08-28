@@ -88,6 +88,7 @@ def restore_to_state_change(
 
 
 ST = TypeVar("ST", bound=State)
+ST2 = TypeVar("ST2", bound=State)
 
 
 @dataclass(frozen=True)
@@ -129,10 +130,9 @@ class WriteAheadLog(Generic[ST]):
     def process_state_change_atomically(
         self,
     ) -> Generator[AtomicStateChangeDispatcher, None, None]:
-        # FIXME: fix mypy annotation
-        class _AtomicStateChangeDispatcher(AtomicStateChangeDispatcher, Generic[ST]):  # type: ignore  # noqa
+        class _AtomicStateChangeDispatcher(AtomicStateChangeDispatcher, Generic[ST2]):
             def __init__(
-                self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage
+                self, state_manager: StateManager[ST2], storage: SerializedSQLiteStorage
             ) -> None:
                 self.state_manager = state_manager
                 self.storage = storage
