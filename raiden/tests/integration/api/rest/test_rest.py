@@ -1023,7 +1023,7 @@ def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_a
 
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
-    initiator.start_mediated_transfer_with_secret(
+    initiator.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=PaymentAmount(amount_to_send - expected_fee - fee_margin),
         target=TargetAddress(target.address),

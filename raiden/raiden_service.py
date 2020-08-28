@@ -1491,29 +1491,6 @@ class RaidenService(Runnable):
             else:
                 secret = ABSENT_SECRET
 
-        payment_status = self.start_mediated_transfer_with_secret(
-            token_network_address=token_network_address,
-            amount=amount,
-            target=target,
-            identifier=identifier,
-            secret=secret,
-            secrethash=secrethash,
-            lock_timeout=lock_timeout,
-        )
-
-        return payment_status
-
-    def start_mediated_transfer_with_secret(
-        self,
-        token_network_address: TokenNetworkAddress,
-        amount: PaymentAmount,
-        target: TargetAddress,
-        identifier: PaymentID,
-        secret: Secret,
-        secrethash: SecretHash = None,
-        lock_timeout: BlockTimeout = None,
-    ) -> PaymentStatus:
-
         if secrethash is None:
             secrethash = sha256_secrethash(secret)
         elif secret != ABSENT_SECRET:

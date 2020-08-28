@@ -424,7 +424,7 @@ def test_secret_revealed_on_chain(
 
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
-    app0.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=target,
@@ -512,7 +512,7 @@ def test_clear_closed_queue(raiden_network: List[RaidenService], token_addresses
     # make an unconfirmed transfer to ensure the nodes have communicated
     amount = PaymentAmount(10)
     payment_identifier = PaymentID(1337)
-    app0.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=TargetAddress(target),

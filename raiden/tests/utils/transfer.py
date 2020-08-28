@@ -265,7 +265,7 @@ def _transfer_expired(
         token_address=token_address,
     )
     assert token_network_address
-    payment_status = initiator_app.start_mediated_transfer_with_secret(
+    payment_status = initiator_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=TargetAddress(target_app.address),
@@ -310,7 +310,7 @@ def _transfer_secret_not_requested(
         token_address=token_address,
     )
     assert token_network_address
-    initiator_app.start_mediated_transfer_with_secret(
+    initiator_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=TargetAddress(target_app.address),
@@ -414,7 +414,7 @@ def transfer_and_assert_path(
     )
 
     last_app = path[-1]
-    payment_status = first_app.start_mediated_transfer_with_secret(
+    payment_status = first_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=TargetAddress(last_app.address),

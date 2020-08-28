@@ -134,7 +134,7 @@ def test_locked_transfer_secret_registered_onchain(
 
     # Test that sending a transfer with a secret already registered on-chain fails
     with pytest.raises(RaidenUnrecoverableError):
-        app0.start_mediated_transfer_with_secret(
+        app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
             target=TargetAddress(target),
@@ -294,7 +294,7 @@ def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argu
 
     amount = PaymentAmount(10)
     identifier = PaymentID(1)
-    transfer_received = app0.start_mediated_transfer_with_secret(
+    transfer_received = app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=TargetAddress(app2.address),
@@ -356,7 +356,7 @@ def test_mediated_transfer_calls_pfs(
 
     with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
 
-        app0.start_mediated_transfer_with_secret(
+        app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=PaymentAmount(10),
             target=TargetAddress(app1.address),
@@ -385,7 +385,7 @@ def test_mediated_transfer_calls_pfs(
             max_paths=5,
         )
 
-        app0.start_mediated_transfer_with_secret(
+        app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=PaymentAmount(11),
             target=TargetAddress(app2.address),
@@ -462,7 +462,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         return error_msg, routes, uuid
 
     with patch("raiden.routing.get_best_routes", get_best_routes_with_fees):
-        app0.start_mediated_transfer_with_secret(
+        app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=amount,
             target=TargetAddress(app2.address),
