@@ -86,6 +86,11 @@ class Capabilities(Enum):
     WEBRTC = "webRTC"
 
 
+class ServerListType(Enum):
+    ACTIVE_SERVERS = "active_servers"
+    ALL_SERVERS = "all_servers"
+
+
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value
 STATE_PRUNING_AFTER_BLOCKS = 64

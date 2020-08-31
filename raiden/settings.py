@@ -45,11 +45,11 @@ DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY = 15_000
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
-        "/master/known_servers/known_servers.alderaan.yaml"
+        "/master/known_servers/known_servers-production-v1.2.0.json"
     ),
     Environment.DEVELOPMENT: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
-        "/master/known_servers/known_servers.test.yaml"
+        "/master/known_servers/known_servers-development-v1.2.0.json"
     ),
 }
 
