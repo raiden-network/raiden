@@ -56,6 +56,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
+from raiden.utils.capabilities import parse_capabilities
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, Dict, List, TokenNetworkAddress, cast
 from raiden.waiting import wait_for_network_state
@@ -1322,3 +1323,32 @@ def test_transport_presence_updates(
     app2.transport.immediate_health_check_for(app1.address)
     wait_for_network_state(app0, app2.address, NetworkState.REACHABLE, retry_timeout)
     wait_for_network_state(app1, app2.address, NetworkState.REACHABLE, retry_timeout)
+
+
+@raise_on_failure
+@pytest.mark.parametrize("matrix_server_count", [1])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("adhoc_capability", [True])
+@pytest.mark.parametrize(
+    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
+)
+def test_transport_capabilities(raiden_network: List[RaidenService], retry_timeout):
+    """
+    Test that raiden matrix users have the `avatar_url` set in a format understood
+    by the capabilities parser.
+    """
+    app0, app1 = raiden_network
+
+    app0.transport.immediate_health_check_for(app1.address)
+    app1.transport.immediate_health_check_for(app0.address)
+
+    wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
+    wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
+
+    app1_user_ids = app0.transport.get_user_ids_for_address(app1.address)
+    assert len(app1_user_ids) == 1, "app1 should have exactly one user_id"
+    app1_user = app0.transport._client.get_user(app1_user_ids.pop())
+    app1_avatar_url = app1_user.get_avatar_url()
+    assert "adhoc_capability" in app1_avatar_url, "avatar_url not set for app1"
+    msg = "capabilities could not be parsed"
+    assert parse_capabilities(app1_avatar_url) == dict(adhoc_capability=True), msg
