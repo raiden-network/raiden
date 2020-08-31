@@ -8,11 +8,13 @@ import pytest
 import requests
 import responses
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
+from flask_restful.representations import json
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 import raiden.network.transport.matrix.client
 import raiden.network.transport.matrix.utils
+from raiden.constants import ServerListType
 from raiden.exceptions import TransportError
 from raiden.messages.synchronization import Processed
 from raiden.messages.transfers import RevealSecret
@@ -28,6 +30,7 @@ from raiden.network.transport.matrix.utils import (
 )
 from raiden.tests.utils.factories import make_secret, make_signature, make_signer
 from raiden.tests.utils.transport import ignore_member_join, ignore_messages
+from raiden.utils.cli import get_matrix_servers
 from raiden.utils.signer import recover
 from raiden.utils.typing import MessageID
 
@@ -291,3 +294,26 @@ def test_message_ack_timing_keeper():
     report = matk.generate_report()
     assert len(report) == 1
     assert report == [0.05]
+
+
+def test_get_matrix_servers(requests_responses: responses.RequestsMock):
+    server_list_content = {
+        "active_servers": ["http://server1", "http://server2"],
+        "all_servers": ["http://server3", "http://server4"],
+    }
+    requests_responses.add(responses.GET, "http://server-list", json.dumps(server_list_content))
+
+    active_servers_default = get_matrix_servers("http://server-list")
+    active_servers_explicit = get_matrix_servers(
+        "http://server-list", server_list_type=ServerListType.ACTIVE_SERVERS
+    )
+
+    assert (
+        active_servers_default == active_servers_explicit == server_list_content["active_servers"]
+    )
+
+    all_servers = get_matrix_servers(
+        "http://server-list", server_list_type=ServerListType.ALL_SERVERS
+    )
+
+    assert all_servers == server_list_content["all_servers"]

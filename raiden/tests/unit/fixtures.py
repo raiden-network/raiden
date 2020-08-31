@@ -124,7 +124,7 @@ def netting_channel_state(chain_state, token_network_state, token_network_regist
 
 
 @pytest.fixture
-def requests_responses():
+def requests_responses() -> responses.RequestsMock:
     """ Uses ``responses`` to provide easy requests tests. """
     with responses.RequestsMock() as mock_responses:
         yield mock_responses
