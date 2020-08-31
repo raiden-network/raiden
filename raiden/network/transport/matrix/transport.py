@@ -54,6 +54,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
+from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -442,10 +443,12 @@ class MatrixTransport(Runnable):
         self._address_mgr.start()
 
         try:
+            capabilities = capconfig_to_dict(self._config.capabilities_config)
             login(
                 client=self._client,
                 signer=self._raiden_service.signer,
                 prev_auth_data=prev_auth_data,
+                capabilities=capabilities,
             )
         except ValueError:
             # `ValueError` may be raised if `get_user` provides invalid data to
