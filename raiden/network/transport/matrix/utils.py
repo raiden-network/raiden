@@ -56,6 +56,7 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
+from raiden.utils.capabilities import serialize_capabilities
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, MessageID, Signature
@@ -569,7 +570,7 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
         )
 
 
-def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
+def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: str) -> User:
     """Login within a server.
 
     There are multiple cases where a previous auth token can become invalid and
@@ -623,7 +624,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     client.login(username, password, sync=False)
 
     # Because this is the first login, the display name has to be set, this
-    # prevents the impersonation metioned above. subsequent calls will reuse
+    # prevents the impersonation mentioned above. subsequent calls will reuse
     # the authentication token and the display name will be properly set.
     signature_bytes = signer.sign(client.user_id.encode())
     signature_hex = encode_hex(signature_bytes)
@@ -634,6 +635,12 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     # Only set the display name if necessary, since this is a slow operation.
     if current_display_name != signature_hex:
         user.set_display_name(signature_hex)
+
+    current_capabilities = user.get_avatar_url() or ""
+
+    # Only set the capabilities if necessary.
+    if current_capabilities != cap_str:
+        user.set_avatar_url(cap_str)
 
     log.debug(
         "Logged in",
@@ -679,7 +686,12 @@ def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> 
     return client.get_user(client.user_id)
 
 
-def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] = None) -> User:
+def login(
+    client: GMatrixClient,
+    signer: Signer,
+    prev_auth_data: Optional[str] = None,
+    capabilities: Dict[str, Any] = None,
+) -> User:
     """ Login with a matrix server.
 
     Params:
@@ -687,6 +699,8 @@ def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] =
         signer: Signer used to sign the password and displayname.
         prev_auth_data: Previously persisted authentication using the format "{user}/{password}".
     """
+    if capabilities is None:
+        capabilities = {}
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
@@ -708,7 +722,11 @@ def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] =
                 server_name=server_name,
             )
 
-    return first_login(client, signer, username)
+    try:
+        capstr = serialize_capabilities(capabilities)
+    except ValueError:
+        raise Exception("error serializing")
+    return first_login(client, signer, username, capstr)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())
