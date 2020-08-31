@@ -73,6 +73,7 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
+    PeerCapabilities,
     RoomID,
     Set,
     Tuple,
@@ -1379,7 +1380,7 @@ class MatrixTransport(Runnable):
         )
 
     def _address_reachability_changed(
-        self, address: Address, reachability: AddressReachability
+        self, address: Address, reachability: AddressReachability, capabilities: PeerCapabilities
     ) -> None:
         if reachability is AddressReachability.REACHABLE:
             node_reachability = NetworkState.REACHABLE
@@ -1395,6 +1396,7 @@ class MatrixTransport(Runnable):
             raise TypeError(f'Unexpected reachability state "{reachability}".')
 
         assert self._raiden_service is not None, "_raiden_service not set"
+        self._address_mgr._address_to_capabilities[address] = capabilities
         state_change = ActionChangeNodeNetworkState(address, node_reachability)
         self._raiden_service.handle_and_track_state_changes([state_change])
 

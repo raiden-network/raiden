@@ -56,10 +56,10 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
-from raiden.utils.capabilities import serialize_capabilities
+from raiden.utils.capabilities import parse_capabilities, serialize_capabilities
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, Signature
+from raiden.utils.typing import Address, ChainID, MessageID, PeerCapabilities, Signature
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
@@ -187,7 +187,9 @@ class UserAddressManager:
         self,
         client: GMatrixClient,
         displayname_cache: DisplayNameCache,
-        address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
+        address_reachability_changed_callback: Callable[
+            [Address, AddressReachability, PeerCapabilities], None
+        ],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
         _log_context: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -270,6 +272,10 @@ class UserAddressManager:
         """ Return the current reachability state for ``address``. """
         return self._address_to_reachabilitystate.get(address, UNKNOWN_REACHABILITY_STATE)
 
+    def get_address_capabilities(self, address: Address) -> PeerCapabilities:
+        """ Return the protocol capabilities for ``address``. """
+        return self._address_to_capabilities.get(address, PeerCapabilities({}))
+
     def force_user_presence(self, user: User, presence: UserPresence) -> None:
         """ Forcibly set the ``user`` presence to ``presence``.
 
@@ -330,7 +336,8 @@ class UserAddressManager:
             userids_to_presence=userids_to_presence,
         )
 
-        self._maybe_address_reachability_changed(address)
+        peer_capabilities = self._address_to_capabilities.get(address, PeerCapabilities({}))
+        self._maybe_address_reachability_changed(address, peer_capabilities)
 
     def get_reachability_from_matrix(self, user_ids: Iterable[str]) -> AddressReachability:
         """ Get the current reachability without any side effects
@@ -345,10 +352,12 @@ class UserAddressManager:
 
         return AddressReachability.UNREACHABLE
 
-    def _maybe_address_reachability_changed(self, address: Address) -> None:
+    def _maybe_address_reachability_changed(
+        self, address: Address, capabilities: PeerCapabilities
+    ) -> None:
         # A Raiden node may have multiple Matrix users, this happens when
         # Raiden roams from a Matrix server to another. This loop goes over all
-        # these users and uses the "best" presence. IOW, if there is a single
+        # these users and uses the "best" presence. IOW, if there is at least one
         # Matrix user that is reachable, then the Raiden node is considered
         # reachable.
         userids = self._address_to_userids[address].copy()
@@ -381,7 +390,9 @@ class UserAddressManager:
             new_address_reachability, now
         )
 
-        self._address_reachability_changed_callback(address, new_address_reachability)
+        self._address_reachability_changed_callback(
+            address, new_address_reachability, capabilities
+        )
 
     def _presence_listener(self, event: Dict[str, Any], presence_update_id: int) -> None:
         """
@@ -428,16 +439,20 @@ class UserAddressManager:
         if not address:
             return
 
+        peer_capabilities = PeerCapabilities(parse_capabilities(user.get_avatar_url()))
+        assert isinstance(peer_capabilities, dict), "could not fetch peer capabilities"
+
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
 
         self._set_user_presence(user_id, new_state, presence_update_id)
-        self._maybe_address_reachability_changed(address)
+        self._maybe_address_reachability_changed(address, peer_capabilities)
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_reachabilitystate: Dict[Address, ReachabilityState] = dict()
+        self._address_to_capabilities: Dict[Address, PeerCapabilities] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
         self._userid_to_presence_update_id: Dict[str, int] = dict()
 
