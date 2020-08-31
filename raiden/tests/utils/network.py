@@ -20,6 +20,7 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_RETRY_TIMEOUT,
     BlockchainConfig,
+    CapabilitiesConfig,
     MatrixTransportConfig,
     MediationFeeConfig,
     RaidenConfig,
@@ -402,6 +403,7 @@ def create_apps(
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
     port_generator: Iterator[Port],
+    capabilities_config: CapabilitiesConfig,
 ) -> List[RaidenService]:
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -431,6 +433,7 @@ def create_apps(
             console=False,
             transport_type="matrix",
         )
+        config.transport.capabilities_config = capabilities_config
 
         if local_matrix_url is not None:
             config.transport = MatrixTransportConfig(
@@ -440,8 +443,10 @@ def create_apps(
                 retry_interval_max=retry_interval_max,
                 server=local_matrix_url,
                 available_servers=[],
+                capabilities_config=capabilities_config,
             )
 
+        assert config.transport.capabilities_config is not None
         if resolver_port is not None:
             config.resolver_endpoint = f"http://localhost:{resolver_port}"
 
@@ -481,6 +486,7 @@ def create_apps(
             )
 
         # Use `TestMatrixTransport` that saves sent messages for assertions in tests
+        assert config.transport.capabilities_config is not None
         transport = TestMatrixTransport(config=config.transport, environment=environment_type)
 
         raiden_event_handler = RaidenEventHandler()
