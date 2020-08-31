@@ -1,9 +1,10 @@
 import errno
+import json
 import os
 import re
-import string
 from enum import EnumMeta
 from itertools import groupby
+from json.decoder import JSONDecodeError
 from pathlib import Path
 from string import Template
 from typing import Any, Callable, Dict, List, MutableMapping, Union
@@ -16,6 +17,7 @@ from click.formatting import iter_rows, measure_table, wrap_text
 from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
 
+from raiden.constants import ServerListType
 from raiden.exceptions import ConfigurationError, InvalidChecksummedAddress
 from raiden.network.rpc.middleware import faster_gas_price_strategy
 from raiden.utils.formatting import address_checksum_and_decode
@@ -423,13 +425,27 @@ def apply_config_file(
             cli_params[config_name_int] = config_value
 
 
-def get_matrix_servers(url: str) -> List[str]:
-    """Fetch a list of matrix servers from a text url
+def get_matrix_servers(
+    url: str, server_list_type: ServerListType = ServerListType.ACTIVE_SERVERS
+) -> List[str]:
+    """Fetch a list of matrix servers from a URL
 
-    '-' prefixes (YAML list) are cleaned. Comment lines /^\\s*#/ are ignored
+    The URL is expected to point to a JSON document of the following format::
 
-    url: url of a text file
-    returns: list of urls, default schema is https
+        {
+            "active_servers": [
+                "url1",
+                "url2",
+                ...
+            ],
+            "all_servers": [
+                "url1",
+                "url2",
+                ...
+            ]
+        }
+
+    Which of the two lists is returned is controlled by the ``server_list_type`` argument.
     """
     try:
         response = requests.get(url)
@@ -438,15 +454,19 @@ def get_matrix_servers(url: str) -> List[str]:
     except requests.RequestException as ex:
         raise RuntimeError(f"Could not fetch matrix servers list: {url!r} => {ex!r}") from ex
 
-    available_servers = []
-    for line in response.text.splitlines():
-        line = line.strip(string.whitespace + "-")
-        if line.startswith("#") or not line:
-            continue
-        if not line.startswith("http"):
-            line = "https://" + line  # default schema
-        available_servers.append(line)
-    return available_servers
+    try:
+        known_servers: Dict[str, List[str]] = json.loads(response.text)
+        msg = f"Unexpected format of known server list at {url}"
+        assert {type_.value for type_ in ServerListType} == known_servers.keys(), msg
+        active_servers = known_servers[server_list_type.value]
+    except (JSONDecodeError, AssertionError) as ex:
+        raise RuntimeError(
+            f"Could not process list of known matrix servers: {url!r} => {ex!r}"
+        ) from ex
+    return [
+        f"https://{server}" if not server.startswith("http") else server
+        for server in active_servers
+    ]
 
 
 ADDRESS_TYPE = AddressType()
