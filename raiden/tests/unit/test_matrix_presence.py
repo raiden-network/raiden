@@ -16,6 +16,12 @@ class DummyApi:
     def get_display_name(self, user_id):  # pylint: disable=no-self-use,unused-argument
         return "DUMMY_DISPLAYNAME"
 
+    def get_avatar_url(self, user_id):  # pylint: disable=no-self-use,unused-argument
+        return "DUMMY_CAPABILITY"
+
+    def get_download_url(self, value):  # pylint: disable=no-self-use
+        return value
+
 
 class DummyMatrixClient:
     def __init__(self, user_id: str, user_directory_content: Optional[List[User]] = None):
@@ -102,6 +108,12 @@ def user_presence():
 
 
 @pytest.fixture
+def user_capability():
+    """Storage `user_capability` will update. Useful to assert over in tests."""
+    return {}
+
+
+@pytest.fixture
 def address_reachability():
     """Storage `address_reachability_callback` will update. Useful to assert over in tests."""
     return {}
@@ -116,9 +128,10 @@ def user_presence_callback(user_presence):
 
 
 @pytest.fixture
-def address_reachability_callback(address_reachability):
-    def _callback(address, reachability):
+def address_reachability_callback(address_reachability, user_capability):
+    def _callback(address, reachability, capabilities):
         address_reachability[address] = reachability
+        user_capability[address] = capabilities
 
     return _callback
 
