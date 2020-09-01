@@ -1,31 +1,14 @@
 import time
-from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict
 
 import structlog
-from aiortc import RTCDataChannel, RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCPeerConnection, RTCSessionDescription
 
-from raiden.network.transport.matrix.rtc.aio_queue import AGTransceiver
-from raiden.network.transport.matrix.utils import my_place_or_yours
+from raiden.network.transport.matrix.rtc.aio_queue import AGTransceiver, RTCPartner
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address
 
 log = structlog.get_logger(__name__)
-
-
-@dataclass
-class RTCPartner:
-    partner_address: Address
-    pc: RTCPeerConnection
-    channel: Optional[RTCDataChannel] = None
-
-    def create_channel(self, node_address) -> None:
-        lower_address = my_place_or_yours(node_address, self.partner_address)
-        higher_address = self.partner_address if lower_address == node_address else node_address
-        channel_name = (
-            f"{to_checksum_address(lower_address)}|{to_checksum_address(higher_address)}"
-        )
-        self.channel = self.pc.createDataChannel(channel_name)
 
 
 async def handle_event(
