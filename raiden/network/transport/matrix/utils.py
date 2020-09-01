@@ -336,8 +336,19 @@ class UserAddressManager:
             userids_to_presence=userids_to_presence,
         )
 
-        peer_capabilities = self._address_to_capabilities.get(address, PeerCapabilities({}))
-        self._maybe_address_reachability_changed(address, peer_capabilities)
+        self._maybe_address_reachability_changed(address)
+
+    def query_capabilities_for_user_id(self, user_id: str) -> PeerCapabilities:
+        """ This pulls the `avatar_url` for a given user/user_id and parses the capabilities.  """
+        try:
+            user: User = self._client.get_user(user_id)
+        except MatrixRequestError:
+            return PeerCapabilities({})
+        avatar_url = user.get_avatar_url()
+        if avatar_url is not None:
+            return PeerCapabilities(parse_capabilities(avatar_url))
+        else:
+            return PeerCapabilities({})
 
     def get_reachability_from_matrix(self, user_ids: Iterable[str]) -> AddressReachability:
         """ Get the current reachability without any side effects
@@ -352,16 +363,15 @@ class UserAddressManager:
 
         return AddressReachability.UNREACHABLE
 
-    def _maybe_address_reachability_changed(
-        self, address: Address, capabilities: PeerCapabilities
-    ) -> None:
+    def _maybe_address_reachability_changed(self, address: Address) -> None:
         # A Raiden node may have multiple Matrix users, this happens when
         # Raiden roams from a Matrix server to another. This loop goes over all
         # these users and uses the "best" presence. IOW, if there is at least one
         # Matrix user that is reachable, then the Raiden node is considered
         # reachable.
         userids = self._address_to_userids[address].copy()
-        composite_presence = {self._userid_to_presence.get(uid) for uid in userids}
+        presence_to_uid = {self._userid_to_presence.get(uid): uid for uid in userids}
+        composite_presence = set(presence_to_uid.keys())
 
         new_presence = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
@@ -375,6 +385,7 @@ class UserAddressManager:
         if new_address_reachability == prev_reachability_state.reachability:
             return
 
+        capabilities = self.query_capabilities_for_user_id(presence_to_uid[new_presence])
         now = datetime.now()
 
         self.log.debug(
@@ -439,15 +450,12 @@ class UserAddressManager:
         if not address:
             return
 
-        peer_capabilities = PeerCapabilities(parse_capabilities(user.get_avatar_url()))
-        assert isinstance(peer_capabilities, dict), "could not fetch peer capabilities"
-
         self.add_userid_for_address(address, user_id)
 
         new_state = UserPresence(event["content"]["presence"])
 
         self._set_user_presence(user_id, new_state, presence_update_id)
-        self._maybe_address_reachability_changed(address, peer_capabilities)
+        self._maybe_address_reachability_changed(address)
 
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)

@@ -58,7 +58,7 @@ from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.capabilities import parse_capabilities
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Dict, List, TokenNetworkAddress, cast
+from raiden.utils.typing import Address, Dict, List, PeerCapabilities, TokenNetworkAddress, cast
 from raiden.waiting import wait_for_network_state
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
@@ -1352,3 +1352,7 @@ def test_transport_capabilities(raiden_network: List[RaidenService], retry_timeo
     assert "adhoc_capability" in app1_avatar_url, "avatar_url not set for app1"
     msg = "capabilities could not be parsed"
     assert parse_capabilities(app1_avatar_url) == dict(adhoc_capability=True), msg
+
+    msg = "capabilities were not collected in transport client"
+    collected_capabilities = app0.transport._address_mgr.get_address_capabilities(app1.address)
+    assert collected_capabilities == PeerCapabilities(dict(adhoc_capability=True)), msg
