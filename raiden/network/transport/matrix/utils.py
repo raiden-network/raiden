@@ -370,7 +370,9 @@ class UserAddressManager:
         # Matrix user that is reachable, then the Raiden node is considered
         # reachable.
         userids = self._address_to_userids[address].copy()
-        presence_to_uid = {self._userid_to_presence.get(uid): uid for uid in userids}
+        presence_to_uid = defaultdict(list)
+        for uid in userids:
+            presence_to_uid[self._userid_to_presence.get(uid)].append(uid)
         composite_presence = set(presence_to_uid.keys())
 
         new_presence = UserPresence.UNKNOWN
@@ -384,8 +386,9 @@ class UserAddressManager:
         prev_reachability_state = self.get_address_reachability_state(address)
         if new_address_reachability == prev_reachability_state.reachability:
             return
-
-        capabilities = self.query_capabilities_for_user_id(presence_to_uid[new_presence])
+        # for capabilities, we get the "first" uid that showed the `new_presence`
+        present_uid = presence_to_uid[new_presence].pop()
+        capabilities = self.query_capabilities_for_user_id(present_uid)
         now = datetime.now()
 
         self.log.debug(
