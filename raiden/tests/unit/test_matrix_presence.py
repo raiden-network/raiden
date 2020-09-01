@@ -45,7 +45,15 @@ class DummyMatrixClient:
     def search_user_directory(self, term: str) -> Iterator[User]:
         for user in self._user_directory_content:
             if term in user.user_id:
+                if user.api is None:
+                    user.api = self.api
                 yield user
+
+    def get_user(self, user_id: str) -> User:
+        all_users = list(self.search_user_directory(user_id))
+        if len(all_users):
+            return all_users[0]
+        raise MatrixRequestError(404, "Unknown user")
 
     def get_user_presence(self, user_id: str) -> str:
         presence = self._user_presence.get(user_id)
@@ -108,7 +116,7 @@ def user_presence():
 
 
 @pytest.fixture
-def user_capability():
+def address_capability():
     """Storage `user_capability` will update. Useful to assert over in tests."""
     return {}
 
@@ -128,10 +136,10 @@ def user_presence_callback(user_presence):
 
 
 @pytest.fixture
-def address_reachability_callback(address_reachability, user_capability):
+def address_reachability_callback(address_reachability, address_capability):
     def _callback(address, reachability, capabilities):
         address_reachability[address] = reachability
-        user_capability[address] = capabilities
+        address_capability[address] = capabilities
 
     return _callback
 
