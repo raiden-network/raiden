@@ -1489,7 +1489,7 @@ class MatrixTransport(Runnable):
         )
         if self._raiden_service.address == room_creator_address:
             log.debug("Creating RTC channel")
-            offer = yield_future(
+            session_description = yield_future(
                 asyncio.ensure_future(
                     create_channel(
                         self.aio_gevent_transceiver,
@@ -1499,6 +1499,9 @@ class MatrixTransport(Runnable):
                     )
                 )
             )
+
+            offer = {"type": session_description.type, "sdp": session_description.sdp}
+            log.debug("Send offer to partner", node=to_checksum_address(self._raiden_service.address), offer=offer)
             room = self._get_room_for_address(partner_address)
             self._client.api.invite(room.room_id, offer)
 
