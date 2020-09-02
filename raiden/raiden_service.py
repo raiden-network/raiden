@@ -31,7 +31,6 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
     BLOCK_ID_LATEST,
-    EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
@@ -63,6 +62,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import RaidenConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
+from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, Range
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
@@ -71,6 +71,7 @@ from raiden.transfer.architecture import (
     ContractSendEvent,
     Event as RaidenEvent,
     StateChange,
+    StateManager,
 )
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import (
@@ -102,11 +103,9 @@ from raiden.transfer.state import ChainState, RouteState, TokenNetworkRegistrySt
 from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
-    ActionInitChain,
     BalanceProofStateChange,
     Block,
     ContractReceiveChannelDeposit,
-    ContractReceiveNewTokenNetworkRegistry,
     ReceiveUnlock,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
@@ -450,6 +449,10 @@ class RaidenService(Runnable):
         # because of the node's queues.
         self.ready_to_process_events = False
 
+        # Counters use for state snapshotting
+        self.state_change_qty_snapshot = 0
+        self.state_change_qty = 0
+
     def start(self) -> None:
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
         assert self.stop_event.ready(), f"Node already started. node:{self!r}"
@@ -594,6 +597,38 @@ class RaidenService(Runnable):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.async_start_health_check_for(neighbour)
 
+    def _make_initial_state(self) -> ChainState:
+        # On first run Raiden needs to fetch all events for the payment
+        # network, to reconstruct all token network graphs and find opened
+        # channels
+        #
+        # The value `self.query_start_block` is an optimization, because
+        # Raiden has to poll all events until the last confirmed block,
+        # using the genesis block would result in fetchs for a few million
+        # of unnecessary blocks. Instead of querying all these unnecessary
+        # blocks, the configuration variable `query_start_block` is used to
+        # start at the block which `TokenNetworkRegistry`  was deployed.
+        last_log_block_number = self.query_start_block
+        last_log_block_hash = self.rpc_client.blockhash_from_blocknumber(last_log_block_number)
+
+        initial_state = ChainState(
+            pseudo_random_generator=random.Random(),
+            block_number=last_log_block_number,
+            block_hash=last_log_block_hash,
+            our_address=self.address,
+            chain_id=self.rpc_client.chain_id,
+        )
+        token_network_registry_address = self.default_registry.address
+        token_network_registry = TokenNetworkRegistryState(
+            token_network_registry_address,
+            [],  # empty list of token network states as it's the node's startup
+        )
+        initial_state.identifiers_to_tokennetworkregistries[
+            token_network_registry_address
+        ] = token_network_registry
+
+        return initial_state
+
     def _initialize_wal(self) -> None:
         if self.database_dir is not None:
             try:
@@ -613,21 +648,25 @@ class RaidenService(Runnable):
         storage.update_version()
         storage.log_run()
 
+        initial_state = self._make_initial_state()
+
         try:
             (
+                state_snapshot,
+                state_change_start,
                 state_change_qty_snapshot,
-                state_change_qty_pending,
-                restore_wal,
-            ) = wal.restore_to_state_change(
-                transition_function=node.state_transition,
-                storage=storage,
-                state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
-                node_address=self.address,
+            ) = wal.restore_or_init_snapshot(
+                storage=storage, node_address=self.address, initial_state=initial_state
             )
 
-            self.wal = restore_wal
-            self.state_change_qty_snapshot = state_change_qty_snapshot
-            self.state_change_qty = state_change_qty_snapshot + state_change_qty_pending
+            unapplied_state_changes_range = Range(state_change_start, HIGH_STATECHANGE_ULID)
+            state_change_qty_unapplied, snapshot_state = wal.replay_unapplied_state_changes(
+                transition_function=node.state_transition,
+                storage=storage,
+                unapplied_state_changes_range=unapplied_state_changes_range,
+                node_address=self.address,
+                state_snapshot=state_snapshot,
+            )
         except SerializationError:
             raise RaidenUnrecoverableError(
                 "Could not restore state. "
@@ -636,74 +675,41 @@ class RaidenService(Runnable):
                 "version of the Raiden client."
             )
 
-        if self.wal.state_manager.current_state is None:
+        if state_change_qty_snapshot == 0:
             print(
                 "This is the first time Raiden is being used with this address. "
                 "Processing all the events may take some time. Please wait ..."
             )
-            log.debug(
-                "No recoverable state available, creating initial state.",
-                node=to_checksum_address(self.address),
-            )
 
-            # On first run Raiden needs to fetch all events for the payment
-            # network, to reconstruct all token network graphs and find opened
-            # channels
-            last_log_block_number = self.query_start_block
-            last_log_block_hash = self.rpc_client.blockhash_from_blocknumber(last_log_block_number)
+        self.state_change_qty_snapshot = state_change_qty_snapshot
+        self.state_change_qty = state_change_qty_snapshot + state_change_qty_unapplied
 
-            # The value `self.query_start_block` is an optimization, because
-            # Raiden has to poll all events until the last confirmed block,
-            # using the genesis block would result in fetchs for a few million
-            # of unnecessary blocks. Instead of querying all these unnecessary
-            # blocks, the configuration variable `query_start_block` is used to
-            # start at the block which `TokenNetworkRegistry`  was deployed.
-            init_state_change = ActionInitChain(
-                pseudo_random_generator=random.Random(),
-                block_number=last_log_block_number,
-                block_hash=last_log_block_hash,
-                our_address=self.address,
-                chain_id=self.rpc_client.chain_id,
-            )
-            token_network_registry = TokenNetworkRegistryState(
-                self.default_registry.address,
-                [],  # empty list of token network states as it's the node's startup
-            )
-            new_network_state_change = ContractReceiveNewTokenNetworkRegistry(
-                transaction_hash=EMPTY_TRANSACTION_HASH,
-                token_network_registry=token_network_registry,
-                block_number=last_log_block_number,
-                block_hash=last_log_block_hash,
-            )
+        msg = "The snapshot_state must be a ChainState instance."
+        assert isinstance(snapshot_state, ChainState), msg
+        state_manager = StateManager(node.state_transition, snapshot_state, [])
+        self.wal = WriteAheadLog(state_manager, storage)
+        current_state = self.wal.get_current_state()
 
-            self.handle_and_track_state_changes([init_state_change, new_network_state_change])
-        else:
-            # The `Block` state change is dispatched only after all the events
-            # for that given block have been processed, filters can be safely
-            # installed starting from this position without losing events.
-            last_log_block_number = views.block_number(self.wal.state_manager.current_state)
-            log.debug(
-                "Restored state from WAL",
-                last_restored_block=last_log_block_number,
-                node=to_checksum_address(self.address),
-            )
+        # The `Block` state change is dispatched only after all the events
+        # for that given block have been processed, filters can be safely
+        # installed starting from this position without losing events.
+        last_log_block_number = views.block_number(current_state)
+        log.debug(
+            "Querying blockchain from block",
+            last_restored_block=last_log_block_number,
+            node=to_checksum_address(self.address),
+        )
 
-            known_networks = views.get_token_network_registry_address(
-                views.state_from_raiden(self)
+        known_networks = views.get_token_network_registry_address(views.state_from_raiden(self))
+        if known_networks and self.default_registry.address not in known_networks:
+            configured_registry = to_checksum_address(self.default_registry.address)
+            known_registries = lpex(known_networks)
+            raise RuntimeError(
+                f"Token network address mismatch.\n"
+                f"Raiden is configured to use the smart contract "
+                f"{configured_registry}, which conflicts with the current known "
+                f"smart contracts {known_registries}"
             )
-            if known_networks and self.default_registry.address not in known_networks:
-                configured_registry = to_checksum_address(self.default_registry.address)
-                known_registries = lpex(known_networks)
-                raise RuntimeError(
-                    f"Token network address mismatch.\n"
-                    f"Raiden is configured to use the smart contract "
-                    f"{configured_registry}, which conflicts with the current known "
-                    f"smart contracts {known_registries}"
-                )
-
-        # Restore the current snapshot group
-        state_change_qty = self.wal.storage.count_state_changes()
-        self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
 
     def _log_sync_progress(
         self, polled_block_number: BlockNumber, target_block: BlockNumber
@@ -824,7 +830,7 @@ class RaidenService(Runnable):
 
     def get_block_number(self) -> BlockNumber:
         assert self.wal, f"WAL object not yet initialized. node:{self!r}"
-        return views.block_number(self.wal.state_manager.current_state)  # type: ignore
+        return views.block_number(self.wal.get_current_state())
 
     def on_messages(self, messages: List[Message]) -> None:
         self.message_handler.on_messages(self, messages)
@@ -955,21 +961,20 @@ class RaidenService(Runnable):
         )
 
         self.state_change_qty += len(state_changes)
-
-        if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
-            self.snapshot()
+        self._maybe_snapshot()
 
         if self.ready_to_process_events:
             return self.async_handle_events(chain_state=new_state, raiden_events=events)
         else:
             return list()
 
-    def snapshot(self) -> None:
-        assert self.wal, "WAL must be set."
+    def _maybe_snapshot(self) -> None:
+        if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
+            assert self.wal, "WAL must be set."
 
-        log.debug("Storing snapshot")
-        self.wal.snapshot(self.state_change_qty)
-        self.state_change_qty_snapshot = self.state_change_qty
+            log.debug("Storing snapshot")
+            self.wal.snapshot(self.state_change_qty)
+            self.state_change_qty_snapshot = self.state_change_qty
 
     def async_handle_events(
         self, chain_state: ChainState, raiden_events: List[RaidenEvent]

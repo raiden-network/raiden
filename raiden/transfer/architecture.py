@@ -29,7 +29,6 @@ from raiden.utils.typing import (
     Locksroot,
     MessageID,
     Nonce,
-    Optional,
     Signature,
     T_Address,
     T_BlockHash,
@@ -238,14 +237,18 @@ class StateManager(Generic[ST]):
 
     def __init__(
         self,
-        state_transition: Callable[[Optional[ST], StateChange], TransitionResult[ST]],
-        current_state: Optional[ST],
+        state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
+        current_state: ST,
+        unapplied_state_changes: List[StateChange],
     ) -> None:
         """ Initialize the state manager.
 
         Args:
             state_transition: function that can apply a StateChange message.
             current_state: current application state.
+            unapplied_state_changes: state changes that should be applied
+            during initialization because they are not part of the
+            `current_state`.
         """
         if not callable(state_transition):  # pragma: no unittest
             raise ValueError("state_transition must be a callable")
@@ -253,13 +256,16 @@ class StateManager(Generic[ST]):
         self.state_transition = state_transition
         self.current_state = current_state
 
+        for state_change in unapplied_state_changes:
+            self.dispatch(state_change)
+
     def copy(self) -> "StateManager[ST]":
         # The state objects must be treated as immutable, so make a copy of the
         # current state and pass the copy to the state machine to be modified.
         before_copy = time.time()
         copy_state = deepcopy(self.current_state)
         log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
-        return StateManager(self.state_transition, copy_state)
+        return StateManager(self.state_transition, copy_state, [])
 
     def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
         # Update the current state by applying the state changes

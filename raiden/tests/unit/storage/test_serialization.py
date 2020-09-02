@@ -1,4 +1,3 @@
-import random
 from pathlib import Path
 
 import marshmallow
@@ -21,9 +20,10 @@ from raiden.transfer.events import (
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.transfer.state_change import ActionInitChain
+from raiden.transfer.state_change import Block
 from raiden.utils.typing import (
     BlockExpiration,
+    BlockGasLimit,
     BlockNumber,
     ChainID,
     Nonce,
@@ -92,12 +92,10 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
     # Satisfy the foreign-key constraint for state change ID
     ids = storage.write_state_changes(
         [
-            ActionInitChain(
-                pseudo_random_generator=random.Random(),
+            Block(
                 block_number=BlockNumber(1),
+                gas_limit=BlockGasLimit(1),
                 block_hash=factories.make_block_hash(),
-                our_address=factories.make_address(),
-                chain_id=ChainID(1),
             )
         ]
     )

@@ -77,8 +77,7 @@ def count_token_network_channels(
 
 def state_from_raiden(raiden: "RaidenService") -> ChainState:  # pragma: no unittest
     assert raiden.wal, "raiden.wal not set"
-    # TODO: current_state should not be optional
-    return raiden.wal.state_manager.current_state  # type: ignore
+    return raiden.wal.get_current_state()
 
 
 def get_pending_transactions(chain_state: ChainState) -> List[ContractSendEvent]:

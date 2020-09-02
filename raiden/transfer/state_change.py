@@ -1,6 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
-from random import Random
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.settings import MediationFeeConfig
@@ -37,7 +36,6 @@ from raiden.utils.typing import (
     SecretRegistryAddress,
     Signature,
     T_Address,
-    T_BlockHash,
     T_BlockNumber,
     T_Secret,
     T_SecretHash,
@@ -145,20 +143,6 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     @property
     def token_network_address(self) -> TokenNetworkAddress:
         return self.canonical_identifier.token_network_address
-
-
-@dataclass(frozen=True)
-class ActionInitChain(StateChange):
-    pseudo_random_generator: Random = field(compare=False)
-    block_number: BlockNumber
-    block_hash: BlockHash
-    our_address: Address
-    chain_id: ChainID
-
-    def __post_init__(self) -> None:
-        typecheck(self.block_number, T_BlockNumber)
-        typecheck(self.block_hash, T_BlockHash)
-        typecheck(self.chain_id, int)
 
 
 @dataclass(frozen=True)

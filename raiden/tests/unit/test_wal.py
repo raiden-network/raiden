@@ -16,7 +16,7 @@ from raiden.storage.sqlite import (
     StateChangeID,
 )
 from raiden.storage.utils import TimestampedEvent
-from raiden.storage.wal import WriteAheadLog, restore_to_state_change
+from raiden.storage.wal import WriteAheadLog, restore_state
 from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
@@ -46,16 +46,18 @@ class AccState(State):
 
 
 def state_transtion_acc(state, state_change):
-    state = state or AccState()
+    state = state
     state.state_changes.append(state_change)
     return TransitionResult(state, list())
 
 
 def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
     serializer = JSONSerializer()
+    state = state or Empty()
 
-    state_manager = StateManager(state_transition, state)
+    state_manager = StateManager(state_transition, state, [])
     storage = SerializedSQLiteStorage(":memory:", serializer)
+    storage.write_first_state_snapshot(state)
     wal = WriteAheadLog(state_manager, storage)
     return wal
 
@@ -176,7 +178,7 @@ def test_write_read_events():
 
 
 def test_restore_without_snapshot():
-    wal = new_wal(state_transition_noop)
+    wal = new_wal(state_transition_noop, AccState())
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     dispatch(wal, [block1])
@@ -187,38 +189,36 @@ def test_restore_without_snapshot():
     block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     dispatch(wal, [block3])
 
-    _, _, newwal = restore_to_state_change(
+    aggregate = restore_state(
         transition_function=state_transtion_acc,
         storage=wal.storage,
         state_change_identifier=HIGH_STATECHANGE_ULID,
         node_address=make_address(),
     )
 
-    aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [block1, block2, block3]
 
 
 def test_restore_without_snapshot_in_batches():
-    wal = new_wal(state_transition_noop)
+    wal = new_wal(state_transition_noop, AccState())
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
     block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     dispatch(wal, [block1, block2, block3])
 
-    _, _, newwal = restore_to_state_change(
+    aggregate = restore_state(
         transition_function=state_transtion_acc,
         storage=wal.storage,
         state_change_identifier=HIGH_STATECHANGE_ULID,
         node_address=make_address(),
     )
 
-    aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [block1, block2, block3]
 
 
 def test_get_snapshot_before_state_change() -> None:
-    wal = new_wal(state_transtion_acc)
+    wal = new_wal(state_transtion_acc, AccState())
 
     block1 = Block(
         block_number=BlockNumber(5), gas_limit=BlockGasLimit(1), block_hash=make_block_hash()
