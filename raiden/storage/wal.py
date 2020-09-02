@@ -7,6 +7,7 @@ import structlog
 
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.sqlite import (
+    HIGH_STATECHANGE_ULID,
     LOW_STATECHANGE_ULID,
     EventID,
     Range,
@@ -33,14 +34,20 @@ from raiden.utils.typing import (
 log = structlog.get_logger(__name__)
 
 
-def restore_to_state_change(
-    transition_function: Callable,
-    storage: SerializedSQLiteStorage,
-    state_change_identifier: StateChangeID,
-    node_address: Address,
-) -> Tuple[int, int, "WriteAheadLog"]:
-    chain_state: Optional[State]
-    from_identifier: StateChangeID
+ST = TypeVar("ST", bound=State)
+ST2 = TypeVar("ST2", bound=State)
+
+
+def restore_or_init_snapshot(
+    storage: SerializedSQLiteStorage, node_address: Address, initial_state: State
+) -> Tuple[State, StateChangeID, int]:
+    """ Restore the latest snapshot.
+    Returns the ULID of the state change that is not applied and the
+    accumulated number of state_changes applied to this snapshot so far.  If
+    there is no snapshot the state will be primed with `initial_state`.
+    """
+
+    state_change_identifier = HIGH_STATECHANGE_ULID
 
     snapshot = storage.get_snapshot_before_state_change(
         state_change_identifier=state_change_identifier
@@ -48,47 +55,84 @@ def restore_to_state_change(
 
     if snapshot is not None:
         log.debug(
-            "Restoring from snapshot",
+            "Snapshot found",
             from_state_change_id=snapshot.state_change_identifier,
             to_state_change_id=state_change_identifier,
             node=to_checksum_address(node_address),
         )
-        from_identifier = snapshot.state_change_identifier
-        chain_state = snapshot.data
-        state_change_qty = snapshot.state_change_qty
+        return snapshot.data, snapshot.state_change_identifier, snapshot.state_change_qty
     else:
         log.debug(
-            "No snapshot found, replaying all state changes",
+            "No snapshot found, initializing the node state",
             to_state_change_id=state_change_identifier,
             node=to_checksum_address(node_address),
         )
-        from_identifier = LOW_STATECHANGE_ULID
-        chain_state = None
-        state_change_qty = 0
+        # The initial state must be saved to preserve the state of the PRNG
+        storage.write_first_state_snapshot(initial_state)
+        return initial_state, LOW_STATECHANGE_ULID, 0
 
-    state_manager = StateManager(transition_function, chain_state)
-    wal = WriteAheadLog(state_manager, storage)
 
-    unapplied_state_changes = storage.get_statechanges_by_range(
-        Range(from_identifier, state_change_identifier)
+def replay_unapplied_state_changes(
+    transition_function: Callable,
+    storage: SerializedSQLiteStorage,
+    unapplied_state_changes_range: Range,
+    node_address: Address,
+    state_snapshot: State,
+) -> Tuple[int, State]:
+    """Applies the state changes in the range `unapplied_state_changes_range`
+    into the `snapshot_state`.
+    """
+
+    unapplied_state_changes = storage.get_statechanges_by_range(unapplied_state_changes_range)
+
+    log.debug(
+        "Replaying state changes",
+        replayed_state_changes=[
+            redact_secret(DictSerializer.serialize(state_change))
+            for state_change in unapplied_state_changes
+        ],
+        node=to_checksum_address(node_address),
     )
-    if unapplied_state_changes:
-        log.debug(
-            "Replaying state changes",
-            replayed_state_changes=[
-                redact_secret(DictSerializer.serialize(state_change))
-                for state_change in unapplied_state_changes
-            ],
-            node=to_checksum_address(node_address),
-        )
-        for state_change in unapplied_state_changes:
-            wal.state_manager.dispatch(state_change)
 
-    return state_change_qty, len(unapplied_state_changes), wal
+    state_manager = StateManager(transition_function, state_snapshot, unapplied_state_changes)
+
+    return len(unapplied_state_changes), state_manager.current_state
 
 
-ST = TypeVar("ST", bound=State)
-ST2 = TypeVar("ST2", bound=State)
+def restore_state(
+    transition_function: Callable,
+    storage: SerializedSQLiteStorage,
+    state_change_identifier: StateChangeID,
+    node_address: Address,
+) -> Optional[State]:
+    snapshot = storage.get_snapshot_before_state_change(
+        state_change_identifier=state_change_identifier
+    )
+
+    if snapshot is None:
+        return None
+
+    log.debug(
+        "Snapshot found",
+        from_state_change_id=snapshot.state_change_identifier,
+        to_state_change_id=state_change_identifier,
+        node=to_checksum_address(node_address),
+    )
+    unapplied_state_changes = storage.get_statechanges_by_range(
+        Range(snapshot.state_change_identifier, state_change_identifier)
+    )
+    log.debug(
+        "Replaying state changes",
+        replayed_state_changes=[
+            redact_secret(DictSerializer.serialize(state_change))
+            for state_change in unapplied_state_changes
+        ],
+        node=to_checksum_address(node_address),
+    )
+
+    state_manager = StateManager(transition_function, snapshot.data, unapplied_state_changes)
+
+    return state_manager.current_state
 
 
 @dataclass(frozen=True)
@@ -117,7 +161,7 @@ class WriteAheadLog(Generic[ST]):
     saved_state: SavedState[ST]
 
     def __init__(self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage) -> None:
-        self.state_manager = state_manager
+        self._state_manager = state_manager
         self.storage = storage
 
         # The state changes must be applied in the same order as they are saved
@@ -134,13 +178,13 @@ class WriteAheadLog(Generic[ST]):
             def __init__(
                 self, state_manager: StateManager[ST2], storage: SerializedSQLiteStorage
             ) -> None:
-                self.state_manager = state_manager
+                self._state_manager = state_manager
                 self.storage = storage
 
                 self.last_state_change_id: Optional[StateChangeID] = None
 
             def dispatch(self, state_change: StateChange) -> List[Event]:
-                _, events = self.state_manager.dispatch(state_change)
+                _, events = self._state_manager.dispatch(state_change)
                 state_change_id = self.write_state_change_and_events(state_change, events)
 
                 self.last_state_change_id = state_change_id
@@ -148,8 +192,7 @@ class WriteAheadLog(Generic[ST]):
                 return events
 
             def latest_state(self) -> ST:
-                assert self.state_manager.current_state is not None, "state is None"
-                return self.state_manager.current_state
+                return self._state_manager.current_state
 
             def write_state_change_and_events(
                 self, state_change: StateChange, events: List[Event]
@@ -175,7 +218,7 @@ class WriteAheadLog(Generic[ST]):
                 return state_change_id
 
         with self._lock:
-            copied_state_manager = self.state_manager.copy()
+            copied_state_manager = self._state_manager.copy()
 
             with self.storage.database.transaction():
                 dispatcher = _AtomicStateChangeDispatcher(
@@ -183,16 +226,16 @@ class WriteAheadLog(Generic[ST]):
                 )
                 yield dispatcher
 
-            self.state_manager = copied_state_manager
+            self._state_manager = copied_state_manager
 
             # When no state change was applied, do not update saved state
             if dispatcher.last_state_change_id is not None:
                 # The update must be done with a single operation, to make sure
                 # that readers will have a consistent view of it.
 
-                assert self.state_manager.current_state is not None, "state is None"
+                assert self._state_manager.current_state is not None, "state is None"
                 self.saved_state = SavedState(
-                    dispatcher.last_state_change_id, self.state_manager.current_state
+                    dispatcher.last_state_change_id, self._state_manager.current_state
                 )
 
     def snapshot(self, statechange_qty: int) -> None:
@@ -202,12 +245,16 @@ class WriteAheadLog(Generic[ST]):
         restart or a crash.
         """
         with self._lock:
-            current_state = self.state_manager.current_state
+            current_state = self._state_manager.current_state
             state_change_id = self.saved_state.state_change_id
 
             # otherwise no state change was dispatched
             if state_change_id and current_state is not None:
                 self.storage.write_state_snapshot(current_state, state_change_id, statechange_qty)
+
+    def get_current_state(self) -> ST:
+        """Returns a copy of the current node state."""
+        return self._state_manager.current_state
 
     @property
     def version(self) -> RaidenDBVersion:

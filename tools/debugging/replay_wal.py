@@ -3,7 +3,7 @@
 """
 This script is meant to be used as a template to step through a provided DB file
 for debugging a specific issue.
-It constructs the chain_state through the state_manager and uses the WAL
+It constructs the chain_state through the _state_manager and uses the WAL
 to replay all state changes through the state machines until all state changes are consumed.
 The parameters (token_network_address and partner_address) will help filter out all
 state changes until a channel is found with the provided token network address and partner.
@@ -214,9 +214,9 @@ def replay_wal(
 
     for _, state_change in enumerate(all_state_changes):
         # Dispatching the state changes one-by-one to easy debugging
-        _, events = wal.state_manager.dispatch(state_change)
+        _, events = wal._state_manager.dispatch(state_change)
 
-        chain_state = wal.state_manager.current_state
+        chain_state = wal.get_current_state()
         msg = "Chain state must never be cleared up."
         assert chain_state, msg
 

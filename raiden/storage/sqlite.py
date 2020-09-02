@@ -363,6 +363,16 @@ class SQLiteStorage:
 
         return int(result[0][0])
 
+    def count_snapshots(self) -> int:
+        cursor = self.conn.cursor()
+        query = cursor.execute("SELECT COUNT(1) FROM state_snapshot")
+        result = query.fetchall()
+
+        if len(result) == 0:
+            return 0
+
+        return int(result[0][0])
+
     def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
         """Write `state_changes` to the database and returns the corresponding IDs."""
         ulid_factory = self._ulid_factory(StateChangeID)
@@ -379,6 +389,23 @@ class SQLiteStorage:
         self.maybe_commit()
 
         return state_change_ids
+
+    def write_first_state_snapshot(self, snapshot: str) -> SnapshotID:
+        if self.count_snapshots() != 0:
+            raise RuntimeError(
+                "write_first_state_snapshot can only be used for an unitialized node."
+            )
+
+        snapshot_id = self._ulid_factory(SnapshotID).new()
+
+        query = (
+            "INSERT INTO state_snapshot (identifier, statechange_id, statechange_qty, data) "
+            "VALUES(?, NULL, 0, ?)"
+        )
+        self.conn.execute(query, (snapshot_id, snapshot))
+        self.maybe_commit()
+
+        return snapshot_id
 
     def write_state_snapshot(
         self, snapshot: str, statechange_id: StateChangeID, statechange_qty: int
@@ -440,7 +467,7 @@ class SQLiteStorage:
 
         cursor = self.conn.execute(
             "SELECT identifier, statechange_qty, statechange_id, data FROM state_snapshot "
-            "WHERE statechange_id <= ? "
+            "WHERE statechange_id <= ? OR statechange_id IS NULL "
             "ORDER BY identifier DESC LIMIT 1",
             (state_change_identifier,),
         )
@@ -904,6 +931,11 @@ class SerializedSQLiteStorage:
         ]
         return self.database.write_state_changes(serialized_data)
 
+    def write_first_state_snapshot(self, snapshot: State) -> SnapshotID:
+        serialized_data = self.serializer.serialize(snapshot)
+
+        return self.database.write_first_state_snapshot(serialized_data)
+
     def write_state_snapshot(
         self, snapshot: State, statechange_id: StateChangeID, statechange_qty: int
     ) -> SnapshotID:
@@ -937,7 +969,7 @@ class SerializedSQLiteStorage:
             result = SnapshotRecord(
                 row.identifier,
                 row.state_change_qty,
-                row.state_change_identifier,
+                row.state_change_identifier or LOW_STATECHANGE_ULID,
                 deserialized_data,
             )
         else:

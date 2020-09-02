@@ -324,9 +324,6 @@ def test_batch_unlock(
     hold_event_handler = bob_app.raiden_event_handler
     assert isinstance(hold_event_handler, HoldRaidenEventHandler)
 
-    # Take a snapshot early on
-    alice_app.snapshot()
-
     canonical_identifier = get_channelstate(
         alice_app, bob_app, token_network_address
     ).canonical_identifier
@@ -337,9 +334,6 @@ def test_batch_unlock(
     token_proxy = alice_app.proxy_manager.token(token_address, BLOCK_ID_LATEST)
     alice_initial_balance = token_proxy.balance_of(alice_app.address)
     bob_initial_balance = token_proxy.balance_of(bob_app.address)
-
-    # Take snapshot before transfer
-    alice_app.snapshot()
 
     alice_to_bob_amount = 10
     identifier = 1
@@ -372,7 +366,8 @@ def test_batch_unlock(
     )
 
     # Test WAL restore to return the latest channel state
-    alice_app.snapshot()
+    assert alice_app.wal, "WAL must be set."
+    alice_app.wal.snapshot(alice_app.state_change_qty)
     our_balance_proof = alice_bob_channel_state.our_state.balance_proof
     restored_channel_state = channel_state_until_state_change(
         raiden=alice_app,
