@@ -52,7 +52,7 @@ async def create_channel(
     assert rtc_partner.channel is not None, msg
 
     @rtc_partner.channel.on("message")
-    def on_message(message: Dict[str, bytes]) -> None:
+    async def on_message(message: Dict[str, bytes]) -> None:
         log.debug(
             "Received message in aio kingdom",
             node=to_checksum_address(node_address),
@@ -74,12 +74,12 @@ async def set_remote_description(
     await pc.setRemoteDescription(remote_description)
 
     @rtc_partner.pc.on("datachannel")
-    def on_datachannel(channel):  # pylint: disable=unused-variable
+    async def on_datachannel(channel):  # pylint: disable=unused-variable
         rtc_partner.channel = channel
         log.debug(f"received channel {channel.label}", node=to_checksum_address(node_address))
 
         @channel.on("close")
-        def channel_closed():  # pylint: disable=unused-variable
+        async def channel_closed():  # pylint: disable=unused-variable
             rtc_partner.channel = None
 
         @channel.on("message")
