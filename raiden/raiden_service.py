@@ -958,6 +958,9 @@ class RaidenService(Runnable):
         if self.ready_to_process_events:
             return self.async_handle_events(chain_state=new_state, raiden_events=events)
         else:
+            if events:
+                log.warning("Discarding events", events=events)
+                raise RaidenUnrecoverableError("Discarding events")
             return list()
 
     def snapshot(self) -> None:
