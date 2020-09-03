@@ -31,7 +31,7 @@ from raiden.network.transport.matrix.client import (
     User,
 )
 from raiden.network.transport.matrix.rtc.aio_queue import AGLock, AGTransceiver
-from raiden.network.transport.matrix.rtc.aiogevent import yield_future
+
 from raiden.network.transport.matrix.rtc.web_rtc import create_channel, run_aiortc
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
@@ -1488,6 +1488,8 @@ class MatrixTransport(Runnable):
             our_address=self._raiden_service.address, partner_address=partner_address
         )
         if self._raiden_service.address == room_creator_address:
+            from raiden.network.transport.matrix.rtc.aiogevent import yield_future
+
             log.debug("Creating RTC channel")
             session_description = yield_future(
                 asyncio.ensure_future(
@@ -1501,7 +1503,11 @@ class MatrixTransport(Runnable):
             )
 
             offer = {"type": session_description.type, "sdp": session_description.sdp}
-            log.debug("Send offer to partner", node=to_checksum_address(self._raiden_service.address), offer=offer)
+            log.debug(
+                "Send offer to partner",
+                node=to_checksum_address(self._raiden_service.address),
+                offer=offer,
+            )
             room = self._get_room_for_address(partner_address)
             self._client.api.invite(room.room_id, offer)
 

@@ -25,8 +25,6 @@ async def handle_event(
         peer_connections[partner_address] = RTCPartner(partner_address, RTCPeerConnection(), None)
     rtc_partner = peer_connections[partner_address]
 
-    if event_type == "create_channel":
-        await create_channel(ag_transceiver, partner_address, node_address)
     if event_type == "message":
         send_message(rtc_partner, event_data, node_address)
     if event_type == "set_remote_description":
@@ -60,7 +58,9 @@ async def create_channel(
             time=time.time(),
         )
 
-        handle_message_callback(message, partner_address)
+        await ag_transceiver.send_event_to_gevent(
+            {"type": "message", "data": message, "address": partner_address}
+        )
 
     return offer
 
@@ -74,12 +74,12 @@ async def set_remote_description(
     await pc.setRemoteDescription(remote_description)
 
     @rtc_partner.pc.on("datachannel")
-    async def on_datachannel(channel):  # pylint: disable=unused-variable
+    def on_datachannel(channel):  # pylint: disable=unused-variable
         rtc_partner.channel = channel
         log.debug(f"received channel {channel.label}", node=to_checksum_address(node_address))
 
         @channel.on("close")
-        async def channel_closed():  # pylint: disable=unused-variable
+        def channel_closed():  # pylint: disable=unused-variable
             rtc_partner.channel = None
 
         @channel.on("message")
