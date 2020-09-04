@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, NewType, Tuple, Type, Union
 from eth_typing import (  # NOQA pylint:disable=unused-import
     Address,
     BlockNumber,
+    ChecksumAddress,
     Hash32,
     HexAddress,
 )
@@ -32,8 +33,6 @@ from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-
     T_TokenAmount,
     TokenAmount,
 )
-
-from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
 
 if sys.version_info < (3, 8):
     from typing_extensions import Literal
