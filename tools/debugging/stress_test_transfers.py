@@ -36,8 +36,6 @@ asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
 gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
 
 
-
-
 BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)
 URL = NewType("URL", str)

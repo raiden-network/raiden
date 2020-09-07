@@ -10,6 +10,7 @@ from uuid import uuid4
 import gevent
 import pkg_resources
 import structlog
+from aiortc import RTCSessionDescription
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock
@@ -30,9 +31,14 @@ from raiden.network.transport.matrix.client import (
     Room,
     User,
 )
-from raiden.network.transport.matrix.rtc.aio_queue import AGLock, AGTransceiver
-
-from raiden.network.transport.matrix.rtc.web_rtc import create_channel, run_aiortc
+from raiden.network.transport.matrix.rtc.aio_queue import AGLock, RTCPartner
+from raiden.network.transport.matrix.rtc.web_rtc import (
+    create_channel,
+    send_message,
+    set_remote_description,
+    spawn_coroutine,
+    stop_rtc,
+)
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -349,6 +355,8 @@ class MatrixTransport(Runnable):
         self._config = config
         self._environment = environment
         self._raiden_service: Optional["RaidenService"] = None
+        # web RTC
+        self.web_rtc_partners: Dict[Address, RTCPartner] = dict()
 
         if config.server == MATRIX_AUTO_SELECT_SERVER:
             available_servers = config.available_servers
@@ -447,16 +455,8 @@ class MatrixTransport(Runnable):
 
         self._address_mgr.start()
 
-        # web RTC
-        self.aio_gevent_transceiver = AGTransceiver()
         assert asyncio.get_event_loop().is_running, "the loop must be running"
         log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running)
-        self.aio_loop = self._schedule_new_greenlet(
-            asyncio.get_event_loop().create_task,
-            run_aiortc(
-                self.aio_gevent_transceiver, self._raiden_service.address, self._stop_event,
-            ),
-        )
 
         try:
             login(
@@ -478,7 +478,6 @@ class MatrixTransport(Runnable):
             node=to_checksum_address(self._raiden_service.address),
             transport_uuid=str(self._uuid),
         )
-        self._schedule_new_greenlet(self.aio_event_consumer)
         self._initialize_broadcast_rooms()
         self._initialize_first_sync()
         self._initialize_health_check(health_check_list)
@@ -538,12 +537,8 @@ class MatrixTransport(Runnable):
         self._stop_event.set()
         self._broadcast_event.set()
 
-        stop_event = {
-            "type": "stop",
-            "data": None,
-            "address": None,
-        }
-        self.aio_gevent_transceiver.send_event_to_aio(stop_event)
+        if self._raiden_service:
+            stop_rtc(self.web_rtc_partners, self._raiden_service.address)
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -713,28 +708,6 @@ class MatrixTransport(Runnable):
             )
 
             self._send_with_retry(queue)
-
-    def aio_event_consumer(self) -> None:
-        while not self._stop_event.is_set():
-            try:
-                event = self.aio_gevent_transceiver.event_to_gevent_queue.get(timeout=1.0)
-            except Empty:
-                continue
-            self.log.debug("Received event from aio", ag_event=event)
-            event_type = event["type"]
-            event_data = event["data"]
-            partner_address = event["address"]
-
-            room = self._get_room_for_address(partner_address)
-
-            if event_type == "local_description":
-                if event_data["type"] == "offer" and room is not None:
-                    self._client.api.invite(room.room_id, event_data)
-                elif event_data["type"] == "answer" and room is not None:
-                    self._client.api.answer(room.room_id, event_data)
-            if event_type == "message" and not self._stop_event.is_set():
-                messages = validate_and_parse_message(event_data, partner_address)
-                self._process_messages(messages)
 
     def broadcast(self, room: str, message: Message) -> None:
         """Broadcast a message to a public room.
@@ -1228,53 +1201,46 @@ class MatrixTransport(Runnable):
             messages = validate_and_parse_message(message_data, partner_address)
             self._process_messages(messages)
 
-    def _validate_call_event(self, room: Room, event: Dict) -> Dict:
-        # Ignore our own messages
-        sender_id = event["sender"]
-        if sender_id == self._user_id:
-            return {}
-
-        user = self._client.get_user(sender_id)
-        self._displayname_cache.warm_users([user])
-
-        peer_address = validate_userid_signature(user)
-        if not peer_address:
-            self.log.debug(
-                "Ignoring message from user with an invalid display name signature",
-                peer_user=user.user_id,
-                room=room,
-            )
-            return {}
-
-        if event["type"] == "m.call.invite":
-            description = event["content"]["offer"]
-            aio_event = {
-                "type": "set_remote_description",
-                "data": description,
-                "address": peer_address,
-            }
-            return aio_event
-
-        if event["type"] == "m.call.answer":
-            description = event["content"]["answer"]
-            aio_event = {
-                "type": "set_remote_description",
-                "data": description,
-                "address": peer_address,
-            }
-            return aio_event
-
-        return {}
-
     def handle_call_events(self, sync_messages: MatrixSyncMessages) -> None:
-        all_call_events = []
+        assert self._raiden_service is not None, "_raiden_service not set"
         for room, call_events in sync_messages:
             for call_event in call_events:
-                all_call_events.append(self._validate_call_event(room, call_event))
 
-        for call_event in all_call_events:
-            if call_event:
-                self.aio_gevent_transceiver.send_event_to_aio(call_event)
+                # Ignore our own messages
+                sender_id = call_event["sender"]
+                if sender_id == self._user_id:
+                    return
+
+                user = self._client.get_user(sender_id)
+                self._displayname_cache.warm_users([user])
+
+                peer_address = validate_userid_signature(user)
+                if not peer_address:
+                    self.log.debug(
+                        "Ignoring message from user with an invalid display name signature",
+                        peer_user=user.user_id,
+                        room=room,
+                    )
+                    return
+
+                if not call_event["type"].startswith("m.call."):
+                    return
+
+                sdp_type = "offer" if call_event["type"].split(".")[-1] == "invite" else "answer"
+
+                description = call_event["content"][sdp_type]
+
+                rtc_partner = self.web_rtc_partners[peer_address]
+                spawn_coroutine(
+                    coroutine=set_remote_description(
+                        rtc_partner=rtc_partner,
+                        description=description,
+                        node_address=self._raiden_service.address,
+                        handle_message_callback=self._handle_web_rtc_messages,
+                    ),
+                    callback=self.handle_sdp,
+                    partner_address=peer_address,
+                )
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
@@ -1294,6 +1260,7 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
         room = self._get_room_for_address(receiver_address, require_online_peer=True)
 
         if room:
@@ -1304,15 +1271,13 @@ class MatrixTransport(Runnable):
                 data=data.replace("\n", "\\n"),
             )
             if (
-                receiver_address in self.aio_gevent_transceiver.peer_connections
-                and self.aio_gevent_transceiver.peer_connections[receiver_address].channel
-                and self.aio_gevent_transceiver.peer_connections[
-                    receiver_address
-                ].channel.readyState
-                == "open"
+                receiver_address in self.web_rtc_partners
+                and self.web_rtc_partners[receiver_address].channel is not None
+                and self.web_rtc_partners[receiver_address].channel.readyState
+                == "open"  # type: ignore
             ):
-                event = {"type": "message", "data": data, "address": receiver_address}
-                self.aio_gevent_transceiver.send_event_to_aio(event)
+                rtc_partner = self.web_rtc_partners[receiver_address]
+                send_message(rtc_partner, data, self._raiden_service.address)
             else:
                 room.send_text(data)
         else:
@@ -1483,33 +1448,51 @@ class MatrixTransport(Runnable):
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
             return room
 
-    def _maybe_create_web_rtc_channel(self, partner_address: Address):
+    def handle_sdp(
+        self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
+    ) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        if rtc_session_description is None:
+            return
+
+        sdp_type = rtc_session_description.type
+
+        message = {"type": rtc_session_description.type, "sdp": rtc_session_description.sdp}
+        log.debug(
+            f"Send {sdp_type} to partner",
+            node=to_checksum_address(self._raiden_service.address),
+            sdp_description=message,
+        )
+        room = self._get_room_for_address(partner_address)
+        if room is None:
+            return
+
+        if sdp_type == "offer":
+            self._client.api.invite(room.room_id, message)
+        elif sdp_type == "answer":
+            self._client.api.answer(room.room_id, message)
+
+    def _maybe_create_web_rtc_channel(self, partner_address: Address) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
         room_creator_address = my_place_or_yours(
             our_address=self._raiden_service.address, partner_address=partner_address
         )
+
         if self._raiden_service.address == room_creator_address:
-            from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 
-            log.debug("Creating RTC channel")
-            session_description = yield_future(
-                asyncio.ensure_future(
-                    create_channel(
-                        self.aio_gevent_transceiver,
-                        partner_address,
-                        self._raiden_service.address,
-                        self._handle_web_rtc_messages,
-                    )
-                )
-            )
-
-            offer = {"type": session_description.type, "sdp": session_description.sdp}
             log.debug(
-                "Send offer to partner",
-                node=to_checksum_address(self._raiden_service.address),
-                offer=offer,
+                "Creating RTC channel", node=to_checksum_address(self._raiden_service.address)
             )
-            room = self._get_room_for_address(partner_address)
-            self._client.api.invite(room.room_id, offer)
+            spawn_coroutine(
+                coroutine=create_channel(
+                    self.web_rtc_partners,
+                    partner_address,
+                    self._raiden_service.address,
+                    self._handle_web_rtc_messages,
+                ),
+                callback=self.handle_sdp,
+                partner_address=partner_address,
+            )
 
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(

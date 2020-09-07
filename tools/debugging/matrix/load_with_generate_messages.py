@@ -19,7 +19,6 @@ asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
 gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
 
 
-
 CWD = os.path.dirname(os.path.abspath(__file__))
 GENERATE_MESSAGES_SCRIPT = os.path.join(CWD, "generate_messages.py")
 

@@ -806,7 +806,7 @@ def sort_servers_closest(
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
     handle_member_join_callback: Callable[[Room], None],
-    handle_call_callback,
+    handle_call_callback: Callable[[MatrixSyncMessages], None],
     servers: List[str],
     *args: Any,
     **kwargs: Any,

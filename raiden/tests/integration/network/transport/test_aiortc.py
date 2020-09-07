@@ -1,22 +1,20 @@
 from typing import Tuple
+
 import gevent
 import pytest
-from raiden.constants import (
-
-    EMPTY_SIGNATURE,
-
-)
-
-from raiden.messages.synchronization import Delivered, Processed
-from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
-from raiden.tests.utils.mocks import MockRaidenService
-from raiden.utils.formatting import to_checksum_address
-from raiden.transfer.identifiers import QueueIdentifier
-from raiden.tests.utils import factories
-from raiden.transfer import views
 from gevent.timeout import Timeout
 
+from raiden.constants import EMPTY_SIGNATURE
+from raiden.messages.synchronization import Processed
+from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
+from raiden.tests.utils import factories
+from raiden.tests.utils.mocks import MockRaidenService
+from raiden.transfer import views
+from raiden.transfer.identifiers import QueueIdentifier
+from raiden.utils.formatting import to_checksum_address
+
 TIMEOUT_MESSAGE_RECEIVE = 15
+
 
 class MessageHandler:
     def __init__(self, bag: set):
@@ -24,6 +22,7 @@ class MessageHandler:
 
     def on_messages(self, _, messages):
         self.bag.update(messages)
+
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
@@ -49,12 +48,10 @@ def test_matrix_message_sync(matrix_transports: Tuple[MatrixTransport]):
     transport0.immediate_health_check_for(transport1._raiden_service.address)
     transport1.immediate_health_check_for(transport0._raiden_service.address)
 
-    while raiden_service1.address not in transport0.aio_gevent_transceiver.peer_connections:
+    while raiden_service1.address not in transport0.web_rtc_partners.peer_connections:
         gevent.wait(timeout=1)
-    while raiden_service0.address not in transport1.aio_gevent_transceiver.peer_connections:
+    while raiden_service0.address not in transport1.web_rtc_partners.peer_connections:
         gevent.wait(timeout=1)
-
-
 
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,

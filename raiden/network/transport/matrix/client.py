@@ -227,7 +227,7 @@ class GMatrixHttpApi(MatrixHttpApi):
     def get_presence(self, user_id: str) -> Dict[str, Any]:
         return self._send("GET", f"/presence/{quote(user_id)}/status")
 
-    def invite(self, room_id, offer):
+    def invite(self, room_id: str, offer: Dict[str, str]) -> None:
         call_id = "12345"
         version = 0
         lifetime = 60000
@@ -236,7 +236,7 @@ class GMatrixHttpApi(MatrixHttpApi):
 
         self.send_message_event(room_id, "m.call.invite", content)
 
-    def answer(self, room_id, answer):
+    def answer(self, room_id: str, answer: Dict[str, str]) -> None:
         call_id = "12345"
         version = 0
 
