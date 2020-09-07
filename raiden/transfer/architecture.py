@@ -1,6 +1,8 @@
 # pylint: disable=too-few-public-methods
 import time
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import ClassVar
 
 import structlog
 from eth_utils import to_hex
@@ -128,8 +130,16 @@ class Event:
     pass
 
 
+class TransferRole(Enum):
+    INITIATOR = "initiator"
+    MEDIATOR = "mediator"
+    TARGET = "target"
+
+
 @dataclass
 class TransferTask(State):
+    role: ClassVar[TransferRole] = None  # type: ignore
+
     token_network_address: TokenNetworkAddress
 
 

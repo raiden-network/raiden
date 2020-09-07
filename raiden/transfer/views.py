@@ -1,7 +1,7 @@
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, TransferRole
 from raiden.transfer.state import (
     ChainState,
     ChannelState,
@@ -397,19 +397,6 @@ def get_channelstate_settled(
     )
 
 
-def role_from_transfer_task(transfer_task: TransferTask) -> str:
-    """Return the role and type for the transfer. Throws an exception on error"""
-    # pragma: no cover
-    if isinstance(transfer_task, InitiatorTask):
-        return "initiator"
-    if isinstance(transfer_task, MediatorTask):
-        return "mediator"
-    if isinstance(transfer_task, TargetTask):
-        return "target"
-
-    raise ValueError("Argument to role_from_transfer_task is not a TransferTask")
-
-
 def secret_from_transfer_task(
     transfer_task: TransferTask, secrethash: SecretHash
 ) -> Optional[Secret]:
@@ -424,7 +411,7 @@ def secret_from_transfer_task(
     return transfer_state.transfer_description.secret
 
 
-def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Optional[str]:
+def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Optional[TransferRole]:
     """
     Returns 'initiator', 'mediator' or 'target' to signify the role the node has
     in a transfer. If a transfer task is not found for the secrethash then the
@@ -433,7 +420,7 @@ def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Option
     task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     if not task:
         return None
-    return role_from_transfer_task(task)
+    return task.role
 
 
 def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Optional[Secret]:
