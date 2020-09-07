@@ -378,7 +378,7 @@ def forward_transfer_pair(
     payer_channel: NettingChannelState,
     route_state: RouteState,
     route_state_table: List[RouteState],
-    channelidentifiers_to_channels: Dict,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
