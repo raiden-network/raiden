@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
+from typing import ClassVar
 
-from raiden.transfer.architecture import TransferTask
+from raiden.transfer.architecture import TransferRole, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
@@ -12,16 +13,22 @@ from raiden.utils.typing import ChannelID, TokenNetworkAddress
 
 @dataclass
 class InitiatorTask(TransferTask):
+    role: ClassVar[TransferRole] = TransferRole.INITIATOR
+
     manager_state: InitiatorPaymentState = field(repr=False)
 
 
 @dataclass
 class MediatorTask(TransferTask):
+    role: ClassVar[TransferRole] = TransferRole.MEDIATOR
+
     mediator_state: MediatorTransferState = field(repr=False)
 
 
 @dataclass
 class TargetTask(TransferTask):
+    role: ClassVar[TransferRole] = TransferRole.TARGET
+
     token_network_address: TokenNetworkAddress = field(init=False, repr=False)
     canonical_identifier: CanonicalIdentifier
     target_state: TargetTransferState = field(repr=False)

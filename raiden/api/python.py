@@ -40,7 +40,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState, NetworkState
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.transfer.views import get_token_network_by_address
+from raiden.transfer.views import TransferRole, get_token_network_by_address
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.utils.transfers import create_default_identifier
@@ -120,7 +120,7 @@ def event_filter_for_payments(
     return token_address_matches and (sent_and_target_matches or received_and_initiator_matches)
 
 
-def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
+def flatten_transfer(transfer: LockedTransferType, role: TransferRole) -> Dict[str, Any]:
     return {
         "payment_identifier": str(transfer.payment_identifier),
         "token_address": to_checksum_address(transfer.token),
@@ -130,7 +130,7 @@ def flatten_transfer(transfer: LockedTransferType, role: str) -> Dict[str, Any]:
         "target": to_checksum_address(transfer.target),
         "transferred_amount": str(transfer.balance_proof.transferred_amount),
         "locked_amount": str(transfer.balance_proof.locked_amount),
-        "role": role,
+        "role": role.value,
     }
 
 
@@ -177,8 +177,7 @@ def transfer_tasks_view(
                 if transfer.balance_proof.channel_identifier != channel_id:
                     continue
 
-        role = views.role_from_transfer_task(transfer_task)
-        view.append(flatten_transfer(transfer, role))
+        view.append(flatten_transfer(transfer, transfer_task.role))
 
     return view
 

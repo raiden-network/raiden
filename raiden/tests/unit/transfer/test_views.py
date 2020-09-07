@@ -1,5 +1,3 @@
-import pytest
-
 from raiden.tests.utils import factories
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
@@ -20,7 +18,6 @@ from raiden.transfer.views import (
     get_token_network_addresses,
     get_token_network_registry_by_token_network_address,
     get_transfer_secret,
-    role_from_transfer_task,
 )
 from raiden.utils.copy import deepcopy
 
@@ -106,11 +103,6 @@ def test_token_identifiers_empty_list_for_token_network_registry_none(chain_stat
         )
         == list()
     )
-
-
-def test_role_from_transfer_task_raises_value_error():
-    with pytest.raises(ValueError):
-        role_from_transfer_task(object())
 
 
 def test_get_transfer_secret_none_for_none_transfer_state(chain_state):

@@ -40,6 +40,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -266,7 +267,7 @@ class MessageHandler:
 
         state_changes: List[StateChange] = []
 
-        if role == "initiator":
+        if role == TransferRole.INITIATOR:
             old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
             is_secret_known = old_secret is not None and old_secret != ABSENT_SECRET
 

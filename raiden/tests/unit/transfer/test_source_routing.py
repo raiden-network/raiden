@@ -19,6 +19,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.node import handle_action_init_initiator, state_transition
 from raiden.transfer.state import NetworkState
+from raiden.transfer.views import TransferRole
 from raiden.utils.signer import LocalSigner, recover
 from raiden.utils.typing import BlockNumber, FeeAmount, TokenAmount
 
@@ -302,7 +303,7 @@ def test_initiator_skips_used_routes():
         chain_state=chain_state, secrethash=locked_transfer.lock.secrethash
     )
 
-    assert role == "initiator", "Should keep initiator role"
+    assert role == TransferRole.INITIATOR, "Should keep initiator role"
 
     failed_route_state_change = ReceiveTransferCancelRoute(
         transfer=received_transfer,
