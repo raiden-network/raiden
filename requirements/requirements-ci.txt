@@ -39,7 +39,7 @@ daemonize==2.5.0          # via -r requirements-dev.txt, matrix-synapse
 decorator==4.4.0          # via -r requirements-dev.txt, ipython, networkx, traitlets
 docutils==0.14            # via -r requirements-dev.txt, readme-renderer, sphinx, sphinxcontrib-httpexample
 eth-abi==2.1.0            # via -r requirements-dev.txt, eth-account, raiden-contracts, web3
-eth-account==0.5.2        # via -r requirements-dev.txt, web3
+eth-account==0.5.3        # via -r requirements-dev.txt, web3
 eth-hash[pycryptodome]==0.2.0  # via -r requirements-dev.txt, eth-utils, web3
 eth-keyfile==0.5.1        # via -r requirements-dev.txt, eth-account
 eth-keys==0.3.3           # via -r requirements-dev.txt, eth-account, eth-keyfile
@@ -186,7 +186,7 @@ unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedj
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
 varint==1.0.2             # via -r requirements-dev.txt, multiaddr
 wcwidth==0.1.9            # via -r requirements-dev.txt, prompt-toolkit
-web3==5.12.0              # via -r requirements-dev.txt, raiden-contracts
+web3==5.12.1              # via -r requirements-dev.txt, raiden-contracts
 webencodings==0.5.1       # via -r requirements-dev.txt, bleach
 websockets==8.1           # via -r requirements-dev.txt, web3
 werkzeug==1.0.1           # via -r requirements-dev.txt, flask
