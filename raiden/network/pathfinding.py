@@ -126,7 +126,7 @@ class IOU:
 
 USER_AGENT_STR = (
     (
-        "Raiden/{raiden}/{raiden_db_version}/{python_implementation}/"
+        "Raiden/{raiden}/DB:{raiden_db_version}/{python_implementation}/"
         "{python_version}/{system}/{architecture}/{distribution}"
     )
     .format(**get_system_spec())
