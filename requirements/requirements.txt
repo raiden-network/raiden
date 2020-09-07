@@ -19,7 +19,7 @@ colorama==0.4.3           # via -r requirements.in
 cytoolz==0.10.1           # via eth-keyfile, eth-utils
 decorator==4.4.0          # via networkx
 eth-abi==2.1.0            # via eth-account, raiden-contracts, web3
-eth-account==0.5.2        # via web3
+eth-account==0.5.3        # via web3
 eth-hash[pycryptodome]==0.2.0  # via eth-utils, web3
 eth-keyfile==0.5.1        # via -r requirements.in, eth-account
 eth-keys==0.3.3           # via -r requirements.in, eth-account, eth-keyfile
@@ -78,7 +78,7 @@ typing-extensions==3.7.4.3  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
 urllib3==1.25.3           # via requests
 varint==1.0.2             # via multiaddr
-web3==5.12.0              # via -r requirements.in, raiden-contracts
+web3==5.12.1              # via -r requirements.in, raiden-contracts
 websockets==8.1           # via web3
 werkzeug==1.0.1           # via flask
 zope.event==4.4           # via gevent
