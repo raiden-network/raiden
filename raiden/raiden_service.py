@@ -194,7 +194,7 @@ def initiator_init(
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
     lock_timeout: BlockTimeout = None,
-    routes: List[RouteState] = None,
+    route_states: List[RouteState] = None,
 ) -> Tuple[Optional[str], ActionInitInitiator]:
     transfer_state = TransferDescriptionWithSecretState(
         token_network_registry_address=raiden.default_registry.address,
@@ -210,8 +210,8 @@ def initiator_init(
 
     error_msg = None
 
-    if routes is None:
-        error_msg, routes, feedback_token = routing.get_best_routes(
+    if route_states is None:
+        error_msg, route_states, feedback_token = routing.get_best_routes(
             chain_state=views.state_from_raiden(raiden),
             token_network_address=token_network_address,
             one_to_n_address=raiden.default_one_to_n_address,
@@ -225,10 +225,10 @@ def initiator_init(
 
         # Only prepare feedback when token is available
         if feedback_token is not None:
-            for route_state in routes:
+            for route_state in route_states:
                 raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
 
-    return error_msg, ActionInitInitiator(transfer_state, routes)
+    return error_msg, ActionInitInitiator(transfer_state, route_states)
 
 
 def smart_contract_filters_from_node_state(
@@ -1478,7 +1478,7 @@ class RaidenService(Runnable):
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
-        routes: List[RouteState] = None,
+        route_states: List[RouteState] = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
@@ -1566,7 +1566,7 @@ class RaidenService(Runnable):
             token_network_address=token_network_address,
             target_address=target,
             lock_timeout=lock_timeout,
-            routes=routes,
+            route_states=route_states,
         )
 
         # FIXME: Dispatch the state change even if there are no routes to
