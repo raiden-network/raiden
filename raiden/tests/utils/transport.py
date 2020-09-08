@@ -63,6 +63,7 @@ def new_client(
     client = GMatrixClient(
         handle_messages_callback=handle_messages_callback,
         handle_member_join_callback=handle_member_join_callback,
+        handle_call_callback=lambda x: None,
         base_url=server,
     )
     client.login(username, password, sync=False)

@@ -4,6 +4,8 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
+aioice==0.6.18            # via -r requirements-dev.txt, aiortc
+aiortc==0.9.28            # via -r requirements-dev.txt
 alabaster==0.7.12         # via -r requirements-dev.txt, sphinx
 altgraph==0.16.1          # via macholib, pyinstaller
 aniso8601==7.0.0          # via -r requirements-dev.txt, flask-restful
@@ -14,6 +16,7 @@ astroid==2.4.2            # via -r requirements-dev.txt, pylint
 astunparse==1.6.2         # via -r requirements-dev.txt, sphinxcontrib-httpexample
 attrs==19.3.0             # via -r requirements-dev.txt, automat, black, flake8-bugbear, hypothesis, jsonschema, matrix-synapse, pytest, service-identity, treq, twisted
 automat==0.7.0            # via -r requirements-dev.txt, twisted
+av==8.0.2                 # via -r requirements-dev.txt, aiortc
 babel==2.7.0              # via -r requirements-dev.txt, sphinx
 backcall==0.1.0           # via -r requirements-dev.txt, ipython
 base58==2.0.0             # via -r requirements-dev.txt, multiaddr
@@ -25,7 +28,7 @@ bump2version==1.0.0       # via -r requirements-dev.txt
 cachetools==4.1.1         # via -r requirements-dev.txt
 canonicaljson==1.1.4      # via -r requirements-dev.txt, matrix-synapse, signedjson
 certifi==2019.3.9         # via -r requirements-dev.txt, requests
-cffi==1.12.3              # via -r requirements-dev.txt, bcrypt, coincurve, cryptography, pynacl
+cffi==1.12.3              # via -r requirements-dev.txt, aiortc, bcrypt, coincurve, cryptography, pylibsrtp, pynacl
 chardet==3.0.4            # via -r requirements-dev.txt, requests
 click==7.0                # via -r requirements-dev.txt, black, flask, pip-tools, raiden-contracts
 coincurve==13.0.0         # via -r requirements-dev.txt, raiden-contracts
@@ -33,7 +36,8 @@ colorama==0.4.3           # via -r requirements-dev.txt
 colour==0.1.5             # via -r requirements-dev.txt
 constantly==15.1.0        # via -r requirements-dev.txt, twisted
 coverage==5.3             # via -r requirements-dev.txt
-cryptography==2.8         # via -r requirements-dev.txt, pyopenssl, service-identity
+crc32c==2.0               # via -r requirements-dev.txt, aiortc
+cryptography==2.9.2       # via -r requirements-dev.txt, aiortc, pyopenssl, service-identity
 cytoolz==0.10.1           # via -r requirements-dev.txt, eth-keyfile, eth-utils
 daemonize==2.5.0          # via -r requirements-dev.txt, matrix-synapse
 decorator==4.4.0          # via -r requirements-dev.txt, ipython, networkx, traitlets
@@ -97,7 +101,7 @@ multiaddr==0.0.9          # via -r requirements-dev.txt, ipfshttpclient
 mypy-extensions==0.4.3    # via -r requirements-dev.txt, mypy, raiden-contracts, typing-inspect
 mypy==0.782               # via -r requirements-dev.txt
 netaddr==0.7.19           # via -r requirements-dev.txt, matrix-synapse, multiaddr
-netifaces==0.10.9         # via -r requirements-dev.txt
+netifaces==0.10.9         # via -r requirements-dev.txt, aioice
 networkx==2.5             # via -r requirements-dev.txt
 objgraph==3.4.1           # via -r requirements-dev.txt
 packaging==19.0           # via -r requirements-dev.txt, pytest, sphinx
@@ -125,6 +129,7 @@ pyasn1==0.4.5             # via -r requirements-dev.txt, matrix-synapse, pyasn1-
 pycodestyle==2.6.0        # via -r requirements-dev.txt, flake8
 pycparser==2.19           # via -r requirements-dev.txt, cffi
 pycryptodome==3.8.2       # via -r requirements-dev.txt, eth-hash, eth-keyfile
+pyee==7.0.2               # via -r requirements-dev.txt, aiortc
 pyflakes==2.2.0           # via -r requirements-dev.txt, flake8
 pygments==2.6.1           # via -r requirements-dev.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via -r requirements-dev.txt, twisted

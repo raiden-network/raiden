@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 from gevent import monkey  # isort:skip # noqa
-
-monkey.patch_all()  # isort:skip # noqa
-
 import argparse
 import json
 import re
@@ -15,6 +12,15 @@ from urllib.parse import urlsplit
 import gevent
 import requests
 import structlog
+
+monkey.patch_all()  # isort:skip # noqa
+
+import asyncio  # isort:skip # noqa
+from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
+
+asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
+
 
 NODE_SECTION_RE = re.compile("^node[0-9]+")
 API_VERSION = "v1"

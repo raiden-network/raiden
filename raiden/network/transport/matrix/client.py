@@ -27,7 +27,7 @@ from raiden.network.transport.matrix.sync_progress import SyncProgress
 from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.utils.typing import AddressHex
+from raiden.utils.typing import AddressHex, RoomID
 
 log = structlog.get_logger(__name__)
 
@@ -226,6 +226,22 @@ class GMatrixHttpApi(MatrixHttpApi):
     def get_presence(self, user_id: str) -> Dict[str, Any]:
         return self._send("GET", f"/presence/{quote(user_id)}/status")
 
+    def invite(self, room_id: RoomID, offer: Dict[str, str]) -> None:
+        call_id = "12345"
+        version = 0
+        lifetime = 60000
+
+        content = {"call_id": call_id, "version": version, "lifetime": lifetime, "offer": offer}
+
+        self.send_message_event(room_id, "m.call.invite", content)
+
+    def answer(self, room_id: RoomID, answer: Dict[str, str]) -> None:
+        call_id = "12345"
+        version = 0
+
+        content = {"call_id": call_id, "version": version, "answer": answer}
+        self.send_message_event(room_id, "m.call.answer", content)
+
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
@@ -238,6 +254,7 @@ class GMatrixClient(MatrixClient):
         self,
         handle_messages_callback: Callable[[MatrixSyncMessages], bool],
         handle_member_join_callback: Callable[[Room], None],
+        handle_call_callback: Callable[[MatrixSyncMessages], None],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -255,6 +272,7 @@ class GMatrixClient(MatrixClient):
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
         self._handle_member_join_callback = handle_member_join_callback
+        self._handle_call_callback = handle_call_callback
         self.response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]] = NotifyingQueue()
         self.stop_event = Event()
 
@@ -733,6 +751,7 @@ class GMatrixClient(MatrixClient):
     def _handle_responses(self, currently_queued_responses: List[JSONResponse]) -> None:
 
         all_messages: MatrixSyncMessages = []
+        all_invites: MatrixSyncMessages = []
         for response in currently_queued_responses:
             for presence_update in response["presence"]["events"]:
                 for callback in list(self.presence_listeners.values()):
@@ -782,6 +801,17 @@ class GMatrixClient(MatrixClient):
                     )
                 )
 
+                all_invites.append(
+                    (
+                        room,
+                        [
+                            message
+                            for message in sync_room["timeline"]["events"]
+                            if message["type"].startswith("m.call.")
+                        ],
+                    )
+                )
+
                 for event in sync_room["ephemeral"]["events"]:
                     event["room_id"] = room_id
                     room._put_ephemeral_event(event)
@@ -796,6 +826,9 @@ class GMatrixClient(MatrixClient):
 
         if len(all_messages) > 0:
             self.handle_messages_callback(all_messages)
+
+        if len(all_invites) > 0:
+            self._handle_call_callback(all_invites)
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id
