@@ -116,7 +116,7 @@ def test_regression_revealsecret_after_secret(
         amount=PaymentAmount(1),
         target=TargetAddress(app2.address),
         identifier=identifier,
-        routes=[
+        route_states=[
             RouteState(
                 route=[app0.address, app1.address, app2.address],
                 forward_channel_id=token_network.partneraddresses_to_channelidentifiers[

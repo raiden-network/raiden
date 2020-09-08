@@ -163,9 +163,9 @@ def transfer(
                 token_address,
             )
             forward_channel_id = token_network.partneraddresses_to_channelidentifiers[route[1]][0]
-            routes = [RouteState(route=route, forward_channel_id=forward_channel_id)]
+            route_states = [RouteState(route=route, forward_channel_id=forward_channel_id)]
         else:
-            routes = None
+            route_states = None
         return _transfer_unlocked(
             initiator_app=initiator_app,
             target_app=target_app,
@@ -174,7 +174,7 @@ def transfer(
             identifier=identifier,
             timeout=timeout,
             expect_unlock_failures=expect_unlock_failures,
-            routes=routes,
+            route_states=route_states,
         )
     elif transfer_state is TransferState.EXPIRED:
         return _transfer_expired(
@@ -206,7 +206,7 @@ def _transfer_unlocked(
     identifier: PaymentID,
     timeout: Optional[float] = None,
     expect_unlock_failures: bool = False,
-    routes: List[RouteState] = None,
+    route_states: List[RouteState] = None,
 ) -> SecretHash:
     assert isinstance(target_app.message_handler, WaitForMessage)
 
@@ -232,7 +232,7 @@ def _transfer_unlocked(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
-        routes=routes,
+        route_states=route_states,
     )
 
     apps = [initiator_app, target_app]
