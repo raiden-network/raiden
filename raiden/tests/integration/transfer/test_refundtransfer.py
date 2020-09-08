@@ -345,6 +345,7 @@ def test_different_view_of_last_bp_during_unlock(
             token_address=token_address,
             amount=amount_path,
             identifier=identifier_path,
+            routes=[[app0.address, app1.address, app2.address]],
         )
 
     # drain the channel app1 -> app2
@@ -541,6 +542,7 @@ def test_refund_transfer_after_2nd_hop(
             amount=amount_path,
             identifier=identifier_path,
             timeout=network_wait * number_of_nodes,
+            routes=[[app0.address, app1.address, app2.address, app3.address]],
         )
 
     # drain the channel app2 -> app3
@@ -554,6 +556,7 @@ def test_refund_transfer_after_2nd_hop(
             amount=amount_drain,
             identifier=identifier_drain,
             timeout=network_wait,
+            routes=[[app2.address, app3.address]],
         )
         wait_assert(
             assert_synced_channel_state,

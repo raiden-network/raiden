@@ -117,6 +117,7 @@ def test_receive_lockedtransfer_invalidnonce(
         amount=PaymentAmount(10),
         identifier=payment_identifier,
         timeout=network_wait * number_of_nodes,
+        routes=[[app0.address, app1.address, app2.address]],
     )
 
     repeated_nonce = Nonce(1)
