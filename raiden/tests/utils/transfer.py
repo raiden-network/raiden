@@ -148,7 +148,7 @@ def transfer(
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
     expect_unlock_failures: bool = False,
-    route: List[Address] = None,
+    routes: List[List[Address]] = None,
 ) -> SecretHash:
     """ Nice to read shortcut to make successful mediated transfer.
 
@@ -156,16 +156,20 @@ def transfer(
         Only the initiator and target are synched.
     """
     if transfer_state is TransferState.UNLOCKED:
-        if route:
-            token_network = views.get_token_network_by_token_address(
-                views.state_from_raiden(initiator_app),
-                initiator_app.default_registry.address,
-                token_address,
-            )
-            forward_channel_id = token_network.partneraddresses_to_channelidentifiers[route[1]][0]
-            route_states = [RouteState(route=route, forward_channel_id=forward_channel_id)]
-        else:
-            route_states = None
+        route_states: Optional[List[RouteState]] = None
+        if routes:
+            route_states = []
+            for route in routes:
+                token_network = views.get_token_network_by_token_address(
+                    views.state_from_raiden(initiator_app),
+                    initiator_app.default_registry.address,
+                    token_address,
+                )
+                forward_channel_id = token_network.partneraddresses_to_channelidentifiers[
+                    route[1]
+                ][0]
+                route_states.append(RouteState(route=route, forward_channel_id=forward_channel_id))
+
         return _transfer_unlocked(
             initiator_app=initiator_app,
             target_app=target_app,

@@ -89,7 +89,7 @@ def test_regression_unfiltered_routes(
         token_address=token,
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
-        route=[app0.address, app1.address, app2.address, app4.address],
+        routes=[[app0.address, app1.address, app2.address, app4.address]],
     )
 
 
@@ -275,6 +275,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         token_address=token,
         amount=deposit,
         identifier=PaymentID(1),
+        routes=[[app1.address, app2.address]],
     )
 
     # Send a transfer that will result in a refund app1->app0
@@ -286,6 +287,10 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         identifier=PaymentID(2),
         timeout=20,
         expect_unlock_failures=True,
+        routes=[
+            [app0.address, app1.address, app2.address],
+            [app0.address, app3.address, app4.address, app2.address],
+        ],
     )
 
     assert raiden_state_changes_search_for_item(

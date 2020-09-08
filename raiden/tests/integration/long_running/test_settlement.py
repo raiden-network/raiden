@@ -1148,8 +1148,8 @@ def test_handle_insufficient_eth(
         transfer(
             initiator_app=app0,
             target_app=app1,
-            amount=PaymentAmount(1),
             token_address=token,
+            amount=PaymentAmount(1),
             identifier=PaymentID(1),
         )
 
