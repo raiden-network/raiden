@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 from collections import Counter, defaultdict
@@ -9,6 +10,7 @@ from uuid import uuid4
 import gevent
 import pkg_resources
 import structlog
+from aiortc import RTCSessionDescription
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import RLock
@@ -29,6 +31,7 @@ from raiden.network.transport.matrix.client import (
     Room,
     User,
 )
+from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager, send_message
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -368,6 +371,7 @@ class MatrixTransport(Runnable):
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
             self._handle_member_join,
+            self.handle_call_events,
             available_servers,
             http_pool_maxsize=4,
             http_retry_timeout=40,
@@ -375,6 +379,10 @@ class MatrixTransport(Runnable):
             environment=environment,
             user_agent=f"Raiden {version}",
         )
+
+        # web RTC
+        self._web_rtc_manager = WebRTCManager(None, self._handle_web_rtc_messages, self.handle_sdp)
+
         self._server_url = self._client.api.base_url
         self._server_name = urlparse(self._server_url).netloc
 
@@ -440,8 +448,12 @@ class MatrixTransport(Runnable):
         self._stop_event.clear()
         self._starting = True
         self._raiden_service = raiden_service
+        self._web_rtc_manager.node_address = self._raiden_service.address
 
         self._address_mgr.start()
+
+        assert asyncio.get_event_loop().is_running, "the loop must be running"
+        log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running)
 
         try:
             capabilities = capconfig_to_dict(self._config.capabilities_config)
@@ -465,7 +477,6 @@ class MatrixTransport(Runnable):
             node=to_checksum_address(self._raiden_service.address),
             transport_uuid=str(self._uuid),
         )
-
         self._initialize_broadcast_rooms()
         self._initialize_first_sync()
         self._initialize_health_check(health_check_list)
@@ -524,6 +535,9 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix stopping")
         self._stop_event.set()
         self._broadcast_event.set()
+
+        if self._raiden_service:
+            self._web_rtc_manager.stop()
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -783,6 +797,7 @@ class MatrixTransport(Runnable):
         )
         assert self._client.sync_thread is None, msg
         assert self._client.message_worker is None, msg
+        assert self._raiden_service is not None, "_raiden_service not set"
 
         # Call sync to fetch the inventory rooms and new invites, the sync
         # limit prevents fetching the messages.
@@ -809,8 +824,14 @@ class MatrixTransport(Runnable):
             assert len(partner_address) <= 1, msg
             # should contain only one element which is the partner's address
             if len(partner_address) == 1 and partner_address[0] is not None:
+                self.log.debug(
+                    "Found room",
+                    room=room,
+                    aliases=room.aliases,
+                    members=room.get_joined_members(),
+                )
                 self._set_room_id_for_address(partner_address[0], room.room_id)
-
+                self._maybe_create_web_rtc_channel(partner_address[0])
             self.log.debug(
                 "Found room", room=room, aliases=room.aliases, members=room.get_joined_members()
             )
@@ -1134,19 +1155,9 @@ class MatrixTransport(Runnable):
 
         return validate_and_parse_message(message["content"]["body"], peer_address)
 
-    def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
-        """ Handle text messages sent to listening rooms """
-        if self._stop_event.ready():
-            return False
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        all_messages: List[Message] = list()
-        for room, room_messages in sync_messages:
-            # TODO: Don't fetch messages from the broadcast rooms. #5535
-            if not self._is_broadcast_room(room):
-                for text in room_messages:
-                    all_messages.extend(self._handle_text(room, text))
+    def _process_messages(self, all_messages: List[Message]) -> None:
+        log.debug("raiden_service", raiden_service=self._raiden_service)
+        assert self._raiden_service is not None, "_process_messages must be called after start"
 
         # Remove this #3254
         for message in all_messages:
@@ -1170,7 +1181,54 @@ class MatrixTransport(Runnable):
 
         self._raiden_service.on_messages(all_messages)
 
+    def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
+        """ Handle text messages sent to listening rooms """
+        if self._stop_event.ready():
+            return False
+
+        assert self._raiden_service is not None, "_raiden_service not set"
+
+        all_messages: List[Message] = list()
+        for room, room_messages in sync_messages:
+            for text in room_messages:
+                all_messages.extend(self._handle_text(room, text))
+
+        self._process_messages(all_messages)
         return len(all_messages) > 0
+
+    def _handle_web_rtc_messages(self, message_data: str, partner_address: Address) -> None:
+        if not self._stop_event.is_set():
+            messages = validate_and_parse_message(message_data, partner_address)
+            self._process_messages(messages)
+
+    def handle_call_events(self, sync_messages: MatrixSyncMessages) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        for room, call_events in sync_messages:
+            for call_event in call_events:
+
+                # Ignore our own messages
+                sender_id = call_event["sender"]
+                if sender_id == self._user_id:
+                    return
+
+                user = self._client.get_user(sender_id)
+                self._displayname_cache.warm_users([user])
+
+                peer_address = validate_userid_signature(user)
+                if not peer_address:
+                    self.log.debug(
+                        "Ignoring message from user with an invalid display name signature",
+                        peer_user=user.user_id,
+                        room=room,
+                    )
+                    return
+
+                if not call_event["type"].startswith("m.call."):
+                    return
+
+                sdp_type = "offer" if call_event["type"].split(".")[-1] == "invite" else "answer"
+                description = call_event["content"][sdp_type]
+                self._web_rtc_manager.set_remote_description(peer_address, description)
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
@@ -1190,6 +1248,7 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
         room = self._get_room_for_address(receiver_address, require_online_peer=True)
 
         if room:
@@ -1199,7 +1258,11 @@ class MatrixTransport(Runnable):
                 room=room,
                 data=data.replace("\n", "\\n"),
             )
-            room.send_text(data)
+            if self._web_rtc_manager.has_ready_channel(receiver_address):
+                rtc_partner = self._web_rtc_manager.rtc_partners[receiver_address]
+                send_message(rtc_partner, data, self._raiden_service.address)
+            else:
+                room.send_text(data)
         else:
             # It is possible there is no room yet. This happens when:
             #
@@ -1217,12 +1280,12 @@ class MatrixTransport(Runnable):
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
     ) -> Optional[Room]:
-        msg = (
-            f"address not health checked: "
-            f"node: {self._user_id}, "
-            f"peer: {to_checksum_address(address)}"
-        )
-        assert address and self._address_mgr.is_address_known(address), msg
+        # msg = (
+        #    f"address not health checked: "
+        #    f"node: {self._user_id}, "
+        #    f"peer: {to_checksum_address(address)}"
+        # )
+        # assert address and self._address_mgr.is_address_known(address), msg
 
         room_candidates = []
         room_ids = self._get_room_ids_for_address(address)
@@ -1363,9 +1426,46 @@ class MatrixTransport(Runnable):
             )
 
             self._set_room_id_for_address(address, room.room_id)
+            self._maybe_create_web_rtc_channel(address)
 
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
             return room
+
+    def handle_sdp(
+        self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
+    ) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        if rtc_session_description is None:
+            return
+
+        sdp_type = rtc_session_description.type
+
+        message = {"type": rtc_session_description.type, "sdp": rtc_session_description.sdp}
+        log.debug(
+            f"Send {sdp_type} to partner",
+            node=to_checksum_address(self._raiden_service.address),
+            sdp_description=message,
+        )
+        room = self._get_room_for_address(partner_address)
+        if room is None:
+            return
+
+        if sdp_type == "offer":
+            self._client.api.invite(room.room_id, message)
+        elif sdp_type == "answer":
+            self._client.api.answer(room.room_id, message)
+
+    def _maybe_create_web_rtc_channel(self, partner_address: Address) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
+        room_creator_address = my_place_or_yours(
+            our_address=self._raiden_service.address, partner_address=partner_address
+        )
+
+        if self._raiden_service.address == room_creator_address:
+            log.debug(
+                "Creating RTC channel", node=to_checksum_address(self._raiden_service.address)
+            )
+            self._web_rtc_manager.create_channel(partner_address)
 
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(

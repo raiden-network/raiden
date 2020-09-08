@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+from gevent import monkey  # isort:skip
+
+monkey.patch_all()  # isort:skip
+
 import logging.config
 import os
 import os.path
@@ -27,9 +31,11 @@ from raiden.utils.formatting import pex
 from raiden.utils.nursery import Janitor, Nursery
 from raiden.utils.typing import Address, Host, Port, TokenAmount
 
-from gevent import monkey  # isort:skip
+import asyncio  # isort:skip # noqa
+from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
 
-monkey.patch_all()  # isort:skip
+asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
 
 
 BaseURL = NewType("BaseURL", str)

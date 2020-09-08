@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 import gevent.monkey  # isort:skip # noqa
-
-gevent.monkey.patch_all()  # isort:skip # noqa
-
 import argparse
 import json
 import logging.config
@@ -11,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from itertools import repeat
 
+import gevent
 import structlog
 from gevent.pool import Pool
 
@@ -23,6 +21,15 @@ from raiden.settings import (
 from raiden.tests.utils import factories
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, Iterator, RoomID
+
+gevent.monkey.patch_all()  # isort:skip # noqa
+
+import asyncio  # isort:skip # noqa
+from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
+
+asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
+gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
+
 
 log = structlog.get_logger(__name__)
 

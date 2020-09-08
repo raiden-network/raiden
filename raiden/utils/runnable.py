@@ -30,7 +30,7 @@ class Runnable:
     def start(self) -> None:
         """ Synchronously start task
 
-        Reimplements in children an call super().start() at end to start _run()
+        Reimplements in children a call super().start() at end to start _run()
         Start-time exceptions may be raised
         """
         if self.greenlet:
