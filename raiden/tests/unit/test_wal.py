@@ -26,7 +26,7 @@ from raiden.tests.utils.factories import (
     make_transaction_hash,
     make_ulid,
 )
-from raiden.transfer.architecture import State, StateChange, StateManager, TransitionResult
+from raiden.transfer.architecture import State, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
 from raiden.utils.typing import BlockGasLimit, BlockNumber, Callable, List, TokenAmount
@@ -55,14 +55,13 @@ def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
     serializer = JSONSerializer()
     state = state or Empty()
 
-    state_manager = StateManager(state_transition, state, [])
     storage = SerializedSQLiteStorage(":memory:", serializer)
 
     assert not storage.database.has_snapshot()
     storage.write_first_state_snapshot(state)
     assert storage.database.has_snapshot()
 
-    return WriteAheadLog(state_manager, storage)
+    return WriteAheadLog(state, storage, state_transition)
 
 
 def dispatch(wal: WriteAheadLog, state_changes: List[StateChange]):

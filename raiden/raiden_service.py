@@ -63,7 +63,7 @@ from raiden.settings import RaidenConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
 from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, Range
-from raiden.storage.wal import WriteAheadLog
+from raiden.storage.wal import WriteAheadLog, dispatch, replay_state_changes
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import (
@@ -71,7 +71,6 @@ from raiden.transfer.architecture import (
     ContractSendEvent,
     Event as RaidenEvent,
     StateChange,
-    StateManager,
 )
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import (
@@ -659,14 +658,35 @@ class RaidenService(Runnable):
                 storage=storage, node_address=self.address, initial_state=initial_state
             )
 
-            unapplied_state_changes_range = Range(state_change_start, HIGH_STATECHANGE_ULID)
-            state_change_qty_unapplied, snapshot_state = wal.replay_unapplied_state_changes(
-                transition_function=node.state_transition,
-                storage=storage,
-                unapplied_state_changes_range=unapplied_state_changes_range,
+            replay_state_changes(
                 node_address=self.address,
-                state_snapshot=state_snapshot,
+                snapshot=1,
+                state_change_identifier=1,
+                storage=storage,
+                transition_function=node.state_transition,
             )
+
+            unapplied_state_changes_range = Range(state_change_start, HIGH_STATECHANGE_ULID)
+            unapplied_state_changes = storage.get_statechanges_by_range(
+                unapplied_state_changes_range
+            )
+            state_change_qty_unapplied = len(unapplied_state_changes)
+
+            log.debug(
+                "Replaying state changes",
+                replayed_state_changes=[
+                    redact_secret(DictSerializer.serialize(state_change))
+                    for state_change in unapplied_state_changes
+                ],
+                node=to_checksum_address(self.address),
+            )
+
+            for state_change in unapplied_state_changes:
+                dispatch(
+                    state=state_snapshot,
+                    state_transition=node.state_transition,
+                    state_change=state_change,
+                )
         except SerializationError:
             raise RaidenUnrecoverableError(
                 "Could not restore state. "
@@ -685,9 +705,9 @@ class RaidenService(Runnable):
         self.state_change_qty = state_change_qty_snapshot + state_change_qty_unapplied
 
         msg = "The snapshot_state must be a ChainState instance."
-        assert isinstance(snapshot_state, ChainState), msg
-        state_manager = StateManager(node.state_transition, snapshot_state, [])
-        self.wal = WriteAheadLog(state_manager, storage)
+        assert isinstance(state_snapshot, ChainState), msg
+
+        self.wal = WriteAheadLog(state_snapshot, storage, node.state_transition)
         current_state = self.wal.get_current_state()
 
         # The `Block` state change is dispatched only after all the events

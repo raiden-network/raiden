@@ -20,7 +20,7 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import channel, node, views
-from raiden.transfer.architecture import Event, StateChange, StateManager
+from raiden.transfer.architecture import Event, StateChange
 from raiden.transfer.state import NetworkState
 from raiden.utils.formatting import pex, to_checksum_address
 from raiden.utils.typing import (
@@ -209,8 +209,7 @@ def replay_wal(
 ) -> None:
     all_state_changes = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
-    state_manager = StateManager(state_transition=node.state_transition, current_state=None)
-    wal = WriteAheadLog(state_manager, storage)
+    wal = WriteAheadLog(None, storage, node.state_transition)
 
     for _, state_change in enumerate(all_state_changes):
         # Dispatching the state changes one-by-one to easy debugging

@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -12,11 +13,13 @@ from raiden.storage.sqlite import (
     EventID,
     Range,
     SerializedSQLiteStorage,
+    SnapshotRecord,
     StateChangeID,
     write_events,
     write_state_change,
 )
-from raiden.transfer.architecture import Event, State, StateChange, StateManager
+from raiden.transfer.architecture import Event, State, StateChange, TransitionResult
+from raiden.utils.copy import deepcopy
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.typing import (
@@ -29,6 +32,7 @@ from raiden.utils.typing import (
     RaidenDBVersion,
     Tuple,
     TypeVar,
+    typecheck,
 )
 
 log = structlog.get_logger(__name__)
@@ -72,33 +76,6 @@ def restore_or_init_snapshot(
         return initial_state, LOW_STATECHANGE_ULID, 0
 
 
-def replay_unapplied_state_changes(
-    transition_function: Callable,
-    storage: SerializedSQLiteStorage,
-    unapplied_state_changes_range: Range,
-    node_address: Address,
-    state_snapshot: State,
-) -> Tuple[int, State]:
-    """Applies the state changes in the range `unapplied_state_changes_range`
-    into the `snapshot_state`.
-    """
-
-    unapplied_state_changes = storage.get_statechanges_by_range(unapplied_state_changes_range)
-
-    log.debug(
-        "Replaying state changes",
-        replayed_state_changes=[
-            redact_secret(DictSerializer.serialize(state_change))
-            for state_change in unapplied_state_changes
-        ],
-        node=to_checksum_address(node_address),
-    )
-
-    state_manager = StateManager(transition_function, state_snapshot, unapplied_state_changes)
-
-    return len(unapplied_state_changes), state_manager.current_state
-
-
 def restore_state(
     transition_function: Callable,
     storage: SerializedSQLiteStorage,
@@ -118,6 +95,19 @@ def restore_state(
         to_state_change_id=state_change_identifier,
         node=to_checksum_address(node_address),
     )
+    state, _ = replay_state_changes(
+        node_address, snapshot, state_change_identifier, storage, transition_function
+    )
+    return state
+
+
+def replay_state_changes(
+    node_address: Address,
+    snapshot: SnapshotRecord,
+    state_change_identifier: StateChangeID,
+    storage: SerializedSQLiteStorage,
+    transition_function: Callable[[ST, StateChange], TransitionResult[ST]],
+) -> Tuple[State, int]:
     unapplied_state_changes = storage.get_statechanges_by_range(
         Range(snapshot.state_change_identifier, state_change_identifier)
     )
@@ -129,10 +119,11 @@ def restore_state(
         ],
         node=to_checksum_address(node_address),
     )
+    state = snapshot.data
+    for state_change in unapplied_state_changes:
+        state, _ = dispatch(state, transition_function, state_change)
 
-    state_manager = StateManager(transition_function, snapshot.data, unapplied_state_changes)
-
-    return state_manager.current_state
+    return state, len(unapplied_state_changes)
 
 
 @dataclass(frozen=True)
@@ -157,12 +148,49 @@ class AtomicStateChangeDispatcher(ABC, Generic[ST]):
         pass
 
 
+T = TypeVar("T")
+
+
+def clone_state(state: T) -> T:
+    # The state objects must be treated as immutable, so make a copy of the
+    # current state and pass the copy to the state machine to be modified.
+    before_copy = time.time()
+    copy_state = deepcopy(state)
+    log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
+    return copy_state
+
+
+def dispatch(
+    state: ST,
+    state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
+    state_change: StateChange,
+) -> Tuple[ST, List[Event]]:
+    iteration = state_transition(state, state_change)
+
+    typecheck(iteration, TransitionResult)
+    for e in iteration.events:
+        typecheck(e, Event)
+    typecheck(iteration.new_state, State)
+
+    assert iteration.new_state is not None, "State transition did not yield new state"
+    return iteration.new_state, iteration.events
+
+
 class WriteAheadLog(Generic[ST]):
     saved_state: SavedState[ST]
 
-    def __init__(self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage) -> None:
-        self._state_manager = state_manager
+    def __init__(
+        self,
+        state: ST,
+        storage: SerializedSQLiteStorage,
+        state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
+    ) -> None:
         self.storage = storage
+        self.state = state
+        if not callable(state_transition):  # pragma: no unittest
+            raise ValueError("state_transition must be a callable")
+
+        self.state_transition = state_transition
 
         # The state changes must be applied in the same order as they are saved
         # to the WAL. Because writing to the database context switches, and the
@@ -176,23 +204,28 @@ class WriteAheadLog(Generic[ST]):
     ) -> Generator[AtomicStateChangeDispatcher, None, None]:
         class _AtomicStateChangeDispatcher(AtomicStateChangeDispatcher, Generic[ST2]):
             def __init__(
-                self, state_manager: StateManager[ST2], storage: SerializedSQLiteStorage
+                self,
+                state: ST2,
+                storage: SerializedSQLiteStorage,
+                state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
             ) -> None:
-                self._state_manager = state_manager
+                self.state = state
                 self.storage = storage
+                self.state_transition = state_transition
 
                 self.last_state_change_id: Optional[StateChangeID] = None
 
             def dispatch(self, state_change: StateChange) -> List[Event]:
-                _, events = self._state_manager.dispatch(state_change)
-                state_change_id = self.write_state_change_and_events(state_change, events)
+                # Update the current state by applying the state changes
+                self.state, events = dispatch(self.state, self.state_transition, state_change)
 
+                state_change_id = self.write_state_change_and_events(state_change, events)
                 self.last_state_change_id = state_change_id
 
                 return events
 
             def latest_state(self) -> ST:
-                return self._state_manager.current_state
+                return self.state
 
             def write_state_change_and_events(
                 self, state_change: StateChange, events: List[Event]
@@ -218,25 +251,25 @@ class WriteAheadLog(Generic[ST]):
                 return state_change_id
 
         with self._lock:
-            copied_state_manager = self._state_manager.copy()
+            cloned_state = clone_state(self.state)
 
             with self.storage.database.transaction():
                 dispatcher = _AtomicStateChangeDispatcher(
-                    state_manager=copied_state_manager, storage=self.storage,
+                    state=cloned_state,
+                    storage=self.storage,
+                    state_transition=self.state_transition,
                 )
                 yield dispatcher
 
-            self._state_manager = copied_state_manager
+            self.state = cloned_state
 
             # When no state change was applied, do not update saved state
             if dispatcher.last_state_change_id is not None:
                 # The update must be done with a single operation, to make sure
                 # that readers will have a consistent view of it.
 
-                assert self._state_manager.current_state is not None, "state is None"
-                self.saved_state = SavedState(
-                    dispatcher.last_state_change_id, self._state_manager.current_state
-                )
+                assert self.state is not None, "state is None"
+                self.saved_state = SavedState(dispatcher.last_state_change_id, self.state)
 
     def snapshot(self, statechange_qty: int) -> None:
         """ Snapshot the application state.
@@ -245,16 +278,15 @@ class WriteAheadLog(Generic[ST]):
         restart or a crash.
         """
         with self._lock:
-            current_state = self._state_manager.current_state
             state_change_id = self.saved_state.state_change_id
 
             # otherwise no state change was dispatched
-            if state_change_id and current_state is not None:
-                self.storage.write_state_snapshot(current_state, state_change_id, statechange_qty)
+            if state_change_id and self.state is not None:
+                self.storage.write_state_snapshot(self.state, state_change_id, statechange_qty)
 
     def get_current_state(self) -> ST:
         """Returns the current node state."""
-        return self._state_manager.current_state
+        return self.state
 
     @property
     def version(self) -> RaidenDBVersion:

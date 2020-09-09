@@ -1,5 +1,4 @@
 # pylint: disable=too-few-public-methods
-import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import ClassVar
@@ -10,7 +9,6 @@ from eth_utils import to_hex
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils.copy import deepcopy
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     AdditionalHash,
@@ -20,7 +18,6 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockHash,
     BlockNumber,
-    Callable,
     ChainID,
     ChannelID,
     Generic,
@@ -40,7 +37,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TransactionHash,
-    Tuple,
     TypeVar,
     typecheck,
 )
@@ -222,73 +218,6 @@ class TransitionResult(Generic[T]):  # pylint: disable=unsubscriptable-object
             isinstance(other, TransitionResult)
             and self.new_state == other.new_state
             and self.events == other.events
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-
-class StateManager(Generic[ST]):
-    """ The mutable storage for the application state, this storage can do
-    state transitions by applying the StateChanges to the current State.
-    """
-
-    __slots__ = ("state_transition", "current_state")
-
-    def __init__(
-        self,
-        state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
-        current_state: ST,
-        unapplied_state_changes: List[StateChange],
-    ) -> None:
-        """ Initialize the state manager.
-
-        Args:
-            state_transition: function that can apply a StateChange message.
-            current_state: current application state.
-            unapplied_state_changes: state changes that should be applied
-            during initialization because they are not part of the
-            `current_state`.
-        """
-        if not callable(state_transition):  # pragma: no unittest
-            raise ValueError("state_transition must be a callable")
-
-        self.state_transition = state_transition
-        self.current_state = current_state
-
-        for state_change in unapplied_state_changes:
-            self.dispatch(state_change)
-
-    def copy(self) -> "StateManager[ST]":
-        # The state objects must be treated as immutable, so make a copy of the
-        # current state and pass the copy to the state machine to be modified.
-        before_copy = time.time()
-        copy_state = deepcopy(self.current_state)
-        log.debug("Copied state before applying state changes", duration=time.time() - before_copy)
-        return StateManager(self.state_transition, copy_state, [])
-
-    def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
-        # Update the current state by applying the state changes
-        iteration = self.state_transition(self.current_state, state_change)
-
-        typecheck(iteration, TransitionResult)
-        for e in iteration.events:
-            typecheck(e, Event)
-        typecheck(iteration.new_state, State)
-
-        # Skipping the copy because this value is internal
-        next_state = iteration.new_state
-
-        assert next_state is not None, "State transition did not yield new state"
-        self.current_state = next_state
-
-        return iteration.new_state, iteration.events
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, StateManager)
-            and self.state_transition == other.state_transition
-            and self.current_state == other.current_state
         )
 
     def __ne__(self, other: Any) -> bool:
