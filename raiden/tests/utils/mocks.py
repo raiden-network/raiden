@@ -11,7 +11,6 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import node
-from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
@@ -206,8 +205,9 @@ class MockRaidenService:
             chain_id=self.rpc_client.chain_id,
         )
         wal = WriteAheadLog(
-            StateManager(state_transition, initial_state, []),
-            SerializedSQLiteStorage(":memory:", serializer),
+            state=initial_state,
+            storage=SerializedSQLiteStorage(":memory:", serializer),
+            state_transition=state_transition,
         )
 
         self.wal = wal

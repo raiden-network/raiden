@@ -71,7 +71,6 @@ from raiden.transfer.architecture import (
     ContractSendEvent,
     Event as RaidenEvent,
     StateChange,
-    StateManager,
 )
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import (
@@ -648,9 +647,8 @@ class RaidenService(Runnable):
         storage.update_version()
         storage.log_run()
 
-        initial_state = self._make_initial_state()
-
         try:
+            initial_state = self._make_initial_state()
             (
                 state_snapshot,
                 state_change_start,
@@ -659,13 +657,12 @@ class RaidenService(Runnable):
                 storage=storage, node_address=self.address, initial_state=initial_state
             )
 
-            unapplied_state_changes_range = Range(state_change_start, HIGH_STATECHANGE_ULID)
-            state_change_qty_unapplied, snapshot_state = wal.replay_unapplied_state_changes(
-                transition_function=node.state_transition,
-                storage=storage,
-                unapplied_state_changes_range=unapplied_state_changes_range,
+            state, state_change_qty_unapplied = wal.replay_state_changes(
                 node_address=self.address,
-                state_snapshot=state_snapshot,
+                state=state_snapshot,
+                state_change_range=Range(state_change_start, HIGH_STATECHANGE_ULID),
+                storage=storage,
+                transition_function=node.state_transition,  # type: ignore
             )
         except SerializationError:
             raise RaidenUnrecoverableError(
@@ -685,9 +682,9 @@ class RaidenService(Runnable):
         self.state_change_qty = state_change_qty_snapshot + state_change_qty_unapplied
 
         msg = "The snapshot_state must be a ChainState instance."
-        assert isinstance(snapshot_state, ChainState), msg
-        state_manager = StateManager(node.state_transition, snapshot_state, [])
-        self.wal = WriteAheadLog(state_manager, storage)
+        assert isinstance(state_snapshot, ChainState), msg
+
+        self.wal = WriteAheadLog(state, storage, node.state_transition)
         current_state = self.wal.get_current_state()
 
         # The `Block` state change is dispatched only after all the events
