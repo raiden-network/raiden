@@ -1,3 +1,4 @@
+import gevent
 import pytest
 
 from raiden import waiting
@@ -238,15 +239,16 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     with watch_for_unlock_failures(*raiden_network):
         waiting.wait_for_healthy(app0_restart, app1.address, network_wait)
 
-        waiting.wait_for_payment_balance(
-            raiden=app1,
-            token_network_registry_address=token_network_registry_address,
-            token_address=token_address,
-            partner_address=app0_restart.address,
-            target_address=Address(target_address),
-            target_balance=spent_amount,
-            retry_timeout=network_wait,
-        )
+        with gevent.Timeout(60):
+            waiting.wait_for_payment_balance(
+                raiden=app1,
+                token_network_registry_address=token_network_registry_address,
+                token_address=token_address,
+                partner_address=app0_restart.address,
+                target_address=Address(target_address),
+                target_balance=spent_amount,
+                retry_timeout=network_wait,
+            )
 
     # Check that payments are completed after both nodes come online after restart
     for identifier in range(spent_amount):
