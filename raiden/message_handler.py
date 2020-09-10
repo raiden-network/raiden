@@ -330,44 +330,37 @@ class MessageHandler:
 
         assert message.sender, "Invalid message dispatched, it should be signed"
 
+        from_transfer = lockedtransfersigned_from_message(message)
+        from_hop = HopState(
+            node_address=message.sender,
+            # pylint: disable=E1101
+            channel_identifier=from_transfer.balance_proof.channel_identifier,
+        )
         if message.target == TargetAddress(raiden.address):
             raiden.immediate_health_check_for(Address(message.initiator))
-
-            from_transfer = lockedtransfersigned_from_message(message)
-            from_hop = HopState(
-                node_address=message.sender,
-                # pylint: disable=E1101
-                channel_identifier=from_transfer.balance_proof.channel_identifier,
-            )
-            init_target_statechange = ActionInitTarget(
-                from_hop=from_hop,
-                transfer=from_transfer,
-                balance_proof=from_transfer.balance_proof,
-                sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
-            )
-            return [init_target_statechange]
+            return [
+                ActionInitTarget(
+                    from_hop=from_hop,
+                    transfer=from_transfer,
+                    balance_proof=from_transfer.balance_proof,
+                    sender=from_transfer.balance_proof.sender,
+                )
+            ]
         else:
-            from_transfer = lockedtransfersigned_from_message(message)
-            from_hop = HopState(
-                message.sender,
-                from_transfer.balance_proof.channel_identifier,  # pylint: disable=E1101
-            )
-            token_network_address = (
-                from_transfer.balance_proof.token_network_address  # pylint: disable=E1101
-            )
             route_states = routing.resolve_routes(
                 routes=message.metadata.routes,
-                token_network_address=token_network_address,
+                token_network_address=from_transfer.balance_proof.token_network_address,
                 chain_state=views.state_from_raiden(raiden),
             )
-            init_mediator_statechange = ActionInitMediator(
-                from_hop=from_hop,
-                route_states=route_states,
-                from_transfer=from_transfer,
-                balance_proof=from_transfer.balance_proof,
-                sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
-            )
-            return [init_mediator_statechange]
+            return [
+                ActionInitMediator(
+                    from_hop=from_hop,
+                    route_states=route_states,
+                    from_transfer=from_transfer,
+                    balance_proof=from_transfer.balance_proof,
+                    sender=from_transfer.balance_proof.sender,
+                )
+            ]
 
     @staticmethod
     def handle_message_processed(
