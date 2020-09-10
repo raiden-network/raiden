@@ -351,8 +351,8 @@ def make_hop_to_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
 # In this module constants are in the bottom because we need some of the
 # factories.
 # Prefixing with UNIT_ to differ from the default globals.
-UNIT_SETTLE_TIMEOUT = BlockExpiration(50)
-UNIT_REVEAL_TIMEOUT = BlockExpiration(5)
+UNIT_SETTLE_TIMEOUT = BlockTimeout(50)
+UNIT_REVEAL_TIMEOUT = BlockTimeout(5)
 UNIT_TRANSFER_AMOUNT = TokenAmount(50)
 UNIT_TRANSFER_FEE = 2
 UNIT_SECRET = Secret(b"secretsecretsecretsecretsecretse")
