@@ -1,4 +1,5 @@
 import itertools
+import json
 import time
 from datetime import datetime
 from functools import wraps
@@ -227,20 +228,10 @@ class GMatrixHttpApi(MatrixHttpApi):
         return self._send("GET", f"/presence/{quote(user_id)}/status")
 
     def invite(self, room_id: RoomID, offer: Dict[str, str]) -> None:
-        call_id = "12345"
-        version = 0
-        lifetime = 60000
-
-        content = {"call_id": call_id, "version": version, "lifetime": lifetime, "offer": offer}
-
-        self.send_message_event(room_id, "m.call.invite", content)
+        self.send_message(room_id, json.dumps(offer), "m.notice")
 
     def answer(self, room_id: RoomID, answer: Dict[str, str]) -> None:
-        call_id = "12345"
-        version = 0
-
-        content = {"call_id": call_id, "version": version, "answer": answer}
-        self.send_message_event(room_id, "m.call.answer", content)
+        self.send_message(room_id, json.dumps(answer), "m.notice")
 
 
 class GMatrixClient(MatrixClient):

@@ -128,7 +128,7 @@ async def create_channel(
     @rtc_partner.channel.on("message")
     async def on_message(message: Dict[str, bytes]) -> None:  # pylint: disable=unused-variable
         log.debug(
-            "Received message in aio kingdom",
+            "Received message in asyncio kingdom",
             node=to_checksum_address(node_address),
             message=message,
             time=time.time(),
@@ -162,7 +162,7 @@ async def set_remote_description(
         @channel.on("message")
         async def on_message(message: Dict[str, bytes]) -> None:  # pylint:disable=unused-variable
             log.debug(
-                "Received message in aio kingdom",
+                "Received message in asyncio kingdom",
                 node=to_checksum_address(node_address),
                 message=message,
                 time=time.time(),
@@ -182,7 +182,7 @@ def send_message(rtc_partner: RTCPartner, message: str, node_address: Address) -
     channel = rtc_partner.channel
     if channel is not None and channel.readyState == "open":
         log.debug(
-            "sending message in aio kingdom",
+            "sending message in asyncio kingdom",
             node=to_checksum_address(node_address),
             message=message,
             time=time.time(),
