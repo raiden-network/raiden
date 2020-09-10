@@ -11,6 +11,7 @@ from raiden.exceptions import InvalidDBData
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
     HIGH_STATECHANGE_ULID,
+    LOW_STATECHANGE_ULID,
     RANGE_ALL_STATE_CHANGES,
     SerializedSQLiteStorage,
     StateChangeID,
@@ -56,10 +57,7 @@ def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
     state = state or Empty()
 
     storage = SerializedSQLiteStorage(":memory:", serializer)
-
-    assert not storage.database.has_snapshot()
     storage.write_first_state_snapshot(state)
-    assert storage.database.has_snapshot()
 
     return WriteAheadLog(state, storage, state_transition)
 
@@ -68,6 +66,19 @@ def dispatch(wal: WriteAheadLog, state_changes: List[StateChange]):
     with wal.process_state_change_atomically() as dispatcher:
         for state_change in state_changes:
             dispatcher.dispatch(state_change)
+
+
+def test_initial_state_snapshotting():
+    serializer = JSONSerializer()
+    state = Empty()
+
+    storage = SerializedSQLiteStorage(":memory:", serializer)
+
+    assert not storage.database.has_snapshot()
+    assert not storage.get_snapshot_before_state_change(LOW_STATECHANGE_ULID)
+    storage.write_first_state_snapshot(state)
+    assert storage.database.has_snapshot()
+    assert storage.get_snapshot_before_state_change(LOW_STATECHANGE_ULID)
 
 
 def test_connect_to_corrupt_db(tmpdir):

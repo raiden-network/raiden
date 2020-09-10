@@ -17,8 +17,12 @@ import click
 from eth_utils import encode_hex, is_address, to_canonical_address
 
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES, SerializedSQLiteStorage
-from raiden.storage.wal import WriteAheadLog
+from raiden.storage.sqlite import (
+    LOW_STATECHANGE_ULID,
+    RANGE_ALL_STATE_CHANGES,
+    SerializedSQLiteStorage,
+)
+from raiden.storage.wal import WriteAheadLog, dispatch
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event, StateChange
 from raiden.transfer.state import NetworkState
@@ -26,6 +30,7 @@ from raiden.utils.formatting import pex, to_checksum_address
 from raiden.utils.typing import (
     Address,
     Any,
+    Balance,
     ChannelID,
     Dict,
     Iterable,
@@ -163,12 +168,14 @@ def print_presence_view(chain_state, translator: Optional[Translator] = None):
     click.echo("", nl=True)
 
 
-def get_node_balances(chain_state, token_network_address: TokenNetworkAddress) -> List[Tuple[Any]]:
+def get_node_balances(
+    chain_state, token_network_address: TokenNetworkAddress
+) -> List[Tuple[Address, Balance, Balance]]:
     channels = views.list_all_channelstate(chain_state)
     channels = [
-        channel
-        for channel in channels
-        if channel.canonical_identifier.token_network_address
+        raiden_channel
+        for raiden_channel in channels
+        if raiden_channel.canonical_identifier.token_network_address
         == to_canonical_address(token_network_address)
     ]
     balances = [
@@ -207,20 +214,26 @@ def replay_wal(
     partner_address: Address,
     translator: Optional[Translator] = None,
 ) -> None:
+    snapshot = storage.get_snapshot_before_state_change(
+        state_change_identifier=LOW_STATECHANGE_ULID
+    )
+    assert snapshot is not None, "No snapshot found"
+
+    wal = WriteAheadLog(snapshot.data, storage, node.state_transition)
+    state = wal.get_current_state()
+
     all_state_changes = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
-
-    wal = WriteAheadLog(None, storage, node.state_transition)
-
-    for _, state_change in enumerate(all_state_changes):
+    for state_change in all_state_changes:
         # Dispatching the state changes one-by-one to easy debugging
-        _, events = wal._state_manager.dispatch(state_change)
+        state, events = dispatch(
+            state=state, state_change=state_change, state_transition=wal.state_transition,
+        )
 
-        chain_state = wal.get_current_state()
         msg = "Chain state must never be cleared up."
-        assert chain_state, msg
+        assert state, msg
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state,
+            state,
             to_canonical_address(token_network_address),
             to_canonical_address(partner_address),
         )
