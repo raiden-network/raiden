@@ -253,7 +253,7 @@ class WriteAheadLog(Generic[ST]):
                 self.storage.write_state_snapshot(current_state, state_change_id, statechange_qty)
 
     def get_current_state(self) -> ST:
-        """Returns a copy of the current node state."""
+        """Returns the current node state."""
         return self._state_manager.current_state
 
     @property

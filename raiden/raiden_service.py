@@ -449,7 +449,7 @@ class RaidenService(Runnable):
         # because of the node's queues.
         self.ready_to_process_events = False
 
-        # Counters use for state snapshotting
+        # Counters used for state snapshotting
         self.state_change_qty_snapshot = 0
         self.state_change_qty = 0
 
