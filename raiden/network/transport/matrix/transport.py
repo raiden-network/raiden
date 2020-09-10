@@ -23,7 +23,7 @@ from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Capabil
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
-from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixMessage,
@@ -257,7 +257,7 @@ class _RetryQueue(Runnable):
             #   - Those are retried according to their retry generator as long as they haven't been
             #     removed from the Raiden queue
             remove = False
-            if isinstance(message_data.message, (Delivered, Ping, Pong)):
+            if isinstance(message_data.message, (Ping, Pong)):
                 # e.g. Delivered, send only once and then clear
                 # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
                 #       later `Processed` message?
@@ -688,7 +688,7 @@ class MatrixTransport(Runnable):
 
             # These are not protocol messages, but transport specific messages
             for message in queue.messages:
-                if isinstance(message, (Delivered, Ping, Pong)):
+                if isinstance(message, (Ping, Pong)):
                     raise ValueError(
                         f"Do not use send_async for {message.__class__.__name__} messages"
                     )
@@ -1178,10 +1178,10 @@ class MatrixTransport(Runnable):
 
         # Remove this #3254
         for message in all_messages:
+            # FIXME
             if isinstance(message, (Processed, SignedRetrieableMessage)) and message.sender:
-                delivered_message = Delivered(
-                    delivered_message_identifier=message.message_identifier,
-                    signature=EMPTY_SIGNATURE,
+                delivered_message = Processed(
+                    message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
                 )
                 self._raiden_service.sign(delivered_message)
                 retrier = self._get_retrier(message.sender)

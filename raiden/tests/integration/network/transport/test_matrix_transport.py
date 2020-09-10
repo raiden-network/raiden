@@ -20,8 +20,9 @@ from raiden.constants import (
     RoutingMode,
 )
 from raiden.exceptions import InsufficientEth
+from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.path_finding_service import PFSFeeUpdate
-from raiden.messages.synchronization import Delivered, Processed
+from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue, _RetryQueue
 from raiden.network.transport.matrix.utils import (
@@ -100,8 +101,8 @@ def ping_pong_message_success(transport0, transport1):
 
     msg_id = random.randint(1e5, 9e5)
 
-    ping_message = Processed(message_identifier=msg_id, signature=EMPTY_SIGNATURE)
-    pong_message = Delivered(delivered_message_identifier=msg_id, signature=EMPTY_SIGNATURE)
+    ping_message = Ping(message_identifier=msg_id, signature=EMPTY_SIGNATURE)
+    pong_message = Pong(delivered_message_identifier=msg_id, signature=EMPTY_SIGNATURE)
 
     transport0_raiden_queues[queueid1].append(ping_message)
 
