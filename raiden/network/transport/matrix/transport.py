@@ -540,8 +540,11 @@ class MatrixTransport(Runnable):
         )
         self._address_to_retrier = {}
 
-        self._address_mgr.stop()
+        # We have to stop the client before the address manager. Otherwise the
+        # sync thread might call the address manager after the manager has been
+        # stopped.
         self._client.stop()  # stop sync_thread, wait on client's greenlets
+        self._address_mgr.stop()
 
         # wait on own greenlets. No need to get on them, exceptions are
         # re-raised because of the `link_exception`
