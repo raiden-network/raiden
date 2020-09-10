@@ -532,12 +532,6 @@ def test_mediated_transfer_with_fees(
         assert channel_state
         channel_state.fee_schedule = fee_schedule
 
-    def get_best_routes_with_fees(*args, **kwargs):
-        error_msg, routes, uuid = get_best_routes(*args, **kwargs)
-        for r in routes:
-            r.estimated_fee = fee_without_margin
-        return error_msg, routes, uuid
-
     def assert_balances(expected_transferred_amounts=List[int]):
         assert token_network_address
         for i, transferred_amount in enumerate(expected_transferred_amounts):
@@ -676,16 +670,16 @@ def test_mediated_transfer_with_fees(
         if fee_schedule:
             set_fee_schedule(apps[i + 1], apps[i], fee_schedule)
 
-    route_patch = patch("raiden.routing.get_best_routes", get_best_routes_with_fees)
     disable_max_mediation_fee_patch = patch(
         "raiden.transfer.mediated_transfer.initiator.MAX_MEDIATION_FEE_PERC", new=10000
     )
 
-    with route_patch, disable_max_mediation_fee_patch:
+    with disable_max_mediation_fee_patch:
         transfer_and_assert_path(
             path=raiden_network,
             token_address=token_address,
             amount=amount,
             identifier=PaymentID(2),
+            fee_estimate=fee_without_margin,
         )
     assert_balances(case["expected_transferred_amounts"])

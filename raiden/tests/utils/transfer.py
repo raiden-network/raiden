@@ -350,6 +350,7 @@ def transfer_and_assert_path(
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: float = 10,
+    fee_estimate: FeeAmount = FeeAmount(0),  # noqa: B008
 ) -> SecretHash:
     """ Nice to read shortcut to make successful LockedTransfer.
 
@@ -432,6 +433,16 @@ def transfer_and_assert_path(
         for app, channel_identifier in receiving
     )
 
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(first_app), first_app.default_registry.address, token_address,
+    )
+
+    route = [app.address for app in path]
+    forward_channel_id = token_network.partneraddresses_to_channelidentifiers[route[1]][0]
+    route_state = RouteState(
+        route=route, forward_channel_id=forward_channel_id, estimated_fee=fee_estimate,
+    )
+
     last_app = path[-1]
     payment_status = first_app.mediated_transfer_async(
         token_network_address=token_network_address,
@@ -439,6 +450,7 @@ def transfer_and_assert_path(
         target=TargetAddress(last_app.address),
         identifier=identifier,
         secret=secret,
+        route_states=[route_state],
     )
 
     msg = (
