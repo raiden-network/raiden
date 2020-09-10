@@ -63,7 +63,7 @@ def get_best_routes(
             target=to_checksum_address(to_address),
             amount=amount,
         )
-        return ("Node does not have a channel in the requested token network.", list(), None)
+        return "Node does not have a channel in the requested token network.", list(), None
 
     error_closed = 0
     error_no_route = 0
@@ -95,7 +95,7 @@ def get_best_routes(
                     forward_channel_id=channel_state.canonical_identifier.channel_identifier,
                     estimated_fee=FeeAmount(0),
                 )
-                return (None, [direct_route], None)
+                return None, [direct_route], None
 
             error_direct = is_usable
 
@@ -173,7 +173,7 @@ def get_best_routes(
             error_direct=error_direct,
             error_not_online=error_not_online,
         )
-        return (error_msg, list(), None)
+        return error_msg, list(), None
 
     if pfs_config is not None and one_to_n_address is not None:
         pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
@@ -193,19 +193,19 @@ def get_best_routes(
             # As of version 0.5 it is possible for the PFS to return an empty
             # list of routes without an error message.
             if not pfs_routes:
-                return ("PFS could not find any routes", list(), None)
+                return "PFS could not find any routes", list(), None
 
             log.info(
                 "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
             )
-            return (pfs_error_msg, pfs_routes, pfs_feedback_token)
+            return pfs_error_msg, pfs_routes, pfs_feedback_token
 
         log.warning(
             "Request to Pathfinding Service was not successful. "
             "No routes to the target are found.",
             pfs_message=pfs_error_msg,
         )
-        return (pfs_error_msg, list(), None)
+        return pfs_error_msg, list(), None
 
     else:
         available_routes = list()
