@@ -57,9 +57,12 @@ def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
 
     state_manager = StateManager(state_transition, state, [])
     storage = SerializedSQLiteStorage(":memory:", serializer)
+
+    assert not storage.database.has_snapshot()
     storage.write_first_state_snapshot(state)
-    wal = WriteAheadLog(state_manager, storage)
-    return wal
+    assert storage.database.has_snapshot()
+
+    return WriteAheadLog(state_manager, storage)
 
 
 def dispatch(wal: WriteAheadLog, state_changes: List[StateChange]):

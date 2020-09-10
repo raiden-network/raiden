@@ -363,15 +363,12 @@ class SQLiteStorage:
 
         return int(result[0][0])
 
-    def count_snapshots(self) -> int:
+    def has_snapshot(self) -> bool:
         cursor = self.conn.cursor()
-        query = cursor.execute("SELECT COUNT(1) FROM state_snapshot")
-        result = query.fetchall()
+        query = cursor.execute("SELECT EXISTS(SELECT 1 FROM state_snapshot)")
+        result = query.fetchone()
 
-        if len(result) == 0:
-            return 0
-
-        return int(result[0][0])
+        return bool(result[0])
 
     def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
         """Write `state_changes` to the database and returns the corresponding IDs."""
@@ -391,7 +388,7 @@ class SQLiteStorage:
         return state_change_ids
 
     def write_first_state_snapshot(self, snapshot: str) -> SnapshotID:
-        if self.count_snapshots() != 0:
+        if self.has_snapshot():
             raise RuntimeError(
                 "write_first_state_snapshot can only be used for an unitialized node."
             )
