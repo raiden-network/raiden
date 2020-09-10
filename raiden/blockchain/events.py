@@ -602,6 +602,9 @@ class BlockchainEvents:
             )
 
             if blockchain_events:
+                # If this should ever decode events from non-controlled contracts, we need
+                # to make sure no unrecoverable error is thrown. If this was an unrecoverable
+                # it would open a surface for attacks.
                 decoded_events = [
                     decode_raiden_event_to_internal(self.event_to_abi(event), self.chain_id, event)
                     for event in blockchain_events

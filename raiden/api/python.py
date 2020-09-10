@@ -76,12 +76,6 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger(__name__)
 
-EVENTS_PAYMENT_HISTORY_RELATED = (
-    EventPaymentSentSuccess,
-    EventPaymentSentFailed,
-    EventPaymentReceivedSuccess,
-)
-
 
 def event_filter_for_payments(
     event: Event,

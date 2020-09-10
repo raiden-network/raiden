@@ -32,7 +32,6 @@ from raiden.utils.typing import AddressHex
 log = structlog.get_logger(__name__)
 
 SHUTDOWN_TIMEOUT = 35
-MSG_QUEUE_MAX_SIZE = 10  # This are matrix sync batches, not messages
 
 MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]

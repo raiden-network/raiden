@@ -199,34 +199,6 @@ def encode_object_to_str(map_: Dict) -> None:
             map_[k] = repr(v)
 
 
-def normalize_events_list(old_list: List) -> List:
-    """Internally the `event_type` key is prefixed with underscore but the API
-    returns an object without that prefix"""
-    new_list = []
-    for _event in old_list:
-        new_event = dict(_event)
-        if new_event.get("args"):
-            new_event["args"] = dict(new_event["args"])
-            encode_byte_values(new_event["args"])
-        # remove the queue identifier
-        if new_event.get("queue_identifier"):
-            del new_event["queue_identifier"]
-        # the events contain HexBytes values, convert those to strings
-        hexbytes_to_str(new_event)
-        # Some of the raiden events contain accounts and as such need to
-        # be exported in hex to the outside world
-        name = new_event["event"]
-        if name == "EventPaymentReceivedSuccess":
-            new_event["initiator"] = to_checksum_address(new_event["initiator"])
-        if name in ("EventPaymentSentSuccess", "EventPaymentSentFailed"):
-            new_event["target"] = to_checksum_address(new_event["target"])
-        encode_byte_values(new_event)
-        # encode unserializable objects
-        encode_object_to_str(new_event)
-        new_list.append(new_event)
-    return new_list
-
-
 def restapi_setup_urls(flask_api_context: Api, rest_api: "RestAPI", urls: List) -> None:
     for url_tuple in urls:
         if len(url_tuple) == 2:

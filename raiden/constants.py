@@ -21,7 +21,6 @@ from raiden.utils.typing import (
     Signature,
     TokenAddress,
     TokenAmount,
-    TransactionHash,
 )
 
 LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
@@ -49,27 +48,22 @@ GENESIS_BLOCK_NUMBER = BlockNumber(0)
 
 
 class EthereumForks(Enum):
-    BYZANTIUM = BlockNumber(4_370_000)
     CONSTANTINOPLE = BlockNumber(7_280_000)
 
 
 class RopstenForks(Enum):
-    BYZANTIUM = BlockNumber(1_700_000)
     CONSTANTINOPLE = BlockNumber(4_230_000)
 
 
 class KovanForks(Enum):
-    BYZANTIUM = BlockNumber(0)
     CONSTANTINOPLE = BlockNumber(4_230_000)
 
 
 class RinkebyForks(Enum):
-    BYZANTIUM = BlockNumber(0)
     CONSTANTINOPLE = BlockNumber(3_660_663)
 
 
 class GoerliForks(Enum):
-    BYZANTIUM = BlockNumber(0)
     CONSTANTINOPLE = BlockNumber(0)
 
 
@@ -103,7 +97,6 @@ NULL_ADDRESS_HEX = to_hex_address(Address(NULL_ADDRESS_BYTES))
 NULL_ADDRESS_CHECKSUM = to_checksum_address(Address(NULL_ADDRESS_BYTES))
 
 EMPTY_HASH = BlockHash(bytes(32))
-EMPTY_TRANSACTION_HASH = TransactionHash(bytes(32))
 EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
 EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_SIGNATURE = Signature(bytes(65))
