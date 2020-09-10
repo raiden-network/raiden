@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
 from raiden.constants import EMPTY_SIGNATURE
-from raiden.messages.abstract import SignedMessage, SignedRetrieableMessage
+from raiden.messages.abstract import SignedMessage
 from raiden.messages.cmdid import CmdId
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.utils.typing import ClassVar, MessageID
 
 
 @dataclass(repr=False, eq=False)
-class Processed(SignedRetrieableMessage):
+class Processed(SignedMessage):
     """ Used by the recipient when a message which has to be validated against
     blockchain data was successfully processed.
 
