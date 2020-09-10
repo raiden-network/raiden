@@ -681,16 +681,15 @@ class RaidenService(Runnable):
         self.state_change_qty_snapshot = state_change_qty_snapshot
         self.state_change_qty = state_change_qty_snapshot + state_change_qty_unapplied
 
-        msg = "The snapshot_state must be a ChainState instance."
-        assert isinstance(state_snapshot, ChainState), msg
+        msg = "The state must be a ChainState instance."
+        assert isinstance(state, ChainState), msg
 
         self.wal = WriteAheadLog(state, storage, node.state_transition)
-        current_state = self.wal.get_current_state()
 
         # The `Block` state change is dispatched only after all the events
         # for that given block have been processed, filters can be safely
         # installed starting from this position without losing events.
-        last_log_block_number = views.block_number(current_state)
+        last_log_block_number = views.block_number(self.wal.get_current_state())
         log.debug(
             "Querying blockchain from block",
             last_restored_block=last_log_block_number,

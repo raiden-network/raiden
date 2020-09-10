@@ -208,7 +208,7 @@ class WriteAheadLog(Generic[ST]):
                 self,
                 state: ST2,
                 storage: SerializedSQLiteStorage,
-                state_transition: Callable[[ST, StateChange], TransitionResult[ST]],
+                state_transition: Callable[[ST2, StateChange], TransitionResult[ST2]],
             ) -> None:
                 self.state = state
                 self.storage = storage
@@ -268,8 +268,6 @@ class WriteAheadLog(Generic[ST]):
             if dispatcher.last_state_change_id is not None:
                 # The update must be done with a single operation, to make sure
                 # that readers will have a consistent view of it.
-
-                assert self.state is not None, "state is None"
                 self.saved_state = SavedState(dispatcher.last_state_change_id, self.state)
 
     def snapshot(self, statechange_qty: int) -> None:
