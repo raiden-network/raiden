@@ -16,15 +16,6 @@ class UnknownRaidenEventType(RaidenUnrecoverableError):
     """
 
 
-class UnknownExternalEventType(RaidenRecoverableError):
-    """Raised if decoding an event from a third-party smart contract failed.
-
-    This cannot be an unrecoverable error, because third party contracts are
-    not controlled. If this was an unrecoverable it would open a surface for
-    attacks.
-    """
-
-
 class EthGetLogsTimeout(RaidenRecoverableError):
     """ Raised when an eth.getLogs RPC call caused a ReadTimeout exception.
 

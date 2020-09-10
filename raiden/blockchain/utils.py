@@ -29,8 +29,6 @@ class BlockBatchSizeAdjuster:
         self._base = base
         self._step_size = step_size
 
-        self._scale_max = math.log(self._block_batch_size_config.max, self._base) + 1
-        self._scale_min = math.log(self._block_batch_size_config.min, self._base)
         self._scale_current = math.log(self._block_batch_size_config.initial, self._base)
 
     def _log(self, previous_batch_size: BlockNumber) -> None:

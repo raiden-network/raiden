@@ -297,13 +297,6 @@ class EthereumNonceTooLow(RaidenUnrecoverableError):
     """Raised when a new transaction is sent with a nonce that has been used already."""
 
 
-class ChannelOutdatedError(RaidenError):
-    """ Raised when an action is invoked on a channel whose
-    identifier has been replaced with a new channel identifier
-    due to a close/re-open of current channel.
-    """
-
-
 class InsufficientGasReserve(RaidenError):
     """ Raised when an action cannot be done because the available balance
     is not sufficient for the lifecycles of all active channels.
