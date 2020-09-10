@@ -174,7 +174,7 @@ def test_is_channel_usable_for_mediation():
     """ Check rules that determine if a channel can be used for transfers """
     reveal_timeout = BlockTimeout(30)
     timeout_blocks = BlockTimeout(reveal_timeout + 10)
-    amount = TokenAmount(UNIT_TRANSFER_AMOUNT)
+    amount = UNIT_TRANSFER_AMOUNT
 
     channels = factories.make_channel_set(
         [
@@ -1406,7 +1406,6 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
             channels[0],
             LockedTransferSignedStateProperties(
                 initiator=HOP1,
-                expiration=UNIT_SETTLE_TIMEOUT,
                 secret=random_secret(),
                 payment_identifier=PaymentID(index),
                 nonce=Nonce(index),
