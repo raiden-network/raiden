@@ -136,8 +136,7 @@ def test_refund_transfer(
 
     TODO:
         - Unlock the token on refund #1091
-        - Clear the pending locks and update the locked amount #193
-        - Remove the refund message type #490"""
+    """
     # Topology:
     #
     #  0 -> 1 -> 2
@@ -161,6 +160,7 @@ def test_refund_transfer(
             token_address=token_address,
             amount=amount_path,
             identifier=identifier_path,
+            routes=[[app0.address, app1.address, app2.address]],
         )
 
     # drain the channel app1 -> app2
@@ -175,6 +175,7 @@ def test_refund_transfer(
             token_address=token_address,
             amount=amount_drain,
             identifier=identifier_drain,
+            routes=[[app1.address, app2.address]],
         )
         wait_assert(
             assert_synced_channel_state,
@@ -204,8 +205,25 @@ def test_refund_transfer(
     fee = calculate_fee_for_amount(amount_refund)
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
+
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address,
+    )
+    assert token_network
     payment_status = app0.mediated_transfer_async(
-        token_network_address, amount_refund, TargetAddress(app2.address), identifier_refund
+        token_network_address=token_network_address,
+        amount=amount_refund,
+        target=TargetAddress(app2.address),
+        identifier=identifier_refund,
+        route_states=[
+            RouteState(
+                route=[app0.address, app1.address, app2.address],
+                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
+                    app1.address
+                ][0],
+                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
+            )
+        ],
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
