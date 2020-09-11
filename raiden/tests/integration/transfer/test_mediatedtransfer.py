@@ -8,7 +8,6 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.raiden_service import RaidenService
-from raiden.routing import get_best_routes
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
@@ -33,6 +32,7 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
+from raiden.transfer.state import RouteState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     BlockExpiration,
@@ -455,20 +455,26 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         SecretRequest, {"secrethash": secrethash}
     )
 
-    def get_best_routes_with_fees(*args, **kwargs):
-        error_msg, routes, uuid = get_best_routes(*args, **kwargs)
-        for r in routes:
-            r.estimated_fee = fee
-        return error_msg, routes, uuid
-
-    with patch("raiden.routing.get_best_routes", get_best_routes_with_fees):
-        app0.mediated_transfer_async(
-            token_network_address=token_network_address,
-            amount=amount,
-            target=TargetAddress(app2.address),
-            identifier=PaymentID(1),
-            secret=secret,
-        )
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address,
+    )
+    assert token_network
+    app0.mediated_transfer_async(
+        token_network_address=token_network_address,
+        amount=amount,
+        target=TargetAddress(app2.address),
+        identifier=PaymentID(1),
+        secret=secret,
+        route_states=[
+            RouteState(
+                route=[app0.address, app1.address, app2.address],
+                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
+                    app1.address
+                ][0],
+                estimated_fee=fee,
+            )
+        ],
+    )
 
     app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
         chain_state=views.state_from_raiden(app0),
