@@ -8,15 +8,13 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo
 from raiden.raiden_service import RaidenService
-from raiden.settings import (
-    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
-)
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import make_secret
+from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
@@ -179,19 +177,39 @@ def test_mediated_transfer_with_entire_deposit(
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
+    assert token_network_address
 
-    # The test uses internal routing at the moment, that's why this is set like that.
-    # However, the actual calculated fee is 3 instead of the 4 calculated here, therefore
-    # the amounts are adjusted below
-    fee1 = FeeAmount(int(deposit * INTERNAL_ROUTING_DEFAULT_FEE_PERC))
-    fee_margin1 = calculate_fee_margin(deposit, fee1)
-    fee_difference = 1
+    def calc_fees(
+        mediator_app: RaidenService,
+        from_app: RaidenService,
+        to_app: RaidenService,
+        amount: PaymentAmount,
+    ):
+        assert token_network_address
+        from_channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=views.state_from_raiden(mediator_app),
+            token_network_address=token_network_address,
+            partner_address=from_app.address,
+        )
+        assert from_channel_state
+        to_channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=views.state_from_raiden(mediator_app),
+            token_network_address=token_network_address,
+            partner_address=to_app.address,
+        )
+        assert to_channel_state
+        return get_amount_for_sending_before_and_after_fees(
+            amount_to_leave_initiator=amount, channels=[(from_channel_state, to_channel_state)]
+        )
+
+    fee_calculation1 = calc_fees(app1, app0, app2, PaymentAmount(200))
     secrethash = transfer_and_assert_path(
         path=raiden_network,
         token_address=token_address,
-        amount=deposit - fee1 - fee_margin1,
+        amount=fee_calculation1.amount_to_send,
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
+        fee_estimate=FeeAmount(sum(fee_calculation1.mediation_fees)),
     )
 
     with block_timeout_for_transfer_by_secrethash(app1, secrethash):
@@ -210,23 +228,23 @@ def test_mediated_transfer_with_entire_deposit(
             func=assert_succeeding_transfer_invariants,
             token_network_address=token_network_address,
             app0=app1,
-            balance0=fee1 - fee_difference,
+            balance0=3,
             pending_locks0=[],
             app1=app2,
-            balance1=deposit * 2 - fee1 + fee_difference,
+            balance1=deposit * 2 - sum(fee_calculation1.mediation_fees),
             pending_locks1=[],
         )
 
-    app2_capacity = 2 * deposit - fee1
-    fee2 = FeeAmount(int(round(app2_capacity * INTERNAL_ROUTING_DEFAULT_FEE_PERC)))
-    fee_margin2 = calculate_fee_margin(app2_capacity, fee2)
-    reverse_path = list(raiden_network[::-1])
+    fee_calculation2 = calc_fees(
+        app1, app2, app0, PaymentAmount(deposit * 2 - sum(fee_calculation1.mediation_fees))
+    )
     transfer_and_assert_path(
-        path=reverse_path,
+        path=list(raiden_network[::-1]),
         token_address=token_address,
-        amount=app2_capacity - fee2 - fee_margin2,
+        amount=fee_calculation2.amount_to_send,
         identifier=PaymentID(2),
         timeout=network_wait * number_of_nodes,
+        fee_estimate=FeeAmount(sum(fee_calculation2.mediation_fees)),
     )
 
     with block_timeout_for_transfer_by_secrethash(app1, secrethash):
@@ -234,10 +252,12 @@ def test_mediated_transfer_with_entire_deposit(
             func=assert_succeeding_transfer_invariants,
             token_network_address=token_network_address,
             app0=app0,
-            balance0=2 * deposit - fee2 + fee_difference,
+            balance0=2 * deposit
+            - sum(fee_calculation1.mediation_fees)
+            - sum(fee_calculation2.mediation_fees),
             pending_locks0=[],
             app1=app1,
-            balance1=fee2 - fee_difference,
+            balance1=6,
             pending_locks1=[],
         )
     with block_timeout_for_transfer_by_secrethash(app2, secrethash):
@@ -245,10 +265,10 @@ def test_mediated_transfer_with_entire_deposit(
             func=assert_succeeding_transfer_invariants,
             token_network_address=token_network_address,
             app0=app1,
-            balance0=deposit * 2 - fee_difference,
+            balance0=deposit * 2,
             pending_locks0=[],
             app1=app2,
-            balance1=fee_difference,
+            balance1=0,
             pending_locks1=[],
         )
 
