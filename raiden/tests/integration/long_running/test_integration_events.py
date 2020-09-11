@@ -9,7 +9,10 @@ from raiden.blockchain.events import get_all_netting_channel_events, get_contrac
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.raiden_service import RaidenService
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
@@ -25,7 +28,7 @@ from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.state import BalanceProofSignedState
+from raiden.transfer.state import BalanceProofSignedState, RouteState
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
@@ -36,6 +39,7 @@ from raiden.utils.typing import (
     BlockNumber,
     ChannelID,
     Dict,
+    FeeAmount,
     List,
     PaymentAmount,
     PaymentID,
@@ -424,12 +428,25 @@ def test_secret_revealed_on_chain(
 
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address,
+    )
+    assert token_network
     app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[
+            RouteState(
+                route=[app0.address, app1.address, app2.address],
+                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
+                    app1.address
+                ][0],
+                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount)),
+            )
+        ],
     )
 
     with watch_for_unlock_failures(*raiden_chain), block_offset_timeout(app0):
