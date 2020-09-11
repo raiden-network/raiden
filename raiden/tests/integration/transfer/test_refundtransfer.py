@@ -78,14 +78,32 @@ def test_refund_messages(raiden_chain: List[RaidenService], token_addresses, dep
         token_address=token_address,
         amount=deposit,
         identifier=identifier,
+        routes=[[app1.address, app2.address]],
     )
 
     refund_amount = deposit // 2
     refund_fees = calculate_fee_for_amount(refund_amount)
     fee_margin = calculate_fee_margin(refund_amount, refund_fees)
     refund_amount_with_fees = refund_amount + refund_fees + fee_margin
+
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address,
+    )
+    assert token_network
     payment_status = app0.mediated_transfer_async(
-        token_network_address, refund_amount, TargetAddress(app2.address), identifier
+        token_network_address=token_network_address,
+        amount=refund_amount,
+        target=TargetAddress(app2.address),
+        identifier=identifier,
+        route_states=[
+            RouteState(
+                route=[app0.address, app1.address, app2.address],
+                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
+                    app1.address
+                ][0],
+                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * refund_amount)),
+            )
+        ],
     )
     msg = "Must fail, there are no routes available"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
