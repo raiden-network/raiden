@@ -534,7 +534,7 @@ def set_offchain_secret(
 
     # The secret should never be revealed if `waiting_transfer` is not None.
     # For this to happen this node must have received a transfer, which it did
-    # *not* mediate, and neverthless the secret was revealed.
+    # *not* mediate, and nevertheless the secret was revealed.
     #
     # This can only be possible if the initiator reveals the secret without the
     # target's secret request, or if the node which sent the `waiting_transfer`
@@ -1048,9 +1048,6 @@ def mediate_transfer(
         payer_channel.partner_state.address == payer_transfer.balance_proof.sender
     ), "Transfer must be signed by sender"
 
-    transfer_pair: Optional[MediationPairState] = None
-    mediated_events: List[Event] = list()
-
     candidate_route_states = routes.filter_reachable_routes(
         route_states=candidate_route_states,
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
@@ -1068,8 +1065,9 @@ def mediate_transfer(
         route_states=candidate_route_states, blacklisted_channel_ids=state.refunded_channels
     )
 
+    # Mediate through the first valid route
     for route_state in candidate_route_states:
-        transfer_pair, mediated_events = forward_transfer_pair(
+        mediation_transfer_pair, mediation_events = forward_transfer_pair(
             payer_transfer=payer_transfer,
             payer_channel=payer_channel,
             route_state=route_state,
@@ -1078,37 +1076,28 @@ def mediate_transfer(
             block_number=block_number,
             route_state_table=candidate_route_states,
         )
-        if transfer_pair is not None:
-            break
+        if mediation_transfer_pair is not None:
+            state.transfers_pair.append(mediation_transfer_pair)
+            return TransitionResult(state, mediation_events)
 
-    if transfer_pair is None:
-        assert not mediated_events, "Without new transfer, we must not cause events (forward)"
-
-        if state.transfers_pair:
-            original_pair = state.transfers_pair[0]
-            original_channel = get_payer_channel(channelidentifiers_to_channels, original_pair)
-        else:
-            original_channel = payer_channel
-
-        if original_channel:
-            transfer_pair, mediated_events = backward_transfer_pair(
-                original_channel, payer_transfer, pseudo_random_generator, block_number
-            )
-        else:
-            transfer_pair = None
-            mediated_events = list()
-
-    if transfer_pair is None:
-        assert not mediated_events, "Without new transfer, we must not cause events"
-        mediated_events = list()
-        state.waiting_transfer = WaitingTransferState(payer_transfer)
-
+    # Could not mediate, try to refund
+    if state.transfers_pair:
+        original_pair = state.transfers_pair[0]
+        original_channel = get_payer_channel(channelidentifiers_to_channels, original_pair)
     else:
-        # the list must be ordered from high to low expiration, expiration
-        # handling depends on it
-        state.transfers_pair.append(transfer_pair)
+        original_channel = payer_channel
 
-    return TransitionResult(state, mediated_events)
+    if original_channel:
+        refund_transfer_pair, refund_events = backward_transfer_pair(
+            original_channel, payer_transfer, pseudo_random_generator, block_number
+        )
+        if refund_transfer_pair:
+            state.transfers_pair.append(refund_transfer_pair)
+            return TransitionResult(state, refund_events)
+
+    # Neither mediation nor refund possible, wait for an opportunity to do either
+    state.waiting_transfer = WaitingTransferState(payer_transfer)
+    return TransitionResult(state, [])
 
 
 def handle_init(
