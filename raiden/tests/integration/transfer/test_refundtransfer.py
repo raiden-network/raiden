@@ -4,6 +4,7 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.raiden_service import RaidenService
+from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
@@ -35,9 +36,17 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
+from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
-from raiden.utils.typing import BlockNumber, List, PaymentAmount, PaymentID, TargetAddress
+from raiden.utils.typing import (
+    BlockNumber,
+    FeeAmount,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TargetAddress,
+)
 from raiden.waiting import wait_for_block, wait_for_settle
 
 
@@ -597,8 +606,25 @@ def test_refund_transfer_after_2nd_hop(
     fee = calculate_fee_for_amount(amount_refund)
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
+
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address,
+    )
+    assert token_network
     payment_status = app0.mediated_transfer_async(
-        token_network_address, amount_refund, TargetAddress(app3.address), identifier_refund
+        token_network_address=token_network_address,
+        amount=amount_refund,
+        target=TargetAddress(app3.address),
+        identifier=identifier_refund,
+        route_states=[
+            RouteState(
+                route=[app0.address, app1.address, app2.address],
+                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
+                    app1.address
+                ][0],
+                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
+            )
+        ],
     )
     msg = "there is no path with capacity, the transfer must fail"
     assert isinstance(payment_status.payment_done.wait(), EventPaymentSentFailed), msg
