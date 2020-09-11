@@ -376,9 +376,9 @@ def clear_if_finalized(
 def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
     payer_channel: NettingChannelState,
+    payee_channel: NettingChannelState,
     route_state: RouteState,
     route_state_table: List[RouteState],
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
@@ -394,10 +394,6 @@ def forward_transfer_pair(
         pseudo_random_generator: Number generator to generate a message id.
         block_number: The current block number.
     """
-    # check channel
-    payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
-    if not payee_channel:
-        return None, []
 
     amount_after_fees = get_amount_without_fees(
         amount_with_fees=payer_transfer.lock.amount,
@@ -1067,11 +1063,15 @@ def mediate_transfer(
 
     # Mediate through the first valid route
     for route_state in candidate_route_states:
+        payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
+        if not payee_channel:
+            continue
+
         mediation_transfer_pair, mediation_events = forward_transfer_pair(
             payer_transfer=payer_transfer,
             payer_channel=payer_channel,
+            payee_channel=payee_channel,
             route_state=route_state,
-            channelidentifiers_to_channels=channelidentifiers_to_channels,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
             route_state_table=candidate_route_states,
