@@ -34,5 +34,5 @@ def prune_route_table(
     return [
         RouteState(route=rs.route[1:], forward_channel_id=selected_route.forward_channel_id)
         for rs in route_states
-        if rs.forward_channel_id == selected_route.forward_channel_id
+        if rs.next_hop == selected_route.next_hop
     ]

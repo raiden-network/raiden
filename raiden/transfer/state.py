@@ -172,6 +172,17 @@ class RouteState(State):
         assert len(self.route) >= 1, "Route has no next hop"
         return self.route[1]
 
+    @property
+    def next_hop(self) -> Address:
+        """ Identifies the next node
+
+        Use this to compare if two routes go to the same next node.
+
+        Planned change: Will return a token network in addition to the node address.
+        """
+        assert len(self.route) >= 1, "Route has no next hop"
+        return self.route[1]
+
     def __repr__(self) -> str:
         return "RouteState ({}), channel_id: {}, fee: {}".format(
             " -> ".join(to_checksum_address(addr) for addr in self.route),
