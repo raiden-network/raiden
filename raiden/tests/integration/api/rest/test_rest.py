@@ -32,10 +32,14 @@ from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
-from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
+from raiden.tests.utils.transfer import (
+    block_offset_timeout,
+    create_route_state_for_route,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
-from raiden.transfer.state import ChannelState, RouteState
+from raiden.transfer.state import ChannelState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import (
@@ -983,10 +987,6 @@ def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_a
 
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(initiator), initiator.default_registry.address, token_address,
-    )
-    assert token_network
     initiator.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=PaymentAmount(amount_to_send - expected_fee - fee_margin),
@@ -994,12 +994,8 @@ def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_a
         identifier=identifier,
         secret=secret,
         route_states=[
-            RouteState(
-                route=[initiator.address, mediator.address, target.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    mediator.address
-                ][0],
-                estimated_fee=expected_fee,
+            create_route_state_for_route(
+                apps=raiden_network, token_address=token_address, fee_estimate=expected_fee,
             )
         ],
     )

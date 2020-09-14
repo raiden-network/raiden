@@ -21,6 +21,7 @@ from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
     block_timeout_for_transfer_by_secrethash,
+    create_route_state_for_route,
     transfer,
     transfer_and_assert_path,
     wait_assert,
@@ -30,7 +31,6 @@ from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import RouteState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     BlockExpiration,
@@ -476,10 +476,6 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         SecretRequest, {"secrethash": secrethash}
     )
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token_address,
-    )
-    assert token_network
     app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
@@ -487,12 +483,8 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         identifier=PaymentID(1),
         secret=secret,
         route_states=[
-            RouteState(
-                route=[app0.address, app1.address, app2.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    app1.address
-                ][0],
-                estimated_fee=fee,
+            create_route_state_for_route(
+                apps=raiden_network, token_address=token_address, fee_estimate=fee,
             )
         ],
     )
