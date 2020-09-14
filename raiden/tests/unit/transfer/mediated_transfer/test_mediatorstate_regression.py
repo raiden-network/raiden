@@ -87,6 +87,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
             mediator_state=new_state,
             state_change=block_state_change,
             channelidentifiers_to_channels=channels.channel_map,
+            addresses_to_channel=channels.addresses_to_channel(),
             nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
         )
@@ -122,6 +123,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state=paid_state,
         state_change=expired_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
     )
@@ -172,6 +174,7 @@ def test_regression_send_refund():
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
@@ -221,6 +224,7 @@ def test_regression_send_refund():
         mediator_state=iteration.new_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
