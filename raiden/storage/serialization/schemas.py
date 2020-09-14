@@ -1,9 +1,7 @@
-import json
 from random import Random
 from typing import Dict, Iterable
 
 import marshmallow
-import networkx
 from eth_utils import to_bytes, to_canonical_address, to_hex
 from marshmallow import EXCLUDE, Schema, post_dump
 from marshmallow_dataclass import class_schema
@@ -213,25 +211,6 @@ class CallablePolyField(PolyField):
         return self
 
 
-class NetworkXGraphField(marshmallow.fields.Field):
-    """ Converts networkx.Graph objects to a string """
-
-    def _serialize(self, value: networkx.Graph, attr: Any, obj: Any, **kwargs: Any) -> str:
-        return json.dumps(
-            [(to_hex_address(edge[0]), to_hex_address(edge[1])) for edge in value.edges]
-        )
-
-    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> networkx.Graph:
-        try:
-            raw_data = json.loads(value)
-            canonical_addresses = [
-                (to_canonical_address(edge[0]), to_canonical_address(edge[1])) for edge in raw_data
-            ]
-            return networkx.Graph(canonical_addresses)
-        except (TypeError, ValueError):
-            raise self.make_error("validator_failed", input=value)
-
-
 class BaseSchema(marshmallow.Schema):
     # We want to ignore unknown fields
     class Meta:
@@ -319,7 +298,6 @@ class BaseSchema(marshmallow.Schema):
         # QueueIdentifier (Special case)
         QueueIdentifier: QueueIdentifierField,
         # Other
-        networkx.Graph: NetworkXGraphField,
         Random: PRNGField,
     }
 

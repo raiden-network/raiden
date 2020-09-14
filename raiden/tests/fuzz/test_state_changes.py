@@ -53,7 +53,6 @@ from raiden.transfer.state import (
     HashTimeLockState,
     NettingChannelState,
     NetworkState,
-    TokenNetworkGraphState,
     TokenNetworkRegistryState,
     TokenNetworkState,
     make_empty_pending_locks_state,
@@ -352,7 +351,6 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.token_network_state = TokenNetworkState(
             address=self.token_network_address,
             token_address=self.token_id,
-            network_graph=TokenNetworkGraphState(self.token_network_address),
         )
 
         self.token_network_registry_address = factories.make_token_network_registry_address()

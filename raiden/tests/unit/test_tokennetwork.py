@@ -14,7 +14,6 @@ from raiden.transfer.state import (
     HashTimeLockState,
     PendingLocksState,
     RouteState,
-    TokenNetworkGraphState,
     TokenNetworkState,
 )
 from raiden.transfer.state_change import (
@@ -23,8 +22,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
-    ContractReceiveRouteClosed,
-    ContractReceiveRouteNew,
 )
 from raiden.utils.copy import deepcopy
 
@@ -48,11 +45,7 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
 
     token_network_address = factories.make_address()
     token_id = factories.make_address()
-    token_network_state = TokenNetworkState(
-        address=token_network_address,
-        token_address=token_id,
-        network_graph=TokenNetworkGraphState(token_network_address),
-    )
+    token_network_state = TokenNetworkState(address=token_network_address, token_address=token_id,)
 
     pseudo_random_generator = random.Random()
 
@@ -108,11 +101,7 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
 
     token_network_address = factories.make_address()
     token_id = factories.make_address()
-    token_network_state = TokenNetworkState(
-        address=token_network_address,
-        token_address=token_id,
-        network_graph=TokenNetworkGraphState(token_network_address),
-    )
+    token_network_state = TokenNetworkState(address=token_network_address, token_address=token_id,)
 
     properties, _ = channel_properties
     channel_state = factories.create(properties)
@@ -538,159 +527,3 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
 
     assert len(ids_to_channels) == 2
     assert channel_state.identifier in ids_to_channels
-
-
-def test_routing_updates(token_network_state, our_address, channel_properties):
-    open_block_number = 10
-    properties, _ = channel_properties
-    address1 = properties.partner_state.address
-    address2 = factories.make_address()
-    address3 = factories.make_address()
-    pseudo_random_generator = random.Random()
-
-    channel_state = factories.create(properties)
-
-    open_block_hash = factories.make_block_hash()
-    # create a new channel as participant, check graph update
-    channel_new_state_change = ContractReceiveChannelNew(
-        transaction_hash=factories.make_transaction_hash(),
-        channel_state=channel_state,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-
-    channel_new_iteration1 = token_network.state_transition(
-        token_network_state=token_network_state,
-        state_change=channel_new_state_change,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-        pseudo_random_generator=pseudo_random_generator,
-    )
-
-    graph_state = channel_new_iteration1.new_state.network_graph
-    assert channel_state.identifier in graph_state.channel_identifier_to_participants
-    assert len(graph_state.channel_identifier_to_participants) == 1
-    assert graph_state.network[our_address][address1] is not None
-    assert len(graph_state.network.edges()) == 1
-
-    # create a new channel without being participant, check graph update
-    new_channel_identifier = factories.make_channel_identifier()
-    channel_new_state_change = ContractReceiveRouteNew(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=new_channel_identifier,
-        ),
-        participant1=address2,
-        participant2=address3,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-
-    channel_new_iteration2 = token_network.state_transition(
-        token_network_state=channel_new_iteration1.new_state,
-        state_change=channel_new_state_change,
-        block_number=open_block_number + 10,
-        block_hash=factories.make_block_hash(),
-        pseudo_random_generator=pseudo_random_generator,
-    )
-
-    graph_state = channel_new_iteration2.new_state.network_graph
-    assert channel_state.identifier in graph_state.channel_identifier_to_participants
-    assert new_channel_identifier in graph_state.channel_identifier_to_participants
-    assert len(graph_state.channel_identifier_to_participants) == 2
-    assert graph_state.network[our_address][address1] is not None
-    assert graph_state.network[address2][address3] is not None
-    assert len(graph_state.network.edges()) == 2
-
-    # close the channel the node is a participant of, check edge is removed from graph
-    closed_block_number = open_block_number + 20
-    closed_block_hash = factories.make_block_hash()
-    channel_close_state_change1 = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
-        transaction_from=channel_state.partner_state.address,
-        canonical_identifier=channel_state.canonical_identifier,
-        block_number=closed_block_number,
-        block_hash=closed_block_hash,
-    )
-
-    channel_closed_iteration1 = token_network.state_transition(
-        token_network_state=channel_new_iteration2.new_state,
-        state_change=channel_close_state_change1,
-        block_number=closed_block_number,
-        block_hash=closed_block_hash,
-        pseudo_random_generator=pseudo_random_generator,
-    )
-
-    # Check that a second ContractReceiveChannelClosed events is handled properly
-    # This might have been sent from the other participant of the channel
-    # See issue #2449
-    channel_close_state_change2 = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
-        transaction_from=channel_state.our_state.address,
-        canonical_identifier=channel_state.canonical_identifier,
-        block_number=closed_block_number,
-        block_hash=closed_block_hash,
-    )
-
-    channel_closed_iteration2 = token_network.state_transition(
-        token_network_state=channel_closed_iteration1.new_state,
-        state_change=channel_close_state_change2,
-        block_number=closed_block_number,
-        block_hash=closed_block_hash,
-        pseudo_random_generator=pseudo_random_generator,
-    )
-
-    graph_state = channel_closed_iteration2.new_state.network_graph
-    assert channel_state.identifier not in graph_state.channel_identifier_to_participants
-    assert new_channel_identifier in graph_state.channel_identifier_to_participants
-    assert len(graph_state.channel_identifier_to_participants) == 1
-    assert graph_state.network[address2][address3] is not None
-    assert len(graph_state.network.edges()) == 1
-
-    # close the channel the node is not a participant of, check edge is removed from graph
-    channel_close_state_change3 = ContractReceiveRouteClosed(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=new_channel_identifier,
-        ),
-        block_number=closed_block_number,
-        block_hash=closed_block_hash,
-    )
-
-    channel_closed_iteration3 = token_network.state_transition(
-        token_network_state=channel_closed_iteration2.new_state,
-        state_change=channel_close_state_change3,
-        block_number=closed_block_number + 10,
-        block_hash=factories.make_block_hash(),
-        pseudo_random_generator=pseudo_random_generator,
-    )
-
-    # Check that a second ContractReceiveRouteClosed events is handled properly.
-    # This might have been sent from the second participant of the channel
-    # See issue #2449
-    closed_block_plus_10_hash = factories.make_block_hash()
-    channel_close_state_change4 = ContractReceiveRouteClosed(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=new_channel_identifier,
-        ),
-        block_number=closed_block_number + 10,
-        block_hash=closed_block_plus_10_hash,
-    )
-
-    channel_closed_iteration4 = token_network.state_transition(
-        token_network_state=channel_closed_iteration3.new_state,
-        state_change=channel_close_state_change4,
-        block_number=closed_block_number + 10,
-        block_hash=closed_block_plus_10_hash,
-        pseudo_random_generator=pseudo_random_generator,
-    )
-
-    graph_state = channel_closed_iteration4.new_state.network_graph
-    assert channel_state.identifier not in graph_state.channel_identifier_to_participants
-    assert new_channel_identifier not in graph_state.channel_identifier_to_participants
-    assert len(graph_state.channel_identifier_to_participants) == 0
-    assert len(graph_state.network.edges()) == 0

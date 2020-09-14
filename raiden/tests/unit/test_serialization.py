@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
-from eth_utils import to_canonical_address
-from networkx import Graph
 
 from raiden.exceptions import SerializationError
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
@@ -139,11 +137,6 @@ messages.append(
 
 
 @dataclass
-class ClassWithGraphObject:
-    graph: Graph
-
-
-@dataclass
 class ClassWithInt:
     value: int
 
@@ -190,22 +183,6 @@ def test_serialize_missing_attribute():
 
     with pytest.raises(SerializationError):
         JSONSerializer.serialize(instance)
-
-
-def test_serialization_networkx_graph():
-    p1 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4C")
-    p2 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4D")
-    p3 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4E")
-    p4 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4F")
-
-    e = [(p1, p2), (p2, p3), (p3, p4)]
-    graph = Graph(e)
-    instance = ClassWithGraphObject(graph)
-
-    data = JSONSerializer.serialize(instance)
-    restored_instance = JSONSerializer.deserialize(data)
-
-    assert instance.graph.edges == restored_instance.graph.edges
 
 
 def test_chainstate_restore():

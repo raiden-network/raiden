@@ -1407,7 +1407,7 @@ def make_chain_state(
     token_address = make_address()
 
     token_network = TokenNetworkState(
-        address=token_network_address, token_address=token_address, network_graph=None
+        address=token_network_address, token_address=token_address
     )
     for netting_channel in channel_set.channels:
         token_network.channelidentifiers_to_channels[
@@ -1498,7 +1498,7 @@ def create_network(
     state = token_network_state
     channels = list()
 
-    for count, route in enumerate(routes, 1):
+    for route in routes:
         if route.address1 == our_address:
             channel = route_properties_to_channel(route)
             state_change = ContractReceiveChannelNew(
@@ -1526,8 +1526,5 @@ def create_network(
             pseudo_random_generator=random.Random(),
         )
         state = iteration.new_state
-
-        assert len(state.network_graph.channel_identifier_to_participants) == count
-        assert len(state.network_graph.network.edges()) == count
 
     return state, channels
