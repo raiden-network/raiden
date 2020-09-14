@@ -380,6 +380,7 @@ def test_mediator_skips_used_routes():
     transition_result = mediator.handle_init(
         state_change=init_action,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=prng,
         block_number=block_number,
@@ -422,6 +423,7 @@ def test_mediator_skips_used_routes():
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=prng,
         block_number=block_number,
@@ -465,6 +467,7 @@ def test_mediator_skips_used_routes():
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=prng,
         block_number=block_number,
