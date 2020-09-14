@@ -13,8 +13,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
-    ContractReceiveRouteClosed,
-    ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
@@ -132,13 +130,7 @@ def handle_channelnew(
 
     channel_state = state_change.channel_state
     channel_identifier = channel_state.identifier
-    our_address = channel_state.our_state.address
     partner_address = channel_state.partner_state.address
-
-    token_network_state.network_graph.network.add_edge(our_address, partner_address)
-    token_network_state.network_graph.channel_identifier_to_participants[
-        state_change.channel_identifier
-    ] = (our_address, partner_address)
 
     # Ignore duplicated channelnew events. For this to work properly on channel
     # reopens the blockchain events ChannelSettled and ChannelOpened must be
@@ -191,19 +183,6 @@ def handle_closed(
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult:
-    network_graph_state = token_network_state.network_graph
-
-    # it might happen that both partners close at the same time, so the channel might
-    # already be deleted
-    if state_change.channel_identifier in network_graph_state.channel_identifier_to_participants:
-        participant1, participant2 = network_graph_state.channel_identifier_to_participants[
-            state_change.channel_identifier
-        ]
-        token_network_state.network_graph.network.remove_edge(participant1, participant2)
-        del token_network_state.network_graph.channel_identifier_to_participants[
-            state_change.channel_identifier
-        ]
-
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -273,42 +252,6 @@ def handle_batch_unlock(
             ].remove(channel_state.identifier)
 
             del token_network_state.channelidentifiers_to_channels[channel_state.identifier]
-
-    return TransitionResult(token_network_state, events)
-
-
-def handle_newroute(
-    token_network_state: TokenNetworkState, state_change: ContractReceiveRouteNew
-) -> TransitionResult:
-    events: List[Event] = list()
-
-    token_network_state.network_graph.network.add_edge(
-        state_change.participant1, state_change.participant2
-    )
-    token_network_state.network_graph.channel_identifier_to_participants[
-        state_change.channel_identifier
-    ] = (state_change.participant1, state_change.participant2)
-
-    return TransitionResult(token_network_state, events)
-
-
-def handle_closeroute(
-    token_network_state: TokenNetworkState, state_change: ContractReceiveRouteClosed
-) -> TransitionResult:
-    events: List[Event] = list()
-
-    network_graph_state = token_network_state.network_graph
-
-    # it might happen that both partners close at the same time, so the channel might
-    # already be deleted
-    if state_change.channel_identifier in network_graph_state.channel_identifier_to_participants:
-        participant1, participant2 = network_graph_state.channel_identifier_to_participants[
-            state_change.channel_identifier
-        ]
-        token_network_state.network_graph.network.remove_edge(participant1, participant2)
-        del token_network_state.network_graph.channel_identifier_to_participants[
-            state_change.channel_identifier
-        ]
 
     return TransitionResult(token_network_state, events)
 
@@ -456,16 +399,6 @@ def state_transition(
             block_number=block_number,
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
-        )
-    elif type(state_change) == ContractReceiveRouteNew:
-        assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
-        iteration = handle_newroute(
-            token_network_state=token_network_state, state_change=state_change
-        )
-    elif type(state_change) == ContractReceiveRouteClosed:
-        assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
-        iteration = handle_closeroute(
-            token_network_state=token_network_state, state_change=state_change
         )
     elif type(state_change) == ReceiveWithdrawRequest:
         assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION

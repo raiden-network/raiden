@@ -4,8 +4,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
+from typing import Tuple
 
-import networkx
 from eth_utils import to_hex
 
 from raiden.constants import (
@@ -28,7 +28,6 @@ from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.typing import (
     Address,
-    Any,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -59,7 +58,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    Tuple,
     Union,
     WithdrawAmount,
     typecheck,
@@ -96,10 +94,6 @@ def message_identifier_from_prng(prng: Random) -> MessageID:
     return MessageID(prng.randint(0, UINT64_MAX))
 
 
-def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
-    return sorted(sorted(edge) for edge in network.edges())
-
-
 @dataclass
 class PaymentMappingState(State):
     """ Global map from secrethash to a transfer task.
@@ -118,33 +112,6 @@ class PaymentMappingState(State):
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
     secrethashes_to_task: Dict[SecretHash, TransferTask] = field(repr=False, default_factory=dict)
-
-
-# This is necessary for the routing only, maybe it should be transient state
-# outside of the state tree.
-@dataclass(repr=False, eq=False)
-class TokenNetworkGraphState(State):
-    """ Stores the existing channels in the channel manager contract, used for
-    route finding.
-    """
-
-    token_network_address: TokenNetworkAddress
-    network: networkx.Graph = field(repr=False, default_factory=networkx.Graph)
-    channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
-        repr=False, default_factory=dict
-    )
-
-    def __repr__(self) -> str:
-        # pylint: disable=no-member
-        return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, TokenNetworkGraphState)
-            and self.token_network_address == other.token_network_address
-            and to_comparable_graph(self.network) == to_comparable_graph(other.network)
-            and self.channel_identifier_to_participants == other.channel_identifier_to_participants
-        )
 
 
 @dataclass
@@ -476,7 +443,6 @@ class TokenNetworkState(State):
 
     address: TokenNetworkAddress
     token_address: TokenAddress
-    network_graph: TokenNetworkGraphState = field(repr=False)
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState] = field(
         repr=False, default_factory=dict
     )

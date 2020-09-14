@@ -58,23 +58,6 @@ def block_number(chain_state: ChainState) -> BlockNumber:
     return chain_state.block_number
 
 
-def count_token_network_channels(
-    chain_state: ChainState,
-    token_network_registry_address: TokenNetworkRegistryAddress,
-    token_address: TokenAddress,
-) -> int:
-    token_network = get_token_network_by_token_address(
-        chain_state, token_network_registry_address, token_address
-    )
-
-    if token_network is not None:
-        count = len(token_network.network_graph.network)
-    else:
-        count = 0
-
-    return count
-
-
 def state_from_raiden(raiden: "RaidenService") -> ChainState:  # pragma: no unittest
     assert raiden.wal, "raiden.wal not set"
     return raiden.wal.get_current_state()
@@ -106,7 +89,10 @@ def get_participants_addresses(
     )
 
     if token_network is not None:
-        addresses = set(token_network.network_graph.network.nodes())
+        addresses = set()
+        for channel_state in token_network.channelidentifiers_to_channels.values():
+            addresses.add(channel_state.partner_state.address)
+            addresses.add(channel_state.our_state.address)
     else:
         addresses = set()
 

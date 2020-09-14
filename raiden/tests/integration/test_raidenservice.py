@@ -36,7 +36,6 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
-    ContractReceiveRouteClosed,
 )
 from raiden.ui.startup import RaidenBundle
 from raiden.utils.copy import deepcopy
@@ -405,7 +404,4 @@ def test_blockchain_event_processed_interleaved(
 
     assert search_for_item(
         app1_state_changes, ContractReceiveChannelClosed, {"channel_identifier": channel_id}
-    )
-    assert not search_for_item(
-        app1_state_changes, ContractReceiveRouteClosed, {"channel_identifier": channel_id}
     )

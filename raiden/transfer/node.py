@@ -54,8 +54,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveNewTokenNetwork,
     ContractReceiveNewTokenNetworkRegistry,
-    ContractReceiveRouteClosed,
-    ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
     ReceiveDelivered,
@@ -87,8 +85,6 @@ TokenNetworkStateChange = Union[
     ContractReceiveChannelNew,
     ContractReceiveChannelDeposit,
     ContractReceiveChannelSettled,
-    ContractReceiveRouteNew,
-    ContractReceiveRouteClosed,
     ContractReceiveUpdateTransfer,
     ContractReceiveChannelClosed,
     ContractReceiveChannelWithdraw,
@@ -816,12 +812,6 @@ def handle_state_change(
         iteration = handle_token_network_action(chain_state, state_change)
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveRouteNew:
-        assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveRouteClosed:
-        assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
         iteration = handle_token_network_action(chain_state, state_change)
     elif type(state_change) == ContractReceiveSecretReveal:
         assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION

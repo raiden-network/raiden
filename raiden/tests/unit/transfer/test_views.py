@@ -3,13 +3,11 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import (
-    TokenNetworkGraphState,
     TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionExecutionStatus,
 )
 from raiden.transfer.views import (
-    count_token_network_channels,
     filter_channels_by_partneraddress,
     filter_channels_by_status,
     get_networks,
@@ -53,17 +51,6 @@ def test_filter_channels_by_status_empty_excludes():
     assert (
         filter_channels_by_status(channel_states=channel_states, exclude_states=None)
         == channel_states
-    )
-
-
-def test_count_token_network_channels_no_token_network(chain_state):
-    assert (
-        count_token_network_channels(
-            chain_state=chain_state,
-            token_network_registry_address=factories.make_address(),
-            token_address=factories.make_address(),
-        )
-        == 0
     )
 
 
@@ -428,11 +415,7 @@ def test_get_networks(chain_state, token_network_address):
     ) == (token_network_registry_empty, None)
 
     chain_state = orig_chain_state
-    token_network = TokenNetworkState(
-        address=token_network_address,
-        token_address=token_address,
-        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
-    )
+    token_network = TokenNetworkState(address=token_network_address, token_address=token_address,)
     token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )

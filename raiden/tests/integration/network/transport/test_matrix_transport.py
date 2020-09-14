@@ -731,7 +731,6 @@ def test_pfs_broadcast_messages(
     retries_before_backoff,
     monkeypatch,
     broadcast_rooms,
-    route_mode,
 ):
     """
     Test that RaidenService broadcasts PFSCapacityUpdate messages to
