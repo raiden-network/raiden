@@ -1116,6 +1116,14 @@ class ChannelSet:
     def nodeaddresses_to_networkstates(self) -> NodeNetworkStateMap:
         return {channel.partner_state.address: NetworkState.REACHABLE for channel in self.channels}
 
+    def addresses_to_channel(
+        self, token_network_address: TokenNetworkAddress = UNIT_TOKEN_NETWORK_ADDRESS
+    ) -> Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState]:
+        return {
+            (token_network_address, channel.partner_state.address): channel
+            for channel in self.channels
+        }
+
     def our_address(self, index: int) -> Address:
         return self.channels[index].our_state.address
 
