@@ -9,7 +9,6 @@ from http.client import HTTPSConnection
 from json import JSONDecodeError
 from os import PathLike
 from typing import IO, Any, Callable, List, Optional, Tuple, Union
-from urllib.parse import urlunparse
 
 import structlog
 from gevent import subprocess
@@ -236,7 +235,7 @@ class JSONRPCExecutor(HTTPExecutor):  # pragma: no cover
         }
         conn.request(
             method=self.method,
-            url=urlunparse(self.url),
+            url=self.url.path,
             body=json.dumps(req_body),
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         )
