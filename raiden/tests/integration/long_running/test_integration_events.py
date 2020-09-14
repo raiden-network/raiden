@@ -21,6 +21,7 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     block_offset_timeout,
+    create_route_state_for_route,
     get_channelstate,
     watch_for_unlock_failures,
 )
@@ -28,7 +29,7 @@ from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.state import BalanceProofSignedState, RouteState
+from raiden.transfer.state import BalanceProofSignedState
 from raiden.transfer.state_change import ContractReceiveSecretReveal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
@@ -428,10 +429,6 @@ def test_secret_revealed_on_chain(
 
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token_address,
-    )
-    assert token_network
     app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
@@ -439,12 +436,10 @@ def test_secret_revealed_on_chain(
         identifier=identifier,
         secret=secret,
         route_states=[
-            RouteState(
-                route=[app0.address, app1.address, app2.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    app1.address
-                ][0],
-                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount)),
+            create_route_state_for_route(
+                apps=raiden_chain,
+                token_address=token_address,
+                fee_estimate=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount)),
             )
         ],
     )

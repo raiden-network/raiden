@@ -23,6 +23,7 @@ from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     block_offset_timeout,
     calculate_fee_for_amount,
+    create_route_state_for_route,
     get_channelstate,
     transfer,
     wait_assert,
@@ -86,22 +87,16 @@ def test_refund_messages(raiden_chain: List[RaidenService], token_addresses, dep
     fee_margin = calculate_fee_margin(refund_amount, refund_fees)
     refund_amount_with_fees = refund_amount + refund_fees + fee_margin
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token_address,
-    )
-    assert token_network
     payment_status = app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=refund_amount,
         target=TargetAddress(app2.address),
         identifier=identifier,
         route_states=[
-            RouteState(
-                route=[app0.address, app1.address, app2.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    app1.address
-                ][0],
-                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * refund_amount)),
+            create_route_state_for_route(
+                apps=raiden_chain,
+                token_address=token_address,
+                fee_estimate=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * refund_amount)),
             )
         ],
     )
@@ -234,12 +229,10 @@ def test_refund_transfer(
         target=TargetAddress(app2.address),
         identifier=identifier_refund,
         route_states=[
-            RouteState(
-                route=[app0.address, app1.address, app2.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    app1.address
-                ][0],
-                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
+            create_route_state_for_route(
+                apps=raiden_chain,
+                token_address=token_address,
+                fee_estimate=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
             )
         ],
     )

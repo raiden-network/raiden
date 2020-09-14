@@ -115,6 +115,24 @@ def get_channelstate(
     return channel_state
 
 
+def create_route_state_for_route(
+    apps: List[RaidenService], token_address: TokenAddress, fee_estimate: FeeAmount
+) -> RouteState:
+    assert len(apps) > 1, "Need at least two nodes for a route"
+    route = [app.address for app in apps]
+
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(apps[0]), apps[0].default_registry.address, token_address,
+    )
+    assert token_network
+
+    return RouteState(
+        route=route,
+        forward_channel_id=token_network.partneraddresses_to_channelidentifiers[route[1]][0],
+        estimated_fee=fee_estimate,
+    )
+
+
 @contextmanager
 def watch_for_unlock_failures(*apps):
     """
@@ -433,24 +451,18 @@ def transfer_and_assert_path(
         for app, channel_identifier in receiving
     )
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(first_app), first_app.default_registry.address, token_address,
-    )
-
-    route = [app.address for app in path]
-    forward_channel_id = token_network.partneraddresses_to_channelidentifiers[route[1]][0]
-    route_state = RouteState(
-        route=route, forward_channel_id=forward_channel_id, estimated_fee=fee_estimate,
-    )
-
     last_app = path[-1]
     payment_status = first_app.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
-        target=TargetAddress(last_app.address),
+        target=TargetAddress(path[-1].address),
         identifier=identifier,
         secret=secret,
-        route_states=[route_state],
+        route_states=[
+            create_route_state_for_route(
+                apps=path, token_address=token_address, fee_estimate=fee_estimate,
+            )
+        ],
     )
 
     msg = (
