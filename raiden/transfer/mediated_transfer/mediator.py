@@ -1027,7 +1027,6 @@ def mediate_transfer(
     state: MediatorTransferState,
     candidate_route_states: List[RouteState],
     payer_channel: NettingChannelState,
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
@@ -1065,7 +1064,8 @@ def mediate_transfer(
 
     # Mediate through the first valid route
     for route_state in candidate_route_states:
-        payee_channel = channelidentifiers_to_channels.get(route_state.forward_channel_id)
+        target_token_network = payer_channel.token_network_address
+        payee_channel = addresses_to_channel.get((target_token_network, route_state.route[1]))
         if not payee_channel:
             continue
 
@@ -1085,7 +1085,12 @@ def mediate_transfer(
     # Could not mediate, try to refund
     if state.transfers_pair:
         original_pair = state.transfers_pair[0]
-        original_channel = get_payer_channel(channelidentifiers_to_channels, original_pair)
+        original_channel = addresses_to_channel.get(
+            (
+                original_pair.payer_transfer.balance_proof.token_network_address,
+                original_pair.payer_transfer.payer_address,
+            )
+        )
     else:
         original_channel = payer_channel
 
@@ -1133,7 +1138,6 @@ def handle_init(
         state=mediator_state,
         candidate_route_states=routes,
         payer_channel=payer_channel,
-        channelidentifiers_to_channels=channelidentifiers_to_channels,
         addresses_to_channel=addresses_to_channel,
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
@@ -1175,7 +1179,6 @@ def handle_block(
                 state=mediator_state,
                 candidate_route_states=mediator_state.routes,
                 payer_channel=payer_channel,
-                channelidentifiers_to_channels=channelidentifiers_to_channels,
                 addresses_to_channel=addresses_to_channel,
                 nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
                 pseudo_random_generator=pseudo_random_generator,
@@ -1274,7 +1277,6 @@ def handle_refundtransfer(
             state=mediator_state,
             candidate_route_states=mediator_state.routes,
             payer_channel=payer_channel,
-            channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
@@ -1501,7 +1503,6 @@ def handle_node_change_network_state(
         state=mediator_state,
         candidate_route_states=mediator_state.routes,
         payer_channel=payer_channel,
-        channelidentifiers_to_channels=channelidentifiers_to_channels,
         addresses_to_channel=addresses_to_channel,
         nodeaddresses_to_networkstates={state_change.node_address: state_change.network_state},
         pseudo_random_generator=pseudo_random_generator,
