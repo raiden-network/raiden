@@ -37,7 +37,6 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
-from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
 from raiden.utils.typing import (
@@ -219,10 +218,6 @@ def test_refund_transfer(
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token_address,
-    )
-    assert token_network
     payment_status = app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount_refund,
@@ -427,22 +422,16 @@ def test_different_view_of_last_bp_during_unlock(
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token_address,
-    )
-    assert token_network
     payment_status = app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount_refund,
         target=TargetAddress(app2.address),
         identifier=identifier_refund,
         route_states=[
-            RouteState(
-                route=[app0.address, app1.address, app2.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    app1.address
-                ][0],
-                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
+            create_route_state_for_route(
+                apps=raiden_chain,
+                token_address=token_address,
+                fee_estimate=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
             )
         ],
     )
@@ -654,22 +643,16 @@ def test_refund_transfer_after_2nd_hop(
     fee_margin = calculate_fee_margin(amount_refund, fee)
     amount_refund_with_fees = amount_refund + fee + fee_margin
 
-    token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token_address,
-    )
-    assert token_network
     payment_status = app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount_refund,
         target=TargetAddress(app3.address),
         identifier=identifier_refund,
         route_states=[
-            RouteState(
-                route=[app0.address, app1.address, app2.address],
-                forward_channel_id=token_network.partneraddresses_to_channelidentifiers[
-                    app1.address
-                ][0],
-                estimated_fee=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
+            create_route_state_for_route(
+                apps=[app0, app1, app2],
+                token_address=token_address,
+                fee_estimate=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount_refund)),
             )
         ],
     )
