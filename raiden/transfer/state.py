@@ -568,3 +568,15 @@ class ChainState(State):
             len(self.payment_mapping.secrethashes_to_task),
             self.chain_id,
         )
+
+    @property
+    def addresses_to_channel(
+        self,
+    ) -> Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState]:
+        """ Find the channel for a partner by his address and token network """
+        return {
+            (token_network.address, channel.partner_state.address): channel
+            for token_network_registry in self.identifiers_to_tokennetworkregistries.values()
+            for token_network in token_network_registry.token_network_list
+            for channel in token_network.channelidentifiers_to_channels.values()
+        }
