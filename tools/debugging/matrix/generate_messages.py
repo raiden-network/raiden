@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import gevent.monkey  # isort:skip # noqa
+
+gevent.monkey.patch_all()  # isort:skip # noqa
 import argparse
 import json
 import logging.config
@@ -21,8 +23,6 @@ from raiden.settings import (
 from raiden.tests.utils import factories
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, Iterator, RoomID
-
-gevent.monkey.patch_all()  # isort:skip # noqa
 
 import asyncio  # isort:skip # noqa
 from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa

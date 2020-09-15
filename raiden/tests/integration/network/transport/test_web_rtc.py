@@ -1,23 +1,22 @@
-from typing import Tuple
-
 import gevent
 import pytest
 from gevent.timeout import Timeout
 
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.synchronization import Processed
-from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
+from raiden.network.transport.matrix.transport import MessagesQueue
+from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
 from raiden.transfer.identifiers import QueueIdentifier
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.typing import MessageID
 
 TIMEOUT_MESSAGE_RECEIVE = 15
 
 
 class MessageHandler:
-    def __init__(self, bag: set):
+    def __init__(self, bag):
         self.bag = bag
 
     def on_messages(self, _, messages):
@@ -26,21 +25,20 @@ class MessageHandler:
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
-def test_matrix_message_sync(matrix_transports: Tuple[MatrixTransport]):
+def test_web_rtc_message_sync(matrix_transports):
 
     transport0, transport1 = matrix_transports
-
-    transport0_messages = set()
     transport1_messages = set()
 
-    transport0_message_handler = MessageHandler(transport0_messages)
-    transport1_message_handler = MessageHandler(transport1_messages)
+    raiden_service0 = MockRaidenService()
+    raiden_service1 = MockRaidenService()
 
-    raiden_service0 = MockRaidenService(transport0_message_handler)
-    raiden_service1 = MockRaidenService(transport1_message_handler)
+    def mock_handle_web_rtc_messages(message_data, partner_address):
+        messages = validate_and_parse_message(message_data, partner_address)
+        transport1_messages.update(messages)
 
-    print(f"transport0: {to_checksum_address(raiden_service0.address)}")
-    print(f"transport1: {to_checksum_address(raiden_service1.address)}")
+    # set mock function to make sure messages are sent via web rtc
+    transport1._web_rtc_manager._handle_message_callback = mock_handle_web_rtc_messages
 
     transport0.start(raiden_service0, [], None)
     transport1.start(raiden_service1, [], None)
@@ -48,10 +46,11 @@ def test_matrix_message_sync(matrix_transports: Tuple[MatrixTransport]):
     transport0.immediate_health_check_for(transport1._raiden_service.address)
     transport1.immediate_health_check_for(transport0._raiden_service.address)
 
-    while raiden_service1.address not in transport0.web_rtc_partners.rtc_partners:
-        gevent.wait(timeout=1)
-    while raiden_service0.address not in transport1.web_rtc_partners.rtc_partners:
-        gevent.wait(timeout=1)
+    # wait until web rtc connection is ready
+    while not transport0._web_rtc_manager.has_ready_channel(raiden_service1.address):
+        gevent.sleep(1)
+    while not transport1._web_rtc_manager.has_ready_channel(raiden_service0.address):
+        gevent.sleep(1)
 
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,
@@ -62,27 +61,12 @@ def test_matrix_message_sync(matrix_transports: Tuple[MatrixTransport]):
     raiden0_queues[queue_identifier] = []
 
     for i in range(5):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Processed(message_identifier=MessageID(i), signature=EMPTY_SIGNATURE)
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
         transport0.send_async([MessagesQueue(queue_identifier, [message])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while not len(transport0_messages) == 5:
-            gevent.sleep(0.1)
-
         while not len(transport1_messages) == 5:
+            print(len(transport1_messages))
             gevent.sleep(0.1)
-
-    # transport1 receives the `Processed` messages sent by transport0
-    for i in range(5):
-        assert any(m.message_identifier == i for m in transport1_messages)
-
-    # transport0 answers with a `Delivered` for each `Processed`
-    for i in range(5):
-        assert any(m.delivered_message_identifier == i for m in transport0_messages)
-
-    # Clear out queue
-    raiden0_queues[queue_identifier] = []
-
-    gevent.sleep(100)

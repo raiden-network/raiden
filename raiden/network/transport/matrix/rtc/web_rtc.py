@@ -1,11 +1,12 @@
 import asyncio
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import gevent
 import structlog
 from aiortc import RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 from gevent import Greenlet
+from gevent.event import Event
 
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.utils import my_place_or_yours
@@ -19,7 +20,8 @@ log = structlog.get_logger(__name__)
 class RTCPartner:
     partner_address: Address
     peer_connection: RTCPeerConnection
-    channel: Optional[RTCDataChannel] = None
+    channel: Optional[RTCDataChannel] = field(default=None)
+    partner_ready_event: Event = field(default_factory=Event)
 
     def create_channel(self, node_address: Address) -> None:
         lower_address = my_place_or_yours(node_address, self.partner_address)
@@ -50,46 +52,48 @@ class WebRTCManager:
         self,
         node_address: Optional[Address],
         handle_message_callback: Callable[[str, Address], None],
-        handle_sdp_callback: Callable[[Dict[str, Any], Address], None],
+        handle_sdp_callback: Callable[[Optional[RTCSessionDescription], Address], None],
     ) -> None:
         self.node_address: Optional[Address] = node_address
         self._handle_message_callback = handle_message_callback
         self._handle_sdp_callback = handle_sdp_callback
-        self.rtc_partners: Dict[Address, RTCPartner] = dict()
+        self.address_to_rtc_partners: Dict[Address, RTCPartner] = dict()
         self.coroutines: List[Coroutine] = list()
 
-    def _get_rtc_partner(self, partner_address: Address) -> RTCPartner:
-        if partner_address not in self.rtc_partners:
-            self.rtc_partners[partner_address] = RTCPartner(partner_address, RTCPeerConnection())
-        return self.rtc_partners[partner_address]
+    def get_rtc_partner(self, partner_address: Address) -> RTCPartner:
+        if partner_address not in self.address_to_rtc_partners:
+            self.address_to_rtc_partners[partner_address] = RTCPartner(
+                partner_address, RTCPeerConnection()
+            )
+        return self.address_to_rtc_partners[partner_address]
 
     def has_ready_channel(self, partner_address: Address) -> bool:
-        if partner_address not in self.rtc_partners:
+        if partner_address not in self.address_to_rtc_partners:
             return False
-        channel = self.rtc_partners[partner_address].channel
+        channel = self.address_to_rtc_partners[partner_address].channel
         if channel is None:
             return False
         if channel.readyState == "open":
             return True
         return False
 
-    def create_channel(self, partner_address: Address) -> None:
+    def async_create_channel(self, partner_address: Address) -> None:
         assert self.node_address, "Transport is not started yet but tried to create rtc channel"
 
-        rtc_partner = self._get_rtc_partner(partner_address)
+        rtc_partner = self.get_rtc_partner(partner_address)
         spawn_coroutine(
             coroutine=create_channel(
-                rtc_partner, self.node_address, self._handle_message_callback,
+                rtc_partner, self.node_address, self._handle_message_callback
             ),
             callback=self._handle_sdp_callback,
             partner_address=partner_address,
         )
 
-    def set_remote_description(
+    def async_set_remote_description(
         self, partner_address: Address, description: Dict[str, str]
     ) -> None:
         assert self.node_address, "Transport is not started yet but tried to set candidates"
-        rtc_partner = self._get_rtc_partner(partner_address)
+        rtc_partner = self.get_rtc_partner(partner_address)
         spawn_coroutine(
             coroutine=set_remote_description(
                 rtc_partner=rtc_partner,
@@ -107,13 +111,13 @@ class WebRTCManager:
 
         log.debug("Gracefully closing RTC channels", node=to_checksum_address(self.node_address))
 
-        for rtc_partner in self.rtc_partners.values():
+        for rtc_partner in self.address_to_rtc_partners.values():
             if rtc_partner.channel:
                 rtc_partner.channel.close()
 
 
 async def create_channel(
-    rtc_partner: RTCPartner, node_address: Address, handle_message_callback: Callable,
+    rtc_partner: RTCPartner, node_address: Address, handle_message_callback: Callable
 ) -> RTCSessionDescription:
 
     pc = rtc_partner.peer_connection

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from gevent import monkey  # isort:skip # noqa
+
+monkey.patch_all()  # isort:skip # noqa
 import argparse
 import json
 import re
@@ -13,7 +15,6 @@ import gevent
 import requests
 import structlog
 
-monkey.patch_all()  # isort:skip # noqa
 
 import asyncio  # isort:skip # noqa
 from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
