@@ -1059,7 +1059,10 @@ def mediate_transfer(
     #      v         ^
     #      5 -> 6 -> 7
     candidate_route_states = routes.filter_acceptable_routes(
-        route_states=candidate_route_states, blacklisted_channel_ids=state.refunded_channels
+        route_states=candidate_route_states,
+        blacklisted_channel_ids=state.refunded_channels,
+        addresses_to_channel=addresses_to_channel,
+        token_network_address=payer_channel.token_network_address,
     )
 
     # Mediate through the first valid route

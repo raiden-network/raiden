@@ -290,11 +290,13 @@ def handle_transferreroute(
     events: List[Event] = []
     events.extend(channel_events)
 
-    filtered_route_states = routes.filter_acceptable_routes(
-        route_states=payment_state.routes, blacklisted_channel_ids=payment_state.cancelled_channels
-    )
-
     old_description = initiator_state.transfer_description
+    filtered_route_states = routes.filter_acceptable_routes(
+        route_states=payment_state.routes,
+        blacklisted_channel_ids=payment_state.cancelled_channels,
+        addresses_to_channel=addresses_to_channel,
+        token_network_address=old_description.token_network_address,
+    )
     transfer_description = TransferDescriptionWithSecretState(
         token_network_registry_address=old_description.token_network_registry_address,
         payment_identifier=old_description.payment_identifier,
