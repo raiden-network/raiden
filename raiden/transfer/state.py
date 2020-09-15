@@ -164,6 +164,7 @@ class RouteState(State):
 
     # TODO: Add timestamp
     route: List[Address]
+    swaps: Dict[Address, TokenNetworkAddress] = field(default_factory=dict)
     estimated_fee: FeeAmount = FeeAmount(0)
 
     @property

@@ -1188,18 +1188,24 @@ def make_channel_set_from_amounts(amounts: List[TokenAmount]) -> ChannelSet:
 
 
 def mediator_make_channel_pair(
-    defaults: NettingChannelStateProperties = None, amount: TokenAmount = UNIT_TRANSFER_AMOUNT
+    defaults: NettingChannelStateProperties = None,
+    amount: TokenAmount = UNIT_TRANSFER_AMOUNT,
+    token_network_address: TokenNetworkAddress = UNIT_TOKEN_NETWORK_ADDRESS,
 ) -> ChannelSet:
     properties_list = [
         NettingChannelStateProperties(
-            canonical_identifier=make_canonical_identifier(channel_identifier=1),
+            canonical_identifier=make_canonical_identifier(
+                channel_identifier=1, token_network_address=token_network_address
+            ),
             our_state=NettingChannelEndStateProperties.OUR_STATE,
             partner_state=NettingChannelEndStateProperties(
                 address=UNIT_TRANSFER_SENDER, balance=amount
             ),
         ),
         NettingChannelStateProperties(
-            canonical_identifier=make_canonical_identifier(channel_identifier=2),
+            canonical_identifier=make_canonical_identifier(
+                channel_identifier=2, token_network_address=token_network_address
+            ),
             our_state=replace(NettingChannelEndStateProperties.OUR_STATE, balance=amount),
             partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
         ),

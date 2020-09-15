@@ -112,6 +112,7 @@ from raiden.utils.typing import (
     Secret,
     SecretRegistryAddress,
     TokenAmount,
+    TokenNetworkAddress,
 )
 
 
@@ -895,6 +896,59 @@ def test_mediate_transfer():
     )
 
     assert item is not None
+
+
+def test_swap():
+    """Do a payment that starts in TN1 and ends in TN2
+
+    There are no checks for the transferred amount and exchange rate.
+    """
+    block_number = BlockNumber(5)
+    tn2_address = TokenNetworkAddress(b"2" * 20)
+
+    tn1_channels = mediator_make_channel_pair()
+    tn2_channels = mediator_make_channel_pair(token_network_address=tn2_address)
+    payer_transfer = factories.make_signed_transfer_for(
+        tn1_channels[0], LockedTransferSignedStateProperties(expiration=BlockExpiration(30))
+    )
+
+    route_states = tn1_channels.get_routes(1)
+    route_states[0].swaps = {tn1_channels[1].our_state.address: tn2_address}
+    mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=route_states)
+
+    iteration = mediator.mediate_transfer(
+        state=mediator_state,
+        candidate_route_states=route_states,
+        payer_channel=tn1_channels[0],
+        addresses_to_channel={
+            **tn1_channels.addresses_to_channel(),
+            **tn2_channels.addresses_to_channel(tn2_address),
+        },
+        nodeaddresses_to_networkstates=tn1_channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        payer_transfer=payer_transfer,
+        block_number=block_number,
+    )
+
+    item = search_for_item(
+        iteration.events,
+        SendLockedTransfer,
+        {
+            "recipient": tn1_channels[1].partner_state.address,
+            "transfer": {
+                "payment_identifier": payer_transfer.payment_identifier,
+                "lock": {
+                    "amount": payer_transfer.lock.amount,
+                    "secrethash": payer_transfer.lock.secrethash,
+                    "expiration": payer_transfer.lock.expiration,
+                },
+                "target": payer_transfer.target,
+            },
+        },
+    )
+
+    assert isinstance(item, SendLockedTransfer)
+    assert item.transfer.balance_proof.canonical_identifier.token_network_address == tn2_address
 
 
 def test_init_mediator():
