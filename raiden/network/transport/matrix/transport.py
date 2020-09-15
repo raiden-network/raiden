@@ -642,7 +642,6 @@ class MatrixTransport(Runnable):
             # representing the target node
             user_ids = self.get_user_ids_for_address(node_address)
             self._address_mgr.track_address_presence(node_address, user_ids)
-            self.async_maybe_initiate_web_rtc(node_address)
 
     def _health_check_worker(self) -> None:
         """ Worker to process healthcheck requests. """
@@ -1218,6 +1217,13 @@ class MatrixTransport(Runnable):
             self._process_messages(messages)
 
     def _handle_call_messages(self, sync_messages: MatrixSyncMessages) -> None:
+        """
+        This function handles incoming signalling messages (in matrix called 'call' events)
+        Main function is to forward it to the aiortc library to establish connections.
+        Messages contain sdp messages to follow the ROAP (RTC Offer Answer Protocol).
+        Args:
+            sync_messages: List of call events received by a partner (either offer or answer)
+        """
         assert self._raiden_service is not None, "_raiden_service not set"
         for room, call_events in sync_messages:
             for call_event in call_events:
@@ -1449,13 +1455,22 @@ class MatrixTransport(Runnable):
             )
 
             self._set_room_id_for_address(address, room.room_id)
-
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
-            return room
+
+            # initiate web rtc handling
+            gevent.spawn(self.create_web_rtc_channel, address)
 
     def _handle_sdp_callback(
         self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
     ) -> None:
+        """
+        This is a callback function to process sdp (session description protocol) messages.
+        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
+        signalling. Messages are exchanged via the partners' private matrix room.
+        Args:
+            rtc_session_description: sdp message for the partner
+            partner_address: Address of the partner
+        """
         assert self._raiden_service is not None, "_raiden_service not set"
         if rtc_session_description is None:
             return
@@ -1478,13 +1493,6 @@ class MatrixTransport(Runnable):
         elif sdp_type == "answer":
             self._client.api.answer(room.room_id, message)
 
-    def async_maybe_initiate_web_rtc(self, partner_address: Address) -> None:
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-        lower_address = my_place_or_yours(self._raiden_service.address, partner_address)
-        if lower_address == self._raiden_service.address:
-            gevent.spawn(self.create_web_rtc_channel, partner_address)
-
     def create_web_rtc_channel(self, partner_address: Address) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
@@ -1499,12 +1507,19 @@ class MatrixTransport(Runnable):
             rtc_partner.partner_ready_event.wait(timeout=5)
             rtc_partner.partner_ready_event.clear()
 
-        log.debug(
-            "Creating rtc channel with partner",
-            node=to_checksum_address(self._raiden_service.address),
-            partner_address=to_checksum_address(partner_address),
-        )
-        self._web_rtc_manager.async_create_channel(partner_address)
+        # we can only ask here for capabilities since we have to wait until the user comes online
+        capabilities = self._address_mgr.get_address_capabilities(partner_address)
+        web_rtc_key = Capabilities.WEBRTC.value
+        if web_rtc_key in capabilities and capabilities[web_rtc_key]:
+            log.debug(
+                "Creating rtc channel with partner",
+                node=to_checksum_address(self._raiden_service.address),
+                partner_address=to_checksum_address(partner_address),
+            )
+            self._web_rtc_manager.async_create_channel(partner_address)
+        else:
+            # if no web rtc capabilities by partner remove him from the rtc partners
+            del self._web_rtc_manager.address_to_rtc_partners[partner_address]
 
     def _is_broadcast_room(self, room: Room) -> bool:
         return any(
@@ -1530,10 +1545,8 @@ class MatrixTransport(Runnable):
             retrier = self._address_to_retrier.get(address)
             if retrier:
                 retrier.notify()
-            if (
-                Capabilities.WEBRTC.value in capabilities
-                and capabilities[Capabilities.WEBRTC.value]
-            ):
+            web_rtc_key = Capabilities.WEBRTC.value
+            if web_rtc_key in capabilities and capabilities[web_rtc_key]:
                 self._web_rtc_manager.get_rtc_partner(address).partner_ready_event.set()
 
         elif reachability is AddressReachability.UNKNOWN:
