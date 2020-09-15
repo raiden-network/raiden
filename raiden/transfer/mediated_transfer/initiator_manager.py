@@ -1,4 +1,5 @@
 import random
+from typing import Tuple
 
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
@@ -26,6 +27,7 @@ from raiden.transfer.state import NettingChannelState, RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
+    Address,
     BlockNumber,
     ChannelID,
     Dict,
@@ -33,6 +35,7 @@ from raiden.utils.typing import (
     NodeNetworkStateMap,
     Optional,
     SecretHash,
+    TokenNetworkAddress,
     cast,
 )
 
@@ -175,6 +178,7 @@ def handle_init(
     payment_state: Optional[InitiatorPaymentState],
     state_change: ActionInitInitiator,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -468,6 +472,7 @@ def state_transition(
     payment_state: Optional[InitiatorPaymentState],
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -491,6 +496,7 @@ def state_transition(
             payment_state=payment_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            addresses_to_channel=addresses_to_channel,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
