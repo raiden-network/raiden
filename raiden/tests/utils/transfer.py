@@ -126,11 +126,7 @@ def create_route_state_for_route(
     )
     assert token_network
 
-    return RouteState(
-        route=route,
-        forward_channel_id=token_network.partneraddresses_to_channelidentifiers[route[1]][0],
-        estimated_fee=fee_estimate,
-    )
+    return RouteState(route=route, estimated_fee=fee_estimate)
 
 
 @contextmanager
@@ -178,15 +174,7 @@ def transfer(
         if routes:
             route_states = []
             for route in routes:
-                token_network = views.get_token_network_by_token_address(
-                    views.state_from_raiden(initiator_app),
-                    initiator_app.default_registry.address,
-                    token_address,
-                )
-                forward_channel_id = token_network.partneraddresses_to_channelidentifiers[
-                    route[1]
-                ][0]
-                route_states.append(RouteState(route=route, forward_channel_id=forward_channel_id))
+                route_states.append(RouteState(route=route))
 
         return _transfer_unlocked(
             initiator_app=initiator_app,

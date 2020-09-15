@@ -2,7 +2,6 @@ import random
 
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import LockedTransfer, RefundTransfer
-from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -135,27 +134,6 @@ def test_can_round_trip_serialize_locked_transfer():
 
     as_dict = DictSerializer.serialize(locked_transfer)
     assert DictSerializer.deserialize(as_dict) == locked_transfer
-
-
-def test_resolve_routes(netting_channel_state, chain_state, token_network_state):
-    route_metadata = factories.create(
-        factories.RouteMetadataProperties(
-            route=[
-                netting_channel_state.our_state.address,
-                netting_channel_state.partner_state.address,
-            ]
-        )
-    )
-
-    route_states = resolve_routes(
-        routes=[route_metadata],
-        token_network_address=token_network_state.address,
-        chain_state=chain_state,
-    )
-
-    msg = "route resolved with wrong channel id"
-    channel_id = netting_channel_state.canonical_identifier.channel_identifier
-    assert route_states[0].forward_channel_id == channel_id, msg
 
 
 def test_initiator_accounts_for_fees_when_selecting_routes():

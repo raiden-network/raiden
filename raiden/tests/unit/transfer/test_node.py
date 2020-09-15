@@ -380,12 +380,7 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
 
     mediator_state = MediatorTransferState(
         secrethash=UNIT_SECRETHASH,
-        routes=[
-            RouteState(
-                route=[netting_channel_state.partner_state.address],
-                forward_channel_id=netting_channel_state.canonical_identifier.channel_identifier,
-            )
-        ],
+        routes=[RouteState(route=[netting_channel_state.partner_state.address])],
     )
     subtask = MediatorTask(
         token_network_address=netting_channel_state.canonical_identifier.token_network_address,

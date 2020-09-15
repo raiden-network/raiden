@@ -218,9 +218,8 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
 
 
 def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our_address):
-    addresses, chain_state, channel_states, response, token_network_state = happy_path_fixture
+    addresses, chain_state, _, response, token_network_state = happy_path_fixture
     _, address2, _, address4 = addresses
-    _, channel_state2 = channel_states
 
     with patch.object(session, "post", return_value=response) as patched:
         routes, feedback_token = get_best_routes_with_iou_request_mocked(
@@ -235,7 +234,6 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
     assert_checksum_address_in_url(patched.call_args[0][0])
 
     assert routes[0].next_hop_address == address2
-    assert routes[0].forward_channel_id == channel_state2.identifier
     assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
     # Check for iou arguments in request payload
@@ -251,9 +249,8 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
 def test_routing_mocked_pfs_happy_path_with_updated_iou(
     happy_path_fixture, one_to_n_address, our_address
 ):
-    addresses, chain_state, channel_states, response, token_network_state = happy_path_fixture
+    addresses, chain_state, _, response, token_network_state = happy_path_fixture
     _, address2, _, address4 = addresses
-    _, channel_state2 = channel_states
 
     iou = make_iou(
         pfs_config=PFS_CONFIG,
@@ -280,7 +277,6 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
     assert_checksum_address_in_url(patched.call_args[0][0])
 
     assert routes[0].next_hop_address == address2
-    assert routes[0].forward_channel_id == channel_state2.identifier
     assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
     # Check for iou arguments in request payload
@@ -434,11 +430,10 @@ def test_routing_mocked_pfs_invalid_json_structure(
 def test_routing_mocked_pfs_unavailable_peer(
     chain_state, token_network_state, one_to_n_address, our_address
 ):
-    token_network_state, addresses, channel_states = create_square_network_topology(
+    token_network_state, addresses, _ = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
     address1, address2, address3, address4 = addresses
-    _, channel_state2 = channel_states
 
     json_data = {
         "result": [
@@ -476,7 +471,6 @@ def test_routing_mocked_pfs_unavailable_peer(
         # Node with address2 is not reachable, so even if the only route sent by the PFS
         # is over address2, the internal routing does not provide
         assert routes[0].next_hop_address == address2
-        assert routes[0].forward_channel_id == channel_state2.identifier
         assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
 
@@ -661,9 +655,8 @@ def assert_failed_pfs_request(
 
 
 def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_address):
-    addresses, chain_state, channel_states, _, token_network_state = happy_path_fixture
+    addresses, chain_state, _, _, token_network_state = happy_path_fixture
     address1, _, _, _ = addresses
-    channel_state1, _ = channel_states
 
     # with the transfer of 50 the direct channel should be returned,
     # so there must be not a pfs call
@@ -681,7 +674,6 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             privkey=PRIVKEY,
         )
         assert routes[0].next_hop_address == address1
-        assert routes[0].forward_channel_id == channel_state1.identifier
         assert not pfs_request.called
 
     # with the transfer of 51 the direct channel should not be returned,

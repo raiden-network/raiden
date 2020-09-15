@@ -1190,10 +1190,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
 
     init_state_change = ActionInitMediator(
         route_states=[
-            RouteState(
-                route=[our_state.address, attacked_channel.partner_state.address],
-                forward_channel_id=attacked_channel.canonical_identifier.channel_identifier,
-            )
+            RouteState(route=[our_state.address, attacked_channel.partner_state.address])
         ],
         from_hop=from_hop,
         from_transfer=from_transfer,
@@ -1859,18 +1856,15 @@ def test_filter_reachable_routes():
     partner1 = factories.NettingChannelEndStateProperties(address=Address(HOP1))
     partner2 = replace(partner1, address=HOP2)
     channel1 = factories.create(factories.NettingChannelStateProperties(partner_state=partner1))
-    channel2 = factories.create(factories.NettingChannelStateProperties(partner_state=partner2))
 
     possible_routes = [
         RouteState(
             # pylint: disable=E1101
             route=[channel1.our_state.address, partner1.address, target],
-            forward_channel_id=channel1.canonical_identifier.channel_identifier,
         ),
         RouteState(
             # pylint: disable=E1101
             route=[channel1.our_state.address, partner2.address, target],
-            forward_channel_id=channel2.canonical_identifier.channel_identifier,
         ),
     ]
 
