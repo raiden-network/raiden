@@ -1,5 +1,6 @@
 import random
 from math import ceil
+from typing import Tuple
 
 from raiden.constants import ABSENT_SECRET
 from raiden.settings import (
@@ -44,7 +45,6 @@ from raiden.utils.typing import (
     Address,
     BlockExpiration,
     BlockNumber,
-    ChannelID,
     Dict,
     FeeAmount,
     List,
@@ -55,6 +55,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    TokenNetworkAddress,
 )
 
 
@@ -222,7 +223,7 @@ def handle_block(
 
 
 def try_new_route(
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
@@ -242,8 +243,8 @@ def try_new_route(
     )
 
     for reachable_route_state in reachable_route_states:
-        candidate_channel_state = channelidentifiers_to_channels[
-            reachable_route_state.forward_channel_id
+        candidate_channel_state = addresses_to_channel[
+            (transfer_description.token_network_address, reachable_route_state.route[1])
         ]
 
         amount_with_fee = calculate_safe_amount_with_fee(
