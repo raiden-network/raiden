@@ -59,7 +59,12 @@ def capconfig_to_dict(config: CapabilitiesConfig) -> Dict[str, Any]:
     result[Capabilities.NO_MEDIATE.value] = config.no_mediate
     result[Capabilities.NO_DELIVERY.value] = config.no_delivery
     result[Capabilities.WEBRTC.value] = config.web_rtc
-    for key in config.__dict__.keys():
+    other_keys = [
+        key
+        for key in config.__dict__.keys()
+        if key not in ["no_receive", "no_mediate", "no_delivery", "web_rtc"]
+    ]
+    for key in other_keys:
         if key not in [_.value for _ in Capabilities]:
             result[key] = getattr(config, key)
     return result
