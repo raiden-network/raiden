@@ -413,7 +413,6 @@ def forward_transfer_pair(
         return None, []
 
     assert payee_channel.settle_timeout >= lock_timeout, "settle_timeout must be >= lock_timeout"
-    assert payee_channel.token_address == payer_transfer.token, "token_address mismatch"
 
     route_states = routes.prune_route_table(
         route_states=route_state_table, selected_route=route_state
@@ -1064,7 +1063,9 @@ def mediate_transfer(
 
     # Mediate through the first valid route
     for route_state in candidate_route_states:
-        target_token_network = payer_channel.token_network_address  # TODO: change for swaps
+        target_token_network = route_state.swaps.get(
+            route_state.route[0], payer_channel.token_network_address
+        )
         payee_channel = addresses_to_channel.get((target_token_network, route_state.route[1]))
         if not payee_channel:
             continue
