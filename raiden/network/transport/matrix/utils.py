@@ -403,6 +403,7 @@ class UserAddressManager:
         self._address_to_reachabilitystate[address] = ReachabilityState(
             new_address_reachability, now
         )
+        self._address_to_capabilities[address] = capabilities
 
         self._address_reachability_changed_callback(
             address, new_address_reachability, capabilities
@@ -850,7 +851,6 @@ def sort_servers_closest(
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
     handle_member_join_callback: Callable[[Room], None],
-    handle_call_callback: Callable[[MatrixSyncMessages], None],
     servers: List[str],
     *args: Any,
     **kwargs: Any,
@@ -874,12 +874,7 @@ def make_client(
     last_ex = None
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(
-            handle_messages_callback,
-            handle_member_join_callback,
-            handle_call_callback,
-            server_url,
-            *args,
-            **kwargs,
+            handle_messages_callback, handle_member_join_callback, server_url, *args, **kwargs,
         )
 
         retries = 3

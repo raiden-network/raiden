@@ -18,7 +18,6 @@ import subprocess
 import sys
 import time
 
-import gevent
 import pytest
 import structlog
 

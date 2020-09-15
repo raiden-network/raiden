@@ -132,7 +132,7 @@ class CapabilitiesConfig:
     no_receive: bool = False
     no_mediate: bool = False
     no_delivery: bool = False
-    web_rtc: bool = False
+    web_rtc: bool = True
 
 
 @dataclass

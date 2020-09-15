@@ -1,3 +1,4 @@
+# pylint: skip-file
 import asyncio
 import selectors
 import socket
@@ -305,3 +306,9 @@ class EventLoopPolicy(AbstractEventLoopPolicy):
 
     def new_event_loop(self):
         return self._loop_factory()
+
+    def get_child_watcher(self):
+        pass
+
+    def set_child_watcher(self, watcher):
+        pass
