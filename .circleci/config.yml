@@ -39,11 +39,11 @@ templates:
       type: string
 
   default-environment: &default-environment
-    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.18-f5382591.tar.gz'
-    GETH_MD5_LINUX: 'f73bc67bddf56cad5d2e1b85fdf13f5e'
-    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.18-f5382591.tar.gz'
-    GETH_MD5_MACOS: '431801613e16ec14beba38926546d270'
-    GETH_VERSION: '1.9.18'
+    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.9.21-0287d548.tar.gz'
+    GETH_MD5_LINUX: '639e3b7bfd95a78fc47642c8b88488e7'
+    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.9.21-0287d548.tar.gz'
+    GETH_MD5_MACOS: '3fe7db3a327948d99dc22a20d880fe7f'
+    GETH_VERSION: '1.9.21'
     PARITY_URL_LINUX: 'https://github.com/openethereum/openethereum/releases/download/v3.0.1/openethereum-linux-v3.0.1.zip'
     PARITY_SHA256_LINUX: '8dd753058e5db77ffaede5a53418005f9c8133212448e11df9169a651cdac997'
     PARITY_URL_MACOS: 'https://github.com/openethereum/openethereum/releases/download/v3.0.1/openethereum-macos-v3.0.1.zip'
