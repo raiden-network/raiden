@@ -1064,7 +1064,7 @@ def mediate_transfer(
 
     # Mediate through the first valid route
     for route_state in candidate_route_states:
-        target_token_network = payer_channel.token_network_address
+        target_token_network = payer_channel.token_network_address  # TODO: change for swaps
         payee_channel = addresses_to_channel.get((target_token_network, route_state.route[1]))
         if not payee_channel:
             continue
@@ -1461,7 +1461,6 @@ def handle_lock_expired(
 def handle_node_change_network_state(
     mediator_state: MediatorTransferState,
     state_change: ActionChangeNodeNetworkState,
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -1488,9 +1487,12 @@ def handle_node_change_network_state(
         return TransitionResult(mediator_state, list())
 
     transfer = mediator_state.waiting_transfer.transfer
-    payer_channel_identifier = transfer.balance_proof.channel_identifier
-    payer_channel = channelidentifiers_to_channels.get(payer_channel_identifier)
-    payee_channel = channelidentifiers_to_channels.get(route.forward_channel_id)
+    payer_channel = addresses_to_channel.get(
+        (transfer.balance_proof.token_network_address, transfer.balance_proof.sender)
+    )
+    payee_channel = addresses_to_channel.get(
+        (transfer.balance_proof.token_network_address, route.route[1])  # TODO: change TN for swaps
+    )
 
     if not payee_channel or not payer_channel:
         return TransitionResult(mediator_state, list())
@@ -1619,7 +1621,6 @@ def state_transition(
         iteration = handle_node_change_network_state(
             mediator_state=mediator_state,
             state_change=state_change,
-            channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,

@@ -2081,7 +2081,6 @@ def test_node_change_network_state_unreachable_node():
     iteration = mediator.handle_node_change_network_state(
         mediator_state=mediator_state,
         state_change=ActionChangeNodeNetworkState(Address(HOP1), NetworkState.UNREACHABLE),
-        channelidentifiers_to_channels={},
         addresses_to_channel={},
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
