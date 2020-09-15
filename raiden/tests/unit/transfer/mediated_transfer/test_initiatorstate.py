@@ -77,7 +77,6 @@ from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     Address,
     BlockNumber,
-    ChannelID,
     FeeAmount,
     NodeNetworkStateMap,
     PaymentAmount,
@@ -958,11 +957,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
         (UNIT_TOKEN_NETWORK_ADDRESS, channel1.partner_state.address): channel1,
     }
     available_routes = [
-        RouteState(
-            # pylint: disable=E1101
-            route=[channel1.our_state.address, channel1.partner_state.address],
-            forward_channel_id=channel1.canonical_identifier.channel_identifier,
-        )
+        RouteState(route=[channel1.our_state.address, channel1.partner_state.address])
     ]
 
     pseudo_random_generator = random.Random()
@@ -2008,7 +2003,6 @@ def test_initiator_init():
     route_states = [
         RouteState(
             route=[factories.make_address(), factories.make_address()],
-            forward_channel_id=ChannelID(1),
             estimated_fee=FeeAmount(123),
         )
     ]

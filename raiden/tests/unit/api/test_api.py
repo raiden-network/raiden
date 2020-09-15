@@ -49,9 +49,7 @@ def test_initiator_task_view():
         secrethash=sha256_secrethash(secret),
     )
     transfer_state = InitiatorTransferState(
-        route=RouteState(
-            route=[transfer.initiator, transfer.target], forward_channel_id=channel_id
-        ),
+        route=RouteState(route=[transfer.initiator, transfer.target]),
         transfer_description=transfer_description,
         channel_identifier=channel_id,
         transfer=transfer,
@@ -88,18 +86,7 @@ def test_mediator_task_view():
         )
     )
     secrethash1 = payee_transfer.lock.secrethash
-    initiator = payee_transfer.initiator
-    initiator_channel = factories.create(
-        factories.NettingChannelStateProperties(
-            partner_state=factories.NettingChannelEndStateProperties(
-                address=initiator, balance=TokenAmount(100)
-            )
-        )
-    )
-    route_state = RouteState(
-        route=[payee_transfer.target],
-        forward_channel_id=initiator_channel.canonical_identifier.channel_identifier,
-    )
+    route_state = RouteState(route=[payee_transfer.target])
 
     transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=[route_state])
     # pylint: disable=E1101

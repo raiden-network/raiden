@@ -402,7 +402,6 @@ def test_channelstate_send_lockedtransfer():
             RouteState(
                 # pylint: disable=E1101
                 route=[channel_state.partner_state.address],
-                forward_channel_id=channel_state.canonical_identifier.channel_identifier,
             )
         ],
     )
@@ -908,7 +907,6 @@ def test_channel_never_expires_lock_with_secret_onchain():
             RouteState(
                 # pylint: disable=E1101
                 route=[channel_state.partner_state.address],
-                forward_channel_id=channel_state.canonical_identifier.channel_identifier,
             )
         ],
     )

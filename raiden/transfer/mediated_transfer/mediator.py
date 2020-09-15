@@ -476,10 +476,7 @@ def backward_transfer_pair(
     if channel.is_channel_usable_for_mediation(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
-        backward_route_state = RouteState(
-            route=[backward_channel.our_state.address],
-            forward_channel_id=backward_channel.canonical_identifier.channel_identifier,
-        )
+        backward_route_state = RouteState(route=[backward_channel.our_state.address],)
 
         refund_transfer = channel.send_refundtransfer(
             channel_state=backward_channel,

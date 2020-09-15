@@ -91,9 +91,7 @@ def get_best_routes(
 
             if is_usable is channel.ChannelUsability.USABLE:
                 direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)],
-                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
-                    estimated_fee=FeeAmount(0),
+                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0),
                 )
                 return None, [direct_route], None
 
@@ -222,11 +220,7 @@ def get_best_routes(
                 estimated_fee = FeeAmount(0)
 
             available_routes.append(
-                RouteState(
-                    route=neighbour.route,
-                    forward_channel_id=neighbour.channelid,
-                    estimated_fee=estimated_fee,
-                )
+                RouteState(route=neighbour.route, estimated_fee=estimated_fee,)
             )
 
         return (None, available_routes, None)
@@ -305,13 +299,7 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(
-            RouteState(
-                route=canonical_path,
-                forward_channel_id=channel_state.identifier,
-                estimated_fee=estimated_fee,
-            )
-        )
+        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee,))
 
     return None, paths, feedback_token
 
@@ -321,7 +309,10 @@ def resolve_routes(
     token_network_address: TokenNetworkAddress,
     chain_state: ChainState,
 ) -> List[RouteState]:
-    """ resolve the forward_channel_id for a given route """
+    """ resolve the forward_channel_id for a given route
+
+    TODO: We don't have ``forward_channel_id``, anymore. Does this function still make sense?
+    """
 
     resolvable = []
     for route_metadata in routes:
@@ -338,7 +329,6 @@ def resolve_routes(
             resolvable.append(
                 RouteState(
                     route=route_metadata.route,
-                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
                     # This is only used in the mediator, so fees are set to 0
                     estimated_fee=FeeAmount(0),
                 )

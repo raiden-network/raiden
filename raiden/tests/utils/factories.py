@@ -823,11 +823,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         NettingChannelStateProperties(canonical_identifier=balance_proof.canonical_identifier)
     )
 
-    route_state = RouteState(
-        # pylint: disable=E1101
-        route=[netting_channel_state.partner_state.address, transfer.target],
-        forward_channel_id=netting_channel_state.canonical_identifier.channel_identifier,
-    )
+    route_state = RouteState(route=[netting_channel_state.partner_state.address, transfer.target])
 
     return LockedTransferUnsignedState(
         balance_proof=balance_proof,
@@ -1144,11 +1140,7 @@ class ChannelSet:
         channel = self.channels[channel_index]
         route = [channel.our_state.address, channel.partner_state.address]
 
-        return RouteState(
-            route=route,
-            forward_channel_id=channel.canonical_identifier.channel_identifier,
-            estimated_fee=estimated_fee,
-        )
+        return RouteState(route=route, estimated_fee=estimated_fee,)
 
     def get_routes(
         self, *args, estimated_fee: FeeAmount = FeeAmount(0)  # noqa: B008
@@ -1228,10 +1220,7 @@ def mediator_make_init_action(
     forwards = [get_forward_channel(route) for route in transfer.routes]
     assert len(forwards) == len(transfer.routes)
 
-    route_states = [
-        RouteState(route=route, forward_channel_id=forwards[idx])
-        for idx, route in enumerate(transfer.routes)
-    ]
+    route_states = [RouteState(route=route) for idx, route in enumerate(transfer.routes)]
 
     return ActionInitMediator(
         from_hop=channels.get_hop(0),
@@ -1258,8 +1247,7 @@ def initiator_make_init_action(
     assert len(forwards) == len(routes)
 
     route_states = [
-        RouteState(route=route, forward_channel_id=forwards[idx], estimated_fee=estimated_fee)
-        for idx, route in enumerate(routes)
+        RouteState(route=route, estimated_fee=estimated_fee) for idx, route in enumerate(routes)
     ]
 
     return ActionInitInitiator(transfer=transfer, routes=route_states)
@@ -1329,10 +1317,7 @@ def make_transfers_pair(
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         route_states = [
-            RouteState(
-                route=[channel.partner_state.address for channel in channels[payer_index:]],
-                forward_channel_id=channels[payee_index].canonical_identifier.channel_identifier,
-            )
+            RouteState(route=[channel.partner_state.address for channel in channels[payer_index:]])
         ]
 
         lockedtransfer_event = channel.send_lockedtransfer(
@@ -1463,10 +1448,7 @@ def make_node_availability_map(nodes):
 
 
 def make_route_from_channel(channel: NettingChannelState) -> RouteState:
-    return RouteState(
-        route=[channel.our_state.address, channel.partner_state.address],
-        forward_channel_id=channel.canonical_identifier.channel_identifier,
-    )
+    return RouteState(route=[channel.our_state.address, channel.partner_state.address])
 
 
 @dataclass(frozen=True)
