@@ -6,7 +6,7 @@ from raiden.routing import resolve_routes
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.factories import UNIT_TRANSFER_AMOUNT
+from raiden.tests.utils.factories import UNIT_TOKEN_NETWORK_ADDRESS, UNIT_TRANSFER_AMOUNT
 from raiden.transfer import views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
@@ -178,6 +178,12 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
         }
 
         channelidentifiers_to_channels = {mediating_channel.identifier: mediating_channel}
+        addresses_to_channel = {
+            (
+                UNIT_TOKEN_NETWORK_ADDRESS,
+                mediating_channel.partner_state.address,
+            ): mediating_channel
+        }
 
         routes = [
             [
@@ -197,6 +203,7 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
             payment_state=None,
             state_change=init_action,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            addresses_to_channel=addresses_to_channel,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pnrg,
             block_number=BlockNumber(1),
