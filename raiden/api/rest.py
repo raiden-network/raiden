@@ -676,7 +676,7 @@ class RestAPI:  # pragma: no unittest
             except (DepositOverLimit, DepositMismatch, UnexpectedChannelState) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        result = self._updated_chanel_state_from_addresses(
+        result = self._updated_channel_state_from_addresses(
             registry_address, partner_address, token_address
         )
         return api_response(result=result, status_code=status_code)
@@ -726,7 +726,7 @@ class RestAPI:  # pragma: no unittest
 
         closed_channels_result = list()
         for channel_state in closed_channels:
-            result = self._updated_chanel_state(registry_address, channel_state)
+            result = self._updated_channel_state(registry_address, channel_state)
             closed_channels_result.append(result)
 
         return api_response(result=closed_channels_result)
@@ -800,7 +800,7 @@ class RestAPI:  # pragma: no unittest
 
         channels_result = list()
         for channel_state in raiden_service_result:
-            result = self._updated_chanel_state(registry_address, channel_state)
+            result = self._updated_channel_state(registry_address, channel_state)
             channels_result.append(result)
 
         return api_response(result=channels_result)
@@ -913,7 +913,7 @@ class RestAPI:  # pragma: no unittest
             partner_address=to_checksum_address(partner_address),
         )
         try:
-            result = self._updated_chanel_state_from_addresses(
+            result = self._updated_channel_state_from_addresses(
                 registry_address, partner_address, token_address
             )
             if result is None:
@@ -1036,7 +1036,7 @@ class RestAPI:  # pragma: no unittest
         result = self.payment_schema.dump(payment)
         return api_response(result=result)
 
-    def _updated_chanel_state_from_addresses(
+    def _updated_channel_state_from_addresses(
         self,
         registry_address: TokenNetworkRegistryAddress,
         partner_address: Address,
@@ -1060,7 +1060,7 @@ class RestAPI:  # pragma: no unittest
 
         return result
 
-    def _updated_chanel_state(
+    def _updated_channel_state(
         self, registry_address: TokenNetworkRegistryAddress, channel_state: NettingChannelState
     ) -> Optional[Dict]:
         chain_state = views.state_from_raiden(self.raiden_api.raiden)
@@ -1119,7 +1119,7 @@ class RestAPI:  # pragma: no unittest
         except UnexpectedChannelState as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        result = self._updated_chanel_state(registry_address, channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _withdraw(
@@ -1154,7 +1154,7 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         # TODO handle InsufficientEth here
 
-        result = self._updated_chanel_state(registry_address, channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _set_channel_reveal_timeout(
@@ -1188,7 +1188,7 @@ class RestAPI:  # pragma: no unittest
         except InvalidRevealTimeout as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        result = self._updated_chanel_state(registry_address, channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _close(
@@ -1214,7 +1214,7 @@ class RestAPI:  # pragma: no unittest
         except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
-        result = self._updated_chanel_state(registry_address, channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def patch_channel(
