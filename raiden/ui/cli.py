@@ -1,11 +1,11 @@
 import datetime
-import importlib
 import json
 import os
 import sys
 import textwrap
 import traceback
 from enum import Enum
+from importlib import util as importlib_util
 from io import StringIO
 from tempfile import NamedTemporaryFile, mktemp
 from typing import Any, AnyStr, Callable, Optional
@@ -505,7 +505,7 @@ def options(func: Callable) -> Callable:
         ),
     ]
 
-    if importlib.util.find_spec("IPython"):
+    if importlib_util.find_spec("IPython"):
         options_.append(
             option("--console", help="Start the interactive raiden console", is_flag=True)
         )
