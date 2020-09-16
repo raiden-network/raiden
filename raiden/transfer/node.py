@@ -16,12 +16,9 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
     SendWithdrawRequest,
 )
-from raiden.transfer.identifiers import (
-    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
-    CanonicalIdentifier,
-    QueueIdentifier,
-)
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
+from raiden.transfer.mediated_transfer.events import SendSecretRequest, SendSecretReveal
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     MediatorTransferState,
@@ -58,7 +55,6 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
-    ReceiveDelivered,
     ReceiveProcessed,
     ReceiveUnlock,
     ReceiveWithdrawConfirmation,
@@ -443,7 +439,9 @@ def maybe_add_tokennetwork(
 
 def inplace_delete_message_queue(
     chain_state: ChainState,
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
+    state_change: Union[
+        ReceiveProcessed, ReceiveWithdrawConfirmation, ReceiveSecretReveal, ReceiveUnlock
+    ],
     queueid: QueueIdentifier,
 ) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
@@ -463,10 +461,13 @@ def inplace_delete_message_queue(
 
 def inplace_delete_message(
     message_queue: List[SendMessageEvent],
-    state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
+    state_change: Union[
+        ReceiveProcessed, ReceiveWithdrawConfirmation, ReceiveSecretReveal, ReceiveUnlock
+    ],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
+        message_found = False
         # A withdraw request is only confirmed by a withdraw confirmation.
         # This is done because Processed is not an indicator that the partner has
         # processed and **accepted** our withdraw request. Receiving
@@ -477,11 +478,33 @@ def inplace_delete_message(
         if isinstance(message, SendWithdrawRequest):
             if not isinstance(state_change, ReceiveWithdrawConfirmation):
                 continue
+            message_found = (
+                message.message_identifier == state_change.message_identifier
+                and message.recipient == state_change.sender
+            )
 
-        message_found = (
-            message.message_identifier == state_change.message_identifier
-            and message.recipient == state_change.sender
-        )
+        elif isinstance(message, SendSecretRequest):
+            if not isinstance(state_change, ReceiveSecretReveal):
+                continue
+            message_found = (
+                message.secrethash == state_change.secrethash
+                and message.recipient == state_change.sender  # FIXME: is this condition correct?
+            )
+
+        elif isinstance(message, SendSecretReveal):
+            if not isinstance(state_change, ReceiveUnlock):
+                continue
+            message_found = (
+                message.secrethash == state_change.secrethash
+                and message.recipient == state_change.sender  # FIXME: is this condition correct?
+            )
+
+        elif isinstance(state_change, ReceiveProcessed):
+            message_found = (
+                message.message_identifier == state_change.message_identifier
+                and message.recipient == state_change.sender
+            )
+
         if message_found:
             message_queue.remove(message)
 
@@ -549,15 +572,6 @@ def handle_contract_receive_channel_closed(
     return handle_token_network_action(chain_state=chain_state, state_change=state_change)
 
 
-def handle_receive_delivered(
-    chain_state: ChainState, state_change: ReceiveDelivered
-) -> TransitionResult[ChainState]:
-    """ Check if the "Delivered" message exists in the global queue and delete if found."""
-    queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_UNORDERED_QUEUE)
-    inplace_delete_message_queue(chain_state, state_change, queueid)
-    return TransitionResult(chain_state, [])
-
-
 def handle_action_change_node_network_state(
     chain_state: ChainState, state_change: ActionChangeNodeNetworkState
 ) -> TransitionResult[ChainState]:
@@ -611,6 +625,9 @@ def handle_contract_receive_new_token_network(
 def handle_receive_secret_reveal(
     chain_state: ChainState, state_change: ReceiveSecretReveal
 ) -> TransitionResult[ChainState]:
+    # Clean up pending SecretRequest messages
+    for queueid in list(chain_state.queueids_to_queues.keys()):
+        inplace_delete_message_queue(chain_state, state_change, queueid)
     return subdispatch_to_paymenttask(chain_state, state_change, state_change.secrethash)
 
 
@@ -747,6 +764,9 @@ def handle_receive_processed(
 def handle_receive_unlock(
     chain_state: ChainState, state_change: ReceiveUnlock
 ) -> TransitionResult[ChainState]:
+    # Clean up any pending RevealSecret messages
+    for queueid in list(chain_state.queueids_to_queues.keys()):
+        inplace_delete_message_queue(chain_state, state_change, queueid)
     secrethash = state_change.secrethash
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
@@ -829,9 +849,6 @@ def handle_state_change(
     elif type(state_change) == ContractReceiveUpdateTransfer:
         assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
         iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ReceiveDelivered:
-        assert isinstance(state_change, ReceiveDelivered), MYPY_ANNOTATION
-        iteration = handle_receive_delivered(chain_state, state_change)
     elif type(state_change) == ReceiveSecretReveal:
         assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_receive_secret_reveal(chain_state, state_change)

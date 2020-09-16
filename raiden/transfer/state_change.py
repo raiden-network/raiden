@@ -356,12 +356,6 @@ class ReceiveUnlock(BalanceProofStateChange):
 
 
 @dataclass(frozen=True)
-class ReceiveDelivered(AuthenticatedSenderStateChange):
-    sender: Address
-    message_identifier: MessageID
-
-
-@dataclass(frozen=True)
 class ReceiveProcessed(AuthenticatedSenderStateChange):
     sender: Address
     message_identifier: MessageID
