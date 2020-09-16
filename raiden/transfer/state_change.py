@@ -60,7 +60,7 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class Block(StateChange):
-    """ Transition used when a new block is mined.
+    """Transition used when a new block is mined.
     Args:
         block_number: The current block_number.
     """
@@ -75,7 +75,7 @@ class Block(StateChange):
 
 @dataclass(frozen=True)
 class ActionCancelPayment(StateChange):
-    """ The user requests the transfer to be cancelled.
+    """The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
     state of the transfer.
     """
@@ -226,7 +226,7 @@ class ActionChannelSetRevealTimeout(StateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):
-    """ Registers a new token network registry.
+    """Registers a new token network registry.
     A token network registry corresponds to a registry smart contract.
     """
 
@@ -266,7 +266,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
-    """ All the locks were claimed via the blockchain.
+    """All the locks were claimed via the blockchain.
 
     Used when all the hash time locks were unlocked and a log ChannelUnlocked is emitted
     by the token network contract.

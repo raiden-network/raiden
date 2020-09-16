@@ -868,7 +868,7 @@ def handle_state_change(
 def is_transaction_effect_satisfied(
     chain_state: ChainState, transaction: ContractSendEvent, state_change: StateChange
 ) -> bool:
-    """ True if the side-effect of `transaction` is satisfied by
+    """True if the side-effect of `transaction` is satisfied by
     `state_change`.
 
     This predicate is used to clear the transaction queue. This should only be
@@ -1001,7 +1001,7 @@ def is_transaction_effect_satisfied(
 
 
 def is_transaction_invalidated(transaction: ContractSendEvent, state_change: StateChange) -> bool:
-    """ True if the `transaction` is made invalid by `state_change`.
+    """True if the `transaction` is made invalid by `state_change`.
 
     Some transactions will fail due to race conditions. The races are:
 
@@ -1062,7 +1062,7 @@ def is_transaction_invalidated(transaction: ContractSendEvent, state_change: Sta
 
 
 def is_transaction_expired(transaction: ContractSendEvent, block_number: BlockNumber) -> bool:
-    """ True if transaction cannot be mined because it has expired.
+    """True if transaction cannot be mined because it has expired.
 
     Some transactions are time dependent, e.g. the secret registration must be
     done before the lock expiration, and the update transfer must be done
