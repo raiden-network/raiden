@@ -36,7 +36,7 @@ class Processed(SignedMessage):
           of the data.
     """
 
-    # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
+    # FIXME: Processed should _not_ be SignedRetriableMessage, but only SignedMessage
     cmdid: ClassVar[CmdId] = CmdId.PROCESSED
 
     message_identifier: MessageID

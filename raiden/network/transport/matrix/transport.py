@@ -21,7 +21,7 @@ from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestE
 import raiden
 from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Capabilities, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
-from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
+from raiden.messages.abstract import Message, RetriableMessage, SignedRetriableMessage
 from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
@@ -243,7 +243,7 @@ class _RetryQueue(Runnable):
                 # The Raiden queue for this queue identifier has been removed
                 return False
             return any(
-                isinstance(message_data.message, RetrieableMessage)
+                isinstance(message_data.message, RetriableMessage)
                 and send_event.message_identifier == message_data.message.message_identifier
                 for send_event in self.transport._queueids_to_queues[message_data.queue_identifier]
             )
@@ -277,7 +277,7 @@ class _RetryQueue(Runnable):
                 if next(message_data.expiration_generator):
                     message_texts.append(message_data.text)
                     if self.transport._environment is Environment.DEVELOPMENT:
-                        if isinstance(message_data.message, RetrieableMessage):
+                        if isinstance(message_data.message, RetriableMessage):
                             self.transport._counters["retry"][
                                 (
                                     message_data.message.__class__.__name__,
@@ -694,7 +694,7 @@ class MatrixTransport(Runnable):
                     )
 
                 is_development = self._environment is Environment.DEVELOPMENT
-                if is_development and isinstance(message, RetrieableMessage):
+                if is_development and isinstance(message, RetriableMessage):
                     assert self._message_timing_keeper is not None, MYPY_ANNOTATION
                     self._counters["send"][
                         (message.__class__.__name__, message.message_identifier)
@@ -1179,7 +1179,7 @@ class MatrixTransport(Runnable):
         # Remove this #3254
         for message in all_messages:
             # FIXME
-            if isinstance(message, (Processed, SignedRetrieableMessage)) and message.sender:
+            if isinstance(message, (Processed, SignedRetriableMessage)) and message.sender:
                 delivered_message = Processed(
                     message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
                 )
@@ -1187,7 +1187,7 @@ class MatrixTransport(Runnable):
                 retrier = self._get_retrier(message.sender)
                 retrier.enqueue_unordered(delivered_message)
             if self._environment is Environment.DEVELOPMENT:
-                if isinstance(message, RetrieableMessage):
+                if isinstance(message, RetriableMessage):
                     self._counters["dispatch"][
                         (message.__class__.__name__, message.message_identifier)
                     ] += 1

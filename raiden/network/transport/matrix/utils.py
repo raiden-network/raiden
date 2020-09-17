@@ -45,7 +45,7 @@ from raiden.exceptions import (
     SerializationError,
     TransportError,
 )
-from raiden.messages.abstract import Message, RetrieableMessage, SignedMessage
+from raiden.messages.abstract import Message, RetriableMessage, SignedMessage
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
@@ -555,7 +555,7 @@ class MessageAckTimingKeeper:
         self._messages_in_flight: Dict[MessageID, float] = {}
         self._durations: List[float] = []
 
-    def add_message(self, message: RetrieableMessage) -> None:
+    def add_message(self, message: RetriableMessage) -> None:
         if message.message_identifier in self._seen_messages:
             return
         self._messages_in_flight[message.message_identifier] = time.monotonic()

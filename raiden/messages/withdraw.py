@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from raiden.constants import EMPTY_SIGNATURE
-from raiden.messages.abstract import SignedRetrieableMessage
+from raiden.messages.abstract import SignedRetriableMessage
 from raiden.messages.cmdid import CmdId
 from raiden.transfer.events import (
     SendWithdrawConfirmation,
@@ -22,7 +22,7 @@ from raiden_contracts.constants import MessageTypeId
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawRequest(SignedRetrieableMessage):
+class WithdrawRequest(SignedRetriableMessage):
     """ Requests a signed on-chain withdraw confirmation from partner. """
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
@@ -63,7 +63,7 @@ class WithdrawRequest(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawConfirmation(SignedRetrieableMessage):
+class WithdrawConfirmation(SignedRetriableMessage):
     """ Confirms withdraw to partner with a signature """
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_CONFIRMATION
@@ -104,7 +104,7 @@ class WithdrawConfirmation(SignedRetrieableMessage):
 
 
 @dataclass(eq=False)
-class WithdrawExpired(SignedRetrieableMessage):
+class WithdrawExpired(SignedRetriableMessage):
     """ Notifies about withdraw expiration/cancellation from partner. """
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_EXPIRED
