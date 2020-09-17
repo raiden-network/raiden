@@ -228,10 +228,12 @@ class GMatrixHttpApi(MatrixHttpApi):
         return self._send("GET", f"/presence/{quote(user_id)}/status")
 
     def invite(self, room_id: RoomID, offer: Dict[str, str]) -> None:
-        self.send_message(room_id, json.dumps(offer), "m.call.invite")
+        self.send_message(room_id=room_id, text_content=json.dumps(offer), msgtype="m.call.invite")
 
     def answer(self, room_id: RoomID, answer: Dict[str, str]) -> None:
-        self.send_message(room_id, json.dumps(answer), "m.call.answer")
+        self.send_message(
+            room_id=room_id, text_content=json.dumps(answer), msgtype="m.call.answer"
+        )
 
 
 class GMatrixClient(MatrixClient):
