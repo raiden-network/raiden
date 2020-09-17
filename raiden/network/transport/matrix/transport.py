@@ -19,9 +19,9 @@ from gevent.queue import Empty, JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
-from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Capabilities, Environment
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, Capabilities, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
-from raiden.messages.abstract import Message, RetriableMessage, SignedRetriableMessage
+from raiden.messages.abstract import Message, RetriableMessage
 from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
@@ -1176,16 +1176,8 @@ class MatrixTransport(Runnable):
     def _process_messages(self, all_messages: List[Message]) -> None:
         assert self._raiden_service is not None, "_process_messages must be called after start"
 
-        # Remove this #3254
+        # Remove this #3254  # FIXME: all of this?
         for message in all_messages:
-            # FIXME
-            if isinstance(message, (Processed, SignedRetriableMessage)) and message.sender:
-                delivered_message = Processed(
-                    message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
-                )
-                self._raiden_service.sign(delivered_message)
-                retrier = self._get_retrier(message.sender)
-                retrier.enqueue_unordered(delivered_message)
             if self._environment is Environment.DEVELOPMENT:
                 if isinstance(message, RetriableMessage):
                     self._counters["dispatch"][
