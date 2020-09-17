@@ -1,6 +1,8 @@
 import asyncio
 import time
+from asyncio import Future
 from dataclasses import dataclass, field
+from enum import Enum
 
 import gevent
 import structlog
@@ -11,9 +13,14 @@ from gevent.event import Event
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.utils import my_place_or_yours
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional
+from raiden.utils.typing import Address, Callable, Coroutine, Dict, List, Optional
 
 log = structlog.get_logger(__name__)
+
+
+class SDPTypes(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
 
 
 @dataclass
@@ -41,7 +48,7 @@ def spawn_coroutine(
     )
 
 
-def wait_for_future(future: Any, callback: Callable, partner_address: Address) -> None:
+def wait_for_future(future: Future, callback: Callable, partner_address: Address) -> None:
     result = yield_future(future)
     if callback is not None:
         callback(result, partner_address)
@@ -79,7 +86,6 @@ class WebRTCManager:
 
     def async_create_channel(self, partner_address: Address) -> None:
         assert self.node_address, "Transport is not started yet but tried to create rtc channel"
-
         rtc_partner = self.get_rtc_partner(partner_address)
         spawn_coroutine(
             coroutine=create_channel(
@@ -109,7 +115,7 @@ class WebRTCManager:
         if self.node_address is None:
             return
 
-        log.debug("Gracefully closing RTC channels", node=to_checksum_address(self.node_address))
+        log.debug("Gracefully closing rtc channels", node=to_checksum_address(self.node_address))
 
         for rtc_partner in self.address_to_rtc_partners.values():
             if rtc_partner.channel:
@@ -126,6 +132,8 @@ async def create_channel(
     offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
 
+    log.debug("Created offer", offer=offer)
+
     msg = "Channel must be created already"
     assert rtc_partner.channel is not None, msg
 
@@ -138,6 +146,10 @@ async def create_channel(
             time=time.time(),
         )
         handle_message_callback(message, rtc_partner.partner_address)
+
+    @rtc_partner.channel.on("close")
+    def on_close() -> None:  # pylint: disable=unused-variable
+        rtc_partner.channel = None
 
     return pc.localDescription
 
@@ -157,7 +169,7 @@ async def set_remote_description(
     @rtc_partner.peer_connection.on("datachannel")
     def on_datachannel(channel: RTCDataChannel) -> None:  # pylint: disable=unused-variable
         rtc_partner.channel = channel
-        log.debug(f"received channel {channel.label}", node=to_checksum_address(node_address))
+        log.debug(f"Received rtc channel {channel.label}", node=to_checksum_address(node_address))
 
         @channel.on("close")
         def channel_closed() -> None:  # pylint: disable=unused-variable
@@ -173,7 +185,11 @@ async def set_remote_description(
             )
             handle_message_callback(message, rtc_partner.partner_address)
 
-    if sdp_type == "offer":
+        @channel.on("close")
+        async def on_close() -> None:  # pylint: disable=unused-variable
+            rtc_partner.channel = None
+
+    if sdp_type == SDPTypes.OFFER.value:
         # send answer
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
@@ -186,7 +202,7 @@ def send_message(rtc_partner: RTCPartner, message: str, node_address: Address) -
     channel = rtc_partner.channel
     if channel is not None and channel.readyState == "open":
         log.debug(
-            "sending message in asyncio kingdom",
+            "Sending message in asyncio kingdom",
             node=to_checksum_address(node_address),
             message=message,
             time=time.time(),
@@ -198,20 +214,3 @@ def send_message(rtc_partner: RTCPartner, message: str, node_address: Address) -
             f"{channel.readyState if channel is not None else 'No channel exists'}",
             node=to_checksum_address(node_address),
         )
-
-
-# class AGLock:
-#    def __init__(self) -> None:
-#        self.lock = Semaphore()
-#
-#    async def __aenter__(self) -> None:
-#        await make_wrapped_greenlet(self.lock.acquire)
-#
-#    async def __aexit__(self, _1: Any, _2: Any, _3: Any) -> None:
-#        await make_wrapped_greenlet(self.lock.release)
-#
-#    def __enter__(self) -> None:
-#        self.lock.acquire()
-#
-#    def __exit__(self, _1: Any, _2: Any, _3: Any) -> None:
-#        self.lock.release()

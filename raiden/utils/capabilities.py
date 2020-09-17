@@ -23,11 +23,12 @@ def parse_capabilities(capstring: str) -> Dict[str, Any]:
 
 
 def serialize_capabilities(capdict: Optional[Dict[str, Any]]) -> str:
-    for key in (capdict or {}).keys():
+    if not capdict:
+        return "mxc://"
+    for key in capdict.keys():
         if "/" in str(key):
             raise ValueError(f"Key {key} is malformed, '/' not allowed")
-    if capdict is None:
-        return "mxc://"
+
     entries = []
     for key, value in capdict.items():
         if isinstance(value, bool):
@@ -54,11 +55,12 @@ def capdict_to_config(capdict: Dict[str, Any]) -> CapabilitiesConfig:
 
 
 def capconfig_to_dict(config: CapabilitiesConfig) -> Dict[str, Any]:
-    result = {}
-    result[Capabilities.NO_RECEIVE.value] = config.no_receive
-    result[Capabilities.NO_MEDIATE.value] = config.no_mediate
-    result[Capabilities.NO_DELIVERY.value] = config.no_delivery
-    result[Capabilities.WEBRTC.value] = config.web_rtc
+    result = {
+        Capabilities.NO_RECEIVE.value: config.no_receive,
+        Capabilities.NO_MEDIATE.value: config.no_mediate,
+        Capabilities.NO_DELIVERY.value: config.no_delivery,
+        Capabilities.WEBRTC.value: config.web_rtc,
+    }
     other_keys = [
         key
         for key in config.__dict__.keys()

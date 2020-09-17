@@ -31,7 +31,7 @@ from raiden.network.transport.matrix.client import (
     Room,
     User,
 )
-from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager, send_message
+from raiden.network.transport.matrix.rtc.web_rtc import SDPTypes, WebRTCManager, send_message
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     USER_PRESENCE_REACHABLE_STATES,
@@ -1171,7 +1171,6 @@ class MatrixTransport(Runnable):
         return validate_and_parse_message(message["content"]["body"], peer_address)
 
     def _process_messages(self, all_messages: List[Message]) -> None:
-        log.debug("raiden_service", raiden_service=self._raiden_service)
         assert self._raiden_service is not None, "_process_messages must be called after start"
 
         # Remove this #3254
@@ -1218,7 +1217,8 @@ class MatrixTransport(Runnable):
 
     def _handle_call_messages(self, sync_messages: MatrixSyncMessages) -> None:
         """
-        This function handles incoming signalling messages (in matrix called 'call' events)
+        This function handles incoming signalling messages (in matrix called 'call' events).
+        In Raiden 'm.room.message' events are used as the communication format.
         Main function is to forward it to the aiortc library to establish connections.
         Messages contain sdp messages to follow the ROAP (RTC Offer Answer Protocol).
         Args:
@@ -1309,12 +1309,12 @@ class MatrixTransport(Runnable):
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
     ) -> Optional[Room]:
-        # msg = (
-        #    f"address not health checked: "
-        #    f"node: {self._user_id}, "
-        #    f"peer: {to_checksum_address(address)}"
-        # )
-        # assert address and self._address_mgr.is_address_known(address), msg
+        msg = (
+            f"address not health checked: "
+            f"node: {self._user_id}, "
+            f"peer: {to_checksum_address(address)}"
+        )
+        assert address and self._address_mgr.is_address_known(address), msg
 
         room_candidates = []
         room_ids = self._get_room_ids_for_address(address)
@@ -1488,16 +1488,20 @@ class MatrixTransport(Runnable):
         if room is None:
             return
 
-        if sdp_type == "offer":
+        if sdp_type == SDPTypes.OFFER.value:
             self._client.api.invite(room.room_id, message)
-        elif sdp_type == "answer":
+        elif sdp_type == SDPTypes.ANSWER.value:
             self._client.api.answer(room.room_id, message)
 
     def create_web_rtc_channel(self, partner_address: Address) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-
+        log.debug(
+            "Waiting for initiating web rtc",
+            node=to_checksum_address(self._raiden_service.address),
+            partner_address=to_checksum_address(partner_address),
+        )
         while (
             self._get_room_for_address(partner_address, require_online_peer=True) is None
             or not self._started
@@ -1512,13 +1516,19 @@ class MatrixTransport(Runnable):
         web_rtc_key = Capabilities.WEBRTC.value
         if web_rtc_key in capabilities and capabilities[web_rtc_key]:
             log.debug(
-                "Creating rtc channel with partner",
+                "Initiating web rtc",
                 node=to_checksum_address(self._raiden_service.address),
                 partner_address=to_checksum_address(partner_address),
             )
             self._web_rtc_manager.async_create_channel(partner_address)
         else:
             # if no web rtc capabilities by partner remove him from the rtc partners
+            log.debug(
+                "Partner has no web rtc capabilities",
+                node=self._raiden_service.address,
+                partner_address=partner_address,
+                partner_capabilities=capabilities,
+            )
             del self._web_rtc_manager.address_to_rtc_partners[partner_address]
 
     def _is_broadcast_room(self, room: Room) -> bool:

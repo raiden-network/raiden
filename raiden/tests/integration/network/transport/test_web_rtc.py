@@ -13,6 +13,7 @@ from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import MessageID
 
 TIMEOUT_MESSAGE_RECEIVE = 15
+TIMEOUT_WEB_RTC_CONNECTION = 120
 
 
 class MessageHandler:
@@ -46,11 +47,12 @@ def test_web_rtc_message_sync(matrix_transports):
     transport0.immediate_health_check_for(transport1._raiden_service.address)
     transport1.immediate_health_check_for(transport0._raiden_service.address)
 
-    # wait until web rtc connection is ready
-    while not transport0._web_rtc_manager.has_ready_channel(raiden_service1.address):
-        gevent.sleep(1)
-    while not transport1._web_rtc_manager.has_ready_channel(raiden_service0.address):
-        gevent.sleep(1)
+    with Timeout(TIMEOUT_WEB_RTC_CONNECTION):
+        # wait until web rtc connection is ready
+        while not transport0._web_rtc_manager.has_ready_channel(raiden_service1.address):
+            gevent.sleep(1)
+        while not transport1._web_rtc_manager.has_ready_channel(raiden_service0.address):
+            gevent.sleep(1)
 
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,

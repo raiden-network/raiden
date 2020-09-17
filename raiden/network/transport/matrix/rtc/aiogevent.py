@@ -1,4 +1,6 @@
 # pylint: skip-file
+# This file is copied from https://github.com/fredo/aiogevent
+# license: https://github.com/fredo/aiogevent/blob/master/COPYING
 import asyncio
 import selectors
 import socket
