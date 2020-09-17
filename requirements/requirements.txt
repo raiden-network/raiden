@@ -45,7 +45,7 @@ markupsafe==1.1.1         # via jinja2
 marshmallow-dataclass==6.0.0  # via -r requirements.in
 marshmallow-enum==1.5.1   # via -r requirements.in
 marshmallow-polyfield==5.9  # via -r requirements.in
-marshmallow==3.7.1        # via -r requirements.in, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
+marshmallow==3.8.0        # via -r requirements.in, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
 matrix-client==0.3.2      # via -r requirements.in
 mirakuru==2.1.2           # via -r requirements.in
 multiaddr==0.0.9          # via ipfshttpclient
