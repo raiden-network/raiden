@@ -16,6 +16,7 @@ from raiden.constants import (
     EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
+    PROTOCOL_VERSION,
     Environment,
     RoutingMode,
 )
@@ -101,7 +102,12 @@ def ping_pong_message_success(transport0, transport1):
 
     msg_id = random.randint(1e5, 9e5)
 
-    ping_message = Ping(message_identifier=msg_id, signature=EMPTY_SIGNATURE)
+    ping_message = Ping(
+        message_identifier=msg_id,
+        signature=EMPTY_SIGNATURE,
+        current_protocol_version=PROTOCOL_VERSION,
+        nonce=1,
+    )
     pong_message = Pong(delivered_message_identifier=msg_id, signature=EMPTY_SIGNATURE)
 
     transport0_raiden_queues[queueid1].append(ping_message)

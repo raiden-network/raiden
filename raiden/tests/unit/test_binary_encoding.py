@@ -16,6 +16,7 @@ signer = LocalSigner(PRIVKEY)
 def test_signature():
     ping = Ping(
         nonce=0,
+        message_identifier=factories.make_message_identifier(),
         current_protocol_version=constants.PROTOCOL_VERSION,
         signature=constants.EMPTY_SIGNATURE,
     )
@@ -46,6 +47,7 @@ def test_signature():
 def test_encoding():
     ping = Ping(
         nonce=0,
+        message_identifier=factories.make_message_identifier(),
         current_protocol_version=constants.PROTOCOL_VERSION,
         signature=constants.EMPTY_SIGNATURE,
     )
@@ -56,6 +58,7 @@ def test_encoding():
 def test_hash():
     ping = Ping(
         nonce=0,
+        message_identifier=factories.make_message_identifier(),
         current_protocol_version=constants.PROTOCOL_VERSION,
         signature=constants.EMPTY_SIGNATURE,
     )

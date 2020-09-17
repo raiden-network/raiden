@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from raiden.messages.abstract import SignedMessage
+from raiden.messages.abstract import SignedMessage, SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
-from raiden.utils.typing import ClassVar, Nonce, RaidenProtocolVersion
+from raiden.utils.typing import ClassVar, MessageID, Nonce, RaidenProtocolVersion
 
 
 @dataclass(repr=False, eq=False)
-class Ping(SignedMessage):
+class Ping(SignedRetrieableMessage):
     """ Healthcheck message.
 
     This message is sent to another node with an unique nonce, a Pong response is
@@ -23,6 +23,8 @@ class Ping(SignedMessage):
     current_protocol_version: RaidenProtocolVersion
 
     def _data_to_sign(self) -> bytes:
+        # FIXME: without signing all the Retriable fields, this becomes insecure, if ever
+        # used in the protocol again.
         return (
             bytes([self.cmdid.value, 0, 0, 0])
             + self.nonce.to_bytes(8, byteorder="big")
@@ -35,8 +37,11 @@ class Pong(SignedMessage):
     """ Response to a Ping message. """
 
     cmdid: ClassVar[CmdId] = CmdId.PONG
+    delivered_message_identifier: MessageID
 
     nonce: Nonce
 
     def _data_to_sign(self) -> bytes:
+        # FIXME: without signing `delivered_message_identifier`, too, this becomes insecure, if
+        # ever used in the protocol again.
         return bytes([self.cmdid.value, 0, 0, 0]) + self.nonce.to_bytes(8, byteorder="big")
