@@ -73,7 +73,7 @@ iniconfig==1.0.1          # via pytest
 ipfshttpclient==0.6.0.post1  # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via traitlets
 ipython==7.18.1           # via -r requirements-dev.in
-isort==5.5.0              # via -r requirements-dev.in, pylint
+isort==5.5.2              # via -r requirements-dev.in, pylint
 itsdangerous==1.1.0       # via -r requirements.txt, flask
 jedi==0.17.0              # via ipython
 jinja2==2.10.1            # via -r requirements-docs.txt, -r requirements.txt, flask, matrix-synapse, sphinx
