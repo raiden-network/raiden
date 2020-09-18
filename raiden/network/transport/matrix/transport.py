@@ -384,15 +384,15 @@ class MatrixTransport(Runnable):
             None, self._handle_web_rtc_messages, self._handle_sdp_callback
         )
 
-        self._server_url = self._client.api.base_url
-        self._server_name = urlparse(self._server_url).netloc
+        self.server_url = self._client.api.base_url
+        self._server_name = urlparse(self.server_url).netloc
 
         self.greenlets: List[gevent.Greenlet] = list()
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
         self._displayname_cache = DisplayNameCache()
 
-        self._broadcast_rooms: Dict[str, Room] = dict()
+        self.broadcast_rooms: Dict[str, Room] = dict()
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
@@ -734,11 +734,11 @@ class MatrixTransport(Runnable):
                     f"Known public rooms: {self._config.broadcast_rooms}."
                 )
             room_name = make_room_alias(self.chain_id, room_name)
-            if room_name not in self._broadcast_rooms:
+            if room_name not in self.broadcast_rooms:
                 room = join_broadcast_room(self._client, f"#{room_name}:{self._server_name}")
-                self._broadcast_rooms[room_name] = room
+                self.broadcast_rooms[room_name] = room
 
-            existing_room = self._broadcast_rooms.get(room_name)
+            existing_room = self.broadcast_rooms.get(room_name)
             assert existing_room, f"Unknown broadcast room: {room_name!r}"
 
             self.log.debug(
@@ -803,7 +803,7 @@ class MatrixTransport(Runnable):
         # Call sync to fetch the inventory rooms and new invites, the sync
         # limit prevents fetching the messages.
         filter_id = self._client.create_sync_filter(
-            not_rooms=self._broadcast_rooms.values(), limit=0
+            not_rooms=self.broadcast_rooms.values(), limit=0
         )
         prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
@@ -883,14 +883,14 @@ class MatrixTransport(Runnable):
             transport.log.debug(
                 "Joining broadcast room", broadcast_room_alias=broadcast_room_alias
             )
-            transport._broadcast_rooms[room_name] = join_broadcast_room(
+            transport.broadcast_rooms[room_name] = join_broadcast_room(
                 client=transport._client, broadcast_room_alias=broadcast_room_alias
             )
 
         for suffix in self._config.broadcast_rooms:
             alias_prefix = make_room_alias(self.chain_id, suffix)
 
-            if alias_prefix not in self._broadcast_rooms:
+            if alias_prefix not in self.broadcast_rooms:
                 pool.apply_async(_join_broadcast_room, args=(self, alias_prefix))
 
         pool.join(raise_error=True)
@@ -908,10 +908,10 @@ class MatrixTransport(Runnable):
             "sync thread, since that is necessary to properly generate the "
             "filters."
         )
-        assert self._broadcast_rooms, msg
+        assert self.broadcast_rooms, msg
 
         broadcast_filter_id = self._client.create_sync_filter(
-            not_rooms=self._broadcast_rooms.values()
+            not_rooms=self.broadcast_rooms.values()
         )
         self._client.set_sync_filter_id(broadcast_filter_id)
 
@@ -1085,7 +1085,7 @@ class MatrixTransport(Runnable):
         if self._is_broadcast_room(room):
             raise AssertionError(
                 f"Broadcast room events should be filtered in syncs: {room.canonical_alias}."
-                f"Joined Broadcast Rooms: {list(self._broadcast_rooms.keys())}"
+                f"Joined Broadcast Rooms: {list(self.broadcast_rooms.keys())}"
                 f"Should be joined to: {self._config.broadcast_rooms}"
             )
 

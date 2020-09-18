@@ -297,11 +297,11 @@ def services_bundle_from_contracts_deployment(
     contractname_address: List[Tuple[str, Address, Callable]] = [
         ("user_deposit", Address(user_deposit_address), proxy_manager.user_deposit)
     ]
-    if routing_mode == RoutingMode.PFS:
+    if routing_mode is RoutingMode.PFS:
         contractname_address.append(
             ("service_registry", Address(service_registry_address), proxy_manager.service_registry)
         )
-    if enable_monitoring or routing_mode == RoutingMode.PFS:
+    if enable_monitoring or routing_mode is RoutingMode.PFS:
         contractname_address.append(
             (
                 "monitoring_service",
@@ -320,7 +320,7 @@ def services_bundle_from_contracts_deployment(
 
         proxies[contractname] = proxy
 
-    if routing_mode == RoutingMode.PFS:
+    if routing_mode is RoutingMode.PFS:
         check_pfs_configuration(pathfinding_service_address=pathfinding_service_address)
 
         pfs_info = configure_pfs_or_exit(
@@ -332,13 +332,12 @@ def services_bundle_from_contracts_deployment(
                 token_network_registry_address
             ),
             pathfinding_max_fee=config.services.pathfinding_max_fee,
-            matrix_servers=config.transport.available_servers,
         )
         msg = "Eth address of selected pathfinding service is unknown."
         assert pfs_info.payment_address is not None, msg
 
         # Only check that PFS is registered in production mode
-        if environment_type == Environment.PRODUCTION:
+        if environment_type is Environment.PRODUCTION:
             check_pfs_for_production(
                 service_registry=proxies["service_registry"], pfs_info=pfs_info
             )
