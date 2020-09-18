@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from gevent import monkey  # isort:skip
+
+monkey.patch_all()  # isort:skip
 import argparse
 import os
 import time
@@ -10,7 +12,6 @@ import gevent
 
 from raiden.utils.nursery import Janitor, Nursery
 
-monkey.patch_all()  # isort:skip
 
 import asyncio  # isort:skip # noqa
 from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
