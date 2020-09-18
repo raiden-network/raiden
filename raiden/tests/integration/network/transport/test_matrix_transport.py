@@ -427,7 +427,7 @@ def test_join_invalid_discovery(
     transport.start(raiden_service, [], None)
     transport.log = MagicMock()
     discovery_room_name = make_room_alias(transport.chain_id, "discovery")
-    assert isinstance(transport._broadcast_rooms.get(discovery_room_name), Room)
+    assert isinstance(transport.broadcast_rooms.get(discovery_room_name), Room)
 
     transport.stop()
     transport.greenlet.get()
@@ -493,7 +493,7 @@ def test_matrix_discovery_room_offline_server(
 
     discovery_room_name = make_room_alias(transport.chain_id, "discovery")
     with gevent.Timeout(1):
-        while not isinstance(transport._broadcast_rooms.get(discovery_room_name), Room):
+        while not isinstance(transport.broadcast_rooms.get(discovery_room_name), Room):
             gevent.sleep(0.1)
 
     transport.stop()
@@ -525,7 +525,7 @@ def test_matrix_broadcast(
     gevent.idle()
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport._broadcast_rooms.get(ms_room_name)
+    ms_room = transport.broadcast_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
 
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
@@ -586,7 +586,7 @@ def test_monitoring_broadcast_messages(
     transport.start(raiden_service, [], None)
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport._broadcast_rooms.get(ms_room_name)
+    ms_room = transport.broadcast_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
@@ -667,7 +667,7 @@ def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
     transport.start(raiden_service, [], None)
 
     ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport._broadcast_rooms.get(ms_room_name)
+    ms_room = transport.broadcast_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
@@ -758,7 +758,7 @@ def test_pfs_broadcast_messages(
     transport.start(raiden_service, [], None)
 
     pfs_room_name = make_room_alias(transport.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_room = transport._broadcast_rooms.get(pfs_room_name)
+    pfs_room = transport.broadcast_rooms.get(pfs_room_name)
     assert isinstance(pfs_room, Room)
     pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
 
@@ -1220,7 +1220,7 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     transport2.start(raiden_service2, [], None)
 
     pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_broadcast_room_t0 = transport0._broadcast_rooms[pfs_broadcast_room_alias]
+    pfs_broadcast_room_t0 = transport0.broadcast_rooms[pfs_broadcast_room_alias]
 
     # Get the sync helper to control flow of asynchronous syncs
     sync_progress1 = transport1._client.sync_progress

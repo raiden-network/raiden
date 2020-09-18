@@ -31,9 +31,11 @@ from raiden.constants import (
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
+from raiden.network.pathfinding import check_pfs_transport_configuration
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
+from raiden.network.transport.matrix import make_room_alias
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
@@ -444,5 +446,19 @@ def run_app(
     )
 
     raiden_app.start()
+
+    if config.pfs_config is not None:
+        # This has to be done down here since there is a circular dependency
+        # between the PFS and Transport
+        pfs_broadcast_room_key = make_room_alias(config.chain_id, PATH_FINDING_BROADCASTING_ROOM)
+        check_pfs_transport_configuration(
+            pfs_info=config.pfs_config.info,
+            pfs_was_autoselected=(pathfinding_service_address == MATRIX_AUTO_SELECT_SERVER),
+            transport_pfs_broadcast_room_id=matrix_transport.broadcast_rooms[
+                pfs_broadcast_room_key
+            ].room_id,
+            matrix_server_url=matrix_transport.server_url,
+            matrix_server_was_autoselected=(config.transport.server == MATRIX_AUTO_SELECT_SERVER),
+        )
 
     return raiden_app

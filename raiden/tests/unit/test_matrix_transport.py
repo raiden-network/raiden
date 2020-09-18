@@ -45,7 +45,7 @@ def test_login_for_the_first_time_must_set_the_display_name():
     client.api = api
 
     # login will assert user is hex-encoded address and pw is server_name signed with that address
-    def mock_login(user, pw, sync=True):  # pylint: disable=unused-argument
+    def mock_login(user, pw, sync=True, device_id=None):  # pylint: disable=unused-argument
         recovered = recover(data=server_name.encode(), signature=decode_hex(pw))
         if recovered != to_canonical_address(user):
             raise MatrixRequestError(403)
