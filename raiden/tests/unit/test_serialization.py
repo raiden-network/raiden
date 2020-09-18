@@ -252,7 +252,7 @@ def test_encoding_and_decoding():
 
 
 def test_bad_messages():
-    "SerializationErrors should be raised on all kinds of wrong messages"
+    """SerializationErrors should be raised on all kinds of wrong messages"""
     for message in ["{}", "[]", '"foo"', "123"]:
         with pytest.raises(SerializationError):
             MessageSerializer.deserialize(message)

@@ -5,20 +5,80 @@ from typing import Dict, Iterable
 import marshmallow
 import networkx
 from eth_utils import to_bytes, to_canonical_address, to_hex
-from marshmallow import Schema
+from marshmallow import EXCLUDE, Schema, post_dump
+from marshmallow_dataclass import class_schema
 from marshmallow_polyfield import PolyField
 
-from raiden.storage.serialization.cache import SchemaCache
+from raiden.transfer.architecture import (
+    BalanceProofSignedState,
+    BalanceProofUnsignedState,
+    ContractSendEvent,
+    TransferTask,
+)
+from raiden.transfer.events import (
+    ContractSendChannelClose,
+    ContractSendChannelSettle,
+    ContractSendChannelUpdateTransfer,
+    ContractSendChannelWithdraw,
+    ContractSendSecretReveal,
+    SendMessageEvent,
+    SendProcessed,
+    SendWithdrawConfirmation,
+    SendWithdrawExpired,
+    SendWithdrawRequest,
+)
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.mediated_transfer.events import (
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+    SendSecretRequest,
+    SendSecretReveal,
+    SendUnlock,
+)
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
+    AdditionalHash,
     Address,
     Any,
+    BalanceHash,
+    BlockExpiration,
+    BlockGasLimit,
+    BlockHash,
+    BlockNumber,
+    BlockTimeout,
     ChainID,
     ChannelID,
+    EncodedData,
+    FeeAmount,
+    InitiatorAddress,
+    LockedAmount,
+    Locksroot,
+    MessageID,
+    MonitoringServiceAddress,
+    Nonce,
+    OneToNAddress,
     Optional,
+    PaymentAmount,
+    PaymentID,
+    PaymentWithFeeAmount,
+    ProportionalFeeAmount,
+    Secret,
+    SecretHash,
+    SecretRegistryAddress,
+    Signature,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
     TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
+    TransactionHash,
+    TransferID,
     Tuple,
+    Union,
+    UserDepositAddress,
+    WithdrawAmount,
 )
 
 
@@ -170,3 +230,117 @@ class NetworkXGraphField(marshmallow.fields.Field):
             return networkx.Graph(canonical_addresses)
         except (TypeError, ValueError):
             raise self.make_error("validator_failed", input=value)
+
+
+class BaseSchema(marshmallow.Schema):
+    # We want to ignore unknown fields
+    class Meta:
+        unknown = EXCLUDE
+
+    TYPE_MAPPING = {
+        # Addresses
+        Address: AddressField,
+        InitiatorAddress: AddressField,
+        MonitoringServiceAddress: AddressField,
+        OneToNAddress: AddressField,
+        TokenNetworkRegistryAddress: AddressField,
+        SecretRegistryAddress: AddressField,
+        TargetAddress: AddressField,
+        TokenAddress: AddressField,
+        TokenNetworkAddress: AddressField,
+        UserDepositAddress: AddressField,
+        # Bytes
+        EncodedData: BytesField,
+        AdditionalHash: BytesField,
+        BalanceHash: BytesField,
+        BlockHash: BytesField,
+        Locksroot: BytesField,
+        Secret: BytesField,
+        SecretHash: BytesField,
+        Signature: BytesField,
+        TransactionHash: BytesField,
+        # Ints
+        BlockExpiration: IntegerToStringField,
+        BlockNumber: IntegerToStringField,
+        BlockTimeout: IntegerToStringField,
+        TokenAmount: IntegerToStringField,
+        FeeAmount: IntegerToStringField,
+        ProportionalFeeAmount: IntegerToStringField,
+        LockedAmount: IntegerToStringField,
+        BlockGasLimit: IntegerToStringField,
+        MessageID: IntegerToStringField,
+        Nonce: IntegerToStringField,
+        PaymentAmount: IntegerToStringField,
+        PaymentID: IntegerToStringField,
+        PaymentWithFeeAmount: IntegerToStringField,
+        TransferID: IntegerToStringField,
+        WithdrawAmount: IntegerToStringField,
+        Optional[BlockNumber]: OptionalIntegerToStringField,  # type: ignore
+        # Integers which should be converted to strings
+        # This is done for querying purposes as sqlite
+        # integer type is smaller than python's.
+        ChainID: IntegerToStringField,
+        ChannelID: IntegerToStringField,
+        # Polymorphic fields
+        TransferTask: CallablePolyField(allowed_classes=[InitiatorTask, MediatorTask, TargetTask]),
+        Union[  # type: ignore
+            BalanceProofUnsignedState, BalanceProofSignedState
+        ]: CallablePolyField(allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState]),
+        Optional[  # type: ignore
+            Union[BalanceProofUnsignedState, BalanceProofSignedState]
+        ]: CallablePolyField(
+            allowed_classes=[BalanceProofUnsignedState, BalanceProofSignedState], allow_none=True
+        ),
+        SendMessageEvent: CallablePolyField(
+            allowed_classes=[
+                SendLockExpired,
+                SendLockedTransfer,
+                SendSecretReveal,
+                SendUnlock,
+                SendSecretRequest,
+                SendRefundTransfer,
+                SendWithdrawRequest,
+                SendWithdrawConfirmation,
+                SendWithdrawExpired,
+                SendProcessed,
+            ],
+            allow_none=True,
+        ),
+        ContractSendEvent: CallablePolyField(
+            allowed_classes=[
+                ContractSendChannelWithdraw,
+                ContractSendChannelClose,
+                ContractSendChannelSettle,
+                ContractSendChannelUpdateTransfer,
+                ContractSendSecretReveal,
+            ],
+            allow_none=False,
+        ),
+        # QueueIdentifier (Special case)
+        QueueIdentifier: QueueIdentifierField,
+        # Other
+        networkx.Graph: NetworkXGraphField,
+        Random: PRNGField,
+    }
+
+    @post_dump(pass_original=True)
+    # pylint: disable=W0613,R0201
+    def add_class_type(self, data: Dict, original_data: Any, many: bool) -> Dict:
+        data["_type"] = class_type(original_data)
+        return data
+
+
+def class_type(instance: Any) -> str:
+    return f"{instance.__class__.__module__}.{instance.__class__.__name__}"
+
+
+class SchemaCache:
+    SCHEMA_CACHE: Dict[str, Schema] = {}
+
+    @classmethod
+    def get_or_create_schema(cls, clazz: type) -> Schema:
+        class_name = clazz.__name__
+        if class_name not in cls.SCHEMA_CACHE:
+            schema = class_schema(clazz, base_schema=BaseSchema)()
+            cls.SCHEMA_CACHE[class_name] = schema
+        return cls.SCHEMA_CACHE[class_name]

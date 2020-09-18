@@ -4,7 +4,7 @@ import marshmallow
 import pytest
 
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.serialization.fields import (
+from raiden.storage.serialization.schemas import (
     AddressField,
     BytesField,
     IntegerToStringField,
