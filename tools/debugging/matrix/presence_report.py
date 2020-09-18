@@ -1,15 +1,19 @@
+#!/usr/bin/env python
+import gevent.monkey
+
+gevent.monkey.patch_all()  # isort:skip # noqa
+
 import json
 
 import click
 import gevent
-import gevent.monkey
+
 import structlog
 from eth_account import Account
 from eth_utils import decode_hex
 
 from raiden.utils.signer import LocalSigner
 
-gevent.monkey.patch_all()  # isort:skip # noqa
 
 import asyncio  # isort:skip # noqa
 from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
