@@ -433,6 +433,7 @@ def maybe_add_tokennetwork(
 
         ids_to_tokens[token_network_address] = token_network_state
         addresses_to_ids[token_address] = token_network_address
+        token_network_registry_state.token_network_list.append(token_network_state)
 
         mapping = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses
         mapping[token_network_address] = token_network_registry_address
