@@ -449,8 +449,7 @@ def get_matrix_servers(
     """
     try:
         response = requests.get(url)
-        if response.status_code != 200:
-            raise requests.RequestException("Response: {response!r}")
+        response.raise_for_status()
     except requests.RequestException as ex:
         raise RuntimeError(f"Could not fetch matrix servers list: {url!r} => {ex!r}") from ex
 

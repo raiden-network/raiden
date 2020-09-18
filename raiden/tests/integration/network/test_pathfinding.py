@@ -1,3 +1,5 @@
+import dataclasses
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -11,7 +13,12 @@ from eth_utils import (
 
 from raiden.constants import MATRIX_AUTO_SELECT_SERVER, RoutingMode
 from raiden.exceptions import RaidenError
-from raiden.network.pathfinding import PFSInfo, check_pfs_for_production, configure_pfs_or_exit
+from raiden.network.pathfinding import (
+    PFSInfo,
+    check_pfs_for_production,
+    check_pfs_transport_configuration,
+    configure_pfs_or_exit,
+)
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
@@ -46,6 +53,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "version": "0.0.1",
         "payment_address": to_checksum_address(privatekey_to_address(private_keys[0])),
         "matrix_server": "http://matrix.example.com",
+        "matrix_room_id": "!room-id:matrix.example.com",
     }
 
     response = mocked_json_response(response_data=json_data)
@@ -59,7 +67,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-            matrix_servers=["http://matrix.example.com"],
         )
 
     # With private routing configure_pfs should raise assertion
@@ -71,7 +78,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-            matrix_servers=["http://matrix.example.com"],
         )
 
     # Asking for auto address
@@ -85,7 +91,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-            matrix_servers=["matrix.example.com"],
         )
     assert config.url in urls
     assert is_canonical_address(config.payment_address)
@@ -100,7 +105,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             node_network_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-            matrix_servers=["matrix.example.com"],
         )
     assert config.url == given_address
     assert is_same_address(config.payment_address, json_data["payment_address"])
@@ -118,7 +122,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 node_network_id=chain_id,
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-                matrix_servers=["http://matrix.example.com"],
             )
 
     # Addresses of token network registries of pfs and client conflict, should exit the client
@@ -134,7 +137,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                     to_canonical_address("0x2222222222222222222222222222222222222221")
                 ),
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-                matrix_servers=["http://matrix.example.com"],
             )
 
     # ChainIDs of pfs and client conflict, should exit the client
@@ -148,22 +150,59 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 node_network_id=ChainID(chain_id + 1),
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-                matrix_servers=["http://matrix.example.com"],
             )
 
-    # Wrong matrix server
-    response = mocked_json_response(response_data=json_data)
-    with pytest.raises(RaidenError, match="matrix server"):
-        with patch.object(requests, "get", return_value=response):
-            configure_pfs_or_exit(
-                pfs_url="http://foo",
-                routing_mode=RoutingMode.PFS,
-                service_registry=service_registry,
-                node_network_id=ChainID(chain_id),
-                token_network_registry_address=token_network_registry_address_test_default,
-                pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-                matrix_servers=["matrix.doesnotexist.com"],
-            )
+
+def test_check_pfs_transport_configuration(chain_id, private_keys, caplog):
+    matrix_server_url = "http://matrix.example.com"
+    matrix_room_id = "!room-id:matrix.example.com"
+    pfs_info = PFSInfo(
+        url="http://foo",
+        price=TokenAmount(0),
+        chain_id=chain_id,
+        token_network_registry_address=token_network_registry_address_test_default,
+        payment_address=to_canonical_address("0x2222222222222222222222222222222222222221"),
+        message="",
+        operator="",
+        version="",
+        user_deposit_address=privatekey_to_address(private_keys[1]),
+        confirmed_block_number=BlockNumber(10),
+        matrix_server=matrix_server_url,
+        matrix_room_id=matrix_room_id,
+    )
+
+    # Room id mismatch, must raise
+    with pytest.raises(RaidenError):
+        check_pfs_transport_configuration(
+            pfs_info=pfs_info,
+            pfs_was_autoselected=True,
+            transport_pfs_broadcast_room_id="!this-is-not-the-room-youre-looking-for:example.com",
+            matrix_server_url=matrix_server_url,
+            matrix_server_was_autoselected=True,
+        )
+
+    # Room ids match, must not raise
+    check_pfs_transport_configuration(
+        pfs_info=pfs_info,
+        pfs_was_autoselected=True,
+        transport_pfs_broadcast_room_id=matrix_room_id,
+        matrix_server_url=matrix_server_url,
+        matrix_server_was_autoselected=True,
+    )
+
+    # With the matrix_room_id missing from the PFS response the check can't be performed
+    pfs_info_no_room_id = dataclasses.replace(pfs_info, matrix_room_id=None)
+    with caplog.at_level(logging.WARNING):
+        check_pfs_transport_configuration(
+            pfs_info=pfs_info_no_room_id,
+            pfs_was_autoselected=True,
+            transport_pfs_broadcast_room_id="!not-this-again:matrix.org",
+            matrix_server_url=matrix_server_url,
+            matrix_server_was_autoselected=True,
+        )
+        assert "Can't check PFS transport configuration" in (
+            record.msg["event"] for record in caplog.records
+        )
 
 
 def test_check_pfs_for_production(
@@ -190,6 +229,7 @@ def test_check_pfs_for_production(
         user_deposit_address=privatekey_to_address(private_keys[1]),
         confirmed_block_number=BlockNumber(10),
         matrix_server="http://matrix.example.com",
+        matrix_room_id="!room-id:matrix.example.com",
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
@@ -207,6 +247,7 @@ def test_check_pfs_for_production(
         user_deposit_address=privatekey_to_address(private_keys[1]),
         confirmed_block_number=BlockNumber(10),
         matrix_server="http://matrix.example.com",
+        matrix_room_id="!room-id:matrix.example.com",
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
