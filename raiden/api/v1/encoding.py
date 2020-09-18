@@ -22,7 +22,7 @@ from raiden.constants import (
     UINT256_MAX,
 )
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
-from raiden.storage.serialization.fields import IntegerToStringField
+from raiden.storage.serialization.schemas import IntegerToStringField
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState

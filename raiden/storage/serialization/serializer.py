@@ -8,15 +8,39 @@ import importlib
 import json
 from dataclasses import is_dataclass
 from json import JSONDecodeError
-from typing import Mapping
+from typing import List, Mapping
 
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
-from raiden.storage.serialization.cache import SchemaCache
-from raiden.storage.serialization.types import MESSAGE_NAME_TO_QUALIFIED_NAME
+from raiden.storage.serialization.schemas import SchemaCache
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import Any, Dict
+
+
+MESSAGE_NAME_TO_QUALIFIED_NAME = {
+    "AuthenticatedMessage": "raiden.messages.abstract.AuthenticatedMessage",
+    "Delivered": "raiden.messages.synchronization.Delivered",
+    "EnvelopeMessage": "raiden.messages.transfers.EnvelopeMessage",
+    "LockedTransferBase": "raiden.messages.transfers.LockedTransferBase",
+    "LockedTransfer": "raiden.messages.transfers.LockedTransfer",
+    "LockExpired": "raiden.messages.transfers.LockExpired",
+    "PFSCapacityUpdate": "raiden.messages.path_finding_service.PFSCapacityUpdate",
+    "PFSFeeUpdate": "raiden.messages.path_finding_service.PFSFeeUpdate",
+    "Ping": "raiden.messages.healthcheck.Ping",
+    "Pong": "raiden.messages.healthcheck.Pong",
+    "Processed": "raiden.messages.synchronization.Processed",
+    "RefundTransfer": "raiden.messages.transfers.RefundTransfer",
+    "RequestMonitoring": "raiden.messages.monitoring_service.RequestMonitoring",
+    "RevealSecret": "raiden.messages.transfers.RevealSecret",
+    "SecretRequest": "raiden.messages.transfers.SecretRequest",
+    "SignedMessage": "raiden.messages.abstract.SignedMessage",
+    "SignedRetrieableMessage": "raiden.messages.abstract.SignedRetrieableMessage",
+    "Unlock": "raiden.messages.transfers.Unlock",
+    "WithdrawConfirmation": "raiden.messages.withdraw.WithdrawConfirmation",
+    "WithdrawExpired": "raiden.messages.withdraw.WithdrawExpired",
+    "WithdrawRequest": "raiden.messages.withdraw.WithdrawRequest",
+}
 
 
 def _import_type(type_name: str) -> type:
@@ -102,6 +126,18 @@ class JSONSerializer(SerializationBase):
         return data
 
 
+def remove_type_inplace(data: Any) -> None:
+    if isinstance(data, Dict):
+        data.pop("_type", None)
+
+        for value in data.values():
+            remove_type_inplace(value)
+
+    if isinstance(data, List):
+        for item in data:
+            remove_type_inplace(item)
+
+
 class MessageSerializer(SerializationBase):
     """ Serialize to JSON with adaptions for external messages
 
@@ -118,6 +154,10 @@ class MessageSerializer(SerializationBase):
 
         # Only use 'Message' instead of `raiden.messages.Message` as type.
         qualified_type = data.pop("_type")
+
+        # Remove `_type` fields in deeper levels
+        remove_type_inplace(data)
+
         data["type"] = qualified_type.split(".")[-1]
 
         return json.dumps(data)
