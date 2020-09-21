@@ -849,6 +849,8 @@ def handle_state_change(
     elif type(state_change) == ReceiveWithdrawExpired:
         assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_expired(chain_state, state_change)
+    else:
+        iteration = TransitionResult(chain_state, [])
 
     chain_state = iteration.new_state
     assert chain_state is not None, "chain_state must be set"

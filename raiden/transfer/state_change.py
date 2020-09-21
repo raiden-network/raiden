@@ -315,6 +315,24 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
+# FIXME: remove on next breaking release
+# This needs to be kept, so that the state changes that are already in the DB
+# continue to be decodable.
+@dataclass(frozen=True)
+class ContractReceiveRouteClosed(ContractReceiveStateChange):
+    """ A channel was closed and this node is NOT a participant. """
+
+    canonical_identifier: CanonicalIdentifier
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+
 @dataclass(frozen=True)
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier
