@@ -154,7 +154,6 @@ class RoutingMode(Enum):
     """Routing mode configuration that can be chosen on the command line"""
 
     PFS = "pfs"
-    LOCAL = "local"
     PRIVATE = "private"
 
 

@@ -720,7 +720,6 @@ def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
-@pytest.mark.parametrize("route_mode", [RoutingMode.LOCAL, RoutingMode.PFS])
 @pytest.mark.parametrize(
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
@@ -751,7 +750,7 @@ def test_pfs_broadcast_messages(
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
     raiden_service.config.services.monitoring_enabled = True
-    raiden_service.routing_mode = route_mode
+    raiden_service.routing_mode = RoutingMode.PFS
 
     transport.start(raiden_service, [], None)
 
