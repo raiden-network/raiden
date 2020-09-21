@@ -1406,9 +1406,7 @@ def make_chain_state(
     token_network_address = channel_set.channels[0].canonical_identifier.token_network_address
     token_address = make_address()
 
-    token_network = TokenNetworkState(
-        address=token_network_address, token_address=token_address
-    )
+    token_network = TokenNetworkState(address=token_network_address, token_address=token_address)
     for netting_channel in channel_set.channels:
         token_network.channelidentifiers_to_channels[
             netting_channel.canonical_identifier.channel_identifier

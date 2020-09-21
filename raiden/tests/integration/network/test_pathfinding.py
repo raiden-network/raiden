@@ -59,17 +59,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
 
     response = mocked_json_response(response_data=json_data)
 
-    # With local routing configure_pfs should raise assertion
-    with pytest.raises(AssertionError):
-        _ = configure_pfs_or_exit(
-            pfs_url="",
-            routing_mode=RoutingMode.LOCAL,
-            service_registry=service_registry,
-            node_network_id=chain_id,
-            token_network_registry_address=token_network_registry_address_test_default,
-            pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
-        )
-
     # With private routing configure_pfs should raise assertion
     with pytest.raises(AssertionError):
         _ = configure_pfs_or_exit(

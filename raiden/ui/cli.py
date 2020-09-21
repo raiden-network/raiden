@@ -278,8 +278,7 @@ def options(func: Callable) -> Callable:
                 help=(
                     "Specify the routing mode to be used.\n"
                     '"pfs": use the path finding service\n'
-                    '"local": use local routing, but send updates to the PFS\n'
-                    '"private": use local routing and don\'t send updates to the PFS\n'
+                    '"private": only use direct channels and don\'t send updates to the PFS\n'
                 ),
                 type=EnumChoiceType(RoutingMode),
                 default=RoutingMode.PFS.value,
@@ -792,7 +791,7 @@ def smoketest(
 
                 # Matrix server
                 args["one_to_n_contract_address"] = "0x" + "1" * 40
-                args["routing_mode"] = RoutingMode.LOCAL
+                args["routing_mode"] = RoutingMode.PRIVATE
                 args["flat_fee"] = ()
                 args["proportional_fee"] = ()
                 args["proportional_imbalance_fee"] = ()

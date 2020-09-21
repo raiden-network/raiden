@@ -168,7 +168,7 @@ def test_setup_proxies_raiden_addresses_are_given():
         config=config,
         proxy_manager=proxy_manager,
         deployed_addresses=deployed_addresses,
-        routing_mode=RoutingMode.LOCAL,
+        routing_mode=RoutingMode.PRIVATE,
         pathfinding_service_address=None,
         enable_monitoring=False,
     )
@@ -182,7 +182,7 @@ def test_setup_proxies_raiden_addresses_are_given():
 
 def test_setup_proxies_all_addresses_are_given():
     """
-    Test that startup for proxies works fine if all addresses are given and routing is local
+    Test that startup for proxies works fine if all addresses are given and routing is private
     """
     chain_id = ChainID(5)
     config = RaidenConfig(chain_id=chain_id, environment_type=Environment.DEVELOPMENT)
@@ -200,7 +200,7 @@ def test_setup_proxies_all_addresses_are_given():
             config=config,
             proxy_manager=proxy_manager,
             deployed_addresses=deployed_addresses,
-            routing_mode=RoutingMode.LOCAL,
+            routing_mode=RoutingMode.PRIVATE,
             pathfinding_service_address="my-pfs",
             enable_monitoring=True,
         )
