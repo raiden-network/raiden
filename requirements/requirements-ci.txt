@@ -40,7 +40,7 @@ coverage==5.3             # via -r requirements-dev.txt
 crc32c==2.0               # via -r requirements-dev.txt, aiortc
 cryptography==2.9.2       # via -r requirements-dev.txt, aiortc, pyopenssl, service-identity
 cytoolz==0.10.1           # via -r requirements-dev.txt, eth-keyfile, eth-utils
-decorator==4.4.0          # via -r requirements-dev.txt, ipython, networkx, traitlets
+decorator==4.4.0          # via -r requirements-dev.txt, ipython, traitlets
 docutils==0.14            # via -r requirements-dev.txt, readme-renderer, sphinx, sphinxcontrib-httpexample
 eth-abi==2.1.0            # via -r requirements-dev.txt, eth-account, raiden-contracts, web3
 eth-account==0.5.3        # via -r requirements-dev.txt, web3
@@ -72,7 +72,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==5.35.2        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==1.7.0  # via -r requirements-dev.txt, flake8, flake8-comprehensions, jsonschema, pluggy, pytest
+importlib-metadata==1.7.0  # via -r requirements-dev.txt, pluggy
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 iniconfig==1.0.1          # via -r requirements-dev.txt, pytest
 ipfshttpclient==0.6.0.post1  # via -r requirements-dev.txt, web3
@@ -112,7 +112,7 @@ pdbpp==0.10.2             # via -r requirements-dev.txt
 pexpect==4.8.0            # via -r requirements-dev.txt, ipython
 phonenumbers==8.10.13     # via -r requirements-dev.txt, matrix-synapse
 pickleshare==0.7.5        # via -r requirements-dev.txt, ipython
-pillow==6.2.0             # via -r requirements-dev.txt, matrix-synapse
+pillow==7.2.0             # via -r requirements-dev.txt, matrix-synapse
 pip-tools==5.3.1          # via -r requirements-dev.txt
 pluggy==0.12.0            # via -r requirements-dev.txt, pytest
 prometheus-client==0.3.1  # via -r requirements-dev.txt, matrix-synapse
@@ -186,8 +186,8 @@ toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==20.3.0      # via -r requirements-dev.txt, matrix-synapse, treq
-typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, black, mypy
-typing-extensions==3.7.4.3  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson, web3
+typed-ast==1.4.0          # via -r requirements-dev.txt, black, mypy
+typing-extensions==3.7.4.3  # via -r requirements-dev.txt, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-dev.txt, requests
