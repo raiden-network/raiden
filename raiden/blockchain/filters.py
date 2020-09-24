@@ -1,15 +1,32 @@
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set
+
 import structlog
 from eth_abi.codec import ABICodec
 from eth_utils import event_abi_to_log_topic
 from web3._utils.abi import build_default_registry, filter_by_type
 from web3._utils.events import get_event_data
 from web3._utils.filters import construct_event_filter_params
-from web3.types import EventData, FilterParams, LogReceipt
+from web3.types import BlockNumber, EventData, FilterParams, LogReceipt
 
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import ABI, BlockIdentifier, ChannelID, TokenNetworkAddress
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
+from raiden.utils.typing import (
+    ABI,
+    Address,
+    BlockIdentifier,
+    ChannelID,
+    SecretRegistryAddress,
+    TokenNetworkAddress,
+    TokenNetworkRegistryAddress,
+)
+from raiden_contracts.constants import (
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    ChannelEvent,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -86,3 +103,82 @@ def decode_event(abi: ABI, event_log: LogReceipt) -> EventData:
     }
     event_abi = topic_to_event_abi[event_id]
     return get_event_data(ABI_CODEC, event_abi, event_log)
+
+
+@dataclass
+class RaidenContractFilter:
+    """ Information to construct a filter for all relevant Raiden contract events
+    """
+
+    token_network_registry_addresses: Set[TokenNetworkRegistryAddress] = field(default_factory=set)
+    token_network_addresses: Set[TokenNetworkAddress] = field(default_factory=set)
+    channels_of_token_network: Dict[TokenNetworkAddress, Set[ChannelID]] = field(
+        default_factory=lambda: defaultdict(set)
+    )
+    secret_registry_address: Optional[SecretRegistryAddress] = None
+
+    def __bool__(self) -> bool:
+        return bool(
+            self.token_network_registry_addresses
+            or self.token_network_addresses
+            or any(self.channels_of_token_network.values())
+            or self.secret_registry_address
+        )
+
+    def to_web3_filter(
+        self, contract_manager: ContractManager, from_block: BlockNumber, to_block: BlockNumber
+    ) -> FilterParams:
+        """ Return a filter dict than can be used with web3's ``getLogs`` """
+        addresses: List[Address] = [
+            *self.token_network_registry_addresses,  # type: ignore
+            *self.token_network_addresses,  # type: ignore
+        ]
+        if self.secret_registry_address:
+            addresses.append(Address(self.secret_registry_address))
+        return {
+            "fromBlock": from_block,
+            "toBlock": to_block,
+            "address": [to_checksum_address(addr) for addr in addresses],
+        }
+
+    def abi_of_contract_address(self, contract_manager: ContractManager) -> Dict[Address, ABI]:
+        """ This class knows which ABI is behind each filtered contract address """
+        tnr_abi = contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY)
+        tn_abi = contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK)
+        secret_registry_abi = contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY)
+        abis = {
+            **{Address(tnr): tnr_abi for tnr in self.token_network_registry_addresses},
+            **{Address(tn): tn_abi for tn in self.token_network_addresses},
+        }
+        if self.secret_registry_address:
+            abis[Address(self.secret_registry_address)] = secret_registry_abi
+        return abis
+
+    def union(self, other: "RaidenContractFilter") -> "RaidenContractFilter":
+        """ Return a new RaidenContractFilter with all elements from both input filters """
+        # We must not have two different non-None secret registries. Choose the non-None one.
+        non_none_secret_registries = {
+            self.secret_registry_address,
+            other.secret_registry_address,
+        } - {None}
+        assert len(non_none_secret_registries) <= 1, "Mismatching secret_registry_address"
+        secret_registry_address = (
+            non_none_secret_registries.pop() if non_none_secret_registries else None
+        )
+
+        return RaidenContractFilter(
+            secret_registry_address=secret_registry_address,
+            token_network_registry_addresses=self.token_network_registry_addresses
+            | other.token_network_registry_addresses,
+            token_network_addresses=self.token_network_addresses | other.token_network_addresses,
+            channels_of_token_network=defaultdict(
+                set,
+                {
+                    tn: self.channels_of_token_network[tn] | other.channels_of_token_network[tn]
+                    for tn in {
+                        *self.channels_of_token_network.keys(),
+                        *other.channels_of_token_network.keys(),
+                    }
+                },
+            ),
+        )
