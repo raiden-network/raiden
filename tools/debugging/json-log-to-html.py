@@ -376,6 +376,9 @@ td.fields {{
 .lvl-error {{
     color: #d04020;
 }}
+.lvl-critical {{
+    color: #f1053c;
+}}
 .fn {{
     color: #f040f0;
 }}
