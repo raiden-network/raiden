@@ -16,6 +16,7 @@ import requests
 from eth_typing import URI, HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
+from typing_extensions import Protocol
 from web3 import HTTPProvider, Web3
 from web3.contract import Contract
 
@@ -106,6 +107,11 @@ TEST_PRIVKEY = PrivateKey(
     b"\xc4\xdd\x14?\xfa\x81\x0e\xf1\x80\x9aj\x11\xf2\xbcD"
 )
 TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
+
+
+class StepPrinter(Protocol):
+    def __call__(self, description: str, error: bool = False) -> None:
+        ...
 
 
 def ensure_executable(cmd):
@@ -304,7 +310,7 @@ def setup_testchain(
 
 @contextmanager
 def setup_matrix_for_smoketest(
-    print_step: Callable,
+    print_step: StepPrinter,
     free_port_generator: Iterable[Port],
     broadcast_rooms_aliases: Iterable[str],
 ) -> Iterator[List[Tuple["ParsedURL", HTTPExecutor]]]:
@@ -319,7 +325,7 @@ def setup_matrix_for_smoketest(
 @contextmanager
 def setup_testchain_for_smoketest(
     eth_client: EthClient,
-    print_step: Callable,
+    print_step: StepPrinter,
     free_port_generator: Iterator[Port],
     base_datadir: str,
     base_logdir: str,
@@ -343,7 +349,7 @@ class RaidenTestSetup(NamedTuple):
 
 def setup_raiden(
     matrix_server: str,
-    print_step: Callable,
+    print_step: StepPrinter,
     contracts_version,
     eth_rpc_endpoint: str,
     web3: Web3,
@@ -421,7 +427,7 @@ def setup_raiden(
     return RaidenTestSetup(args=args, token=token, contract_addresses=contract_addresses)
 
 
-def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
+def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
     print_step("Starting Raiden")
 
     app = None
@@ -504,7 +510,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
 def setup_smoketest(
     *,
     eth_client: EthClient,
-    print_step: Callable,
+    print_step: StepPrinter,
     free_port_generator: Iterator[Port],
     debug: bool = False,
     stdout: IO = None,
@@ -573,7 +579,7 @@ def setup_smoketest(
 
 
 @contextmanager
-def step_printer(step_count, stdout) -> Iterator[Callable[str, bool], None]:
+def step_printer(step_count, stdout) -> Iterator[StepPrinter]:
     step = 0
 
     def print_step(description: str, error: bool = False) -> None:

@@ -44,10 +44,15 @@ def raiden_testchain(
         base_logdir=base_logdir,
     )
 
+    def dont_print_step(
+        description: str, error: bool = False  # pylint: disable=unused-argument
+    ) -> None:
+        pass
+
     with testchain_manager as testchain:
         result = setup_raiden(
             matrix_server=MATRIX_AUTO_SELECT_SERVER,
-            print_step=lambda x: None,
+            print_step=dont_print_step,
             contracts_version=cli_tests_contracts_version,
             eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
             web3=testchain["web3"],
