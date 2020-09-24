@@ -9,7 +9,7 @@ from http import HTTPStatus
 from pathlib import Path
 from subprocess import TimeoutExpired
 from tempfile import mkdtemp
-from typing import IO, ContextManager, NamedTuple
+from typing import IO, NamedTuple
 
 import click
 import requests
@@ -26,6 +26,7 @@ from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_ADDRESS,
     GENESIS_BLOCK_NUMBER,
+    MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     SECONDS_PER_DAY,
     UINT256_MAX,
@@ -513,21 +514,20 @@ def setup_smoketest(
     make_requests_insecure()
 
     datadir = mkdtemp()
-    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
+    testchain_manager = setup_testchain_for_smoketest(
         eth_client=eth_client,
         print_step=print_step,
         free_port_generator=free_port_generator,
         base_datadir=datadir,
         base_logdir=datadir,
     )
-    matrix_manager: ContextManager[
-        List[Tuple[ParsedURL, HTTPExecutor]]
-    ] = setup_matrix_for_smoketest(
+    matrix_manager = setup_matrix_for_smoketest(
         print_step=print_step,
         free_port_generator=free_port_generator,
         broadcast_rooms_aliases=[
             make_room_alias(CHAINNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
             make_room_alias(CHAINNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
+            make_room_alias(CHAINNAME_TO_ID["smoketest"], MONITORING_BROADCASTING_ROOM),
         ],
     )
 
@@ -573,7 +573,7 @@ def setup_smoketest(
 
 
 @contextmanager
-def step_printer(step_count, stdout):
+def step_printer(step_count, stdout) -> Iterator[Callable[str, bool], None]:
     step = 0
 
     def print_step(description: str, error: bool = False) -> None:
