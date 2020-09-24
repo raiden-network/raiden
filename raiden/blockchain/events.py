@@ -10,7 +10,11 @@ from web3 import Web3
 from web3.types import LogReceipt, RPCEndpoint
 
 from raiden.blockchain.exceptions import EthGetLogsTimeout, UnknownRaidenEventType
-from raiden.blockchain.filters import decode_event, get_filter_args_for_all_events_from_channel
+from raiden.blockchain.filters import (
+    RaidenContractFilter,
+    decode_event,
+    get_filter_args_for_all_events_from_channel,
+)
 from raiden.blockchain.utils import BlockBatchSizeAdjuster
 from raiden.constants import (
     BLOCK_ID_LATEST,
@@ -22,7 +26,6 @@ from raiden.constants import (
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import BlockBatchSizeConfig
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
     Address,
@@ -262,7 +265,7 @@ def secret_registry_events(
     )
 
 
-def new_filters_from_events(
+def new_filters_from_events_old(
     contract_manager: ContractManager, events: List[DecodedEvent]
 ) -> Iterable[SmartContractEvents]:
     for entry in events:
@@ -270,6 +273,16 @@ def new_filters_from_events(
             yield token_network_events(
                 entry.event_data["args"]["token_network_address"], contract_manager
             )
+
+
+def new_filters_from_events(events: List[DecodedEvent]) -> RaidenContractFilter:
+    return RaidenContractFilter(
+        token_network_addresses={
+            entry.event_data["args"]["token_network_address"]
+            for entry in events
+            if entry.event_data["event"] == EVENT_TOKEN_NETWORK_CREATED
+        }
+    )
 
 
 def filters_to_rpc(
@@ -334,12 +347,14 @@ class BlockchainEvents:
         contract_manager: ContractManager,
         last_fetched_block: BlockNumber,
         event_filters: List[SmartContractEvents],
+        event_filter: RaidenContractFilter,
         block_batch_size_config: BlockBatchSizeConfig,
     ) -> None:
         self.web3 = web3
         self.chain_id = chain_id
         self.last_fetched_block = last_fetched_block
         self.contract_manager = contract_manager
+        self.event_filter = event_filter
         self.block_batch_size_adjuster = BlockBatchSizeAdjuster(block_batch_size_config)
 
         # This lock is used to add a new smart contract to the list of polled
@@ -367,6 +382,9 @@ class BlockchainEvents:
         self._address_to_filters: Dict[Address, SmartContractEvents] = {
             event.contract_address: event for event in event_filters
         }
+        self._address_to_abi: Dict[Address, ABI] = event_filter.abi_of_contract_address(
+            contract_manager
+        )
 
     def fetch_logs_in_batch(self, target_block_number: BlockNumber) -> Optional[PollResult]:
         """Poll the smart contract events for a limited number of blocks to
@@ -557,6 +575,7 @@ class BlockchainEvents:
         request_duration: float = 0
         result: List[DecodedEvent] = []
         filters_to_query = self._address_to_filters.values()
+        event_filter: Optional[RaidenContractFilter] = self.event_filter
 
         # While there are new smart contracts to follow, this will query them
         # and add to the existing filters.
@@ -566,14 +585,18 @@ class BlockchainEvents:
         # filter, and then the filter has to be queried before for the same
         # batch before it is dispatched. This is necessary to guarantee safety
         # of restarts.
-        while filters_to_query:
-            filter_params = filters_to_rpc(filters_to_query, from_block, to_block)
+        print(f"== {from_block, to_block}")
+        while event_filter:
+            print(f"=== {event_filter}")
+            filter_params = event_filter.to_web3_filter(
+                self.contract_manager, from_block, to_block
+            )
 
             log.debug(
                 "StatelessFilter: querying new entries",
                 from_block=filter_params["fromBlock"],
                 to_block=filter_params["toBlock"],
-                addresses=[to_checksum_address(address) for address in filter_params["address"]],
+                addresses=filter_params["address"],
             )
 
             try:
@@ -596,7 +619,7 @@ class BlockchainEvents:
                 "StatelessFilter: fetched new entries",
                 from_block=filter_params["fromBlock"],
                 to_block=filter_params["toBlock"],
-                addresses=[to_checksum_address(address) for address in filter_params["address"]],
+                addresses=filter_params["address"],
                 blockchain_events=blockchain_events,
                 request_duration=request_duration,
             )
@@ -606,7 +629,11 @@ class BlockchainEvents:
                 # to make sure no unrecoverable error is thrown. If this was an unrecoverable
                 # it would open a surface for attacks.
                 decoded_events = [
-                    decode_raiden_event_to_internal(self.event_to_abi(event), self.chain_id, event)
+                    decode_raiden_event_to_internal(
+                        self._address_to_abi[to_canonical_address(event["address"])],
+                        self.chain_id,
+                        event,
+                    )
                     for event in blockchain_events
                 ]
                 result.extend(decoded_events)
@@ -617,21 +644,24 @@ class BlockchainEvents:
                 # The generator result is converted to a list because we need
                 # to iterate over it twice
                 filters_to_query = list(
-                    new_filters_from_events(self.contract_manager, decoded_events)
+                    new_filters_from_events_old(self.contract_manager, decoded_events)
                 )
+                print("new filter", [f.contract_address for f in filters_to_query])
+                event_filter = new_filters_from_events(decoded_events)
 
                 # Register the new filters, so that they will be fetched on the next iteration
                 self._address_to_filters.update(
                     (new_filter.contract_address, new_filter) for new_filter in filters_to_query
                 )
+                self.event_filter = self.event_filter.union(event_filter)
+                self._address_to_abi.update(
+                    event_filter.abi_of_contract_address(self.contract_manager)
+                )
             else:
                 filters_to_query = []
+                event_filter = None
 
         return result, request_duration
-
-    def event_to_abi(self, event: LogReceipt) -> ABI:
-        address = to_canonical_address(event["address"])
-        return self._address_to_filters[address].abi
 
     def uninstall_all_event_listeners(self) -> None:
         with self._filters_lock:
