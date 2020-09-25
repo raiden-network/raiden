@@ -65,7 +65,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             pfs_url="",
             routing_mode=RoutingMode.PRIVATE,
             service_registry=service_registry,
-            node_network_id=chain_id,
+            node_chain_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
@@ -78,7 +78,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             pfs_url=MATRIX_AUTO_SELECT_SERVER,
             routing_mode=RoutingMode.PFS,
             service_registry=service_registry,
-            node_network_id=chain_id,
+            node_chain_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
@@ -92,7 +92,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             pfs_url=given_address,
             routing_mode=RoutingMode.PFS,
             service_registry=service_registry,
-            node_network_id=chain_id,
+            node_chain_id=chain_id,
             token_network_registry_address=token_network_registry_address_test_default,
             pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
         )
@@ -109,7 +109,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 pfs_url=bad_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
-                node_network_id=chain_id,
+                node_chain_id=chain_id,
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )
@@ -122,7 +122,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
-                node_network_id=chain_id,
+                node_chain_id=chain_id,
                 token_network_registry_address=TokenNetworkRegistryAddress(
                     to_canonical_address("0x2222222222222222222222222222222222222221")
                 ),
@@ -137,7 +137,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
                 pfs_url="http://foo",
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_registry,
-                node_network_id=ChainID(chain_id + 1),
+                node_chain_id=ChainID(chain_id + 1),
                 token_network_registry_address=token_network_registry_address_test_default,
                 pathfinding_max_fee=DEFAULT_PATHFINDING_MAX_FEE,
             )

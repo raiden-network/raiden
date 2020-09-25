@@ -247,7 +247,7 @@ def configure_pfs_or_exit(
     pfs_url: str,
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
-    node_network_id: ChainID,
+    node_chain_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: TokenAmount,
 ) -> PFSInfo:
@@ -299,11 +299,11 @@ def configure_pfs_or_exit(
             f"Raiden will shut down. Please try a different Pathfinding Service."
         )
 
-    if not node_network_id == pathfinding_service_info.chain_id:
+    if not node_chain_id == pathfinding_service_info.chain_id:
         raise RaidenError(
             f"Invalid reply from Pathfinding Service {pfs_url}\n"
             f"Pathfinding Service is not operating on the same network "
-            f"({pathfinding_service_info.chain_id}) as your node is ({node_network_id}).\n"
+            f"({pathfinding_service_info.chain_id}) as your node is ({node_chain_id}).\n"
             f"Raiden will shut down. Please choose a different Pathfinding Service."
         )
 

@@ -54,10 +54,10 @@ from raiden.ui.runners import run_services
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
+    ChainChoiceType,
     EnumChoiceType,
     GasPriceChoiceType,
     MatrixServerType,
-    NetworkChoiceType,
     PathRelativePath,
     apply_config_file,
     group,
@@ -75,7 +75,7 @@ from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
-ETH_NETWORKID_OPTION = "--network-id"
+ETH_CHAINID_OPTION = "--network-id"
 COMMUNICATION_ERROR = (
     f"\n"
     f"Communicating with an external service failed.\n"
@@ -181,7 +181,8 @@ def options(func: Callable) -> Callable:
             type=ADDRESS_TYPE,
         ),
         option(
-            ETH_NETWORKID_OPTION,
+            ETH_CHAINID_OPTION,
+            "chain_id",
             help=(
                 "Specify the network name/id of the Ethereum network to run Raiden on.\n"
                 "Available networks:\n"
@@ -190,10 +191,10 @@ def options(func: Callable) -> Callable:
                 '"rinkeby" - network id: 4\n'
                 '"goerli" - network id: 5\n'
                 '"kovan" - network id: 42\n'
-                '"<NETWORK_ID>": use the given network id directly\n'
+                '"<CHAIN_ID>": use the given network id directly\n'
             ),
-            type=NetworkChoiceType(
-                ["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<NETWORK_ID>"]
+            type=ChainChoiceType(
+                ["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<CHAIN_ID>"]
             ),
             default="mainnet",
             show_default=True,
@@ -612,7 +613,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
     # Name used in the exception handlers, make sure the kwargs contains the
     # key with the correct name by always running it.
-    name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
+    name_or_id = ID_TO_CHAINNAME.get(kwargs["chain_id"], kwargs["chain_id"])
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
