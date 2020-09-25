@@ -1109,7 +1109,7 @@ class ChannelSet:
         return {channel.identifier: channel for channel in self.channels}
 
     @property
-    def nodeaddresses_to_networkstates(self) -> NodeNetworkStateMap:
+    def nodeaddress_to_networkstate(self) -> NodeNetworkStateMap:
         return {channel.partner_state.address: NetworkState.REACHABLE for channel in self.channels}
 
     def addresses_to_channel(
@@ -1436,7 +1436,7 @@ def make_chain_state(
         token_network_address
     ] = token_network_registry_address
 
-    chain_state.nodeaddresses_to_networkstates = make_node_availability_map(
+    chain_state.nodeaddress_to_networkstate = make_node_availability_map(
         [channel.partner_state.address for channel in channel_set.channels]
     )
     return ContainerForChainStateTests(

@@ -5,14 +5,14 @@ from raiden.utils.typing import Address, ChannelID, List, NodeNetworkStateMap, T
 
 
 def filter_reachable_routes(
-    route_states: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
+    route_states: List[RouteState], nodeaddress_to_networkstate: NodeNetworkStateMap
 ) -> List[RouteState]:
     """ This function makes sure we use reachable routes only. """
 
     return [
         route
         for route in route_states
-        if nodeaddresses_to_networkstates.get(route.next_hop_address) == NetworkState.REACHABLE
+        if nodeaddress_to_networkstate.get(route.next_hop_address) == NetworkState.REACHABLE
     ]
 
 

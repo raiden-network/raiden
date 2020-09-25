@@ -224,7 +224,7 @@ def handle_block(
 
 def try_new_route(
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
+    nodeaddress_to_networkstate: NodeNetworkStateMap,
     candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
@@ -239,7 +239,7 @@ def try_new_route(
     route_state = None
 
     reachable_route_states = routes.filter_reachable_routes(
-        candidate_route_states, nodeaddresses_to_networkstates
+        candidate_route_states, nodeaddress_to_networkstate
     )
 
     for reachable_route_state in reachable_route_states:

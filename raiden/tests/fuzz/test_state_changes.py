@@ -301,7 +301,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             block_hash=factories.make_block_hash(),
         )
         node.state_transition(client.chain_state, channel_new_state_change)
-        client.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
+        client.chain_state.nodeaddress_to_networkstate[partner_address] = NetworkState.REACHABLE
 
     def new_channel_with_transaction(
         self, client_address: Address, partner_address: Address = None

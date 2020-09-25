@@ -108,7 +108,7 @@ def make_initiator_manager_state(
         state_change=init,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -124,7 +124,7 @@ class InitiatorSetup(NamedTuple):
     available_routes: typing.List[RouteState]
     prng: random.Random
     lock: HashTimeLockState
-    nodeaddresses_to_networkstates: NodeNetworkStateMap
+    nodeaddress_to_networkstate: NodeNetworkStateMap
 
 
 def setup_initiator_tests(
@@ -173,7 +173,7 @@ def setup_initiator_tests(
         available_routes=available_routes,
         prng=prng,
         lock=lock,
-        nodeaddresses_to_networkstates={
+        nodeaddress_to_networkstate={
             channel.partner_state.address: NetworkState.REACHABLE for channel in channels.channels
         },
     )
@@ -221,7 +221,7 @@ def test_init_with_usable_routes():
         state_change=init_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -275,7 +275,7 @@ def test_init_with_fees_more_than_max_limit():
         state_change=init_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -303,7 +303,7 @@ def test_init_without_routes():
         state_change=init_state_change,
         channelidentifiers_to_channels=channel_map,
         addresses_to_channel={},
-        nodeaddresses_to_networkstates=network_state_map,
+        nodeaddress_to_networkstate=network_state_map,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -331,7 +331,7 @@ def test_state_wait_secretrequest_valid():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -355,7 +355,7 @@ def test_state_wait_secretrequest_valid():
         state_change=state_change_2,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -379,7 +379,7 @@ def test_state_wait_secretrequest_invalid_amount():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -403,7 +403,7 @@ def test_state_wait_secretrequest_invalid_amount():
         state_change=state_change_2,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -427,7 +427,7 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -450,7 +450,7 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
         state_change=state_change_2,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -476,7 +476,7 @@ def test_state_wait_unlock_valid():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -511,7 +511,7 @@ def test_state_wait_unlock_invalid():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -563,7 +563,7 @@ def test_refund_transfer_with_reroute():
         state_change=init,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -603,7 +603,7 @@ def test_refund_transfer_with_reroute():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -626,7 +626,7 @@ def test_refund_transfer_with_reroute():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -682,7 +682,7 @@ def test_refund_transfer_no_more_routes():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -705,7 +705,7 @@ def test_refund_transfer_no_more_routes():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -759,7 +759,7 @@ def test_refund_transfer_no_more_routes():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=expiry_block,
     )
@@ -773,7 +773,7 @@ def test_refund_transfer_no_more_routes():
         state_change=invalid_lock_expired_state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=before_expiry_block,
     )
@@ -789,7 +789,7 @@ def test_refund_transfer_no_more_routes():
         state_change=lock_expired_state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=before_expiry_block,
     )
@@ -808,7 +808,7 @@ def test_refund_transfer_no_more_routes():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=expiry_block,
     )
@@ -825,7 +825,7 @@ def test_refund_transfer_no_more_routes():
         state_change=lock_expired_state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=expiry_block,
     )
@@ -843,7 +843,7 @@ def test_refund_transfer_no_more_routes():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=expiry_block + 1,
     )
@@ -859,7 +859,7 @@ def test_cancel_transfer():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -883,7 +883,7 @@ def test_cancelpayment():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -905,7 +905,7 @@ def test_cancelpayment():
         state_change=expiry_block_state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=expiry_block,
     )
@@ -931,7 +931,7 @@ def test_invalid_cancelpayment():
         state_change=receive_secret_request,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=1,
     )
@@ -973,7 +973,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
                 state_change=init_state_change,
                 channelidentifiers_to_channels=channel_map,
                 addresses_to_channel=addresses_to_channel,
-                nodeaddresses_to_networkstates={
+                nodeaddress_to_networkstate={
                     channel1.partner_state.address: NetworkState.REACHABLE
                 },
                 pseudo_random_generator=pseudo_random_generator,
@@ -1072,7 +1072,7 @@ def test_initiator_lock_expired():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -1151,7 +1151,7 @@ def test_initiator_lock_expired():
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expiration_block_number,
     )
@@ -1203,7 +1203,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         state_change=block,
         channelidentifiers_to_channels=channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=expiration_block_number,
     )
@@ -1239,7 +1239,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=transfer.lock.expiration,
     )
@@ -1397,7 +1397,7 @@ def test_lock_expiry_updates_balance_proof():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -1455,7 +1455,7 @@ def test_secret_reveal_cancel_other_transfers():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -1472,7 +1472,7 @@ def test_secret_reveal_cancel_other_transfers():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -1498,7 +1498,7 @@ def test_secret_reveal_cancel_other_transfers():
         state_change=secret_reveal,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -1525,7 +1525,7 @@ def test_secret_reveal_cancel_other_transfers():
             state_change=secret_reveal,
             channelidentifiers_to_channels=channels.channel_map,
             addresses_to_channel=channels.addresses_to_channel(),
-            nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
             pseudo_random_generator=prng,
             block_number=block_number,
         )
@@ -1560,7 +1560,7 @@ def test_refund_after_secret_request():
         state_change=secret_request,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -1592,7 +1592,7 @@ def test_refund_after_secret_request():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -1659,7 +1659,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number + 10,
     )
@@ -1676,7 +1676,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number + 10,
     )
@@ -1719,7 +1719,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         state_change=lock_expired_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expiry_block,
     )
@@ -1734,7 +1734,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         state_change=initial_transfer_expiry_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expiry_block,
     )
@@ -1755,7 +1755,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         state_change=rerouted_transfer_expiry_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expiry_block,
     )
@@ -1780,7 +1780,7 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -1807,7 +1807,7 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
         state_change=state_change_2,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.nodeaddress_to_networkstate,
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
@@ -1837,7 +1837,7 @@ def test_initiator_manager_drops_invalid_state_changes():
         state_change=lock_expired,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=1,
     )
@@ -1858,7 +1858,7 @@ def test_initiator_manager_drops_invalid_state_changes():
         state_change=lock_expired,
         channelidentifiers_to_channels=dict(),
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=prng,
         block_number=1,
     )
@@ -1877,7 +1877,7 @@ def test_initiator_manager_drops_invalid_state_changes():
         state_change=cancel_route2,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=1,
     )
@@ -1935,7 +1935,7 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number + 10,
     )
@@ -1953,7 +1953,7 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number + 10,
     )
@@ -1972,7 +1972,7 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
         state_change=initial_transfer_expiry_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expiry_block,
     )
@@ -1987,7 +1987,7 @@ def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
         state_change=initial_transfer_expiry_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=next_block_after_expiry,
     )

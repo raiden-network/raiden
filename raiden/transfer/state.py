@@ -539,7 +539,7 @@ class ChainState(State):
     identifiers_to_tokennetworkregistries: Dict[
         TokenNetworkRegistryAddress, TokenNetworkRegistryState
     ] = field(repr=False, default_factory=dict)
-    nodeaddresses_to_networkstates: Dict[Address, NetworkState] = field(
+    nodeaddress_to_networkstate: Dict[Address, NetworkState] = field(
         repr=False, default_factory=dict
     )
     payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)

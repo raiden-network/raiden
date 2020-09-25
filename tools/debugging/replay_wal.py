@@ -163,7 +163,7 @@ def print_presence_view(chain_state, translator: Optional[Translator] = None):
         return None
 
     click.secho("Presence:", nl=False, fg="white")
-    for k, v in chain_state.nodeaddresses_to_networkstates.items():
+    for k, v in chain_state.nodeaddress_to_networkstate.items():
         click.secho(f" {trans(pex(k))}", fg=network_state_to_color(v), nl=False)
     click.echo("", nl=True)
 

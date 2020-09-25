@@ -151,7 +151,7 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
         mediating_channel = channel_set.channels[0]
         pnrg = random.Random()
 
-        nodeaddresses_to_networkstates = {
+        nodeaddress_to_networkstate = {
             mediating_channel.partner_state.address: NetworkState.REACHABLE
         }
 
@@ -180,7 +180,7 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
             payment_state=None,
             state_change=init_action,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=nodeaddress_to_networkstate,
             pseudo_random_generator=pnrg,
             block_number=BlockNumber(1),
         )
@@ -356,7 +356,7 @@ def test_mediator_skips_used_routes():
         )
     )
     init_action = factories.mediator_make_init_action(channels=channels, transfer=locked_transfer)
-    nodeaddresses_to_networkstates = {
+    nodeaddress_to_networkstate = {
         channel.partner_state.address: NetworkState.REACHABLE for channel in channels.channels
     }
 
@@ -364,7 +364,7 @@ def test_mediator_skips_used_routes():
         state_change=init_action,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -407,7 +407,7 @@ def test_mediator_skips_used_routes():
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -451,7 +451,7 @@ def test_mediator_skips_used_routes():
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=prng,
         block_number=block_number,
     )

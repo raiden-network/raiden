@@ -1024,7 +1024,7 @@ def mediate_transfer(
     candidate_route_states: List[RouteState],
     payer_channel: NettingChannelState,
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
+    nodeaddress_to_networkstate: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     payer_transfer: LockedTransferSignedState,
     block_number: BlockNumber,
@@ -1043,7 +1043,7 @@ def mediate_transfer(
 
     candidate_route_states = routes.filter_reachable_routes(
         route_states=candidate_route_states,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
     )
 
     # Makes sure we filter routes that have already been used.
@@ -1112,7 +1112,7 @@ def handle_init(
     state_change: ActionInitMediator,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
+    nodeaddress_to_networkstate: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[MediatorTransferState]]:
@@ -1140,7 +1140,7 @@ def handle_init(
         candidate_route_states=routes,
         payer_channel=payer_channel,
         addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         payer_transfer=from_transfer,
         block_number=block_number,
@@ -1155,7 +1155,7 @@ def handle_block(
     state_change: Block,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
+    nodeaddress_to_networkstate: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[MediatorTransferState]:
     """ After Raiden learns about a new block this function must be called to
@@ -1181,7 +1181,7 @@ def handle_block(
                 candidate_route_states=mediator_state.routes,
                 payer_channel=payer_channel,
                 addresses_to_channel=addresses_to_channel,
-                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+                nodeaddress_to_networkstate=nodeaddress_to_networkstate,
                 pseudo_random_generator=pseudo_random_generator,
                 payer_transfer=mediator_state.waiting_transfer.transfer,
                 block_number=state_change.block_number,
@@ -1232,7 +1232,7 @@ def handle_refundtransfer(
     mediator_state_change: ReceiveTransferRefund,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
+    nodeaddress_to_networkstate: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
@@ -1279,7 +1279,7 @@ def handle_refundtransfer(
             candidate_route_states=mediator_state.routes,
             payer_channel=payer_channel,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=nodeaddress_to_networkstate,
             pseudo_random_generator=pseudo_random_generator,
             payer_transfer=payer_transfer,
             block_number=block_number,
@@ -1507,7 +1507,7 @@ def handle_node_change_network_state(
         candidate_route_states=mediator_state.routes,
         payer_channel=payer_channel,
         addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates={state_change.node_address: state_change.network_state},
+        nodeaddress_to_networkstate={state_change.node_address: state_change.network_state},
         pseudo_random_generator=pseudo_random_generator,
         payer_transfer=mediator_state.waiting_transfer.transfer,
         block_number=block_number,
@@ -1519,7 +1519,7 @@ def state_transition(
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
+    nodeaddress_to_networkstate: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     block_hash: BlockHash,
@@ -1541,7 +1541,7 @@ def state_transition(
                 state_change=state_change,
                 channelidentifiers_to_channels=channelidentifiers_to_channels,
                 addresses_to_channel=addresses_to_channel,
-                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+                nodeaddress_to_networkstate=nodeaddress_to_networkstate,
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=block_number,
             )
@@ -1554,7 +1554,7 @@ def state_transition(
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=nodeaddress_to_networkstate,
             pseudo_random_generator=pseudo_random_generator,
         )
 
@@ -1567,7 +1567,7 @@ def state_transition(
             mediator_state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=nodeaddress_to_networkstate,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )

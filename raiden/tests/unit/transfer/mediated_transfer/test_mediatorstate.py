@@ -745,13 +745,13 @@ def secret_learned_setup():
     channels = mediator_make_channel_pair()
     from_transfer = factories.make_signed_transfer_for(channels[0])
 
-    nodeaddresses_to_networkstates = factories.make_node_availability_map([UNIT_TRANSFER_TARGET])
+    nodeaddress_to_networkstate = factories.make_node_availability_map([UNIT_TRANSFER_TARGET])
     iteration = mediator.state_transition(
         mediator_state=None,
         state_change=mediator_make_init_action(channels, from_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -810,9 +810,7 @@ def test_secret_learned_with_refund():
     mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=[])
     mediator_state.transfers_pair = transfers_pair
 
-    nodeaddresses_to_networkstates = factories.make_node_availability_map(
-        [setup.channels.ADDRESSES]
-    )
+    nodeaddress_to_networkstate = factories.make_node_availability_map([setup.channels.ADDRESSES])
 
     # Emulate a ReceiveSecretReveal state transition_result
     # Which means that hop5 sent a SecretReveal -> hop4 -> HOP1 (Us)
@@ -821,7 +819,7 @@ def test_secret_learned_with_refund():
         state_change=ReceiveSecretReveal(secret=UNIT_SECRET, sender=hop5),
         channelidentifiers_to_channels=channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(5),
         block_hash=factories.make_block_hash(),
@@ -871,7 +869,7 @@ def test_mediate_transfer():
         candidate_route_states=route_states,
         payer_channel=channels[0],
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         payer_transfer=payer_transfer,
         block_number=block_number,
@@ -924,7 +922,7 @@ def test_swap():
             **tn1_channels.addresses_to_channel(),
             **tn2_channels.addresses_to_channel(tn2_address),
         },
-        nodeaddresses_to_networkstates=tn1_channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=tn1_channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         payer_transfer=payer_transfer,
         block_number=block_number,
@@ -960,7 +958,7 @@ def test_init_mediator():
         state_change=mediator_make_init_action(channels, from_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -997,7 +995,7 @@ def test_mediator_accept_sha256_empty_hash():
         state_change=mediator_make_init_action(channels, from_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -1019,7 +1017,7 @@ def test_mediator_secret_reveal_empty_hash():
         state_change=mediator_make_init_action(channels, from_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -1035,7 +1033,7 @@ def test_mediator_secret_reveal_empty_hash():
         state_change=receive_secret,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(2),
         block_hash=factories.make_block_hash(),
@@ -1057,7 +1055,7 @@ def test_mediator_secret_reveal_empty_hash():
         state_change=onchain_reveal,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(2),
         block_hash=factories.make_block_hash(),
@@ -1097,7 +1095,7 @@ def test_no_valid_routes():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -1166,7 +1164,7 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
         state_change=mediator_make_init_action(channels, from_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -1252,14 +1250,14 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         sender=from_transfer.balance_proof.sender,
     )
 
-    nodeaddresses_to_networkstates = {UNIT_TRANSFER_TARGET: NetworkState.REACHABLE}
+    nodeaddress_to_networkstate = {UNIT_TRANSFER_TARGET: NetworkState.REACHABLE}
 
     iteration = mediator.state_transition(
         mediator_state=None,
         state_change=init_state_change,
         channelidentifiers_to_channels=channel_map,
         addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
@@ -1285,7 +1283,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
             state_change=block,
             channelidentifiers_to_channels=channel_map,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=nodeaddress_to_networkstate,
             pseudo_random_generator=pseudo_random_generator,
             block_number=BlockNumber(new_block_number),
             block_hash=factories.make_block_hash(),
@@ -1302,7 +1300,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         state_change=receive_secret,
         channelidentifiers_to_channels=channel_map,
         addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=attack_block_number,
         block_hash=factories.make_block_hash(),
@@ -1324,7 +1322,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
             state_change=block,
             channelidentifiers_to_channels=channel_map,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            nodeaddress_to_networkstate=nodeaddress_to_networkstate,
             pseudo_random_generator=pseudo_random_generator,
             block_number=BlockNumber(new_block_number),
             block_hash=new_block_hash,
@@ -1386,7 +1384,7 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
         channels.get_routes(1),
         channels[0],
         channels.addresses_to_channel(),
-        channels.nodeaddresses_to_networkstates,
+        channels.nodeaddress_to_networkstate,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -1494,7 +1492,7 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                 state_change=mediator_make_init_action(channels, from_transfer),
                 channelidentifiers_to_channels=channels.channel_map,
                 addresses_to_channel=channels.addresses_to_channel(),
-                nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+                nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=BlockNumber(1),
                 block_hash=factories.make_block_hash(),
@@ -1536,7 +1534,7 @@ def test_mediator_lock_expired_with_new_block():
         candidate_route_states=channels.get_routes(0),
         payer_channel=channels[0],
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         payer_transfer=payer_transfer,
         block_number=block_number,
@@ -1560,7 +1558,7 @@ def test_mediator_lock_expired_with_new_block():
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(block_expiration_number),
         block_hash=block_expiration_hash,
@@ -1596,7 +1594,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         candidate_route_states=channels.get_routes(1),
         payer_channel=channels[0],
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         payer_transfer=payer_transfer,
         block_number=block_number,
@@ -1637,7 +1635,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
         block_hash=BlockHash(block_expiration_hash),
@@ -1676,7 +1674,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         state_change=mediator_make_init_action(channels, transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(5),
         block_hash=factories.make_block_hash(),
@@ -1717,7 +1715,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         state_change=lock_expired_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_before_confirmed_expiration,
         block_hash=factories.make_block_hash(),
@@ -1730,7 +1728,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         state_change=lock_expired_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_lock_expired,
         block_hash=factories.make_block_hash(),
@@ -1762,7 +1760,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         state_change=mediator_make_init_action(channels, transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(5),
         block_hash=factories.make_block_hash(),
@@ -1782,7 +1780,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         state_change=secret_reveal,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_lock_expired,
         block_hash=factories.make_block_hash(),
@@ -1804,7 +1802,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         state_change=lock_expired_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_lock_expired + 1,
         block_hash=factories.make_block_hash(),
@@ -1840,7 +1838,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
         state_change=mediator_make_init_action(channels, transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(5),
         block_hash=factories.make_block_hash(),
@@ -1860,7 +1858,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
         state_change=secret_reveal,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_lock_expired,
         block_hash=factories.make_block_hash(),
@@ -1891,7 +1889,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
         block_hash=factories.make_block_hash(),
@@ -1923,30 +1921,30 @@ def test_filter_reachable_routes():
     ]
 
     # Both nodes are online
-    nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP1, HOP2])
+    nodeaddress_to_networkstate = factories.make_node_availability_map([HOP1, HOP2])
 
     filtered_routes = routes.filter_reachable_routes(
-        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes, nodeaddress_to_networkstate=nodeaddress_to_networkstate
     )
 
     assert possible_routes[0] in filtered_routes
     assert possible_routes[1] in filtered_routes
 
     # Only HOP2 is online
-    nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP2])
+    nodeaddress_to_networkstate = factories.make_node_availability_map([HOP2])
 
     filtered_routes = routes.filter_reachable_routes(
-        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes, nodeaddress_to_networkstate=nodeaddress_to_networkstate
     )
 
     assert possible_routes[0] not in filtered_routes
     assert possible_routes[1] in filtered_routes
 
     # None of the route nodes are available
-    nodeaddresses_to_networkstates = factories.make_node_availability_map([])
+    nodeaddress_to_networkstate = factories.make_node_availability_map([])
 
     filtered_routes = routes.filter_reachable_routes(
-        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes, nodeaddress_to_networkstate=nodeaddress_to_networkstate
     )
 
     assert possible_routes[0] not in filtered_routes
@@ -2001,7 +1999,7 @@ def test_resume_waiting_transfer():
         ),
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -2020,7 +2018,7 @@ def test_resume_waiting_transfer():
         state_change=too_early_block,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -2039,7 +2037,7 @@ def test_resume_waiting_transfer():
         state_change=late_enough_block,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(2),
         block_hash=too_early_block.block_hash,
@@ -2100,7 +2098,7 @@ def test_node_change_network_state_reachable_node():
         state_change=ActionChangeNodeNetworkState(HOP2, NetworkState.REACHABLE),
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=setup.channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -2398,7 +2396,7 @@ def test_sanity_check_for_refund_transfer_with_fees():
         state_change=mediator_make_init_action(channels, from_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=channels.nodeaddress_to_networkstate,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -2441,7 +2439,7 @@ def test_receive_unlock():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=prng,
         block_number=BlockNumber(1),
         block_hash=block_hash,
@@ -2461,7 +2459,7 @@ def test_receive_unlock():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=prng,
         block_number=BlockNumber(1),
         block_hash=block_hash,
@@ -2480,7 +2478,7 @@ def test_receive_unlock():
         state_change=state_change,
         channelidentifiers_to_channels=dict(),
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=prng,
         block_number=BlockNumber(1),
         block_hash=block_hash,
@@ -2492,7 +2490,7 @@ def test_receive_unlock():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=prng,
         block_number=BlockNumber(1),
         block_hash=block_hash,
@@ -2519,7 +2517,7 @@ def test_receive_unlock():
         state_change=state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=dict(),
+        nodeaddress_to_networkstate=dict(),
         pseudo_random_generator=prng,
         block_number=BlockNumber(1),
         block_hash=block_hash,

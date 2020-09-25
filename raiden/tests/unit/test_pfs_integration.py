@@ -191,7 +191,7 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
     )
     address1, address2, address3, address4 = addresses
 
-    chain_state.nodeaddresses_to_networkstates = {
+    chain_state.nodeaddress_to_networkstate = {
         address1: NetworkState.REACHABLE,
         address2: NetworkState.REACHABLE,
         address3: NetworkState.REACHABLE,
@@ -300,7 +300,7 @@ def test_routing_mocked_pfs_request_error(
     address1, address2, address3, address4 = addresses
 
     # test routing with all nodes available
-    chain_state.nodeaddresses_to_networkstates = {
+    chain_state.nodeaddress_to_networkstate = {
         address1: NetworkState.REACHABLE,
         address2: NetworkState.REACHABLE,
         address3: NetworkState.REACHABLE,
@@ -329,7 +329,7 @@ def test_routing_mocked_pfs_bad_http_code(
     address1, address2, address3, address4 = addresses
 
     # test routing with all nodes available
-    chain_state.nodeaddresses_to_networkstates = {
+    chain_state.nodeaddress_to_networkstate = {
         address1: NetworkState.REACHABLE,
         address2: NetworkState.REACHABLE,
         address3: NetworkState.REACHABLE,
@@ -375,7 +375,7 @@ def test_routing_mocked_pfs_invalid_json(
     address1, address2, address3, address4 = addresses
 
     # test routing with all nodes available
-    chain_state.nodeaddresses_to_networkstates = {
+    chain_state.nodeaddress_to_networkstate = {
         address1: NetworkState.REACHABLE,
         address2: NetworkState.REACHABLE,
         address3: NetworkState.REACHABLE,
@@ -406,7 +406,7 @@ def test_routing_mocked_pfs_invalid_json_structure(
     address1, address2, address3, address4 = addresses
 
     # test routing with all nodes available
-    chain_state.nodeaddresses_to_networkstates = {
+    chain_state.nodeaddress_to_networkstate = {
         address1: NetworkState.REACHABLE,
         address2: NetworkState.REACHABLE,
         address3: NetworkState.REACHABLE,
@@ -452,7 +452,7 @@ def test_routing_mocked_pfs_unavailable_peer(
     }
 
     # test routing with node 2 unavailable
-    chain_state.nodeaddresses_to_networkstates = {
+    chain_state.nodeaddress_to_networkstate = {
         address1: NetworkState.REACHABLE,
         address2: NetworkState.UNREACHABLE,
         address3: NetworkState.REACHABLE,

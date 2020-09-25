@@ -204,7 +204,7 @@ def subdispatch_to_paymenttask(
                     state_change=state_change,
                     channelidentifiers_to_channels=channel_identifier_map,
                     addresses_to_channel=chain_state.addresses_to_channel,
-                    nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+                    nodeaddress_to_networkstate=chain_state.nodeaddress_to_networkstate,
                     pseudo_random_generator=pseudo_random_generator,
                     block_number=block_number,
                 )
@@ -224,7 +224,7 @@ def subdispatch_to_paymenttask(
                     state_change=state_change,
                     channelidentifiers_to_channels=channelids_to_channels,
                     addresses_to_channel=chain_state.addresses_to_channel,
-                    nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+                    nodeaddress_to_networkstate=chain_state.nodeaddress_to_networkstate,
                     pseudo_random_generator=pseudo_random_generator,
                     block_number=block_number,
                     block_hash=block_hash,
@@ -289,7 +289,7 @@ def subdispatch_initiatortask(
         state_change=state_change,
         channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
         addresses_to_channel=chain_state.addresses_to_channel,
-        nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+        nodeaddress_to_networkstate=chain_state.nodeaddress_to_networkstate,
         pseudo_random_generator=chain_state.pseudo_random_generator,
         block_number=chain_state.block_number,
     )
@@ -337,7 +337,7 @@ def subdispatch_mediatortask(
                 state_change=state_change,
                 channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
                 addresses_to_channel=chain_state.addresses_to_channel,
-                nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+                nodeaddress_to_networkstate=chain_state.nodeaddress_to_networkstate,
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=block_number,
                 block_hash=block_hash,
@@ -565,7 +565,7 @@ def handle_action_change_node_network_state(
 
     node_address = state_change.node_address
     network_state = state_change.network_state
-    chain_state.nodeaddresses_to_networkstates[node_address] = network_state
+    chain_state.nodeaddress_to_networkstate[node_address] = network_state
 
     for secrethash, subtask in list(chain_state.payment_mapping.secrethashes_to_task.items()):
         # This typecheck would not have been needed if token_network_address, a common attribute
