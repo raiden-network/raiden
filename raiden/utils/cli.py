@@ -259,7 +259,7 @@ class LogLevelConfigType(click.ParamType):
         return level_config
 
 
-class NetworkChoiceType(click.Choice):
+class ChainChoiceType(click.Choice):
     def convert(self, value, param, ctx):
         if isinstance(value, int):
             return value

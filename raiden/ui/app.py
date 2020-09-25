@@ -47,9 +47,9 @@ from raiden.settings import (
     ServiceConfig,
 )
 from raiden.ui.checks import (
+    check_ethereum_chain_id,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
-    check_ethereum_network_id,
     check_sql_version,
     check_synced,
 )
@@ -143,16 +143,16 @@ def get_account_and_private_key(
     return to_canonical_address(address_hex), privatekey_bin
 
 
-def get_smart_contracts_start_at(network_id: ChainID) -> BlockNumber:
-    if network_id == Networks.MAINNET.value:
+def get_smart_contracts_start_at(chain_id: ChainID) -> BlockNumber:
+    if chain_id == Networks.MAINNET.value:
         smart_contracts_start_at = EthereumForks.CONSTANTINOPLE.value
-    elif network_id == Networks.ROPSTEN.value:
+    elif chain_id == Networks.ROPSTEN.value:
         smart_contracts_start_at = RopstenForks.CONSTANTINOPLE.value
-    elif network_id == Networks.KOVAN.value:
+    elif chain_id == Networks.KOVAN.value:
         smart_contracts_start_at = KovanForks.CONSTANTINOPLE.value
-    elif network_id == Networks.RINKEBY.value:
+    elif chain_id == Networks.RINKEBY.value:
         smart_contracts_start_at = RinkebyForks.CONSTANTINOPLE.value
-    elif network_id == Networks.GOERLI.value:
+    elif chain_id == Networks.GOERLI.value:
         smart_contracts_start_at = GoerliForks.CONSTANTINOPLE.value
     else:
         smart_contracts_start_at = GENESIS_BLOCK_NUMBER
@@ -209,7 +209,7 @@ def run_raiden_service(
     web_ui: bool,
     datadir: Optional[str],
     matrix_server: str,
-    network_id: ChainID,
+    chain_id: ChainID,
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     pathfinding_service_address: str,
@@ -239,7 +239,7 @@ def run_raiden_service(
 
     check_sql_version()
     check_ethereum_has_accounts(account_manager)
-    check_ethereum_network_id(network_id, web3)
+    check_ethereum_chain_id(chain_id, web3)
 
     address, privatekey = get_account_and_private_key(account_manager, address, password_file)
 
@@ -273,7 +273,7 @@ def run_raiden_service(
     )
 
     config = RaidenConfig(
-        chain_id=network_id,
+        chain_id=chain_id,
         environment_type=environment_type,
         reveal_timeout=default_reveal_timeout,
         settle_timeout=default_settle_timeout,
@@ -288,7 +288,7 @@ def run_raiden_service(
     config.services.pathfinding_max_paths = pathfinding_max_paths
     config.transport.server = matrix_server
 
-    contracts = load_deployed_contracts_data(config, network_id)
+    contracts = load_deployed_contracts_data(config, chain_id)
 
     rpc_client = JSONRPCClient(
         web3=web3,
@@ -304,7 +304,7 @@ def run_raiden_service(
         )
 
     if token_network_registry_deployed_at is None:
-        smart_contracts_start_at = get_smart_contracts_start_at(network_id)
+        smart_contracts_start_at = get_smart_contracts_start_at(chain_id)
     else:
         smart_contracts_start_at = token_network_registry_deployed_at
 
@@ -376,7 +376,7 @@ def run_raiden_service(
         os.path.join(
             datadir,
             f"node_{pex(address)}",
-            f"netid_{network_id}",
+            f"netid_{chain_id}",
             f"network_{pex(raiden_bundle.token_network_registry.address)}",
             f"v{RAIDEN_DB_VERSION}_log.db",
         )
@@ -386,7 +386,7 @@ def run_raiden_service(
     print(f"Raiden is running in {environment_type.value.lower()} mode")
     print(
         "\nYou are connected to the '{}' network and the DB path is: {}".format(
-            ID_TO_CHAINNAME.get(network_id, network_id), database_path
+            ID_TO_CHAINNAME.get(chain_id, chain_id), database_path
         )
     )
 

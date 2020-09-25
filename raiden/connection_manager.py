@@ -184,7 +184,7 @@ class ConnectionManager:  # pragma: no unittest
                 log.info(
                     "Bootstrapping token network.",
                     node=to_checksum_address(self.raiden.address),
-                    network_id=to_checksum_address(self.registry_address),
+                    chain_id=to_checksum_address(self.registry_address),
                     token_id=to_checksum_address(self.token_address),
                     bootstrap_address=to_checksum_address(bootstrap_address),
                 )

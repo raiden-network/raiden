@@ -98,40 +98,40 @@ def check_ethereum_confirmed_block_is_not_pruned(
         )
 
 
-def check_ethereum_network_id(given_network_id: ChainID, web3: Web3) -> None:
+def check_ethereum_chain_id(given_chain_id: ChainID, web3: Web3) -> None:
     """
     Takes the given network id and checks it against the connected network
 
     If they don't match, exits the program with an error. If they do adds it
     to the configuration and then returns it and whether it is a known network
     """
-    node_network_id = ChainID(web3.eth.chainId)
+    node_chain_id = ChainID(web3.eth.chainId)
 
-    if node_network_id != given_network_id:
-        given_name = ID_TO_CHAINNAME.get(given_network_id)
-        network_name = ID_TO_CHAINNAME.get(node_network_id)
+    if node_chain_id != given_chain_id:
+        given_name = ID_TO_CHAINNAME.get(given_chain_id)
+        network_name = ID_TO_CHAINNAME.get(node_chain_id)
 
-        given_description = f'{given_name or "Unknown"} (id {given_network_id})'
-        network_description = f'{network_name or "Unknown"} (id {node_network_id})'
+        given_description = f'{given_name or "Unknown"} (id {given_chain_id})'
+        network_description = f'{network_name or "Unknown"} (id {node_chain_id})'
 
         # TODO: fix cyclic import
-        from raiden.ui.cli import ETH_NETWORKID_OPTION
+        from raiden.ui.cli import ETH_CHAINID_OPTION
 
         raise RaidenError(
             f"The configured network {given_description} differs "
             f"from the Ethereum client's network {network_description}. The "
-            f"network_id can be configured using the flag {ETH_NETWORKID_OPTION}"
+            f"chain_id can be configured using the flag {ETH_CHAINID_OPTION}"
             f"Please check your settings."
         )
 
 
-def check_raiden_environment(network_id: ChainID, environment_type: Environment) -> None:
+def check_raiden_environment(chain_id: ChainID, environment_type: Environment) -> None:
     warn = (  # mainnet --development is only for tests
-        network_id == 1 and environment_type == Environment.DEVELOPMENT
+        chain_id == 1 and environment_type == Environment.DEVELOPMENT
     )
     if warn:
         raise RaidenError(
-            f"The chosen network ({ID_TO_CHAINNAME[network_id]}) is not a testnet, "
+            f"The chosen network ({ID_TO_CHAINNAME[chain_id]}) is not a testnet, "
             f'but the "development" environment was selected.\n'
             f"This crashes the node often. Please start again with a safe environment setting "
             f"(--environment-type production)."
@@ -140,7 +140,7 @@ def check_raiden_environment(network_id: ChainID, environment_type: Environment)
 
 def check_deployed_contracts_data(
     environment_type: Environment,
-    node_network_id: ChainID,
+    node_chain_id: ChainID,
     contracts: Dict[str, Address],
     required_contracts: List[str],
 ) -> None:
@@ -151,7 +151,7 @@ def check_deployed_contracts_data(
     for name in required_contracts:
         if name not in contracts:
             raise RaidenError(
-                f"There are no known contract addresses for network id '{node_network_id}'. and "
+                f"There are no known contract addresses for network id '{node_chain_id}'. and "
                 f"environment type {environment_type} for contract {name}."
             )
 

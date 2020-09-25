@@ -13,9 +13,9 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.utils import factories
 from raiden.ui.app import rpc_normalized_endpoint
-from raiden.ui.checks import check_ethereum_network_id, check_synced
-from raiden.ui.cli import ETH_NETWORKID_OPTION, ETH_RPC_CONFIG_OPTION
-from raiden.utils.cli import NetworkChoiceType, group, option
+from raiden.ui.checks import check_ethereum_chain_id, check_synced
+from raiden.ui.cli import ETH_CHAINID_OPTION, ETH_RPC_CONFIG_OPTION
+from raiden.utils.cli import ChainChoiceType, group, option
 from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
@@ -95,7 +95,7 @@ def format_event_for_serialization(data: Dict):
     ),
 )
 @option(
-    ETH_NETWORKID_OPTION,
+    ETH_CHAINID_OPTION,
     help=(
         "Specify the network name/id of the Ethereum network to run Raiden on.\n"
         "Available networks:\n"
@@ -104,9 +104,9 @@ def format_event_for_serialization(data: Dict):
         '"rinkeby" - network id: 4\n'
         '"goerli" - network id: 5\n'
         '"kovan" - network id: 42\n'
-        '"<NETWORK_ID>": use the given network id directly\n'
+        '"<CHAIN_ID>": use the given network id directly\n'
     ),
-    type=NetworkChoiceType(["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<NETWORK_ID>"]),
+    type=ChainChoiceType(["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<CHAIN_ID>"]),
     default="mainnet",
     show_default=True,
 )
@@ -121,7 +121,7 @@ def format_event_for_serialization(data: Dict):
     show_default=True,
 )
 @option("--contracts-version", default=RAIDEN_CONTRACT_VERSION, type=str, show_default=True)
-def main(output_directory, network_id, eth_rpc_endpoint, contracts_version):
+def main(output_directory, chain_id, eth_rpc_endpoint, contracts_version):
     web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
 
     try:
@@ -136,7 +136,7 @@ def main(output_directory, network_id, eth_rpc_endpoint, contracts_version):
         )
         return
 
-    check_ethereum_network_id(network_id, web3)
+    check_ethereum_chain_id(chain_id, web3)
 
     # This script does not send any transactions, the privatekey is generate
     # just because it is a dependency for JSONRPCClient.
@@ -144,16 +144,16 @@ def main(output_directory, network_id, eth_rpc_endpoint, contracts_version):
     rpc_client = JSONRPCClient(web3=web3, privkey=unecessary_privatekey)
     check_synced(rpc_client)
 
-    deployment_data = get_contracts_deployment_info(chain_id=network_id, version=contracts_version)
+    deployment_data = get_contracts_deployment_info(chain_id=chain_id, version=contracts_version)
 
     if not deployment_data:
         raise RuntimeError(
             f"There is no deployment data available for contracts-version {contracts_version}."
         )
 
-    network_name = ID_TO_CHAINNAME.get(network_id)
+    network_name = ID_TO_CHAINNAME.get(chain_id)
     if network_name is None:
-        raise RuntimeError(f"Network with id {network_id} is not known.")
+        raise RuntimeError(f"Network with id {chain_id} is not known.")
 
     contracts = deployment_data["contracts"]
     token_network_registry_deployed_at = BlockNumber(

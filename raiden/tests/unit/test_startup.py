@@ -11,7 +11,7 @@ from raiden.network.pathfinding import PFSInfo
 from raiden.settings import RaidenConfig, ServiceConfig
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
-from raiden.ui.checks import check_ethereum_network_id
+from raiden.ui.checks import check_ethereum_chain_id
 from raiden.ui.startup import (
     load_deployed_contracts_data,
     load_deployment_addresses_from_contracts,
@@ -58,17 +58,17 @@ PFS_INFO = PFSInfo(
 )
 
 
-def test_check_network_id_raises_with_mismatching_ids():
-    check_ethereum_network_id(ChainID(68), MockWeb3(68))
+def test_check_chain_id_raises_with_mismatching_ids():
+    check_ethereum_chain_id(ChainID(68), MockWeb3(68))
 
     with pytest.raises(RaidenError):
-        check_ethereum_network_id(ChainID(61), MockWeb3(68))
+        check_ethereum_chain_id(ChainID(61), MockWeb3(68))
 
 
 @pytest.mark.parametrize("netid", [1, 3, 4, 5, 627])
 def test_setup_does_not_raise_with_matching_ids(netid):
     """Test that network setup works for the known network ids"""
-    check_ethereum_network_id(netid, MockWeb3(netid))
+    check_ethereum_chain_id(netid, MockWeb3(netid))
 
 
 def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:

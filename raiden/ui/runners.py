@@ -6,7 +6,7 @@ import gevent.monkey
 import structlog
 from gevent.event import AsyncResult
 
-from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
+from raiden.tasks import check_chain_id, check_gas_reserve, check_rdn_deposits, check_version
 from raiden.ui.app import run_raiden_service
 from raiden.utils.gevent import spawn_named
 from raiden.utils.system import get_system_spec
@@ -34,8 +34,8 @@ def run_services(options: Dict[str, Any]) -> None:
     gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, raiden_service))
     gevent_tasks.append(
         spawn_named(
-            "check_network_id",
-            check_network_id,
+            "check_chain_id",
+            check_chain_id,
             raiden_service.rpc_client.chain_id,
             raiden_service.rpc_client.web3,
         )

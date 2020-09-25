@@ -70,6 +70,7 @@ def test_run_error_reporting(cli_runner, monkeypatch):
     for exception, code in caught_exceptions.items():
         monkeypatch.setattr(cli, "run_services", mock_raises(exception))
         result = cli_runner(cli.run, "--accept-disclaimer")
+        print(result)
         assert result.exception.code == code
 
 

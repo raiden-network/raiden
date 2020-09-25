@@ -98,6 +98,9 @@ def cli_args(
         for k, v in changed_args.items():
             initial_args[k] = v
 
+    # The CLI param is `--network-id` for legacy reasons. We use `chain_id` as variable name.
+    initial_args["network_id"] = initial_args.pop("chain_id")
+
     # This assumes that there is only one Raiden instance per CLI test
     base_logfile = os.path.join(logs_storage, "raiden_nodes", "cli_test.log")
 
