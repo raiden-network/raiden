@@ -94,7 +94,6 @@ matrix-client==0.3.2      # via -r requirements-dev.txt
 matrix-synapse==1.19.1    # via -r requirements-dev.txt
 mccabe==0.6.1             # via -r requirements-dev.txt, flake8, pylint
 mirakuru==2.1.2           # via -r requirements-dev.txt
-more-itertools==7.0.0     # via -r requirements-dev.txt, pytest
 msgpack==0.6.1            # via -r requirements-dev.txt, matrix-synapse
 multiaddr==0.0.9          # via -r requirements-dev.txt, ipfshttpclient
 mypy-extensions==0.4.3    # via -r requirements-dev.txt, mypy, raiden-contracts, typing-inspect
@@ -146,7 +145,7 @@ pytest-forked==1.1.3      # via -r requirements-dev.txt, pytest-xdist
 pytest-random==0.2        # via -r requirements-dev.txt
 pytest-select==0.1.2      # via -r requirements-dev.txt
 pytest-xdist==2.1.0       # via -r requirements-dev.txt
-pytest==6.0.2             # via -r requirements-dev.txt, pytest-forked, pytest-random, pytest-select, pytest-xdist
+pytest==6.1.0             # via -r requirements-dev.txt, pytest-forked, pytest-random, pytest-select, pytest-xdist
 python-dateutil==2.8.0    # via s3cmd
 python-magic==0.4.15      # via s3cmd
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
