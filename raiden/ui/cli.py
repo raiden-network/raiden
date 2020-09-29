@@ -509,6 +509,12 @@ def options(func: Callable) -> Callable:
         options_.append(
             option("--console", help="Start the interactive raiden console", is_flag=True)
         )
+    else:
+
+        def unsupported(*args: Any) -> None:
+            raise click.BadParameter("Console support is only available in development installs.")
+
+        options_.append(option("--console", is_flag=True, hidden=True, callback=unsupported))
 
     for option_ in reversed(options_):
         func = option_(func)
