@@ -207,7 +207,7 @@ Run the Ethereum client and let it sync::
     geth --syncmode fast --rpc --rpcapi eth,net,web3
 
 .. note::
-    When you want to use a testnet add one of the ``--testnet``, ``--rinkeby`` or ``--goerli`` flags or set the network id with ``--networkid`` directly.
+    When you want to use a testnet add one of the ``--testnet``, ``--rinkeby`` or ``--goerli`` flags or set the network id with ``--network-id`` directly.
 
 Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
 

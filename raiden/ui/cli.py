@@ -184,14 +184,14 @@ def options(func: Callable) -> Callable:
             ETH_CHAINID_OPTION,
             "chain_id",
             help=(
-                "Specify the network name/id of the Ethereum network to run Raiden on.\n"
+                "Specify the chain name/id of the Ethereum network to run Raiden on.\n"
                 "Available networks:\n"
-                '"mainnet" - network id: 1\n'
-                '"ropsten" - network id: 3\n'
-                '"rinkeby" - network id: 4\n'
-                '"goerli" - network id: 5\n'
-                '"kovan" - network id: 42\n'
-                '"<CHAIN_ID>": use the given network id directly\n'
+                '"mainnet" - chain id: 1\n'
+                '"ropsten" - chain id: 3\n'
+                '"rinkeby" - chain id: 4\n'
+                '"goerli" - chain id: 5\n'
+                '"kovan" - chain id: 42\n'
+                '"<CHAIN_ID>": use the given chain id directly\n'
             ),
             type=ChainChoiceType(
                 ["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<CHAIN_ID>"]
