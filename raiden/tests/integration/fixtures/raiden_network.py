@@ -198,7 +198,8 @@ def adhoc_capability():
 @pytest.fixture
 def capabilities(adhoc_capability) -> CapabilitiesConfig:
     config = CapabilitiesConfig()
-    config.adhoc_capability = adhoc_capability  # type: ignore
+    if adhoc_capability:
+        config.adhoc_capability = adhoc_capability  # type: ignore
     return config
 
 

@@ -11,7 +11,7 @@ from raiden.settings import CapabilitiesConfig
 from raiden.utils.capabilities import (
     capconfig_to_dict,
     capdict_to_config,
-    parse_capabilities,
+    deserialize_capabilities,
     serialize_capabilities,
 )
 from raiden.utils.keys import privatekey_to_publickey
@@ -97,26 +97,25 @@ def test_get_http_rtt_ignore_failing(requests_responses):
     assert get_average_http_response_time(url="http://url3", method="get") is None
 
 
-def test_parse_capabilities():
-    capstring = 'foo,toad,bar="max",form,agar'
-    parsed = parse_capabilities(capstring)
+def test_deserialize_capabilities():
+    capstring = "mxc://raiden.network/cap?foo=1&toad=1&bar=max&form=1&agar=1&nottrue=0&l=one&l=2"
+    parsed = deserialize_capabilities(capstring)
     assert parsed.get("foo") is True
     assert parsed.get("toad") is True
     assert parsed.get("bar") == "max"
-    assert parsed.get("form") is True
     assert parsed.get("agar") is True
+    assert parsed.get("nottrue") is False
+    assert parsed.get("l") == ["one", "2"]
     assert not parsed.get("nothing")
 
-    assert serialize_capabilities(parsed) == f"mxc://{capstring}"
+    assert serialize_capabilities(parsed) == f"{capstring}"
 
     parsed["false"] = False
 
-    assert serialize_capabilities(parsed) == f"mxc://{capstring}"
+    # Explicit new value changes the serialization format
+    assert serialize_capabilities(parsed) != f"mxc://{capstring}"
 
-    parsed["nothing"] = None
-    assert 'nothing="None"' in serialize_capabilities(parsed)
-
-    assert parse_capabilities("") == dict()
+    assert deserialize_capabilities("") == dict()
 
     assert serialize_capabilities({}) == "mxc://"
 
