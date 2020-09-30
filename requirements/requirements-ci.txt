@@ -30,7 +30,7 @@ canonicaljson==1.4.0      # via -r requirements-dev.txt, matrix-synapse, signedj
 certifi==2019.3.9         # via -r requirements-dev.txt, requests
 cffi==1.12.3              # via -r requirements-dev.txt, aiortc, bcrypt, coincurve, cryptography, pylibsrtp, pynacl
 chardet==3.0.4            # via -r requirements-dev.txt, requests
-click==7.0                # via -r requirements-dev.txt, black, flask, pip-tools, raiden-contracts
+click==7.1.2              # via -r requirements-dev.txt, black, flask, pip-tools, raiden-contracts
 coincurve==13.0.0         # via -r requirements-dev.txt, raiden-contracts
 colorama==0.4.3           # via -r requirements-dev.txt
 colour==0.1.5             # via -r requirements-dev.txt
@@ -84,7 +84,7 @@ jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, 
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in
+macholib==1.14            # via -r requirements-ci.in, pyinstaller
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==8.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt

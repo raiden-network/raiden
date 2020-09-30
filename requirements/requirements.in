@@ -1,5 +1,6 @@
 aiortc
 cachetools
+click
 coincurve
 colorama
 eth-keyfile

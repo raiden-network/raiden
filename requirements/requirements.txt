@@ -16,13 +16,12 @@ cachetools==4.1.1         # via -r requirements.in
 certifi==2019.3.9         # via requests
 cffi==1.12.3              # via aiortc, coincurve, cryptography, pylibsrtp
 chardet==3.0.4            # via requests
-click==7.0                # via flask, raiden-contracts
+click==7.1.2              # via -r requirements.in, flask, raiden-contracts
 coincurve==13.0.0         # via -r requirements.in, raiden-contracts
 colorama==0.4.3           # via -r requirements.in
 crc32c==2.0               # via aiortc
 cryptography==2.9.2       # via aiortc
 cytoolz==0.10.1           # via eth-keyfile, eth-utils
-decorator==4.4.2          # via networkx
 eth-abi==2.1.0            # via eth-account, raiden-contracts, web3
 eth-account==0.5.3        # via web3
 eth-hash[pycryptodome]==0.2.0  # via eth-utils, web3
