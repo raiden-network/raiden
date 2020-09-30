@@ -38,7 +38,7 @@ coverage==5.3             # via -r requirements-dev.in
 crc32c==2.0               # via -r requirements.txt, aiortc
 cryptography==2.9.2       # via -r requirements.txt, aiortc, pyopenssl, service-identity
 cytoolz==0.10.1           # via -r requirements.txt, eth-keyfile, eth-utils
-decorator==4.4.2          # via -r requirements.txt, ipython, networkx, traitlets
+decorator==4.4.2          # via -r requirements.txt, ipython, traitlets
 docutils==0.14            # via -r requirements-docs.txt, readme-renderer, sphinx, sphinxcontrib-httpexample
 eth-abi==2.1.0            # via -r requirements.txt, eth-account, raiden-contracts, web3
 eth-account==0.5.3        # via -r requirements.txt, web3
@@ -70,13 +70,13 @@ hyperlink==19.0.0         # via twisted
 hypothesis==5.35.2        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==2.0.0  # via -r requirements.txt, flake8, flake8-comprehensions, jsonschema, pluggy, pytest
+importlib-metadata==2.0.0  # via -r requirements.txt, pluggy
 incremental==17.5.0       # via treq, twisted
 iniconfig==1.0.1          # via pytest
 ipfshttpclient==0.6.0.post1  # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via traitlets
 ipython==7.18.1           # via -r requirements-dev.in
-isort==5.5.3              # via -r requirements-dev.in, pylint
+isort==5.5.4              # via -r requirements-dev.in, pylint
 itsdangerous==1.1.0       # via -r requirements.txt, flask
 jedi==0.17.0              # via ipython
 jinja2==2.10.1            # via -r requirements-docs.txt, -r requirements.txt, flask, matrix-synapse, sphinx
@@ -176,8 +176,8 @@ toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
-typed-ast==1.4.0          # via astroid, black, mypy
-typing-extensions==3.7.4.3  # via -r requirements.txt, matrix-synapse, mypy, signedjson, web3
+typed-ast==1.4.0          # via black, mypy
+typing-extensions==3.7.4.3  # via -r requirements.txt, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
