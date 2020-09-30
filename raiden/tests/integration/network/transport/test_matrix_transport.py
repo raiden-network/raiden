@@ -56,7 +56,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils.capabilities import capconfig_to_dict, parse_capabilities
+from raiden.utils.capabilities import capconfig_to_dict, deserialize_capabilities
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, Dict, List, PeerCapabilities, TokenNetworkAddress, cast
 from raiden.waiting import wait_for_network_state
@@ -1343,18 +1343,15 @@ def test_transport_capabilities(raiden_network: List[RaidenService], capabilitie
     wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
     wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
 
-    # only True values are set in the avatar_url (opt_in)
-    expected_capabilities = {
-        key: value for key, value in capconfig_to_dict(capabilities).items() if value
-    }
+    expected_capabilities = capconfig_to_dict(capabilities)
 
     app1_user_ids = app0.transport.get_user_ids_for_address(app1.address)
     assert len(app1_user_ids) == 1, "app1 should have exactly one user_id"
     app1_user = app0.transport._client.get_user(app1_user_ids.pop())
     app1_avatar_url = app1_user.get_avatar_url()
-    assert "adhoc_capability" in app1_avatar_url, "avatar_url not set for app1"
-    msg = "capabilities could not be parsed"
-    assert parse_capabilities(app1_avatar_url) == expected_capabilities, msg
+    assert len(app1_avatar_url), "avatar_url not set for app1"
+    app1_capabilities = deserialize_capabilities(app1_avatar_url)
+    assert "adhoc_capability" in app1_capabilities, "capabilities could not be parsed correctly"
 
     msg = "capabilities were not collected in transport client"
     collected_capabilities = app0.transport._address_mgr.get_address_capabilities(app1.address)

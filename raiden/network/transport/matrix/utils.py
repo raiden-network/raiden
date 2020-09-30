@@ -56,7 +56,7 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
-from raiden.utils.capabilities import parse_capabilities, serialize_capabilities
+from raiden.utils.capabilities import deserialize_capabilities, serialize_capabilities
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, MessageID, PeerCapabilities, Signature
@@ -346,7 +346,7 @@ class UserAddressManager:
             return PeerCapabilities({})
         avatar_url = user.get_avatar_url()
         if avatar_url is not None:
-            return PeerCapabilities(parse_capabilities(avatar_url))
+            return PeerCapabilities(deserialize_capabilities(avatar_url))
         else:
             return PeerCapabilities({})
 

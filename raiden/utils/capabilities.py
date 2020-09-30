@@ -1,44 +1,66 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
+
+import structlog
+from werkzeug.urls import url_decode, url_encode
 
 from raiden.constants import Capabilities
 from raiden.settings import CapabilitiesConfig
 
+log = structlog.get_logger(__name__)
 
-def parse_capabilities(capstring: str) -> Dict[str, Any]:
-    if capstring.startswith("mxc://"):
-        capstring = capstring[6:]
-    elif "/" in capstring:
-        capstring = capstring[capstring.rindex("/") + 1 :]
-    result: Dict[str, Any] = {}
-    if len(capstring) == 0:
-        return result
-    for token in capstring.split(","):
-        if "=" in token:
-            key, value = token.split("=")
-            value = value.strip('"')
-            result[key] = value
-        else:
-            result[token] = True
-    return result
+
+def _bool_to_binary(value: Any) -> str:
+    if isinstance(value, bool):
+        return "1" if value is True else "0"
+    return value
+
+
+def _serialize(capdict: Optional[Dict[str, Any]]) -> str:
+    if capdict is None:
+        capdict = {}
+    for key in capdict:
+        capdict[key] = _bool_to_binary(capdict[key])
+    return url_encode(capdict)
 
 
 def serialize_capabilities(capdict: Optional[Dict[str, Any]]) -> str:
     if not capdict:
         return "mxc://"
-    for key in capdict.keys():
-        if "/" in str(key):
-            raise ValueError(f"Key {key} is malformed, '/' not allowed")
+    return f"mxc://raiden.network/cap?{_serialize(capdict)}"
 
-    entries = []
-    for key, value in capdict.items():
-        if isinstance(value, bool):
-            if value:
-                entries.append(key)
+
+def _strip_capstring(capstring: str) -> str:
+    if capstring.startswith("mxc://"):
+        capstring = capstring[6:]
+    if "/" in capstring:
+        capstring = capstring[capstring.rindex("/") + 1 :]
+    if "?" in capstring:
+        capstring = capstring[capstring.rindex("?") + 1 :]
+    return capstring
+
+
+def deserialize_capabilities(capstring: str) -> Dict[str, Any]:
+    capstring = _strip_capstring(capstring)
+    capdict = url_decode(capstring.encode("utf-8"))
+    capabilities: Dict[str, Any] = dict()
+    for key in capdict:
+        value = capdict.getlist(key, type=int_bool)
+        # reduce lists with one entry to just their element
+        if len(value) == 1:
+            capabilities[key] = value.pop()
         else:
-            entries.append(f'{key}="{value}"')
-    if len(entries):
-        return f"mxc://{','.join(entries)}"
-    return "mxc://"
+            capabilities[key] = value
+    return capabilities
+
+
+def int_bool(value: str) -> Union[bool, str]:
+    try:
+        if int(value) in {0, 1}:
+            return bool(int(value))
+        else:
+            return value
+    except ValueError:
+        return value
 
 
 def capdict_to_config(capdict: Dict[str, Any]) -> CapabilitiesConfig:
