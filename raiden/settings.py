@@ -129,9 +129,9 @@ class MediationFeeConfig:
 
 @dataclass
 class CapabilitiesConfig:
-    no_receive: bool = False
-    no_mediate: bool = False
-    no_delivery: bool = False
+    receive: bool = True
+    mediate: bool = True
+    delivery: bool = True
     web_rtc: bool = True
 
 
