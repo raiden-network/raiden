@@ -29,7 +29,7 @@ canonicaljson==1.4.0      # via matrix-synapse, signedjson
 certifi==2019.3.9         # via -r requirements-docs.txt, -r requirements.txt, requests
 cffi==1.12.3              # via -r requirements.txt, aiortc, bcrypt, coincurve, cryptography, pylibsrtp, pynacl
 chardet==3.0.4            # via -r requirements-docs.txt, -r requirements.txt, requests
-click==7.0                # via -r requirements.txt, black, flask, pip-tools, raiden-contracts
+click==7.1.2              # via -r requirements.txt, black, flask, pip-tools, raiden-contracts
 coincurve==13.0.0         # via -r requirements.txt, raiden-contracts
 colorama==0.4.3           # via -r requirements.txt
 colour==0.1.5             # via -r requirements-dev.in
