@@ -43,9 +43,9 @@ def serialize_capabilities(capdict: Optional[Dict[str, Any]]) -> str:
 
 def capdict_to_config(capdict: Dict[str, Any]) -> CapabilitiesConfig:
     config = CapabilitiesConfig(
-        no_receive=capdict.get(Capabilities.NO_RECEIVE.value, False),
-        no_mediate=capdict.get(Capabilities.NO_MEDIATE.value, False),
-        no_delivery=capdict.get(Capabilities.NO_DELIVERY.value, False),
+        receive=capdict.get(Capabilities.RECEIVE.value, True),
+        mediate=capdict.get(Capabilities.MEDIATE.value, True),
+        delivery=capdict.get(Capabilities.DELIVERY.value, True),
         web_rtc=capdict.get(Capabilities.WEBRTC.value, False),
     )
     for key in capdict.keys():
@@ -56,15 +56,15 @@ def capdict_to_config(capdict: Dict[str, Any]) -> CapabilitiesConfig:
 
 def capconfig_to_dict(config: CapabilitiesConfig) -> Dict[str, Any]:
     result = {
-        Capabilities.NO_RECEIVE.value: config.no_receive,
-        Capabilities.NO_MEDIATE.value: config.no_mediate,
-        Capabilities.NO_DELIVERY.value: config.no_delivery,
+        Capabilities.RECEIVE.value: config.receive,
+        Capabilities.MEDIATE.value: config.mediate,
+        Capabilities.DELIVERY.value: config.delivery,
         Capabilities.WEBRTC.value: config.web_rtc,
     }
     other_keys = [
         key
         for key in config.__dict__.keys()
-        if key not in ["no_receive", "no_mediate", "no_delivery", "web_rtc"]
+        if key not in ["receive", "mediate", "delivery", "web_rtc"]
     ]
     for key in other_keys:
         if key not in [_.value for _ in Capabilities]:
