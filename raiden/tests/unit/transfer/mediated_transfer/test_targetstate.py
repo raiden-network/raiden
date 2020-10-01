@@ -131,7 +131,7 @@ channel_properties2 = NettingChannelStateProperties(
 
 
 def test_events_for_onchain_secretreveal():
-    """ Secret must be registered on-chain when the unsafe region is reached and
+    """Secret must be registered on-chain when the unsafe region is reached and
     the secret is known.
     """
     block_number = 10
@@ -239,7 +239,7 @@ def test_handle_inittarget_bad_expiration():
 
 
 def test_handle_offchain_secretreveal():
-    """ The target node needs to inform the secret to the previous node to
+    """The target node needs to inform the secret to the previous node to
     receive an updated balance proof.
     """
     setup = make_target_state()
@@ -327,7 +327,7 @@ def test_handle_offchain_secretreveal_after_lock_expired():
 
 
 def test_handle_onchain_secretreveal():
-    """ The target node must update the lock state when the secret is
+    """The target node must update the lock state when the secret is
     registered in the blockchain.
     """
     setup = make_target_state(block_number=1, expiration=1 + factories.UNIT_REVEAL_TIMEOUT)

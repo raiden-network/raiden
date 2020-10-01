@@ -45,7 +45,10 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
 
     token_network_address = factories.make_address()
     token_id = factories.make_address()
-    token_network_state = TokenNetworkState(address=token_network_address, token_address=token_id,)
+    token_network_state = TokenNetworkState(
+        address=token_network_address,
+        token_address=token_id,
+    )
 
     pseudo_random_generator = random.Random()
 
@@ -101,7 +104,10 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
 
     token_network_address = factories.make_address()
     token_id = factories.make_address()
-    token_network_state = TokenNetworkState(address=token_network_address, token_address=token_id,)
+    token_network_state = TokenNetworkState(
+        address=token_network_address,
+        token_address=token_id,
+    )
 
     properties, _ = channel_properties
     channel_state = factories.create(properties)
@@ -285,7 +291,7 @@ def test_channel_data_removed_after_unlock(
 def test_mediator_clear_pairs_after_batch_unlock(
     chain_state, token_network_state, our_address, channel_properties
 ):
-    """ Regression test for https://github.com/raiden-network/raiden/issues/2932
+    """Regression test for https://github.com/raiden-network/raiden/issues/2932
     The mediator must also clear the transfer pairs once a ReceiveBatchUnlock where
     he is a participant is received.
     """

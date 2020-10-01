@@ -60,7 +60,7 @@ def shutdown_apps_and_cleanup_tasks(raiden_apps):
 
 
 def all_combinations(values):
-    """ Returns all possible combinations, from length 1 up to full-length of
+    """Returns all possible combinations, from length 1 up to full-length of
     values.
     """
     all_generators = (combinations(values, r) for r in range(1, len(values)))
@@ -69,7 +69,7 @@ def all_combinations(values):
 
 
 def fixture_all_combinations(invalid_values):
-    """ Generate all combinations for testing invalid values.
+    """Generate all combinations for testing invalid values.
 
     `pytest.mark.parametrize` will generate the combination of the full-length
     values, this is not sufficient for an exhaustive failing test with default

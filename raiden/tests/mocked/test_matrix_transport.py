@@ -330,9 +330,7 @@ def create_sync_filter_patch(monkeypatch, sync_filter_dict):
                 Room(None, "!room1:server"),  # type: ignore
                 Room(None, "!room2:server"),  # type: ignore
             ],
-            "rooms": [
-                Room(None, "!room1:server")  # type: ignore
-            ],
+            "rooms": [Room(None, "!room1:server")],  # type: ignore
             "limit": None,
         },
         {"not_rooms": None, "rooms": None, "limit": 0},

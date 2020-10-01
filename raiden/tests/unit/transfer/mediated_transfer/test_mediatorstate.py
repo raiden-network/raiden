@@ -131,7 +131,7 @@ def test_is_lock_valid():
 
 
 def test_is_safe_to_wait():
-    """ It's safe to wait for a secret while there are more than reveal timeout
+    """It's safe to wait for a secret while there are more than reveal timeout
     blocks until the lock expiration.
     """
     expiration = BlockExpiration(40)
@@ -384,7 +384,7 @@ def test_events_for_refund():
 
 
 def test_events_for_secretreveal():
-    """ The secret is revealed backwards to the payer once the payee sent the
+    """The secret is revealed backwards to the payer once the payee sent the
     SecretReveal.
     """
     pseudo_random_generator = random.Random()
@@ -450,7 +450,7 @@ def test_events_for_secretreveal_secret_unknown():
 
 
 def test_events_for_secretreveal_all_states():
-    """ The secret must be revealed backwards to the payer if the payee knows
+    """The secret must be revealed backwards to the payer if the payee knows
     the secret.
     """
     payee_secret_known = ("payee_secret_revealed", "payee_contract_unlock", "payee_balance_proof")
@@ -474,7 +474,7 @@ def test_events_for_secretreveal_all_states():
 
 
 def test_events_for_balanceproof():
-    """ Test the simple case where the last hop has learned the secret and sent
+    """Test the simple case where the last hop has learned the secret and sent
     it to the mediator node.
     """
     pseudo_random_generator = random.Random()
@@ -540,7 +540,7 @@ def test_events_for_balanceproof():
 
 
 def test_events_for_balanceproof_channel_closed():
-    """ Balance proofs are useless if the channel is closed/settled. The payee
+    """Balance proofs are useless if the channel is closed/settled. The payee
     needs to go on-chain and use the latest known balance proof which includes
     this lock in the locksroot.
     """
@@ -571,7 +571,7 @@ def test_events_for_balanceproof_channel_closed():
 
 
 def test_events_for_balanceproof_middle_secret():
-    """ Even though the secret should only propagate from the end of the chain
+    """Even though the secret should only propagate from the end of the chain
     to the front, if there is a payee node in the middle that knows the secret
     the Balance Proof is nevertheless sent.
 
@@ -653,7 +653,7 @@ def test_events_for_balanceproof_lock_expired():
 
 
 def test_events_for_onchain_secretreveal():
-    """ Secret must be registered on-chain when the unsafe region is reached and
+    """Secret must be registered on-chain when the unsafe region is reached and
     the secret is known.
     """
     setup = factories.make_transfers_pair(2, block_number=1)
@@ -1111,7 +1111,7 @@ def test_no_valid_routes():
 
 
 def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
-    """ The lock expiration must be constant through out the path, if a
+    """The lock expiration must be constant through out the path, if a
     transfer with an expiration larger than the channel's settle_timeout is
     received it must be ignored.
 
@@ -1902,7 +1902,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
 
 
 def test_filter_reachable_routes():
-    """ Try to mediate a transfer where a node, that is part of the routes_order,
+    """Try to mediate a transfer where a node, that is part of the routes_order,
     was unreachable and became reachable before the locked transfer expired.
     Expected result is to route the transfer through this node.
     """
@@ -1954,7 +1954,7 @@ def test_filter_reachable_routes():
 
 
 def test_resume_waiting_transfer():
-    """ Test that a mediator who has a waiting_transfer
+    """Test that a mediator who has a waiting_transfer
     set (the transfer couldn't be sent forward or backward
     due to availability or capacity or timeout issues) will retry
     mediating the waiting_transfer as soon as this transfer's
@@ -2065,7 +2065,7 @@ def test_resume_waiting_transfer():
 
 
 def test_node_change_network_state_reachable_node():
-    """ Test that a mediator who has a waiting_transfer
+    """Test that a mediator who has a waiting_transfer
     set (the transfer couldn't be sent forward or backward
     due to availability or capacity issues) will retry
     mediating the waiting_transfer as soon as this transfer's

@@ -70,7 +70,7 @@ log = structlog.get_logger(__name__)
 
 @dataclass
 class State:
-    """ An isolated state, modified by StateChange messages.
+    """An isolated state, modified by StateChange messages.
 
     Notes:
     - Don't duplicate the same state data in two different States, instead use
@@ -87,7 +87,7 @@ class State:
 
 @dataclass
 class StateChange:
-    """ Declare the transition to be applied in a state object.
+    """Declare the transition to be applied in a state object.
 
     StateChanges are incoming events that change this node state (eg. a
     blockchain event, a new packet, an error). It is not used for the node to
@@ -108,7 +108,7 @@ class StateChange:
 
 @dataclass
 class Event:
-    """ Events produced by the execution of a state change.
+    """Events produced by the execution of a state change.
 
     Nomenclature convention:
     - 'Send' prefix for protocol messages.
@@ -140,7 +140,7 @@ class TransferTask(State):
 
 @dataclass(frozen=True)
 class SendMessageEvent(Event):
-    """ Marker used for events which represent off-chain protocol messages tied
+    """Marker used for events which represent off-chain protocol messages tied
     to a channel.
 
     Messages are sent only once, delivery is guaranteed by the transport and
@@ -178,7 +178,7 @@ class ContractSendEvent(Event):
 
 @dataclass(frozen=True)
 class ContractSendExpirableEvent(ContractSendEvent):
-    """ Marker used for events which represent on-chain transactions which are
+    """Marker used for events which represent on-chain transactions which are
     time dependent.
     """
 
@@ -203,7 +203,7 @@ ST = TypeVar("ST", bound=State)
 
 
 class TransitionResult(Generic[T]):  # pylint: disable=unsubscriptable-object
-    """ Representes the result of applying a single state change.
+    """Representes the result of applying a single state change.
 
     When a task is completed the new_state is set to None, allowing the parent
     task to cleanup after the child.
@@ -279,7 +279,7 @@ class BalanceProofUnsignedState(State):
 
 @dataclass
 class BalanceProofSignedState(State):
-    """ Proof of a channel balance that can be used on-chain to resolve
+    """Proof of a channel balance that can be used on-chain to resolve
     disputes.
     """
 

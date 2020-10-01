@@ -99,7 +99,7 @@ def is_lock_valid(expiration: BlockExpiration, block_number: BlockNumber) -> boo
 def is_safe_to_wait(
     lock_expiration: BlockExpiration, reveal_timeout: BlockTimeout, block_number: BlockNumber
 ) -> SuccessOrError:
-    """ True if waiting is safe, i.e. there are more than enough blocks to safely
+    """True if waiting is safe, i.e. there are more than enough blocks to safely
     unlock on chain.
     """
     # reveal timeout will not ever be larger than the lock_expiration otherwise
@@ -200,7 +200,7 @@ def get_pending_transfer_pairs(
 
 
 def find_intersection(fee_func: Interpolate, line: Callable[[int], Fraction]) -> Optional[float]:
-    """ Returns the x value where both functions intersect
+    """Returns the x value where both functions intersect
 
     `fee_func` is a piecewise linear function while `line` is a straight line
     and takes the one of fee_func's indexes as argument.
@@ -383,7 +383,7 @@ def forward_transfer_pair(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
-    """ Given a payer transfer tries the given route to proceed with the mediation.
+    """Given a payer transfer tries the given route to proceed with the mediation.
 
     Args:
         payer_transfer: The transfer received from the payer_channel.
@@ -447,7 +447,7 @@ def backward_transfer_pair(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
-    """ Sends a transfer backwards, allowing the previous hop to try a new
+    """Sends a transfer backwards, allowing the previous hop to try a new
     route.
 
     When all the routes available for this node failed, send a transfer
@@ -475,7 +475,9 @@ def backward_transfer_pair(
     if channel.is_channel_usable_for_mediation(backward_channel, lock.amount, lock_timeout):
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
-        backward_route_state = RouteState(route=[backward_channel.our_state.address],)
+        backward_route_state = RouteState(
+            route=[backward_channel.our_state.address],
+        )
 
         refund_transfer = channel.send_refundtransfer(
             channel_state=backward_channel,
@@ -555,7 +557,7 @@ def set_onchain_secret(
     secrethash: SecretHash,
     block_number: BlockNumber,
 ) -> List[Event]:
-    """ Set the secret to all mediated transfers.
+    """Set the secret to all mediated transfers.
 
     The secret should have been learned from the secret registry.
     """
@@ -680,7 +682,7 @@ def events_for_secretreveal(
     secret: Secret,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
-    """ Reveal the secret off-chain.
+    """Reveal the secret off-chain.
 
     The secret is revealed off-chain even if there is a pending transaction to
     reveal it on-chain, this allows the unlock to happen off-chain, which is
@@ -799,7 +801,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> List[Event]:
-    """ Reveal the secret on-chain if the lock enters the unsafe region and the
+    """Reveal the secret on-chain if the lock enters the unsafe region and the
     secret is not yet on-chain.
     """
     events: List[Event] = list()
@@ -860,7 +862,7 @@ def events_for_onchain_secretreveal_if_closed(
     secrethash: SecretHash,
     block_hash: BlockHash,
 ) -> List[Event]:
-    """ Register the secret on-chain if the payer channel is already closed and
+    """Register the secret on-chain if the payer channel is already closed and
     the mediator learned the secret off-chain.
 
     Balance proofs are not exchanged for closed channels, so there is no reason
@@ -919,7 +921,7 @@ def events_to_remove_expired_locks(
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
-    """ Clear the channels which have expired locks.
+    """Clear the channels which have expired locks.
 
     This only considers the *sent* transfers, received transfers can only be
     updated by the partner.
@@ -983,7 +985,7 @@ def secret_learned(
     secrethash: SecretHash,
     payee_address: Address,
 ) -> TransitionResult[MediatorTransferState]:
-    """ Unlock the payee lock, reveal the lock to the payer, and if necessary
+    """Unlock the payee lock, reveal the lock to the payer, and if necessary
     register the secret on-chain.
     """
     secret_reveal_events = set_offchain_secret(
@@ -1029,7 +1031,7 @@ def mediate_transfer(
     payer_transfer: LockedTransferSignedState,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
-    """ Try a new route or fail back to a refund.
+    """Try a new route or fail back to a refund.
 
     The mediator can safely try a new route knowing that the tokens from
     payer_transfer will cover the expenses of the mediation. If there is no
@@ -1158,7 +1160,7 @@ def handle_block(
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[MediatorTransferState]:
-    """ After Raiden learns about a new block this function must be called to
+    """After Raiden learns about a new block this function must be called to
     handle expiration of the hash time locks.
     Args:
         state: The current state.
@@ -1236,7 +1238,7 @@ def handle_refundtransfer(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
-    """ Validate and handle a ReceiveTransferRefund mediator_state change.
+    """Validate and handle a ReceiveTransferRefund mediator_state change.
     A node might participate in mediated transfer more than once because of
     refund transfers, eg. A-B-C-B-D-T, B tried to mediate the transfer through
     C, which didn't have an available route to proceed and refunds B, at this
@@ -1347,7 +1349,7 @@ def handle_onchain_secretreveal(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
-    """ The secret was revealed on-chain, set the state of all transfers to
+    """The secret was revealed on-chain, set the state of all transfers to
     secret known.
     """
     secrethash = onchain_secret_reveal.secrethash
@@ -1466,7 +1468,7 @@ def handle_node_change_network_state(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult:
-    """ If a certain node comes online:
+    """If a certain node comes online:
     1. Check if a channel exists with that node
     2. Check that this channel is a route, check if the route is valid.
     3. Check that the transfer was stuck because there was no route available.

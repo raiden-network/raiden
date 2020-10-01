@@ -526,11 +526,11 @@ class MatrixTransport(Runnable):
             raise
 
     def stop(self) -> None:
-        """ Try to gracefully stop the greenlet synchronously
+        """Try to gracefully stop the greenlet synchronously
 
         Stop isn't expected to re-raise greenlet _run exception
         (use self.greenlet.get() for that),
-        but it should raise any stop-time exception """
+        but it should raise any stop-time exception"""
         if self._stop_event.ready():
             return
         self.log.debug("Matrix stopping")
@@ -1574,7 +1574,7 @@ class MatrixTransport(Runnable):
         self._raiden_service.handle_and_track_state_changes([state_change])
 
     def _maybe_invite_user(self, user: User) -> None:
-        """ Invite user if necessary.
+        """Invite user if necessary.
 
         - Only the node with the smallest address should do
           the invites, just like the rule to

@@ -119,7 +119,7 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
 
 
 def test_restore_queueids_to_queues(chain_state, netting_channel_state):
-    """ Test that withdraw messages are restorable if they exist in
+    """Test that withdraw messages are restorable if they exist in
     chain_state.queueids_to_queues.
     """
     recipient = netting_channel_state.partner_state.address
@@ -153,7 +153,7 @@ def test_restore_queueids_to_queues(chain_state, netting_channel_state):
 
 
 def test_serialize_contract_send_subclass(chain_state):
-    """ Serializing must preserve class
+    """Serializing must preserve class
 
     Regression test for https://github.com/raiden-network/raiden/issues/6075
     """

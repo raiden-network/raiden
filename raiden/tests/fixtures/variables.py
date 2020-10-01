@@ -70,7 +70,7 @@ class TransportProtocol(Enum):
 
 
 def escape_for_format(string):
-    """ Escape `string` so that it can be used with `.format()`.
+    """Escape `string` so that it can be used with `.format()`.
 
     >>> escaped = escape_for_format('{}')
     >>> escaped + '{}'.format(0)
@@ -107,7 +107,7 @@ def settle_timeout_max():
 
 @pytest.fixture
 def reveal_timeout(number_of_nodes):
-    """ NettingChannel default reveal timeout for tests.
+    """NettingChannel default reveal timeout for tests.
 
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
@@ -133,7 +133,7 @@ def retry_timeout():
 
 @pytest.fixture
 def random_marker():
-    """ A random marker used to identify a pytest run.
+    """A random marker used to identify a pytest run.
 
     Some tests will spawn a private chain, the private chain will be one or
     more ethereum nodes on a new subprocesss. These nodes may fail to start on
@@ -216,7 +216,7 @@ def retries_before_backoff():
 
 @pytest.fixture
 def privatekey_seed(request):
-    """ Private key template, allow different keys to be used for each test to
+    """Private key template, allow different keys to be used for each test to
     avoid collisions.
     """
     return escape_for_format(request.node.name) + ":{}"
@@ -277,7 +277,7 @@ def blockchain_extra_config() -> Dict:
 
 @pytest.fixture
 def blockchain_number_of_nodes() -> int:
-    """ Number of nodes in the cluster, not the same as the number of raiden
+    """Number of nodes in the cluster, not the same as the number of raiden
     nodes. Used for all geth clusters.
     """
     return 1
@@ -285,7 +285,7 @@ def blockchain_number_of_nodes() -> int:
 
 @pytest.fixture
 def blockchain_key_seed(request):
-    """ Private key template for the nodes in the private blockchain, allows
+    """Private key template for the nodes in the private blockchain, allows
     different keys to be used for each test to avoid collisions.
     """
     # Using the test name as part of the template to force the keys to be

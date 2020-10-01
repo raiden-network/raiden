@@ -47,7 +47,7 @@ LONG_EXPIRATION = factories.create_properties(
 
 
 def test_payer_enter_danger_zone_with_transfer_payed():
-    """ A mediator may have paid the next hop (payee), and didn't get paid by
+    """A mediator may have paid the next hop (payee), and didn't get paid by
     the previous hop (payer).
 
     When this happens, an assertion must not be hit, because it means the
@@ -237,7 +237,7 @@ def test_regression_send_refund():
 
 
 def test_regression_mediator_send_lock_expired_with_new_block():
-    """ The mediator must send the lock expired, but it must **not** clear
+    """The mediator must send the lock expired, but it must **not** clear
     itself if it has not **received** the corresponding message.
     """
     pseudo_random_generator = random.Random()
@@ -294,7 +294,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
 
 
 def test_regression_mediator_task_no_routes():
-    """ The mediator must only be cleared after the waiting transfer's lock has
+    """The mediator must only be cleared after the waiting transfer's lock has
     been handled.
 
     If a node receives a transfer to mediate, but there is no route available
@@ -403,7 +403,7 @@ def test_regression_mediator_task_no_routes():
 
 
 def test_regression_mediator_not_update_payer_state_twice():
-    """ Regression Test for https://github.com/raiden-network/raiden/issues/3086
+    """Regression Test for https://github.com/raiden-network/raiden/issues/3086
     Make sure that after a lock expired the mediator doesn't update the pair
     twice causing EventUnlockClaimFailed to be generated at every block.
     """
@@ -507,7 +507,7 @@ def test_regression_mediator_not_update_payer_state_twice():
 
 
 def test_regression_onchain_secret_reveal_must_update_channel_state():
-    """ If a secret is learned off-chain and then on-chain, the state of the
+    """If a secret is learned off-chain and then on-chain, the state of the
     lock must be updated in the channel.
     """
     pseudo_random_generator = random.Random()

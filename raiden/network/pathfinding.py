@@ -376,7 +376,7 @@ def check_pfs_transport_configuration(
 def check_pfs_for_production(
     service_registry: Optional[ServiceRegistry], pfs_info: PFSInfo
 ) -> None:
-    """ Checks that the PFS in `pfs_info` is registered in the service registry
+    """Checks that the PFS in `pfs_info` is registered in the service registry
     and that the URL matches.
 
     Should only be called in production mode.
@@ -596,7 +596,7 @@ def query_paths(
     value: PaymentAmount,
     pfs_wait_for_block: BlockNumber,
 ) -> Tuple[List[Dict[str, Any]], Optional[UUID]]:
-    """ Query paths from the PFS.
+    """Query paths from the PFS.
 
     Send a request to the /paths endpoint of the PFS specified in service_config, and
     retry in case of a failed request if it makes sense.

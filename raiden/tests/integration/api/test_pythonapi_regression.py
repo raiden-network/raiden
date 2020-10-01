@@ -14,7 +14,7 @@ from raiden.utils.typing import List, PaymentAmount, PaymentID, TargetAddress
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 def test_close_regression(raiden_network: List[RaidenService], deposit, token_addresses):
-    """ The python api was using the wrong balance proof to close the channel,
+    """The python api was using the wrong balance proof to close the channel,
     thus the close was failing if a transfer was made.
     """
     app0, app1 = raiden_network

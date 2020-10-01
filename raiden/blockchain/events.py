@@ -116,7 +116,7 @@ def get_contract_events(
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
     to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> List[Dict]:
-    """ Query the blockchain for all events of the smart contract at
+    """Query the blockchain for all events of the smart contract at
     `contract_address` that match the filters `topics`, `from_block`, and
     `to_block`.
     """
@@ -298,7 +298,7 @@ def fetch_all_events_for_a_deployment(
     start_block: BlockNumber,
     target_block: BlockNumber,
 ) -> Iterable[Dict]:
-    """ Read all the events of a whole deployment, starting at the network
+    """Read all the events of a whole deployment, starting at the network
     registry, and following the registered networks.
     """
 

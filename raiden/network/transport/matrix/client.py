@@ -85,7 +85,7 @@ class Room(MatrixRoom):
         return f"<Room id={self.room_id!r} canonical_alias={self.canonical_alias!r}>"
 
     def update_local_alias(self) -> bool:
-        """ Fetch the server local canonical alias for the room.
+        """Fetch the server local canonical alias for the room.
 
         This is an optimization over the general `update_aliases()` method which fetches the
         entire room state (which can be large in Raiden) and then discards all non-alias events.
@@ -325,7 +325,7 @@ class GMatrixClient(MatrixClient):
         not_rooms: Optional[Iterable[Room]] = None,
         limit: Optional[int] = None,
     ) -> Optional[int]:
-        """ Create a matrix sync filter
+        """Create a matrix sync filter
 
         A whitelist and blacklist of rooms can be supplied optionally. If
         no whitelist ist given, all rooms are whitelisted. The blacklist is
@@ -563,7 +563,7 @@ class GMatrixClient(MatrixClient):
     def create_room(
         self, alias: str = None, is_public: bool = False, invitees: List[str] = None, **kwargs: Any
     ) -> MatrixRoom:
-        """ Create a new room on the homeserver.
+        """Create a new room on the homeserver.
 
         Args:
             alias (str): The canonical_alias of the room.
@@ -700,7 +700,7 @@ class GMatrixClient(MatrixClient):
         response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]],
         stop_event: Event,
     ) -> None:
-        """ Worker to process network messages from the asynchronous transport.
+        """Worker to process network messages from the asynchronous transport.
 
         Note that this worker will process the messages in the order of
         delivery. However, the underlying protocol may not guarantee that

@@ -77,8 +77,7 @@ class Networks(Enum):
 
 
 class Capabilities(Enum):
-    """Capabilities allow for protocol handshake between nodes.
-    """
+    """Capabilities allow for protocol handshake between nodes."""
 
     NO_RECEIVE = "noReceive"  # won't proceed with protocol for incoming transfers
     NO_MEDIATE = "noMediate"  # can't mediate transfers; mediating requires receiving

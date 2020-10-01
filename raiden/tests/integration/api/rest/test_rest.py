@@ -728,7 +728,11 @@ def test_payment_events_endpoints(
     # test endpoint without partner for app0 but with limit/offset to get only first
     request = grequests.get(
         api_url_for(
-            app0_server, "token_paymentresource", token_address=token_address0, limit=1, offset=0,
+            app0_server,
+            "token_paymentresource",
+            token_address=token_address0,
+            limit=1,
+            offset=0,
         )
     )
     response = request.send().response
@@ -742,7 +746,11 @@ def test_payment_events_endpoints(
     # to get only second transfer of token_address
     request = grequests.get(
         api_url_for(
-            app0_server, "token_paymentresource", token_address=token_address0, limit=1, offset=1,
+            app0_server,
+            "token_paymentresource",
+            token_address=token_address0,
+            limit=1,
+            offset=1,
         )
     )
     response = request.send().response
@@ -995,7 +1003,9 @@ def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_a
         secret=secret,
         route_states=[
             create_route_state_for_route(
-                apps=raiden_network, token_address=token_address, fee_estimate=expected_fee,
+                apps=raiden_network,
+                token_address=token_address,
+                fee_estimate=expected_fee,
             )
         ],
     )

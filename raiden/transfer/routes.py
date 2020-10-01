@@ -40,7 +40,7 @@ def filter_acceptable_routes(
 def prune_route_table(
     route_states: List[RouteState], selected_route: RouteState
 ) -> List[RouteState]:
-    """ Given a selected route, returns a filtered route table that
+    """Given a selected route, returns a filtered route table that
     contains only routes using the same forward channel and removes our own
     address in the process.
     """

@@ -39,7 +39,7 @@ from raiden_contracts.contract_manager import (
 
 
 def format_event_for_serialization(data: Dict):
-    """ Convert the values in-place from `bin` to `str` since JSON does not
+    """Convert the values in-place from `bin` to `str` since JSON does not
     support binary values.
     """
 

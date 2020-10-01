@@ -96,7 +96,10 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
         rpc_client=app0.rpc_client,
         proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry,),
+        raiden_bundle=RaidenBundle(
+            app0.default_registry,
+            app0.default_secret_registry,
+        ),
         services_bundle=app0.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
@@ -161,7 +164,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     token_addresses: List[TokenAddress],
     network_wait: float,
 ):
-    """ Test that when the Raiden is restarted, the dictionary of
+    """Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport
     is started.
     This should happen because if a client gets restarted during a transfer
@@ -210,7 +213,10 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         rpc_client=app0.rpc_client,
         proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry,),
+        raiden_bundle=RaidenBundle(
+            app0.default_registry,
+            app0.default_secret_registry,
+        ),
         services_bundle=app0.default_services_bundle,
         transport=MatrixTransport(
             config=app0.config.transport, environment=app0.config.environment_type
@@ -253,5 +259,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     # Check that payments are completed after both nodes come online after restart
     for identifier in range(spent_amount):
         assert raiden_events_search_for_item(
-            app0_restart, EventPaymentSentSuccess, {"identifier": identifier + 1, "amount": 1},
+            app0_restart,
+            EventPaymentSentSuccess,
+            {"identifier": identifier + 1, "amount": 1},
         )

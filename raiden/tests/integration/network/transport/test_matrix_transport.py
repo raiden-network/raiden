@@ -316,7 +316,7 @@ def test_matrix_message_retry(
     retries_before_backoff,
     broadcast_rooms,
 ):
-    """ Test the retry mechanism implemented into the matrix client.
+    """Test the retry mechanism implemented into the matrix client.
     The test creates a transport and sends a message. Given that the
     receiver was online, the initial message is sent but the receiver
     doesn't respond in time and goes offline. The retrier should then
@@ -1176,7 +1176,7 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
 )
 def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
-    """ Ensure that matrix server-side filters take effect on sync for broadcast room content.
+    """Ensure that matrix server-side filters take effect on sync for broadcast room content.
 
     The test sets up 3 transports where:
     Transport0 sends a message to the PFS broadcast room.

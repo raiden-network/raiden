@@ -95,7 +95,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     token_addresses,
     network_wait,
 ):
-    """ Raiden must broadcast the latest known balance proof on restarts.
+    """Raiden must broadcast the latest known balance proof on restarts.
 
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
@@ -366,7 +366,7 @@ def test_blockchain_event_processed_interleaved(
     token_addresses: List[TokenAddress],
     restart_node: RestartNode,
 ):
-    """ Blockchain events must be transformed into state changes and processed by
+    """Blockchain events must be transformed into state changes and processed by
     the state machine interleaved.
 
     Otherwise problems arise when the creation of the state change is dependent

@@ -58,7 +58,7 @@ def test_interpolation():
 
 
 def test_imbalance_penalty():
-    r""" Test an imbalance penalty by moving back and forth
+    r"""Test an imbalance penalty by moving back and forth
 
     The imbalance fee looks like
 
@@ -363,7 +363,7 @@ def test_get_lock_amount_after_fees_imbalanced_channel(
 )
 @settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
-    """ Tests mediation fee deduction.
+    """Tests mediation fee deduction.
 
     First we're doing a PFS-like calculation going backwards from the target
     amount to get the amount that the initiator has to send. Then we calculate

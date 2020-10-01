@@ -26,8 +26,7 @@ from raiden_contracts.constants import MessageTypeId
 
 @dataclass(repr=False, eq=False)
 class SignedBlindedBalanceProof:
-    """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
-    """
+    """Message sub-field `onchain_balance_proof` for `RequestMonitoring`."""
 
     channel_identifier: ChannelID
     token_network_address: TokenNetworkAddress
@@ -79,8 +78,7 @@ class SignedBlindedBalanceProof:
         return packed
 
     def _sign(self, signer: Signer) -> Signature:
-        """Internal function for the overall `sign` function of `RequestMonitoring`.
-        """
+        """Internal function for the overall `sign` function of `RequestMonitoring`."""
         # Important: we don't write the signature to `.signature`
         data = self._data_to_sign()
         return signer.sign(data)
@@ -148,8 +146,8 @@ class RequestMonitoring(SignedMessage):
 
     def sign(self, signer: Signer) -> None:
         """This method signs twice:
-            - the `non_closing_signature` for the balance proof update
-            - the `reward_proof_signature` for the monitoring request
+        - the `non_closing_signature` for the balance proof update
+        - the `reward_proof_signature` for the monitoring request
         """
         self.non_closing_signature = self.balance_proof._sign(signer)
         message_data = self._data_to_sign()
@@ -158,8 +156,8 @@ class RequestMonitoring(SignedMessage):
     def verify_request_monitoring(
         self, partner_address: Address, requesting_address: Address
     ) -> bool:
-        """ One should only use this method to verify integrity and signatures of a
-        RequestMonitoring message. """
+        """One should only use this method to verify integrity and signatures of a
+        RequestMonitoring message."""
         if not self.non_closing_signature:
             return False
 

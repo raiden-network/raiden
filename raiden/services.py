@@ -126,7 +126,8 @@ def update_monitoring_service_from_balance_proof(
             token_address=WETH_TOKEN_ADDRESS,
         )
         channel_balance = get_balance(
-            sender=channel_state.our_state, receiver=channel_state.partner_state,
+            sender=channel_state.our_state,
+            receiver=channel_state.partner_state,
         )
 
         if channel_state.canonical_identifier.token_network_address == dai_token_network_address:

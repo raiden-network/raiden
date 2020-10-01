@@ -17,7 +17,7 @@ log = structlog.get_logger(__name__)
 
 
 def enable_gevent_monitoring_signal() -> None:
-    """ Install a signal handler for SIGUSR1 that executes gevent.util.print_run_info().
+    """Install a signal handler for SIGUSR1 that executes gevent.util.print_run_info().
     This can help evaluating the gevent greenlet tree.
     See http://www.gevent.org/monitoring.html for more information.
 
@@ -99,7 +99,7 @@ class Idle:
     measurements: List[IdleMeasurement] = field(init=False, default_factory=list)
 
     def prepare_handler(self) -> None:
-        """ The prepare handler executed before the call to the polling backend
+        """The prepare handler executed before the call to the polling backend
         (e.g. select/epoll).
 
         Note:
@@ -112,7 +112,7 @@ class Idle:
         self.before_poll = time.time()
 
     def check_handler(self) -> None:
-        """ Check handler executed after the poll backend returns.
+        """Check handler executed after the poll backend returns.
 
         Note:
         - For each of the watchers in the ready state there will be a callback,
@@ -155,7 +155,7 @@ class Idle:
 
     @property
     def running_interval(self) -> float:
-        """ The number of seconds idled by this thread.
+        """The number of seconds idled by this thread.
 
         This will take into account the measurements frequency. Ideally the
         measurements would happen exactly every `measurement_interval` seconds,

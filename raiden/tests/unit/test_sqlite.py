@@ -166,7 +166,7 @@ def make_from_route_from_counter(counter):
 
 
 def test_get_state_change_with_balance_proof():
-    """ All state changes which contain a balance proof must be found when
+    """All state changes which contain a balance proof must be found when
     querying the database.
     """
     serializer = JSONSerializer()
@@ -281,7 +281,7 @@ def test_get_state_change_with_balance_proof():
 
 
 def test_get_event_with_balance_proof():
-    """ All events which contain a balance proof must be found by when
+    """All events which contain a balance proof must be found by when
     querying the database.
     """
     serializer = JSONSerializer()

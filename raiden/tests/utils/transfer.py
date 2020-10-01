@@ -122,7 +122,9 @@ def create_route_state_for_route(
     route = [app.address for app in apps]
 
     token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(apps[0]), apps[0].default_registry.address, token_address,
+        views.state_from_raiden(apps[0]),
+        apps[0].default_registry.address,
+        token_address,
     )
     assert token_network
 
@@ -164,7 +166,7 @@ def transfer(
     expect_unlock_failures: bool = False,
     routes: List[List[Address]] = None,
 ) -> SecretHash:
-    """ Nice to read shortcut to make successful mediated transfer.
+    """Nice to read shortcut to make successful mediated transfer.
 
     Note:
         Only the initiator and target are synched.
@@ -358,7 +360,7 @@ def transfer_and_assert_path(
     timeout: float = 10,
     fee_estimate: FeeAmount = FeeAmount(0),  # noqa: B008
 ) -> SecretHash:
-    """ Nice to read shortcut to make successful LockedTransfer.
+    """Nice to read shortcut to make successful LockedTransfer.
 
     Note:
         This utility *does not enforce the path*, however it does check the
@@ -448,7 +450,9 @@ def transfer_and_assert_path(
         secret=secret,
         route_states=[
             create_route_state_for_route(
-                apps=path, token_address=token_address, fee_estimate=fee_estimate,
+                apps=path,
+                token_address=token_address,
+                fee_estimate=fee_estimate,
             )
         ],
     )
@@ -863,7 +867,7 @@ def assert_succeeding_transfer_invariants(
 
 
 def wait_assert(func: Callable, *args, **kwargs) -> None:
-    """ Utility to re-run `func` if it raises an assert. Return once `func`
+    """Utility to re-run `func` if it raises an assert. Return once `func`
     doesn't hit a failed assert anymore.
 
     This will loop forever unless a gevent.Timeout is used.

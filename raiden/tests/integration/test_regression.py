@@ -66,7 +66,7 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
 def test_regression_unfiltered_routes(
     raiden_network: List[RaidenService], token_addresses, settle_timeout, deposit
 ):
-    """ The transfer should proceed without triggering an assert.
+    """The transfer should proceed without triggering an assert.
 
     Transfers failed in networks where two or more paths to the destination are
     possible but they share same node as a first hop.
@@ -99,7 +99,7 @@ def test_regression_unfiltered_routes(
 def test_regression_revealsecret_after_secret(
     raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
 ) -> None:
-    """ A RevealSecret message received after a Unlock message must be cleanly
+    """A RevealSecret message received after a Unlock message must be cleanly
     handled.
     """
     app0, app1, app2 = raiden_network
@@ -140,7 +140,7 @@ def test_regression_revealsecret_after_secret(
 def test_regression_multiple_revealsecret(
     raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
 ) -> None:
-    """ Multiple RevealSecret messages arriving at the same time must be
+    """Multiple RevealSecret messages arriving at the same time must be
     handled properly.
 
     Unlock handling followed these steps:

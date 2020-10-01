@@ -44,7 +44,7 @@ ST2 = TypeVar("ST2", bound=State)
 def restore_or_init_snapshot(
     storage: SerializedSQLiteStorage, node_address: Address, initial_state: State
 ) -> Tuple[State, StateChangeID, int]:
-    """ Restore the latest snapshot.
+    """Restore the latest snapshot.
     Returns the ULID of the state change that is not applied and the
     accumulated number of state_changes applied to this snapshot so far.  If
     there is no snapshot the state will be primed with `initial_state`.
@@ -271,7 +271,7 @@ class WriteAheadLog(Generic[ST]):
                 self.saved_state = SavedState(dispatcher.last_state_change_id, self.state)
 
     def snapshot(self, statechange_qty: int) -> None:
-        """ Snapshot the application state.
+        """Snapshot the application state.
 
         Snapshots are used to restore the application state, either after a
         restart or a crash.

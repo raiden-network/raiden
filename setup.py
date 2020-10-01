@@ -50,7 +50,7 @@ history = ""
 
 
 def read_requirements(path: str) -> List[str]:
-    """ Read requirements, skip comments, modify git dependencies
+    """Read requirements, skip comments, modify git dependencies
 
     setup.py does not support git dependencies, so we change those to simple package names, here.
     This only leads to the correct versions in the installation because we

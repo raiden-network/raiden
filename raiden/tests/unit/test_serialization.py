@@ -186,7 +186,7 @@ def test_serialize_missing_attribute():
 
 
 def test_chainstate_restore():
-    """ ChainState *must* restore the previous pseudo random generator
+    """ChainState *must* restore the previous pseudo random generator
     state.
 
     Message identifiers are used for confirmation messages, e.g. delivered and
@@ -236,7 +236,7 @@ def test_bad_messages():
 
 
 def test_message_identical() -> None:
-    """ Will fail if the messages changed since the committed version
+    """Will fail if the messages changed since the committed version
 
     If you intend to change the serialized messages, then update the messages
     on disc (see comment inside test). This test exists only to prevent

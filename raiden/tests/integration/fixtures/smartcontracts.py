@@ -466,7 +466,7 @@ def max_token_networks_fixture() -> int:
 def token_addresses_fixture(
     deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> List[TokenAddress]:
-    """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
+    """Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `deploy_client` and
     potentially pre-registered with the Raiden Registry.
     The following pytest arguments can control the behavior:

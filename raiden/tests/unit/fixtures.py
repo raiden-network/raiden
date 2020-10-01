@@ -66,7 +66,10 @@ def token_network_state(
     token_network_address,
     token_id,
 ):
-    token_network = TokenNetworkState(address=token_network_address, token_address=token_id,)
+    token_network = TokenNetworkState(
+        address=token_network_address,
+        token_address=token_id,
+    )
     token_network_registry_state.tokennetworkaddresses_to_tokennetworks[
         token_network_address
     ] = token_network

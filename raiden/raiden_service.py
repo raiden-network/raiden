@@ -271,7 +271,7 @@ class PaymentStatus(NamedTuple):
 
 
 class SyncTimeout:
-    """ Helper to determine if the sync should halt or continue.
+    """Helper to determine if the sync should halt or continue.
 
     The goal of this helper is to stop synching before the block
     `current_confirmed_head` is pruned, otherwise JSON-RPC requests will start
@@ -566,7 +566,7 @@ class RaidenService(Runnable):
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
 
     def _start_transport(self, chain_state: ChainState) -> None:
-        """ Initialize the transport and related facilities.
+        """Initialize the transport and related facilities.
 
         Note:
             The node has first to `_synchronize_with_blockchain` before
@@ -832,7 +832,7 @@ class RaidenService(Runnable):
         self.message_handler.on_messages(self, messages)
 
     def handle_and_track_state_changes(self, state_changes: List[StateChange]) -> None:
-        """ Dispatch the state change and does not handle the exceptions.
+        """Dispatch the state change and does not handle the exceptions.
 
         When the method is used the exceptions are tracked and re-raised in the
         raiden service thread.
@@ -850,7 +850,7 @@ class RaidenService(Runnable):
             self.add_pending_greenlet(greenlet)
 
     def handle_state_changes(self, state_changes: List[StateChange]) -> List[Greenlet]:
-        """ Dispatch the state change and return the processing threads.
+        """Dispatch the state change and return the processing threads.
 
         Use this for error reporting, failures in the returned greenlets,
         should be re-raised using `gevent.joinall` with `raise_error=True`.
@@ -1072,7 +1072,7 @@ class RaidenService(Runnable):
             self.transport.immediate_health_check_for(node_address)
 
     def _best_effort_synchronize(self, latest_block: BlockData) -> SynchronizationState:
-        """ Called with the current latest block, tries to synchronize with the
+        """Called with the current latest block, tries to synchronize with the
         *confirmed* head of the chain in a best effort manner, it is not
         guaranteed to succeed in a single call since `latest_block` may become
         pruned.
@@ -1097,7 +1097,7 @@ class RaidenService(Runnable):
     def _best_effort_synchronize_with_confirmed_head(
         self, current_confirmed_head: BlockNumber, timeout: float
     ) -> SynchronizationState:
-        """ Tries to synchronize with the blockchain events up to
+        """Tries to synchronize with the blockchain events up to
         `current_confirmed_head`. This may stop before being fully synchronized
         if the number of `current_confirmed_head` is close to be pruned.
 
@@ -1283,7 +1283,7 @@ class RaidenService(Runnable):
             self.add_pending_greenlet(greeenlet)
 
     def _initialize_payment_statuses(self, chain_state: ChainState) -> None:
-        """ Re-initialize targets_to_identifiers_to_statuses.
+        """Re-initialize targets_to_identifiers_to_statuses.
 
         Restore the PaymentStatus for any pending payment. This is not tied to
         a specific protocol message but to the lifecycle of a payment, i.e.
@@ -1421,7 +1421,7 @@ class RaidenService(Runnable):
             )
 
     def _initialize_channel_fees(self) -> None:
-        """ Initializes the fees of all open channels to the latest set values.
+        """Initializes the fees of all open channels to the latest set values.
 
         This includes a recalculation of the dynamic rebalancing fees.
         """
@@ -1530,7 +1530,7 @@ class RaidenService(Runnable):
         lock_timeout: BlockTimeout = None,
         route_states: List[RouteState] = None,
     ) -> PaymentStatus:
-        """ Transfer `amount` between this node and `target`.
+        """Transfer `amount` between this node and `target`.
 
         This method will start an asynchronous transfer, the transfer might fail
         or succeed depending on a couple of factors:

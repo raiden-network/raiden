@@ -74,7 +74,7 @@ class Token:
         )
 
     def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
-        """ Approve `allowed_address` to transfer up to `deposit` amount of token.
+        """Approve `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
 
@@ -165,7 +165,7 @@ class Token:
     def total_supply(
         self, block_identifier: BlockIdentifier = BLOCK_ID_LATEST
     ) -> Optional[TokenAmount]:
-        """ Return the total supply of the token at the given block identifier.
+        """Return the total supply of the token at the given block identifier.
 
         Because Token is just an interface, it is not possible to check the
         bytecode during the proxy instantiation. This means it is possible for
@@ -182,7 +182,7 @@ class Token:
         return None
 
     def transfer(self, to_address: Address, amount: TokenAmount) -> None:
-        """ Transfer `amount` tokens to `to_address`.
+        """Transfer `amount` tokens to `to_address`.
 
         Note:
 

@@ -320,7 +320,9 @@ def make_lock() -> HashTimeLockState:
     )
 
 
-def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[PrivateKey, Address]:
+def make_privkey_address(
+    privatekey: bytes = EMPTY,
+) -> Tuple[PrivateKey, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
     return privatekey, address
@@ -1140,7 +1142,10 @@ class ChannelSet:
         channel = self.channels[channel_index]
         route = [channel.our_state.address, channel.partner_state.address]
 
-        return RouteState(route=route, estimated_fee=estimated_fee,)
+        return RouteState(
+            route=route,
+            estimated_fee=estimated_fee,
+        )
 
     def get_routes(
         self, *args, estimated_fee: FeeAmount = FeeAmount(0)  # noqa: B008

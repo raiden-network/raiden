@@ -203,7 +203,7 @@ class ConnectionManager:  # pragma: no unittest
                 self._open_channels()
 
     def leave(self, registry_address: TokenNetworkRegistryAddress) -> List[NettingChannelState]:
-        """ Leave the token network.
+        """Leave the token network.
 
         This implies closing all channels and waiting for all channels to be
         settled.
@@ -418,7 +418,7 @@ class ConnectionManager:  # pragma: no unittest
             )
 
     def _open_channels(self) -> bool:
-        """ Open channels until there are `self.initial_channel_target`
+        """Open channels until there are `self.initial_channel_target`
         channels open. Do nothing if there are enough channels open already.
 
         Note:

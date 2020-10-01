@@ -239,7 +239,7 @@ def test_token_registered_race(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_deposit_updates_balance_immediately(raiden_chain: List[RaidenService], token_addresses):
-    """ Test that the balance of a channel gets updated by the deposit() call
+    """Test that the balance of a channel gets updated by the deposit() call
     immediately and without having to wait for the
     `ContractReceiveChannelDeposit` message since the API needs to return
     the channel with the deposit balance updated.
@@ -338,7 +338,7 @@ def test_funds_check_for_openchannel(raiden_network: List[RaidenService], token_
 def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unused-argument
     raiden_network: List[RaidenService], token_addresses, reveal_timeout, retry_timeout
 ):
-    """ Test to make sure that when our target does not respond payment times out
+    """Test to make sure that when our target does not respond payment times out
 
     If the target does not respond and the lock times out then the payment will
     timeout. Note that at the moment we don't retry other routes even if they

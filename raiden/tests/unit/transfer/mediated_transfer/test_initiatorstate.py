@@ -915,7 +915,7 @@ def test_cancelpayment():
 
 
 def test_invalid_cancelpayment():
-    """ A payment can *NOT* be cancelled if a secret for any transfer has been
+    """A payment can *NOT* be cancelled if a secret for any transfer has been
     revealed.
     """
     setup = setup_initiator_tests(amount=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT)
@@ -1164,7 +1164,7 @@ def test_initiator_lock_expired():
 
 
 def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
-    """ If the channel is closed there is no rason to send balance proofs
+    """If the channel is closed there is no rason to send balance proofs
     off-chain, so a remove expired lock must not be sent when the channel is
     closed.
     """
@@ -1213,7 +1213,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
 
 
 def test_initiator_handle_contract_receive_secret_reveal():
-    """ Initiator must unlock off-chain if the secret is revealed on-chain and
+    """Initiator must unlock off-chain if the secret is revealed on-chain and
     the channel is open.
     """
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=10)
@@ -1254,8 +1254,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
 
 
 def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
-    """ Initiator must accept contract receive secret reveal with emptyhash
-    """
+    """Initiator must accept contract receive secret reveal with emptyhash"""
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=10)
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
@@ -1285,7 +1284,7 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
 
 
 def test_initiator_handle_contract_receive_secret_reveal_expired():
-    """ Initiator must *not* unlock off-chain if the secret is revealed
+    """Initiator must *not* unlock off-chain if the secret is revealed
     on-chain *after* the lock expiration.
     """
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=10)
@@ -1315,7 +1314,7 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
 
 
 def test_initiator_handle_contract_receive_after_channel_closed():
-    """ Initiator must accept on-chain secret reveal if the channel is closed.
+    """Initiator must accept on-chain secret reveal if the channel is closed.
     However, the off-chain unlock must not be done!
 
     This will happen because secrets are registered after a channel is closed,
@@ -1409,7 +1408,7 @@ def test_lock_expiry_updates_balance_proof():
 
 
 def test_secret_reveal_cancel_other_transfers():
-    """ Once an initiator manager receives a secretreveal
+    """Once an initiator manager receives a secretreveal
     on one of the pending transfers, all other pending
     transfers should be cancelled. Any secret requests / reveals
     for any of the other now-cancelled requests should be rejected.
@@ -1532,7 +1531,7 @@ def test_secret_reveal_cancel_other_transfers():
 
 
 def test_refund_after_secret_request():
-    """ A refund transfer after the original transfer's secret
+    """A refund transfer after the original transfer's secret
     is requested should fail to be cancelled.
     """
     amount = UNIT_TRANSFER_AMOUNT
@@ -1602,7 +1601,7 @@ def test_refund_after_secret_request():
 
 
 def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
-    """ Create an initiator manager state where we have nodes with channels:
+    """Create an initiator manager state where we have nodes with channels:
     A - > B
     |
     ---> C

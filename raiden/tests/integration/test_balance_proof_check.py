@@ -35,7 +35,7 @@ from raiden_contracts.constants import MessageTypeId
 def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     raiden_network: List[RaidenService], number_of_nodes, token_addresses, network_wait
 ):
-    """ A node must be able to settle a channel, even if the partner used an
+    """A node must be able to settle a channel, even if the partner used an
     old balance proof to close it.
 
     This test will:
@@ -123,7 +123,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
 def test_node_can_settle_if_partner_does_not_call_update_transfer(
     raiden_network: List[RaidenService], number_of_nodes, token_addresses, network_wait
 ):
-    """ A node must be able to settle a channel, even if the partner did not
+    """A node must be able to settle a channel, even if the partner did not
     call update transfer.
 
     This test will:

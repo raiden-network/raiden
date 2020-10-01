@@ -70,7 +70,7 @@ def get_filter_args_for_all_events_from_channel(
 
 
 def decode_event(abi: ABI, event_log: LogReceipt) -> EventData:
-    """ Helper function to unpack event data using a provided ABI
+    """Helper function to unpack event data using a provided ABI
 
     Args:
         abi: The ABI of the contract, not the ABI of the event

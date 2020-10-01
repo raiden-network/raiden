@@ -162,7 +162,7 @@ def auto_enable_gevent_monitoring_signal():
 
 @pytest.fixture(scope="session", autouse=True)
 def enable_greenlet_debugger(request):
-    """ Enable the pdb debugger for gevent's greenlets.
+    """Enable the pdb debugger for gevent's greenlets.
 
     This extends the flag `--pdb` from pytest to enable debugging of greenlets
     which have raised an exception to the top-level. Without this hook the
@@ -224,7 +224,7 @@ def profiler(request):
 
 @pytest.fixture(autouse=True)
 def logging_level(request, logs_storage):
-    """ Configure the structlog level.
+    """Configure the structlog level.
 
     For integration tests this also sets the geth verbosity.
     """
@@ -266,7 +266,7 @@ def logging_level(request, logs_storage):
 
 @pytest.fixture(scope="session", autouse=True)
 def dont_exit_pytest():
-    """ Raiden will quit on any unhandled exception.
+    """Raiden will quit on any unhandled exception.
 
     This allows the test suite to finish in case an exception is unhandled.
     """
@@ -432,7 +432,7 @@ def pytest_runtest_setup(item):
 
 @pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_runtest_call(item):
-    """ More feedback for flaky tests.
+    """More feedback for flaky tests.
 
     In verbose mode this outputs 'FLAKY' every time a test marked as flaky fails.
 

@@ -37,7 +37,7 @@ def support_check(
     highest_supported_version_string: str,
     lowest_supported_version_string: str,
 ) -> VersionSupport:
-    """ Check if the eth client version is in the supported range
+    """Check if the eth client version is in the supported range
 
     If every client strictly adhered to semver, we would only compare major
     version numbers, here. Unfortunately, we had patch-level changes break

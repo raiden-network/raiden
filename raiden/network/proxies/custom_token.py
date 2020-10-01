@@ -19,7 +19,7 @@ class CustomToken(Token):
         return contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN)
 
     def mint(self, amount: TokenAmount) -> None:
-        """ Try to mint tokens by calling `mint`.
+        """Try to mint tokens by calling `mint`.
 
         Raises:
             MintFailed if anything goes wrong.
@@ -43,7 +43,7 @@ class CustomToken(Token):
             )
 
     def mint_for(self, amount: TokenAmount, address: Address) -> None:
-        """ Try to mint tokens by calling `mintFor`.
+        """Try to mint tokens by calling `mintFor`.
 
         Raises:
             MintFailed if anything goes wrong.

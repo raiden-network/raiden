@@ -489,7 +489,10 @@ def test_secret_revealed_on_chain(
 
     with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
-            app2, ContractReceiveSecretReveal, {"secrethash": secrethash}, retry_interval_initial,
+            app2,
+            ContractReceiveSecretReveal,
+            {"secrethash": secrethash},
+            retry_interval_initial,
         )
 
 
@@ -559,7 +562,11 @@ def test_clear_closed_queue(raiden_network: List[RaidenService], token_addresses
 
     with block_offset_timeout(app0, "Could not get close event"):
         waiting.wait_for_close(
-            app0, registry_address, token_address, [channel_identifier], app0.alarm.sleep_time,
+            app0,
+            registry_address,
+            token_address,
+            [channel_identifier],
+            app0.alarm.sleep_time,
         )
 
     # assert all queues with this partner are gone or empty

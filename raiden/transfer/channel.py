@@ -148,7 +148,7 @@ class ChannelUsability(Enum):
 def get_safe_initial_expiration(
     block_number: BlockNumber, reveal_timeout: BlockTimeout, lock_timeout: BlockTimeout = None
 ) -> BlockExpiration:
-    """ Returns the upper bound block expiration number used by the initiator
+    """Returns the upper bound block expiration number used by the initiator
     of a transfer or a withdraw.
 
     The `reveal_timeout` defines how many blocks it takes for a transaction to
@@ -167,7 +167,7 @@ def get_safe_initial_expiration(
 
 
 def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
-    """ Compute the block at which an expiration message can be sent without
+    """Compute the block at which an expiration message can be sent without
     worrying about blocking the message queue.
 
     The expiry messages will be rejected if the expiration block has not been
@@ -178,7 +178,7 @@ def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpirat
 
 
 def get_receiver_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
-    """ Returns the block number at which the receiver can accept an expiry
+    """Returns the block number at which the receiver can accept an expiry
     message.
 
     The receiver must wait for the block at which the expired message to be
@@ -304,7 +304,7 @@ def is_lock_expired(
     block_number: BlockNumber,
     lock_expiration_threshold: BlockExpiration,
 ) -> SuccessOrError:
-    """ Determine whether a lock has expired.
+    """Determine whether a lock has expired.
 
     The lock has expired if both:
 
@@ -340,7 +340,7 @@ def is_transfer_expired(
 
 
 def is_withdraw_expired(block_number: BlockNumber, expiration_threshold: BlockExpiration) -> bool:
-    """ Determine whether a withdraw has expired.
+    """Determine whether a withdraw has expired.
 
     The withdraw has expired if the current block exceeds
     the withdraw's expiration + confirmation blocks.
@@ -423,7 +423,9 @@ def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Opt
     return None
 
 
-def is_balance_proof_safe_for_onchain_operations(balance_proof: BalanceProofSignedState,) -> bool:
+def is_balance_proof_safe_for_onchain_operations(
+    balance_proof: BalanceProofSignedState,
+) -> bool:
     """ Check if the balance proof would overflow onchain. """
     total_amount = balance_proof.transferred_amount + balance_proof.locked_amount
     return total_amount <= UINT256_MAX
@@ -494,7 +496,7 @@ def is_balance_proof_usable_onchain(
     channel_state: NettingChannelState,
     sender_state: NettingChannelEndState,
 ) -> SuccessOrError:
-    """ Checks the balance proof can be used on-chain.
+    """Checks the balance proof can be used on-chain.
 
     For a balance proof to be valid it must be newer than the previous one,
     i.e. the nonce must increase, the signature must tie the balance proof to
@@ -1111,7 +1113,9 @@ def get_amount_locked(end_state: NettingChannelEndState) -> LockedAmount:
     return LockedAmount(result)
 
 
-def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
+def get_batch_unlock_gain(
+    channel_state: NettingChannelState,
+) -> UnlockGain:
     """Collect amounts for unlocked/unclaimed locks and onchain unlocked locks.
     Note: this function does not check expiry, so the values make only sense during settlement.
 
@@ -1145,7 +1149,7 @@ def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
 
 
 def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
-    """ Calculates the capacity of the given channel
+    """Calculates the capacity of the given channel
 
     For the definition of capacity see
     https://raiden-network.readthedocs.io/en/stable/glossary.html#term-channel-capacity
@@ -1159,7 +1163,7 @@ def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
 
 
 def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> Balance:
-    """ Calculates the balance for a participant in a channel.
+    """Calculates the balance for a participant in a channel.
 
     For the definition of balance see
     https://raiden-network.readthedocs.io/en/stable/glossary.html#term-balance
@@ -1221,8 +1225,10 @@ def get_distributable(
     return TokenAmount(min(overflow_limit, distributable))
 
 
-def get_batch_unlock(end_state: NettingChannelEndState,) -> Optional[PendingLocksState]:
-    """ Unlock proof for entire pending locks
+def get_batch_unlock(
+    end_state: NettingChannelEndState,
+) -> Optional[PendingLocksState]:
+    """Unlock proof for entire pending locks
 
     The unlock proof contains all the locks, tightly packed, needed by the token
     network contract to verify the secret expiry and calculate the token amounts to transfer.
@@ -1381,7 +1387,7 @@ def compute_locks_without(
 
 
 def compute_locksroot(locks: PendingLocksState) -> Locksroot:
-    """ Compute the hash representing all pending locks
+    """Compute the hash representing all pending locks
     The hash is submitted in TokenNetwork.settleChannel() call.
     """
     return Locksroot(keccak(b"".join(locks.locks)))
@@ -2412,7 +2418,7 @@ def handle_channel_deposit(
 def handle_channel_withdraw(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelWithdraw
 ) -> TransitionResult[NettingChannelState]:
-    """ An on-chain total withdraw took place which means that we have to keep
+    """An on-chain total withdraw took place which means that we have to keep
     track of this not to go lower than the on-chain value. The value is set to
     onchain_total_withdraw and the corresponding withdraw_state is cleared.
     """

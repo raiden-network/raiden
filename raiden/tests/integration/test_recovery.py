@@ -154,12 +154,19 @@ def test_recovery_unhappy_case(
     RaidenAPI(app1).channel_close(app1.default_registry.address, token_address, app0.address)
 
     channel01 = views.get_channelstate_for(
-        views.state_from_raiden(app1), app1.default_registry.address, token_address, app0.address,
+        views.state_from_raiden(app1),
+        app1.default_registry.address,
+        token_address,
+        app0.address,
     )
     assert channel01
 
     waiting.wait_for_settle(
-        app1, app1.default_registry.address, token_address, [channel01.identifier], retry_timeout,
+        app1,
+        app1.default_registry.address,
+        token_address,
+        [channel01.identifier],
+        retry_timeout,
     )
 
     raiden_event_handler = RaidenEventHandler()
@@ -201,7 +208,7 @@ def test_recovery_unhappy_case(
 def test_recovery_blockchain_events(
     raiden_network: List[RaidenService], restart_node, token_addresses, network_wait
 ):
-    """ Close one of the two raiden apps that have a channel between them,
+    """Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
     app sees the change
     """
@@ -231,7 +238,10 @@ def test_recovery_blockchain_events(
         rpc_client=app0.rpc_client,
         proxy_manager=app0.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(app0.default_registry, app0.default_secret_registry,),
+        raiden_bundle=RaidenBundle(
+            app0.default_registry,
+            app0.default_secret_registry,
+        ),
         services_bundle=app0.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
@@ -263,7 +273,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
     number_of_nodes,
     retry_timeout,
 ):
-    """ A test case related to https://github.com/raiden-network/raiden/issues/4639
+    """A test case related to https://github.com/raiden-network/raiden/issues/4639
     where a node sends a withdraw transaction, is stopped before the transaction is completed.
     Meanwhile, the partner node closes the channel so when the stopped node is back up, it tries to
     execute the pending withdraw transaction and fails because the channel was closed.

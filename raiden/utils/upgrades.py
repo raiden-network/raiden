@@ -104,7 +104,7 @@ def delete_dbs_with_failed_migrations(valid_db_names: List[Path]) -> None:
 
 
 class UpgradeManager:
-    """ Run migrations when a database upgrade is necesary.
+    """Run migrations when a database upgrade is necesary.
 
     Skip the upgrade if either:
 

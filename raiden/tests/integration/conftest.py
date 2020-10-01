@@ -12,8 +12,7 @@ asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())
 
 
 def pytest_collection_modifyitems(items):
-    """ Use ``flaky`` to rerun tests failing with ``RetryTestError``
-    """
+    """Use ``flaky`` to rerun tests failing with ``RetryTestError``"""
     # We don't want this in every test's namespace, so import locally
     from raiden.tests.integration.exception import RetryTestError
 

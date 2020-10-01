@@ -56,7 +56,7 @@ def test_get_pfs_info_success():
 
 
 def test_get_pfs_info_error():
-    """ This test tests the correct handling of the 3 error cases of get_pfs_info
+    """This test tests the correct handling of the 3 error cases of get_pfs_info
     JSONDecodeError, RequestException and KeyError
     """
 

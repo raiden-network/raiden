@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
-    """ Return the identifiers for all nodes accross all token network registries which
+    """Return the identifiers for all nodes accross all token network registries which
     have a channel open with this one.
     """
     addresses = set()
@@ -480,8 +480,8 @@ def filter_channels_by_partneraddress(
 def filter_channels_by_status(
     channel_states: List[NettingChannelState], exclude_states: Optional[List[ChannelState]] = None
 ) -> List[NettingChannelState]:
-    """ Filter the list of channels by excluding ones
-    for which the state exists in `exclude_states`. """
+    """Filter the list of channels by excluding ones
+    for which the state exists in `exclude_states`."""
 
     if exclude_states is None:
         exclude_states = []

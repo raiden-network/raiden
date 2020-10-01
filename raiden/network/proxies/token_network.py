@@ -212,7 +212,7 @@ class TokenNetwork:
     def new_netting_channel(
         self, partner: Address, settle_timeout: int, given_block_identifier: BlockIdentifier
     ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
-        """ Creates a new channel in the TokenNetwork contract.
+        """Creates a new channel in the TokenNetwork contract.
 
         Args:
             partner: The peer to open the channel with.
@@ -450,7 +450,7 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ChannelData:
-        """ Returns a ChannelData instance with the channel specific information.
+        """Returns a ChannelData instance with the channel specific information.
 
         If no specific channel_identifier is given then it tries to see if there
         is a currently open channel and uses that identifier.
@@ -490,7 +490,7 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ParticipantsDetails:
-        """ Returns a ParticipantsDetails instance with the participants'
+        """Returns a ParticipantsDetails instance with the participants'
             channel information.
 
         Note:
@@ -536,7 +536,7 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID = None,
     ) -> ChannelDetails:
-        """ Returns a ChannelDetails instance with all the details of the
+        """Returns a ChannelDetails instance with all the details of the
             channel and the channel participants.
 
         Note:
@@ -641,11 +641,11 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
-        """ Returns True if the channel is opened and the node has deposit in
+        """Returns True if the channel is opened and the node has deposit in
         it.
 
         Note: Having a deposit does not imply having a balance for off-chain
-        transfers. """
+        transfers."""
         opened = self.channel_is_opened(
             participant1=participant1,
             participant2=participant2,
@@ -671,7 +671,7 @@ class TokenNetwork:
         total_deposit: TokenAmount,
         partner: Address,
     ) -> None:
-        """ Set channel's total deposit.
+        """Set channel's total deposit.
 
         `total_deposit` has to be monotonically increasing, this is enforced by
         the `TokenNetwork` smart contract. This is done for the same reason why
@@ -1183,7 +1183,7 @@ class TokenNetwork:
         participant: Address,
         partner: Address,
     ) -> None:
-        """ Set total token withdraw in the channel to total_withdraw.
+        """Set total token withdraw in the channel to total_withdraw.
 
         Raises:
             ValueError: If provided total_withdraw is not an integer value.
@@ -1496,7 +1496,7 @@ class TokenNetwork:
         closing_signature: Signature,
         given_block_identifier: BlockIdentifier,
     ) -> None:
-        """ Close the channel using the provided balance proof.
+        """Close the channel using the provided balance proof.
 
         Note:
             This method must *not* be called without updating the application

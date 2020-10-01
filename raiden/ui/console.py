@@ -53,7 +53,7 @@ def print_usage() -> None:
 
 
 class Console(gevent.Greenlet):
-    """ A service starting an interactive ipython session when receiving the
+    """A service starting an interactive ipython session when receiving the
     SIGSTP signal (e.g. via keyboard shortcut CTRL-Z).
     """
 
@@ -77,7 +77,7 @@ class Console(gevent.Greenlet):
         sys.stderr = err
 
         def lastlog(n: int = 10, prefix: str = None, level: str = None) -> None:
-            """ Print the last `n` log lines to stdout.
+            """Print the last `n` log lines to stdout.
             Use `prefix='p2p'` to filter for a specific logger.
             Use `level=INFO` to filter for a specific level.
             Level- and prefix-filtering are applied before tailing the log.
@@ -133,7 +133,7 @@ class ConsoleTools:
         timeout: int = 60,
         auto_register: bool = True,
     ) -> AddressHex:
-        """ Create a proxy for a new HumanStandardToken (ERC20), that is
+        """Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
         Per default it will be registered with 'raiden'.
 
@@ -175,7 +175,7 @@ class ConsoleTools:
         token_address_hex: AddressHex,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> TokenNetwork:
-        """ Register a token with the raiden token manager.
+        """Register a token with the raiden token manager.
 
         Args:
             registry_address_hex: a hex encoded registry address.
@@ -212,7 +212,7 @@ class ConsoleTools:
         total_deposit: TokenAmount,
         settle_timeout: BlockTimeout = None,
     ) -> None:
-        """ Convenience method to open a channel.
+        """Convenience method to open a channel.
 
         Args:
             registry_address_hex: hex encoded address of the registry for the channel.
@@ -238,7 +238,7 @@ class ConsoleTools:
         )
 
     def wait_for_contract(self, contract_address_hex: AddressHex, timeout: int = None) -> bool:
-        """ Wait until a contract is mined
+        """Wait until a contract is mined
 
         Args:
             contract_address_hex: hex encoded address of the contract

@@ -280,7 +280,7 @@ class RaidenAPI:  # pragma: no unittest
         initial_channel_target: int = 3,
         joinable_funds_target: float = 0.4,
     ) -> None:
-        """ Automatically maintain channels open for the given token network.
+        """Automatically maintain channels open for the given token network.
 
         Args:
             token_address: the ERC20 token network to connect to.
@@ -379,7 +379,7 @@ class RaidenAPI:  # pragma: no unittest
         reveal_timeout: BlockTimeout = None,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> ChannelID:
-        """ Open a channel with the peer at `partner_address`
+        """Open a channel with the peer at `partner_address`
         with the given `token_address`.
         """
         if settle_timeout is None:
@@ -532,7 +532,7 @@ class RaidenAPI:  # pragma: no unittest
         return channel_state.identifier
 
     def mint_token_for(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> None:
-        """ Try to mint `value` units of the token at `token_address` and
+        """Try to mint `value` units of the token at `token_address` and
         assign them to `to`, using `mintFor`.
 
         Raises:
@@ -552,7 +552,7 @@ class RaidenAPI:  # pragma: no unittest
         total_withdraw: WithdrawAmount,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> None:
-        """ Set the `total_withdraw` in the channel with the peer at `partner_address` and the
+        """Set the `total_withdraw` in the channel with the peer at `partner_address` and the
         given `token_address`.
 
         Raises:
@@ -625,7 +625,7 @@ class RaidenAPI:  # pragma: no unittest
         total_deposit: TokenAmount,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> None:
-        """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
+        """Set the `total_deposit` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
 
         Raises:
@@ -781,7 +781,7 @@ class RaidenAPI:  # pragma: no unittest
         partner_address: Address,
         reveal_timeout: BlockTimeout,
     ) -> None:
-        """ Set the `reveal_timeout` in the channel with the peer at `partner_address` and the
+        """Set the `reveal_timeout` in the channel with the peer at `partner_address` and the
         given `token_address`.
 
         Raises:

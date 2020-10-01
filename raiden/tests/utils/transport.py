@@ -248,7 +248,7 @@ class EthAuthProvider:
 
 # Used from within synapse during tests
 class NoTLSFederationMonkeyPatchProvider:
-    """ Dummy auth provider that disables TLS on S2S federation.
+    """Dummy auth provider that disables TLS on S2S federation.
 
     This is used by the integration tests to avoid the need for tls certificates.
     It's implemented as an auth provider since that's a handy way to inject code into the

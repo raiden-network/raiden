@@ -43,7 +43,7 @@ class AccountDescription(NamedTuple):
 
 
 class GenesisDescription(NamedTuple):
-    """ Genesis configuration for a geth PoA private chain.
+    """Genesis configuration for a geth PoA private chain.
 
     Args:
         prefunded_accounts: iterable list of privatekeys whose
@@ -286,7 +286,7 @@ def parity_keyfile(datadir: str) -> str:
 
 
 def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: int = 10) -> None:
-    """ Wait until the given addresses have a balance.
+    """Wait until the given addresses have a balance.
 
     Raises a ValueError if any of the addresses still have no balance after ``retries``.
     """
@@ -467,7 +467,7 @@ def run_private_blockchain(
     verbosity: str,
     genesis_description: GenesisDescription,
 ) -> Iterator[List[JSONRPCExecutor]]:
-    """ Starts a private network with private_keys accounts funded.
+    """Starts a private network with private_keys accounts funded.
 
     Args:
         web3: A Web3 instance used to check when the private chain is running.

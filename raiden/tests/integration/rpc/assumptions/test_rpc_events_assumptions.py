@@ -16,7 +16,7 @@ from raiden.utils.typing import Nonce
     "an assumption and to show that a corner case is possible."
 )
 def test_events_can_happen_in_the_deployment_block(web3: Web3, deploy_key: bytes) -> None:
-    """ It is possible to send transactions to a smart contract that has not
+    """It is possible to send transactions to a smart contract that has not
     been mined yet, resulting in events being emitted in the same block the
     smart contract was deployed.
     """

@@ -54,11 +54,11 @@ class Translator(dict):
         self._make_regex()
 
     def _address_rxp(self, addr):
-        """ Create a regex string for addresses, that matches several representations:
-            - with(out) '0x' prefix
-            - `pex` version
-            This function takes care of maintaining additional lookup keys for substring matches.
-            In case the given string is no address, it returns the original string.
+        """Create a regex string for addresses, that matches several representations:
+        - with(out) '0x' prefix
+        - `pex` version
+        This function takes care of maintaining additional lookup keys for substring matches.
+        In case the given string is no address, it returns the original string.
         """
         try:
             addr = str(to_checksum_address(addr))
@@ -226,7 +226,9 @@ def replay_wal(
     for state_change in all_state_changes:
         # Dispatching the state changes one-by-one to easy debugging
         state, events = dispatch(
-            state=state, state_change=state_change, state_transition=wal.state_transition,
+            state=state,
+            state_change=state_change,
+            state_transition=wal.state_transition,
         )
 
         msg = "Chain state must never be cleared up."

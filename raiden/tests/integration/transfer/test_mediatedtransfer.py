@@ -485,7 +485,9 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
         secret=secret,
         route_states=[
             create_route_state_for_route(
-                apps=raiden_network, token_address=token_address, fee_estimate=fee,
+                apps=raiden_network,
+                token_address=token_address,
+                fee_estimate=fee,
             )
         ],
     )

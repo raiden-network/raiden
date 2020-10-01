@@ -296,7 +296,12 @@ def test_api_payments_with_hash_no_secret(
 def test_api_payments_post_without_required_params(api_server_test_instance, token_addresses):
     token_address = token_addresses[0]
 
-    request = grequests.post(api_url_for(api_server_test_instance, "paymentresource",),)
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "paymentresource",
+        ),
+    )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.METHOD_NOT_ALLOWED)
 

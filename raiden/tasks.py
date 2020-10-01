@@ -171,7 +171,7 @@ class AlarmTask(Runnable):
             self.callbacks = list()
 
     def register_callback(self, callback: Callable) -> None:
-        """ Register a new callback.
+        """Register a new callback.
 
         Note:
             The callback will be executed in the AlarmTask context and for
@@ -196,7 +196,7 @@ class AlarmTask(Runnable):
             self._maybe_run_callbacks(latest_block)
 
     def _maybe_run_callbacks(self, latest_block: BlockData) -> None:
-        """ Run the callbacks if there is at least one new block.
+        """Run the callbacks if there is at least one new block.
 
         The callbacks are executed only if there is a new block, otherwise the
         filters may try to poll for an inexisting block number and the Ethereum
