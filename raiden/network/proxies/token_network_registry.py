@@ -83,7 +83,7 @@ class TokenNetworkRegistry:
     def get_token_network(
         self, token_address: TokenAddress, block_identifier: BlockIdentifier
     ) -> Optional[TokenNetworkAddress]:
-        """ Return the token network address for the given token or None if
+        """Return the token network address for the given token or None if
         there is no correspoding address.
         """
         typecheck(token_address, T_TargetAddress)
@@ -555,13 +555,13 @@ class TokenNetworkRegistry:
         )
 
     def get_token_network_created(self, block_identifier: BlockIdentifier) -> int:
-        """ Returns the number of TokenNetwork contracts created so far in the
+        """Returns the number of TokenNetwork contracts created so far in the
         token network registry.
         """
         return self.proxy.functions.token_network_created().call(block_identifier=block_identifier)
 
     def get_max_token_networks(self, block_identifier: BlockIdentifier) -> int:
-        """ Returns the maximal number of TokenNetwork contracts that the
+        """Returns the maximal number of TokenNetwork contracts that the
         token network registry.
         """
         return self.proxy.functions.max_token_networks().call(block_identifier=block_identifier)

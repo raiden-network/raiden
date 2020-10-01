@@ -152,7 +152,7 @@ class GlobalState(dict):
 
 
 class ThreadState:
-    """ This class is responsable to store the state of an execution thread,
+    """This class is responsable to store the state of an execution thread,
     that can be a native thread, with a 1-to-1 mapping between userland and
     kernel space, or a light thread with a n-to-1, be it cooperative or not.
 
@@ -360,8 +360,8 @@ def profile():
 
 
 def zip_outter_join(equal, *element_list):
-    """ Returns a list with equal elements grouped, were elements considered
-    equal will be in the same tuple """
+    """Returns a list with equal elements grouped, were elements considered
+    equal will be in the same tuple"""
 
     if not callable(equal):
         raise ValueError("equal must be a callable")
@@ -445,7 +445,7 @@ def merge_info(*allinfo):
 
 
 def merge_threadstates(*threadstates):
-    """ Merge the profile data from first and second, the result will _not_ be
+    """Merge the profile data from first and second, the result will _not_ be
     a ThreadState
     """
 

@@ -48,7 +48,7 @@ log = structlog.get_logger(__name__)
 
 
 def iwait_and_get(items: Sequence[gevent.Greenlet]) -> None:
-    """ Iteratively wait and get on passed greenlets.
+    """Iteratively wait and get on passed greenlets.
 
     This ensures exceptions in the greenlets are re-raised as soon as possible.
     """
@@ -101,7 +101,10 @@ def restart_app(app: RaidenService, restart_node: RestartNode) -> RaidenService:
         rpc_client=app.rpc_client,
         proxy_manager=app.proxy_manager,
         query_start_block=BlockNumber(0),
-        raiden_bundle=RaidenBundle(app.default_registry, app.default_secret_registry,),
+        raiden_bundle=RaidenBundle(
+            app.default_registry,
+            app.default_secret_registry,
+        ),
         services_bundle=app.default_services_bundle,
         transport=new_transport,
         raiden_event_handler=hold_handler,
@@ -250,8 +253,7 @@ def stress_send_parallel_transfers(
     identifier_generator: Iterator[int],
     deposit: TokenAmount,
 ) -> None:
-    """Send `deposit` transfers in parallel, without changing the initial capacity.
-    """
+    """Send `deposit` transfers in parallel, without changing the initial capacity."""
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
 
     # deplete the channels in one direction

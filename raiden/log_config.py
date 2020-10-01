@@ -64,7 +64,7 @@ class LogFilter:
     """ Utility for filtering log records on module level rules """
 
     def __init__(self, config: Dict[str, str], default_level: str):
-        """ Initializes a new `LogFilter`
+        """Initializes a new `LogFilter`
 
         Args:
             config: Dictionary mapping module names to logging level

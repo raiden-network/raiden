@@ -62,7 +62,8 @@ def get_best_routes(
 
             if is_usable is channel.ChannelUsability.USABLE:
                 direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0),
+                    route=[Address(from_address), Address(to_address)],
+                    estimated_fee=FeeAmount(0),
                 )
                 return None, [direct_route], None
 
@@ -173,7 +174,12 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee,))
+        paths.append(
+            RouteState(
+                route=canonical_path,
+                estimated_fee=estimated_fee,
+            )
+        )
 
     return None, paths, feedback_token
 
@@ -183,7 +189,7 @@ def resolve_routes(
     token_network_address: TokenNetworkAddress,
     chain_state: ChainState,
 ) -> List[RouteState]:
-    """ resolve the forward_channel_id for a given route
+    """resolve the forward_channel_id for a given route
 
     TODO: We don't have ``forward_channel_id``, anymore. Does this function still make sense?
     """

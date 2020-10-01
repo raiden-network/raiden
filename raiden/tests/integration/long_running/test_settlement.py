@@ -132,7 +132,11 @@ def test_settle_is_automatically_called(
     RaidenAPI(app1).channel_close(registry_address, token_address, app0.address)
 
     waiting.wait_for_close(
-        app0, registry_address, token_address, [channel_identifier], app0.alarm.sleep_time,
+        app0,
+        registry_address,
+        token_address,
+        [channel_identifier],
+        app0.alarm.sleep_time,
     )
 
     channel_state = views.get_channelstate_for(
@@ -143,7 +147,11 @@ def test_settle_is_automatically_called(
     assert channel_state.close_transaction.finished_block_number
 
     waiting.wait_for_settle(
-        app0, registry_address, token_address, [channel_identifier], app0.alarm.sleep_time,
+        app0,
+        registry_address,
+        token_address,
+        [channel_identifier],
+        app0.alarm.sleep_time,
     )
 
     token_network = views.get_token_network_by_address(
@@ -187,7 +195,9 @@ def test_lock_expiry(
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_raiden(alice_app), alice_app.default_registry.address, token_address,
+        views.state_from_raiden(alice_app),
+        alice_app.default_registry.address,
+        token_address,
     )
     assert token_network_address
 
@@ -471,7 +481,9 @@ def test_channel_withdraw(
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_raiden(alice_app), alice_app.default_registry.address, token_address,
+        views.state_from_raiden(alice_app),
+        alice_app.default_registry.address,
+        token_address,
     )
     assert token_network_address
 
@@ -537,7 +549,9 @@ def test_channel_withdraw_expired(
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_raiden(alice_app), alice_app.default_registry.address, token_address,
+        views.state_from_raiden(alice_app),
+        alice_app.default_registry.address,
+        token_address,
     )
     assert token_network_address
 
@@ -630,7 +644,7 @@ def test_channel_withdraw_expired(
 def test_settled_lock(
     token_addresses: List[TokenAddress], raiden_network: List[RaidenService], deposit: TokenAmount
 ) -> None:
-    """ Any transfer following a secret reveal must update the locksroot, so
+    """Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
     app0, app1 = raiden_network
@@ -796,7 +810,7 @@ def test_start_end_attack(
     raiden_chain: List[RaidenService],
     deposit: List[RaidenService],
 ) -> None:
-    """ An attacker can try to steal tokens from a hub or the last node in a
+    """An attacker can try to steal tokens from a hub or the last node in a
     path.
 
     The attacker needs to use two addresses (A1 and A2) and connect both to the
@@ -949,7 +963,11 @@ def test_automatic_dispute(
     # )
 
     waiting.wait_for_settle(
-        app0, registry_address, token_address, [channel0.identifier], app0.alarm.sleep_time,
+        app0,
+        registry_address,
+        token_address,
+        [channel0.identifier],
+        app0.alarm.sleep_time,
     )
 
     # check that the channel is properly settled and that Bob's client
@@ -1160,7 +1178,9 @@ def test_handle_insufficient_eth(
     block_offset = BlockOffset(channel_state.settle_timeout * 2)
     with block_offset_timeout(app0, "Settle did not happen", block_offset):
         RaidenAPI(app0).channel_close(
-            registry_address=registry_address, token_address=token, partner_address=app1.address,
+            registry_address=registry_address,
+            token_address=token,
+            partner_address=app1.address,
         )
         waiting.wait_for_settle(
             raiden=app0,

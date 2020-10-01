@@ -29,7 +29,7 @@ def make_decreasing_gas_price_strategy(gas_price: GasPrice) -> Callable:
 
 
 def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> None:
-    """ If a pending transaction is re-sent the exception `EthereumNonceTooLow` is raised.
+    """If a pending transaction is re-sent the exception `EthereumNonceTooLow` is raised.
 
     This tests is only sufficient because of the companion test
     `test_resending_mined_transaction_raises` which shows that if the
@@ -99,7 +99,7 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
 
 
 def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
-    """ If a _new_ transaction is sent with an old nonce the exception
+    """If a _new_ transaction is sent with an old nonce the exception
     `EthereumNonceTooLow` is raised.
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
@@ -132,7 +132,7 @@ def test_reusing_nonce_from_a_mined_transaction_raises(deploy_client: JSONRPCCli
 
 
 def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCClient) -> None:
-    """ If a transaction is sent through the eth_sendRawTransaction interface,
+    """If a transaction is sent through the eth_sendRawTransaction interface,
     directly to the miner, with a gas price of zero, it is considered local and
     mined anyways.
     """
@@ -167,7 +167,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
 def test_remote_transaction_with_zero_gasprice_is_not_mined(
     web3: Web3, deploy_key: PrivateKey, eth_nodes_configuration: List[EthNodeDescription]
 ) -> None:
-    """ If the non-local transaction is sent with a gas price set to zero it is
+    """If the non-local transaction is sent with a gas price set to zero it is
     not mined.
     """
     host = "127.0.0.1"
@@ -276,7 +276,7 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
 
 
 def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
-    """ If a _new_ transaction is sent but with a lower gas the exception
+    """If a _new_ transaction is sent but with a lower gas the exception
     `ReplacementTransactionUnderpriced` is raised.
     """
     # Use a _decreasing_ gas price strategy so that the second transactions is

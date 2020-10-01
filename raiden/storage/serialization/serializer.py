@@ -89,7 +89,7 @@ class DictSerializer(SerializationBase):
 
     @staticmethod
     def deserialize(data: Dict) -> Any:
-        """ Deserialize a dict-like object.
+        """Deserialize a dict-like object.
 
         If the key ``_type`` is present, import the target and deserialize via Marshmallow.
         Raises ``SerializationError`` for invalid inputs.
@@ -114,7 +114,7 @@ class JSONSerializer(SerializationBase):
 
     @staticmethod
     def deserialize(data: str) -> Any:
-        """ Deserialize a JSON object.
+        """Deserialize a JSON object.
 
         Raises ``SerializationError`` for invalid inputs.
         """
@@ -139,7 +139,7 @@ def remove_type_inplace(data: Any) -> None:
 
 
 class MessageSerializer(SerializationBase):
-    """ Serialize to JSON with adaptions for external messages
+    """Serialize to JSON with adaptions for external messages
 
     This serializer only includes the class name in the type. This is more
     suitable for external Messages than including the complete module path as

@@ -342,7 +342,7 @@ class UserDeposit:
         total_deposit: TokenAmount,
         given_block_identifier: BlockIdentifier,
     ) -> None:
-        """ Deposit provided amount into the user-deposit contract
+        """Deposit provided amount into the user-deposit contract
         to the beneficiary's account.
 
         This function will also call approve with the *same* amount of tokens
@@ -393,7 +393,7 @@ class UserDeposit:
     def plan_withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
     ) -> BlockNumber:
-        """ Announce that you plan to withdraw tokens from the UserDeposit contract
+        """Announce that you plan to withdraw tokens from the UserDeposit contract
 
         Returns the block number at which the withdraw is ready.
         """
@@ -510,7 +510,7 @@ class UserDeposit:
     def _deposit_inflight(
         self, beneficiary: Address, total_deposit: TokenAmount
     ) -> Iterator[None]:
-        """ Updates the `_inflight_deposits` dictionary to handle concurrent deposits.
+        """Updates the `_inflight_deposits` dictionary to handle concurrent deposits.
 
         Note: This must be called after `_deposit_preconditions`.
         """

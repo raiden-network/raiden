@@ -62,7 +62,7 @@ class ProxyManagerMetadata:
 
 
 class ProxyManager:
-    """ Encapsulates access and creation of contract proxies.
+    """Encapsulates access and creation of contract proxies.
 
     This class keeps track of mapping between contract addresses and their internal
     contract proxy counterparts. It also synchronizes creation of proxies, so that

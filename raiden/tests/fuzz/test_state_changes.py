@@ -349,7 +349,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.token_network_address = factories.UNIT_TOKEN_NETWORK_ADDRESS
         self.token_id = factories.UNIT_TOKEN_ADDRESS
         self.token_network_state = TokenNetworkState(
-            address=self.token_network_address, token_address=self.token_id,
+            address=self.token_network_address,
+            token_address=self.token_id,
         )
 
         self.token_network_registry_address = factories.make_token_network_registry_address()
@@ -360,7 +361,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         return multiple(*self.create_network())
 
     def event(self, description):
-        """ Wrapper for hypothesis' event function.
+        """Wrapper for hypothesis' event function.
 
         hypothesis.event raises an exception when invoked outside of hypothesis
         context, so skip it when we are replaying a failed path.

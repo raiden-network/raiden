@@ -422,7 +422,7 @@ Record = namedtuple(
 
 @cached(LRUCache(maxsize=1_000))
 def truncate_logger_name(logger: str) -> str:
-    """ Truncate dotted logger path names.
+    """Truncate dotted logger path names.
 
     Keeps the last component unchanged.
 

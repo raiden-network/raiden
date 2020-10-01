@@ -31,7 +31,7 @@ class Nursery(ABC):
 
 
 class Janitor:
-    """ Janitor to properly cleanup after spawned subprocesses and greenlets.
+    """Janitor to properly cleanup after spawned subprocesses and greenlets.
 
     The goal of the janitor is to:
 
@@ -115,7 +115,8 @@ class Janitor:
                                 janitor._stop.set_exception(exception)
                         except Exception as exception:
                             log.exception(
-                                "Process erroed! Propagating error.", args=process.args,
+                                "Process erroed! Propagating error.",
+                                args=process.args,
                             )
                             janitor._stop.set_exception(exception)
 

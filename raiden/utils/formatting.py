@@ -25,10 +25,10 @@ from raiden.utils.typing import (
 
 
 def address_checksum_and_decode(addr: str) -> Address:
-    """ Accepts a string address and turns it into binary.
+    """Accepts a string address and turns it into binary.
 
-        Makes sure that the string address provided starts is 0x prefixed and
-        checksummed according to EIP55 specification
+    Makes sure that the string address provided starts is 0x prefixed and
+    checksummed according to EIP55 specification
     """
     if not is_0x_prefixed(addr):
         raise InvalidChecksummedAddress("Address must be 0x prefixed")

@@ -271,11 +271,11 @@ class GeventChecker(BaseChecker):
     def _force_group_join_to_set_raise_error(self, node):
         """This detect usages of the form:
 
-            >>> from gevent.pool import Group, Pool
-            >>> g = Group()
-            >>> g.join(...)
-            >>> p = Pool()
-            >>> p.join(...)
+        >>> from gevent.pool import Group, Pool
+        >>> g = Group()
+        >>> g.join(...)
+        >>> p = Pool()
+        >>> p.join(...)
         """
         for inferred_func in node.func.infer():
             if is_group_join(inferred_func):
@@ -295,7 +295,7 @@ class GeventChecker(BaseChecker):
     def _forbid_calls_to_input(self, node):
         """This detect usages of the form:
 
-            >>> input()
+        >>> input()
         """
         for inferred_func in node.func.infer():
             if is_input(inferred_func):

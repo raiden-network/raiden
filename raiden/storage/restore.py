@@ -67,7 +67,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
     balance_hash: BalanceHash,
     sender: Address,
 ) -> Optional[StateChangeRecord]:
-    """ Returns the state change which contains the corresponding balance
+    """Returns the state change which contains the corresponding balance
     proof.
 
     Use this function to find a balance proof for a call to settle, which only
@@ -102,7 +102,7 @@ def get_state_change_with_balance_proof_by_locksroot(
     locksroot: Locksroot,
     sender: Address,
 ) -> Optional[StateChangeRecord]:
-    """ Returns the state change which contains the corresponding balance
+    """Returns the state change which contains the corresponding balance
     proof.
 
     Use this function to find a balance proof for a call to unlock, which only
@@ -137,7 +137,7 @@ def get_event_with_balance_proof_by_balance_hash(
     balance_hash: BalanceHash,
     recipient: Address,
 ) -> Optional[EventRecord]:
-    """ Returns the event which contains the corresponding balance
+    """Returns the event which contains the corresponding balance
     proof.
 
     Use this function to find a balance proof for a call to settle, which only
@@ -176,7 +176,7 @@ def get_event_with_balance_proof_by_locksroot(
     locksroot: Locksroot,
     recipient: Address,
 ) -> Optional[EventRecord]:
-    """ Returns the event which contains the corresponding balance proof.
+    """Returns the event which contains the corresponding balance proof.
 
     Use this function to find a balance proof for a call to unlock, which only
     happens after settle, so the channel has the unblinded version of the

@@ -144,7 +144,7 @@ def check_deployed_contracts_data(
     contracts: Dict[str, Address],
     required_contracts: List[str],
 ) -> None:
-    """ This function only checks if all necessary contracts are indeed in the deployment JSON
+    """This function only checks if all necessary contracts are indeed in the deployment JSON
     from Raiden Contracts. It does not check anything else, especially not if those contracts
     are consistent or in fact Raiden contracts.
     """

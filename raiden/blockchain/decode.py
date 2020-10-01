@@ -87,7 +87,8 @@ def contractreceivenewtokennetwork_from_event(
     return ContractReceiveNewTokenNetwork(
         token_network_registry_address=token_network_registry_address,
         token_network=TokenNetworkState(
-            address=token_network_address, token_address=token_address,
+            address=token_network_address,
+            token_address=token_address,
         ),
         transaction_hash=event.transaction_hash,
         block_number=event.block_number,

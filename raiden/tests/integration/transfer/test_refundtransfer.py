@@ -106,7 +106,9 @@ def test_refund_messages(raiden_chain: List[RaidenService], token_addresses, dep
     # Since the refund is not unlocked both channels have the corresponding
     # amount locked (issue #1091)
     send_lockedtransfer = raiden_events_search_for_item(
-        app0, SendLockedTransfer, {"transfer": {"lock": {"amount": refund_amount_with_fees}}},
+        app0,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": refund_amount_with_fees}}},
     )
     assert send_lockedtransfer
 
@@ -237,7 +239,9 @@ def test_refund_transfer(
     # A lock structure with the correct amount
 
     send_locked = raiden_events_search_for_item(
-        app0, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
+        app0,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked
     secrethash = send_locked.transfer.lock.secrethash
@@ -441,7 +445,9 @@ def test_different_view_of_last_bp_during_unlock(
     # A lock structure with the correct amount
 
     send_locked = raiden_events_search_for_item(
-        app0, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
+        app0,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked
     secrethash = send_locked.transfer.lock.secrethash
@@ -537,13 +543,19 @@ def test_different_view_of_last_bp_during_unlock(
     timeout = 30 if blockchain_type == "parity" else 10
     with gevent.Timeout(timeout):
         unlock_app0 = wait_for_state_change(
-            app0, ContractReceiveChannelBatchUnlock, {"receiver": app0.address}, retry_timeout,
+            app0,
+            ContractReceiveChannelBatchUnlock,
+            {"receiver": app0.address},
+            retry_timeout,
         )
     assert unlock_app0
     assert unlock_app0.returned_tokens == amount_refund_with_fees
     with gevent.Timeout(timeout):
         unlock_app1 = wait_for_state_change(
-            app1, ContractReceiveChannelBatchUnlock, {"receiver": app1.address}, retry_timeout,
+            app1,
+            ContractReceiveChannelBatchUnlock,
+            {"receiver": app1.address},
+            retry_timeout,
         )
     assert unlock_app1
     assert unlock_app1.returned_tokens == amount_refund_with_fees
@@ -662,7 +674,9 @@ def test_refund_transfer_after_2nd_hop(
     # Lock structures with the correct amount
 
     send_locked1 = raiden_events_search_for_item(
-        app0, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
+        app0,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked1
 
@@ -675,7 +689,9 @@ def test_refund_transfer_after_2nd_hop(
     assert lock1.secrethash == refund_lock1.secrethash
 
     send_locked2 = raiden_events_search_for_item(
-        app1, SendLockedTransfer, {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
+        app1,
+        SendLockedTransfer,
+        {"transfer": {"lock": {"amount": amount_refund_with_fees}}},
     )
     assert send_locked2
 

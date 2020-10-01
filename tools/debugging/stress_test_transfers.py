@@ -522,7 +522,7 @@ def get_balance_for_node(url: URL) -> Dict[Address, TokenAmount]:
 
 
 def wait_for_balance(running_nodes: List[RunningNode]) -> None:
-    """ Wait until the nodes have `starting_balance`, again
+    """Wait until the nodes have `starting_balance`, again
 
     This makes sure that we can run another iteration of the stress test
     """

@@ -441,7 +441,7 @@ class SQLiteStorage:
     def get_snapshot_before_state_change(
         self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotEncodedRecord]:
-        """ Returns the Snapshot which can be used to restore the State with
+        """Returns the Snapshot which can be used to restore the State with
         the StateChange `state_change_identifier` applied.
 
         If `state_change_identifier` has a snapshot, that is returned,
@@ -579,7 +579,7 @@ class SQLiteStorage:
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
     ) -> List[StateChangeEncodedRecord]:
-        """ Return a batch of state change records (identifier and data)
+        """Return a batch of state change records (identifier and data)
 
         The batch size can be tweaked with the `limit` and `offset` arguments.
 
@@ -672,7 +672,7 @@ class SQLiteStorage:
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
     ) -> List[EventEncodedRecord]:
-        """ Return a batch of event records
+        """Return a batch of event records
 
         The batch size can be tweaked with the `limit` and `offset` arguments.
 
@@ -898,7 +898,7 @@ class SQLiteStorage:
 
 
 class SerializedSQLiteStorage:
-    """ A wrapper around SQLiteStorage that automatically serializes and
+    """A wrapper around SQLiteStorage that automatically serializes and
     deserializes the data.
 
     SQLiteStorage is necessary for database upgrades. Upgrades are necessary
@@ -941,7 +941,7 @@ class SerializedSQLiteStorage:
         return self.database.write_state_snapshot(serialized_data, statechange_id, statechange_qty)
 
     def write_events(self, events: List[Tuple[StateChangeID, Event]]) -> List[EventID]:
-        """ Save events.
+        """Save events.
 
         Args:
             events: List of Event objects and the corresponding state change id.

@@ -54,7 +54,7 @@ class SendLockedTransfer(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendSecretReveal(SendMessageEvent):
-    """ Sends a SecretReveal to another node.
+    """Sends a SecretReveal to another node.
 
     This event is used once the secret is known locally and an action must be
     performed on the recipient:
@@ -92,7 +92,7 @@ class SendSecretReveal(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendUnlock(SendMessageEvent):
-    """ Event to send a balance-proof to the counter-party, used after a lock
+    """Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to claim it.
 
     Used by payers: The initiator and mediator nodes.
@@ -122,7 +122,7 @@ class SendUnlock(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendSecretRequest(SendMessageEvent):
-    """ Event used by a target node to request the secret from the initiator
+    """Event used by a target node to request the secret from the initiator
     (`recipient`).
     """
 
@@ -134,7 +134,7 @@ class SendSecretRequest(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendRefundTransfer(SendMessageEvent):
-    """ Event used to cleanly backtrack the current node in the route.
+    """Event used to cleanly backtrack the current node in the route.
     This message will pay back the same amount of token from the recipient to
     the sender, allowing the sender to try a different route without the risk
     of losing token.
@@ -191,7 +191,7 @@ class EventUnexpectedSecretReveal(Event):
 
 @dataclass(frozen=True)
 class EventRouteFailed(Event):
-    """ Event emitted when a route failed.
+    """Event emitted when a route failed.
     As a payment can try different routes to reach the intended target
     some of the routes can fail. This event is emitted when a route failed.
     This means that multiple EventRouteFailed for a given payment and it's

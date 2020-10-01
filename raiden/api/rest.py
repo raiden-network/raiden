@@ -881,7 +881,9 @@ class RestAPI:  # pragma: no unittest
                 )
             else:
                 log.warning(
-                    "Unexpected event", node=self.checksum_address, unexpected_event=event.event,
+                    "Unexpected event",
+                    node=self.checksum_address,
+                    unexpected_event=event.event,
                 )
 
             result.append(serialized_event)
@@ -1053,7 +1055,8 @@ class RestAPI:  # pragma: no unittest
         if updated_channel_state:
             result = self.channel_schema.dump(updated_channel_state)
             result[CHANNEL_NETWORK_STATE] = views.get_node_network_status(
-                chain_state, updated_channel_state.partner_state.address,
+                chain_state,
+                updated_channel_state.partner_state.address,
             ).value
         else:
             result = None
@@ -1074,7 +1077,8 @@ class RestAPI:  # pragma: no unittest
         if updated_channel_state:
             result = self.channel_schema.dump(updated_channel_state)
             result[CHANNEL_NETWORK_STATE] = views.get_node_network_status(
-                chain_state, updated_channel_state.partner_state.address,
+                chain_state,
+                updated_channel_state.partner_state.address,
             ).value
         else:
             result = None

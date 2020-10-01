@@ -71,7 +71,7 @@ def get_amount_with_fees(
     schedule_out: FeeScheduleState,
     receivable_amount: TokenAmount,
 ) -> Optional[PaymentWithFeeAmount]:
-    """ Return the amount the transfer requires before fees are deducted.
+    """Return the amount the transfer requires before fees are deducted.
 
     This function is also used by the PFS. Therefore the parameters should not be Raiden state
     objects.
@@ -112,7 +112,7 @@ def get_initial_amount_for_amount_after_fees(
     amount_after_fees: PaymentAmount,
     channels: List[Tuple[NettingChannelState, NettingChannelState]],
 ) -> Optional[FeesCalculation]:
-    """ Calculates the payment amount including fees to be supplied to the given
+    """Calculates the payment amount including fees to be supplied to the given
     channel configuration, so that `amount_after_fees` arrives at the target.
 
     Note: The channels have to be from the view of the mediator, so for the case

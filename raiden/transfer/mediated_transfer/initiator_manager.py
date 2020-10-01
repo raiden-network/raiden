@@ -43,8 +43,8 @@ from raiden.utils.typing import (
 def clear_if_finalized(
     iteration: TransitionResult,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
-    """ Clear the initiator payment task if all transfers have been finalized
-    or expired. """
+    """Clear the initiator payment task if all transfers have been finalized
+    or expired."""
     state = cast(InitiatorPaymentState, iteration.new_state)
 
     if state is None:
@@ -90,7 +90,7 @@ def events_for_cancel_current_route(
 def cancel_current_route(
     payment_state: InitiatorPaymentState, initiator_state: InitiatorTransferState
 ) -> List[Event]:
-    """ Cancel current route.
+    """Cancel current route.
 
     This allows a new route to be tried.
     """
@@ -349,8 +349,7 @@ def handle_lock_expired(
     - When the lock expires B will also send a LockExpired message to A
     - A needs to be able to properly process it
 
-    Related issue: https://github.com/raiden-network/raiden/issues/3183
-"""
+    Related issue: https://github.com/raiden-network/raiden/issues/3183"""
     initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
     if not initiator_state:
         return TransitionResult(payment_state, list())

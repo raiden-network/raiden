@@ -338,7 +338,7 @@ def check_address_has_code(
     given_block_identifier: BlockIdentifier,
     expected_code: bytes = None,
 ) -> None:
-    """ Checks that the given address contains code.
+    """Checks that the given address contains code.
 
     Use this function to detect errors prior to sending transactions, which is
     faster to interact and easier to debug. These are the problem that can be
@@ -386,7 +386,7 @@ def check_address_has_code_handle_pruned_block(
     given_block_identifier: BlockIdentifier,
     expected_code: bytes = None,
 ) -> None:
-    """ Checks that the given address contains code.
+    """Checks that the given address contains code.
 
     If `given_block_identifier` points to a pruned block, fallbacks to use
     `latest` instead.
@@ -578,7 +578,7 @@ def is_infura(web3: Web3) -> bool:
 def patched_web3_eth_estimate_gas(
     self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
 ) -> Wei:
-    """ Temporary workaround until next web3.py release (5.X.X)
+    """Temporary workaround until next web3.py release (5.X.X)
 
     Current master of web3.py has this implementation already:
     https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
@@ -728,7 +728,7 @@ def make_sane_poa_middleware(
 def make_patched_web3_get_block(
     original_func: Callable[[Eth, BlockIdentifier, bool], BlockData]
 ) -> Callable[[Eth, BlockIdentifier, bool], BlockData]:
-    """ Patch Eth.getBlock() to retry in case of ``BlockNotFound``
+    """Patch Eth.getBlock() to retry in case of ``BlockNotFound``
 
     Infura sometimes erroneously returns a `null` response for
     ``eth_getBlockByNumber`` and ``eth_getBlockByHash`` for existing blocks.
@@ -1155,7 +1155,7 @@ class JSONRPCClient:
         return pending.estimate_gas(self.get_checking_block())
 
     def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
-        """ Allocates an unique `nonce` and send the transaction to the blockchain.
+        """Allocates an unique `nonce` and send the transaction to the blockchain.
 
         This can fail for a few reasons:
 
@@ -1466,7 +1466,7 @@ class JSONRPCClient:
         )
 
     def poll_transaction(self, transaction_sent: TransactionSent) -> TransactionMined:
-        """ Wait until the `transaction_hash` is mined, confirmed, handling
+        """Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 
         Consider the following reorg, where a transaction is mined at block B,
@@ -1565,7 +1565,7 @@ class JSONRPCClient:
         required_gas: int,
         block_identifier: BlockIdentifier,
     ) -> None:
-        """ After estimate gas failure checks if our address has enough balance.
+        """After estimate gas failure checks if our address has enough balance.
 
         If the account did not have enough ETH balance to execute the
         transaction, it raises an `InsufficientEth` error.
@@ -1612,7 +1612,7 @@ class JSONRPCClient:
     def transaction_failed_with_a_require(
         self, transaction_hash: TransactionHash
     ) -> Optional[bool]:
-        """ Tries to determine if the transaction with `transaction_hash`
+        """Tries to determine if the transaction with `transaction_hash`
         failed because of a `require` expression.
         """
 

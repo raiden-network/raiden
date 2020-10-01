@@ -119,7 +119,7 @@ class ContractSendChannelWithdraw(ContractSendEvent):
 
 @dataclass(frozen=True)
 class ContractSendChannelClose(ContractSendEvent):
-    """ Event emitted to close the netting channel.
+    """Event emitted to close the netting channel.
     This event is used when a node needs to prepare the channel to unlock
     on-chain.
     """
@@ -197,7 +197,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
 
 @dataclass(frozen=True)
 class EventPaymentSentSuccess(Event):
-    """ Event emitted by the initiator when a transfer is considered successful.
+    """Event emitted by the initiator when a transfer is considered successful.
 
     A transfer is considered successful when the initiator's payee hop sends the
     reveal secret message, assuming that each hop in the mediator chain has
@@ -242,7 +242,7 @@ class EventPaymentSentSuccess(Event):
 
 @dataclass(frozen=True)
 class EventPaymentSentFailed(Event):
-    """ Event emitted by the payer when a transfer has failed.
+    """Event emitted by the payer when a transfer has failed.
 
     Note:
         Mediators cannot use this event since they don't know when a transfer
@@ -268,7 +268,7 @@ class EventPaymentSentFailed(Event):
 
 @dataclass(frozen=True)
 class EventPaymentReceivedSuccess(Event):
-    """ Event emitted when a payee has received a payment.
+    """Event emitted when a payee has received a payment.
 
     Note:
         A payee knows if a lock claim has failed, but this is not sufficient

@@ -221,7 +221,8 @@ def get_contractreceivechannelbatchunlock_data_from_event(
 
 
 def get_contractreceivechannelnew_data_from_event(
-    chain_state: ChainState, event: DecodedEvent,
+    chain_state: ChainState,
+    event: DecodedEvent,
 ) -> Optional[NewChannelDetails]:
     token_network_address = TokenNetworkAddress(event.originating_contract)
     data = event.event_data

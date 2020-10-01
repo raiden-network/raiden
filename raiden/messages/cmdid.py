@@ -3,7 +3,7 @@ import enum
 
 @enum.unique
 class CmdId(enum.Enum):
-    """ Identifier for off-chain messages.
+    """Identifier for off-chain messages.
 
     These magic numbers are used to identify the type of a message.
     """

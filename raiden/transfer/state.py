@@ -96,7 +96,7 @@ def message_identifier_from_prng(prng: Random) -> MessageID:
 
 @dataclass
 class PaymentMappingState(State):
-    """ Global map from secrethash to a transfer task.
+    """Global map from secrethash to a transfer task.
     This mapping is used to quickly dispatch state changes by secrethash, for
     those that dont have a balance proof, e.g. SecretReveal.
     This mapping forces one task per secrethash, assuming that secrethash collision
@@ -141,7 +141,7 @@ class RouteState(State):
 
     @property
     def next_hop(self) -> Address:
-        """ Identifies the next node
+        """Identifies the next node
 
         Use this to compare if two routes go to the same next node.
 
@@ -152,7 +152,8 @@ class RouteState(State):
 
     def __repr__(self) -> str:
         return "RouteState ({}), fee: {}".format(
-            " -> ".join(to_checksum_address(addr) for addr in self.route), self.estimated_fee,
+            " -> ".join(to_checksum_address(addr) for addr in self.route),
+            self.estimated_fee,
         )
 
 
@@ -490,7 +491,7 @@ class TokenNetworkRegistryState(State):
 
 @dataclass(repr=False)
 class ChainState(State):
-    """ Umbrella object that stores the per blockchain state.
+    """Umbrella object that stores the per blockchain state.
     For each registry smart contract there must be a token network registry. Within the
     token network registry the existing token networks and channels are registered.
 

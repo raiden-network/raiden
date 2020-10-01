@@ -103,7 +103,7 @@ def get_free_port(initial_port: Optional[int] = None) -> Iterator[Port]:
 def get_average_http_response_time(
     url: str, samples: int = 3, method: str = "head", sample_delay: float = 0.125
 ) -> Optional[Tuple[str, float]]:
-    """ Returns a tuple (`url`, `average_response_time`) after `samples` successful requests.
+    """Returns a tuple (`url`, `average_response_time`) after `samples` successful requests.
 
     When called multiple times the parameter `samples` must remain constant for each `url` in order
     to obtain comparable results.

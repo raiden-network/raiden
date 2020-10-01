@@ -115,7 +115,7 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
 
 
 def test_sequential_version_numbers(tmp_path, monkeypatch):
-    """ Test that the version received by each migration
+    """Test that the version received by each migration
     function is sequentially incremented according to the
     version returned by the previous migration.
     Sequence of events:

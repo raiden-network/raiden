@@ -261,7 +261,7 @@ def create_all_channels_for_network(
 def network_with_minimum_channels(
     apps: List[RaidenService], channels_per_node: int
 ) -> AppChannels:
-    """ Return the channels that should be created so that each app has at
+    """Return the channels that should be created so that each app has at
     least `channels_per_node` with the other apps.
 
     Yields a two-tuple (app1, app2) that must be connected to respect
@@ -343,7 +343,7 @@ def create_network_channels(
 def create_sequential_channels(
     raiden_apps: List[RaidenService], channels_per_node: int
 ) -> AppChannels:
-    """ Create a fully connected network with `num_nodes`, the nodes are
+    """Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
     Returns:
@@ -600,7 +600,7 @@ def wait_for_usable_channel(
     partner_deposit: TokenAmount,
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
 ) -> None:
-    """ Wait until the channel from app0 to app1 is usable.
+    """Wait until the channel from app0 to app1 is usable.
 
     The channel and the deposits are registered, and the partner network state
     is reachable.

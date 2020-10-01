@@ -19,7 +19,7 @@ NUM_DISCRETISATION_POINTS = 21
 
 
 class Interpolate:  # pylint: disable=too-few-public-methods
-    """ Linear interpolation of a function with given points
+    """Linear interpolation of a function with given points
 
     Based on https://stackoverflow.com/a/7345691/114926
     """
@@ -47,8 +47,7 @@ class Interpolate:  # pylint: disable=too-few-public-methods
 
 
 def sign(x: Union[float, Fraction]) -> int:
-    """ Sign of input, returns zero on zero input
-    """
+    """Sign of input, returns zero on zero input"""
     if x == 0:
         return 0
     else:
@@ -62,7 +61,7 @@ def _collect_x_values(
     balance_out: Balance,
     max_x: int,
 ) -> List[Fraction]:
-    """ Normalizes the x-axis of the penalty functions around the amount of
+    """Normalizes the x-axis of the penalty functions around the amount of
     tokens being transferred.
 
     A penalty function maps the participant's balance to a fee. These functions
@@ -118,7 +117,7 @@ def _mediation_fee_func(
     amount_without_fees: Optional[PaymentWithFeeAmount],
     cap_fees: bool,
 ) -> Interpolate:
-    """ Returns a function which calculates total_mediation_fee(x)
+    """Returns a function which calculates total_mediation_fee(x)
 
     Either `amount_with_fees` or `amount_without_fees` must be given while the
     other one is None. The returned function will depend on the value that is
@@ -261,7 +260,7 @@ def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmoun
 def calculate_imbalance_fees(
     channel_capacity: TokenAmount, proportional_imbalance_fee: ProportionalFeeAmount
 ) -> Optional[List[Tuple[TokenAmount, FeeAmount]]]:
-    """ Calculates a U-shaped imbalance curve
+    """Calculates a U-shaped imbalance curve
 
     The penalty term takes the following value at the extrema:
     channel_capacity * (proportional_imbalance_fee / 1_000_000)
