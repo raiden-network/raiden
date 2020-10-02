@@ -511,8 +511,11 @@ def options(func: Callable) -> Callable:
         )
     else:
 
-        def unsupported(*args: Any) -> None:
-            raise click.BadParameter("Console support is only available in development installs.")
+        def unsupported(_ctx: Any, _param: Any, value: bool) -> None:
+            if value:
+                raise click.BadParameter(
+                    "Console support is only available in development installs."
+                )
 
         options_.append(option("--console", is_flag=True, hidden=True, callback=unsupported))
 
