@@ -18,7 +18,6 @@ from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_MEDIATION_FLAT_FEE,
     DEFAULT_MEDIATION_PROPORTIONAL_FEE,
@@ -367,9 +366,7 @@ def test_fees_are_updated_during_startup(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 def test_blockchain_event_processed_interleaved(
-    raiden_network: List[RaidenService],
-    token_addresses: List[TokenAddress],
-    restart_node: RestartNode,
+    raiden_network: List[App], token_addresses: List[TokenAddress], restart_node: RestartNode,
 ):
     """ Blockchain events must be transformed into state changes and processed by
     the state machine interleaved.
@@ -383,16 +380,16 @@ def test_blockchain_event_processed_interleaved(
 
     app1.stop()
 
-    api0 = RaidenAPI(app0)
+    api0 = RaidenAPI(app0.raiden)
     channel_id = api0.channel_open(
-        registry_address=app0.default_registry.address,
+        registry_address=app0.raiden.default_registry.address,
         token_address=token_addresses[0],
-        partner_address=app1.address,
+        partner_address=app1.raiden.address,
     )
     api0.channel_close(
-        registry_address=app0.default_registry.address,
+        registry_address=app0.raiden.default_registry.address,
         token_address=token_addresses[0],
-        partner_address=app1.address,
+        partner_address=app1.raiden.address,
     )
 
     # Restart node 1
@@ -400,8 +397,8 @@ def test_blockchain_event_processed_interleaved(
     wait_all_apps(raiden_network)
 
     # Check correct events
-    assert app1.wal, "app1.wal not set"
-    app1_state_changes = app1.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+    assert app1.raiden.wal, "app1.wal not set"
+    app1_state_changes = app1.raiden.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
 
     assert search_for_item(
         app1_state_changes, ContractReceiveChannelNew, {"channel_identifier": channel_id}
