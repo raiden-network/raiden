@@ -6,6 +6,7 @@ from enum import Enum
 from random import Random
 from typing import Tuple
 
+import marshmallow
 from eth_utils import to_hex
 
 from raiden.constants import (
@@ -460,33 +461,41 @@ class TokenNetworkState(State):
         )
 
 
-@dataclass
+@dataclass(init=False)
 class TokenNetworkRegistryState(State):
     """ Corresponds to a registry smart contract. """
+
+    class Meta:
+        unknown = marshmallow.EXCLUDE
+        fields = ["address", "token_network_list"]  # only serialize attributes needed for init
 
     address: TokenNetworkRegistryAddress
     token_network_list: List[TokenNetworkState]
     tokennetworkaddresses_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
-        repr=False, default_factory=dict
+        repr=False
     )
     tokenaddresses_to_tokennetworkaddresses: Dict[TokenAddress, TokenNetworkAddress] = field(
-        repr=False, default_factory=dict
+        repr=False
     )
 
-    def __post_init__(self) -> None:
-        typecheck(self.address, T_Address)
+    def __init__(
+        self,
+        address: TokenNetworkRegistryAddress,
+        token_network_list: List[TokenNetworkState],
+    ) -> None:
+        self.address = address
+        self.token_network_list = []
+        self.tokennetworkaddresses_to_tokennetworks = {}
+        self.tokenaddresses_to_tokennetworkaddresses = {}
+        for tn in token_network_list:
+            self.add_token_network(tn)
 
-        if not self.tokennetworkaddresses_to_tokennetworks:
-            self.tokennetworkaddresses_to_tokennetworks: Dict[
-                TokenNetworkAddress, TokenNetworkState
-            ] = {token_network.address: token_network for token_network in self.token_network_list}
-        if not self.tokenaddresses_to_tokennetworkaddresses:
-            self.tokenaddresses_to_tokennetworkaddresses: Dict[
-                TokenAddress, TokenNetworkAddress
-            ] = {
-                token_network.token_address: token_network.address
-                for token_network in self.token_network_list
-            }
+    def add_token_network(self, token_network: TokenNetworkState) -> None:
+        self.token_network_list.append(token_network)
+        self.tokennetworkaddresses_to_tokennetworks[token_network.address] = token_network
+        self.tokenaddresses_to_tokennetworkaddresses[
+            token_network.token_address
+        ] = token_network.address
 
 
 @dataclass(repr=False)

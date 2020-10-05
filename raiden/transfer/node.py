@@ -426,12 +426,7 @@ def maybe_add_tokennetwork(
         ids_to_payments[token_network_registry_address] = token_network_registry_state
 
     if token_network_state_previous is None:
-        ids_to_tokens = token_network_registry_state.tokennetworkaddresses_to_tokennetworks
-        addresses_to_ids = token_network_registry_state.tokenaddresses_to_tokennetworkaddresses
-
-        ids_to_tokens[token_network_address] = token_network_state
-        addresses_to_ids[token_address] = token_network_address
-        token_network_registry_state.token_network_list.append(token_network_state)
+        token_network_registry_state.add_token_network(token_network_state)
 
         mapping = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses
         mapping[token_network_address] = token_network_registry_address
