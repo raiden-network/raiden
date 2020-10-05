@@ -55,7 +55,7 @@ filelock==3.0.12          # via -r requirements-dev.txt
 flake8-bugbear==20.1.4    # via -r requirements-dev.txt
 flake8-comprehensions==3.2.3  # via -r requirements-dev.txt
 flake8-tuple==0.4.1       # via -r requirements-dev.txt
-flake8==3.8.3             # via -r requirements-dev.txt, flake8-bugbear, flake8-comprehensions, flake8-tuple
+flake8==3.8.4             # via -r requirements-dev.txt, flake8-bugbear, flake8-comprehensions, flake8-tuple
 flaky==3.7.0              # via -r requirements-dev.txt
 flask-cors==3.0.9         # via -r requirements-dev.txt
 flask-restful==0.3.8      # via -r requirements-dev.txt
