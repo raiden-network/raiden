@@ -70,12 +70,7 @@ def token_network_state(
         address=token_network_address,
         token_address=token_id,
     )
-    token_network_registry_state.tokennetworkaddresses_to_tokennetworks[
-        token_network_address
-    ] = token_network
-    token_network_registry_state.tokenaddresses_to_tokennetworkaddresses[
-        token_id
-    ] = token_network_address
+    token_network_registry_state.add_token_network(token_network)
 
     mapping = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses
     mapping[token_network_address] = token_network_registry_address
