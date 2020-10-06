@@ -97,20 +97,14 @@ def get_token_network_by_address(
     tn_registry_address = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses.get(
         token_network_address
     )
+    if not tn_registry_address:
+        return None
 
-    tn_registry_state = None
-    if tn_registry_address:
-        tn_registry_state = chain_state.identifiers_to_tokennetworkregistries.get(
-            tn_registry_address
-        )
+    tn_registry_state = chain_state.identifiers_to_tokennetworkregistries.get(tn_registry_address)
+    if not tn_registry_state:
+        return None
 
-    token_network_state = None
-    if tn_registry_state:
-        token_network_state = tn_registry_state.tokennetworkaddresses_to_tokennetworks.get(
-            token_network_address
-        )
-
-    return token_network_state
+    return tn_registry_state.tokennetworkaddresses_to_tokennetworks.get(token_network_address)
 
 
 def subdispatch_to_all_channels(
