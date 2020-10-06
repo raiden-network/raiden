@@ -629,7 +629,7 @@ def is_valid_lock_expired(
     result: PendingLocksStateOrError = (False, None, None)
 
     if secret_registered_on_chain:
-        msg = "Invalid LockExpired mesage. Lock was unlocked on-chain."
+        msg = "Invalid LockExpired message. Lock was unlocked on-chain."
         result = (False, msg, None)
 
     elif lock is None:
@@ -1073,7 +1073,7 @@ def is_valid_withdraw_expired(
             f"WithdrawExpired for withdraw that has not yet expired {state_change.total_withdraw}."
         )
     elif channel_state.canonical_identifier != state_change.canonical_identifier:
-        return SuccessOrError("Invalid canonical identifier provided in WithdrawExpire")
+        return SuccessOrError("Invalid canonical identifier provided in WithdrawExpired")
     elif state_change.sender != channel_state.partner_state.address:
         return SuccessOrError("Expired withdraw not from partner.")
     elif state_change.total_withdraw != withdraw_state.total_withdraw:
@@ -1242,7 +1242,7 @@ def get_batch_unlock(
 def get_lock(
     end_state: NettingChannelEndState, secrethash: SecretHash
 ) -> Optional[HashTimeLockState]:
-    """Return the lock correspoding to `secrethash` or None if the lock is
+    """Return the lock corresponding to `secrethash` or None if the lock is
     unknown.
     """
     lock = end_state.secrethashes_to_lockedlocks.get(secrethash)
@@ -1790,7 +1790,7 @@ def send_expired_withdraws(
         )
 
         # Break on the first non-expired withdraw as the list
-        # of withdraws are ordered and only ealier withdraws
+        # of withdraws are ordered and only earlier withdraws
         # can expire.
         if not withdraw_expired:
             break

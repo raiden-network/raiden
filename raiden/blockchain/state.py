@@ -6,7 +6,7 @@ otherwise the node will be susceptible to races due to reorgs. These races can
 crash the client in the best case, or be an attack vector in the worst case.
 Because of this, the event itself must already be confirmed.
 
-If possible, the confirmed data should be retrievied from the same block at
+If possible, the confirmed data should be retrieved from the same block at
 which the event was emitted. However, because of state pruning this is not
 always possible. If that block is pruned then the latest confirmed block must
 be used.

@@ -462,7 +462,7 @@ def backward_transfer_pair(
         block_number: The current block number.
 
     Returns:
-        The mediator pair and the correspoding refund event.
+        The mediator pair and the corresponding refund event.
     """
     transfer_pair = None
     events: List[Event] = list()
@@ -819,7 +819,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
     # Only consider the transfers which have a pair. This means if we have a
     # waiting transfer and for some reason the node knows the secret, it will
     # not try to register it. Otherwise it would be possible for an attacker to
-    # reveal the secret late, just to force the node to send an unecessary
+    # reveal the secret late, just to force the node to send an unnecessary
     # transaction.
 
     for pair in get_pending_transfer_pairs(transfers_pair):
@@ -1240,7 +1240,7 @@ def handle_refundtransfer(
 ) -> TransitionResult[MediatorTransferState]:
     """Validate and handle a ReceiveTransferRefund mediator_state change.
     A node might participate in mediated transfer more than once because of
-    refund transfers, eg. A-B-C-B-D-T, B tried to mediate the transfer through
+    refund transfers, e.g. A-B-C-B-D-T, B tried to mediate the transfer through
     C, which didn't have an available route to proceed and refunds B, at this
     point B is part of the path again and will try a new partner to proceed
     with the mediation through D, D finally reaches the target T.

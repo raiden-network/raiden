@@ -99,7 +99,7 @@ def message_identifier_from_prng(prng: Random) -> MessageID:
 class PaymentMappingState(State):
     """Global map from secrethash to a transfer task.
     This mapping is used to quickly dispatch state changes by secrethash, for
-    those that dont have a balance proof, e.g. SecretReveal.
+    those that don't have a balance proof, e.g. SecretReveal.
     This mapping forces one task per secrethash, assuming that secrethash collision
     is unlikely. Features like token swaps, that span multiple networks, must
     be encapsulated in a single task to work with this structure.
@@ -172,7 +172,7 @@ class HashTimeLockState(State):
         typecheck(self.expiration, T_BlockNumber)
         typecheck(self.secrethash, T_Secret)
 
-        from raiden.messages.transfers import Lock  # put here to avoid cyclic depenendcies
+        from raiden.messages.transfers import Lock  # put here to avoid cyclic dependencies
 
         lock = Lock(amount=self.amount, expiration=self.expiration, secrethash=self.secrethash)
         self.encoded = EncodedData(lock.as_bytes)
