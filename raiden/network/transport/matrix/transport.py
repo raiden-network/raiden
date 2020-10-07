@@ -54,6 +54,7 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
+from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address, to_hex_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -72,6 +73,7 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
+    PeerCapabilities,
     RoomID,
     Set,
     Tuple,
@@ -443,10 +445,12 @@ class MatrixTransport(Runnable):
         self._address_mgr.start()
 
         try:
+            capabilities = capconfig_to_dict(self._config.capabilities_config)
             login(
                 client=self._client,
                 signer=self._raiden_service.signer,
                 prev_auth_data=prev_auth_data,
+                capabilities=capabilities,
             )
         except ValueError:
             # `ValueError` may be raised if `get_user` provides invalid data to
@@ -1377,7 +1381,7 @@ class MatrixTransport(Runnable):
         )
 
     def _address_reachability_changed(
-        self, address: Address, reachability: AddressReachability
+        self, address: Address, reachability: AddressReachability, capabilities: PeerCapabilities
     ) -> None:
         if reachability is AddressReachability.REACHABLE:
             node_reachability = NetworkState.REACHABLE
@@ -1391,6 +1395,8 @@ class MatrixTransport(Runnable):
             node_reachability = NetworkState.UNREACHABLE
         else:
             raise TypeError(f'Unexpected reachability state "{reachability}".')
+
+        log.debug("Peer capabilities", capabilities=capabilities, address=address)
 
         assert self._raiden_service is not None, "_raiden_service not set"
         state_change = ActionChangeNodeNetworkState(address, node_reachability)

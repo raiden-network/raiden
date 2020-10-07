@@ -198,6 +198,9 @@ DatabasePath = Union[Path, Literal[":memory:"]]
 T_RoomID = str
 RoomID = NewType("RoomID", T_RoomID)
 
+T_PeerCapabilities = Dict[str, Union[str, bool]]
+PeerCapabilities = NewType("PeerCapabilities", T_PeerCapabilities)
+
 AddressTypes = Union[
     Address,
     TokenAddress,

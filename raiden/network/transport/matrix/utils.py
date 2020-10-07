@@ -56,9 +56,10 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
+from raiden.utils.capabilities import deserialize_capabilities, serialize_capabilities
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, Signature
+from raiden.utils.typing import Address, ChainID, MessageID, PeerCapabilities, Signature
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
@@ -186,7 +187,9 @@ class UserAddressManager:
         self,
         client: GMatrixClient,
         displayname_cache: DisplayNameCache,
-        address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
+        address_reachability_changed_callback: Callable[
+            [Address, AddressReachability, PeerCapabilities], None
+        ],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
         _log_context: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -269,6 +272,10 @@ class UserAddressManager:
         """ Return the current reachability state for ``address``. """
         return self._address_to_reachabilitystate.get(address, UNKNOWN_REACHABILITY_STATE)
 
+    def get_address_capabilities(self, address: Address) -> PeerCapabilities:
+        """ Return the protocol capabilities for ``address``. """
+        return self._address_to_capabilities.get(address, PeerCapabilities({}))
+
     def force_user_presence(self, user: User, presence: UserPresence) -> None:
         """ Forcibly set the ``user`` presence to ``presence``.
 
@@ -331,6 +338,18 @@ class UserAddressManager:
 
         self._maybe_address_reachability_changed(address)
 
+    def query_capabilities_for_user_id(self, user_id: str) -> PeerCapabilities:
+        """ This pulls the `avatar_url` for a given user/user_id and parses the capabilities.  """
+        try:
+            user: User = self._client.get_user(user_id)
+        except MatrixRequestError:
+            return PeerCapabilities({})
+        avatar_url = user.get_avatar_url()
+        if avatar_url is not None:
+            return PeerCapabilities(deserialize_capabilities(avatar_url))
+        else:
+            return PeerCapabilities({})
+
     def get_reachability_from_matrix(self, user_ids: Iterable[str]) -> AddressReachability:
         """ Get the current reachability without any side effects
 
@@ -347,11 +366,14 @@ class UserAddressManager:
     def _maybe_address_reachability_changed(self, address: Address) -> None:
         # A Raiden node may have multiple Matrix users, this happens when
         # Raiden roams from a Matrix server to another. This loop goes over all
-        # these users and uses the "best" presence. IOW, if there is a single
+        # these users and uses the "best" presence. IOW, if there is at least one
         # Matrix user that is reachable, then the Raiden node is considered
         # reachable.
         userids = self._address_to_userids[address].copy()
-        composite_presence = {self._userid_to_presence.get(uid) for uid in userids}
+        presence_to_uid = defaultdict(list)
+        for uid in userids:
+            presence_to_uid[self._userid_to_presence.get(uid)].append(uid)
+        composite_presence = set(presence_to_uid.keys())
 
         new_presence = UserPresence.UNKNOWN
         for presence in UserPresence.__members__.values():
@@ -364,7 +386,9 @@ class UserAddressManager:
         prev_reachability_state = self.get_address_reachability_state(address)
         if new_address_reachability == prev_reachability_state.reachability:
             return
-
+        # for capabilities, we get the "first" uid that showed the `new_presence`
+        present_uid = presence_to_uid[new_presence].pop()
+        capabilities = self.query_capabilities_for_user_id(present_uid)
         now = datetime.now()
 
         self.log.debug(
@@ -379,8 +403,11 @@ class UserAddressManager:
         self._address_to_reachabilitystate[address] = ReachabilityState(
             new_address_reachability, now
         )
+        self._address_to_capabilities[address] = capabilities
 
-        self._address_reachability_changed_callback(address, new_address_reachability)
+        self._address_reachability_changed_callback(
+            address, new_address_reachability, capabilities
+        )
 
     def _presence_listener(self, event: Dict[str, Any], presence_update_id: int) -> None:
         """
@@ -437,6 +464,7 @@ class UserAddressManager:
     def _reset_state(self) -> None:
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_reachabilitystate: Dict[Address, ReachabilityState] = dict()
+        self._address_to_capabilities: Dict[Address, PeerCapabilities] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
         self._userid_to_presence_update_id: Dict[str, int] = dict()
 
@@ -569,7 +597,7 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
         )
 
 
-def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
+def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: str) -> User:
     """Login within a server.
 
     There are multiple cases where a previous auth token can become invalid and
@@ -635,6 +663,12 @@ def first_login(client: GMatrixClient, signer: Signer, username: str) -> User:
     if current_display_name != signature_hex:
         user.set_display_name(signature_hex)
 
+    current_capabilities = user.get_avatar_url() or ""
+
+    # Only set the capabilities if necessary.
+    if current_capabilities != cap_str:
+        user.set_avatar_url(cap_str)
+
     log.debug(
         "Logged in",
         node=to_checksum_address(username),
@@ -679,14 +713,21 @@ def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> 
     return client.get_user(client.user_id)
 
 
-def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] = None) -> User:
-    """ Login with a matrix server.
+def login(
+    client: GMatrixClient,
+    signer: Signer,
+    prev_auth_data: Optional[str] = None,
+    capabilities: Dict[str, Any] = None,
+) -> User:
+    """Login with a matrix server.
 
     Params:
         client: GMatrixClient instance configured with desired homeserver.
         signer: Signer used to sign the password and displayname.
         prev_auth_data: Previously persisted authentication using the format "{user}/{password}".
     """
+    if capabilities is None:
+        capabilities = {}
     server_url = client.api.base_url
     server_name = urlparse(server_url).netloc
 
@@ -708,7 +749,11 @@ def login(client: GMatrixClient, signer: Signer, prev_auth_data: Optional[str] =
                 server_name=server_name,
             )
 
-    return first_login(client, signer, username)
+    try:
+        capstr = serialize_capabilities(capabilities)
+    except ValueError:
+        raise Exception("error serializing")
+    return first_login(client, signer, username, capstr)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())

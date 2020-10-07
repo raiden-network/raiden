@@ -8,6 +8,7 @@ from gevent.event import AsyncResult
 
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
+from raiden.settings import CapabilitiesConfig
 from raiden.tests.utils.network import (
     CHAIN,
     BlockchainServices,
@@ -82,6 +83,7 @@ def raiden_chain(
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
     port_generator: Iterator[Port],
+    capabilities: CapabilitiesConfig,
 ) -> Iterable[List[App]]:
 
     if len(token_addresses) != 1:
@@ -122,6 +124,7 @@ def raiden_chain(
         resolver_ports=resolver_ports,
         enable_rest_api=enable_rest_api,
         port_generator=port_generator,
+        capabilities_config=capabilities,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
@@ -193,6 +196,19 @@ def resolvers(resolver_ports):
 
 
 @pytest.fixture
+def adhoc_capability():
+    return False
+
+
+@pytest.fixture
+def capabilities(adhoc_capability) -> CapabilitiesConfig:
+    config = CapabilitiesConfig()
+    if adhoc_capability:
+        config.adhoc_capability = adhoc_capability  # type: ignore
+    return config
+
+
+@pytest.fixture
 def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
@@ -222,6 +238,7 @@ def raiden_network(
     resolver_ports: List[Optional[int]],
     enable_rest_api: bool,
     port_generator: Iterator[Port],
+    capabilities: CapabilitiesConfig,
 ) -> Iterable[List[App]]:
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -254,6 +271,7 @@ def raiden_network(
         resolver_ports=resolver_ports,
         enable_rest_api=enable_rest_api,
         port_generator=port_generator,
+        capabilities_config=capabilities,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
