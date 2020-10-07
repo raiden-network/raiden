@@ -82,6 +82,15 @@ class Networks(Enum):
     SMOKETEST = ChainID(627)
 
 
+class Capabilities(Enum):
+    """Capabilities allow for protocol handshake between nodes."""
+
+    RECEIVE = "Receive"  # handle receiving transfers
+    MEDIATE = "Mediate"  # support for mediating transfers; mediating requires receiving
+    DELIVERY = "Delivery"  # expects and sends Delivery messages
+    WEBRTC = "webRTC"  # supports webRTC messaging
+
+
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value
 STATE_PRUNING_AFTER_BLOCKS = 64

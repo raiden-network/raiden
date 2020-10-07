@@ -7,6 +7,13 @@ from eth_utils import decode_hex, keccak, to_canonical_address
 
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_average_http_response_time
+from raiden.settings import CapabilitiesConfig
+from raiden.utils.capabilities import (
+    capconfig_to_dict,
+    capdict_to_config,
+    deserialize_capabilities,
+    serialize_capabilities,
+)
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
 
@@ -88,3 +95,40 @@ def test_get_http_rtt_ignore_failing(requests_responses):
     # Internal server error
     requests_responses.add(responses.GET, "http://url3", status=500)
     assert get_average_http_response_time(url="http://url3", method="get") is None
+
+
+def test_deserialize_capabilities():
+    capstring = "mxc://raiden.network/cap?foo=1&toad=1&bar=max&form=1&agar=1&nottrue=0&l=one&l=2"
+    parsed = deserialize_capabilities(capstring)
+    assert parsed.get("foo") is True
+    assert parsed.get("toad") is True
+    assert parsed.get("bar") == "max"
+    assert parsed.get("agar") is True
+    assert parsed.get("nottrue") is False
+    assert parsed.get("l") == ["one", "2"]
+    assert not parsed.get("nothing")
+
+    assert serialize_capabilities(parsed) == f"{capstring}"
+
+    parsed["false"] = False
+
+    # Explicit new value changes the serialization format
+    assert serialize_capabilities(parsed) != f"mxc://{capstring}"
+
+    assert deserialize_capabilities("") == dict()
+
+    assert serialize_capabilities({}) == "mxc://"
+
+
+def test_capconfig_to_dict():
+    # test method supports adding unknown keys
+    config = CapabilitiesConfig()
+    config.foo = True
+    as_dict = capconfig_to_dict(config)
+
+    assert as_dict.get("foo") is True
+    assert as_dict.get("bar") is None
+
+    assert capdict_to_config(as_dict) == config
+    as_dict["bar"] = True
+    assert capdict_to_config(as_dict).bar is True  # pylint: disable=no-member

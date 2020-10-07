@@ -128,6 +128,14 @@ class MediationFeeConfig:
 
 
 @dataclass
+class CapabilitiesConfig:
+    receive: bool = True
+    mediate: bool = True
+    delivery: bool = True
+    web_rtc: bool = False
+
+
+@dataclass
 class MatrixTransportConfig:
     retries_before_backoff: int
     retry_interval_initial: float
@@ -137,6 +145,7 @@ class MatrixTransportConfig:
     available_servers: List[str]
     sync_timeout: int = DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
     sync_latency: int = DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY
+    capabilities_config: CapabilitiesConfig = CapabilitiesConfig()
 
 
 @dataclass
@@ -201,6 +210,7 @@ class RaidenConfig:
         retry_interval_max=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX,
         server=MATRIX_AUTO_SELECT_SERVER,
         sync_timeout=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
+        capabilities_config=CapabilitiesConfig(),
     )
 
     rest_api: RestApiConfig = RestApiConfig()
