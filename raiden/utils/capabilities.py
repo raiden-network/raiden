@@ -32,16 +32,14 @@ def serialize_capabilities(capdict: Optional[Dict[str, Any]]) -> str:
 def _strip_capstring(capstring: str) -> str:
     if capstring.startswith("mxc://"):
         capstring = capstring[6:]
-    if "/" in capstring:
-        capstring = capstring[capstring.rindex("/") + 1 :]
-    if "?" in capstring:
-        capstring = capstring[capstring.rindex("?") + 1 :]
+    _, _, capstring = capstring.rpartition("/")
+    _, _, capstring = capstring.rpartition("?")
     return capstring
 
 
 def deserialize_capabilities(capstring: str) -> Dict[str, Any]:
     capstring = _strip_capstring(capstring)
-    capdict = url_decode(capstring.encode("utf-8"))
+    capdict = url_decode(capstring.encode())
     capabilities: Dict[str, Any] = dict()
     for key in capdict:
         value = capdict.getlist(key, type=int_bool)
