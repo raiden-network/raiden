@@ -79,7 +79,7 @@ class Networks(Enum):
 class Capabilities(Enum):
     """Capabilities allow for protocol handshake between nodes."""
 
-    RECEIVE = "Receive"  # proceed with protocol for incoming transfers
+    RECEIVE = "Receive"  # handle receiving transfers
     MEDIATE = "Mediate"  # support for mediating transfers; mediating requires receiving
     DELIVERY = "Delivery"  # expects and sends Delivery messages
     WEBRTC = "webRTC"  # supports webRTC messaging
