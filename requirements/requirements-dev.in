@@ -36,6 +36,7 @@ ipython
 pdbpp
 colour
 py-spy
+nest-asyncio
 
 # Continuous Integration
 coverage

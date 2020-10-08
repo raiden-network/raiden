@@ -5,6 +5,7 @@ import time
 
 import gevent
 import IPython
+import nest_asyncio
 from eth_utils import denoms, to_canonical_address
 
 from raiden import waiting
@@ -111,6 +112,7 @@ class Console(gevent.Greenlet):
         print("Entering Console" + OKGREEN)
         print("Tip:" + OKBLUE)
         print_usage()
+        nest_asyncio.apply()
         IPython.start_ipython(argv=[], user_ns=self.console_locals)
 
         sys.exit(0)

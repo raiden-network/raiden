@@ -15,13 +15,9 @@ import gevent
 import requests
 import structlog
 
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 
-import asyncio  # isort:skip # noqa
-from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
-
-asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
-gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
-
+setup_asyncio_event_loop()
 
 NODE_SECTION_RE = re.compile("^node[0-9]+")
 API_VERSION = "v1"

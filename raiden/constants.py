@@ -209,3 +209,26 @@ PROPORTIONAL_MED_FEE_MIN = 0
 PROPORTIONAL_MED_FEE_MAX = 1_000_000
 IMBALANCE_MED_FEE_MIN = 0
 IMBALANCE_MED_FEE_MAX = 50_000
+
+
+# Web RTC constants
+class RTCMessageType(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+    CANDIDATES = "candidates"
+    HANGUP = "hangup"
+
+
+class SDPTypes(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+
+
+class RTCChannelState(Enum):
+    CONNECTING = "connecting"
+    OPEN = "open"
+    CLOSING = "closing"
+    CLOSED = "closed"
+
+
+WEB_RTC_CHANNEL_TIMEOUT = 10

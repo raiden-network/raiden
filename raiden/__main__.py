@@ -6,11 +6,9 @@ def main() -> None:
 
     gevent.monkey.patch_all()
 
-    import asyncio  # isort:skip # noqa
-    import raiden.network.transport.matrix.rtc.aiogevent as aiogevent  # isort:skip # noqa
+    from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 
-    asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
-    gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
+    setup_asyncio_event_loop()
 
     from raiden.ui.cli import run
 
