@@ -312,15 +312,10 @@ There are further CLI arguments with which you can control, among other things
 
 A pathfinding service is a third party service helping your node with efficient transfer routing. It is usually paid in RDN tokens.
 
-Raiden can be configured to not use a pathfinding service and rely on its internal routing instead.
-This is discouraged since the node has less information about the network that it can use to find routes and compute fees.
-So transfers will be more likely to fail to route, and paid fees will often be unnecessarily high when internal routing is used.
-If you want to use internal routing anyway, you can do so with ``--routing-mode local``.
-
-.. note::
-    Although otherwise discouraged, ``--routing-mode local`` has to be used at the moment to try
-    out Raiden on the mainnet. The Raiden Service Bundle, with pathfinding service and registry,
-    will not be deployed on the mainnet until the Alderaan release.
+Direct channels to other nodes can be used without asking the PFS for a route.
+If you want to stop broadcasting information about your channel states to
+PFSes, use ``--routing-mode private``. As a result, PFSes won't create routes
+that include your node as a mediator.
 
 If you want to use a particular pathfinding service, e.g. one of the testnet pathfinding services given below, you can
 do so with ``--pathfinding-service-address <url>``. Otherwise Raiden will automatically pick one of the pathfinding
