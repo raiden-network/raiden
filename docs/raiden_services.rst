@@ -21,17 +21,6 @@ Pathfinding services have a global view on a token network can provide suitable 
 The service will keep its view on the token network updated by listening to blockchain events and a public matrix room where current capacities and fees (Capacity Updates) are being published. Nodes can publish their channel capacities and fees in order to advertise their channels and mediate payments.
 
 
-Using a Pathfinding Service
----------------------------
-
-Using a Pathfinding service increases the likelihood of successful payments, especially when multiple mediators are used. Therefore, using a Pathfinding service is enabled by default.
-
-.. note::
-  Direct token transfers (using no mediators) never need information from a PFS, so in that case no request for a PFS is done.
-
-To disable the usage of Pathfinding services use the ``--routing-mode`` command line flag. This option is set to ``pfs`` by default, but can also be set to ``local`` or ``private`` if you don't want to use a Pathfinding service. See below for further information about privacy implications.
-
-
 Choosing a Pathfinding Service
 ------------------------------
 
