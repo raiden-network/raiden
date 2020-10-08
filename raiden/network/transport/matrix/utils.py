@@ -342,13 +342,12 @@ class UserAddressManager:
         """ This pulls the `avatar_url` for a given user/user_id and parses the capabilities.  """
         try:
             user: User = self._client.get_user(user_id)
+            avatar_url = user.get_avatar_url()
+            if avatar_url is not None:
+                return PeerCapabilities(deserialize_capabilities(avatar_url))
         except MatrixRequestError:
-            return PeerCapabilities({})
-        avatar_url = user.get_avatar_url()
-        if avatar_url is not None:
-            return PeerCapabilities(deserialize_capabilities(avatar_url))
-        else:
-            return PeerCapabilities({})
+            log.debug("Could not fetch capabilities", user_id=user_id)
+        return PeerCapabilities({})
 
     def get_reachability_from_matrix(self, user_ids: Iterable[str]) -> AddressReachability:
         """Get the current reachability without any side effects

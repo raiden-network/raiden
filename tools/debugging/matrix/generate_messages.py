@@ -15,6 +15,7 @@ import structlog
 from gevent.pool import Pool
 
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room, User
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.network.transport.matrix.utils import login
 from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
@@ -24,12 +25,7 @@ from raiden.tests.utils import factories
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, Iterator, RoomID
 
-import asyncio  # isort:skip # noqa
-from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
-
-asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
-gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
-
+setup_asyncio_event_loop()
 
 log = structlog.get_logger(__name__)
 

@@ -70,5 +70,4 @@ def test_web_rtc_message_sync(matrix_transports):
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while not len(transport1_messages) == 5:
-            print(len(transport1_messages))
             gevent.sleep(0.1)

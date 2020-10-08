@@ -25,18 +25,14 @@ from gevent.pool import Pool
 from gevent.subprocess import DEVNULL, STDOUT, Popen
 from greenlet import greenlet
 
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.network.utils import get_free_port
 from raiden.transfer.state import NetworkState
 from raiden.utils.formatting import pex
 from raiden.utils.nursery import Janitor, Nursery
 from raiden.utils.typing import Address, Host, Port, TokenAmount
 
-import asyncio  # isort:skip # noqa
-from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
-
-asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
-gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
-
+setup_asyncio_event_loop()
 
 BaseURL = NewType("BaseURL", str)
 Amount = NewType("Amount", int)

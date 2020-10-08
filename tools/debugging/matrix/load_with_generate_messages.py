@@ -8,17 +8,10 @@ import time
 from dataclasses import dataclass
 from typing import Iterator, List
 
-import gevent
-
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.utils.nursery import Janitor, Nursery
 
-
-import asyncio  # isort:skip # noqa
-from raiden.network.transport.matrix.rtc import aiogevent  # isort:skip # noqa
-
-asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())  # isort:skip # noqa
-gevent.spawn(asyncio.get_event_loop().run_forever)  # isort:skip # noqa
-
+setup_asyncio_event_loop()
 
 CWD = os.path.dirname(os.path.abspath(__file__))
 GENERATE_MESSAGES_SCRIPT = os.path.join(CWD, "generate_messages.py")
