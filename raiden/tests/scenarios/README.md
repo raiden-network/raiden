@@ -46,13 +46,6 @@ When all channels are opened and deposits have taken place, 100 payments are sta
 At the same time 100 payments are done in parallel from node4 to node0.
 After all payments have finished it is asserted that all nodes received the correct amounts.
 
-#### [bf5_join_and_leave](./bf5_join_and_leave.yaml)
-It sets up a simple topology of two nodes and then uses
-`join_network` to add more nodes to the network. It tests that nodes can join the network
-with nodes that didn't use `join_network` themselves and that nodes that used `join_network`
-also deposits in new channels when other nodes open channels with them. Finally it also
-tests that nodes using `leave_network` have all their open channels closed, when doing so.
-
 #### [bf6_stress_hub_node](./bf6_stress_hub_node.yaml)
 It sets up a tolopogy with 9 nodes connected to node0,
 so that node0 is the single hub that all payments have to go through. First one
