@@ -79,7 +79,7 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from raiden.raiden_service import RaidenService, PaymentStatus
+    from raiden.raiden_service import PaymentStatus, RaidenService
 
 log = structlog.get_logger(__name__)
 

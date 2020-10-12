@@ -39,8 +39,8 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
     from raiden.app import App
+    from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
 
 log = structlog.get_logger(__name__)
 

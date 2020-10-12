@@ -174,8 +174,8 @@ def enable_greenlet_debugger(request):
     discarded. Making it impossible to execute a post_mortem
     """
     if request.config.option.usepdb:
-        import pdb
         import bdb
+        import pdb
 
         # Do not run pdb again if an exception hits top-level for a second
         # greenlet and the previous pdb session is still running
@@ -212,7 +212,7 @@ def profiler(request):
     profiler = None
 
     if request.config.option.profiler == "flamegraph-trace":
-        from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
+        from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 
         now = datetime.datetime.now()
         stack_path = os.path.join("/tmp", f"{now:%Y%m%d_%H%M}_stack.data")
