@@ -80,9 +80,7 @@ class WebRTCManager:
     ) -> None:
         self.wrapped_coroutines.add(
             spawn_coroutine(
-                coroutine=coroutine,
-                callback=callback,
-                partner_address=partner_address,
+                coroutine=coroutine, callback=callback, partner_address=partner_address
             )
         )
 
@@ -120,7 +118,11 @@ class WebRTCManager:
 
         if rtc_partner is not None:
             aiortc_channel_close_callback(rtc_partner)
-            rtc_partner.peer_connection.close()
+            self._spawn_web_rtc_coroutine(
+                coroutine=rtc_partner.peer_connection.close(),
+                callback=None,
+                partner_address=rtc_partner.partner_address,
+            )
 
     def stop(self) -> None:
         if self.node_address is None:
@@ -185,10 +187,7 @@ async def create_channel_coroutine(
     rtc_partner.channel.on(
         "message",
         partial(
-            aiortc_channel_message_callback,
-            rtc_partner,
-            node_address,
-            handle_message_callback,
+            aiortc_channel_message_callback, rtc_partner, node_address, handle_message_callback
         ),
     )
     # channel callback on close signal
@@ -228,10 +227,7 @@ async def set_remote_description_coroutine(
         rtc_partner.channel.on(
             "message",
             partial(
-                aiortc_channel_message_callback,
-                rtc_partner,
-                node_address,
-                handle_message_callback,
+                aiortc_channel_message_callback, rtc_partner, node_address, handle_message_callback
             ),
         )
         rtc_partner.channel.on("close", partial(aiortc_channel_close_callback, rtc_partner))
