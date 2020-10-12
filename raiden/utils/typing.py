@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, NewType, Tuple, Type, Union
 
-from eth_typing import (  # NOQA pylint:disable=unused-import
+from eth_typing import (  # NOQA pylint:disable=unused-import; noqa: F401; pylint: disable=unused-import
     Address,
     BlockNumber,
+    ChecksumAddress,
     Hash32,
     HexAddress,
 )
@@ -33,8 +34,6 @@ from raiden_contracts.utils.type_aliases import (  # NOQA pylint:disable=unused-
     TokenAmount,
 )
 
-from eth_typing import ChecksumAddress  # noqa: F401; pylint: disable=unused-import
-
 if sys.version_info < (3, 8):
     from typing_extensions import Literal
 else:
@@ -43,19 +42,19 @@ else:
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.transfer.state import (  # noqa: F401
-        HashTimeLockState,
-        NettingChannelState,
-        UnlockPartialProofState,
-        NetworkState,
-    )
+    from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError  # noqa: F401
+    from raiden.messages.monitoring_service import SignedBlindedBalanceProof  # noqa: F401
     from raiden.transfer.mediated_transfer.state import (  # noqa: F401
         InitiatorTransferState,
         LockedTransferSignedState,
         LockedTransferUnsignedState,
     )
-    from raiden.messages.monitoring_service import SignedBlindedBalanceProof  # noqa: F401
-    from raiden.exceptions import RaidenUnrecoverableError, RaidenRecoverableError  # noqa: F401
+    from raiden.transfer.state import (  # noqa: F401
+        HashTimeLockState,
+        NettingChannelState,
+        NetworkState,
+        UnlockPartialProofState,
+    )
 
 
 MYPY_ANNOTATION = "This assert is used to tell mypy what is the type of the variable"
