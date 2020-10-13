@@ -4,12 +4,12 @@ settings:
   gas_price: "fast"
   services:
     pfs:
-      url: {{ pfs_with_fee }}
+      url: "{{ pfs_with_fee }}"
     udc:
       enable: true
       token:
         deposit: true
-        balance_per_node: {{ ms_reward_with_margin + 200 * 2 * pfs_fee}}
+        balance_per_node: "{{ ms_reward_with_margin + 200 * 2 * pfs_fee}}"
 
 token:
   address: "{{ transfer_token }}"
@@ -23,7 +23,7 @@ nodes:
     gas-price: fast
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-max-fee: {{ pfs_fee }}
+    pathfinding-max-fee: "{{ pfs_fee }}"
     enable-monitoring: true
     proportional-fee:
       - "{{ transfer_token }}"
@@ -31,19 +31,19 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: {{ settlement_timeout_min }}
+    default-settle-timeout: "{{ settlement_timeout_min }}"
     default-reveal-timeout: 20
   node_options:
     0:
-      matrix-server: {{ matrix_servers[0] }}
+      matrix-server: "{{ matrix_servers[0] }}"
     1:
-      matrix-server: {{ matrix_servers[1] }}
+      matrix-server: "{{ matrix_servers[1] }}"
     2:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: "{{ matrix_servers[2] }}"
     3:
-      matrix-server: {{ matrix_servers[3] }}
+      matrix-server: "{{ matrix_servers[3] }}"
     4:
-      matrix-server: {{ matrix_servers[0] }}
+      matrix-server: "{{ matrix_servers[0] }}"
 
 scenario:
   serial:
@@ -66,7 +66,7 @@ scenario:
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
       - serial:
-          name: "Make transfer in the direction with no deposit (should fail) - No IOU created"
+          name: "Make transfer in the direction with no deposit (should fail) - No path available"
           tasks:
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30, expected_http_status: 409}
       - parallel:
@@ -117,10 +117,10 @@ scenario:
           tasks:
             # Add a wait until all ious are processed correctly
             - wait: 100
-            - assert_pfs_history: {source: 3, target: 0, request_count: 10}
-            - assert_pfs_iou: {source: 3, amount: {{ 10 * pfs_fee }} }
+            - assert_pfs_history: {source: 3, target: 0, request_count: 11}
+            - assert_pfs_iou: {source: 3, amount: "{{ 11 * pfs_fee }}" }
             - assert_pfs_history: {source: 1, target: 4, request_count: 10}
-            - assert_pfs_iou: {source: 1, amount: {{ 10 * pfs_fee }} }
+            - assert_pfs_iou: {source: 1, amount: "{{ 10 * pfs_fee }}" }
             # Make sure that a mediating node has not used the PFS
             - assert_pfs_iou: {source: 2, iou_exists: false}
       - serial:
@@ -226,7 +226,7 @@ scenario:
                 event_args: {closing_participant: 0}
             - assert: {from: 0, to: 4, state: "closed"}
             # Make sure that channel between 0 and 4 is also settled
-            - wait_blocks: {{ settlement_timeout_min }}
+            - wait_blocks: "{{ settlement_timeout_min }}"
       - serial:
           name: "Close channel between 3 and 4 while 4 is offline"
           tasks:
@@ -242,7 +242,7 @@ scenario:
                 event_args: {closing_participant: 3}
 
             ## The MS reacts within the settle_timeout
-            - wait_blocks: {{ settlement_timeout_min }}
+            - wait_blocks: "{{ settlement_timeout_min }}"
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "NonClosingBalanceProofUpdated"
