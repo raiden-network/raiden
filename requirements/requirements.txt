@@ -18,7 +18,7 @@ cffi==1.12.3              # via aiortc, coincurve, cryptography, pylibsrtp
 chardet==3.0.4            # via requests
 click==7.1.2              # via -r requirements.in, flask, raiden-contracts
 coincurve==13.0.0         # via -r requirements.in, raiden-contracts
-colorama==0.4.3           # via -r requirements.in
+colorama==0.4.4           # via -r requirements.in
 crc32c==2.0               # via aiortc
 cryptography==2.9.2       # via aiortc
 cytoolz==0.10.1           # via eth-keyfile, eth-utils
