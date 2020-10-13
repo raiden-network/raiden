@@ -37,7 +37,7 @@ flask==1.1.2              # via -r requirements.in, flask-cors, flask-restful
 gevent==20.9.0            # via -r requirements.in
 graphviz==0.13.2          # via objgraph
 greenlet==0.4.17          # via gevent
-guppy3==3.0.10.post1      # via -r requirements.in
+guppy3==3.1.0             # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
 ipfshttpclient==0.6.0.post1  # via web3
