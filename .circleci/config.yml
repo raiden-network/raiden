@@ -354,7 +354,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            make -C scenario-player install-dev
+            pip install git+https://github.com/raiden-network/scenario-player.git
       - run:
           name: Set Locale
           command: |
@@ -366,7 +366,8 @@ jobs:
       - run:
           name: Run Unit Tests
           command: |
-            make -C scenario-player unit-tests
+            cd scenario-player
+            pytest .
       - run:
           name: Run Smoketest
           command: |
