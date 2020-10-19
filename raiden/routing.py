@@ -62,13 +62,29 @@ def get_best_routes(
 
             if is_usable is channel.ChannelUsability.USABLE:
                 direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0),
+                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0)
                 )
                 return None, [direct_route], None
 
     if pfs_config is None or one_to_n_address is None:
         log.warning("Pathfinding Service could not be used.")
         return "Pathfinding Service could not be used.", list(), None
+
+    # Does any channel have sufficient capacity for the payment?
+    channels = [
+        token_network.channelidentifiers_to_channels[channel_id]
+        for channels_to_partner in token_network.partneraddresses_to_channelidentifiers.values()
+        for channel_id in channels_to_partner
+    ]
+    for channel_state in channels:
+        payment_with_fee_amount = PaymentWithFeeAmount(amount)
+        is_usable = channel.is_channel_usable_for_new_transfer(
+            channel_state, payment_with_fee_amount, None
+        )
+        if is_usable is channel.ChannelUsability.USABLE:
+            break
+    else:
+        return ("You have no suitable channel to initiate this payment.", list(), None)
 
     # Make sure that the PFS knows about the last channel we opened
     latest_channel_opened_at = 0
@@ -172,7 +188,7 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee,))
+        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee))
 
     return None, paths, feedback_token
 
