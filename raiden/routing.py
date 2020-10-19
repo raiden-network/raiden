@@ -62,42 +62,35 @@ def get_best_routes(
 
             if is_usable is channel.ChannelUsability.USABLE:
                 direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)],
-                    estimated_fee=FeeAmount(0),
+                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0),
                 )
                 return None, [direct_route], None
 
+    if pfs_config is None or one_to_n_address is None:
+        log.warning("Pathfinding Service could not be used.")
+        return "Pathfinding Service could not be used.", list(), None
+
+    # Make sure that the PFS knows about the last channel we opened
     latest_channel_opened_at = 0
     for channel_state in token_network.channelidentifiers_to_channels.values():
         latest_channel_opened_at = max(
             latest_channel_opened_at, channel_state.open_transaction.finished_block_number
         )
 
-    if pfs_config is not None and one_to_n_address is not None:
-        pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            one_to_n_address=one_to_n_address,
-            from_address=from_address,
-            to_address=to_address,
-            amount=amount,
-            previous_address=previous_address,
-            pfs_config=pfs_config,
-            privkey=privkey,
-            pfs_wait_for_block=BlockNumber(latest_channel_opened_at),
-        )
+    pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
+        chain_state=chain_state,
+        token_network_address=token_network_address,
+        one_to_n_address=one_to_n_address,
+        from_address=from_address,
+        to_address=to_address,
+        amount=amount,
+        previous_address=previous_address,
+        pfs_config=pfs_config,
+        privkey=privkey,
+        pfs_wait_for_block=BlockNumber(latest_channel_opened_at),
+    )
 
-        if not pfs_error_msg:
-            # As of version 0.5 it is possible for the PFS to return an empty
-            # list of routes without an error message.
-            if not pfs_routes:
-                return "PFS could not find any routes", list(), None
-
-            log.info(
-                "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
-            )
-            return pfs_error_msg, pfs_routes, pfs_feedback_token
-
+    if pfs_error_msg:
         log.warning(
             "Request to Pathfinding Service was not successful. "
             "No routes to the target were found.",
@@ -105,8 +98,13 @@ def get_best_routes(
         )
         return pfs_error_msg, list(), None
 
-    log.warning("Pathfinding Service could not be used.")
-    return "Pathfinding Service could not be used.", list(), None
+    if not pfs_routes:
+        # As of version 0.5 it is possible for the PFS to return an empty
+        # list of routes without an error message.
+        return "PFS could not find any routes", list(), None
+
+    log.info("Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token)
+    return pfs_error_msg, pfs_routes, pfs_feedback_token
 
 
 def get_best_routes_pfs(
@@ -174,12 +172,7 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(
-            RouteState(
-                route=canonical_path,
-                estimated_fee=estimated_fee,
-            )
-        )
+        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee,))
 
     return None, paths, feedback_token
 
