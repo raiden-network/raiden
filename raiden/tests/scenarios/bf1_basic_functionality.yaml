@@ -117,8 +117,8 @@ scenario:
           tasks:
             # Add a wait until all ious are processed correctly
             - wait: 100
-            - assert_pfs_history: {source: 3, target: 0, request_count: 11}
-            - assert_pfs_iou: {source: 3, amount: "{{ 11 * pfs_fee }}" }
+            - assert_pfs_history: {source: 3, target: 0, request_count: 10}
+            - assert_pfs_iou: {source: 3, amount: "{{ 10 * pfs_fee }}" }
             - assert_pfs_history: {source: 1, target: 4, request_count: 10}
             - assert_pfs_iou: {source: 1, amount: "{{ 10 * pfs_fee }}" }
             # Make sure that a mediating node has not used the PFS
