@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`6582` Add ``/settings`` endpoint with information about the used pathfinding service.
 * :bug:`6444` Fix a race condition when processing blockchain events.
 
 * :release:`1.1.1 <2020-07-20>`
