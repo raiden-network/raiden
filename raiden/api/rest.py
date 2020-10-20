@@ -484,38 +484,36 @@ class RestAPI:  # pragma: no unittest
         return api_response(result=dict(version=get_system_spec()["raiden"]))
 
     def get_node_settings(self) -> Response:
-        settings = dict(pathfinding_service_address="")
         pfs_config = self.raiden_api.raiden.config.pfs_config
-        if pfs_config is not None:
-            settings["pathfinding_service_address"] = pfs_config.info.url
+        settings = dict(
+            pathfinding_service_address=pfs_config and pfs_config.info.url
+        )
 
         return api_response(result=settings)
 
     def get_contract_versions(self) -> Response:
         raiden = self.raiden_api.raiden
+        service_registry_address = raiden.default_service_registry and to_checksum_address(
+            raiden.default_service_registry.address
+        )
+        user_deposit_address = raiden.default_user_deposit and to_checksum_address(
+            raiden.default_user_deposit.address
+        )
+        monitoring_service_address = raiden.default_msc_address and to_checksum_address(
+            raiden.default_msc_address
+        )
+        one_to_n_address = raiden.default_one_to_n_address and to_checksum_address(
+            raiden.default_one_to_n_address
+        )
         contracts = dict(
             contracts_version=raiden.proxy_manager.contract_manager.contracts_version,
             token_network_registry_address=to_checksum_address(raiden.default_registry.address),
             secret_registry_address=to_checksum_address(raiden.default_secret_registry.address),
-            service_registry_address="",
-            user_deposit_address="",
-            monitoring_service_address="",
-            one_to_n_address="",
+            service_registry_address=service_registry_address,
+            user_deposit_address=user_deposit_address,
+            monitoring_service_address=monitoring_service_address,
+            one_to_n_address=one_to_n_address,
         )
-        if raiden.default_service_registry is not None:
-            contracts["service_registry_address"] = to_checksum_address(
-                raiden.default_service_registry.address
-            )
-        if raiden.default_user_deposit is not None:
-            contracts["user_deposit_address"] = to_checksum_address(
-                raiden.default_user_deposit.address
-            )
-        if raiden.default_msc_address is not None:
-            contracts["monitoring_service_address"] = to_checksum_address(
-                raiden.default_msc_address
-            )
-        if raiden.default_one_to_n_address is not None:
-            contracts["one_to_n_address"] = to_checksum_address(raiden.default_one_to_n_address)
 
         return api_response(result=contracts)
 

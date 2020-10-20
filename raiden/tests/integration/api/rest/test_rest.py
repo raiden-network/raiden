@@ -209,13 +209,9 @@ def test_api_get_node_settings(api_server_test_instance: APIServer):
     response = request.send().response
     assert_proper_response(response)
 
-    pathfinding_service_address = ""
     pfs_config = api_server_test_instance.rest_api.raiden_api.raiden.config.pfs_config
-    if pfs_config is not None:
-        pathfinding_service_address = pfs_config.info.url
-
     assert get_json_response(response) == {
-        "pathfinding_service_address": pathfinding_service_address
+        "pathfinding_service_address": pfs_config and pfs_config.info.url
     }
 
 
@@ -238,7 +234,7 @@ def test_api_get_contract_infos(api_server_test_instance: APIServer):
         "one_to_n_address",
     ]:
         address = json[contract_name]
-        if address != "":
+        if address is not None:
             assert is_checksum_address(address)
 
 
