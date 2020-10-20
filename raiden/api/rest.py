@@ -43,6 +43,7 @@ from raiden.api.v1.resources import (
     ConnectionsResource,
     ContractsResource,
     MintTokenResource,
+    NodeSettingsResource,
     PartnersResourceByTokenAddress,
     PaymentEventsResource,
     PaymentResource,
@@ -134,6 +135,7 @@ CHANNEL_NETWORK_STATE = "network_state"
 URLS_V1 = [
     ("/address", AddressResource),
     ("/version", VersionResource),
+    ("/settings", NodeSettingsResource),
     ("/contracts", ContractsResource),
     ("/channels", ChannelsResource),
     ("/channels/<hexaddress:token_address>", ChannelsResourceByTokenAddress),
@@ -480,6 +482,14 @@ class RestAPI:  # pragma: no unittest
     @classmethod
     def get_raiden_version(cls) -> Response:
         return api_response(result=dict(version=get_system_spec()["raiden"]))
+
+    def get_node_settings(self) -> Response:
+        settings = dict(pathfinding_service_address="")
+        pfs_config = self.raiden_api.raiden.config.pfs_config
+        if pfs_config is not None:
+            settings["pathfinding_service_address"] = pfs_config.info.url
+
+        return api_response(result=settings)
 
     def get_contract_versions(self) -> Response:
         raiden = self.raiden_api.raiden

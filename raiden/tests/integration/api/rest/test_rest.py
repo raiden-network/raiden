@@ -204,6 +204,23 @@ def test_api_get_raiden_version(api_server_test_instance: APIServer):
 
 @raise_on_failure
 @pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_get_node_settings(api_server_test_instance: APIServer):
+    request = grequests.get(api_url_for(api_server_test_instance, "nodesettingsresource"))
+    response = request.send().response
+    assert_proper_response(response)
+
+    pathfinding_service_address = ""
+    pfs_config = api_server_test_instance.rest_api.raiden_api.raiden.config.pfs_config
+    if pfs_config is not None:
+        pathfinding_service_address = pfs_config.info.url
+
+    assert get_json_response(response) == {
+        "pathfinding_service_address": pathfinding_service_address
+    }
+
+
+@raise_on_failure
+@pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_get_contract_infos(api_server_test_instance: APIServer):
     request = grequests.get(api_url_for(api_server_test_instance, "contractsresource"))
     response = request.send().response

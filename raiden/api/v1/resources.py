@@ -62,6 +62,12 @@ class VersionResource(BaseResource):
         return self.rest_api.get_raiden_version()
 
 
+class NodeSettingsResource(BaseResource):
+    @if_api_available
+    def get(self) -> Response:
+        return self.rest_api.get_node_settings()
+
+
 class ContractsResource(BaseResource):
     @if_api_available
     def get(self) -> Response:
