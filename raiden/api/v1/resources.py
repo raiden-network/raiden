@@ -181,15 +181,6 @@ class ConnectionsResource(BaseResource):
     put_schema = ConnectionsConnectSchema()
 
     @if_api_available
-    def put(self, token_address: TokenAddress) -> Response:
-        kwargs = validate_json(self.put_schema)
-        return self.rest_api.connect(
-            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
-            token_address=token_address,
-            **kwargs,
-        )
-
-    @if_api_available
     def delete(self, token_address: TokenAddress) -> Response:
         return self.rest_api.leave(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,

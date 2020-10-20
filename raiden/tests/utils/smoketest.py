@@ -21,7 +21,6 @@ from web3 import HTTPProvider, Web3
 from web3.contract import Contract
 
 from raiden.accounts import AccountManager
-from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     BLOCK_ID_LATEST,
     DISCOVERY_DEFAULT_ROOM,
@@ -435,6 +434,7 @@ def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
         app = run_raiden_service(**setup.args)
         raiden_api = app.raiden_api
         assert raiden_api is not None  # for mypy
+        partner_address = Address(b"1" * 20)
 
         block = BlockNumber(app.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
@@ -447,14 +447,14 @@ def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
                 setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
             token_address=TokenAddress(to_canonical_address(setup.token.address)),
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+            partner_address=partner_address,
         )
         raiden_api.set_total_channel_deposit(
             registry_address=TokenNetworkRegistryAddress(
                 setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
             token_address=TokenAddress(to_canonical_address(setup.token.address)),
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+            partner_address=partner_address,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
         token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
@@ -478,7 +478,7 @@ def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
             chain_state=views.state_from_raiden(raiden_service),
             token_network_registry_address=raiden_service.default_registry.address,
             token_address=token_networks[0],
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+            partner_address=partner_address,
         )
         assert channel_state
 
@@ -495,9 +495,7 @@ def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
         assert response.status_code == HTTPStatus.OK
 
         response_json = json.loads(response.content)
-        assert response_json[0]["partner_address"] == to_checksum_address(
-            ConnectionManager.BOOTSTRAP_ADDR
-        )
+        assert response_json[0]["partner_address"] == to_checksum_address(partner_address)
         assert response_json[0]["state"] == "opened"
         assert int(response_json[0]["balance"]) > 0
     finally:

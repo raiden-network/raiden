@@ -622,12 +622,10 @@ Connection Management
 
       {
           "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
-              "funds": "100",
               "sum_deposits": "67",
               "channels": "3"
           },
           "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "funds": "49",
               "sum_deposits": "31",
               "channels": "1"
           }
@@ -636,43 +634,9 @@ Connection Management
    :statuscode 200: For a successful query
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-   :resjsonarr int funds: Funds from last connect request
    :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
    :resjsonarr int channels: Number of channels currently open for that token
 
-.. http:put:: /api/(version)/connections/(token_address)
-
-   Automatically join a token network. The request will only return once all blockchain calls for
-   opening and/or depositing to a channel have completed.
-
-   The request's payload has ``initial_channel_target`` and ``joinable_funds_target`` as optional arguments. If not provided they default to ``initial_channel_target = 3`` and ``joinable_funds_target = 0.4``.
-
-   If the ``initial_channel_target`` is bigger than the current number of participants of the token network then the funds will still be split according to the ``initial_channel_target`` but the number of channels made will be equal to the number of participants in the network. So eventually you will end up with less channels, but each channel will have the expected number of funds allocated to it. The remaining channels will be opened once more peers become available.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      PUT /api/v1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "funds": "1337"
-      }
-
-   :statuscode 204: For a successful connection creation.
-   :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions.
-   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
-   :statuscode 409: If any of the provided input to the call is invalid.
-   :statuscode 500: Internal Raiden node error.
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-   :reqjson int funds: Amount of funding you want to put into the network.
-   :reqjson int initial_channel_target: Number of channels to open proactively.
-   :reqjson float joinable_funds_target: Fraction of funds that will be used to join channels opened by other participants.
-
-   .. note::
-      Currently, the API calls are blocking. This means that in the case of long running calls like ``join``, if other calls to ``join`` are made concurrently, they will block too and wait for the first call to finish. If an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
 .. http:delete:: /api/(version)/connections/(token_address)
 
