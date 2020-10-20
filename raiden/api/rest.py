@@ -687,38 +687,6 @@ class RestAPI:  # pragma: no unittest
         )
         return api_response(result=result, status_code=status_code)
 
-    def connect(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        token_address: TokenAddress,
-        funds: TokenAmount,
-        initial_channel_target: int = 3,
-        joinable_funds_target: float = 0.4,
-    ) -> Response:
-        log.debug(
-            "Connecting to token network",
-            node=self.checksum_address,
-            registry_address=to_checksum_address(registry_address),
-            token_address=to_checksum_address(token_address),
-            funds=funds,
-            initial_channel_target=initial_channel_target,
-            joinable_funds_target=joinable_funds_target,
-        )
-        try:
-            self.raiden_api.token_network_connect(
-                registry_address,
-                token_address,
-                funds,
-                initial_channel_target,
-                joinable_funds_target,
-            )
-        except (InsufficientEth, InsufficientFunds, InsufficientGasReserve) as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
-        except (InvalidAmount, InvalidBinaryAddress) as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-
-        return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
-
     def leave(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
     ) -> Response:
@@ -748,32 +716,15 @@ class RestAPI:  # pragma: no unittest
             registry_address=to_checksum_address(registry_address),
         )
         connection_managers = dict()
-        raiden_service = self.raiden_api.raiden
 
         for token in self.raiden_api.get_tokens_list(registry_address):
-            token_network_address = views.get_token_network_address_by_token_address(
-                views.state_from_raiden(self.raiden_api.raiden),
-                token_network_registry_address=registry_address,
-                token_address=token,
-            )
-            connection_manager = None
-
-            if token_network_address is not None:
-                try:
-                    connection_manager = raiden_service.connection_manager_for_token_network(
-                        token_network_address
-                    )
-                except InvalidBinaryAddress:
-                    pass
-
             open_channels = views.get_channelstate_open(
                 chain_state=views.state_from_raiden(self.raiden_api.raiden),
                 token_network_registry_address=registry_address,
                 token_address=token,
             )
-            if connection_manager is not None and open_channels:
-                connection_managers[to_checksum_address(connection_manager.token_address)] = {
-                    "funds": str(connection_manager.funds),
+            if open_channels:
+                connection_managers[to_checksum_address(token)] = {
                     "sum_deposits": str(
                         views.get_our_deposits_for_token_network(
                             views.state_from_raiden(self.raiden_api.raiden),

@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
 * :feature:`6582` Add ``/settings`` endpoint with information about the used pathfinding service.
 * :bug:`6444` Fix a race condition when processing blockchain events.
 

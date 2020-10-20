@@ -10,7 +10,7 @@ from uuid import UUID
 import filelock
 import gevent
 import structlog
-from eth_utils import is_binary_address, to_hex
+from eth_utils import to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 from web3.types import BlockData
@@ -22,7 +22,6 @@ from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain.filters import RaidenContractFilter
 from raiden.blockchain_events_handler import after_blockchain_statechange
-from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
     BLOCK_ID_LATEST,
@@ -34,7 +33,6 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    InvalidBinaryAddress,
     InvalidDBData,
     InvalidSecret,
     InvalidSecretHash,
@@ -135,7 +133,6 @@ from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
-ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 
 PFS_UPDATE_CAPACITY_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
@@ -334,7 +331,6 @@ class RaidenService(Runnable):
                 )
             )
 
-        self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
         one_to_n_address = None
@@ -584,8 +580,7 @@ class RaidenService(Runnable):
         )
 
         for neighbour in views.all_neighbour_nodes(chain_state):
-            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                self.async_start_health_check_for(neighbour)
+            self.async_start_health_check_for(neighbour)
 
     def _make_initial_state(self) -> ChainState:
         # On first run Raiden needs to fetch all events for the payment
@@ -1466,8 +1461,6 @@ class RaidenService(Runnable):
         all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
 
         for neighbour in all_neighbour_nodes:
-            if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
-                continue
             neighbour_addresses.append(neighbour)
 
         events_queues = views.get_all_messagequeues(chain_state)
@@ -1487,27 +1480,6 @@ class RaidenService(Runnable):
             raise ValueError("{} is not signable.".format(repr(message)))
 
         message.sign(self.signer)
-
-    def connection_manager_for_token_network(
-        self, token_network_address: TokenNetworkAddress
-    ) -> ConnectionManager:
-        if not is_binary_address(token_network_address):
-            raise InvalidBinaryAddress("token address is not valid.")
-
-        known_token_networks = views.get_token_network_addresses(
-            views.state_from_raiden(self), self.default_registry.address
-        )
-
-        if token_network_address not in known_token_networks:
-            raise InvalidBinaryAddress("token is not registered.")
-
-        manager = self.tokennetworkaddrs_to_connectionmanagers.get(token_network_address)
-
-        if manager is None:
-            manager = ConnectionManager(self, token_network_address)
-            self.tokennetworkaddrs_to_connectionmanagers[token_network_address] = manager
-
-        return manager
 
     def mediated_transfer_async(
         self,

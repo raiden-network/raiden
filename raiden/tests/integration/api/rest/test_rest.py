@@ -8,6 +8,7 @@ import pytest
 from eth_utils import is_checksum_address, to_checksum_address, to_hex
 from flask import url_for
 
+from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer
 from raiden.constants import Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
@@ -18,7 +19,6 @@ from raiden.settings import (
 )
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
-    assert_no_content_response,
     assert_proper_response,
     assert_response_with_code,
     assert_response_with_error,
@@ -49,6 +49,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     TargetAddress,
+    TokenAddress,
 )
 from raiden.waiting import (
     TransferWaitResult,
@@ -504,82 +505,36 @@ def test_get_token_network_for_token(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("enable_rest_api", [True])
-# For non-red eyes mainnet code set number_of_tokens to 2 and uncomment the code
-# at the end of this test
-def test_get_connection_managers_info(api_server_test_instance: APIServer, token_addresses):
-    # check that there are no registered tokens
+def test_get_connections_info(
+    raiden_network: List[RaidenService],
+    api_server_test_instance: APIServer,
+    token_addresses: List[TokenAddress],
+):
+    token_address = token_addresses[0]
+
+    # Check that there are no registered tokens
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
     result = get_json_response(response)
     assert len(result) == 0
 
-    funds = 100
-    token_address1 = to_checksum_address(token_addresses[0])
-    connect_data_obj = {"funds": funds}
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "connectionsresource", token_address=token_address1),
-        json=connect_data_obj,
+    # Create a channel
+    app0 = raiden_network[0]
+    RaidenAPI(app0).channel_open(
+        registry_address=app0.default_registry.address,
+        token_address=token_address,
+        partner_address=factories.make_address(),
     )
-    response = request.send().response
-    assert_no_content_response(response)
 
-    # check that there now is one registered channel manager
+    # Check that there is a channel for one token, now
+    cs_token_address = to_checksum_address(token_address)
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
     result = get_json_response(response)
     assert isinstance(result, dict) and len(result.keys()) == 1
-    assert token_address1 in result
-    assert isinstance(result[token_address1], dict)
-    assert set(result[token_address1].keys()) == {"funds", "sum_deposits", "channels"}
-
-    # funds = 100
-    # token_address2 = to_checksum_address(token_addresses[1])
-    # connect_data_obj = {
-    #     'funds': funds,
-    # }
-    # request = grequests.put(
-    #     api_url_for(
-    #         api_server_test_instance,
-    #         'connectionsresource',
-    #         token_address=token_address2,
-    #     ),
-    #     json=connect_data_obj,
-    # )
-    # response = request.send().response
-    # assert_no_content_response(response)
-
-    # # check that there now are two registered channel managers
-    # request = grequests.get(
-    #     api_url_for(api_server_test_instance, 'connectionsinforesource'),
-    # )
-    # response = request.send().response
-    # result = response.json()
-    # assert isinstance(result, dict) and len(result.keys()) == 2
-    # assert token_address2 in result
-    # assert isinstance(result[token_address2], dict)
-    # assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("number_of_tokens", [1])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token_addresses):
-
-    # Burn all eth and then try to connect to a token network
-    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
-    funds = 100
-    token_address1 = to_checksum_address(token_addresses[0])
-    connect_data_obj = {"funds": funds}
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "connectionsresource", token_address=token_address1),
-        json=connect_data_obj,
-    )
-    response = request.send().response
-    assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
-    json_response = get_json_response(response)
-    assert "The account balance is below the estimated amount" in json_response["errors"]
+    assert cs_token_address in result
+    assert isinstance(result[cs_token_address], dict)
+    assert set(result[cs_token_address].keys()) == {"sum_deposits", "channels"}
 
 
 @raise_on_failure

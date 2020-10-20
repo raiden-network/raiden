@@ -272,63 +272,11 @@ class RaidenAPI:  # pragma: no unittest
 
         return token_network_address
 
-    def token_network_connect(
+    def token_network_leave(
         self,
         registry_address: TokenNetworkRegistryAddress,
         token_address: TokenAddress,
-        funds: TokenAmount,
-        initial_channel_target: int = 3,
-        joinable_funds_target: float = 0.4,
-    ) -> None:
-        """Automatically maintain channels open for the given token network.
-
-        Args:
-            token_address: the ERC20 token network to connect to.
-            funds: the amount of funds that can be used by the ConnectionManager.
-            initial_channel_target: number of channels to open proactively.
-            joinable_funds_target: fraction of the funds that will be used to join
-                channels opened by other participants.
-        """
-        if not is_binary_address(registry_address):
-            raise InvalidBinaryAddress("registry_address must be a valid address in binary")
-        if not is_binary_address(token_address):
-            raise InvalidBinaryAddress("token_address must be a valid address in binary")
-
-        token_network_address = views.get_token_network_address_by_token_address(
-            chain_state=views.state_from_raiden(self.raiden),
-            token_network_registry_address=registry_address,
-            token_address=token_address,
-        )
-
-        if token_network_address is None:
-            raise UnknownTokenAddress(
-                f"Token {to_checksum_address(token_address)} is not registered "
-                f"with the network {to_checksum_address(registry_address)}."
-            )
-
-        connection_manager = self.raiden.connection_manager_for_token_network(
-            token_network_address
-        )
-
-        has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
-            raiden=self.raiden, channels_to_open=initial_channel_target
-        )
-
-        if not has_enough_reserve:
-            raise InsufficientGasReserve(
-                "The account balance is below the estimated amount necessary to "
-                "finish the lifecycles of all active channels. A balance of at "
-                f"least {estimated_required_reserve} wei is required."
-            )
-
-        connection_manager.connect(
-            funds=funds,
-            initial_channel_target=initial_channel_target,
-            joinable_funds_target=joinable_funds_target,
-        )
-
-    def token_network_leave(
-        self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
+        retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> List[NettingChannelState]:
         """ Close all channels and wait for settlement. """
         if not is_binary_address(registry_address):
@@ -348,11 +296,14 @@ class RaidenAPI:  # pragma: no unittest
                 f"with the network {to_checksum_address(registry_address)}."
             )
 
-        connection_manager = self.raiden.connection_manager_for_token_network(
-            token_network_address
+        channels = self.get_channel_list(registry_address, token_address)
+        self.channel_batch_close(
+            registry_address=registry_address,
+            token_address=token_address,
+            partner_addresses=[c.partner_state.address for c in channels],
+            retry_timeout=retry_timeout,
         )
-
-        return connection_manager.leave(registry_address)
+        return channels
 
     def is_already_existing_channel(
         self,

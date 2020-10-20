@@ -234,7 +234,7 @@ This call takes some time to finalize, due to the nature of the way that settlem
 Token payments
 ==============
 
-For the token payment example it is assumed a node is connected to the RTT token network as mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
+For the token payment example it is assumed a node is connected to the RTT token network as mentioned above. In this case the node is connected to five peers.
 
 
 .. _payments:
