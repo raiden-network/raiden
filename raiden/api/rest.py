@@ -485,9 +485,7 @@ class RestAPI:  # pragma: no unittest
 
     def get_node_settings(self) -> Response:
         pfs_config = self.raiden_api.raiden.config.pfs_config
-        settings = dict(
-            pathfinding_service_address=pfs_config and pfs_config.info.url
-        )
+        settings = dict(pathfinding_service_address=pfs_config and pfs_config.info.url)
 
         return api_response(result=settings)
 
