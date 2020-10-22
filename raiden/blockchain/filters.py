@@ -109,15 +109,13 @@ def decode_event(abi: ABI, event_log: LogReceipt) -> EventData:
 def get_topics_of_events(abi: ABI) -> Dict[str, HexStr]:
     event_abis = filter_by_type("event", abi)
     return {
-        ev["name"]: "0x" + event_abi_to_log_topic(ev).hex()  # type: ignore
-        for ev in event_abis
+        ev["name"]: "0x" + event_abi_to_log_topic(ev).hex() for ev in event_abis  # type: ignore
     }
 
 
 @dataclass
 class RaidenContractFilter:
-    """ Information to construct a filter for all relevant Raiden contract events
-    """
+    """Information to construct a filter for all relevant Raiden contract events"""
 
     token_network_registry_addresses: Set[TokenNetworkRegistryAddress] = field(default_factory=set)
     token_network_addresses: Set[TokenNetworkAddress] = field(default_factory=set)
