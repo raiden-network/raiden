@@ -241,6 +241,12 @@ class GMatrixHttpApi(MatrixHttpApi):
         message = {"type": RTCMessageType.HANGUP.value, "call_id": call_id}
         self._send_signalling(room_id, message)
 
+    def send_to_device_message(self, user_ids: Iterable[str], text: str) -> None:
+        # TODO: send just to active user id
+        data = {user_id: {"*": text} for user_id in user_ids}
+
+        self.send_to_device(event_type="m.text", messages=data)
+
     def _send_signalling(self, room_id: RoomID, message: Dict[str, str]) -> None:
         self.send_message(room_id=room_id, text_content=json.dumps(message), msgtype="m.notice")
 

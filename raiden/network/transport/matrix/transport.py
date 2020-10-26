@@ -1338,33 +1338,55 @@ class MatrixTransport(Runnable):
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
-        room = self._get_room_for_address(receiver_address, require_online_peer=True)
 
+        # Try sending using webRTC
+        if self._web_rtc_manager.has_ready_channel(receiver_address):
+            self.log.debug(
+                "Send raw using webRTC message",
+                receiver=to_checksum_address(receiver_address),
+                data=data.replace("\n", "\\n"),
+            )
+            rtc_partner = self._web_rtc_manager.address_to_rtc_partners[receiver_address]
+            send_rtc_message(rtc_partner, data, self._raiden_service.address)
+            return
+
+        # Try sending using toDevice message
+        capabilities = self._address_mgr.get_address_capabilities(receiver_address)
+        to_device_key = Capabilities.TODEVICE.value
+        if to_device_key in capabilities and capabilities[to_device_key]:
+            self.log.debug(
+                "Send raw using toDevice message",
+                receiver=to_checksum_address(receiver_address),
+                data=data.replace("\n", "\\n"),
+            )
+            self._client.api.send_to_device_message(
+                user_ids=self._address_mgr.get_userids_for_address(receiver_address),
+                text=data,
+            )
+            return
+
+        # Try sending using existing room
+        room = self._get_room_for_address(receiver_address, require_online_peer=True)
         if room:
             self.log.debug(
-                "Send raw",
+                "Send raw using room message",
                 receiver=to_checksum_address(receiver_address),
                 room=room,
                 data=data.replace("\n", "\\n"),
             )
-            if self._web_rtc_manager.has_ready_channel(receiver_address):
-                rtc_partner = self._web_rtc_manager.address_to_rtc_partners[receiver_address]
-                send_rtc_message(rtc_partner, data, self._raiden_service.address)
-            else:
-                room.send_text(data)
-        else:
-            # It is possible there is no room yet. This happens when:
-            #
-            # - The room creation is started by a background thread running
-            # `whitelist`, and the room can be used by a another thread.
-            # - The room should be created by the partner, and this node is waiting
-            # on it.
-            # - No user for the requested address is online
-            #
-            # This is not a problem since the messages are retried regularly.
-            self.log.warning(
-                "No room for receiver", receiver=to_checksum_address(receiver_address)
-            )
+            room.send_text(data)
+            return
+
+        # It is possible there is no room yet. This happens when:
+        #
+        # - The room creation is started by a background thread running
+        # `whitelist`, and the room can be used by a another thread.
+        # - The room should be created by the partner, and this node is waiting
+        # on it.
+        # - No user for the requested address is online
+        #
+        # This is not a problem since the messages are retried regularly.
+        self.log.warning("No room for receiver", receiver=to_checksum_address(receiver_address))
 
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
