@@ -83,6 +83,7 @@ class Capabilities(Enum):
     MEDIATE = "Mediate"  # support for mediating transfers; mediating requires receiving
     DELIVERY = "Delivery"  # expects and sends Delivery messages
     WEBRTC = "webRTC"  # supports webRTC messaging
+    TODEVICE = "toDevice"  # supports sending and receiving toDevice messages on Matrix
 
 
 class ServerListType(Enum):
