@@ -1724,8 +1724,17 @@ class MatrixTransport(Runnable):
             )
             return
 
-        room = self._client.rooms[room_ids[0]]
+        capabilities = self._address_mgr.get_address_capabilities(peer_address)
+        to_device_key = Capabilities.TODEVICE.value
+        if to_device_key in capabilities and capabilities[to_device_key]:
+            self.log.debug(
+                "Both partner and we have `toDevice` capability, skipping room creation",
+                partner=to_checksum_address(peer_address),
+                parter_caps=capabilities,
+            )
+            return
 
+        room = self._client.rooms[room_ids[0]]
         if not room._members:
             room.get_joined_members(force_resync=True)
 
