@@ -35,7 +35,8 @@ SHUTDOWN_TIMEOUT = 35
 MSG_QUEUE_MAX_SIZE = 10  # This are matrix sync batches, not messages
 
 MatrixMessage = Dict[str, Any]
-MatrixRoomMessages = Tuple["Room", List[MatrixMessage]]
+# No room means it's a toDevice message
+MatrixRoomMessages = Tuple[Optional["Room"], List[MatrixMessage]]
 MatrixSyncMessages = List[MatrixRoomMessages]
 JSONResponse = Dict[str, Any]
 
@@ -761,6 +762,10 @@ class GMatrixClient(MatrixClient):
                 for listener in self.listeners[:]:
                     if listener["event_type"] == "to_device":
                         listener["callback"](to_device_message)
+
+            # Add toDevice messages to message queue
+            if response["to_device"]["events"]:
+                all_messages.append((None, response["to_device"]["events"],))
 
             for room_id, invite_room in response["rooms"]["invite"].items():
                 for listener in self.invite_listeners[:]:

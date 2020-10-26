@@ -17,7 +17,7 @@ from gevent.queue import Empty, JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
 
 import raiden
-from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Environment
+from raiden.constants import EMPTY_SIGNATURE, MATRIX_AUTO_SELECT_SERVER, Capabilities, Environment
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
@@ -37,6 +37,7 @@ from raiden.network.transport.matrix.utils import (
     MessageAckTimingKeeper,
     UserAddressManager,
     UserPresence,
+    address_from_userid,
     join_broadcast_room,
     login,
     make_client,
@@ -613,19 +614,22 @@ class MatrixTransport(Runnable):
 
             self._address_mgr.add_address(node_address)
 
-            # Start the room creation early on. This reduces latency for channel
-            # partners, by removing the latency of creating the room on the first
-            # message.
-            #
-            # This does not reduce latency for target<->initiator communication,
-            # since the target may be the node with lower address, and therefore
-            # the node that has to create the room.
-            self._maybe_create_room_for_address(node_address)
-
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             user_ids = self.get_user_ids_for_address(node_address)
             self._address_mgr.track_address_presence(node_address, user_ids)
+
+            # Now capabilites are available, only open rooms when no toDevice is available
+            capabilities = self._address_mgr.get_address_capabilities(node_address)
+            if not self._capability_usable(Capabilities.TODEVICE, capabilities):
+                # Start the room creation early on. This reduces latency for channel
+                # partners, by removing the latency of creating the room on the first
+                # message.
+                #
+                # This does not reduce latency for target<->initiator communication,
+                # since the target may be the node with lower address, and therefore
+                # the node that has to create the room.
+                self._maybe_create_room_for_address(node_address)
 
     def _health_check_worker(self) -> None:
         """ Worker to process healthcheck requests. """
@@ -1071,7 +1075,7 @@ class MatrixTransport(Runnable):
                 [room], "Users from more than one address joined the room"
             )
 
-    def _handle_text(self, room: Room, message: MatrixMessage) -> List[Message]:
+    def _handle_text(self, room: Optional[Room], message: MatrixMessage) -> List[Message]:
         """Handle a single Matrix message.
 
         The matrix message is expected to be a NDJSON, and each entry should be
@@ -1081,16 +1085,18 @@ class MatrixTransport(Runnable):
             If any of the validations fail emtpy is returned, otherwise a list
             contained all parsed messages is returned.
         """
-
+        assert self._raiden_service is not None, "_raiden_service not set"
         is_valid_type = (
             message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.text"
         )
         if not is_valid_type:
             return []
 
-        # Ignore our own messages
+        # Ignore our own messages. We can use address_from_userid in this specific case
+        # since it is a negative check. This is used to avoid messages from same address
+        # but different user (due to roaming)
         sender_id = message["sender"]
-        if sender_id == self._user_id:
+        if self._raiden_service.address == address_from_userid(sender_id):
             return []
 
         user = self._client.get_user(sender_id)
@@ -1105,7 +1111,7 @@ class MatrixTransport(Runnable):
             )
             return []
 
-        if self._is_broadcast_room(room):
+        if room and self._is_broadcast_room(room):
             # This must not happen. Nodes must not listen on broadcast rooms.
             raise RuntimeError(
                 f"Received message in broadcast room {room.canonical_alias}. Sending user: {user}"
@@ -1123,7 +1129,7 @@ class MatrixTransport(Runnable):
         # rooms we created and invited user, or we're invited specifically by them
         room_ids = self._get_room_ids_for_address(peer_address)
 
-        if room.room_id not in room_ids:
+        if room and room.room_id not in room_ids:
             self.log.debug(
                 "Ignoring invalid message",
                 peer_user=user.user_id,
@@ -1192,29 +1198,53 @@ class MatrixTransport(Runnable):
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
     def _send_raw(self, receiver_address: Address, data: str) -> None:
-        room = self._get_room_for_address(receiver_address, require_online_peer=True)
+        assert self._raiden_service is not None, "_raiden_service not set"
 
+        # Try sending using toDevice message
+        capabilities = self._address_mgr.get_address_capabilities(receiver_address)
+        if self._capability_usable(Capabilities.TODEVICE, capabilities):
+            self.log.debug(
+                "Send raw using toDevice message",
+                receiver=to_checksum_address(receiver_address),
+                data=data.replace("\n", "\\n"),
+            )
+            online_userids = {
+                user_id
+                for user_id in self._address_mgr.get_userids_for_address(receiver_address)
+                if self._address_mgr.get_userid_presence(user_id) in USER_PRESENCE_REACHABLE_STATES
+            }
+            if not online_userids:
+                self.log.debug("No online user_ids", online_userids=online_userids)
+                return
+
+            body = {
+                user_id: {"*": {"msgtype": "m.text", "body": data}} for user_id in online_userids
+            }
+
+            self._client.api.send_to_device(event_type="m.room.message", messages=body)
+            return
+
+        # Try sending using existing room
+        room = self._get_room_for_address(receiver_address, require_online_peer=True)
         if room:
             self.log.debug(
-                "Send raw",
+                "Send raw using room message",
                 receiver=to_checksum_address(receiver_address),
                 room=room,
                 data=data.replace("\n", "\\n"),
             )
             room.send_text(data)
-        else:
-            # It is possible there is no room yet. This happens when:
-            #
-            # - The room creation is started by a background thread running
-            # `whitelist`, and the room can be used by a another thread.
-            # - The room should be created by the partner, and this node is waiting
-            # on it.
-            # - No user for the requested address is online
-            #
-            # This is not a problem since the messages are retried regularly.
-            self.log.warning(
-                "No room for receiver", receiver=to_checksum_address(receiver_address)
-            )
+            return
+        # It is possible there is no room yet. This happens when:
+        #
+        # - The room creation is started by a background thread running
+        # `whitelist`, and the room can be used by a another thread.
+        # - The room should be created by the partner, and this node is waiting
+        # on it.
+        # - No user for the requested address is online
+        #
+        # This is not a problem since the messages are retried regularly.
+        self.log.warning("No room for receiver", receiver=to_checksum_address(receiver_address))
 
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
@@ -1369,10 +1399,27 @@ class MatrixTransport(Runnable):
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
             return room
 
-    def _is_broadcast_room(self, room: Room) -> bool:
+    def _is_broadcast_room(self, room: Optional[Room]) -> bool:
+        if room is None:
+            return False
         has_alias = room.canonical_alias is not None
         return has_alias and any(
             suffix in room.canonical_alias for suffix in self._config.broadcast_rooms
+        )
+
+    def _capability_usable(
+        self, capability: Capabilities, partner_capabilies: PeerCapabilities
+    ) -> bool:
+        """ Checks if a given capability is enabled for the local and the partner node """
+
+        own_caps = capconfig_to_dict(self._config.capabilities_config)
+
+        key = capability.value
+        return bool(
+            key in own_caps
+            and own_caps[key]
+            and key in partner_capabilies
+            and partner_capabilies[key]
         )
 
     def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
@@ -1448,8 +1495,16 @@ class MatrixTransport(Runnable):
             )
             return
 
-        room = self._client.rooms[room_ids[0]]
+        capabilities = self._address_mgr.get_address_capabilities(peer_address)
+        if self._capability_usable(Capabilities.TODEVICE, capabilities):
+            self.log.debug(
+                "Both partner and we have `toDevice` capability, skipping room creation",
+                partner=to_checksum_address(peer_address),
+                parter_caps=capabilities,
+            )
+            return
 
+        room = self._client.rooms[room_ids[0]]
         if not room._members:
             room.get_joined_members(force_resync=True)
 
