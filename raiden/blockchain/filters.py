@@ -26,6 +26,8 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    EVENT_SECRET_REVEALED,
+    EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
 from raiden_contracts.contract_manager import ContractManager
@@ -145,19 +147,35 @@ class RaidenContractFilter:
         )
         filters: List[dict] = []
 
-        # Fetch all events from TN registry and secret registry
-        addresses: List[Address] = [
-            *self.token_network_registry_addresses,  # type: ignore
-        ]
-        if self.secret_registry_address:
-            addresses.append(Address(self.secret_registry_address))
-        if addresses:
+        if self.token_network_registry_addresses:
             filters.append(
                 {
-                    "_name": "wildcard",
+                    "_name": "token_network_registry",
                     "fromBlock": from_block,
                     "toBlock": to_block,
-                    "address": [to_checksum_address(addr) for addr in addresses],
+                    "address": [
+                        to_checksum_address(addr) for addr in self.token_network_registry_addresses
+                    ],
+                    "topics": [
+                        get_topics_of_events(
+                            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY)
+                        )[EVENT_TOKEN_NETWORK_CREATED]
+                    ],
+                }
+            )
+
+        if self.secret_registry_address:
+            filters.append(
+                {
+                    "_name": "secret_registry",
+                    "fromBlock": from_block,
+                    "toBlock": to_block,
+                    "address": [to_checksum_address(self.secret_registry_address)],
+                    "topics": [
+                        get_topics_of_events(
+                            contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY)
+                        )[EVENT_SECRET_REVEALED]
+                    ],
                 }
             )
 
