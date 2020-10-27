@@ -1359,8 +1359,12 @@ class MatrixTransport(Runnable):
                 receiver=to_checksum_address(receiver_address),
                 data=data.replace("\n", "\\n"),
             )
-            user_ids = self._address_mgr.get_userids_for_address(receiver_address)
-            body = {user_id: {"*": data} for user_id in user_ids}
+            online_userids = {
+                user_id
+                for user_id in self._address_mgr.get_userids_for_address(receiver_address)
+                if self._address_mgr.get_userid_presence(user_id) in USER_PRESENCE_REACHABLE_STATES
+            }
+            body = {user_id: {"*": data} for user_id in online_userids}
 
             self._client.api.send_to_device(
                 event_type="m.room.message", messages={"msgtype": "m.text", "body": body}
