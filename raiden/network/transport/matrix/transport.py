@@ -1131,7 +1131,7 @@ class MatrixTransport(Runnable):
                 rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_addresses[0])
                 rtc_partner.partner_ready_event.set()
 
-    def _handle_text(self, room: Room, message: MatrixMessage) -> List[Message]:
+    def _handle_text(self, room: Optional[Room], message: MatrixMessage) -> List[Message]:
         """Handle a single Matrix message.
 
         The matrix message is expected to be a NDJSON, and each entry should be
@@ -1142,8 +1142,10 @@ class MatrixTransport(Runnable):
             contained all parsed messages is returned.
         """
         assert self._raiden_service is not None, "_raiden_service not set"
-        is_valid_type = (
-            message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.text"
+        is_valid_type = message["type"] == "m.text" or (  # toDevice message
+            # room message
+            message["type"] == "m.room.message"
+            and message["content"]["msgtype"] == "m.text"
         )
 
         if message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.notice":
@@ -1171,7 +1173,7 @@ class MatrixTransport(Runnable):
             )
             return []
 
-        if self._is_broadcast_room(room):
+        if room and self._is_broadcast_room(room):
             # This must not happen. Nodes must not listen on broadcast rooms.
             raise RuntimeError(
                 f"Received message in broadcast room {room.canonical_alias}. Sending user: {user}"
@@ -1189,7 +1191,7 @@ class MatrixTransport(Runnable):
         # rooms we created and invited user, or we're invited specifically by them
         room_ids = self._get_room_ids_for_address(peer_address)
 
-        if room.room_id not in room_ids:
+        if room and room.room_id not in room_ids:
             self.log.debug(
                 "Ignoring invalid message",
                 peer_user=user.user_id,
@@ -1200,7 +1202,11 @@ class MatrixTransport(Runnable):
             )
             return []
 
-        return validate_and_parse_message(message["content"]["body"], peer_address)
+        content = message["content"]
+        if isinstance(content, str):
+            return validate_and_parse_message(content, peer_address)
+        else:
+            return validate_and_parse_message(content["body"], peer_address)
 
     def _process_messages(self, all_messages: List[Message]) -> None:
         assert self._raiden_service is not None, "_process_messages must be called after start"
