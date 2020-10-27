@@ -1364,11 +1364,11 @@ class MatrixTransport(Runnable):
                 for user_id in self._address_mgr.get_userids_for_address(receiver_address)
                 if self._address_mgr.get_userid_presence(user_id) in USER_PRESENCE_REACHABLE_STATES
             }
-            body = {user_id: {"*": data} for user_id in online_userids}
+            body = {
+                user_id: {"*": {"msgtype": "m.text", "body": data}} for user_id in online_userids
+            }
 
-            self._client.api.send_to_device(
-                event_type="m.room.message", messages={"msgtype": "m.text", "body": body}
-            )
+            self._client.api.send_to_device(event_type="m.room.message", messages=body)
             return
 
         # Try sending using existing room
