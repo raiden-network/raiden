@@ -1,5 +1,4 @@
 import time
-from collections import defaultdict
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -222,21 +221,23 @@ def decode_raiden_event_to_internal(
 
 
 def new_filters_from_events(events: List[DecodedEvent]) -> RaidenContractFilter:
-    channels_of_token_network = defaultdict(set)
-    for entry in events:
-        if entry.event_data["event"] == ChannelEvent.OPENED:
-            channels_of_token_network[TokenNetworkAddress(entry.originating_contract)].add(
-                entry.event_data["args"]["channel_identifier"]
-            )
-
-    return RaidenContractFilter(
+    new_filter = RaidenContractFilter(
         token_network_addresses={
             entry.event_data["args"]["token_network_address"]
             for entry in events
             if entry.event_data["event"] == EVENT_TOKEN_NETWORK_CREATED
         },
-        channels_of_token_network=channels_of_token_network,
+        ignore_secret_registry_until_channel_found=True,
     )
+    for entry in events:
+        if entry.event_data["event"] == ChannelEvent.OPENED:
+            new_filter.channels_of_token_network[
+                TokenNetworkAddress(entry.originating_contract)
+            ].add(entry.event_data["args"]["channel_identifier"])
+            # Now that we have a channel, we need to watch for registered secrets.
+            new_filter.ignore_secret_registry_until_channel_found = False
+
+    return new_filter
 
 
 def sort_events(events: List[DecodedEvent]) -> None:
