@@ -37,7 +37,7 @@ colour==0.1.5             # via -r requirements-dev.txt
 constantly==15.1.0        # via -r requirements-dev.txt, twisted
 coverage==5.3             # via -r requirements-dev.txt
 crc32c==2.0               # via -r requirements-dev.txt, aiortc
-cryptography==2.9.2       # via -r requirements-dev.txt, aiortc, pyopenssl, service-identity
+cryptography==3.2         # via -r requirements-dev.txt, aiortc, pyopenssl, service-identity
 cytoolz==0.10.1           # via -r requirements-dev.txt, eth-keyfile, eth-utils
 decorator==4.4.2          # via -r requirements-dev.txt, ipython, traitlets
 docutils==0.14            # via -r requirements-dev.txt, readme-renderer, sphinx, sphinxcontrib-httpexample
