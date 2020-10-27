@@ -1142,10 +1142,8 @@ class MatrixTransport(Runnable):
             contained all parsed messages is returned.
         """
         assert self._raiden_service is not None, "_raiden_service not set"
-        is_valid_type = message["type"] == "m.text" or (  # toDevice message
-            # room message
-            message["type"] == "m.room.message"
-            and message["content"]["msgtype"] == "m.text"
+        is_valid_type = (
+            message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.text"
         )
 
         if message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.notice":
@@ -1202,11 +1200,7 @@ class MatrixTransport(Runnable):
             )
             return []
 
-        content = message["content"]
-        if isinstance(content, str):
-            return validate_and_parse_message(content, peer_address)
-        else:
-            return validate_and_parse_message(content["body"], peer_address)
+        return validate_and_parse_message(message["content"]["body"], peer_address)
 
     def _process_messages(self, all_messages: List[Message]) -> None:
         assert self._raiden_service is not None, "_process_messages must be called after start"
@@ -1365,9 +1359,11 @@ class MatrixTransport(Runnable):
                 receiver=to_checksum_address(receiver_address),
                 data=data.replace("\n", "\\n"),
             )
-            self._client.api.send_to_device_message(
-                user_ids=self._address_mgr.get_userids_for_address(receiver_address),
-                text=data,
+            user_ids = self._address_mgr.get_userids_for_address(receiver_address)
+            body = {user_id: {"*": data} for user_id in user_ids}
+
+            self._client.api.send_to_device(
+                event_type="m.room.message", messages={"msgtype": "m.text", "body": body}
             )
             return
 

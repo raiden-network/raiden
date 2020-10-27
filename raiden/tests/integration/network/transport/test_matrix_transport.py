@@ -36,6 +36,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import (
     MIN_MONITORING_AMOUNT_DAI,
     MONITORING_REWARD,
+    CapabilitiesConfig,
     MatrixTransportConfig,
     RaidenConfig,
     ServiceConfig,
@@ -1013,6 +1014,7 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     "roaming_peer",
     [pytest.param("high", id="roaming_high"), pytest.param("low", id="roaming_low")],
 )
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     # 6 transports on 3 servers, where (0,3), (1,4), (2,5) are one the same server
     (
