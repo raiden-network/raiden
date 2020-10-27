@@ -229,14 +229,18 @@ def smart_contract_filters_from_node_state(
 ) -> RaidenContractFilter:
     token_network_registries = chain_state.identifiers_to_tokennetworkregistries.values()
     token_networks = [tn for tnr in token_network_registries for tn in tnr.token_network_list]
+    channels_of_token_network = {
+        tn.address: set(tn.channelidentifiers_to_channels.keys())
+        for tn in token_networks
+        if tn.channelidentifiers_to_channels
+    }
 
     return RaidenContractFilter(
         secret_registry_address=secret_registry_address,
         token_network_registry_addresses={tnr.address for tnr in token_network_registries},
         token_network_addresses={tn.address for tn in token_networks},
-        channels_of_token_network={
-            tn.address: set(tn.channelidentifiers_to_channels.keys()) for tn in token_networks
-        },
+        channels_of_token_network=channels_of_token_network,
+        ignore_secret_registry_until_channel_found=not channels_of_token_network,
     )
 
 
@@ -260,7 +264,7 @@ class PaymentStatus(NamedTuple):
 class SyncTimeout:
     """Helper to determine if the sync should halt or continue.
 
-    The goal of this helper is to stop synching before the block
+    The goal of this helper is to stop syncing before the block
     `current_confirmed_head` is pruned, otherwise JSON-RPC requests will start
     to fail.
     """
@@ -1094,8 +1098,8 @@ class RaidenService(Runnable):
         missed important events, like a channel close, while the transport
         layer is running, this can lead to loss of funds.
 
-        It is very important for `current_confirmed_head` to be an confirmed
-        block that has not been pruned. Uncorfirmed blocks are a problem
+        It is very important for `current_confirmed_head` to be a confirmed
+        block that has not been pruned. Unconfirmed blocks are a problem
         because of reorgs, since some operations performed based on the events
         are irreversible, namely sending a balance proof after a channel
         deposit, once a node accepts a deposit, these tokens can be used to do
@@ -1105,7 +1109,7 @@ class RaidenService(Runnable):
         fetch data which is not available in an event, the original event block
         is used, however that block may have been pruned if the synchronization
         is considerably lagging behind (which happens after long restarts), so
-        a new block number is necessary to be used as a fallback, an `latest`
+        a new block number is necessary to be used as a fallback, a `latest`
         is not a valid option because of the reorgs.
 
         This function takes care of fetching blocks in batches and confirming

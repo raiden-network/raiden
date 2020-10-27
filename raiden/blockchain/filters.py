@@ -125,6 +125,7 @@ class RaidenContractFilter:
         default_factory=lambda: defaultdict(set)
     )
     secret_registry_address: Optional[SecretRegistryAddress] = None
+    ignore_secret_registry_until_channel_found: bool = False
 
     def __bool__(self) -> bool:
         return bool(
@@ -164,7 +165,7 @@ class RaidenContractFilter:
                 }
             )
 
-        if self.secret_registry_address:
+        if self.secret_registry_address and not self.ignore_secret_registry_until_channel_found:
             filters.append(
                 {
                     "_name": "secret_registry",
@@ -270,5 +271,9 @@ class RaidenContractFilter:
                         *other.channels_of_token_network.keys(),
                     }
                 },
+            ),
+            ignore_secret_registry_until_channel_found=(
+                self.ignore_secret_registry_until_channel_found
+                and other.ignore_secret_registry_until_channel_found
             ),
         )
