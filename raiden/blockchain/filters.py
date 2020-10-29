@@ -1,9 +1,10 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, cast
 
 import structlog
 from eth_abi.codec import ABICodec
+from eth_typing import HexStr
 from eth_utils import event_abi_to_log_topic
 from web3._utils.abi import build_default_registry, filter_by_type
 from web3._utils.events import get_event_data
@@ -105,6 +106,14 @@ def decode_event(abi: ABI, event_log: LogReceipt) -> EventData:
     return get_event_data(ABI_CODEC, event_abi, event_log)
 
 
+def get_topics_of_events(abi: ABI) -> Dict[str, HexStr]:
+    event_abis = filter_by_type("event", abi)
+    return {
+        ev["name"]: "0x" + event_abi_to_log_topic(ev).hex()  # type: ignore
+        for ev in event_abis
+    }
+
+
 @dataclass
 class RaidenContractFilter:
     """ Information to construct a filter for all relevant Raiden contract events
@@ -125,21 +134,86 @@ class RaidenContractFilter:
             or self.secret_registry_address
         )
 
-    def to_web3_filter(
-        self, contract_manager: ContractManager, from_block: BlockNumber, to_block: BlockNumber
-    ) -> FilterParams:
+    def to_web3_filters(
+        self,
+        contract_manager: ContractManager,
+        from_block: BlockNumber,
+        to_block: BlockNumber,
+        node_address: Address,
+    ) -> List[FilterParams]:
         """ Return a filter dict than can be used with web3's ``getLogs`` """
+        tn_event_topics = get_topics_of_events(
+            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK)
+        )
+        filters: List[dict] = []
+
+        # Fetch all events from TN registry and secret registry
         addresses: List[Address] = [
             *self.token_network_registry_addresses,  # type: ignore
-            *self.token_network_addresses,  # type: ignore
         ]
         if self.secret_registry_address:
             addresses.append(Address(self.secret_registry_address))
-        return {
-            "fromBlock": from_block,
-            "toBlock": to_block,
-            "address": [to_checksum_address(addr) for addr in addresses],
-        }
+        if addresses:
+            filters.append(
+                {
+                    "_name": "wildcard",
+                    "fromBlock": from_block,
+                    "toBlock": to_block,
+                    "address": [to_checksum_address(addr) for addr in addresses],
+                }
+            )
+
+        if self.token_network_addresses:
+            node_topic = HexStr("0x" + (bytes([0] * 12) + node_address).hex())
+            filters.extend(
+                [
+                    {
+                        "_name": "token_network",
+                        "fromBlock": from_block,
+                        "toBlock": to_block,
+                        "address": [
+                            to_checksum_address(addr) for addr in self.token_network_addresses
+                        ],
+                        "topics": [tn_event_topics[ChannelEvent.OPENED], None, node_topic],
+                    },
+                    {
+                        "_name": "token_network",
+                        "fromBlock": from_block,
+                        "toBlock": to_block,
+                        "address": [
+                            to_checksum_address(addr) for addr in self.token_network_addresses
+                        ],
+                        "topics": [tn_event_topics[ChannelEvent.OPENED], None, None, node_topic],
+                    },
+                ]
+            )
+
+        if self.channels_of_token_network:
+            channel_topics = [
+                tn_event_topics[ev]
+                for ev in [
+                    ChannelEvent.CLOSED,
+                    ChannelEvent.SETTLED,
+                    ChannelEvent.DEPOSIT,
+                    ChannelEvent.WITHDRAW,
+                    ChannelEvent.UNLOCKED,
+                ]
+            ]
+            filters.extend(
+                {
+                    "_name": "channel",
+                    "fromBlock": from_block,
+                    "toBlock": to_block,
+                    "address": to_checksum_address(tn),
+                    "topics": [channel_topics, [HexStr("0x{:064x}".format(c)) for c in channels]],
+                }
+                for tn, channels in self.channels_of_token_network.items()
+            )
+
+        # The filters contain a ``_name`` key, which does not belong into
+        # FilterParams. But that key is very helpful when debugging and it
+        # gets ``pop``ed out before the filter is sent to the eth node.
+        return cast(List[FilterParams], filters)
 
     def abi_of_contract_address(self, contract_manager: ContractManager) -> Dict[Address, ABI]:
         """ This class knows which ABI is behind each filtered contract address """
