@@ -401,7 +401,7 @@ class BlockchainEvents:
             # go through lots of elements).
 
             try:
-                decoded_result, request_duration = self._query_and_track(from_block, to_block)
+                decoded_result, max_request_duration = self._query_and_track(from_block, to_block)
             except EthGetLogsTimeout:
                 # The request timed out - this typically means the node wasn't able to process
                 # the requested batch size fast enough.
@@ -416,7 +416,7 @@ class BlockchainEvents:
             # Adjust block batch size depending on request duration.
             # To reduce oscillating the batch size is kept constant for request durations
             # between ``ETH_GET_LOGS_THRESHOLD_FAST`` and ``ETH_GET_LOGS_THRESHOLD_SLOW``.
-            if request_duration < ETH_GET_LOGS_THRESHOLD_FAST:
+            if max_request_duration < ETH_GET_LOGS_THRESHOLD_FAST:
                 # The request was fast, increase batch size
                 if can_use_bigger_batches:
                     # But only if we actually need bigger batches. This prevents the batch
@@ -424,7 +424,7 @@ class BlockchainEvents:
                     # since then typically only one block is fetched at a time which is usually
                     # fast.
                     self.block_batch_size_adjuster.increase()
-            elif request_duration > ETH_GET_LOGS_THRESHOLD_SLOW:
+            elif max_request_duration > ETH_GET_LOGS_THRESHOLD_SLOW:
                 # The request is taking longer than the 'slow' threshold - decrease
                 # the batch size
                 self.block_batch_size_adjuster.decrease()
@@ -473,7 +473,7 @@ class BlockchainEvents:
         *all* filters will start from 9, thus missing the event for the new
         channel on block 8.
         """
-        request_duration: float = 0
+        max_request_duration: float = 0
         result: List[DecodedEvent] = []
         event_filter: Optional[RaidenContractFilter] = self.event_filter
 
@@ -513,6 +513,7 @@ class BlockchainEvents:
                         RPCEndpoint("eth_getLogs"), [filter_params]
                     )
                     request_duration = time.monotonic() - start
+                    max_request_duration = max(max_request_duration, request_duration)
                 except ReadTimeout as ex:
                     # The request timed out while waiting for a response (as opposed to a
                     # ConnectTimeout).
@@ -567,7 +568,7 @@ class BlockchainEvents:
             else:
                 event_filter = None
 
-        return result, request_duration
+        return result, max_request_duration
 
     def uninstall_all_event_listeners(self) -> None:
         with self._filters_lock:
