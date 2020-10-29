@@ -19,13 +19,7 @@ from raiden import routing
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
-from raiden.blockchain.events import (
-    BlockchainEvents,
-    SmartContractEvents,
-    secret_registry_events,
-    token_network_events,
-    token_network_registry_events,
-)
+from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain.filters import RaidenContractFilter
 from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.connection_manager import ConnectionManager
@@ -133,7 +127,6 @@ from raiden.utils.typing import (
     SecretRegistryAddress,
     TargetAddress,
     TokenNetworkAddress,
-    TokenNetworkRegistryAddress,
     WithdrawAmount,
     typecheck,
 )
@@ -230,30 +223,6 @@ def initiator_init(
     return error_msg, ActionInitInitiator(transfer_state, route_states)
 
 
-def smart_contract_filters_from_node_state_old(
-    chain_state: ChainState,
-    contract_manager: ContractManager,
-    token_network_registry_address: TokenNetworkRegistryAddress,
-    secret_registry_address: SecretRegistryAddress,
-) -> List[SmartContractEvents]:
-
-    token_networks = views.get_token_network_addresses(chain_state, token_network_registry_address)
-
-    registry_listener = token_network_registry_events(
-        token_network_registry_address, contract_manager
-    )
-    secret_listener = secret_registry_events(secret_registry_address, contract_manager)
-    token_listeners = [
-        token_network_events(token_network_address, contract_manager)
-        for token_network_address in token_networks
-    ]
-
-    listeners: List[SmartContractEvents] = [registry_listener, secret_listener]
-    listeners.extend(token_listeners)
-
-    return listeners
-
-
 def smart_contract_filters_from_node_state(
     chain_state: ChainState,
     secret_registry_address: SecretRegistryAddress,
@@ -262,8 +231,9 @@ def smart_contract_filters_from_node_state(
     token_networks = [tn for tnr in token_network_registries for tn in tnr.token_network_list]
 
     return RaidenContractFilter(
-        token_network_registry_addresses={tnr.address for tnr in token_network_registries},
         secret_registry_address=secret_registry_address,
+        token_network_registry_addresses={tnr.address for tnr in token_network_registries},
+        token_network_addresses={tn.address for tn in token_networks},
         channels_of_token_network={
             tn.address: set(tn.channelidentifiers_to_channels.keys()) for tn in token_networks
         },
@@ -771,24 +741,19 @@ class RaidenService(Runnable):
         # starting from this position without missing events.
         last_block_number = views.block_number(chain_state)
 
-        filters = smart_contract_filters_from_node_state_old(
-            chain_state,
-            self.contract_manager,
-            self.default_registry.address,
-            self.default_secret_registry.address,
-        )
         event_filter = smart_contract_filters_from_node_state(
             chain_state,
             self.default_secret_registry.address,
         )
+        log.debug("initial filter", event_filter=event_filter, node=self.address)
         blockchain_events = BlockchainEvents(
             web3=self.rpc_client.web3,
             chain_id=chain_state.chain_id,
             contract_manager=self.contract_manager,
             last_fetched_block=last_block_number,
-            event_filters=filters,
             event_filter=event_filter,
             block_batch_size_config=self.config.blockchain.block_batch_size_config,
+            node_address=self.address,
         )
 
         self.last_log_block = last_block_number
@@ -1257,7 +1222,6 @@ class RaidenService(Runnable):
 
         log.debug(
             "Synchronized to a new confirmed block",
-            event_filters_qty=len(self.blockchain_events._address_to_filters),
             sync_elapsed=guard.time_elapsed(),
             block_number=current_synched_block_number,
         )

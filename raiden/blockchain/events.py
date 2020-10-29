@@ -1,9 +1,10 @@
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Tuple
 
 import structlog
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 from gevent.lock import Semaphore
 from requests.exceptions import ReadTimeout
 from web3 import Web3
@@ -37,18 +38,13 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
-    Iterable,
     List,
     Optional,
-    SecretRegistryAddress,
     TokenNetworkAddress,
-    TokenNetworkRegistryAddress,
     TransactionHash,
 )
 from raiden_contracts.constants import (
-    CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
@@ -58,19 +54,6 @@ log = structlog.get_logger(__name__)
 
 # `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
-
-
-@dataclass(frozen=True)
-class SmartContractEvents:
-    """All the events from `contract_address` are queried and decoded with
-    `abi`.
-
-    This does not support filtering events by design, since this is more
-    performant and removes ordering problems with the event processing.
-    """
-
-    contract_address: Address
-    abi: ABI
 
 
 @dataclass(frozen=True)
@@ -238,105 +221,26 @@ def decode_raiden_event_to_internal(
     )
 
 
-def token_network_registry_events(
-    token_network_registry_address: TokenNetworkRegistryAddress, contract_manager: ContractManager
-) -> SmartContractEvents:
-    return SmartContractEvents(
-        contract_address=Address(token_network_registry_address),
-        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-    )
-
-
-def token_network_events(
-    token_network_address: TokenNetworkAddress, contract_manager: ContractManager
-) -> SmartContractEvents:
-    return SmartContractEvents(
-        contract_address=Address(token_network_address),
-        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-    )
-
-
-def secret_registry_events(
-    secret_registry_address: SecretRegistryAddress, contract_manager: ContractManager
-) -> SmartContractEvents:
-    return SmartContractEvents(
-        contract_address=Address(secret_registry_address),
-        abi=contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
-    )
-
-
-def new_filters_from_events_old(
-    contract_manager: ContractManager, events: List[DecodedEvent]
-) -> Iterable[SmartContractEvents]:
+def new_filters_from_events(events: List[DecodedEvent]) -> RaidenContractFilter:
+    channels_of_token_network = defaultdict(set)
     for entry in events:
-        if entry.event_data["event"] == EVENT_TOKEN_NETWORK_CREATED:
-            yield token_network_events(
-                entry.event_data["args"]["token_network_address"], contract_manager
+        if entry.event_data["event"] == ChannelEvent.OPENED:
+            channels_of_token_network[TokenNetworkAddress(entry.originating_contract)].add(
+                entry.event_data["args"]["channel_identifier"]
             )
 
-
-def new_filters_from_events(events: List[DecodedEvent]) -> RaidenContractFilter:
     return RaidenContractFilter(
         token_network_addresses={
             entry.event_data["args"]["token_network_address"]
             for entry in events
             if entry.event_data["event"] == EVENT_TOKEN_NETWORK_CREATED
-        }
+        },
+        channels_of_token_network=channels_of_token_network,
     )
 
 
-def filters_to_rpc(
-    filters: Iterable[SmartContractEvents], from_block: BlockNumber, to_block: BlockNumber
-) -> Dict:
-    # Payload is specified at
-    # https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_getlogs
-    return {
-        "fromBlock": from_block,
-        "toBlock": to_block,
-        "address": [event_filter.contract_address for event_filter in filters],
-        # This interface exists to query multiple smart contracts with a single
-        # query, therefore topics cannot be supported. Because the address can
-        # be different types of smart contract, the topics are likely
-        # different. Additionally, not having topics here will result in a
-        # slight performance gain (read documentation above for why).
-        # "topics": None,
-    }
-
-
-def fetch_all_events_for_a_deployment(
-    contract_manager: ContractManager,
-    web3: Web3,
-    token_network_registry_address: TokenNetworkRegistryAddress,
-    secret_registry_address: SecretRegistryAddress,
-    start_block: BlockNumber,
-    target_block: BlockNumber,
-) -> Iterable[Dict]:
-    """Read all the events of a whole deployment, starting at the network
-    registry, and following the registered networks.
-    """
-
-    chain_id = ChainID(web3.eth.chainId)
-    filters = [
-        token_network_registry_events(token_network_registry_address, contract_manager),
-        secret_registry_events(secret_registry_address, contract_manager),
-    ]
-    blockchain_events = BlockchainEvents(
-        web3=web3,
-        chain_id=chain_id,
-        contract_manager=contract_manager,
-        last_fetched_block=start_block,
-        event_filters=filters,
-        block_batch_size_config=BlockBatchSizeConfig(),
-    )
-
-    while target_block > blockchain_events.last_fetched_block:
-        poll_result = blockchain_events.fetch_logs_in_batch(target_block)
-        if poll_result is None:
-            # No blocks could be fetched (due to timeout), retry
-            continue
-
-        for event in poll_result.events:
-            yield event.event_data
+def sort_events(events: List[DecodedEvent]) -> None:
+    events.sort(key=lambda e: e.block_number)
 
 
 class BlockchainEvents:
@@ -346,9 +250,9 @@ class BlockchainEvents:
         chain_id: ChainID,
         contract_manager: ContractManager,
         last_fetched_block: BlockNumber,
-        event_filters: List[SmartContractEvents],
         event_filter: RaidenContractFilter,
         block_batch_size_config: BlockBatchSizeConfig,
+        node_address: Address,
     ) -> None:
         self.web3 = web3
         self.chain_id = chain_id
@@ -356,6 +260,7 @@ class BlockchainEvents:
         self.contract_manager = contract_manager
         self.event_filter = event_filter
         self.block_batch_size_adjuster = BlockBatchSizeAdjuster(block_batch_size_config)
+        self.node_address = node_address
 
         # This lock is used to add a new smart contract to the list of polled
         # smart contracts. The crucial optimization done by this class is to
@@ -379,9 +284,6 @@ class BlockchainEvents:
         # protect against these races (introduced by the commit
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         self._filters_lock = Semaphore()
-        self._address_to_filters: Dict[Address, SmartContractEvents] = {
-            event.contract_address: event for event in event_filters
-        }
         self._address_to_abi: Dict[Address, ABI] = event_filter.abi_of_contract_address(
             contract_manager
         )
@@ -570,11 +472,8 @@ class BlockchainEvents:
         *all* filters will start from 9, thus missing the event for the new
         channel on block 8.
         """
-        filters_to_query: Iterable[SmartContractEvents]
-
         request_duration: float = 0
         result: List[DecodedEvent] = []
-        filters_to_query = self._address_to_filters.values()
         event_filter: Optional[RaidenContractFilter] = self.event_filter
 
         # While there are new smart contracts to follow, this will query them
@@ -585,44 +484,53 @@ class BlockchainEvents:
         # filter, and then the filter has to be queried before for the same
         # batch before it is dispatched. This is necessary to guarantee safety
         # of restarts.
-        print(f"== {from_block, to_block}")
+        i = 0
         while event_filter:
-            print(f"=== {event_filter}")
-            filter_params = event_filter.to_web3_filter(
-                self.contract_manager, from_block, to_block
-            )
+            i += 1
+            blockchain_events: List[LogReceipt] = []
 
-            log.debug(
-                "StatelessFilter: querying new entries",
-                from_block=filter_params["fromBlock"],
-                to_block=filter_params["toBlock"],
-                addresses=filter_params["address"],
-            )
-
-            try:
-                start = time.monotonic()
-                # Using web3 because:
-                # - It sets an unique request identifier, not strictly necessary.
-                # - To avoid another abstraction to query the Ethereum client.
-                blockchain_events: List[LogReceipt] = self.web3.manager.request_blocking(
-                    RPCEndpoint("eth_getLogs"), [filter_params]
+            for filter_params in event_filter.to_web3_filters(
+                self.contract_manager, from_block, to_block, self.node_address
+            ):
+                log.debug(
+                    "Querying new blockchain events",
+                    from_block=from_block,
+                    to_block=to_block,
+                    event_filter=event_filter,
+                    filter_params=filter_params,
+                    i=i,
+                    node=to_checksum_address(self.node_address),
                 )
-                request_duration = time.monotonic() - start
-            except ReadTimeout as ex:
-                # The request timed out while waiting for a response (as opposed to a
-                # ConnectTimeout).
-                # This will usually be caused by overloading of the target eth node but can also
-                # happen due to network conditions.
-                raise EthGetLogsTimeout() from ex
+                filter_name = filter_params.pop("_name")  # type: ignore
 
-            log.debug(
-                "StatelessFilter: fetched new entries",
-                from_block=filter_params["fromBlock"],
-                to_block=filter_params["toBlock"],
-                addresses=filter_params["address"],
-                blockchain_events=blockchain_events,
-                request_duration=request_duration,
-            )
+                try:
+                    start = time.monotonic()
+                    # Using web3 because:
+                    # - It sets an unique request identifier, not strictly necessary.
+                    # - To avoid another abstraction to query the Ethereum client.
+                    new_events: List[LogReceipt] = self.web3.manager.request_blocking(
+                        RPCEndpoint("eth_getLogs"), [filter_params]
+                    )
+                    request_duration = time.monotonic() - start
+                except ReadTimeout as ex:
+                    # The request timed out while waiting for a response (as opposed to a
+                    # ConnectTimeout).
+                    # This will usually be caused by overloading of the target
+                    # eth node but can also happen due to network conditions.
+                    raise EthGetLogsTimeout() from ex
+
+                log.debug(
+                    "Fetched new blockchain events",
+                    from_block=filter_params["fromBlock"],
+                    to_block=filter_params["toBlock"],
+                    addresses=filter_params["address"],
+                    filter_name=filter_name,
+                    new_events=new_events,
+                    request_duration=request_duration,
+                    i=i,
+                    node=to_checksum_address(self.node_address),
+                )
+                blockchain_events.extend(new_events)
 
             if blockchain_events:
                 # If this should ever decode events from non-controlled contracts, we need
@@ -636,33 +544,30 @@ class BlockchainEvents:
                     )
                     for event in blockchain_events
                 ]
+                sort_events(decoded_events)
+
+                from dataclasses import asdict
+
+                log.debug(
+                    "Decoded new blockchain events",
+                    decoded_events=[asdict(e) for e in decoded_events],
+                    node=to_checksum_address(self.node_address),
+                )
                 result.extend(decoded_events)
 
-                # Go through the results and create the child filters, if
-                # necessary.
-                #
-                # The generator result is converted to a list because we need
-                # to iterate over it twice
-                filters_to_query = list(
-                    new_filters_from_events_old(self.contract_manager, decoded_events)
-                )
-                print("new filter", [f.contract_address for f in filters_to_query])
+                # Go through the results and create the child filters, if necessary.
                 event_filter = new_filters_from_events(decoded_events)
 
                 # Register the new filters, so that they will be fetched on the next iteration
-                self._address_to_filters.update(
-                    (new_filter.contract_address, new_filter) for new_filter in filters_to_query
-                )
                 self.event_filter = self.event_filter.union(event_filter)
                 self._address_to_abi.update(
                     event_filter.abi_of_contract_address(self.contract_manager)
                 )
             else:
-                filters_to_query = []
                 event_filter = None
 
         return result, request_duration
 
     def uninstall_all_event_listeners(self) -> None:
         with self._filters_lock:
-            self._address_to_filters = dict()
+            self._address_to_abi = {}
