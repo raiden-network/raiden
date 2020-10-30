@@ -73,7 +73,7 @@ imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
 importlib-metadata==2.0.0  # via pluggy
 incremental==17.5.0       # via treq, twisted
 iniconfig==1.0.1          # via pytest
-ipfshttpclient==0.6.0.post1  # via -r requirements.txt, web3
+ipfshttpclient==0.7.0a1   # via -r requirements.txt, web3
 ipython-genutils==0.2.0   # via traitlets
 ipython==7.19.0           # via -r requirements-dev.in
 isort==5.6.4              # via -r requirements-dev.in, pylint
@@ -184,7 +184,7 @@ unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
 varint==1.0.2             # via -r requirements.txt, multiaddr
 wcwidth==0.1.9            # via prompt-toolkit
-web3==5.12.1              # via -r requirements.txt, raiden-contracts
+web3==5.13.0              # via -r requirements.txt, raiden-contracts
 webencodings==0.5.1       # via bleach
 websockets==8.1           # via -r requirements.txt, web3
 werkzeug==1.0.1           # via -r requirements.txt, flask
