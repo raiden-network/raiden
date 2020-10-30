@@ -231,9 +231,9 @@ def new_filters_from_events(events: List[DecodedEvent]) -> RaidenContractFilter:
     )
     for entry in events:
         if entry.event_data["event"] == ChannelEvent.OPENED:
-            new_filter.channels_of_token_network[
-                TokenNetworkAddress(entry.originating_contract)
-            ].add(entry.event_data["args"]["channel_identifier"])
+            new_filter.channels_of_token_network.setdefault(
+                TokenNetworkAddress(entry.originating_contract), set()
+            ).add(entry.event_data["args"]["channel_identifier"])
             # Now that we have a channel, we need to watch for registered secrets.
             new_filter.ignore_secret_registry_until_channel_found = False
 

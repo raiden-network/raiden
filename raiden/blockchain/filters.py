@@ -1,4 +1,3 @@
-from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, cast
 
@@ -122,7 +121,7 @@ class RaidenContractFilter:
     token_network_registry_addresses: Set[TokenNetworkRegistryAddress] = field(default_factory=set)
     token_network_addresses: Set[TokenNetworkAddress] = field(default_factory=set)
     channels_of_token_network: Dict[TokenNetworkAddress, Set[ChannelID]] = field(
-        default_factory=lambda: defaultdict(set)
+        default_factory=dict
     )
     secret_registry_address: Optional[SecretRegistryAddress] = None
     ignore_secret_registry_until_channel_found: bool = False
@@ -262,16 +261,14 @@ class RaidenContractFilter:
             token_network_registry_addresses=self.token_network_registry_addresses
             | other.token_network_registry_addresses,
             token_network_addresses=self.token_network_addresses | other.token_network_addresses,
-            channels_of_token_network=defaultdict(
-                set,
-                {
-                    tn: self.channels_of_token_network[tn] | other.channels_of_token_network[tn]
-                    for tn in {
-                        *self.channels_of_token_network.keys(),
-                        *other.channels_of_token_network.keys(),
-                    }
-                },
-            ),
+            channels_of_token_network={
+                tn: self.channels_of_token_network.get(tn, set())
+                | other.channels_of_token_network.get(tn, set())
+                for tn in {
+                    *self.channels_of_token_network.keys(),
+                    *other.channels_of_token_network.keys(),
+                }
+            },
             ignore_secret_registry_until_channel_found=(
                 self.ignore_secret_registry_until_channel_found
                 and other.ignore_secret_registry_until_channel_found
