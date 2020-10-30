@@ -667,7 +667,7 @@ class MatrixTransport(Runnable):
             # This does not reduce latency for target<->initiator communication,
             # since the target may be the node with lower address, and therefore
             # the node that has to create the room.
-            self._maybe_create_room_for_address(node_address)
+            # self._maybe_create_room_for_address(node_address)
             # Ensure network state is updated in case we already know about the user presences
             # representing the target node
             user_ids = self.get_user_ids_for_address(node_address)
@@ -1692,10 +1692,10 @@ class MatrixTransport(Runnable):
             retrier = self._address_to_retrier.get(address)
             if retrier:
                 retrier.notify()
-            web_rtc_key = Capabilities.WEBRTC.value
-            if web_rtc_key in capabilities and capabilities[web_rtc_key]:
-                # if lower address spawn worker to create web rtc channel
-                self._maybe_create_web_rtc_channel(address)
+            # web_rtc_key = Capabilities.WEBRTC.value
+            # if web_rtc_key in capabilities and capabilities[web_rtc_key]:
+            #     # if lower address spawn worker to create web rtc channel
+            #     self._maybe_create_web_rtc_channel(address)
 
         elif reachability is AddressReachability.UNKNOWN:
             node_reachability = NetworkState.UNKNOWN
