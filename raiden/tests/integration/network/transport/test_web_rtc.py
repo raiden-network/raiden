@@ -25,6 +25,7 @@ class MessageHandler:
         self.bag.update(messages)
 
 
+@pytest.mark.skip(reason="https://github.com/raiden-network/raiden/issues/6639")
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("capabilities", [CapabilitiesConfig(web_rtc=True)])
