@@ -798,6 +798,7 @@ def test_pfs_broadcast_messages(
 
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_invite_private_room_happy_case(matrix_transports):
     """ Test that a room has been created between two communicating nodes."""
 
@@ -835,6 +836,7 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_invite_retry_with_offline_invitee(
     matrix_transports: List[MatrixTransport],
 ) -> None:
@@ -903,6 +905,7 @@ def test_matrix_invite_retry_with_offline_invitee(
 
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_invitee_receives_invite_on_restart(
     matrix_transports: List[MatrixTransport],
 ) -> None:
