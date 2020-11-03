@@ -1366,6 +1366,10 @@ class MatrixTransport(Runnable):
                 for user_id in self._address_mgr.get_userids_for_address(receiver_address)
                 if self._address_mgr.get_userid_presence(user_id) in USER_PRESENCE_REACHABLE_STATES
             }
+            if not online_userids:
+                self.log.debug("No online user_ids", online_userids=online_userids)
+                return
+
             body = {
                 user_id: {"*": {"msgtype": "m.text", "body": data}} for user_id in online_userids
             }
