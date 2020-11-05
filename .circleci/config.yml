@@ -350,7 +350,7 @@ jobs:
       - run:
           name: Checkout Scenario Player
           command: |
-            git clone https://github.com/raiden-network/scenario-player.git
+            git clone --single-branch --branch raiden-master https://github.com/raiden-network/scenario-player.git
       - run:
           name: Install dependencies
           command: |
