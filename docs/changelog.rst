@@ -1,7 +1,7 @@
 =========
 Changelog
 =========
-
+* :feature: `6646` add [Matrix toDevice](https://matrix.org/docs/spec/client_server/r0.6.0#id70) message support in transport layer
 * :feature:`6608` Compatibility with synapse 1.19 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
 * :bug:`6444` Fix a race condition when processing blockchain events.
 
