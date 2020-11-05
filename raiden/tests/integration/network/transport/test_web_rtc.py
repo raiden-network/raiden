@@ -6,6 +6,7 @@ from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.transport import MessagesQueue
 from raiden.network.transport.matrix.utils import validate_and_parse_message
+from raiden.settings import CapabilitiesConfig
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
@@ -24,8 +25,10 @@ class MessageHandler:
         self.bag.update(messages)
 
 
+@pytest.mark.skip(reason="https://github.com/raiden-network/raiden/issues/6639")
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(web_rtc=True)])
 def test_web_rtc_message_sync(matrix_transports):
 
     transport0, transport1 = matrix_transports

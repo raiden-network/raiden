@@ -67,6 +67,7 @@ def capdict_to_config(capdict: Dict[str, Any]) -> CapabilitiesConfig:
         mediate=capdict.get(Capabilities.MEDIATE.value, True),
         delivery=capdict.get(Capabilities.DELIVERY.value, True),
         web_rtc=capdict.get(Capabilities.WEBRTC.value, False),
+        to_device=capdict.get(Capabilities.TODEVICE.value, False),
     )
     for key in capdict.keys():
         if key not in [_.value for _ in Capabilities]:
@@ -80,11 +81,12 @@ def capconfig_to_dict(config: CapabilitiesConfig) -> Dict[str, Any]:
         Capabilities.MEDIATE.value: config.mediate,
         Capabilities.DELIVERY.value: config.delivery,
         Capabilities.WEBRTC.value: config.web_rtc,
+        Capabilities.TODEVICE.value: config.to_device,
     }
     other_keys = [
         key
         for key in config.__dict__.keys()
-        if key not in ["receive", "mediate", "delivery", "web_rtc"]
+        if key not in ["receive", "mediate", "delivery", "web_rtc", "to_device"]
     ]
     for key in other_keys:
         if key not in [_.value for _ in Capabilities]:

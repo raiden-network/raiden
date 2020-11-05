@@ -76,7 +76,7 @@ incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 iniconfig==1.0.1          # via -r requirements-dev.txt, pytest
 ipfshttpclient==0.7.0a1   # via -r requirements-dev.txt, web3
 ipython-genutils==0.2.0   # via -r requirements-dev.txt, traitlets
-ipython==7.18.1           # via -r requirements-dev.txt
+ipython==7.19.0           # via -r requirements-dev.txt
 isort==5.6.4              # via -r requirements-dev.txt, pylint
 itsdangerous==1.1.0       # via -r requirements-dev.txt, flask
 jedi==0.17.0              # via -r requirements-dev.txt, ipython
@@ -89,7 +89,7 @@ markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==8.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
 marshmallow-polyfield==5.9  # via -r requirements-dev.txt
-marshmallow==3.8.0        # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
+marshmallow==3.9.0        # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
 matrix-client==0.3.2      # via -r requirements-dev.txt
 matrix-synapse==1.19.1    # via -r requirements-dev.txt
 mccabe==0.6.1             # via -r requirements-dev.txt, flake8, pylint
@@ -98,7 +98,7 @@ msgpack==0.6.1            # via -r requirements-dev.txt, matrix-synapse
 multiaddr==0.0.9          # via -r requirements-dev.txt, ipfshttpclient
 mypy-extensions==0.4.3    # via -r requirements-dev.txt, black, mypy, raiden-contracts, typing-inspect
 mypy==0.782               # via -r requirements-dev.txt
-nest-asyncio==1.4.1       # via -r requirements-dev.txt
+nest-asyncio==1.4.2       # via -r requirements-dev.txt
 netaddr==0.7.19           # via -r requirements-dev.txt, matrix-synapse, multiaddr
 netifaces==0.10.9         # via -r requirements-dev.txt, aioice
 objgraph==3.5.0           # via -r requirements-dev.txt
@@ -145,7 +145,7 @@ pytest-forked==1.1.3      # via -r requirements-dev.txt, pytest-xdist
 pytest-random==0.2        # via -r requirements-dev.txt
 pytest-select==0.1.2      # via -r requirements-dev.txt
 pytest-xdist==2.1.0       # via -r requirements-dev.txt
-pytest==6.1.1             # via -r requirements-dev.txt, pytest-forked, pytest-random, pytest-select, pytest-xdist
+pytest==6.1.2             # via -r requirements-dev.txt, pytest-forked, pytest-random, pytest-select, pytest-xdist
 python-dateutil==2.8.0    # via s3cmd
 python-magic==0.4.15      # via s3cmd
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful

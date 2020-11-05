@@ -36,6 +36,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import (
     MIN_MONITORING_AMOUNT_DAI,
     MONITORING_REWARD,
+    CapabilitiesConfig,
     MatrixTransportConfig,
     RaidenConfig,
     ServiceConfig,
@@ -797,6 +798,7 @@ def test_pfs_broadcast_messages(
 
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_invite_private_room_happy_case(matrix_transports):
     """ Test that a room has been created between two communicating nodes."""
 
@@ -834,6 +836,7 @@ def test_matrix_invite_private_room_happy_case(matrix_transports):
 
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_invite_retry_with_offline_invitee(
     matrix_transports: List[MatrixTransport],
 ) -> None:
@@ -902,6 +905,7 @@ def test_matrix_invite_retry_with_offline_invitee(
 
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("matrix_server_count", [2])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_invitee_receives_invite_on_restart(
     matrix_transports: List[MatrixTransport],
 ) -> None:
@@ -1013,6 +1017,7 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     "roaming_peer",
     [pytest.param("high", id="roaming_high"), pytest.param("low", id="roaming_low")],
 )
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
 def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     # 6 transports on 3 servers, where (0,3), (1,4), (2,5) are one the same server
     (
