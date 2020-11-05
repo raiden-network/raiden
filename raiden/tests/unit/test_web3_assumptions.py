@@ -6,7 +6,6 @@ import responses
 from eth_typing import URI, BlockNumber
 from requests import PreparedRequest
 from web3 import HTTPProvider, Web3
-from web3.eth import Eth
 from web3.exceptions import BlockNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 
@@ -41,10 +40,10 @@ _FAKE_BLOCK_DATA = {
 def patched_web3():
     web3 = Web3(HTTPProvider(URI("http://domain/")))
     monkey_patch_web3(web3=web3, gas_price_strategy=rpc_gas_price_strategy)
-    original_get_block = Eth.getBlock
-    Eth.getBlock = make_patched_web3_get_block(Eth.getBlock)
+    original_get_block = web3.eth.getBlock
+    web3.eth.getBlock = make_patched_web3_get_block(web3.eth.getBlock)
     yield web3
-    Eth.getBlock = original_get_block
+    web3.eth.getBlock = original_get_block
 
 
 def _make_json_rpc_null_response(
