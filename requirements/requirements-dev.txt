@@ -172,7 +172,7 @@ sphinxcontrib-jsmath==1.0.1  # via -r requirements-docs.txt, sphinx
 sphinxcontrib-qthelp==1.0.3  # via -r requirements-docs.txt, sphinx
 sphinxcontrib-serializinghtml==1.1.4  # via -r requirements-docs.txt, sphinx
 structlog==20.1.0         # via -r requirements.txt
-toml==0.10.1              # via -r requirements.txt, black, pylint, pytest
+toml==0.10.2              # via -r requirements.txt, black, pylint, pytest
 toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via ipython
 treq==18.6.0              # via matrix-synapse
