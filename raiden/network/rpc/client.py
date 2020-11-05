@@ -726,8 +726,8 @@ def make_sane_poa_middleware(
 
 
 def make_patched_web3_get_block(
-    original_func: Callable[[Eth, BlockIdentifier, bool], BlockData]
-) -> Callable[[Eth, BlockIdentifier, bool], BlockData]:
+    original_func: Callable[[BlockIdentifier, bool], BlockData]
+) -> Callable[[BlockIdentifier, bool], BlockData]:
     """Patch Eth.getBlock() to retry in case of ``BlockNotFound``
 
     Infura sometimes erroneously returns a `null` response for
@@ -745,12 +745,12 @@ def make_patched_web3_get_block(
     """
 
     def patched_web3_get_block(  # type: ignore
-        self: Eth, block_identifier: BlockIdentifier, full_transactions: bool = False
+        block_identifier: BlockIdentifier, full_transactions: bool = False
     ) -> BlockData:
         last_ex: Optional[Exception] = None
         for remaining_retries in range(WEB3_BLOCK_NOT_FOUND_RETRY_COUNT, 0, -1):
             try:
-                return original_func(self, block_identifier, full_transactions)
+                return original_func(block_identifier, full_transactions)
             except BlockNotFound as ex:
                 log.warning(
                     "Block not found, retrying",
@@ -799,7 +799,7 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # Infura sometimes erroneously returns `null` for existing (but very recent) blocks.
         # Work around this by retrying those requests.
         # See docstring for details.
-        Eth.getBlock = make_patched_web3_get_block(Eth.getBlock)  # type: ignore
+        web3.eth.getBlock = make_patched_web3_get_block(web3.eth.getBlock)
 
 
 @dataclass
