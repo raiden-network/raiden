@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :feature:`6608` Compatibility with synapse 1.19 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
+* :feature:`6482` Add support for capabilities. The Raiden client can show its capababilities to other clients via its matrix profile.
 * :bug:`6444` Fix a race condition when processing blockchain events.
 
 * :release:`1.1.1 <2020-07-20>`
