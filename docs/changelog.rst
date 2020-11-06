@@ -1,7 +1,9 @@
 =========
 Changelog
 =========
-* :feature: `6646` add [Matrix toDevice](https://matrix.org/docs/spec/client_server/r0.6.0#id70) message support in transport layer
+
+* :release:`1.2.0 <2020-11-06>`
+* :feature:`6646` add [Matrix toDevice](https://matrix.org/docs/spec/client_server/r0.6.0#id70) message support in transport layer
 * :feature:`6608` Compatibility with synapse 1.19 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
 * :feature:`6482` Add support for capabilities. The Raiden client can show its capababilities to other clients via its matrix profile.
 * :bug:`6444` Fix a race condition when processing blockchain events.
