@@ -481,7 +481,10 @@ def inspect_client_error(
             if "insufficient funds" in error["message"]:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
 
-            if "always failing transaction" in error["message"]:
+            if (
+                "always failing transaction" in error["message"]
+                or "execution reverted" in error["message"]
+            ):
                 return ClientErrorInspectResult.ALWAYS_FAIL
 
             if "replacement transaction underpriced" in error["message"]:
