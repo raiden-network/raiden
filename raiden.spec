@@ -87,7 +87,7 @@ a = Entrypoint(
         'tools/pyinstaller_hooks/runtime_encoding.py',
         'tools/pyinstaller_hooks/runtime_raiden_contracts.py',
     ],
-    hiddenimports=['scrypt', 'eth_tester', 'pkg_resources.py2_warn'],
+    hiddenimports=['scrypt', 'eth_tester'],
     datas=[],
     excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
 )
