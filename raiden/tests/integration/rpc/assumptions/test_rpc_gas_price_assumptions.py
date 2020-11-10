@@ -238,8 +238,8 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     except TransactionNotFound:
         zerogas_receipt = None
 
-    msg = "The transaction does NOT have a receipt because the miner rejected it"
-    assert zerogas_receipt is None, msg
+    msg = "The transaction receipt does NOT have a blockHash because the miner rejected it"
+    assert zerogas_receipt is None or zerogas_receipt["blockHash"] is None, msg
 
 
 def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSONRPCClient) -> None:
