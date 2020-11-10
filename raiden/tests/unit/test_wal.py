@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 import pytest
+import ulid
 
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
@@ -25,7 +26,6 @@ from raiden.tests.utils.factories import (
     make_locksroot,
     make_token_network_registry_address,
     make_transaction_hash,
-    make_ulid,
 )
 from raiden.transfer.architecture import State, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
@@ -150,7 +150,7 @@ def test_write_read_log() -> None:
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
-        wal.storage.write_state_snapshot(State(), StateChangeID(make_ulid()), 1)
+        wal.storage.write_state_snapshot(State(), StateChangeID(ulid.new()), 1)
 
 
 def test_timestamped_event():
