@@ -65,12 +65,12 @@ The Raiden Network is getting created with a set of tools, which are maintained 
 
 - The Raiden Python client within the current repository is used to manage payment channels and to make token transfers.
 
-- A [configured matrix server](https://github.com/raiden-network/raiden-transport) joins a federation of Matrix servers which is used as the transport layer for the Raiden Network. 
+- A [configured matrix server](https://github.com/raiden-network/raiden-transport) joins a federation of Matrix servers which is used as the transport layer for the Raiden Network.
 
 - The [Service repository](https://github.com/raiden-network/raiden-services) contains the code for following services:
-    - The Monitoring Service watches open payment channels when the user is not on-line. 
+    - The Monitoring Service watches open payment channels when the user is not on-line.
     - The Pathfinding service supports users in finding the cheapest or shortest way to route a payment through the network.
-    
+
 - The [Light Client repository](https://github.com/raiden-network/light-client) contains the code for following applications:
     - The Raiden Light Client SDK is a Raiden Network compatible client written in JavaScript/Typescript.
     - The Raiden DApp is a reference implementation of the Raiden Light Client SDK.
@@ -106,8 +106,8 @@ Website: [Raiden Network](https://raiden.network/)
 
 Blog: [Medium](https://medium.com/@raiden_network)
 
-Mail: contact@raiden.network 
+Mail: contact@raiden.network
 
 *The Raiden project is led by brainbot labs Est.*
 
-> Disclaimer: Please note, that even though we do our best to ensure the quality and accuracy of the information provided, this publication may contain views and opinions, errors and omissions for which the content creator(s) and any represented organization cannot be held liable. The wording and concepts regarding financial terminology (e.g. “payments”, “checks”, “currency”, “transfer” [of value]) are exclusively used in an exemplary way to describe technological principles and do not necessarily conform to the real world or legal equivalents of these terms and concepts.
+> Disclaimer: Please note, that even though we do our best to ensure the quality and accuracy of the information provided, this publication may contain views and opinions, errors and omissions for which the content creator(s) and any represented organization cannot be held liable. The wording and concepts regarding financial terminology (e.g. "payments", "checks", "currency", "transfer" [of value]) are exclusively used in an exemplary way to describe technological principles and do not necessarily conform to the real world or legal equivalents of these terms and concepts.
