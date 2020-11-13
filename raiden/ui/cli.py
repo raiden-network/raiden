@@ -66,9 +66,6 @@ from raiden.utils.cli import (
 )
 from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.profiling.greenlets import SwitchMonitoring
-from raiden.utils.profiling.memory import MemoryLogger
-from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION
 from raiden_contracts.constants import ID_TO_CHAINNAME
@@ -99,6 +96,12 @@ class ReturnCode(Enum):
     ETH_ACCOUNT_ERROR = 6
     RAIDEN_CONFIGURATION_ERROR = 7
     SMART_CONTRACTS_CONFIGURATION_ERROR = 8
+
+
+def windows_not_supported(feature_name: str) -> None:
+    if os.name == "nt":
+        click.echo(f"{feature_name.title()} not supported on Windows")
+        exit(1)
 
 
 def write_stack_trace(ex: Exception) -> None:
@@ -549,6 +552,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
     enable_gevent_monitoring_signal()
 
     if flamegraph:  # pragma: no cover
+        windows_not_supported("flame graph")
+        from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
+
         os.makedirs(flamegraph, exist_ok=True)
 
         now = datetime.datetime.now().isoformat()
@@ -559,6 +565,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
         profiler = TraceSampler(flame)
 
     if switch_tracing is True:  # pragma: no cover
+        windows_not_supported("switch tracing")
+        from raiden.utils.profiling.greenlets import SwitchMonitoring
+
         switch_monitor = SwitchMonitoring()
 
     if kwargs["environment_type"] == Environment.DEVELOPMENT:
@@ -567,6 +576,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
     if log_memory_usage_interval > 0:  # pragma: no cover
+        windows_not_supported("memory usage logging")
+        from raiden.utils.profiling.memory import MemoryLogger
+
         memory_logger = MemoryLogger(log_memory_usage_interval)
         memory_logger.start()
 
