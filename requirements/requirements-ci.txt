@@ -97,7 +97,7 @@ mirakuru==2.1.2           # via -r requirements-dev.txt
 msgpack==0.6.1            # via -r requirements-dev.txt, matrix-synapse
 multiaddr==0.0.9          # via -r requirements-dev.txt, ipfshttpclient
 mypy-extensions==0.4.3    # via -r requirements-dev.txt, black, mypy, raiden-contracts, typing-inspect
-mypy==0.782               # via -r requirements-dev.txt
+mypy==0.790               # via -r requirements-dev.txt
 nest-asyncio==1.4.2       # via -r requirements-dev.txt
 netaddr==0.7.19           # via -r requirements-dev.txt, matrix-synapse, multiaddr
 netifaces==0.10.9         # via -r requirements-dev.txt, aioice
