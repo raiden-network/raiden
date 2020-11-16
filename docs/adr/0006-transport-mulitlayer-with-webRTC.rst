@@ -1,5 +1,5 @@
 Transport: Using multilayer transport with WebRTC
-=================================================
+*************************************************
 
 **Status**: Under investigation
 
@@ -17,7 +17,7 @@ Considered Options
 
 * **Option 1**: Multi layer transport. A multi layer transport has a robust base transport layer which meets all requirements. Raiden must work on this transport layer although with performance issues possible. Different Requirements can be outsourced to different other protocols which scale with the number of users in order to A) improve performance and B) take of load from base layer. If anything goes wrong in the outsourced layers, the base serves as a fallback. The Downside lies in increased complexity of implementing and maintaining multiple protocols.
 
-* **Option 2**: Go-libp2p-daemon. Libp2p is a very promising alternative p2p communication framework. It is configurable on multiple layers of transmission protocols. In the current stage it is still in a very experimental state. It probably does not fullfill all requirements for being a full transport layer for Raiden.  
+* **Option 2**: Go-libp2p-daemon. Libp2p is a very promising alternative p2p communication framework. It is configurable on multiple layers of transmission protocols. In the current stage it is still in a very experimental state. It probably does not fullfill all requirements for being a full transport layer for Raiden.
 
 * **Option 3**: Custom websocket solution. Another alternative is an inhouse built solution. Since the current Matrix transport is designed for its purpose being a chat protocol for humans there has been work done to abstract it to Raiden's needs. A customized solution can be "tailored" to adapt perfectly to raiden's use case and would probably be more lightweight than the current Matrix. A self-built transport of course requires additional maintainance capacity.
 
@@ -53,4 +53,3 @@ Current Status
 ==============
 - The implementation for the light client is almost merged.
 - The implementation for the python client is still under investigation. It needs to be solved how and which framework to use for handling WebRTC data channels.
-
