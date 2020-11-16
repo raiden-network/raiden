@@ -365,8 +365,3 @@ Finally by default the output of the logs are in plain readable text format. In 
 Summing up these are the arguments you need to append if you want to disable the debug log and want to configure normal logging for up to debug statement in json inside a file called ``raiden.log``
 
 ``--disable-debug-logfile --log-config ":debug" --log-file raiden.log --log-json``
-
-Further reading
-===============
-
-Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface, and a :doc:`Mainnet tutorial <alderaan_mainnet_tutorial>` for your first mainnet transfers via API.
