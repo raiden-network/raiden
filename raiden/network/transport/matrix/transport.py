@@ -1570,7 +1570,8 @@ class MatrixTransport(Runnable):
 
         if lower_address == self._raiden_service.address:
             self.log.debug(
-                "Spawning create rtc channel worker", partner_address=to_checksum_address(address),
+                "Spawning create rtc channel worker",
+                partner_address=to_checksum_address(address),
             )
             # initiate web rtc handling
             self._schedule_new_greenlet(self._create_web_rtc_channel, address)
@@ -1663,7 +1664,8 @@ class MatrixTransport(Runnable):
             capabilities = self._address_mgr.get_address_capabilities(partner_address)
             if self._capability_usable(Capabilities.WEBRTC, capabilities):
                 self.log.debug(
-                    "Initiating web rtc", partner_address=to_checksum_address(partner_address),
+                    "Initiating web rtc",
+                    partner_address=to_checksum_address(partner_address),
                 )
                 self._web_rtc_manager.spawn_create_channel(partner_address)
             else:
