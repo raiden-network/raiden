@@ -4,7 +4,20 @@ import time
 from datetime import datetime
 from functools import wraps
 from itertools import repeat
-from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Container,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -242,7 +255,13 @@ class GMatrixHttpApi(MatrixHttpApi):
         message = {"type": RTCMessageType.HANGUP.value, "call_id": call_id}
         self._send_signalling(room_id, message)
 
-    def _send_signalling(self, room_id: RoomID, message: Dict[str, str]) -> None:
+    def candidates(self, room_id: RoomID, call_id: str, candidates: List[str]) -> None:
+        message = {"type": "candidates", "call_id": call_id, "candidates": candidates}
+        self._send_signalling(room_id, message)
+
+    def _send_signalling(
+        self, room_id: RoomID, message: Mapping[str, Union[str, Sequence[str]]]
+    ) -> None:
         self.send_message(room_id=room_id, text_content=json.dumps(message), msgtype="m.notice")
 
     def get_aliases(self, room_id: str) -> Dict[str, Any]:
@@ -792,12 +811,7 @@ class GMatrixClient(MatrixClient):
 
             # Add toDevice messages to message queue
             if response["to_device"]["events"]:
-                all_messages.append(
-                    (
-                        None,
-                        response["to_device"]["events"],
-                    )
-                )
+                all_messages.append((None, response["to_device"]["events"],))
 
             for room_id, invite_room in response["rooms"]["invite"].items():
                 for listener in self.invite_listeners[:]:
