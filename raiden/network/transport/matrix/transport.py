@@ -1310,7 +1310,13 @@ class MatrixTransport(Runnable):
                         )
                         self._web_rtc_manager.close(peer_address)
 
-                    # TODO: implement candidates handling
+                    elif rtc_message_type == RTCMessageType.CANDIDATES.value:
+                        self.log.debug(
+                            "Received 'candidates' message",
+                            partner_address=to_checksum_address(peer_address),
+                            content=content,
+                        )
+                        self._web_rtc_manager.set_candidates(peer_address, content)
                     else:
                         self.log.debug(
                             "Unknown rtc message type",
