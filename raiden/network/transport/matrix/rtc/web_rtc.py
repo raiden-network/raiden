@@ -6,6 +6,7 @@ from functools import partial
 import gevent
 import structlog
 from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
+from aiortc.sdp import candidate_from_sdp
 from gevent import Greenlet
 from gevent.event import Event
 
@@ -13,7 +14,17 @@ from raiden.constants import RTCChannelState, SDPTypes
 from raiden.network.transport.matrix.rtc.utils import spawn_coroutine
 from raiden.network.transport.matrix.utils import my_place_or_yours
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, Optional, Set
+from raiden.utils.typing import (
+    Address,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -98,6 +109,23 @@ class WebRTCManager:
         self._spawn_web_rtc_coroutine(
             coroutine, self._handle_sdp_callback, partner_address=partner_address
         )
+
+    def set_candidates(
+        self, partner_address: Address, description: Dict[str, Union[str, Sequence[str]]]
+    ) -> None:
+        assert self.node_address, "Transport is not started yet but tried to set candidates"
+        rtc_partner = self.get_rtc_partner(partner_address)
+        msg = "Partner RTCPeerConnection is not set, but tried to set candidates"
+        assert rtc_partner.peer_connection is not None, msg
+        msg = "Partner remote description is not set, but tried to set candidates"
+        assert rtc_partner.peer_connection.remoteDescription is not None, msg
+
+        connection: RTCPeerConnection = rtc_partner.peer_connection
+        for candidate_str in description["candidates"]:
+
+            candidate = candidate_from_sdp(candidate_str)
+            if candidate is not None:
+                connection.addIceCandidate(candidate)
 
     def spawn_set_remote_description(
         self, partner_address: Address, description: Dict[str, str]
