@@ -811,7 +811,12 @@ class GMatrixClient(MatrixClient):
 
             # Add toDevice messages to message queue
             if response["to_device"]["events"]:
-                all_messages.append((None, response["to_device"]["events"],))
+                all_messages.append(
+                    (
+                        None,
+                        response["to_device"]["events"],
+                    )
+                )
 
             for room_id, invite_room in response["rooms"]["invite"].items():
                 for listener in self.invite_listeners[:]:
