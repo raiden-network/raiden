@@ -5,7 +5,7 @@ import structlog
 from raiden.network.proxies.exceptions import MintFailed
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import was_transaction_successfully_mined
-from raiden.utils.typing import ABI, Address, TokenAmount
+from raiden.utils.typing import ABI, Address, TokenAmount, TransactionHash
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -42,11 +42,15 @@ class CustomToken(Token):
                 "Gas estimation failed. Make sure the token has a method mint(uint256)."
             )
 
-    def mint_for(self, amount: TokenAmount, address: Address) -> None:
+    def mint_for(self, amount: TokenAmount, address: Address) -> TransactionHash:
         """Try to mint tokens by calling `mintFor`.
 
         Raises:
             MintFailed if anything goes wrong.
+
+        Returns:
+            TransactionHash of the successfully mined Ethereum transaction
+            associated with the token mint.
         """
 
         extra_log_details: Dict[str, Any] = {}
@@ -60,6 +64,8 @@ class CustomToken(Token):
 
             if not was_transaction_successfully_mined(transaction_mined):
                 raise MintFailed("Call to contract method mintFor: Transaction failed.")
+            else:
+                return transaction_mined.transaction_hash
 
         else:
             raise MintFailed(

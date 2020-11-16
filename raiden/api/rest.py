@@ -576,13 +576,17 @@ class RestAPI:  # pragma: no unittest
         )
 
         try:
-            self.raiden_api.mint_token_for(token_address=token_address, to=to, value=value)
+            transaction_hash = self.raiden_api.mint_token_for(
+                token_address=token_address, to=to, value=value
+            )
         except MintFailed as e:
             return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
         except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
-        return api_response(status_code=HTTPStatus.OK, result={})
+        return api_response(
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=transaction_hash.hex())
+        )
 
     def open(
         self,
