@@ -107,9 +107,10 @@ class WebRTCManager:
         self, partner_address: Address, description: Dict[str, Union[str, Sequence[str]]]
     ) -> None:
         assert self.node_address, "Transport is not started yet but tried to set candidates"
+        msg = "Tried to set candidates, but RTCPeerConnection does not exist"
+        assert partner_address in self.address_to_rtc_partners, msg
         rtc_partner = self.get_rtc_partner(partner_address)
-        msg = "Partner RTCPeerConnection is not set, but tried to set candidates"
-        assert rtc_partner.peer_connection is not None, msg
+        # TODO: check if remoteDescription is necessary precondition
         msg = "Partner remote description is not set, but tried to set candidates"
         assert rtc_partner.peer_connection.remoteDescription is not None, msg
 
@@ -117,9 +118,8 @@ class WebRTCManager:
         for candidate_str in description["candidates"]:
 
             candidate = candidate_from_sdp(candidate_str)
-            if candidate is not None:
-                candidate.sdpMid = "0"
-                connection.addIceCandidate(candidate)
+            candidate.sdpMid = "0"
+            connection.addIceCandidate(candidate)
 
     def spawn_set_remote_description(
         self, partner_address: Address, description: Dict[str, str]
