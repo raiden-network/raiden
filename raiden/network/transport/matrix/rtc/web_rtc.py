@@ -118,6 +118,7 @@ class WebRTCManager:
 
             candidate = candidate_from_sdp(candidate_str)
             if candidate is not None:
+                candidate.sdpMid = "0"
                 connection.addIceCandidate(candidate)
 
     def spawn_set_remote_description(
