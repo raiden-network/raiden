@@ -1,4 +1,5 @@
 import os
+import re
 
 from solc import compile_files
 from web3.contract import Contract
@@ -9,8 +10,18 @@ from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.custom_token import CustomToken
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils.typing import Any, Dict, List, TokenAmount, Tuple
+from raiden.utils.typing import Any, Dict, List, T_TransactionHash, TokenAmount, Tuple
 from raiden_contracts.contract_manager import ContractManager
+
+
+def is_tx_hash_bytes(bytes_: Any) -> bool:
+    """
+    Check wether the `bytes_` is a correctly encoded transaction hash,
+    but do not query any blockchain node to check for transaction validity.
+    """
+    if isinstance(bytes_, T_TransactionHash):
+        return bool(re.fullmatch("^0x([A-Fa-f0-9]{64})$", bytes_.hex()))
+    return False
 
 
 def deploy_token(
