@@ -234,4 +234,11 @@ class RTCChannelState(Enum):
     CLOSED = "closed"
 
 
-WEB_RTC_CHANNEL_TIMEOUT = 10
+class RTCSignallingState(Enum):
+    STABLE = "stable"
+    HAVE_LOCAL_OFFER = "have-local-offer"
+    HAVE_REMOTE_OFFER = "have-remote-offer"
+    CLOSED = "closed"
+
+
+WEB_RTC_CHANNEL_TIMEOUT = 30.0

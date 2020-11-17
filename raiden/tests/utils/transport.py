@@ -15,6 +15,7 @@ from typing import Any, Callable, DefaultDict, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
 from requests.packages import urllib3
@@ -31,7 +32,7 @@ from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Iterable, Port
+from raiden.utils.typing import Address, Iterable, Optional, Port
 from raiden_contracts.utils.type_aliases import Signature
 
 log = get_logger(__name__)
@@ -77,6 +78,16 @@ def ignore_member_join(_room: Room) -> None:
 
 def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
     return True
+
+
+def ignore_web_rtc_messages(_message_data: str, _partner_address: Address):
+    pass
+
+
+def ignore_sdp(
+    _session_description: Optional[RTCSessionDescription], _partner_address: Address
+) -> None:
+    pass
 
 
 def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:

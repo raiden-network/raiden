@@ -1616,6 +1616,8 @@ class MatrixTransport(Runnable):
         room: Optional[Room] = None
         # bigger loop to retry if channel was not created
         while not self._web_rtc_manager.has_ready_channel(partner_address):
+            rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+
             # if room is not None that means we are at least in the second iteration
             # call hang up to sync with the partner about a retry
             if room is not None:
@@ -1629,49 +1631,43 @@ class MatrixTransport(Runnable):
                         self._raiden_service.address
                     ),
                 )
-                self._web_rtc_manager.close(partner_address)
 
-            rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-            # we need to wait for a online partner and an existing room
+                close_task = self._web_rtc_manager.close(partner_address)
+                if close_task is not None:
+                    gevent.joinall({close_task}, raise_error=True)
+
+            # we need to wait for an online partner and an existing room
             while (
                 self._get_room_for_address(partner_address, require_online_peer=True) is None
                 or not self._started
             ):
+
                 self.log.debug(
                     "Waiting for partner reachable to create rtc channel",
                     partner_address=to_checksum_address(partner_address),
+                    has_room=self._get_room_for_address(partner_address, require_online_peer=True)
+                    is None,
+                    transport_started=self._started,
+                    partner_ready=rtc_partner.partner_ready_event.is_set(),
                 )
                 # this can be ignored here since the underlying awaitables are only events
                 gevent.wait(  # pylint: disable=gevent-disable-wait
-                    [rtc_partner.partner_ready_event, self._stop_event], timeout=15, count=1
+                    {rtc_partner.partner_ready_event, self._stop_event},
+                    timeout=15,
+                    count=1,
                 )
-
-                rtc_partner.partner_ready_event.clear()
 
                 if self._stop_event.is_set():
                     return
 
             room = self._get_room_for_address(partner_address, require_online_peer=True)
 
-            # we can only ask here for capabilities
-            # since we have to wait until the user comes online
-            capabilities = self._address_mgr.get_address_capabilities(partner_address)
-            if self._capability_usable(Capabilities.WEBRTC, capabilities):
-                self.log.debug(
-                    "Initiating web rtc",
-                    partner_address=to_checksum_address(partner_address),
-                )
-                self._web_rtc_manager.spawn_create_channel(partner_address)
-            else:
-                # if no web rtc capabilities by partner remove him from the rtc partners
-                self.log.debug(
-                    "Partner has no web rtc capabilities",
-                    node=self._raiden_service.address,
-                    partner_address=partner_address,
-                    partner_capabilities=capabilities,
-                )
-                self._web_rtc_manager.close(partner_address)
-                return
+            self.log.debug(
+                "Initiating web rtc",
+                partner_address=to_checksum_address(partner_address),
+            )
+            self._web_rtc_manager.spawn_create_channel(partner_address)
+
             # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
             if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
                 return
