@@ -31,5 +31,6 @@ def test_custom_token(service_registry_address, private_keys, web3, contract_man
     assert c1_token_proxy.balance_of(c2_client.address) == mint_amount
     assert c1_token_proxy.balance_of(c1_client.address) == 0
 
-    c1_token_proxy.mint(mint_amount)
+    tx_hash = c1_token_proxy.mint(mint_amount)
+    assert is_tx_hash_bytes(tx_hash)
     assert c1_token_proxy.balance_of(c1_client.address) == mint_amount

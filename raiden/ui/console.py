@@ -194,7 +194,7 @@ class ConsoleTools:
             registry_address, BLOCK_ID_LATEST
         )
 
-        token_network_address = registry.add_token(
+        _, token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),

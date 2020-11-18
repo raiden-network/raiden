@@ -3,6 +3,7 @@ from eth_utils import to_canonical_address
 from raiden.constants import BLOCK_ID_LATEST
 from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.tests.utils.smartcontracts import is_tx_hash_bytes
 from raiden.utils.keys import privatekey_to_address
 
 
@@ -20,10 +21,13 @@ def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager)
 
     # send some funds from deployer to generated address
     transfer_funds = 100
-    token_proxy.transfer(address, transfer_funds)
+    transaction_hash = token_proxy.transfer(address, transfer_funds)
+    assert is_tx_hash_bytes(transaction_hash)
     assert transfer_funds == token_proxy.balance_of(address)
     allow_funds = 100
-    token_proxy.approve(address, allow_funds)
+
+    transaction_hash = token_proxy.approve(address, allow_funds)
+    assert is_tx_hash_bytes(transaction_hash)
     assert allow_funds == token_proxy.proxy.functions.allowance(
         deploy_client.address, address
     ).call(block_identifier=BLOCK_ID_LATEST)

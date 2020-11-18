@@ -17,6 +17,7 @@ from raiden.network.rpc.client import (
 )
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
+from raiden.tests.utils.smartcontracts import is_tx_hash_bytes
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import Address, BlockNumber, Dict, List, PrivateKey, Secret
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
@@ -29,7 +30,9 @@ def secret_registry_batch_happy_path(
     secrets = [make_secret() for i in range(4)]
     secrethashes = [sha256_secrethash(secret) for secret in secrets]
 
-    secret_registry_proxy.register_secret_batch(secrets=secrets)
+    transaction_hashes = secret_registry_proxy.register_secret_batch(secrets=secrets)
+    for tx_hash in transaction_hashes:
+        assert is_tx_hash_bytes(tx_hash)
 
     logs = get_contract_events(
         proxy_manager=proxy_manager,
