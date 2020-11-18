@@ -585,7 +585,7 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         return api_response(
-            status_code=HTTPStatus.OK, result=dict(transaction_hash=transaction_hash.hex())
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(transaction_hash))
         )
 
     def open(
