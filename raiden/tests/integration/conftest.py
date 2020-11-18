@@ -1,4 +1,5 @@
 import asyncio
+
 import gevent
 import pytest
 
@@ -18,7 +19,9 @@ def pytest_collection_modifyitems(items):
 
     for item in items:
         item.add_marker(
-            pytest.mark.flaky(rerun_filter=lambda err, *args: issubclass(err[0], RetryTestError))
+            pytest.mark.flaky(
+                rerun_filter=lambda err, *args: issubclass(err[0], RetryTestError), max_runs=3
+            )
         )
 
 
