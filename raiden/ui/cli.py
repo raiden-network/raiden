@@ -505,7 +505,7 @@ def options(func: Callable) -> Callable:
         ),
     ]
 
-    if importlib.util.find_spec("IPython"):
+    if importlib.util.find_spec("IPython"):  # type: ignore
         options_.append(
             option("--console", help="Start the interactive raiden console", is_flag=True)
         )
