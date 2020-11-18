@@ -129,12 +129,13 @@ def register_token(
     token_network_registry_proxy = token_network_registry_deploy_result()
     token_contract = token_deploy_result()
 
-    return token_network_registry_proxy.add_token(
+    _, token_network_address = token_network_registry_proxy.add_token(
         token_address=TokenAddress(to_canonical_address(token_contract.address)),
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
         given_block_identifier=token_contract.web3.eth.blockNumber,
     )
+    return token_network_address
 
 
 def deploy_service_registry(

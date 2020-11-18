@@ -8,6 +8,7 @@ from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.exceptions import BrokenPreconditionError
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.tests.utils.smartcontracts import is_tx_hash_bytes
 from raiden.utils.typing import PrivateKey, TokenAmount, UserDepositAddress
 from raiden_contracts.contract_manager import ContractManager
 
@@ -50,7 +51,10 @@ def test_user_deposit_proxy_withdraw(
         c0_user_deposit_proxy.withdraw(TokenAmount(1), BLOCK_ID_LATEST)
 
     withdraw_amount = TokenAmount(current_deposit // 2)
-    withdraw_block = c0_user_deposit_proxy.plan_withdraw(withdraw_amount, BLOCK_ID_LATEST)
+    transaction_hash, withdraw_block = c0_user_deposit_proxy.plan_withdraw(
+        withdraw_amount, BLOCK_ID_LATEST
+    )
+    assert is_tx_hash_bytes(transaction_hash)
 
     # The effective balance must take the planned withdraw into account
     effective_balance_after_withdraw_plan = c0_user_deposit_proxy.effective_balance(
@@ -71,7 +75,10 @@ def test_user_deposit_proxy_withdraw(
     c0_user_deposit_proxy.client.wait_until_block(withdraw_block)
 
     # Now withdraw must succeed
-    c0_user_deposit_proxy.withdraw(TokenAmount(withdraw_amount), BLOCK_ID_LATEST)
+    transaction_hash = c0_user_deposit_proxy.withdraw(
+        TokenAmount(withdraw_amount), BLOCK_ID_LATEST
+    )
+    assert is_tx_hash_bytes(transaction_hash)
 
     # The total deposit must now match the reduced value
     new_current_deposit = c0_user_deposit_proxy.get_total_deposit(

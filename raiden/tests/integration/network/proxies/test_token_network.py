@@ -29,6 +29,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.smartcontracts import is_tx_hash_bytes
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Set, T_ChannelID
@@ -65,11 +66,13 @@ def test_token_network_deposit_race(
         address=token_network_address, block_identifier=BLOCK_ID_LATEST
     )
     token_proxy.transfer(c1_client.address, 10)
-    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
+    channel_details = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(channel_details.transaction_hash)
+    channel_identifier = channel_details.channel_identifier
     assert channel_identifier is not None
 
     c1_token_network_proxy.approve_and_set_total_deposit(
@@ -184,11 +187,13 @@ def test_token_network_proxy(
         pytest.fail(msg)
 
     # Using exactly the minimal timeout must succeed
-    c1_token_network_proxy.new_netting_channel(
+    channel_details = c1_token_network_proxy.new_netting_channel(
         partner=make_address(),
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    # Test for correct tx hash
+    assert is_tx_hash_bytes(channel_details.transaction_hash)
 
     msg = (
         "Opening a channel with a settle_timeout larger then token "
@@ -259,11 +264,12 @@ def test_token_network_proxy(
         )
         pytest.fail(msg)
 
-    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
+    channel_details = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    channel_identifier = channel_details.channel_identifier
     msg = "new_netting_channel did not return a valid channel id"
     assert isinstance(channel_identifier, T_ChannelID), msg
 
@@ -376,7 +382,7 @@ def test_token_network_proxy(
     closing_data = balance_proof.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF) + decode_hex(
         balance_proof.signature
     )
-    c2_token_network_proxy.close(
+    transaction_hash = c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
         balance_hash=balance_proof.balance_hash,
@@ -386,6 +392,7 @@ def test_token_network_proxy(
         closing_signature=c2_signer.sign(data=closing_data),
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(transaction_hash)
     assert (
         c1_token_network_proxy.channel_is_closed(
             participant1=c1_client.address,
@@ -536,9 +543,10 @@ def test_token_network_proxy_update_transfer(
         address=token_network_address, block_identifier=BLOCK_ID_LATEST
     )
     # create a channel
-    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
+    channel_details = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier=BLOCK_ID_LATEST
     )
+    channel_identifier = channel_details.channel_identifier
     # deposit to the channel
     initial_balance = 100
     token_proxy.transfer(c1_client.address, initial_balance)
@@ -652,7 +660,7 @@ def test_token_network_proxy_update_transfer(
         msg_type=MessageTypeId.BALANCE_PROOF_UPDATE
     ) + decode_hex(balance_proof_c1.signature)
     non_closing_signature = LocalSigner(c2_client.privkey).sign(data=non_closing_data)
-    c2_token_network_proxy.update_transfer(
+    transaction_hash = c2_token_network_proxy.update_transfer(
         channel_identifier=channel_identifier,
         partner=c1_client.address,
         balance_hash=balance_proof_c1.balance_hash,
@@ -662,6 +670,7 @@ def test_token_network_proxy_update_transfer(
         non_closing_signature=non_closing_signature,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(transaction_hash)
 
     with pytest.raises(BrokenPreconditionError) as exc:
         c1_token_network_proxy.settle(
@@ -695,7 +704,7 @@ def test_token_network_proxy_update_transfer(
         )
 
     # proper settle
-    c1_token_network_proxy.settle(
+    transaction_hash = c1_token_network_proxy.settle(
         channel_identifier=channel_identifier,
         transferred_amount=transferred_amount_c1,
         locked_amount=0,
@@ -706,6 +715,7 @@ def test_token_network_proxy_update_transfer(
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(transaction_hash)
     assert token_proxy.balance_of(c2_client.address) == (
         initial_balance_c2 + transferred_amount_c1 - transferred_amount_c2
     )
@@ -746,9 +756,10 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         address=token_network_address, block_identifier=BLOCK_ID_LATEST
     )
     # create a channel and query the state at the current block hash
-    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
+    channel_details = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address, settle_timeout=10, given_block_identifier=BLOCK_ID_LATEST
     )
+    channel_identifier = channel_details.channel_identifier
     block = c1_client.web3.eth.getBlock(BLOCK_ID_LATEST)
     block_number = int(block["number"])
     block_hash = bytes(block["hash"])
@@ -806,11 +817,12 @@ def test_token_network_actions_at_pruned_blocks(
     assert initial_balance_c2 == initial_token_balance
     # create a channel
     settle_timeout = STATE_PRUNING_AFTER_BLOCKS + 10
-    channel_identifier, _, _ = c1_token_network_proxy.new_netting_channel(
+    channel_details = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=settle_timeout,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    channel_identifier = channel_details.channel_identifier
 
     # Now wait until this block becomes pruned
     pruned_number = c1_proxy_manager.client.block_number()
@@ -953,9 +965,11 @@ def test_concurrent_set_total_deposit(token_network_proxy: TokenNetwork) -> None
         partner = factories.make_address()
         settle_timeout = 500
         given_block_identifier = BLOCK_ID_LATEST
-        channel_identifier, _, block_hash = token_network_proxy.new_netting_channel(
+        channel_details = token_network_proxy.new_netting_channel(
             partner, settle_timeout, given_block_identifier
         )
+        channel_identifier = channel_details.channel_identifier
+        block_hash = channel_details.block_hash
         channels.put((channel_identifier, block_hash, partner))
 
     channel_grenlets = {gevent.spawn(open_channel) for _ in range(CHANNEL_COUNT)}

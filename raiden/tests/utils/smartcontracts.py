@@ -106,8 +106,12 @@ def deploy_service_registry_and_set_urls(
     c2_token_proxy.mint_for(c2_price, c2_client.address)
     assert c2_token_proxy.balance_of(c2_client.address) > 0
     c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
-    c2_service_proxy.deposit(block_identifier=BLOCK_ID_LATEST, limit_amount=c2_price)
-    c2_service_proxy.set_url(urls[1])
+    transaction_hash = c2_service_proxy.deposit(
+        block_identifier=BLOCK_ID_LATEST, limit_amount=c2_price
+    )
+    assert is_tx_hash_bytes(transaction_hash)
+    transaction_hash = c2_service_proxy.set_url(urls[1])
+    assert is_tx_hash_bytes(transaction_hash)
 
     c3_price = c3_service_proxy.current_price(block_identifier=BLOCK_ID_LATEST)
     c3_token_proxy.mint_for(c3_price, c3_client.address)

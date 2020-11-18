@@ -257,7 +257,7 @@ class RaidenAPI:  # pragma: no unittest
             registry_address, block_identifier=chainstate.block_hash
         )
 
-        token_network_address = registry.add_token(
+        _, token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=channel_participant_deposit_limit,
             token_network_deposit_limit=token_network_deposit_limit,

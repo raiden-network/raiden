@@ -18,7 +18,7 @@ class CustomToken(Token):
         """Overwrittable by subclasses to change the proxies ABI."""
         return contract_manager.get_contract_abi(CONTRACT_CUSTOM_TOKEN)
 
-    def mint(self, amount: TokenAmount) -> None:
+    def mint(self, amount: TokenAmount) -> TransactionHash:
         """Try to mint tokens by calling `mint`.
 
         Raises:
@@ -36,6 +36,8 @@ class CustomToken(Token):
 
             if not was_transaction_successfully_mined(transaction_mined):
                 raise MintFailed("Mint failed.")
+            else:
+                return transaction_mined.transaction_hash
 
         else:
             raise MintFailed(

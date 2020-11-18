@@ -66,7 +66,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    Tuple,
+    TransactionHash,
     WithdrawAmount,
     typecheck,
 )
@@ -124,6 +124,13 @@ class ChannelDetails(NamedTuple):
     token_address: TokenAddress
     channel_data: ChannelData
     participants_data: ParticipantsDetails
+
+
+class NewNettingChannelDetails(NamedTuple):
+    channel_identifier: ChannelID
+    block_hash: BlockHash
+    block_number: BlockNumber
+    transaction_hash: TransactionHash
 
 
 @dataclass
@@ -211,7 +218,7 @@ class TokenNetwork:
 
     def new_netting_channel(
         self, partner: Address, settle_timeout: int, given_block_identifier: BlockIdentifier
-    ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
+    ) -> NewNettingChannelDetails:
         """Creates a new channel in the TokenNetwork contract.
 
         Args:
@@ -272,15 +279,15 @@ class TokenNetwork:
 
             self.opening_channels_count += 1
             try:
-                channel_identifier = self._new_netting_channel(partner, settle_timeout)
+                netting_channel_details = self._new_netting_channel(partner, settle_timeout)
             finally:
                 self.opening_channels_count -= 1
 
-            return channel_identifier
+            return netting_channel_details
 
     def _new_netting_channel(
         self, partner: Address, settle_timeout: int
-    ) -> Tuple[ChannelID, BlockHash, BlockNumber]:
+    ) -> NewNettingChannelDetails:
         estimated_transaction = self.client.estimate_gas(
             self.proxy,
             "openChannel",
@@ -368,10 +375,11 @@ class TokenNetwork:
             block_identifier=encode_hex(receipt["blockHash"]),
         ).channel_identifier
 
-        return (
-            channel_identifier,
-            BlockHash(receipt["blockHash"]),
-            BlockNumber(receipt["blockNumber"]),
+        return NewNettingChannelDetails(
+            channel_identifier=channel_identifier,
+            block_hash=BlockHash(receipt["blockHash"]),
+            block_number=BlockNumber(receipt["blockNumber"]),
+            transaction_hash=TransactionHash(transaction_mined.transaction_hash),
         )
 
     def get_channel_identifier(
@@ -670,7 +678,7 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         total_deposit: TokenAmount,
         partner: Address,
-    ) -> None:
+    ) -> TransactionHash:
         """Set channel's total deposit.
 
         `total_deposit` has to be monotonically increasing, this is enforced by
@@ -844,7 +852,7 @@ class TokenNetwork:
                 "given_block_identifier": format_block_id(given_block_identifier),
             }
 
-            self._approve_and_set_total_deposit(
+            return self._approve_and_set_total_deposit(
                 channel_identifier=channel_identifier,
                 total_deposit=total_deposit,
                 previous_total_deposit=our_details.deposit,
@@ -859,7 +867,7 @@ class TokenNetwork:
         partner: Address,
         previous_total_deposit: TokenAmount,
         log_details: Dict[Any, Any],
-    ) -> None:
+    ) -> TransactionHash:
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         # If there are channels being set up concurrently either the
@@ -1037,6 +1045,8 @@ class TokenNetwork:
                 # dealing with an external token contract, it is assumed that it is
                 # malicious and therefore we raise a Recoverable error here.
                 raise RaidenRecoverableError("Unlocked failed for an unknown reason")
+            else:
+                return transaction_mined.transaction_hash
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
@@ -1182,7 +1192,7 @@ class TokenNetwork:
         partner_signature: Signature,
         participant: Address,
         partner: Address,
-    ) -> None:
+    ) -> TransactionHash:
         """Set total token withdraw in the channel to total_withdraw.
 
         Raises:
@@ -1309,7 +1319,7 @@ class TokenNetwork:
 
             log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-            self._set_total_withdraw(
+            return self._set_total_withdraw(
                 channel_identifier=channel_identifier,
                 total_withdraw=total_withdraw,
                 expiration_block=expiration_block,
@@ -1330,7 +1340,7 @@ class TokenNetwork:
         partner_signature: Signature,
         participant_signature: Signature,
         log_details: Dict[Any, Any],
-    ) -> None:
+    ) -> TransactionHash:
 
         estimated_transaction = self.client.estimate_gas(
             self.proxy,
@@ -1425,6 +1435,8 @@ class TokenNetwork:
                     raise WithdrawMismatch(msg)
 
                 raise RaidenUnrecoverableError("SetTotalwithdraw failed for an unknown reason")
+            else:
+                return transaction_mined.transaction_hash
         else:
             # The transaction would have failed if sent, figure out why.
 
@@ -1495,7 +1507,7 @@ class TokenNetwork:
         non_closing_signature: Signature,
         closing_signature: Signature,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         """Close the channel using the provided balance proof.
 
         Note:
@@ -1594,7 +1606,7 @@ class TokenNetwork:
 
         log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-        self._close(
+        return self._close(
             channel_identifier=channel_identifier,
             partner=partner,
             balance_hash=balance_hash,
@@ -1615,7 +1627,7 @@ class TokenNetwork:
         non_closing_signature: Signature,
         closing_signature: Signature,
         log_details: Dict[Any, Any],
-    ) -> None:
+    ) -> TransactionHash:
         # `channel_operations_lock` is used to serialize conflicting channel
         # operations. E.g. this close and a deposit or withdraw.
         with self.channel_operations_lock[partner]:
@@ -1672,6 +1684,8 @@ class TokenNetwork:
                         raise RaidenRecoverableError(msg)
 
                     raise RaidenUnrecoverableError("closeChannel call failed")
+                else:
+                    return transaction_mined.transaction_hash
 
             else:
                 # The transaction would have failed if sent, figure out why.
@@ -1726,7 +1740,7 @@ class TokenNetwork:
         closing_signature: Signature,
         non_closing_signature: Signature,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         if balance_hash is EMPTY_BALANCE_HASH:
             raise RaidenUnrecoverableError("update_transfer called with an empty balance_hash")
 
@@ -1832,7 +1846,7 @@ class TokenNetwork:
 
         log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
 
-        self._update_transfer(
+        return self._update_transfer(
             channel_identifier=channel_identifier,
             partner=partner,
             balance_hash=balance_hash,
@@ -1853,7 +1867,7 @@ class TokenNetwork:
         closing_signature: Signature,
         non_closing_signature: Signature,
         log_details: Dict[Any, Any],
-    ) -> None:
+    ) -> TransactionHash:
         estimated_transaction = self.client.estimate_gas(
             self.proxy,
             "updateNonClosingBalanceProof",
@@ -1962,6 +1976,8 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 raise RaidenUnrecoverableError("update transfer failed for an unknown reason")
+            else:
+                return transaction_mined.transaction_hash
 
         else:
             # The transaction would have failed if sent, figure out why.
@@ -2033,7 +2049,7 @@ class TokenNetwork:
         receiver: Address,
         pending_locks: PendingLocksState,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         if not pending_locks:
             raise ValueError("unlock cannot be done without pending locks")
 
@@ -2091,7 +2107,7 @@ class TokenNetwork:
             "given_block_identifier": format_block_id(given_block_identifier),
         }
 
-        self._unlock(
+        return self._unlock(
             channel_identifier=channel_identifier,
             sender=sender,
             receiver=receiver,
@@ -2108,7 +2124,7 @@ class TokenNetwork:
         pending_locks: PendingLocksState,
         given_block_identifier: BlockIdentifier,
         log_details: Dict[Any, Any],
-    ) -> None:
+    ) -> TransactionHash:
         leaves_packed = b"".join(pending_locks.locks)
         estimated_transaction = self.client.estimate_gas(
             self.proxy,
@@ -2150,6 +2166,8 @@ class TokenNetwork:
                     raise RaidenRecoverableError("The locks are already unlocked")
 
                 raise RaidenRecoverableError("Unlocked failed for an unknown reason")
+            else:
+                return transaction_mined.transaction_hash
         else:
             # The transaction has failed, figure out why.
 
@@ -2205,7 +2223,7 @@ class TokenNetwork:
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         # `channel_operations_lock` is used to serialize conflicting channel
         # operations. E.g. this settle and a channel open.
         with self.channel_operations_lock[partner]:
@@ -2279,7 +2297,7 @@ class TokenNetwork:
                     raise BrokenPreconditionError(msg)
 
             log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
-            self._settle(
+            return self._settle(
                 channel_identifier=channel_identifier,
                 transferred_amount=transferred_amount,
                 locked_amount=locked_amount,
@@ -2302,7 +2320,7 @@ class TokenNetwork:
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         log_details: Dict[Any, Any],
-    ) -> None:
+    ) -> TransactionHash:
 
         # The second participant transferred + locked amount must be higher
         our_maximum = transferred_amount + locked_amount
@@ -2423,6 +2441,8 @@ class TokenNetwork:
                     raise RaidenUnrecoverableError(msg)
 
                 raise RaidenRecoverableError("Settle failed for an unknown reason")
+            else:
+                return transaction_mined.transaction_hash
         else:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.

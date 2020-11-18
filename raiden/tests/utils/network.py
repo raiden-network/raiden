@@ -172,11 +172,12 @@ def payment_channel_open_and_deposit(
         token_network_address, block_identifier=BLOCK_ID_LATEST
     )
 
-    channel_identifier, _, _ = token_network_proxy.new_netting_channel(
+    channel_details = token_network_proxy.new_netting_channel(
         partner=app1.address,
         settle_timeout=settle_timeout,
         given_block_identifier=block_identifier,
     )
+    channel_identifier = channel_details.channel_identifier
     assert channel_identifier
 
     if deposit != 0:

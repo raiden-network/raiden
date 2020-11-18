@@ -48,7 +48,7 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.smartcontracts import deploy_token
+from raiden.tests.utils.smartcontracts import deploy_token, is_tx_hash_bytes
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
@@ -215,11 +215,12 @@ def deploy_smoketest_contracts(
         proxy_manager=proxy_manager,
         block_identifier=BLOCK_ID_LATEST,
     )
-    user_deposit_proxy.init(
+    transaction_hash = user_deposit_proxy.init(
         monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
         one_to_n_address=OneToNAddress(one_to_n_address),
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(transaction_hash)
 
     addresses = {
         CONTRACT_SECRET_REGISTRY: secret_registry_address,

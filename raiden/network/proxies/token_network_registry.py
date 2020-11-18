@@ -39,6 +39,8 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    TransactionHash,
+    Tuple,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
@@ -104,7 +106,7 @@ class TokenNetworkRegistry:
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
         given_block_identifier: BlockIdentifier,
-    ) -> TokenNetworkAddress:
+    ) -> Tuple[TransactionHash, TokenNetworkAddress]:
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
@@ -231,7 +233,7 @@ class TokenNetworkRegistry:
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
         log_details: Dict[Any, Any],
-    ) -> TokenNetworkAddress:
+    ) -> Tuple[TransactionHash, TokenNetworkAddress]:
         token_network_address = None
 
         kwargs = {
@@ -509,7 +511,10 @@ class TokenNetworkRegistry:
                 f"reason. Reference block {failed_at_blockhash} "
                 f"{failed_at_blocknumber}."
             )
-        return token_network_address
+        return (
+            TransactionHash(transaction_mined.transaction_hash),
+            TokenNetworkAddress(token_network_address),
+        )
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
         filter_ = self.proxy.events.TokenNetworkCreated.createFilter(

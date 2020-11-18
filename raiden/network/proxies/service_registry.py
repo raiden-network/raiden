@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     ServiceRegistryAddress,
     TokenAddress,
     TokenAmount,
+    TransactionHash,
 )
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
@@ -111,7 +112,9 @@ class ServiceRegistry:
             )
         )
 
-    def deposit(self, block_identifier: BlockIdentifier, limit_amount: TokenAmount) -> None:
+    def deposit(
+        self, block_identifier: BlockIdentifier, limit_amount: TokenAmount
+    ) -> TransactionHash:
         """Makes a deposit to create or extend a registration"""
         extra_log_details = {"given_block_identifier": block_identifier}
         estimated_transaction = self.client.estimate_gas(
@@ -128,8 +131,10 @@ class ServiceRegistry:
         if not was_transaction_successfully_mined(transaction_mined):
             msg = "ServiceRegistry.deposit transaction failed"
             raise RaidenUnrecoverableError(msg)
+        else:
+            return transaction_mined.transaction_hash
 
-    def set_url(self, url: str) -> None:
+    def set_url(self, url: str) -> TransactionHash:
         """Sets the url needed to access the service via HTTP for the caller"""
         if not url.strip():
             msg = "Invalid empty URL"
@@ -154,3 +159,5 @@ class ServiceRegistry:
         if not was_transaction_successfully_mined(transaction_mined):
             msg = f"URL {url} is invalid"
             raise RaidenUnrecoverableError(msg)
+        else:
+            return transaction_mined.transaction_hash
