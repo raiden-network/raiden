@@ -1,5 +1,6 @@
 from typing import List
 
+import gevent
 import pytest
 from eth_typing import Address, BlockNumber
 from web3 import Web3
@@ -83,3 +84,26 @@ def test_user_deposit_proxy_withdraw(
     # The current balance must now match the reduced value
     new_current_balance = c0_user_deposit_proxy.get_balance(c0_client.address, BLOCK_ID_LATEST)
     assert new_current_balance == initial_deposit - withdraw_amount
+
+    # Deposit again after the funds were withdrawn
+    amount_to_deposit = 1
+    tasks = set()
+    # Force a race condition between deposits, letting successive, concurrent calls
+    # wait for the first inflight transaction
+    for _ in range(3):
+        task = gevent.spawn(
+            c0_user_deposit_proxy.approve_and_deposit,
+            beneficiary=c0_client.address,
+            # the total deposit needs to increase monotonically in the contract
+            total_deposit=initial_deposit + amount_to_deposit,
+            given_block_identifier=BLOCK_ID_LATEST,
+        )
+        tasks.add(task)
+    results = gevent.joinall(tasks, raise_error=True)
+    # All tx have the same deposit,
+    # so one of them should successfully transact,
+    # while all others should wait for the inflight transaction
+    # All calls should then be associated to the same on-chain transaction
+    tx_hashes = set(result.get() for result in results)
+    assert len(tx_hashes) == 1
+    assert is_tx_hash_bytes(tx_hashes.pop())
