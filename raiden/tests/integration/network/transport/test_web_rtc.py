@@ -16,6 +16,8 @@ from raiden.utils.typing import MessageID
 TIMEOUT_MESSAGE_RECEIVE = 15
 TIMEOUT_WEB_RTC_CONNECTION = 120
 
+pytestmark = pytest.mark.asyncio
+
 
 class MessageHandler:
     def __init__(self, bag):

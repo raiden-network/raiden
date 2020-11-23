@@ -2,6 +2,8 @@
 import gevent  # isort:skip # noqa
 from gevent import monkey  # isort:skip # noqa
 
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
+
 monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
 
 import contextlib
@@ -505,3 +507,13 @@ if sys.platform == "darwin":
     def pytest_configure(config) -> None:
         if config.option.basetemp is None:
             config.option.basetemp = f"/tmp/pytest-of-{os.getlogin():.6s}"
+
+
+@pytest.fixture(autouse=True)
+def asyncio_loop(request):
+    if request.node.get_closest_marker("asyncio") is not None:
+        asyncio_greenlet = setup_asyncio_event_loop()
+        yield
+        gevent.kill(asyncio_greenlet)
+    else:
+        yield
