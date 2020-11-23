@@ -39,10 +39,10 @@ def test_user_deposit_proxy_withdraw(
     assert withdraw_plan.withdraw_block == 0
     assert withdraw_plan.withdraw_amount == 0
 
-    current_deposit = c0_user_deposit_proxy.get_total_deposit(c0_client.address, BLOCK_ID_LATEST)
+    initial_deposit = c0_user_deposit_proxy.get_total_deposit(c0_client.address, BLOCK_ID_LATEST)
 
     # None of these are valid plan_withdraw amounts
-    for value in [-1, 0, current_deposit + 1]:
+    for value in [-1, 0, initial_deposit + 1]:
         with pytest.raises(BrokenPreconditionError):
             c0_user_deposit_proxy.plan_withdraw(TokenAmount(value), BLOCK_ID_LATEST)
 
@@ -50,7 +50,7 @@ def test_user_deposit_proxy_withdraw(
     with pytest.raises(BrokenPreconditionError):
         c0_user_deposit_proxy.withdraw(TokenAmount(1), BLOCK_ID_LATEST)
 
-    withdraw_amount = TokenAmount(current_deposit // 2)
+    withdraw_amount = TokenAmount(initial_deposit // 2)
     transaction_hash, withdraw_block = c0_user_deposit_proxy.plan_withdraw(
         withdraw_amount, BLOCK_ID_LATEST
     )
@@ -60,7 +60,7 @@ def test_user_deposit_proxy_withdraw(
     effective_balance_after_withdraw_plan = c0_user_deposit_proxy.effective_balance(
         c0_client.address, BLOCK_ID_LATEST
     )
-    assert effective_balance_after_withdraw_plan == current_deposit - withdraw_amount
+    assert effective_balance_after_withdraw_plan == initial_deposit - withdraw_amount
 
     # Wait until target block - 1.
     # We set the retry timeout to 0.1 to make sure there is enough time for the failing case
@@ -80,8 +80,6 @@ def test_user_deposit_proxy_withdraw(
     )
     assert is_tx_hash_bytes(transaction_hash)
 
-    # The total deposit must now match the reduced value
-    new_current_deposit = c0_user_deposit_proxy.get_total_deposit(
-        c0_client.address, BLOCK_ID_LATEST
-    )
-    assert new_current_deposit == current_deposit - withdraw_amount
+    # The current balance must now match the reduced value
+    new_current_balance = c0_user_deposit_proxy.get_balance(c0_client.address, BLOCK_ID_LATEST)
+    assert new_current_balance == initial_deposit - withdraw_amount
