@@ -418,8 +418,6 @@ class UserDeposit:
                 transaction_sent=transaction_sent, amount_to_plan_withdraw=amount
             )
 
-        assert transaction_mined is not None, "_plan_withdraw_check_result returned None"
-
         return (
             transaction_mined.transaction_hash,
             BlockNumber(transaction_mined.receipt["blockNumber"] + self.get_withdraw_delay()),
@@ -748,7 +746,7 @@ class UserDeposit:
 
     def _plan_withdraw_check_result(
         self, transaction_sent: Optional[TransactionSent], amount_to_plan_withdraw: TokenAmount
-    ) -> Optional[TransactionMined]:
+    ) -> TransactionMined:
         if transaction_sent is None:
             failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blocknumber = failed_at["number"]
