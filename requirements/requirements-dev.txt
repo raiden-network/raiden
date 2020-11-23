@@ -5,7 +5,7 @@
 #    'requirements/deps compile' (for details see requirements/README)
 #
 aioice==0.6.18            # via -r requirements.txt, aiortc
-aiortc==0.9.28            # via -r requirements.txt
+aiortc==1.0.0             # via -r requirements.txt
 alabaster==0.7.12         # via -r requirements-docs.txt, sphinx
 aniso8601==7.0.0          # via -r requirements.txt, flask-restful
 apipkg==1.5               # via execnet

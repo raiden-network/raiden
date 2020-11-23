@@ -5,7 +5,7 @@
 #    'requirements/deps compile' (for details see requirements/README)
 #
 aioice==0.6.18            # via aiortc
-aiortc==0.9.28            # via -r requirements.in
+aiortc==1.0.0             # via -r requirements.in
 aniso8601==7.0.0          # via flask-restful
 asn1crypto==1.3.0         # via coincurve
 attrs==19.3.0             # via jsonschema
