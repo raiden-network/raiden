@@ -132,6 +132,9 @@ class UserDeposit:
     def get_total_deposit(
         self, address: Address, block_identifier: BlockIdentifier
     ) -> TokenAmount:
+        return self.proxy.functions.total_deposit(address).call(block_identifier=block_identifier)
+
+    def get_balance(self, address: Address, block_identifier: BlockIdentifier) -> TokenAmount:
         return self.proxy.functions.balances(address).call(block_identifier=block_identifier)
 
     def whole_balance(self, block_identifier: BlockIdentifier) -> TokenAmount:
@@ -681,7 +684,7 @@ class UserDeposit:
             raise BrokenPreconditionError("Planned withdraw amount must be greater than zero.")
 
         try:
-            current_balance = self.get_total_deposit(
+            current_balance = self.get_balance(
                 address=self.node_address, block_identifier=given_block_identifier
             )
         except ValueError:
@@ -757,7 +760,7 @@ class UserDeposit:
 
             failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
 
-            current_balance = self.get_total_deposit(
+            current_balance = self.get_balance(
                 address=self.node_address, block_identifier=failed_at_blocknumber
             )
 
