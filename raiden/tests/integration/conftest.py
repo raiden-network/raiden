@@ -1,15 +1,8 @@
-import asyncio
-
-import gevent
 import pytest
-
-from raiden.network.transport.matrix.rtc import aiogevent
 from raiden.tests.integration.fixtures.blockchain import *  # noqa: F401,F403
 from raiden.tests.integration.fixtures.raiden_network import *  # noqa: F401,F403
 from raiden.tests.integration.fixtures.smartcontracts import *  # noqa: F401,F403
 from raiden.tests.integration.fixtures.transport import *  # noqa: F401,F403
-
-asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())
 
 
 def pytest_collection_modifyitems(items):
@@ -23,6 +16,7 @@ def pytest_collection_modifyitems(items):
                 rerun_filter=lambda err, *args: issubclass(err[0], RetryTestError), max_runs=3
             )
         )
+        item.add_marker(pytest.mark.asyncio)
 
 
 def pytest_configure(config):
@@ -45,13 +39,3 @@ def pytest_collection_finish(session):
             f"\nPlease decorate each of them with either @raise_on_failure or @expect_failure."
             f"\n- {unsafe_tests_list}"
         )
-
-
-@pytest.fixture(autouse=True)
-def asyncio_loop():
-
-    asyncio_greenlet = gevent.spawn(asyncio.get_event_loop().run_forever)
-
-    yield
-
-    gevent.kill(asyncio_greenlet)
