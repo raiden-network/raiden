@@ -302,7 +302,7 @@ class UserDeposit:
         beneficiary: Address,
         total_deposit: TokenAmount,
         given_block_identifier: BlockIdentifier,
-    ) -> Optional[TransactionHash]:
+    ) -> TransactionHash:
         """ Increase the total deposit of the beneficiary's account to `total_deposit`. """
 
         token_address = self.token_address(given_block_identifier)
@@ -321,10 +321,9 @@ class UserDeposit:
         # other operation.
         current_inflight = self._inflight_deposits.get(beneficiary)
         if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
-            current_inflight.async_result.get()
-            return None
+            return TransactionHash(current_inflight.async_result.get())
 
-        with self._deposit_inflight(beneficiary, total_deposit):
+        with self._deposit_inflight(beneficiary, total_deposit) as inflight_deposit:
             log_details = {
                 "given_block_identifier": format_block_id(given_block_identifier),
                 "previous_total_deposit": previous_total_deposit,
@@ -337,16 +336,18 @@ class UserDeposit:
             if estimated_transaction is not None:
                 transaction_hash = self.client.transact(estimated_transaction)
 
-            return self._deposit_check_result(
+            transaction_mined_hash = self._deposit_check_result(
                 transaction_hash, token, beneficiary, total_deposit, amount_to_deposit
             )
+            inflight_deposit.async_result.set(transaction_mined_hash)
+            return transaction_mined_hash
 
     def approve_and_deposit(
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
         given_block_identifier: BlockIdentifier,
-    ) -> Optional[TransactionHash]:
+    ) -> TransactionHash:
         """Deposit provided amount into the user-deposit contract
         to the beneficiary's account.
 
@@ -371,10 +372,9 @@ class UserDeposit:
 
         current_inflight = self._inflight_deposits.get(beneficiary)
         if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
-            current_inflight.async_result.get()
-            return None
+            return TransactionHash(current_inflight.async_result.get())
 
-        with self._deposit_inflight(beneficiary, total_deposit):
+        with self._deposit_inflight(beneficiary, total_deposit) as inflight_deposit:
             # Make sure another `approve` transactions is not sent before the
             # deposit, otherwise the value would be overwritten.
             transaction_sent = None
@@ -391,9 +391,11 @@ class UserDeposit:
                 if estimated_transaction is not None:
                     transaction_sent = self.client.transact(estimated_transaction)
 
-            return self._deposit_check_result(
+            transaction_mined_hash = self._deposit_check_result(
                 transaction_sent, token, beneficiary, total_deposit, amount_to_deposit
             )
+            inflight_deposit.async_result.set(transaction_mined_hash)
+            return transaction_mined_hash
 
     def plan_withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
@@ -499,13 +501,18 @@ class UserDeposit:
                 )
                 raise BrokenPreconditionError(msg)
 
-            if total_deposit <= previous_total_deposit:
+            if total_deposit < previous_total_deposit:
                 msg = (
                     f"Current total deposit {previous_total_deposit} is already larger "
                     f"than the requested total deposit amount {total_deposit}"
                 )
                 raise BrokenPreconditionError(msg)
-
+            if total_deposit == previous_total_deposit:
+                msg = (
+                    f"Current total deposit {previous_total_deposit} is the same as "
+                    "the requested total deposit amount."
+                )
+                raise BrokenPreconditionError(msg)
             if current_balance < amount_to_deposit:
                 msg = (
                     f"new_total_deposit - previous_total_deposit = {amount_to_deposit} "
@@ -519,22 +526,28 @@ class UserDeposit:
     @contextmanager
     def _deposit_inflight(
         self, beneficiary: Address, total_deposit: TokenAmount
-    ) -> Iterator[None]:
+    ) -> Iterator[InflightDeposit]:
         """Updates the `_inflight_deposits` dictionary to handle concurrent deposits.
 
-        Note: This must be called after `_deposit_preconditions`.
+        Note:
+          This must be called after `_deposit_preconditions`.
+          The returned InflightDeposit.async_result has to be set within the 'with' block,
+          when no Exception is raised
         """
         async_result = AsyncResult()
         current_inflight = InflightDeposit(total_deposit, async_result)
         self._inflight_deposits[beneficiary] = current_inflight
 
         try:
-            yield
+            yield current_inflight
         except Exception as e:
             async_result.set_exception(e)
             raise
         else:
-            async_result.set_result(None)
+            assert async_result.ready(), (
+                "The AsyncResult created by this contextmanager must be"
+                "set within the 'with' block!"
+            )
         finally:
             # Clearing the dictionary is not strictly necessary since the
             # deposit is always increasing. But it is just nice to clear up the
