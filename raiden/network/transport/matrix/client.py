@@ -14,7 +14,6 @@ from typing import (
     List,
     Mapping,
     Optional,
-    Sequence,
     Tuple,
     Union,
 )
@@ -255,12 +254,16 @@ class GMatrixHttpApi(MatrixHttpApi):
         message = {"type": RTCMessageType.HANGUP.value, "call_id": call_id}
         self._send_signalling(room_id, message)
 
-    def candidates(self, room_id: RoomID, call_id: str, candidates: List[str]) -> None:
+    def candidates(
+        self, room_id: RoomID, call_id: str, candidates: List[Dict[str, Union[int, str]]]
+    ) -> None:
         message = {"type": "candidates", "call_id": call_id, "candidates": candidates}
         self._send_signalling(room_id, message)
 
     def _send_signalling(
-        self, room_id: RoomID, message: Mapping[str, Union[str, Sequence[str]]]
+        self,
+        room_id: RoomID,
+        message: Mapping[str, Any],
     ) -> None:
         self.send_message(room_id=room_id, text_content=json.dumps(message), msgtype="m.notice")
 
