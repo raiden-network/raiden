@@ -145,7 +145,9 @@ class DisplayNameCache:
                         # We ignore the error here and set user presence: SERVER_ERROR at the
                         # calling site
                         log.error(
-                            f"Ignoring failed `get_display_name` for user {user}", exc_info=ex
+                            "Ignoring Matrix error in `get_display_name`",
+                            exc_info=ex,
+                            user_id=user.user_id,
                         )
 
                 if user.displayname is not None:
@@ -656,13 +658,31 @@ def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: s
     signature_hex = encode_hex(signature_bytes)
 
     user = client.get_user(client.user_id)
-    current_display_name = user.get_display_name()
+
+    try:
+        current_display_name = user.get_display_name()
+    except MatrixRequestError as ex:
+        # calling site
+        log.error(
+            "Ignoring Matrix error in `get_display_name`",
+            exc_info=ex,
+            user_id=user.user_id,
+        )
+        current_display_name = ""
 
     # Only set the display name if necessary, since this is a slow operation.
     if current_display_name != signature_hex:
         user.set_display_name(signature_hex)
 
-    current_capabilities = user.get_avatar_url() or ""
+    try:
+        current_capabilities = user.get_avatar_url() or ""
+    except MatrixRequestError as ex:
+        log.error(
+            "Ignoring Matrix error in `get_avatar_url`",
+            exc_info=ex,
+            user_id=user.user_id,
+        )
+        current_capabilities = ""
 
     # Only set the capabilities if necessary.
     if current_capabilities != cap_str:

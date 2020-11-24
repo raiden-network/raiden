@@ -542,14 +542,25 @@ class GMatrixClient(MatrixClient):
         Returns:
             user_list: list of users returned by server-side search
         """
-        response = self.api._send("POST", "/user_directory/search", {"search_term": term})
+        try:
+            response = self.api._send("POST", "/user_directory/search", {"search_term": term})
+        except MatrixRequestError as ex:
+            if ex.code >= 500:
+                log.error(
+                    "Ignoring Matrix error in `search_user_directory`",
+                    exc_info=ex,
+                    term=term,
+                )
+                return list()
+            else:
+                raise ex
         try:
             return [
                 User(self.api, _user["user_id"], _user["display_name"])
                 for _user in response["results"]
             ]
         except KeyError:
-            return []
+            return list()
 
     def set_presence_state(self, state: str) -> Dict:
         return self.api._send(
