@@ -68,6 +68,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    TransactionHash,
     WithdrawAmount,
 )
 
@@ -482,18 +483,24 @@ class RaidenAPI:  # pragma: no unittest
 
         return channel_state.identifier
 
-    def mint_token_for(self, token_address: TokenAddress, to: Address, value: TokenAmount) -> None:
+    def mint_token_for(
+        self, token_address: TokenAddress, to: Address, value: TokenAmount
+    ) -> TransactionHash:
         """Try to mint `value` units of the token at `token_address` and
         assign them to `to`, using `mintFor`.
 
         Raises:
             MintFailed if the minting fails for any reason.
+
+        Returns:
+            TransactionHash of the successfully mined Ethereum transaction
+            associated with the token mint.
         """
         confirmed_block_identifier = self.raiden.get_block_number()
         token_proxy = self.raiden.proxy_manager.custom_token(
             token_address, block_identifier=confirmed_block_identifier
         )
-        token_proxy.mint_for(value, to)
+        return token_proxy.mint_for(value, to)
 
     def set_total_channel_withdraw(
         self,

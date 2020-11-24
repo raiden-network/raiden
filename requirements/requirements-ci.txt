@@ -111,7 +111,7 @@ pexpect==4.8.0            # via -r requirements-dev.txt, ipython
 phonenumbers==8.10.13     # via -r requirements-dev.txt, matrix-synapse
 pickleshare==0.7.5        # via -r requirements-dev.txt, ipython
 pillow==7.2.0             # via -r requirements-dev.txt, matrix-synapse
-pip-tools==5.3.1          # via -r requirements-dev.txt
+pip-tools==5.4.0          # via -r requirements-dev.txt
 pluggy==0.12.0            # via -r requirements-dev.txt, pytest
 prometheus-client==0.3.1  # via -r requirements-dev.txt, matrix-synapse
 prompt-toolkit==3.0.5     # via -r requirements-dev.txt, ipython
@@ -132,7 +132,7 @@ pyflakes==2.2.0           # via -r requirements-dev.txt, flake8
 pygments==2.6.1           # via -r requirements-dev.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via -r requirements-dev.txt, twisted
 pyinstaller-hooks-contrib==2020.7  # via pyinstaller
-pyinstaller==4.0          # via -r requirements-ci.in
+pyinstaller==4.1          # via -r requirements-ci.in
 pylibsrtp==0.6.6          # via -r requirements-dev.txt, aiortc
 pylint==2.6.0             # via -r requirements-dev.txt
 pymacaroons==0.13.0       # via -r requirements-dev.txt, matrix-synapse

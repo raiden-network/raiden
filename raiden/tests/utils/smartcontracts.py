@@ -9,8 +9,19 @@ from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.custom_token import CustomToken
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils.typing import Any, Dict, List, TokenAmount, Tuple
+from raiden.utils.typing import Any, Dict, List, T_TransactionHash, TokenAmount, Tuple
 from raiden_contracts.contract_manager import ContractManager
+
+
+def is_tx_hash_bytes(bytes_: Any) -> bool:
+    """
+    Check wether the `bytes_` is a bytes object with the correct number of bytes
+    for a transaction,
+    but do not query any blockchain node to check for transaction validity.
+    """
+    if isinstance(bytes_, T_TransactionHash):
+        return len(bytes_) == 32
+    return False
 
 
 def deploy_token(
