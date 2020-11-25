@@ -23,6 +23,8 @@ from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, O
 
 log = structlog.get_logger(__name__)
 
+PING_MESSAGE = "ping"
+
 
 class CoroutineHandler:
     def __init__(self) -> None:
@@ -83,6 +85,7 @@ class RTCPartner(CoroutineHandler):
                 handle_message_callback,
             ),
         )
+        self.channel.on("open", partial(on_channel_open, self.channel))
         # channel callback on close signal
         self.channel.on("close", partial(on_channel_close, self))
 
@@ -149,10 +152,11 @@ class RTCPartner(CoroutineHandler):
         def on_datachannel(channel: RTCDataChannel) -> None:  # pylint: disable=unused-variable
             self.channel = channel
             log.debug(
-                f"Received rtc channel {channel.label}", node=to_checksum_address(node_address)
+                f"Rtc channel received {channel.label}", node=to_checksum_address(node_address)
             )
 
             self._set_channel_callbacks(node_address, handle_message_callback)
+            self.channel.send(PING_MESSAGE)
 
         if sdp_type == SDPTypes.OFFER.value:
             answer = await self.peer_connection.createAnswer()
@@ -237,6 +241,7 @@ class WebRTCManager(CoroutineHandler):
             return False
         if channel.readyState == RTCChannelState.OPEN.value:
             return True
+
         return False
 
     def _reset_state(self) -> None:
@@ -345,6 +350,10 @@ class WebRTCManager(CoroutineHandler):
         self._reset_state()
 
 
+def on_channel_open(channel: RTCDataChannel) -> None:
+    channel.send(PING_MESSAGE)
+
+
 def on_channel_close(rtc_partner: RTCPartner) -> None:
     """callback if channel is closed. It is part of a partial function"""
     if rtc_partner.channel is not None:
@@ -362,17 +371,27 @@ def on_channel_message(
 ) -> None:
     """callback if message is received. It is part of a partial function"""
     assert rtc_partner.channel, "channel not set but received message"
+
+    if message == PING_MESSAGE:
+        log.debug(
+            "Ping Message received",
+            channel=rtc_partner.channel.label,
+            node=to_checksum_address(node_address),
+        )
+        return
+
     log.debug(
-        "Received message in asyncio kingdom",
+        "Message received in asyncio kingdom",
         node=to_checksum_address(node_address),
         partner_address=to_checksum_address(rtc_partner.partner_address),
         channel=rtc_partner.channel.label,
         message=message,
         time=time.time(),
     )
-
     wrap_callback(
-        handle_message_callback, message_data=message, partner_address=rtc_partner.partner_address
+        handle_message_callback,
+        message_data=message,
+        partner_address=rtc_partner.partner_address,
     )
 
 
@@ -399,7 +418,7 @@ def on_ice_gathering_state_change(
 
         for candidate in rtc_ice_candidates:
             candidate = {
-                "candidate": candidate_to_sdp(candidate),
+                "candidate": f"candidate:{candidate_to_sdp(candidate)}",
                 "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else SDP_MID_DEFAULT,
                 "sdpMLineIndex": candidate.sdpMLineIndex is not None
                 if candidate.sdpMLineIndex

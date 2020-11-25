@@ -1671,13 +1671,13 @@ class MatrixTransport(Runnable):
         if rtc_session_description is None:
             return
 
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        call_id = rtc_partner.get_call_id(self._raiden_service.address)
         room = self._get_room_for_address(partner_address, require_online_peer=True)
 
         if room is None:
             return
 
+        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+        call_id = rtc_partner.get_call_id(self._raiden_service.address)
         sdp_type = rtc_session_description.type
         message = {"type": sdp_type, "sdp": rtc_session_description.sdp, "call_id": call_id}
         self.log.debug(
@@ -1700,12 +1700,12 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
 
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        call_id = rtc_partner.get_call_id(self._raiden_service.address)
         room = self._get_room_for_address(partner_address, require_online_peer=True)
         if room is None:
             return
 
+        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+        call_id = rtc_partner.get_call_id(self._raiden_service.address)
         self._client.api.candidates(room_id=room.room_id, call_id=call_id, candidates=candidates)
 
     def _is_broadcast_room(self, room: Room) -> bool:
