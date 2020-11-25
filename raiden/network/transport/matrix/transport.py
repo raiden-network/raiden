@@ -394,7 +394,7 @@ class MatrixTransport(Runnable):
             node_address=None,
             _handle_message_callback=self._handle_web_rtc_messages,
             _handle_sdp_callback=self._handle_sdp_callback,
-            _handle_candidates_callback=self.handle_candidates_callback,
+            _handle_candidates_callback=self._handle_candidates_callback,
         )
 
         self.server_url = self._client.api.base_url
@@ -1569,7 +1569,7 @@ class MatrixTransport(Runnable):
             self._set_room_id_for_address(address, room.room_id)
             self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
 
-    def _maybe_create_web_rtc_channel(self, address: Address) -> None:
+    def _maybe_initialize_web_rtc(self, address: Address) -> None:
 
         if self._stop_event.ready():
             return
@@ -1580,70 +1580,13 @@ class MatrixTransport(Runnable):
 
         if lower_address == self._raiden_service.address:
             self.log.debug(
-                "Spawning create rtc channel worker",
+                "Spawning initialize web rtc for partner",
                 partner_address=to_checksum_address(address),
             )
             # initiate web rtc handling
-            self._schedule_new_greenlet(self._create_web_rtc_channel, address)
+            self._schedule_new_greenlet(self._initialize_web_rtc, address)
 
-    def _handle_sdp_callback(
-        self,
-        rtc_session_description: Optional[RTCSessionDescription],
-        partner_address: Address,
-    ) -> None:
-        """
-        This is a callback function to process sdp (session description protocol) messages.
-        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
-        signalling. Messages are exchanged via the partners' private matrix room.
-        Args:
-            rtc_session_description: sdp message for the partner
-            partner_address: Address of the partner
-        """
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        if self._stop_event.ready():
-            return
-
-        if rtc_session_description is None:
-            return
-
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        call_id = rtc_partner.get_call_id(self._raiden_service.address)
-        room = self._get_room_for_address(partner_address, require_online_peer=True)
-        if room is None:
-            return
-
-        sdp_type = rtc_session_description.type
-        message = {"type": sdp_type, "sdp": rtc_session_description.sdp, "call_id": call_id}
-        self.log.debug(
-            f"Send {sdp_type} to partner",
-            partner_address=to_checksum_address(partner_address),
-            sdp_description=message,
-        )
-
-        if sdp_type == SDPTypes.OFFER.value:
-            self._client.api.invite(room.room_id, call_id, rtc_session_description.sdp)
-        if sdp_type == SDPTypes.ANSWER.value:
-            self._client.api.answer(room.room_id, call_id, rtc_session_description.sdp)
-
-    def handle_candidates_callback(
-        self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
-    ) -> None:
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        if self._stop_event.ready():
-            return
-
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        call_id = rtc_partner.get_call_id(self._raiden_service.address)
-        room = self._get_room_for_address(partner_address, require_online_peer=True)
-        if room is None:
-            return
-
-        self._client.api.candidates(room_id=room.room_id, call_id=call_id, candidates=candidates)
-
-    def _create_web_rtc_channel(self, partner_address: Address) -> None:
+    def _initialize_web_rtc(self, partner_address: Address) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
         # making room optional is a workaround to fix mypy statement
         # unreachable 5 lines below. https://github.com/python/mypy/issues/7204
@@ -1707,6 +1650,64 @@ class MatrixTransport(Runnable):
             if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
                 return
 
+    def _handle_sdp_callback(
+        self,
+        rtc_session_description: Optional[RTCSessionDescription],
+        partner_address: Address,
+    ) -> None:
+        """
+        This is a callback function to process sdp (session description protocol) messages.
+        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
+        signalling. Messages are exchanged via the partners' private matrix room.
+        Args:
+            rtc_session_description: sdp message for the partner
+            partner_address: Address of the partner
+        """
+        assert self._raiden_service is not None, "_raiden_service not set"
+
+        if self._stop_event.ready():
+            return
+
+        if rtc_session_description is None:
+            return
+
+        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+        call_id = rtc_partner.get_call_id(self._raiden_service.address)
+        room = self._get_room_for_address(partner_address, require_online_peer=True)
+
+        if room is None:
+            return
+
+        sdp_type = rtc_session_description.type
+        message = {"type": sdp_type, "sdp": rtc_session_description.sdp, "call_id": call_id}
+        self.log.debug(
+            f"Send {sdp_type} to partner",
+            partner_address=to_checksum_address(partner_address),
+            sdp_description=message,
+        )
+
+        if sdp_type == SDPTypes.OFFER.value:
+            self._client.api.invite(room.room_id, call_id, rtc_session_description.sdp)
+        if sdp_type == SDPTypes.ANSWER.value:
+            self._client.api.answer(room.room_id, call_id, rtc_session_description.sdp)
+
+    def _handle_candidates_callback(
+        self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
+    ) -> None:
+
+        assert self._raiden_service is not None, "_raiden_service not set"
+
+        if self._stop_event.ready():
+            return
+
+        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+        call_id = rtc_partner.get_call_id(self._raiden_service.address)
+        room = self._get_room_for_address(partner_address, require_online_peer=True)
+        if room is None:
+            return
+
+        self._client.api.candidates(room_id=room.room_id, call_id=call_id, candidates=candidates)
+
     def _is_broadcast_room(self, room: Room) -> bool:
         has_alias = room.canonical_alias is not None
         return has_alias and any(
@@ -1746,7 +1747,7 @@ class MatrixTransport(Runnable):
 
             if self._capability_usable(Capabilities.WEBRTC, capabilities):
                 # if lower address spawn worker to create web rtc channel
-                self._maybe_create_web_rtc_channel(address)
+                self._maybe_initialize_web_rtc(address)
 
         elif reachability is AddressReachability.UNKNOWN:
             node_reachability = NetworkState.UNKNOWN

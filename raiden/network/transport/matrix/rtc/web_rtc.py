@@ -265,6 +265,11 @@ class WebRTCManager(CoroutineHandler):
             #  remote descriptions (offer) not being set yet but already
             #  processing candidates which have been sent later
             #  If so a return must be replaced by a wait on the set_remote_description coroutine
+            log.warning(
+                "Received candidates before answer",
+                node=to_checksum_address(self.node_address),
+                partner_address=to_checksum_address(partner_address),
+            )
             return
 
         for candidate in content["candidates"]:
