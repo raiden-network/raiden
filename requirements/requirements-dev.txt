@@ -51,7 +51,7 @@ eth-utils==1.9.5          # via -r requirements.txt, eth-abi, eth-account, eth-k
 execnet==1.6.0            # via pytest-xdist
 fancycompleter==0.8       # via pdbpp
 filelock==3.0.12          # via -r requirements.txt
-flake8-bugbear==20.1.4    # via -r requirements-dev.in
+flake8-bugbear==20.11.1   # via -r requirements-dev.in
 flake8-comprehensions==3.3.0  # via -r requirements-dev.in
 flake8-tuple==0.4.1       # via -r requirements-dev.in
 flake8==3.8.4             # via -r requirements-dev.in, flake8-bugbear, flake8-comprehensions, flake8-tuple
@@ -70,7 +70,7 @@ hyperlink==19.0.0         # via twisted
 hypothesis==5.35.2        # via -r requirements-dev.in
 idna==2.8                 # via -r requirements-docs.txt, -r requirements.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-docs.txt, sphinx
-importlib-metadata==2.0.0  # via pluggy
+importlib-metadata==2.0.0  # via -r requirements.txt, flake8, flake8-comprehensions, jsonschema, pluggy, pytest
 incremental==17.5.0       # via treq, twisted
 iniconfig==1.0.1          # via pytest
 ipfshttpclient==0.7.0a1   # via -r requirements.txt, web3
@@ -177,9 +177,10 @@ toolz==0.9.0              # via -r requirements.txt, cytoolz
 traitlets==4.3.2          # via ipython
 treq==18.6.0              # via matrix-synapse
 twisted[tls]==20.3.0      # via matrix-synapse, treq
-typed-ast==1.4.0          # via black, mypy
-typing-extensions==3.7.4.3  # via -r requirements.txt, black, matrix-synapse, mypy, signedjson
+typed-ast==1.4.0          # via astroid, black, mypy
+typing-extensions==3.7.4.3  # via -r requirements.txt, black, matrix-synapse, mypy, signedjson, web3
 typing-inspect==0.4.0     # via -r requirements.txt, marshmallow-dataclass
+ulid-py==1.1.0            # via -r requirements.txt
 unpaddedbase64==1.1.0     # via matrix-synapse, signedjson
 urllib3==1.25.3           # via -r requirements-docs.txt, -r requirements.txt, requests
 varint==1.0.2             # via -r requirements.txt, multiaddr
@@ -191,7 +192,7 @@ werkzeug==1.0.1           # via -r requirements.txt, flask
 wheel==0.33.4             # via -r requirements-docs.txt, astunparse
 wmctrl==0.3               # via pdbpp
 wrapt==1.11.1             # via astroid
-zipp==3.2.0               # via importlib-metadata
+zipp==3.4.0               # via -r requirements.txt, importlib-metadata
 zope.event==4.4           # via -r requirements.txt, gevent
 zope.interface==5.1.0     # via -r requirements.txt, gevent, twisted
 
