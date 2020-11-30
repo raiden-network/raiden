@@ -360,6 +360,14 @@ def apply_config_file(
     """ Applies all options set in the config file to `cli_params` """
     options_using_default = ctx.meta.get(CONTEXT_KEY_DEFAULT_OPTIONS, set())
     paramname_to_param = {param.name: param for param in command_function.params}
+
+    external_to_internal_map = dict()
+    for param in command_function.params:
+        for ext_name in param.opts:
+            # only allow '--' cli options to be parseable from the config
+            if ext_name.startswith("--"):
+                external_to_internal_map[ext_name[2:]] = param.name
+
     path_params = {
         param.name
         for param in command_function.params
@@ -393,14 +401,25 @@ def apply_config_file(
     except TomlDecodeError as ex:
         raise ConfigurationError(f"Error loading config file: {ex}")
 
+    parsed_options = set()
     for config_name, config_value in config_file_values.items():
-        config_name_int = config_name.replace("-", "_")
-
-        if config_name_int not in paramname_to_param:
-            click.secho(
-                f"Unknown setting '{config_name}' found in config file - ignoring.", fg="yellow"
-            )
-            continue
+        try:
+            config_name_int = external_to_internal_map[config_name]
+        except KeyError:
+            raise KeyError(f"Unknown setting '{config_name}' found in config file")
+        else:
+            if config_name_int in parsed_options:
+                ambiguous_settings = [
+                    ext_name
+                    for ext_name, int_name in external_to_internal_map.items()
+                    if int_name == config_name_int
+                ]
+                raise KeyError(
+                    f"Ambiguous setting '{config_name}' found in config file, please"
+                    f"only use one of {ambiguous_settings}"
+                )
+            else:
+                parsed_options.add(config_name_int)
 
         if config_name_int in path_params:
             # Allow users to use `~` in paths in the config file
