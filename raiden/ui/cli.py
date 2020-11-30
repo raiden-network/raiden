@@ -49,6 +49,7 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_PATHS,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
+    MIN_REVEAL_TIMEOUT,
 )
 from raiden.ui.runners import run_services
 from raiden.utils.cli import (
@@ -225,7 +226,7 @@ OPTIONS = [
             help="Sets the default reveal timeout to be used to newly created channels",
             default=DEFAULT_REVEAL_TIMEOUT,
             show_default=True,
-            type=click.IntRange(min=20),
+            type=click.IntRange(min=MIN_REVEAL_TIMEOUT),
         ),
         option(
             "--default-settle-timeout",
