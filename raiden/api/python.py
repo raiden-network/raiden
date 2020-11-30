@@ -28,7 +28,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
     WithdrawMismatch,
 )
-from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.settings import DEFAULT_RETRY_TIMEOUT, MIN_REVEAL_TIMEOUT
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel, views
 from raiden.transfer.architecture import Event, StateChange, TransferTask
@@ -175,6 +175,35 @@ def transfer_tasks_view(
         view.append(flatten_transfer(transfer, transfer_task.role))
 
     return view
+
+
+def _raise_for_invalid_channel_timeouts(
+    settle_timeout: BlockTimeout, reveal_timeout: BlockTimeout
+) -> None:
+
+    if reveal_timeout <= MIN_REVEAL_TIMEOUT:
+        if reveal_timeout <= 0:
+            raise InvalidRevealTimeout("reveal_timeout should be larger than zero.")
+        else:
+            raise InvalidRevealTimeout(
+                f"reveal_timeout is recommended to be larger than {MIN_REVEAL_TIMEOUT - 1}"
+            )
+
+    if settle_timeout < reveal_timeout * 2:
+        raise InvalidSettleTimeout(
+            "`settle_timeout` can not be smaller than double the "
+            "`reveal_timeout`.\n "
+            "\n "
+            "The setting `reveal_timeout` determines the maximum number of "
+            "blocks it should take a transaction to be mined when the "
+            "blockchain is under congestion. This setting determines the "
+            "when a node must go on-chain to register a secret, and it is "
+            "therefore the lower bound of the lock expiration. The "
+            "`settle_timeout` determines when a channel can be settled "
+            "on-chain, for this operation to be safe all locks must have "
+            "been resolved, for this reason the `settle_timeout` has to be "
+            "larger than `reveal_timeout`."
+        )
 
 
 class RaidenAPI:  # pragma: no unittest
@@ -340,24 +369,7 @@ class RaidenAPI:  # pragma: no unittest
         if reveal_timeout is None:
             reveal_timeout = self.raiden.config.reveal_timeout
 
-        if reveal_timeout <= 0:
-            raise InvalidRevealTimeout("reveal_timeout should be larger than zero")
-
-        if settle_timeout < reveal_timeout * 2:
-            raise InvalidSettleTimeout(
-                "`settle_timeout` can not be smaller than double the "
-                "`reveal_timeout`.\n "
-                "\n "
-                "The setting `reveal_timeout` determines the maximum number of "
-                "blocks it should take a transaction to be mined when the "
-                "blockchain is under congestion. This setting determines the "
-                "when a node must go on-chain to register a secret, and it is "
-                "therefore the lower bound of the lock expiration. The "
-                "`settle_timeout` determines when a channel can be settled "
-                "on-chain, for this operation to be safe all locks must have "
-                "been resolved, for this reason the `settle_timeout` has to be "
-                "larger than `reveal_timeout`."
-            )
+        _raise_for_invalid_channel_timeouts(settle_timeout, reveal_timeout)
 
         if not is_binary_address(registry_address):
             raise InvalidBinaryAddress(
@@ -773,13 +785,7 @@ class RaidenAPI:  # pragma: no unittest
         if channel_state is None:
             raise NonexistingChannel("No channel with partner_address for the given token")
 
-        if reveal_timeout <= 0:
-            raise InvalidRevealTimeout("reveal_timeout should be larger than zero.")
-
-        if channel_state.settle_timeout < reveal_timeout * 2:
-            raise InvalidRevealTimeout(
-                "`settle_timeout` should be at least double the " "provided `reveal_timeout`."
-            )
+        _raise_for_invalid_channel_timeouts(channel_state.settle_timeout, reveal_timeout)
 
         self.raiden.set_channel_reveal_timeout(
             canonical_identifier=channel_state.canonical_identifier, reveal_timeout=reveal_timeout
