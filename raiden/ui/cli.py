@@ -122,16 +122,296 @@ def write_stack_trace(ex: Exception) -> None:
         )
 
 
-def options(func: Callable) -> Callable:
-    """Having the common app options as a decorator facilitates reuse."""
-
-    # Until https://github.com/pallets/click/issues/926 is fixed the options need to be re-defined
-    # for every use
-    options_ = [
+OPTIONS = [
+    option(
+        "--datadir",
+        help="Directory for storing raiden data.",
+        default=lambda: os.path.join(os.path.expanduser("~"), ".raiden"),
+        type=click.Path(
+            exists=False,
+            dir_okay=True,
+            file_okay=False,
+            writable=True,
+            resolve_path=True,
+            allow_dash=False,
+        ),
+        show_default=True,
+    ),
+    option(
+        "--config-file",
+        help="Configuration file (TOML)",
+        default=os.path.join("${datadir}", "config.toml"),
+        type=PathRelativePath(
+            file_okay=True, dir_okay=False, exists=False, readable=True, resolve_path=True
+        ),
+        show_default=True,
+    ),
+    option(
+        "--keystore-path",
+        help=(
+            "If you have a non-standard path for the ethereum keystore directory"
+            " provide it using this argument."
+        ),
+        default=None,
+        type=click.Path(exists=True),
+        show_default=True,
+    ),
+    option(
+        "--address",
+        help=(
+            "The ethereum address you would like raiden to use and for which "
+            "a keystore file exists in your local system."
+        ),
+        default=None,
+        type=ADDRESS_TYPE,
+        show_default=True,
+    ),
+    option(
+        "--password-file",
+        help="Text file containing the password for the provided account",
+        default=None,
+        type=click.File(lazy=True),
+        show_default=True,
+    ),
+    option(
+        "--user-deposit-contract-address",
+        help="hex encoded address of the User Deposit contract.",
+        type=ADDRESS_TYPE,
+    ),
+    option(
+        ETH_CHAINID_OPTION,
+        "chain_id",
+        help=(
+            "Specify the chain name/id of the Ethereum network to run Raiden on.\n"
+            "Available networks:\n"
+            '"mainnet" - chain id: 1\n'
+            '"ropsten" - chain id: 3\n'
+            '"rinkeby" - chain id: 4\n'
+            '"goerli" - chain id: 5\n'
+            '"kovan" - chain id: 42\n'
+            '"<CHAIN_ID>": use the given chain id directly\n'
+        ),
+        type=ChainChoiceType(["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<CHAIN_ID>"]),
+        default="mainnet",
+        show_default=True,
+    ),
+    option(
+        "--environment-type",
+        help=(
+            "Specify the environment (production or development).\n"
+            'The "production" setting adds some safety measures and is mainly intended '
+            "for running Raiden on the mainnet.\n"
+        ),
+        type=EnumChoiceType(Environment),
+        default=Environment.PRODUCTION.value,
+        show_default=True,
+    ),
+    option(
+        "--accept-disclaimer",
+        help="Bypass the experimental software disclaimer prompt",
+        is_flag=True,
+    ),
+    option(
+        "--blockchain-query-interval",
+        help="Time interval after which to check for new blocks (in seconds)",
+        default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
+        show_default=True,
+        type=click.FloatRange(min=0.1),
+    ),
+    option_group(
+        "Channel-specific Options",
         option(
-            "--datadir",
-            help="Directory for storing raiden data.",
-            default=lambda: os.path.join(os.path.expanduser("~"), ".raiden"),
+            "--default-reveal-timeout",
+            help="Sets the default reveal timeout to be used to newly created channels",
+            default=DEFAULT_REVEAL_TIMEOUT,
+            show_default=True,
+            type=click.IntRange(min=20),
+        ),
+        option(
+            "--default-settle-timeout",
+            help="Sets the default settle timeout to be used to newly created channels",
+            default=DEFAULT_SETTLE_TIMEOUT,
+            show_default=True,
+            type=click.IntRange(min=20),
+        ),
+    ),
+    option_group(
+        "Ethereum Node Options",
+        option(
+            "--sync-check/--no-sync-check",
+            help="Checks if the ethereum node is synchronized against etherscan.",
+            default=True,
+            show_default=True,
+        ),
+        option(
+            "--gas-price",
+            help=(
+                "Set the gas price for ethereum transactions. If not provided "
+                "the normal gas price startegy is used.\n"
+                "Available options:\n"
+                '"fast" - transactions are usually mined within 60 seconds\n'
+                '"normal" - transactions are usually mined within 5 minutes\n'
+                "<GAS_PRICE> - use given gas price\n"
+            ),
+            type=GasPriceChoiceType(["normal", "fast"]),
+            default="fast",
+            show_default=True,
+        ),
+        option(
+            ETH_RPC_CONFIG_OPTION,
+            help=(
+                '"host:port" address of ethereum JSON-RPC server.\n'
+                "Also accepts a protocol prefix (http:// or https://) with optional port"
+            ),
+            default="http://127.0.0.1:8545",  # geth default jsonrpc port
+            type=str,
+            show_default=True,
+        ),
+    ),
+    option_group(
+        "Raiden Services Options",
+        option(
+            "--routing-mode",
+            help=(
+                "Specify the routing mode to be used.\n"
+                '"pfs": use the path finding service\n'
+                '"private": only use direct channels and don\'t send updates to the PFS\n'
+            ),
+            type=EnumChoiceType(RoutingMode),
+            default=RoutingMode.PFS.value,
+            show_default=True,
+        ),
+        option(
+            "--pathfinding-service-address",
+            help=(
+                f"URL to the Raiden path finding service to request paths from.\n "
+                f"Example: https://pfs-ropsten.services-dev.raiden.network\n "
+                f"Can also be given the '{MATRIX_AUTO_SELECT_SERVER}' value "
+                f"so that raiden chooses a PFS randomly from the service "
+                f"registry contract."
+            ),
+            default=MATRIX_AUTO_SELECT_SERVER,
+            type=str,
+            show_default=True,
+        ),
+        option(
+            "--pathfinding-max-paths",
+            help="Set maximum number of paths to be requested from the path finding service.",
+            default=DEFAULT_PATHFINDING_MAX_PATHS,
+            type=int,
+            show_default=True,
+        ),
+        option(
+            "--pathfinding-max-fee",
+            help="Set max fee per request paid to the path finding service.",
+            default=DEFAULT_PATHFINDING_MAX_FEE,
+            type=int,
+            show_default=True,
+        ),
+        option(
+            "--pathfinding-iou-timeout",
+            help="Number of blocks before a new IOU to the path finding service expires.",
+            default=DEFAULT_PATHFINDING_IOU_TIMEOUT,
+            type=int,
+            show_default=True,
+        ),
+        option(
+            "--enable-monitoring",
+            help="Enable broadcasting of balance proofs to the monitoring services.",
+            default=False,
+            is_flag=True,
+        ),
+    ),
+    option_group(
+        "Matrix Transport Options",
+        option(
+            "--matrix-server",
+            help=(
+                f"Matrix homeserver to use for communication.\n"
+                f"Valid values:\n"
+                f"'{MATRIX_AUTO_SELECT_SERVER}' - automatically select a suitable homeserver\n"
+                f"A URL pointing to a Raiden matrix homeserver"
+            ),
+            default=MATRIX_AUTO_SELECT_SERVER,
+            type=MatrixServerType([MATRIX_AUTO_SELECT_SERVER, "<url>"]),
+            show_default=True,
+        ),
+    ),
+    option_group(
+        "Logging Options",
+        option(
+            "--log-config",
+            help="Log level configuration.\n"
+            "Format: [<logger-name-1>]:<level>[,<logger-name-2>:level][,...]",
+            type=LOG_LEVEL_CONFIG_TYPE,
+            default=":info",
+            show_default=True,
+        ),
+        option(
+            "--log-file",
+            help="file path for logging to file",
+            default=None,
+            type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+            show_default=True,
+        ),
+        option("--log-json", help="Output log lines in JSON format", is_flag=True),
+        option(
+            "--debug-logfile-path",
+            help=(
+                "The absolute path to the debug logfile. If not given defaults to:\n"
+                " - OSX: ~/Library/Logs/Raiden/raiden_debug_XXX.log\n"
+                " - Windows: ~/Appdata/Roaming/Raiden/raiden_debug_XXX.log\n"
+                " - Linux: ~/.raiden/raiden_debug_XXX.log\n"
+                "\nIf there is a problem with expanding home it is placed under /tmp"
+            ),
+            type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+        ),
+        option(
+            "--disable-debug-logfile",
+            help=(
+                "Disable the debug logfile feature. This is independent of "
+                "the normal logging setup"
+            ),
+            is_flag=True,
+        ),
+    ),
+    option_group(
+        "RPC Options",
+        option(
+            "--rpc/--no-rpc",
+            help="Start with or without the RPC server.",
+            default=True,
+            show_default=True,
+        ),
+        option(
+            "--rpccorsdomain",
+            help="Comma separated list of domains to accept cross origin requests.",
+            default="http://localhost:*/*",
+            type=str,
+            show_default=True,
+        ),
+        option(
+            "--api-address",
+            help='"host:port" for the RPC server to listen on.',
+            default=f"127.0.0.1:{DEFAULT_HTTP_SERVER_PORT}",
+            type=str,
+            show_default=True,
+        ),
+        option(
+            "--web-ui/--no-web-ui",
+            help=(
+                "Start with or without the web interface. Requires --rpc. "
+                "It will be accessible at http://<api-address>. "
+            ),
+            default=True,
+            show_default=True,
+        ),
+    ),
+    option_group(
+        "Debugging options",
+        option(
+            "--flamegraph",
+            help=("Directory to save stack data used to produce flame graphs."),
             type=click.Path(
                 exists=False,
                 dir_okay=True,
@@ -140,389 +420,101 @@ def options(func: Callable) -> Callable:
                 resolve_path=True,
                 allow_dash=False,
             ),
-            show_default=True,
-        ),
-        option(
-            "--config-file",
-            help="Configuration file (TOML)",
-            default=os.path.join("${datadir}", "config.toml"),
-            type=PathRelativePath(
-                file_okay=True, dir_okay=False, exists=False, readable=True, resolve_path=True
-            ),
-            show_default=True,
-        ),
-        option(
-            "--keystore-path",
-            help=(
-                "If you have a non-standard path for the ethereum keystore directory"
-                " provide it using this argument."
-            ),
             default=None,
-            type=click.Path(exists=True),
-            show_default=True,
         ),
+        option("--switch-tracing", help="Enable switch tracing", is_flag=True, default=False),
         option(
-            "--address",
+            "--unrecoverable-error-should-crash",
             help=(
-                "The ethereum address you would like raiden to use and for which "
-                "a keystore file exists in your local system."
+                "DO NOT use, unless you know what you are doing. If provided "
+                "along with a production environment setting then all "
+                "unrecoverable errors will lead to a crash and not simply get logged."
             ),
-            default=None,
-            type=ADDRESS_TYPE,
-            show_default=True,
-        ),
-        option(
-            "--password-file",
-            help="Text file containing the password for the provided account",
-            default=None,
-            type=click.File(lazy=True),
-            show_default=True,
-        ),
-        option(
-            "--user-deposit-contract-address",
-            help="hex encoded address of the User Deposit contract.",
-            type=ADDRESS_TYPE,
-        ),
-        option(
-            ETH_CHAINID_OPTION,
-            "chain_id",
-            help=(
-                "Specify the chain name/id of the Ethereum network to run Raiden on.\n"
-                "Available networks:\n"
-                '"mainnet" - chain id: 1\n'
-                '"ropsten" - chain id: 3\n'
-                '"rinkeby" - chain id: 4\n'
-                '"goerli" - chain id: 5\n'
-                '"kovan" - chain id: 42\n'
-                '"<CHAIN_ID>": use the given chain id directly\n'
-            ),
-            type=ChainChoiceType(
-                ["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<CHAIN_ID>"]
-            ),
-            default="mainnet",
-            show_default=True,
-        ),
-        option(
-            "--environment-type",
-            help=(
-                "Specify the environment (production or development).\n"
-                'The "production" setting adds some safety measures and is mainly intended '
-                "for running Raiden on the mainnet.\n"
-            ),
-            type=EnumChoiceType(Environment),
-            default=Environment.PRODUCTION.value,
-            show_default=True,
-        ),
-        option(
-            "--accept-disclaimer",
-            help="Bypass the experimental software disclaimer prompt",
             is_flag=True,
+            default=False,
         ),
         option(
-            "--blockchain-query-interval",
-            help="Time interval after which to check for new blocks (in seconds)",
-            default=DEFAULT_BLOCKCHAIN_QUERY_INTERVAL,
+            "--log-memory-usage-interval",
+            help="Log memory usage every X sec (fractions accepted). [default: disabled]",
+            type=float,
+            default=0,
+        ),
+    ),
+    option_group(
+        "Hash Resolver Options",
+        option(
+            "--resolver-endpoint",
+            help=(
+                "URL of the resolver server that is used to resolve "
+                "a payment hash to a secret. "
+                "Accepts a protocol prefix (http:// or https://) with optional port"
+            ),
+            default=None,
+            type=str,
             show_default=True,
-            type=click.FloatRange(min=0.1),
         ),
-        option_group(
-            "Channel-specific Options",
-            option(
-                "--default-reveal-timeout",
-                help="Sets the default reveal timeout to be used to newly created channels",
-                default=DEFAULT_REVEAL_TIMEOUT,
-                show_default=True,
-                type=click.IntRange(min=20),
+    ),
+    option_group(
+        "Mediation Fee Options",
+        option(
+            "--flat-fee",
+            help=(
+                "Sets the flat fee required for every mediation in wei of the "
+                "mediated token for a certain token address. Must be bigger "
+                f"or equal to {FLAT_MED_FEE_MIN}."
             ),
-            option(
-                "--default-settle-timeout",
-                help="Sets the default settle timeout to be used to newly created channels",
-                default=DEFAULT_SETTLE_TIMEOUT,
-                show_default=True,
-                type=click.IntRange(min=20),
-            ),
+            type=(ADDRESS_TYPE, click.IntRange(min=FLAT_MED_FEE_MIN)),
+            multiple=True,
         ),
-        option_group(
-            "Ethereum Node Options",
-            option(
-                "--sync-check/--no-sync-check",
-                help="Checks if the ethereum node is synchronized against etherscan.",
-                default=True,
-                show_default=True,
+        option(
+            "--proportional-fee",
+            help=(
+                "Mediation fee as ratio of mediated amount in parts-per-million "
+                "(10^-6) for a certain token address. "
+                f"Must be in [{PROPORTIONAL_MED_FEE_MIN}, {PROPORTIONAL_MED_FEE_MAX}]."
             ),
-            option(
-                "--gas-price",
-                help=(
-                    "Set the gas price for ethereum transactions. If not provided "
-                    "the normal gas price startegy is used.\n"
-                    "Available options:\n"
-                    '"fast" - transactions are usually mined within 60 seconds\n'
-                    '"normal" - transactions are usually mined within 5 minutes\n'
-                    "<GAS_PRICE> - use given gas price\n"
-                ),
-                type=GasPriceChoiceType(["normal", "fast"]),
-                default="fast",
-                show_default=True,
+            type=(
+                ADDRESS_TYPE,
+                click.IntRange(min=PROPORTIONAL_MED_FEE_MIN, max=PROPORTIONAL_MED_FEE_MAX),
             ),
-            option(
-                ETH_RPC_CONFIG_OPTION,
-                help=(
-                    '"host:port" address of ethereum JSON-RPC server.\n'
-                    "Also accepts a protocol prefix (http:// or https://) with optional port"
-                ),
-                default="http://127.0.0.1:8545",  # geth default jsonrpc port
-                type=str,
-                show_default=True,
-            ),
+            multiple=True,
         ),
-        option_group(
-            "Raiden Services Options",
-            option(
-                "--routing-mode",
-                help=(
-                    "Specify the routing mode to be used.\n"
-                    '"pfs": use the path finding service\n'
-                    '"private": only use direct channels and don\'t send updates to the PFS\n'
-                ),
-                type=EnumChoiceType(RoutingMode),
-                default=RoutingMode.PFS.value,
-                show_default=True,
+        option(
+            "--proportional-imbalance-fee",
+            help=(
+                "Set the worst-case imbalance fee relative to the channels capacity "
+                "in parts-per-million (10^-6) for a certain token address. "
+                f"Must be in [{IMBALANCE_MED_FEE_MIN}, {IMBALANCE_MED_FEE_MAX}]."
             ),
-            option(
-                "--pathfinding-service-address",
-                help=(
-                    f"URL to the Raiden path finding service to request paths from.\n "
-                    f"Example: https://pfs-ropsten.services-dev.raiden.network\n "
-                    f"Can also be given the '{MATRIX_AUTO_SELECT_SERVER}' value "
-                    f"so that raiden chooses a PFS randomly from the service "
-                    f"registry contract."
-                ),
-                default=MATRIX_AUTO_SELECT_SERVER,
-                type=str,
-                show_default=True,
+            type=(
+                ADDRESS_TYPE,
+                click.IntRange(min=IMBALANCE_MED_FEE_MIN, max=IMBALANCE_MED_FEE_MAX),
             ),
-            option(
-                "--pathfinding-max-paths",
-                help="Set maximum number of paths to be requested from the path finding service.",
-                default=DEFAULT_PATHFINDING_MAX_PATHS,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--pathfinding-max-fee",
-                help="Set max fee per request paid to the path finding service.",
-                default=DEFAULT_PATHFINDING_MAX_FEE,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--pathfinding-iou-timeout",
-                help="Number of blocks before a new IOU to the path finding service expires.",
-                default=DEFAULT_PATHFINDING_IOU_TIMEOUT,
-                type=int,
-                show_default=True,
-            ),
-            option(
-                "--enable-monitoring",
-                help="Enable broadcasting of balance proofs to the monitoring services.",
-                default=False,
-                is_flag=True,
-            ),
+            multiple=True,
         ),
-        option_group(
-            "Matrix Transport Options",
-            option(
-                "--matrix-server",
-                help=(
-                    f"Matrix homeserver to use for communication.\n"
-                    f"Valid values:\n"
-                    f"'{MATRIX_AUTO_SELECT_SERVER}' - automatically select a suitable homeserver\n"
-                    f"A URL pointing to a Raiden matrix homeserver"
-                ),
-                default=MATRIX_AUTO_SELECT_SERVER,
-                type=MatrixServerType([MATRIX_AUTO_SELECT_SERVER, "<url>"]),
-                show_default=True,
-            ),
+        option(
+            "--cap-mediation-fees/--no-cap-mediation-fees",
+            help="Cap the mediation fees to never get negative.",
+            default=True,
+            show_default=True,
         ),
-        option_group(
-            "Logging Options",
-            option(
-                "--log-config",
-                help="Log level configuration.\n"
-                "Format: [<logger-name-1>]:<level>[,<logger-name-2>:level][,...]",
-                type=LOG_LEVEL_CONFIG_TYPE,
-                default=":info",
-                show_default=True,
-            ),
-            option(
-                "--log-file",
-                help="file path for logging to file",
-                default=None,
-                type=click.Path(dir_okay=False, writable=True, resolve_path=True),
-                show_default=True,
-            ),
-            option("--log-json", help="Output log lines in JSON format", is_flag=True),
-            option(
-                "--debug-logfile-path",
-                help=(
-                    "The absolute path to the debug logfile. If not given defaults to:\n"
-                    " - OSX: ~/Library/Logs/Raiden/raiden_debug_XXX.log\n"
-                    " - Windows: ~/Appdata/Roaming/Raiden/raiden_debug_XXX.log\n"
-                    " - Linux: ~/.raiden/raiden_debug_XXX.log\n"
-                    "\nIf there is a problem with expanding home it is placed under /tmp"
-                ),
-                type=click.Path(dir_okay=False, writable=True, resolve_path=True),
-            ),
-            option(
-                "--disable-debug-logfile",
-                help=(
-                    "Disable the debug logfile feature. This is independent of "
-                    "the normal logging setup"
-                ),
-                is_flag=True,
-            ),
-        ),
-        option_group(
-            "RPC Options",
-            option(
-                "--rpc/--no-rpc",
-                help="Start with or without the RPC server.",
-                default=True,
-                show_default=True,
-            ),
-            option(
-                "--rpccorsdomain",
-                help="Comma separated list of domains to accept cross origin requests.",
-                default="http://localhost:*/*",
-                type=str,
-                show_default=True,
-            ),
-            option(
-                "--api-address",
-                help='"host:port" for the RPC server to listen on.',
-                default=f"127.0.0.1:{DEFAULT_HTTP_SERVER_PORT}",
-                type=str,
-                show_default=True,
-            ),
-            option(
-                "--web-ui/--no-web-ui",
-                help=(
-                    "Start with or without the web interface. Requires --rpc. "
-                    "It will be accessible at http://<api-address>. "
-                ),
-                default=True,
-                show_default=True,
-            ),
-        ),
-        option_group(
-            "Debugging options",
-            option(
-                "--flamegraph",
-                help=("Directory to save stack data used to produce flame graphs."),
-                type=click.Path(
-                    exists=False,
-                    dir_okay=True,
-                    file_okay=False,
-                    writable=True,
-                    resolve_path=True,
-                    allow_dash=False,
-                ),
-                default=None,
-            ),
-            option("--switch-tracing", help="Enable switch tracing", is_flag=True, default=False),
-            option(
-                "--unrecoverable-error-should-crash",
-                help=(
-                    "DO NOT use, unless you know what you are doing. If provided "
-                    "along with a production environment setting then all "
-                    "unrecoverable errors will lead to a crash and not simply get logged."
-                ),
-                is_flag=True,
-                default=False,
-            ),
-            option(
-                "--log-memory-usage-interval",
-                help="Log memory usage every X sec (fractions accepted). [default: disabled]",
-                type=float,
-                default=0,
-            ),
-        ),
-        option_group(
-            "Hash Resolver Options",
-            option(
-                "--resolver-endpoint",
-                help=(
-                    "URL of the resolver server that is used to resolve "
-                    "a payment hash to a secret. "
-                    "Accepts a protocol prefix (http:// or https://) with optional port"
-                ),
-                default=None,
-                type=str,
-                show_default=True,
-            ),
-        ),
-        option_group(
-            "Mediation Fee Options",
-            option(
-                "--flat-fee",
-                help=(
-                    "Sets the flat fee required for every mediation in wei of the "
-                    "mediated token for a certain token address. Must be bigger "
-                    f"or equal to {FLAT_MED_FEE_MIN}."
-                ),
-                type=(ADDRESS_TYPE, click.IntRange(min=FLAT_MED_FEE_MIN)),
-                multiple=True,
-            ),
-            option(
-                "--proportional-fee",
-                help=(
-                    "Mediation fee as ratio of mediated amount in parts-per-million "
-                    "(10^-6) for a certain token address. "
-                    f"Must be in [{PROPORTIONAL_MED_FEE_MIN}, {PROPORTIONAL_MED_FEE_MAX}]."
-                ),
-                type=(
-                    ADDRESS_TYPE,
-                    click.IntRange(min=PROPORTIONAL_MED_FEE_MIN, max=PROPORTIONAL_MED_FEE_MAX),
-                ),
-                multiple=True,
-            ),
-            option(
-                "--proportional-imbalance-fee",
-                help=(
-                    "Set the worst-case imbalance fee relative to the channels capacity "
-                    "in parts-per-million (10^-6) for a certain token address. "
-                    f"Must be in [{IMBALANCE_MED_FEE_MIN}, {IMBALANCE_MED_FEE_MAX}]."
-                ),
-                type=(
-                    ADDRESS_TYPE,
-                    click.IntRange(min=IMBALANCE_MED_FEE_MIN, max=IMBALANCE_MED_FEE_MAX),
-                ),
-                multiple=True,
-            ),
-            option(
-                "--cap-mediation-fees/--no-cap-mediation-fees",
-                help="Cap the mediation fees to never get negative.",
-                default=True,
-                show_default=True,
-            ),
-        ),
-    ]
+    ),
+]
 
-    if importlib.util.find_spec("IPython"):
-        options_.append(
-            option("--console", help="Start the interactive raiden console", is_flag=True)
-        )
-    else:
+if importlib.util.find_spec("IPython"):
+    OPTIONS.append(option("--console", help="Start the interactive raiden console", is_flag=True))
+else:
 
-        def unsupported(_ctx: Any, _param: Any, value: bool) -> None:
-            if value:
-                raise click.BadParameter(
-                    "Console support is only available in development installs."
-                )
+    def unsupported(_ctx: Any, _param: Any, value: bool) -> None:
+        if value:
+            raise click.BadParameter("Console support is only available in development installs.")
 
-        options_.append(option("--console", is_flag=True, hidden=True, callback=unsupported))
+    OPTIONS.append(option("--console", is_flag=True, hidden=True, callback=unsupported))
 
-    for option_ in reversed(options_):
+
+def options(func: Callable) -> Callable:
+    """Having the common app options as a decorator facilitates reuse."""
+    for option_ in reversed(OPTIONS):
         func = option_(func)
     return func
 
