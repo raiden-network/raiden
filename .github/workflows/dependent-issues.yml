@@ -1,0 +1,19 @@
+name: Dependent Issues
+
+on:
+  issues:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *' # schedule daily check
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: z0al/dependent-issues@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          label: "State / Blocked"
+          check_issues: on
+          keywords: depends on, blocked by, requires
