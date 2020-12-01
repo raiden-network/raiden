@@ -1,5 +1,12 @@
 version: 2.1
+parameters:
+  run_workflow_nightly:
+    default: false
+    type: boolean
 
+  run_workflow_defaults:
+    default: true
+    type: boolean
 
 templates:
   filter-tag-templates: &only-tagged-version-filter
@@ -129,11 +136,18 @@ commands:
           name: Link platform local binaries
           command: |
             export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
+            export LOCAL_BASE=~/.local-${OS_NAME}
+            if [[ ${OS_NAME} == "MACOS" ]]; then
+              export LOCAL_BASE="${LOCAL_BASE}-<<parameters.py-version>>"
+            fi
             rm -rf ~/.local
-            [[ -d ~/.local-${OS_NAME} ]] && ln -sfn ~/.local-${OS_NAME} ~/.local || true
+            [[ -d ${LOCAL_BASE} ]] && ln -sfn ${LOCAL_BASE} ~/.local || true
             [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -sfn ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
 
   prepare-system:
+    parameters:
+      py-version:
+        <<: *py-version-template
     steps:
       - run:
           name: Get cache key
@@ -154,13 +168,17 @@ commands:
           name: Installing System Dependencies
           command: |
             export LOCAL_BASE=~/.local-${OS_NAME}
-            .circleci/fetch_geth_parity_solc.sh
+            if [[ ${OS_NAME} == "MACOS" ]]; then
+              export LOCAL_BASE="${LOCAL_BASE}-<<parameters.py-version>>"
+            fi
+            export PYVERSION=<<parameters.py-version>>
+            .circleci/setup_system_dependencies.sh
             ln -sfn ${LOCAL_BASE} ~/.local
       - save_cache:
           key: system-deps-v8-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-LINUX"
-            - "~/.local-MACOS"
+            - "~/.local-MACOS-<<parameters.py-version>>"
       - run:
           name: Fetch PR Base Commit
           command: source .circleci/fetch_pr_base_commit.sh
@@ -237,9 +255,13 @@ jobs:
       - prepare-system
 
   prepare-system-macos:
+    parameters:
+      py-version:
+        <<: *py-version-template
     executor: macos
     steps:
-      - prepare-system
+      - prepare-system:
+          py-version: << parameters.py-version >>
 
   prepare-python-linux:
     parameters:
@@ -677,6 +699,7 @@ jobs:
 
 workflows:
   raiden-default:
+    when: << pipeline.parameters.run_workflow_defaults >>
     jobs:
       - checkout
 
@@ -782,6 +805,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - prepare-system-macos:
+          py-version: '3.7'
           requires:
             - checkout
           filters:
@@ -871,6 +895,7 @@ workflows:
             <<: *only-tagged-version-filter
 
   nightly:
+    when: << pipeline.parameters.run_workflow_nightly >>
     jobs:
       - checkout
 
@@ -985,6 +1010,7 @@ workflows:
             - finalize
 
       - prepare-system-macos:
+          py-version: '3.7'
           requires:
             - checkout
 
