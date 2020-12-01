@@ -26,11 +26,11 @@ from raiden.tests.utils.transfer import (
     watch_for_unlock_failures,
 )
 from raiden.transfer import views
-from raiden.transfer.events import ContractSendChannelClose
+from raiden.transfer.events import ContractSendChannelBatchUnlock, ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state import BalanceProofSignedState
-from raiden.transfer.state_change import ContractReceiveSecretReveal
+from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
@@ -408,7 +408,12 @@ def test_secret_revealed_on_chain(
     token_addresses,
     retry_interval_initial,
 ):
-    """ A node must reveal the secret on-chain if it's known and the channel is closed. """
+    """A node must reveal the secret on-chain if it's known and the channel is closed.
+
+    A mediated transfer app0 -> app1 -> app2 is done, but the unlock that app1
+    should send to app2 after receiving the secret is held. This makes app2 go
+    on-chain to both register the secret and then unlock.
+    """
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -420,6 +425,21 @@ def test_secret_revealed_on_chain(
     identifier = PaymentID(1)
     target = TargetAddress(app2.address)
     secret, secrethash = factories.make_secret_with_hash()
+
+    # Verify that app2 calls the unlock, since it is the beneficiary of that operation.
+    # Prevents regression of https://github.com/raiden-network/raiden/issues/6706
+    def make_unlock_checker(app):
+        def check_unlocker(event):
+            app_name = f"app{raiden_chain.index(app)}"
+            if isinstance(event, ContractSendChannelBatchUnlock):
+                assert app_name == "app2"
+
+        return check_unlocker
+
+    for app in raiden_chain:
+        msg = "test apps must have HoldRaidenEventHandler set"
+        assert isinstance(app.raiden_event_handler, HoldRaidenEventHandler), msg
+        app.raiden_event_handler.pre_hooks.add(make_unlock_checker(app))
 
     # Reveal the secret, but do not unlock it off-chain
     app1_hold_event_handler = app1.raiden_event_handler
@@ -487,11 +507,11 @@ def test_secret_revealed_on_chain(
         token_network_address, app0, deposit - amount, [], app1, deposit + amount, []
     )
 
-    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
+    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(20):
         wait_for_state_change(
-            app2,
-            ContractReceiveSecretReveal,
-            {"secrethash": secrethash},
+            app1,
+            ContractReceiveChannelBatchUnlock,
+            {},
             retry_interval_initial,
         )
 
