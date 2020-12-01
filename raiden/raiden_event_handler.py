@@ -20,14 +20,11 @@ from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
 from raiden.network.transport.matrix.transport import MessagesQueue
 from raiden.storage.restore import (
-    channel_state_until_state_change,
     get_event_with_balance_proof_by_balance_hash,
-    get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_balance_hash,
-    get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.architecture import Event
-from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
+from raiden.transfer.channel import get_batch_unlock
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -68,11 +65,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendUnlock,
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
-from raiden.transfer.views import (
-    get_channelstate_by_canonical_identifier,
-    get_channelstate_by_token_network_and_partner,
-    state_from_raiden,
-)
+from raiden.transfer.views import get_channelstate_by_canonical_identifier, state_from_raiden
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
 from raiden.utils.typing import (
@@ -535,146 +528,30 @@ class RaidenEventHandler(EventHandler):
         channel_unlock_event: ContractSendChannelBatchUnlock,
     ) -> None:
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
-
-        canonical_identifier = channel_unlock_event.canonical_identifier
-        token_network_address = canonical_identifier.token_network_address
-        channel_identifier = canonical_identifier.channel_identifier
-        participant = channel_unlock_event.sender
-
         channel_state = get_channelstate_by_canonical_identifier(
-            chain_state=state_from_raiden(raiden), canonical_identifier=canonical_identifier
+            chain_state=chain_state,
+            canonical_identifier=channel_unlock_event.canonical_identifier,
         )
-        if channel_state is None:
-            raise RaidenUnrecoverableError(
-                "ContractSendChannelBatchUnlock for non-existing channel."
-            )
-
+        assert channel_state, "Channel data must not be cleared before unlock"
         confirmed_block_identifier = state_from_raiden(raiden).block_hash
         payment_channel: PaymentChannel = raiden.proxy_manager.payment_channel(
             channel_state=channel_state, block_identifier=confirmed_block_identifier
         )
 
-        channel_state = get_channelstate_by_token_network_and_partner(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            partner_address=participant,
-        )
-
-        if not channel_state:
-            # channel was cleaned up already due to an unlock
-            raise RaidenUnrecoverableError(
-                f"Failed to find channel state with partner:"
-                f"{to_checksum_address(participant)}, "
-                f"token_network:{to_checksum_address(token_network_address)}"
-            )
-
+        # Determine sender and receiver
         our_address = channel_state.our_state.address
-        our_locksroot = channel_state.our_state.onchain_locksroot
-
         partner_address = channel_state.partner_state.address
-        partner_locksroot = channel_state.partner_state.onchain_locksroot
+        sender = channel_unlock_event.sender
+        assert sender in (our_address, partner_address), "Wrong sender!"
+        receiver = our_address if sender == partner_address else partner_address
 
-        # we want to unlock because there are on-chain unlocked locks
-        search_events = our_locksroot != LOCKSROOT_OF_NO_LOCKS
-        # we want to unlock, because there are unlocked/unclaimed locks
-        search_state_changes = partner_locksroot != LOCKSROOT_OF_NO_LOCKS
-
-        if not search_events and not search_state_changes:
-            # In the case that someone else sent the unlock we do nothing
-            # Check https://github.com/raiden-network/raiden/issues/3152
-            # for more details
-            log.warning(
-                "Onchain unlock already mined",
-                canonical_identifier=canonical_identifier,
-                channel_identifier=canonical_identifier.channel_identifier,
-                participant=to_checksum_address(participant),
-            )
-            return
-
-        if search_state_changes:
-            state_change_record = get_state_change_with_balance_proof_by_locksroot(
-                storage=raiden.wal.storage,
-                canonical_identifier=canonical_identifier,
-                locksroot=partner_locksroot,
-                sender=partner_address,
-            )
-
-            if state_change_record is None:
-                raise RaidenUnrecoverableError(
-                    f"Failed to find state that matches the current channel locksroots. "
-                    f"chain_id:{raiden.rpc_client.chain_id} "
-                    f"token_network:{to_checksum_address(token_network_address)} "
-                    f"channel:{channel_identifier} "
-                    f"participant:{to_checksum_address(participant)} "
-                    f"our_locksroot:{to_hex(our_locksroot)} "
-                    f"partner_locksroot:{to_hex(partner_locksroot)} "
-                )
-
-            state_change_identifier = state_change_record.state_change_identifier
-            restored_channel_state = channel_state_until_state_change(
-                raiden=raiden,
-                canonical_identifier=canonical_identifier,
-                state_change_identifier=state_change_identifier,
-            )
-
-            gain = get_batch_unlock_gain(restored_channel_state)
-
-            skip_unlock = (
-                restored_channel_state.partner_state.address == participant
-                and gain.from_partner_locks == 0
-            )
-            if not skip_unlock:
-                unlock(
-                    payment_channel=payment_channel,
-                    end_state=restored_channel_state.partner_state,
-                    sender=partner_address,
-                    receiver=our_address,
-                    given_block_identifier=channel_unlock_event.triggered_by_block_hash,
-                )
-
-        if search_events:
-            event_record = get_event_with_balance_proof_by_locksroot(
-                storage=raiden.wal.storage,
-                canonical_identifier=canonical_identifier,
-                locksroot=our_locksroot,
-                recipient=partner_address,
-            )
-
-            if event_record is None:
-                raise RaidenUnrecoverableError(
-                    f"Failed to find event that match current channel locksroots. "
-                    f"chain_id:{raiden.rpc_client.chain_id} "
-                    f"token_network:{to_checksum_address(token_network_address)} "
-                    f"channel:{channel_identifier} "
-                    f"participant:{to_checksum_address(participant)} "
-                    f"our_locksroot:{to_hex(our_locksroot)} "
-                    f"partner_locksroot:{to_hex(partner_locksroot)} "
-                )
-
-            state_change_identifier = event_record.state_change_identifier
-            restored_channel_state = channel_state_until_state_change(
-                raiden=raiden,
-                canonical_identifier=canonical_identifier,
-                state_change_identifier=state_change_identifier,
-            )
-
-            gain = get_batch_unlock_gain(restored_channel_state)
-
-            skip_unlock = (
-                restored_channel_state.our_state.address == participant
-                and gain.from_our_locks == 0
-            )
-            if not skip_unlock:
-                try:
-                    unlock(
-                        payment_channel=payment_channel,
-                        end_state=restored_channel_state.our_state,
-                        sender=our_address,
-                        receiver=partner_address,
-                        given_block_identifier=channel_unlock_event.triggered_by_block_hash,
-                    )
-                except InsufficientEth as e:
-                    raise RaidenUnrecoverableError(str(e)) from e
+        unlock(
+            payment_channel=payment_channel,
+            end_state=channel_state.partner_state,
+            sender=sender,
+            receiver=receiver,
+            given_block_identifier=channel_unlock_event.triggered_by_block_hash,
+        )
 
     @staticmethod
     def handle_contract_send_channelsettle(

@@ -9,6 +9,7 @@ from raiden.raiden_service import RaidenService
 from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
+    make_block_number,
     make_canonical_identifier,
     make_channel_identifier,
     make_locksroot,
@@ -17,11 +18,14 @@ from raiden.tests.utils.factories import (
     make_secret_hash,
     make_token_network_address,
     make_token_network_registry_address,
+    make_transaction_hash,
 )
 from raiden.tests.utils.mocks import make_raiden_service_mock
-from raiden.transfer.events import ContractSendChannelBatchUnlock, EventPaymentSentSuccess
+from raiden.transfer.channel import handle_channel_settled
+from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import EventRouteFailed
 from raiden.transfer.state import ChainState
+from raiden.transfer.state_change import ContractReceiveChannelSettled
 from raiden.transfer.utils import hash_balance_data
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils.typing import (
@@ -66,13 +70,18 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     )
     assert channel_state
 
+    channel_state.identifier = channel_identifier  # type: ignore
     channel_state.our_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
+    channel_state.our_state.secrethashes_to_lockedlocks = {}
+    channel_state.our_state.secrethashes_to_unlockedlocks = {}
     channel_state.partner_state.onchain_locksroot = LOCKSROOT_OF_NO_LOCKS
+    channel_state.partner_state.secrethashes_to_onchain_unlockedlocks = {}
+
+    locksroot = make_locksroot()
 
     def detail_participants(_participant1, _participant2, _block_identifier, _channel_identifier):
         transferred_amount = TokenAmount(1)
         locked_amount = LockedAmount(1)
-        locksroot = make_locksroot()
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         our_details = ParticipantDetails(
             address=raiden.address,
@@ -104,18 +113,22 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     # make sure detail_participants returns partner data with a locksroot of 0x0
     raiden.proxy_manager.token_network.detail_participants = detail_participants
 
-    event = ContractSendChannelBatchUnlock(
-        canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_address, channel_identifier=channel_identifier
+    transition_result = handle_channel_settled(
+        channel_state,
+        ContractReceiveChannelSettled(
+            canonical_identifier=make_canonical_identifier(
+                token_network_address=token_network_address, channel_identifier=channel_identifier
+            ),
+            our_onchain_locksroot=locksroot,
+            partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+            transaction_hash=make_transaction_hash(),
+            block_number=make_block_number(),
+            block_hash=make_block_hash(),
         ),
-        sender=participant,
-        triggered_by_block_hash=make_block_hash(),
     )
 
-    # This should not throw an unrecoverable error
-    RaidenEventHandler().on_raiden_events(
-        raiden=raiden, chain_state=raiden.wal.get_current_state(), events=[event]
-    )
+    # We must not try to settle ourselves
+    assert not transition_result.events
 
 
 def setup_pfs_handler_test(

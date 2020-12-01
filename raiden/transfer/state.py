@@ -308,7 +308,7 @@ class NettingChannelEndState(State):
         repr=False, default_factory=dict
     )
     #: Locks for which the secret is known, the partner has not sent an
-    #: unlocked off chain yet, and the secret has been registered onchain
+    #: unlock off-chain yet, and the secret has been registered on-chain
     #: before the lock has expired.
     secrethashes_to_onchain_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict

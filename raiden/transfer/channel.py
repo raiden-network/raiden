@@ -1116,7 +1116,7 @@ def get_amount_locked(end_state: NettingChannelEndState) -> LockedAmount:
 def get_batch_unlock_gain(
     channel_state: NettingChannelState,
 ) -> UnlockGain:
-    """Collect amounts for unlocked/unclaimed locks and onchain unlocked locks.
+    """Collect amounts for unclaimed locks and on-chain unlocked locks.
     Note: this function does not check expiry, so the values make only sense during settlement.
 
     Returns:
@@ -2348,6 +2348,42 @@ def handle_channel_updated_transfer(
     return TransitionResult(channel_state, list())
 
 
+def _unclaimed_locks(channel_state: NettingChannelState) -> bool:
+    """Are any of our locks without secret, which we can unlock?
+
+    Callable after settlement. Returns True if there are locks from us to a
+    partner where no secret has been registered on-chain. These transfers have
+    expired and we can unlock our tokens.
+    """
+    assert channel_state.settle_transaction, "Unlock only possible after settle"
+
+    if channel_state.our_state.onchain_locksroot == LOCKSROOT_OF_NO_LOCKS:
+        return False
+
+    if get_batch_unlock_gain(channel_state).from_our_locks == 0:
+        return False
+
+    return True
+
+
+def _onchain_revealed_locks(channel_state: NettingChannelState) -> bool:
+    """Are there any locks for us with secret, which we can unlock?
+
+    Callable after settlement. Returns True if there are locks from a partner
+    to us, for which the secret has been registered on-chain. Those can be
+    unlocked to our benefit.
+    """
+    assert channel_state.settle_transaction, "Unlock only possible after settle"
+
+    if channel_state.partner_state.onchain_locksroot == LOCKSROOT_OF_NO_LOCKS:
+        return False
+
+    if get_batch_unlock_gain(channel_state).from_partner_locks == 0:
+        return False
+
+    return True
+
+
 def handle_channel_settled(
     channel_state: NettingChannelState, state_change: ContractReceiveChannelSettled
 ) -> TransitionResult[Optional[NettingChannelState]]:
@@ -2359,22 +2395,27 @@ def handle_channel_settled(
         our_locksroot = state_change.our_onchain_locksroot
         partner_locksroot = state_change.partner_onchain_locksroot
 
-        should_clear_channel = (
-            our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
-        )
-
-        if should_clear_channel:
+        if our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS:
+            # No locks left, let's clear the channel data
             return TransitionResult(None, events)
 
         channel_state.our_state.onchain_locksroot = our_locksroot
         channel_state.partner_state.onchain_locksroot = partner_locksroot
 
-        onchain_unlock = ContractSendChannelBatchUnlock(
-            canonical_identifier=channel_state.canonical_identifier,
-            sender=channel_state.partner_state.address,
-            triggered_by_block_hash=state_change.block_hash,
-        )
-        events.append(onchain_unlock)
+        if _onchain_revealed_locks(channel_state):
+            onchain_unlock = ContractSendChannelBatchUnlock(
+                canonical_identifier=channel_state.canonical_identifier,
+                sender=channel_state.partner_state.address,
+                triggered_by_block_hash=state_change.block_hash,
+            )
+            events.append(onchain_unlock)
+        if _unclaimed_locks(channel_state):
+            onchain_unlock = ContractSendChannelBatchUnlock(
+                canonical_identifier=channel_state.canonical_identifier,
+                sender=channel_state.our_state.address,
+                triggered_by_block_hash=state_change.block_hash,
+            )
+            events.append(onchain_unlock)
 
     return TransitionResult(channel_state, events)
 
