@@ -6,6 +6,7 @@ import structlog
 from gevent import Greenlet
 from gevent.timeout import Timeout
 
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.transport.matrix.rtc import aiogevent
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.utils.typing import Any, Callable, Coroutine, Generator, Optional, Union
@@ -18,11 +19,12 @@ log = structlog.get_logger(__name__)
 def setup_asyncio_event_loop() -> Generator:
     asyncio.set_event_loop_policy(aiogevent.EventLoopPolicy())
     asyncio_greenlet = gevent.spawn(asyncio.get_event_loop().run_forever)
-
-    with Timeout(ASYNCIO_LOOP_RUNNING_TIMEOUT):
-        while not asyncio.get_event_loop().is_running():
-            log.debug("Asyncio loop not running yet. Waiting.")
-            gevent.sleep(0.05)
+    gevent.sleep(0.05)
+    if not asyncio.get_event_loop().is_running():
+        log.debug("Asyncio loop not running yet. Waiting.")
+        with Timeout(ASYNCIO_LOOP_RUNNING_TIMEOUT, RaidenUnrecoverableError):
+            while not asyncio.get_event_loop().is_running():
+                gevent.sleep(0.05)
 
     return asyncio_greenlet
 
@@ -37,7 +39,7 @@ def spawn_coroutine(
     wrapped_coroutine = gevent.spawn(
         wait_for_future, asyncio.ensure_future(coroutine), callback, **kwargs
     )
-    wrapped_coroutine.name = coroutine.__str__()
+    wrapped_coroutine.name = str(coroutine)
     return wrapped_coroutine
 
 

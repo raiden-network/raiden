@@ -135,6 +135,11 @@ class RTCPartner(CoroutineHandler):
         )
 
         if self.peer_connection.signalingState == RTCSignallingState.CLOSED:
+            log.debug(
+                "Connection already closed",
+                node_address=to_checksum_address(node_address),
+                partner_address=to_checksum_address(self.partner_address),
+            )
             return None
 
         remote_description = RTCSessionDescription(description["sdp"], description["type"])
@@ -313,7 +318,7 @@ class WebRTCManager(CoroutineHandler):
         )
 
     def close_connection(self, partner_address: Address) -> Optional[Task]:
-        msg = "Node address not set yet"
+        msg = "Transport not yet started"
         assert self.node_address, msg
 
         log.debug(
@@ -331,7 +336,7 @@ class WebRTCManager(CoroutineHandler):
         return None
 
     def stop(self) -> None:
-        msg = "Node address not set yet"
+        msg = "Transport not yet started"
         assert self.node_address, msg
 
         log.debug("Closing rtc connections", node=to_checksum_address(self.node_address))
