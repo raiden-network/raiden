@@ -1,6 +1,6 @@
 version: 2.1
 parameters:
-  run_workflow_nightly:
+  run_workflow_nightly_test:
     default: false
     type: boolean
 
@@ -93,6 +93,7 @@ executors:
     environment:
       <<: *default-environment
       PYTHON_VERSION_SHORT: << parameters.py-version >>
+      PATH_OPT: "/usr/local/opt"
 
 
 commands:
@@ -137,12 +138,61 @@ commands:
           command: |
             export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
             export LOCAL_BASE=~/.local-${OS_NAME}
-            if [[ ${OS_NAME} == "MACOS" ]]; then
-              export LOCAL_BASE="${LOCAL_BASE}-<<parameters.py-version>>"
-            fi
             rm -rf ~/.local
             [[ -d ${LOCAL_BASE} ]] && ln -sfn ${LOCAL_BASE} ~/.local || true
+            #if [[ ${OS_NAME} == "MACOS" &&  -n ${PY_PATH_HOMEBREW:?} ]]; then
+              #PY_BIN = ${PY_PATH_HOMEBREW}/bin/python3
+              #[[-d ${PY_BIN} ]] && ln -sfn ${PY_BIN} ~/.local/bin/python || true
+            #fi
             [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -sfn ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
+
+  attach-and-link-homebrew:
+    parameters:
+      py-version:
+        <<: *py-version-template
+    steps:
+      - attach_workspace:
+          at: "${PATH_OPT}/python@<<parameters.py-version>>"
+      - run:
+          name: Link platform local binaries
+          command: |
+            export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
+            export LOCAL_BASE=~/.local-${OS_NAME}
+            PY_OPT="${PATH_OPT}"/python@<<parameters.py-version>>
+            if [[ ${OS_NAME} == "MACOS" &&  -n ${PY_OPT:?} ]]; then
+              PY_BIN="${PY_OPT}"/bin/python3
+              [[-d ${PY_BIN} ]] && ln -sfn ${PY_BIN} ${LOCAL_BASE}/bin/python || true
+            fi
+
+
+  prepare-homebrew:
+    parameters:
+      py-version:
+        <<: *py-version-template
+    steps:
+      - run:
+          name: Preparing environment
+          command: |
+            echo "export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')" >> ${BASH_ENV}
+            echo "SHA: ${CIRCLE_SHA1}"
+            echo "TAG: ${CIRCLE_TAG}"
+      - attach-and-link-homebrew
+      - restore_cache:
+          key: system-deps-v8-macos-py{{ parameters.py-version }}
+      - run:
+        #TODO verify that this is actually OS_NAME MACOS
+          name: Installing MacOS specific dependencies
+          command: |
+            .circleci/setup_macos_python.sh
+      - save_cache:
+          key: system-deps-v8-macos-py{{ parameters.py-version }}
+          paths:
+            - $PY_PATH_HOMEBREW
+              # TODO persist the brew python!
+      - persist_to_workspace:
+          root: $PATH_OPT
+          paths:
+            - "python@<<parameters.py-version>>"
 
   prepare-system:
     parameters:
@@ -168,17 +218,13 @@ commands:
           name: Installing System Dependencies
           command: |
             export LOCAL_BASE=~/.local-${OS_NAME}
-            if [[ ${OS_NAME} == "MACOS" ]]; then
-              export LOCAL_BASE="${LOCAL_BASE}-<<parameters.py-version>>"
-            fi
-            export PYVERSION=<<parameters.py-version>>
             .circleci/setup_system_dependencies.sh
             ln -sfn ${LOCAL_BASE} ~/.local
       - save_cache:
           key: system-deps-v8-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-LINUX"
-            - "~/.local-MACOS-<<parameters.py-version>>"
+            - "~/.local-MACOS"
       - run:
           name: Fetch PR Base Commit
           command: source .circleci/fetch_pr_base_commit.sh
@@ -260,6 +306,8 @@ jobs:
         <<: *py-version-template
     executor: macos
     steps:
+      - prepare-homebrew:
+          py-version: << parameters.py-version >>
       - prepare-system:
           py-version: << parameters.py-version >>
 
@@ -868,7 +916,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
             - build-binary-linux-aarch64
             - build-binary-macos
           filters:
@@ -878,7 +925,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
             - build-binary-linux-aarch64
             - build-binary-macos
           filters:
@@ -888,14 +934,13 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
             - build-binary-linux-aarch64
             - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
 
   nightly:
-    when: << pipeline.parameters.run_workflow_nightly >>
+    when: << pipeline.parameters.run_workflow_defaults >>
     jobs:
       - checkout
 
@@ -1029,7 +1074,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
             - build-binary-linux-aarch64
             - build-binary-macos
 
@@ -1040,3 +1084,119 @@ workflows:
             branches:
               only:
                 - develop
+
+  nightly-test:
+    when: << pipeline.parameters.run_workflow_nightly_test >>
+    jobs:
+      - checkout
+
+      - prepare-system-linux:
+          requires:
+            - checkout
+
+      - prepare-python-linux:
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
+          requires:
+          - prepare-system-linux
+
+      - shellcheck/check:
+          name: shellcheck
+          requires:
+            - prepare-system-linux
+
+      - lint:
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
+          requires:
+          - prepare-python-linux
+
+      - build-docs:
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
+          requires:
+            - prepare-python-linux
+
+      - smoketest:
+          matrix:
+            parameters:
+              py-version: ["3.7", "3.8"]
+              transport-layer: ["matrix"]
+              environment-type: ["production", "development"]
+              blockchain-type: ["geth", "parity"]
+          requires:
+            - lint
+
+      - test:
+          matrix:
+            alias: test
+            parameters:
+              py-version: ["3.7", "3.8"]
+              test-type: ["unit", "mocked"]
+          requires:
+            - lint
+
+      - test:
+          matrix:
+            alias: test-fuzz
+            parameters:
+              py-version: ["3.7", "3.8"]
+              test-type: ["fuzz"]
+          additional-args: "--hypothesis-show-statistics"
+          requires:
+            - lint
+
+      - scenario-player-integration-test:
+          name: scenario-player-integration-test
+          py-version: "3.7"
+          requires:
+            - smoketest
+            - test
+            - test-fuzz
+            - shellcheck
+
+      - test:
+          matrix:
+            alias: test-integration
+            parameters:
+              py-version: ["3.7"]
+              test-type: ["integration"]
+              blockchain-type: ["geth", "parity"]
+          resource: "medium+"
+          transport-layer: "matrix"
+          parallelism: 25
+          requires:
+            - smoketest
+            - test
+            - test-fuzz
+            - shellcheck
+
+      - finalize:
+          requires:
+          - scenario-player-integration-test
+          - test-integration
+
+      - build-binary-linux:
+          name: build-binary-linux-x86
+          requires:
+            - finalize
+
+
+      - prepare-system-macos:
+          py-version: '3.7'
+          requires:
+            - checkout
+
+      - prepare-python-macos:
+          name: prepare-python-macos-3.7
+          py-version: '3.7'
+          requires:
+            - prepare-system-macos
+
+      - build-binary-macos:
+          requires:
+            - finalize
+            - prepare-python-macos-3.7

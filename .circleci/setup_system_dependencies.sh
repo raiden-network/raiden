@@ -7,7 +7,6 @@ set -x
 [[ -n ${GETH_VERSION:?} ]]
 [[ -n ${PARITY_VERSION:?} ]]
 [[ -n ${SOLC_VERSION:?} ]]
-[[ -n ${PYVERSION:?} ]]
 
 if [[ -z ${LOCAL_BASE} ]]; then
     LOCAL_BASE=~/.local
@@ -53,26 +52,6 @@ if [[ ! -x ${PARITY_PATH} ]]; then
   fi
 fi
 ln -sfn "${PARITY_PATH}" "${LOCAL_BASE}"/bin/openethereum
-
-
-if [[ ${OS_NAME} == "MACOS" ]]; then
-  if [[ ${PYVERSION} != "3.7" ]] && [[ ${PYVERSION} != "3.8" ]]; then
-    # not supported by MacOS
-    exit 1
-  fi
-  PY_PATH="${LOCAL_BASE}/bin/python-${OS_NAME}-${PYVERSION}"
-  PY_PATH_HOMEBREW="/usr/local/opt/python@${PYVERSION}"
-  if [[ ! -x ${PY_PATH} ]]; then
-    # install Python via Homebrew
-    # (Only Minor version specifier supported, will pull most
-    # recent stable release)
-    brew install python@"${PYVERSION}"
-    cp -r "${PY_PATH_HOMEBREW}" "${PY_PATH}"
-    # TODO do we also need some version checksums etc here?
-  fi
-  # Symlink homebrew python to the local bin/
-  ln -sfn "${PY_PATH}"/bin/python3 "${LOCAL_BASE}"/bin/python
-fi
 
 # Only deal with solc for Linux since it's only used for testing
 if [[ ${OS_NAME} != "LINUX" ]]; then
