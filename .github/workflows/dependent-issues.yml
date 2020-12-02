@@ -2,7 +2,7 @@ name: Dependent Issues
 
 on:
   issues:
-  pull_request:
+  pull_request_target:
   schedule:
     - cron: '0 0 * * *' # schedule daily check
 
