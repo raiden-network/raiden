@@ -145,7 +145,7 @@ pytest==6.1.2             # via -r requirements-dev.in, pytest-forked, pytest-ra
 pytz==2019.1              # via -r requirements-docs.txt, -r requirements.txt, babel, flask-restful
 pyyaml==5.1.1             # via matrix-synapse
 raiden-contracts==0.37.1  # via -r requirements.txt
-raiden-webui==1.0.2       # via -r requirements.txt
+raiden-webui==1.1.0       # via -r requirements.txt
 readme-renderer==28.0     # via -r requirements-dev.in
 regex==2020.6.8           # via black
 releases==1.6.3           # via -r requirements-docs.txt

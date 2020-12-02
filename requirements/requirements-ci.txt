@@ -151,7 +151,7 @@ python-magic==0.4.15      # via s3cmd
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
 raiden-contracts==0.37.1  # via -r requirements-dev.txt
-raiden-webui==1.0.2       # via -r requirements-dev.txt
+raiden-webui==1.1.0       # via -r requirements-dev.txt
 readme-renderer==28.0     # via -r requirements-dev.txt
 regex==2020.6.8           # via -r requirements-dev.txt, black
 releases==1.6.3           # via -r requirements-dev.txt
