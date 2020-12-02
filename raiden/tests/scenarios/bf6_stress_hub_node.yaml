@@ -31,29 +31,28 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    pathfinding-service-address: https://pfs.transport03.raiden.network
 
   node_options:
     0:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[0] }}
     1:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[1] }}
     2:
       matrix-server: {{ matrix_servers[2] }}
     3:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[3] }}
     4:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[4] }}
     5:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[0] }}
     6:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[1] }}
     7:
       matrix-server: {{ matrix_servers[2] }}
     8:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[3] }}
     9:
-      matrix-server: {{ matrix_servers[2] }}
+      matrix-server: {{ matrix_servers[4] }}
 
 # This is the BF6 scenario. It sets up a tolopogy with 9 nodes connected to node0,
 # so that node0 is the single hub that all payments have to go through. First one
