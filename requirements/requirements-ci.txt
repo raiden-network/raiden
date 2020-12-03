@@ -71,7 +71,7 @@ hyperlink==19.0.0         # via -r requirements-dev.txt, twisted
 hypothesis==5.35.2        # via -r requirements-dev.txt
 idna==2.8                 # via -r requirements-dev.txt, hyperlink, matrix-synapse, requests, twisted
 imagesize==1.1.0          # via -r requirements-dev.txt, sphinx
-importlib-metadata==2.0.0  # via -r requirements-dev.txt, flake8, flake8-comprehensions, jsonschema, pluggy, pytest
+importlib-metadata==2.0.0  # via -r requirements-dev.txt, pluggy
 incremental==17.5.0       # via -r requirements-dev.txt, treq, twisted
 iniconfig==1.0.1          # via -r requirements-dev.txt, pytest
 ipfshttpclient==0.7.0a1   # via -r requirements-dev.txt, web3
@@ -151,7 +151,7 @@ python-magic==0.4.15      # via s3cmd
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
 raiden-contracts==0.37.1  # via -r requirements-dev.txt
-raiden-webui==1.0.2       # via -r requirements-dev.txt
+raiden-webui==1.1.0       # via -r requirements-dev.txt
 readme-renderer==28.0     # via -r requirements-dev.txt
 regex==2020.6.8           # via -r requirements-dev.txt, black
 releases==1.6.3           # via -r requirements-dev.txt
@@ -184,8 +184,8 @@ toolz==0.9.0              # via -r requirements-dev.txt, cytoolz
 traitlets==4.3.2          # via -r requirements-dev.txt, ipython
 treq==18.6.0              # via -r requirements-dev.txt, matrix-synapse
 twisted[tls]==20.3.0      # via -r requirements-dev.txt, matrix-synapse, treq
-typed-ast==1.4.0          # via -r requirements-dev.txt, astroid, black, mypy
-typing-extensions==3.7.4.3  # via -r requirements-dev.txt, black, matrix-synapse, mypy, signedjson, web3
+typed-ast==1.4.0          # via -r requirements-dev.txt, black, mypy
+typing-extensions==3.7.4.3  # via -r requirements-dev.txt, black, matrix-synapse, mypy, signedjson
 typing-inspect==0.4.0     # via -r requirements-dev.txt, marshmallow-dataclass
 ulid-py==1.1.0            # via -r requirements-dev.txt
 unpaddedbase64==1.1.0     # via -r requirements-dev.txt, matrix-synapse, signedjson
