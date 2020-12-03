@@ -40,7 +40,6 @@ greenlet==0.4.17          # via gevent
 guppy3==3.1.0             # via -r requirements.in
 hexbytes==0.2.0           # via eth-account, eth-rlp, web3
 idna==2.8                 # via requests
-importlib-metadata==2.0.0  # via jsonschema
 ipfshttpclient==0.7.0a1   # via web3
 itsdangerous==1.1.0       # via flask
 jinja2==2.10.1            # via flask
@@ -71,7 +70,7 @@ pyrsistent==0.15.7        # via jsonschema
 pysha3==1.0.2             # via -r requirements.in
 pytz==2019.1              # via flask-restful
 raiden-contracts==0.37.1  # via -r requirements.in
-raiden-webui==1.0.2       # via -r requirements.in
+raiden-webui==1.1.0       # via -r requirements.in
 requests==2.25.0          # via -r requirements.in, ipfshttpclient, matrix-client, web3
 rlp==1.1.0                # via eth-account, eth-rlp, raiden-contracts
 semantic-version==2.6.0   # via py-solc
@@ -80,7 +79,7 @@ six==1.15.0               # via cryptography, flask-cors, flask-restful, jsonsch
 structlog==20.1.0         # via -r requirements.in
 toml==0.10.2              # via -r requirements.in
 toolz==0.9.0              # via cytoolz
-typing-extensions==3.7.4.3  # via -r requirements.in, web3
+typing-extensions==3.7.4.3  # via -r requirements.in
 typing-inspect==0.4.0     # via marshmallow-dataclass
 ulid-py==1.1.0            # via -r requirements.in
 urllib3==1.25.3           # via requests
@@ -88,7 +87,6 @@ varint==1.0.2             # via multiaddr
 web3==5.13.0              # via -r requirements.in, raiden-contracts
 websockets==8.1           # via web3
 werkzeug==1.0.1           # via flask
-zipp==3.4.0               # via importlib-metadata
 zope.event==4.4           # via gevent
 zope.interface==5.1.0     # via gevent
 
