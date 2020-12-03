@@ -45,6 +45,7 @@ class CoroutineHandler:
         return task
 
     async def wait_for_coroutines(self) -> None:
+        log.debug("Waiting for coroutines", coroutines=self.coroutines)
         await asyncio.gather(*self.coroutines)
 
     def join_all_coroutines(self) -> None:
@@ -279,19 +280,19 @@ class WebRTCManager(CoroutineHandler):
 
         for candidate in content["candidates"]:
 
-            try:
-                rtc_ice_candidate = candidate_from_sdp(candidate["candidate"])
-                rtc_ice_candidate.sdpMid = candidate["sdpMid"]
-                rtc_ice_candidate.sdpMLineIndex = candidate["sdpMLineIndex"]
-                msg = "Candidate's sdpMid must be equal to own sctp.mid"
-                assert rtc_ice_candidate.sdpMid == rtc_partner.peer_connection.sctp.mid, msg
-                connection.addIceCandidate(rtc_ice_candidate)
-            except AssertionError:
+            rtc_ice_candidate = candidate_from_sdp(candidate["candidate"])
+            rtc_ice_candidate.sdpMid = candidate["sdpMid"]
+            rtc_ice_candidate.sdpMLineIndex = candidate["sdpMLineIndex"]
+
+            if rtc_ice_candidate.sdpMid != rtc_partner.peer_connection.sctp.mid:
                 log.debug(
-                    "Candidate invalid, wrong sdpMid",
+                    "Invalid candidate. Wrong sdpMid",
+                    node_address=to_checksum_address(self.node_address),
                     candidate=candidate,
                     sctp_sdp_mid=rtc_partner.peer_connection.sctp.mid,
                 )
+                continue
+            connection.addIceCandidate(rtc_ice_candidate)
 
     def process_signalling_for_address(
         self, partner_address: Address, description: Dict[str, str]
