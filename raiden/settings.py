@@ -188,6 +188,11 @@ class RestApiConfig:
 
 
 @dataclass
+class PythonApiConfig:
+    minimum_reveal_timeout: BlockTimeout = BlockTimeout(1)
+
+
+@dataclass
 class RaidenConfig:
     chain_id: ChainID
     environment_type: Environment
@@ -216,6 +221,7 @@ class RaidenConfig:
     )
 
     rest_api: RestApiConfig = RestApiConfig()
+    python_api: PythonApiConfig = PythonApiConfig()
 
     shutdown_timeout: int = DEFAULT_SHUTDOWN_TIMEOUT
     unrecoverable_error_should_crash: bool = False

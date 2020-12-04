@@ -13,6 +13,7 @@ from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.constants import (
     BLOCK_ID_LATEST,
+    CHAIN_TO_MIN_REVEAL_TIMEOUT,
     DOC_URL,
     GENESIS_BLOCK_NUMBER,
     MATRIX_AUTO_SELECT_SERVER,
@@ -28,7 +29,7 @@ from raiden.constants import (
     RopstenForks,
     RoutingMode,
 )
-from raiden.exceptions import RaidenError
+from raiden.exceptions import ConfigurationError, RaidenError
 from raiden.message_handler import MessageHandler
 from raiden.network.pathfinding import check_pfs_transport_configuration
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
@@ -42,6 +43,7 @@ from raiden.settings import (
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     MatrixTransportConfig,
+    PythonApiConfig,
     RaidenConfig,
     RestApiConfig,
     ServiceConfig,
@@ -160,6 +162,10 @@ def get_smart_contracts_start_at(chain_id: ChainID) -> BlockNumber:
     return smart_contracts_start_at
 
 
+def get_min_reveal_timeout(chain_id: ChainID) -> BlockTimeout:
+    return CHAIN_TO_MIN_REVEAL_TIMEOUT.get(chain_id, BlockTimeout(1))
+
+
 def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> URI:
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
 
@@ -194,54 +200,35 @@ def start_api_server(
     return api_server
 
 
-def run_raiden_service(
-    address: Address,
-    keystore_path: str,
-    gas_price: Callable,
+def setup_raiden_config(
     eth_rpc_endpoint: str,
-    user_deposit_contract_address: Optional[UserDepositAddress],
     api_address: Endpoint,
     rpc: bool,
     rpccorsdomain: str,
-    sync_check: bool,
     console: bool,
-    password_file: TextIO,
     web_ui: bool,
-    datadir: Optional[str],
     matrix_server: str,
     chain_id: ChainID,
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
-    pathfinding_service_address: str,
     pathfinding_max_paths: int,
     enable_monitoring: bool,
     resolver_endpoint: str,
     default_reveal_timeout: BlockTimeout,
     default_settle_timeout: BlockTimeout,
-    routing_mode: RoutingMode,
     flat_fee: Tuple[Tuple[TokenAddress, FeeAmount], ...],
     proportional_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
-    **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
-) -> RaidenService:
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
-
-    token_network_registry_deployed_at: Optional[BlockNumber]
-    smart_contracts_start_at: BlockNumber
-
-    if datadir is None:
-        datadir = os.path.join(os.path.expanduser("~"), ".raiden")
-
-    account_manager = AccountManager(keystore_path)
-    web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
-
-    check_sql_version()
-    check_ethereum_has_accounts(account_manager)
-    check_ethereum_chain_id(chain_id, web3)
-
-    address, privatekey = get_account_and_private_key(account_manager, address, password_file)
+    **kwargs: Any,
+) -> RaidenConfig:
+    """
+    Initialise the nested raiden config objects from "flat" arguments.
+    Static checking for a sane config should be done here (but no I/O or checks for
+    valid environment).
+    """
+    # pylint: disable=unused-argument
 
     api_host, api_port = split_endpoint(api_address)
 
@@ -256,13 +243,13 @@ def run_raiden_service(
         else:
             domain_list.append(str(rpccorsdomain))
 
-    # Set up config
     fee_config = prepare_mediation_fee_config(
         cli_token_to_flat_fee=flat_fee,
         cli_token_to_proportional_fee=proportional_fee,
         cli_token_to_proportional_imbalance_fee=proportional_imbalance_fee,
         cli_cap_mediation_fees=cap_mediation_fees,
     )
+
     rest_api_config = RestApiConfig(
         rest_api_enabled=rpc,
         web_ui_enabled=rpc and web_ui,
@@ -271,6 +258,24 @@ def run_raiden_service(
         host=api_host,
         port=api_port,
     )
+
+    minimum_reveal_timeout = get_min_reveal_timeout(chain_id)
+    python_api_config = PythonApiConfig(minimum_reveal_timeout=minimum_reveal_timeout)
+
+    if default_reveal_timeout < minimum_reveal_timeout:
+        network = Networks(chain_id)
+        raise ConfigurationError(
+            f"Option `default-reveal-timeout={default_reveal_timeout}` can't be smaller than "
+            f"the minimally recommended reveal timeout ({minimum_reveal_timeout}) for chain "
+            f"{network.name} (chain-id: {network.value})"
+        )
+
+    if default_settle_timeout < default_reveal_timeout * 2:
+        network = Networks(chain_id)
+        raise ConfigurationError(
+            f"Option `default-settle-timeout={default_settle_timeout}` should be higher than "
+            f"two times the `default-reveal-timeout={default_reveal_timeout}`."
+        )
 
     config = RaidenConfig(
         chain_id=chain_id,
@@ -282,11 +287,46 @@ def run_raiden_service(
         unrecoverable_error_should_crash=unrecoverable_error_should_crash,
         resolver_endpoint=resolver_endpoint,
         rest_api=rest_api_config,
+        python_api=python_api_config,
     )
     config.blockchain.query_interval = blockchain_query_interval
     config.services.monitoring_enabled = enable_monitoring
     config.services.pathfinding_max_paths = pathfinding_max_paths
     config.transport.server = matrix_server
+    return config
+
+
+def run_raiden_service(
+    config: RaidenConfig,
+    eth_rpc_endpoint: str,
+    address: Address,
+    keystore_path: str,
+    gas_price: Callable,
+    user_deposit_contract_address: Optional[UserDepositAddress],
+    sync_check: bool,
+    password_file: TextIO,
+    datadir: Optional[str],
+    pathfinding_service_address: str,
+    routing_mode: RoutingMode,
+    **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
+) -> RaidenService:
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
+
+    chain_id = config.chain_id
+    token_network_registry_deployed_at: Optional[BlockNumber]
+    smart_contracts_start_at: BlockNumber
+
+    if datadir is None:
+        datadir = os.path.join(os.path.expanduser("~"), ".raiden")
+
+    account_manager = AccountManager(keystore_path)
+    web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
+
+    check_sql_version()
+    check_ethereum_has_accounts(account_manager)
+    check_ethereum_chain_id(chain_id, web3)
+
+    address, privatekey = get_account_and_private_key(account_manager, address, password_file)
 
     contracts = load_deployed_contracts_data(config, chain_id)
 
@@ -319,8 +359,12 @@ def run_raiden_service(
 
     api_server: Optional[APIServer] = None
     if config.rest_api.rest_api_enabled:
+        msg = "An eth_rpc_endpoint must be supplied for the Rest API when it is enabled"
+        assert config.rest_api.eth_rpc_endpoint, msg
         api_server = start_api_server(
-            rpc_client=rpc_client, config=config.rest_api, eth_rpc_endpoint=eth_rpc_endpoint
+            rpc_client=rpc_client,
+            config=config.rest_api,
+            eth_rpc_endpoint=config.rest_api.eth_rpc_endpoint,
         )
 
     if sync_check:
@@ -349,7 +393,7 @@ def run_raiden_service(
     # Load the available matrix servers when no matrix server is given
     # The list is used in a PFS check
     if config.transport.server == MATRIX_AUTO_SELECT_SERVER:
-        fetch_available_matrix_servers(config.transport, environment_type)
+        fetch_available_matrix_servers(config.transport, config.environment_type)
 
     raiden_bundle = raiden_bundle_from_contracts_deployment(
         proxy_manager=proxy_manager,
@@ -363,7 +407,7 @@ def run_raiden_service(
         proxy_manager=proxy_manager,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
-        enable_monitoring=enable_monitoring,
+        enable_monitoring=config.services.monitoring_enabled,
     )
 
     check_ethereum_confirmed_block_is_not_pruned(
@@ -383,7 +427,7 @@ def run_raiden_service(
     )
     config.database_path = database_path
 
-    print(f"Raiden is running in {environment_type.value.lower()} mode")
+    print(f"Raiden is running in {config.environment_type.value.lower()} mode")
     print(
         "\nYou are connected to the '{}' network and the DB path is: {}".format(
             ID_TO_CHAINNAME.get(chain_id, chain_id), database_path
@@ -391,17 +435,17 @@ def run_raiden_service(
     )
 
     matrix_transport = setup_matrix(
-        config.transport, config.services, environment_type, routing_mode
+        config.transport, config.services, config.environment_type, routing_mode
     )
 
     event_handler: EventHandler = RaidenEventHandler()
 
     # User should be told how to set fees, if using default fee settings
-    log.debug("Fee Settings", fee_settings=fee_config)
+    log.debug("Fee Settings", fee_settings=config.mediation_fees)
     has_default_fees = (
-        len(fee_config.token_to_flat_fee) == 0
-        and len(fee_config.token_to_proportional_fee) == 0
-        and len(fee_config.token_to_proportional_imbalance_fee) == 0
+        len(config.mediation_fees.token_to_flat_fee) == 0
+        and len(config.mediation_fees.token_to_proportional_fee) == 0
+        and len(config.mediation_fees.token_to_proportional_imbalance_fee) == 0
     )
     if has_default_fees:
         click.secho(
