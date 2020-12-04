@@ -49,8 +49,8 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_PATHS,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
-    MIN_REVEAL_TIMEOUT,
 )
+from raiden.ui.app import setup_raiden_config
 from raiden.ui.runners import run_services
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -226,7 +226,7 @@ OPTIONS = [
             help="Sets the default reveal timeout to be used to newly created channels",
             default=DEFAULT_REVEAL_TIMEOUT,
             show_default=True,
-            type=click.IntRange(min=MIN_REVEAL_TIMEOUT),
+            type=click.IntRange(min=1),
         ),
         option(
             "--default-settle-timeout",
@@ -526,113 +526,122 @@ def options(func: Callable) -> Callable:
 def run(ctx: Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    if kwargs["config_file"]:
-        apply_config_file(run, kwargs, ctx)
-
-    configure_logging(
-        kwargs["log_config"],
-        log_json=kwargs["log_json"],
-        log_file=kwargs["log_file"],
-        disable_debug_logfile=kwargs["disable_debug_logfile"],
-        debug_log_file_path=kwargs["debug_logfile_path"],
-    )
-
-    flamegraph = kwargs.pop("flamegraph", None)
-    switch_tracing = kwargs.pop("switch_tracing", None)
-    profiler = None
     switch_monitor = None
-
-    enable_gevent_monitoring_signal()
-
-    if flamegraph:  # pragma: no cover
-        windows_not_supported("flame graph")
-        from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
-
-        os.makedirs(flamegraph, exist_ok=True)
-
-        now = datetime.datetime.now().isoformat()
-        address = to_checksum_address(kwargs["address"])
-        stack_path = os.path.join(flamegraph, f"{address}_{now}_stack.data")
-        stack_stream = open(stack_path, "w")
-        flame = FlameGraphCollector(stack_stream)
-        profiler = TraceSampler(flame)
-
-    if switch_tracing is True:  # pragma: no cover
-        windows_not_supported("switch tracing")
-        from raiden.utils.profiling.greenlets import SwitchMonitoring
-
-        switch_monitor = SwitchMonitoring()
-
-    if kwargs["environment_type"] == Environment.DEVELOPMENT:
-        IDLE.enable()
-
+    profiler = None
     memory_logger = None
-    log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
-    if log_memory_usage_interval > 0:  # pragma: no cover
-        windows_not_supported("memory usage logging")
-        from raiden.utils.profiling.memory import MemoryLogger
+    try:
+        if kwargs["config_file"]:
+            apply_config_file(run, kwargs, ctx)
 
-        memory_logger = MemoryLogger(log_memory_usage_interval)
-        memory_logger.start()
-
-    if ctx.invoked_subcommand is not None:
-        # Pass parsed args on to subcommands.
-        ctx.obj = kwargs
-        return
-
-    raiden_version = get_system_spec()["raiden"]
-    click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
-
-    click.secho(
-        textwrap.dedent(
-            """\
-            +------------------------------------------------------------------------+
-            | This is a Beta version of experimental open source software released   |
-            | as a test version under an MIT license and may contain errors and/or   |
-            | bugs. No guarantee or representation whatsoever is made regarding its  |
-            | suitability (or its use) for any purpose or regarding its compliance   |
-            | with any applicable laws and regulations. Use of the software is at    |
-            | your own risk and discretion and by using the software you warrant and |
-            | represent that you have read this disclaimer, understand its contents, |
-            | assume all risk related thereto and hereby release, waive, discharge   |
-            | and covenant not to hold liable Brainbot Labs Establishment or any of  |
-            | its officers, employees or affiliates from and for any direct or       |
-            | indirect damage resulting from the software or the use thereof.        |
-            | Such to the extent as permissible by applicable laws and regulations.  |
-            |                                                                        |
-            | Privacy warning: Please be aware, that by using the Raiden Client,     |
-            | among others your Ethereum address, channels, channel deposits,        |
-            | settlements and the Ethereum address of your channel counterparty will |
-            | be stored on the Ethereum chain, i.e. on servers of Ethereum node      |
-            | operators and ergo are to a certain extent publicly available. The     |
-            | same might also be stored on systems of parties running Raiden nodes   |
-            | connected to the same token network. Data present in the Ethereum      |
-            | chain is very unlikely to be able to be changed, removed or deleted    |
-            | from the public arena.                                                 |
-            |                                                                        |
-            | Also be aware, that data on individual Raiden token transfers will be  |
-            | made available via the Matrix protocol to the recipient,               |
-            | intermediating nodes of a specific transfer as well as to the Matrix   |
-            | server operators, see Raiden Transport Specification.                  |
-            +------------------------------------------------------------------------+"""
-        ),
-        fg="yellow",
-    )
-    if not kwargs["accept_disclaimer"]:
-        click.confirm(
-            "\nHave you read, understood and hereby accept the above "
-            "disclaimer and privacy warning?",
-            abort=True,
+        configure_logging(
+            kwargs["log_config"],
+            log_json=kwargs["log_json"],
+            log_file=kwargs["log_file"],
+            disable_debug_logfile=kwargs["disable_debug_logfile"],
+            debug_log_file_path=kwargs["debug_logfile_path"],
         )
 
-    # Name used in the exception handlers, make sure the kwargs contains the
-    # key with the correct name by always running it.
-    name_or_id = ID_TO_CHAINNAME.get(kwargs["chain_id"], kwargs["chain_id"])
+        # If still present, this means we read in a file provided by the user
+        if kwargs["config_file"]:
+            log.debug("Using config file", config_file=kwargs["config_file"])
 
-    # TODO:
-    # - Ask for confirmation to quit if there are any locked transfers that did
-    # not timeout.
-    try:
+        flamegraph = kwargs.pop("flamegraph", None)
+        switch_tracing = kwargs.pop("switch_tracing", None)
+
+        enable_gevent_monitoring_signal()
+
+        if flamegraph:  # pragma: no cover
+            windows_not_supported("flame graph")
+            from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
+
+            os.makedirs(flamegraph, exist_ok=True)
+
+            now = datetime.datetime.now().isoformat()
+            address = to_checksum_address(kwargs["address"])
+            stack_path = os.path.join(flamegraph, f"{address}_{now}_stack.data")
+            stack_stream = open(stack_path, "w")
+            flame = FlameGraphCollector(stack_stream)
+            profiler = TraceSampler(flame)
+
+        if switch_tracing is True:  # pragma: no cover
+            windows_not_supported("switch tracing")
+            from raiden.utils.profiling.greenlets import SwitchMonitoring
+
+            switch_monitor = SwitchMonitoring()
+
+        if kwargs["environment_type"] == Environment.DEVELOPMENT:
+            IDLE.enable()
+
+        log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
+        if log_memory_usage_interval > 0:  # pragma: no cover
+            windows_not_supported("memory usage logging")
+            from raiden.utils.profiling.memory import MemoryLogger
+
+            memory_logger = MemoryLogger(log_memory_usage_interval)
+            memory_logger.start()
+
+        if ctx.invoked_subcommand is not None:
+            # Pass parsed args on to subcommands.
+            ctx.obj = kwargs
+            return
+
+        # Name used in the exception handlers, make sure the kwargs contains the
+        # key with the correct name by always running it.
+        name_or_id = ID_TO_CHAINNAME.get(kwargs["chain_id"], kwargs["chain_id"])
+
+        # construct the config here, so that eventual misconfigurations can raise
+        # before the disclaimer and before starting any services
+        raiden_config = setup_raiden_config(**kwargs)
+        kwargs["config"] = raiden_config
+
+        raiden_version = get_system_spec()["raiden"]
+        click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
+
+        click.secho(
+            textwrap.dedent(
+                """\
+                +------------------------------------------------------------------------+
+                | This is a Beta version of experimental open source software released   |
+                | as a test version under an MIT license and may contain errors and/or   |
+                | bugs. No guarantee or representation whatsoever is made regarding its  |
+                | suitability (or its use) for any purpose or regarding its compliance   |
+                | with any applicable laws and regulations. Use of the software is at    |
+                | your own risk and discretion and by using the software you warrant and |
+                | represent that you have read this disclaimer, understand its contents, |
+                | assume all risk related thereto and hereby release, waive, discharge   |
+                | and covenant not to hold liable Brainbot Labs Establishment or any of  |
+                | its officers, employees or affiliates from and for any direct or       |
+                | indirect damage resulting from the software or the use thereof.        |
+                | Such to the extent as permissible by applicable laws and regulations.  |
+                |                                                                        |
+                | Privacy warning: Please be aware, that by using the Raiden Client,     |
+                | among others your Ethereum address, channels, channel deposits,        |
+                | settlements and the Ethereum address of your channel counterparty will |
+                | be stored on the Ethereum chain, i.e. on servers of Ethereum node      |
+                | operators and ergo are to a certain extent publicly available. The     |
+                | same might also be stored on systems of parties running Raiden nodes   |
+                | connected to the same token network. Data present in the Ethereum      |
+                | chain is very unlikely to be able to be changed, removed or deleted    |
+                | from the public arena.                                                 |
+                |                                                                        |
+                | Also be aware, that data on individual Raiden token transfers will be  |
+                | made available via the Matrix protocol to the recipient,               |
+                | intermediating nodes of a specific transfer as well as to the Matrix   |
+                | server operators, see Raiden Transport Specification.                  |
+                +------------------------------------------------------------------------+"""
+            ),
+            fg="yellow",
+        )
+        if not kwargs["accept_disclaimer"]:
+            click.confirm(
+                "\nHave you read, understood and hereby accept the above "
+                "disclaimer and privacy warning?",
+                abort=True,
+            )
+
+        # TODO:
+        # - Ask for confirmation to quit if there are any locked transfers that did
+        # not timeout.
         run_services(kwargs)
     except KeyboardInterrupt:
         # The user requested a shutdown. Assume that if the exception
@@ -816,6 +825,9 @@ def smoketest(
                         args[option_.name] = option_.process_value(ctx, args[option_.name])
                     else:
                         args[option_.name] = option_.default
+
+                raiden_config = setup_raiden_config(**args)
+                args["config"] = raiden_config
 
                 run_smoketest(print_step=print_step, setup=setup)
 

@@ -15,9 +15,6 @@ log = structlog.get_logger(__name__)
 
 
 def run_services(options: Dict[str, Any]) -> None:
-    if options["config_file"]:
-        log.debug("Using config file", config_file=options["config_file"])
-
     raiden_service = run_raiden_service(**options)
 
     gevent_tasks: List[gevent.Greenlet] = list()

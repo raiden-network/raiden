@@ -10,9 +10,11 @@ from raiden.utils.typing import (
     BalanceHash,
     BlockHash,
     BlockNumber,
+    BlockTimeout,
     ChainID,
     Literal,
     Locksroot,
+    Mapping,
     RaidenDBVersion,
     RaidenProtocolVersion,
     Secret,
@@ -140,6 +142,15 @@ GAS_FACTOR = 1.3
 # exceeded. The limit is inclusive.
 UNLOCK_TX_GAS_LIMIT = TRANSACTION_GAS_LIMIT_UPPER_BOUND
 MAXIMUM_PENDING_TRANSFERS = 160
+
+CHAIN_TO_MIN_REVEAL_TIMEOUT: Mapping[ChainID, BlockTimeout] = {
+    Networks.MAINNET.value: BlockTimeout(20),
+    Networks.ROPSTEN.value: BlockTimeout(20),
+    Networks.GOERLI.value: BlockTimeout(20),
+    Networks.RINKEBY.value: BlockTimeout(20),
+    Networks.KOVAN.value: BlockTimeout(20),
+    Networks.SMOKETEST.value: BlockTimeout(20),
+}
 
 
 class Environment(Enum):
