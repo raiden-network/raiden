@@ -4,7 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
-from typing import Tuple
+from typing import Any, Tuple
 
 import marshmallow
 from eth_utils import to_hex
@@ -467,22 +467,36 @@ class TokenNetworkRegistryState(State):
 
     class Meta:
         unknown = marshmallow.EXCLUDE
-        fields = ["address", "token_network_list"]  # only serialize attributes needed for init
+        fields = [
+            "address",
+            "token_network_list",
+            "tokennetworkaddresses_to_tokennetworks",
+        ]  # only serialize attributes needed for init
+        load_only = ["tokennetworkaddresses_to_tokennetworks"]
 
     address: TokenNetworkRegistryAddress
     token_network_list: List[TokenNetworkState]
-    tokennetworkaddresses_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
-        repr=False
-    )
     tokenaddresses_to_tokennetworkaddresses: Dict[TokenAddress, TokenNetworkAddress] = field(
         repr=False
+    )
+    tokennetworkaddresses_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
+        repr=False, default_factory=dict
     )
 
     def __init__(
         self,
         address: TokenNetworkRegistryAddress,
         token_network_list: List[TokenNetworkState],
+        tokennetworkaddresses_to_tokennetworks: Dict[Any, TokenNetworkState] = None,
     ) -> None:
+        # Fix inconsistent state from Alderaan releases. Can be removed when
+        # only reading state from Bespin or later is acceptable. Those releases
+        # could leave the token_network_list empty, even after TNs have been
+        # added.  The TNs were only available in the other attributes. See
+        # https://github.com/raiden-network/raiden/commit/922e4fdf0d54c150c1bada0d101f8085e04b68bd
+        if not token_network_list and tokennetworkaddresses_to_tokennetworks:
+            token_network_list = list(tokennetworkaddresses_to_tokennetworks.values())
+
         self.address = address
         self.token_network_list = []
         self.tokennetworkaddresses_to_tokennetworks = {}
