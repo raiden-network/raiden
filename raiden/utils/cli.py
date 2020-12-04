@@ -405,8 +405,10 @@ def apply_config_file(
     for config_name, config_value in config_file_values.items():
         try:
             config_name_int = external_to_internal_map[config_name]
-        except KeyError:
-            raise KeyError(f"Unknown setting '{config_name}' found in config file")
+        except KeyError as ex:
+            raise ConfigurationError(
+                f"Unknown setting '{config_name}' found in config file"
+            ) from ex
         else:
             if config_name_int in parsed_options:
                 ambiguous_settings = [
@@ -414,7 +416,7 @@ def apply_config_file(
                     for ext_name, int_name in external_to_internal_map.items()
                     if int_name == config_name_int
                 ]
-                raise KeyError(
+                raise ConfigurationError(
                     f"Ambiguous setting '{config_name}' found in config file, please"
                     f"only use one of {ambiguous_settings}"
                 )
