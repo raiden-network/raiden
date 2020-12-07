@@ -104,13 +104,17 @@ install: check-pip-tools clean-pyc
 	cd requirements; pip-sync requirements.txt _raiden.txt
 
 install-dev: check-pip-tools clean-pyc osx-detect-proper-python
-	touch requirements/requirements-local.txt
+# Remove extras from requirements to produce a valid constraints file.
+# See: https://github.com/pypa/pip/issues/9209
+	@sed -e 's/\[[^]]*\]//g' requirements/requirements-dev.txt > requirements/constraints-dev.txt
+	@touch requirements/requirements-local.txt
 	cd requirements; pip-sync requirements-dev.txt _raiden-dev.txt
-	pip install -c requirements/requirements-dev.txt -r requirements/requirements-local.txt
+	pip install -c requirements/constraints-dev.txt -r requirements/requirements-local.txt
+	@rm requirements/constraints-dev.txt
 
 osx-detect-proper-python:
 ifeq ($(shell uname -s),Darwin)
-	python -c 'import time; time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)' > /dev/null 2>&1 || (echo "Not supported python version. Read https://raiden-network.readthedocs.io/en/latest/macos_install_guide.html#macos-development-setup for details."; exit 1)
+	@python -c 'import time; time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)' > /dev/null 2>&1 || (echo "Not supported python version. Read https://raiden-network.readthedocs.io/en/latest/macos_install_guide.html#macos-development-setup for details."; exit 1)
 endif
 
 GITHUB_ACCESS_TOKEN_ARG=
