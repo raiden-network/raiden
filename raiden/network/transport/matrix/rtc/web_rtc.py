@@ -292,7 +292,7 @@ class WebRTCManager(CoroutineHandler):
                     sctp_sdp_mid=rtc_partner.peer_connection.sctp.mid,
                 )
                 continue
-            connection.addIceCandidate(rtc_ice_candidate)
+            yield_future(connection.addIceCandidate(rtc_ice_candidate))
 
     def process_signalling_for_address(
         self, partner_address: Address, description: Dict[str, str]
