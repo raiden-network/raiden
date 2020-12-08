@@ -29,6 +29,7 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     SecretRegistryAddress,
+    TransactionHash,
     Union,
 )
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY
@@ -81,12 +82,13 @@ class SecretRegistry:
     def register_secret(self, secret: Secret) -> None:
         self.register_secret_batch([secret])
 
-    def register_secret_batch(self, secrets: List[Secret]) -> None:
+    def register_secret_batch(self, secrets: List[Secret]) -> List[TransactionHash]:
         """Register a batch of secrets. Check if they are already registered at
         the given block identifier."""
         secrets_to_register = list()
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
+        secrets_results = list()
         transaction_result = AsyncResult()
         wait_for = set()
 
@@ -128,10 +130,12 @@ class SecretRegistry:
                 if other_result is not None:
                     wait_for.add(other_result)
                     secrethashes_not_sent.append(secrethash_hex)
+                    secrets_results.append(other_result)
                 elif not self.is_secret_registered(secrethash, verification_block_hash):
                     secrets_to_register.append(secret)
                     secrethashes_to_register.append(secrethash_hex)
                     self.open_secret_transactions[secret] = transaction_result
+                    secrets_results.append(transaction_result)
 
         # From here on the lock is not required. Context-switches will happen
         # for the gas estimation and the transaction, however the
@@ -141,6 +145,7 @@ class SecretRegistry:
             self._register_secret_batch(secrets_to_register, transaction_result, log_details)
 
         gevent.joinall(wait_for, raise_error=True)
+        return [result.get() for result in secrets_results]
 
     def _register_secret_batch(
         self,
@@ -239,7 +244,7 @@ class SecretRegistry:
             if estimated_transaction is not None:
                 assert msg, "Unexpected control flow, an exception should have been raised."
                 error = (
-                    f"Sending the the transaction for registerSecretBatch "
+                    f"Sending the transaction for registerSecretBatch "
                     f"failed with: `{msg}`.  This happens if the same ethereum "
                     f"account is being used by more than one program which is not "
                     f"supported."

@@ -1,5 +1,6 @@
 import random
 from math import ceil
+from typing import Tuple
 
 from raiden.constants import ABSENT_SECRET
 from raiden.settings import (
@@ -44,7 +45,6 @@ from raiden.utils.typing import (
     Address,
     BlockExpiration,
     BlockNumber,
-    ChannelID,
     Dict,
     FeeAmount,
     List,
@@ -55,6 +55,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    TokenNetworkAddress,
 )
 
 
@@ -78,7 +79,7 @@ def calculate_fee_margin(payment_amount: PaymentAmount, estimated_fee: FeeAmount
 def calculate_safe_amount_with_fee(
     payment_amount: PaymentAmount, estimated_fee: FeeAmount
 ) -> PaymentWithFeeAmount:
-    """ Calculates the total payment amount
+    """Calculates the total payment amount
 
     This total amount consists of the payment amount, the estimated fees as well as a
     small margin that is added to increase the likelihood of payments succeeding in
@@ -139,7 +140,7 @@ def handle_block(
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
-    """ Checks if the lock has expired, and if it has sends a remove expired
+    """Checks if the lock has expired, and if it has sends a remove expired
     lock and emits the failing events.
     """
     secrethash = initiator_state.transfer.lock.secrethash
@@ -222,7 +223,7 @@ def handle_block(
 
 
 def try_new_route(
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
@@ -242,8 +243,8 @@ def try_new_route(
     )
 
     for reachable_route_state in reachable_route_states:
-        candidate_channel_state = channelidentifiers_to_channels[
-            reachable_route_state.forward_channel_id
+        candidate_channel_state = addresses_to_channel[
+            (transfer_description.token_network_address, reachable_route_state.route[1])
         ]
 
         amount_with_fee = calculate_safe_amount_with_fee(
@@ -432,7 +433,7 @@ def handle_offchain_secretreveal(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
-    """ Once the next hop proves it knows the secret, the initiator can unlock
+    """Once the next hop proves it knows the secret, the initiator can unlock
     the mediated transfer.
 
     This will validate the secret, and if valid a new balance proof is sent to
@@ -479,7 +480,7 @@ def handle_onchain_secretreveal(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
-    """ When a secret is revealed on-chain all nodes learn the secret.
+    """When a secret is revealed on-chain all nodes learn the secret.
 
     This check the on-chain secret corresponds to the one used by the
     initiator, and if valid a new balance proof is sent to the next hop with

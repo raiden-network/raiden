@@ -16,7 +16,7 @@ LOCKSROOT_OF_NO_LOCKS_AS_STRING = encode_hex(LOCKSROOT_OF_NO_LOCKS)
 
 
 class BalanceProof:
-    """ A Balance Proof
+    """A Balance Proof
 
     If transferred_amount, locked_amount and locksroot are set, balance_proof hash is
     computed using these values. Otherwise a value stored in _balance_hash is returned.

@@ -14,6 +14,7 @@ from raiden.utils.typing import (
     Signature,
     TokenAddress,
     TokenAmount,
+    TransactionHash,
     WithdrawAmount,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
@@ -121,8 +122,8 @@ class PaymentChannel:
         partner_signature: Signature,
         expiration_block: BlockExpiration,
         block_identifier: BlockIdentifier,
-    ) -> None:
-        self.token_network.set_total_withdraw(
+    ) -> TransactionHash:
+        return self.token_network.set_total_withdraw(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
             total_withdraw=total_withdraw,
@@ -181,8 +182,8 @@ class PaymentChannel:
         receiver: Address,
         pending_locks: PendingLocksState,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
-        self.token_network.unlock(
+    ) -> TransactionHash:
+        return self.token_network.unlock(
             channel_identifier=self.channel_identifier,
             sender=sender,
             receiver=receiver,
@@ -199,9 +200,9 @@ class PaymentChannel:
         partner_locked_amount: LockedAmount,
         partner_locksroot: Locksroot,
         block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         """ Settles the channel. """
-        self.token_network.settle(
+        return self.token_network.settle(
             channel_identifier=self.channel_identifier,
             transferred_amount=transferred_amount,
             locked_amount=locked_amount,

@@ -7,6 +7,7 @@ from eth_utils import is_checksum_address, to_canonical_address, to_checksum_add
 
 from raiden.api.rest import APIServer
 from raiden.constants import Environment
+from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
@@ -16,6 +17,7 @@ from raiden.tests.integration.api.rest.utils import (
 )
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
+from raiden.utils.typing import BlockNumber, List
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
@@ -27,10 +29,13 @@ from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 @pytest.mark.parametrize("environment_type", [Environment.PRODUCTION])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_register_token_mainnet(
-    api_server_test_instance: APIServer, token_amount, raiden_network, contract_manager
+    api_server_test_instance: APIServer,
+    token_amount,
+    raiden_network: List[RaidenService],
+    contract_manager,
 ):
     app0 = raiden_network[0]
-    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+    contract_proxy, _ = app0.rpc_client.deploy_single_contract(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
         constructor_parameters=(token_amount, 2, "raiden", "Rd"),
@@ -56,16 +61,20 @@ def test_register_token_mainnet(
 @pytest.mark.parametrize("register_tokens", [False])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_register_token(
-    api_server_test_instance, token_amount, raiden_network, contract_manager, retry_timeout
+    api_server_test_instance,
+    token_amount,
+    raiden_network: List[RaidenService],
+    contract_manager,
+    retry_timeout,
 ):
     app0 = raiden_network[0]
-    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+    contract_proxy, _ = app0.rpc_client.deploy_single_contract(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
         constructor_parameters=(token_amount, 2, "raiden", "Rd1"),
     )
     new_token_address = Address(to_canonical_address(contract_proxy.address))
-    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+    contract_proxy, _ = app0.rpc_client.deploy_single_contract(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
         constructor_parameters=(token_amount, 2, "raiden", "Rd2"),
@@ -76,13 +85,17 @@ def test_register_token(
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
     # Therefore, until that block is received.
     wait_for_block(
-        raiden=app0.raiden,
-        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        raiden=app0,
+        block_number=BlockNumber(
+            app0.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
         retry_timeout=retry_timeout,
     )
     wait_for_block(
-        raiden=app0.raiden,
-        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        raiden=app0,
+        block_number=BlockNumber(
+            app0.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
         retry_timeout=retry_timeout,
     )
 
@@ -131,10 +144,14 @@ def test_register_token(
 @pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_register_token_without_balance(
-    api_server_test_instance, token_amount, raiden_network, contract_manager, retry_timeout
+    api_server_test_instance,
+    token_amount,
+    raiden_network: List[RaidenService],
+    contract_manager,
+    retry_timeout,
 ):
     app0 = raiden_network[0]
-    contract_proxy, _ = app0.raiden.rpc_client.deploy_single_contract(
+    contract_proxy, _ = app0.rpc_client.deploy_single_contract(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
         constructor_parameters=(token_amount, 2, "raiden", "Rd2"),
@@ -145,13 +162,15 @@ def test_register_token_without_balance(
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
     # Therefore, until that block is received.
     wait_for_block(
-        raiden=app0.raiden,
-        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        raiden=app0,
+        block_number=BlockNumber(
+            app0.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
         retry_timeout=retry_timeout,
     )
 
     # Burn all the eth and then make sure we get the appropriate API error
-    burn_eth(app0.raiden.rpc_client)
+    burn_eth(app0.rpc_client)
     poor_request = grequests.put(
         api_url_for(
             api_server_test_instance,

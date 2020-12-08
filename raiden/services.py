@@ -113,7 +113,6 @@ def update_monitoring_service_from_balance_proof(
             "Skipping update to Monitoring service. "
             "Your channel balance {channel_balance} is less than "
             "the required minimum balance of {min_balance} "
-            "that you have set before sending the MonitorRequest"
         )
 
         dai_token_network_address = views.get_token_network_address_by_token_address(
@@ -127,23 +126,29 @@ def update_monitoring_service_from_balance_proof(
             token_address=WETH_TOKEN_ADDRESS,
         )
         channel_balance = get_balance(
-            sender=channel_state.our_state, receiver=channel_state.partner_state,
+            sender=channel_state.our_state,
+            receiver=channel_state.partner_state,
         )
+
         if channel_state.canonical_identifier.token_network_address == dai_token_network_address:
             if channel_balance < MIN_MONITORING_AMOUNT_DAI:
-                log.warning(
-                    message.format(
-                        channel_balance=channel_balance, min_balance=MIN_MONITORING_AMOUNT_DAI
-                    )
+                data = dict(
+                    channel_balance=channel_balance,
+                    min_balance=MIN_MONITORING_AMOUNT_DAI,
+                    channel_id=channel_state.canonical_identifier.channel_identifier,
+                    token_address=to_checksum_address(DAI_TOKEN_ADDRESS),
                 )
+                log.warning(message.format(**data), **data)
                 return
         if channel_state.canonical_identifier.token_network_address == weth_token_network_address:
             if channel_balance < MIN_MONITORING_AMOUNT_WETH:
-                log.warning(
-                    message.format(
-                        channel_balance=channel_balance, min_balance=MIN_MONITORING_AMOUNT_WETH
-                    )
+                data = dict(
+                    channel_balance=channel_balance,
+                    min_balance=MIN_MONITORING_AMOUNT_WETH,
+                    channel_id=channel_state.canonical_identifier.channel_identifier,
+                    token_address=to_checksum_address(WETH_TOKEN_ADDRESS),
                 )
+                log.warning(message.format(**data), **data)
                 return
 
     log.info(

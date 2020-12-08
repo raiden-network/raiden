@@ -2,20 +2,23 @@ import os
 import random
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import pytest
+import ulid
 
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
     HIGH_STATECHANGE_ULID,
+    LOW_STATECHANGE_ULID,
     RANGE_ALL_STATE_CHANGES,
     SerializedSQLiteStorage,
     StateChangeID,
 )
 from raiden.storage.utils import TimestampedEvent
-from raiden.storage.wal import WriteAheadLog, restore_to_state_change
+from raiden.storage.wal import WriteAheadLog, restore_state
 from raiden.tests.utils.factories import (
     make_address,
     make_block_hash,
@@ -23,9 +26,8 @@ from raiden.tests.utils.factories import (
     make_locksroot,
     make_token_network_registry_address,
     make_transaction_hash,
-    make_ulid,
 )
-from raiden.transfer.architecture import State, StateChange, StateManager, TransitionResult
+from raiden.transfer.architecture import State, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
 from raiden.utils.typing import BlockGasLimit, BlockNumber, Callable, List, TokenAmount
@@ -45,24 +47,38 @@ class AccState(State):
 
 
 def state_transtion_acc(state, state_change):
-    state = state or AccState()
+    state = state
     state.state_changes.append(state_change)
     return TransitionResult(state, list())
 
 
 def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:
     serializer = JSONSerializer()
+    state = state or Empty()
 
-    state_manager = StateManager(state_transition, state)
     storage = SerializedSQLiteStorage(":memory:", serializer)
-    wal = WriteAheadLog(state_manager, storage)
-    return wal
+    storage.write_first_state_snapshot(state)
+
+    return WriteAheadLog(state, storage, state_transition)
 
 
 def dispatch(wal: WriteAheadLog, state_changes: List[StateChange]):
     with wal.process_state_change_atomically() as dispatcher:
         for state_change in state_changes:
             dispatcher.dispatch(state_change)
+
+
+def test_initial_state_snapshotting():
+    serializer = JSONSerializer()
+    state = Empty()
+
+    storage = SerializedSQLiteStorage(":memory:", serializer)
+
+    assert not storage.database.has_snapshot()
+    assert not storage.get_snapshot_before_state_change(LOW_STATECHANGE_ULID)
+    storage.write_first_state_snapshot(state)
+    assert storage.database.has_snapshot()
+    assert storage.get_snapshot_before_state_change(LOW_STATECHANGE_ULID)
 
 
 def test_connect_to_corrupt_db(tmpdir):
@@ -134,19 +150,20 @@ def test_write_read_log() -> None:
 
     # Make sure state snapshot can only go for corresponding state change ids
     with pytest.raises(sqlite3.IntegrityError):
-        wal.storage.write_state_snapshot(State(), StateChangeID(make_ulid()), 1)
+        wal.storage.write_state_snapshot(State(), StateChangeID(ulid.new()), 1)
 
 
 def test_timestamped_event():
     event = EventPaymentSentFailed(
         make_token_network_registry_address(), make_address(), 1, make_address(), "whatever"
     )
-    log_time = "2018-09-07T20:02:35.000"
+    log_time = datetime.fromisoformat("2018-09-07T20:02:35.000")
 
     timestamped = TimestampedEvent(event, log_time)
     assert timestamped.log_time == log_time
-    assert timestamped.reason == timestamped.wrapped_event.reason == "whatever"
-    assert timestamped.identifier == 1
+    assert isinstance(timestamped.event, EventPaymentSentFailed)
+    assert timestamped.reason == timestamped.event.reason == "whatever"
+    assert timestamped.identifier == timestamped.event.identifier == 1
 
 
 def test_write_read_events():
@@ -170,11 +187,11 @@ def test_write_read_events():
 
     latest_event = new_events[-1]
     assert isinstance(latest_event, TimestampedEvent)
-    assert isinstance(latest_event.wrapped_event, EventPaymentSentFailed)
+    assert isinstance(latest_event.event, EventPaymentSentFailed)
 
 
 def test_restore_without_snapshot():
-    wal = new_wal(state_transition_noop)
+    wal = new_wal(state_transition_noop, AccState())
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     dispatch(wal, [block1])
@@ -185,38 +202,36 @@ def test_restore_without_snapshot():
     block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     dispatch(wal, [block3])
 
-    _, _, newwal = restore_to_state_change(
+    aggregate = restore_state(
         transition_function=state_transtion_acc,
         storage=wal.storage,
         state_change_identifier=HIGH_STATECHANGE_ULID,
         node_address=make_address(),
     )
 
-    aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [block1, block2, block3]
 
 
 def test_restore_without_snapshot_in_batches():
-    wal = new_wal(state_transition_noop)
+    wal = new_wal(state_transition_noop, AccState())
 
     block1 = Block(block_number=5, gas_limit=1, block_hash=make_transaction_hash())
     block2 = Block(block_number=7, gas_limit=1, block_hash=make_transaction_hash())
     block3 = Block(block_number=8, gas_limit=1, block_hash=make_transaction_hash())
     dispatch(wal, [block1, block2, block3])
 
-    _, _, newwal = restore_to_state_change(
+    aggregate = restore_state(
         transition_function=state_transtion_acc,
         storage=wal.storage,
         state_change_identifier=HIGH_STATECHANGE_ULID,
         node_address=make_address(),
     )
 
-    aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [block1, block2, block3]
 
 
 def test_get_snapshot_before_state_change() -> None:
-    wal = new_wal(state_transtion_acc)
+    wal = new_wal(state_transtion_acc, AccState())
 
     block1 = Block(
         block_number=BlockNumber(5), gas_limit=BlockGasLimit(1), block_hash=make_block_hash()

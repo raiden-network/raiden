@@ -2,6 +2,7 @@ import pytest
 
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.transfers import RevealSecret, SecretRequest, Unlock
+from raiden.raiden_service import RaidenService
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
@@ -16,11 +17,13 @@ from raiden.tests.utils.transfer import sign_and_inject
 from raiden.transfer import views
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
+    List,
     LockedAmount,
     Locksroot,
     Nonce,
     PaymentAmount,
     PaymentID,
+    TargetAddress,
     TokenAmount,
 )
 
@@ -28,12 +31,12 @@ from raiden.utils.typing import (
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [1])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
+def test_receive_secrethashtransfer_unknown(raiden_network: List[RaidenService], token_addresses):
     app0 = raiden_network[0]
     token_address = token_addresses[0]
 
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
     )
     assert token_network_address
 
@@ -52,7 +55,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
             token=token_address,
             canonical_identifier=canonical_identifier,
             transferred_amount=amount,
-            recipient=app0.raiden.address,
+            recipient=TargetAddress(app0.address),
             locksroot=locksroot,
             amount=amount,
             secret=UNIT_SECRET,

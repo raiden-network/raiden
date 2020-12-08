@@ -1,4 +1,6 @@
+aiortc
 cachetools
+click
 coincurve
 colorama
 eth-keyfile
@@ -10,15 +12,13 @@ Flask-Cors
 Flask-RESTful
 gevent>=1.5a3
 guppy3
-ipython
-marshmallow-dataclass==6.0.0
+marshmallow-dataclass
 marshmallow-polyfield
 marshmallow
 marshmallow_enum
 matrix-client==0.3.2
 mirakuru==2.1.2
 netifaces
-networkx
 psutil
 pysha3
 toml
@@ -29,3 +29,4 @@ structlog
 web3
 typing_extensions
 objgraph
+ulid-py

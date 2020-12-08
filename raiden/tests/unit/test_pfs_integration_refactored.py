@@ -2,11 +2,11 @@ import json
 from unittest.mock import Mock, patch
 
 import pytest
-import requests
 from eth_utils import to_canonical_address
+from requests import RequestException
 
 from raiden.exceptions import ServiceRequestFailed
-from raiden.network.pathfinding import PFSInfo, get_pfs_info
+from raiden.network.pathfinding import PFSInfo, get_pfs_info, session
 
 # We first test the correct handling of the pfs info endpoint. The info endpoint provides
 # the Raiden Client with price and information about the token network registry.
@@ -38,7 +38,7 @@ def test_get_pfs_info_success():
     response = Mock()
     response.configure_mock(status_code=200, content=json.dumps(info_data))
 
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(session, "get", return_value=response):
         pfs_info = get_pfs_info("url")
 
         req_registry_address = to_canonical_address(pfs_test_default_registry_address)
@@ -56,7 +56,7 @@ def test_get_pfs_info_success():
 
 
 def test_get_pfs_info_error():
-    """ This test tests the correct handling of the 3 error cases of get_pfs_info
+    """This test tests the correct handling of the 3 error cases of get_pfs_info
     JSONDecodeError, RequestException and KeyError
     """
 
@@ -77,14 +77,14 @@ def test_get_pfs_info_error():
     response = Mock()
     response.configure_mock(status_code=200, content=str(incorrect_json_info_data))
 
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(session, "get", return_value=response):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
         assert "Selected Pathfinding Service returned unexpected reply" == str(error.value)
 
     # test RequestException
-    with patch.object(requests, "get", side_effect=requests.RequestException()):
+    with patch.object(session, "get", side_effect=RequestException()):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
@@ -103,13 +103,13 @@ def test_get_pfs_info_error():
     }
 
     response.configure_mock(status_code=200, content=json.dumps(incorrect_info_data))
-    with patch.object(requests, "get", return_value=response):
+    with patch.object(session, "get", return_value=response):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 
         assert "Selected Pathfinding Service returned unexpected reply" == str(error.value)
 
-    with patch.object(requests, "get", side_effect=requests.exceptions.RequestException):
+    with patch.object(session, "get", side_effect=RequestException):
         with pytest.raises(ServiceRequestFailed) as error:
             get_pfs_info("url")
 

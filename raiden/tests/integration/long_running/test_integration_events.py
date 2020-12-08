@@ -5,17 +5,14 @@ from web3._utils.events import construct_event_topic_set
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.app import App
-from raiden.blockchain.events import (
-    ALL_EVENTS,
-    get_all_netting_channel_events,
-    get_contract_events,
-    get_token_network_events,
-    get_token_network_registry_events,
-)
+from raiden.blockchain.events import get_all_netting_channel_events, get_contract_events
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.raiden_service import RaidenService
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    INTERNAL_ROUTING_DEFAULT_FEE_PERC,
+)
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
@@ -24,6 +21,7 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     block_offset_timeout,
+    create_route_state_for_route,
     get_channelstate,
     watch_for_unlock_failures,
 )
@@ -42,6 +40,7 @@ from raiden.utils.typing import (
     BlockNumber,
     ChannelID,
     Dict,
+    FeeAmount,
     List,
     PaymentAmount,
     PaymentID,
@@ -52,6 +51,7 @@ from raiden.utils.typing import (
 from raiden.waiting import wait_until
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
@@ -139,33 +139,29 @@ def get_netting_channel_settled_events(
 
 
 def wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout):
-    waiting.wait_for_newchannel(
-        app1.raiden, registry_address, token_address, app0.raiden.address, retry_timeout
-    )
-    waiting.wait_for_newchannel(
-        app0.raiden, registry_address, token_address, app1.raiden.address, retry_timeout
-    )
+    waiting.wait_for_newchannel(app1, registry_address, token_address, app0.address, retry_timeout)
+    waiting.wait_for_newchannel(app0, registry_address, token_address, app1.address, retry_timeout)
 
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_channel_new(raiden_chain, retry_timeout, token_addresses):
+def test_channel_new(raiden_chain: List[RaidenService], retry_timeout, token_addresses):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
-    registry_address = app0.raiden.default_registry.address
+    registry_address = app0.default_registry.address
     token_address = token_addresses[0]
 
     channelcount0 = views.total_token_network_channels(
-        views.state_from_app(app0), registry_address, token_address
+        views.state_from_raiden(app0), registry_address, token_address
     )
 
-    RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
+    RaidenAPI(app0).channel_open(registry_address, token_address, app1.address)
 
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     # The channel is created but without funds
     channelcount1 = views.total_token_network_channels(
-        views.state_from_app(app0), registry_address, token_address
+        views.state_from_raiden(app0), registry_address, token_address
     )
     assert channelcount0 + 1 == channelcount1
 
@@ -174,26 +170,28 @@ def test_channel_new(raiden_chain, retry_timeout, token_addresses):
 @pytest.mark.parametrize("privatekey_seed", ["event_new_channel:{}"])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
-def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
+def test_channel_deposit(
+    raiden_chain: List[RaidenService], deposit, retry_timeout, token_addresses
+):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
 
-    registry_address = app0.raiden.default_registry.address
+    registry_address = app0.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
     )
     assert token_network_address
 
     channel0 = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(app0), token_network_address, app1.raiden.address
+        views.state_from_raiden(app0), token_network_address, app1.address
     )
     channel1 = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(app0), token_network_address, app1.raiden.address
+        views.state_from_raiden(app0), token_network_address, app1.address
     )
     assert channel0 is None
     assert channel1 is None
 
-    RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
+    RaidenAPI(app0).channel_open(registry_address, token_address, app1.address)
 
     timeout_seconds = 15
     exception = RuntimeError(f"Did not see the channels open within {timeout_seconds} seconds")
@@ -202,8 +200,8 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 
     assert_synced_channel_state(token_network_address, app0, Balance(0), [], app1, Balance(0), [])
 
-    RaidenAPI(app0.raiden).set_total_channel_deposit(
-        registry_address, token_address, app1.raiden.address, deposit
+    RaidenAPI(app0).set_total_channel_deposit(
+        registry_address, token_address, app1.address, deposit
     )
 
     exception = RuntimeError(f"Did not see the channel deposit within {timeout_seconds} seconds")
@@ -214,8 +212,8 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 
     assert_synced_channel_state(token_network_address, app0, deposit, [], app1, Balance(0), [])
 
-    RaidenAPI(app1.raiden).set_total_channel_deposit(
-        registry_address, token_address, app0.raiden.address, deposit
+    RaidenAPI(app1).set_total_channel_deposit(
+        registry_address, token_address, app0.address, deposit
     )
 
     with gevent.Timeout(seconds=timeout_seconds, exception=exception):
@@ -230,7 +228,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_query_events(
-    raiden_chain,
+    raiden_chain: List[RaidenService],
     token_addresses,
     deposit,
     settle_timeout,
@@ -239,25 +237,22 @@ def test_query_events(
     blockchain_type,
 ):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
-    registry_address = app0.raiden.default_registry.address
+    registry_address = app0.default_registry.address
     token_address = token_addresses[0]
 
-    token_network_address = app0.raiden.default_registry.get_token_network(
-        token_address, BLOCK_ID_LATEST
-    )
+    token_network_address = app0.default_registry.get_token_network(token_address, BLOCK_ID_LATEST)
 
     assert token_network_address
-    manager0 = app0.raiden.proxy_manager.token_network(token_network_address, BLOCK_ID_LATEST)
+    manager0 = app0.proxy_manager.token_network(token_network_address, BLOCK_ID_LATEST)
 
     channelcount0 = views.total_token_network_channels(
-        views.state_from_app(app0), registry_address, token_address
+        views.state_from_raiden(app0), registry_address, token_address
     )
 
-    events = get_token_network_registry_events(
-        proxy_manager=app0.raiden.proxy_manager,
-        token_network_registry_address=registry_address,
-        contract_manager=contract_manager,
-        events=ALL_EVENTS,
+    events = get_contract_events(
+        proxy_manager=app0.proxy_manager,
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        contract_address=Address(registry_address),
     )
 
     assert must_have_event(
@@ -274,25 +269,23 @@ def test_query_events(
     if blockchain_type == "geth":
         # FIXME: This is apparently meant to verify that querying nonexisting blocks
         # returns an empty list, which is not true for parity.
-        events = get_token_network_registry_events(
-            proxy_manager=app0.raiden.proxy_manager,
-            token_network_registry_address=app0.raiden.default_registry.address,
-            contract_manager=contract_manager,
-            events=ALL_EVENTS,
+        events = get_contract_events(
+            proxy_manager=app0.proxy_manager,
+            abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+            contract_address=Address(app0.default_registry.address),
             from_block=BlockNumber(999999998),
             to_block=BlockNumber(999999999),
         )
         assert not events
 
-    RaidenAPI(app0.raiden).channel_open(registry_address, token_address, app1.raiden.address)
+    RaidenAPI(app0).channel_open(registry_address, token_address, app1.address)
 
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
-    events = get_token_network_events(
-        proxy_manager=app0.raiden.proxy_manager,
-        token_network_address=manager0.address,
-        contract_manager=contract_manager,
-        events=ALL_EVENTS,
+    events = get_contract_events(
+        proxy_manager=app0.proxy_manager,
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_address=Address(manager0.address),
     )
 
     _event = must_have_event(
@@ -300,8 +293,8 @@ def test_query_events(
         {
             "event": ChannelEvent.OPENED,
             "args": {
-                "participant1": to_checksum_address(app0.raiden.address),
-                "participant2": to_checksum_address(app1.raiden.address),
+                "participant1": to_checksum_address(app0.address),
+                "participant2": to_checksum_address(app1.address),
                 "settle_timeout": settle_timeout,
             },
         },
@@ -311,11 +304,10 @@ def test_query_events(
 
     if blockchain_type == "geth":
         # see above
-        events = get_token_network_events(
-            proxy_manager=app0.raiden.proxy_manager,
-            token_network_address=manager0.address,
-            contract_manager=contract_manager,
-            events=ALL_EVENTS,
+        events = get_contract_events(
+            proxy_manager=app0.proxy_manager,
+            abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            contract_address=Address(manager0.address),
             from_block=BlockNumber(999999998),
             to_block=BlockNumber(999999999),
         )
@@ -323,25 +315,25 @@ def test_query_events(
 
     # channel is created but not opened and without funds
     channelcount1 = views.total_token_network_channels(
-        views.state_from_app(app0), registry_address, token_address
+        views.state_from_raiden(app0), registry_address, token_address
     )
     assert channelcount0 + 1 == channelcount1
 
     assert_synced_channel_state(token_network_address, app0, Balance(0), [], app1, Balance(0), [])
 
-    RaidenAPI(app0.raiden).set_total_channel_deposit(
-        registry_address, token_address, app1.raiden.address, deposit
+    RaidenAPI(app0).set_total_channel_deposit(
+        registry_address, token_address, app1.address, deposit
     )
 
     all_netting_channel_events = get_all_netting_channel_events(
-        proxy_manager=app0.raiden.proxy_manager,
+        proxy_manager=app0.proxy_manager,
         token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
-        contract_manager=app0.raiden.contract_manager,
+        contract_manager=app0.contract_manager,
     )
 
     deposit_events = get_netting_channel_deposit_events(
-        proxy_manager=app0.raiden.proxy_manager,
+        proxy_manager=app0.proxy_manager,
         token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=contract_manager,
@@ -350,7 +342,7 @@ def test_query_events(
     total_deposit_event = {
         "event": ChannelEvent.DEPOSIT,
         "args": {
-            "participant": to_checksum_address(app0.raiden.address),
+            "participant": to_checksum_address(app0.address),
             "total_deposit": deposit,
             "channel_identifier": channel_id,
         },
@@ -358,17 +350,17 @@ def test_query_events(
     assert must_have_event(deposit_events, total_deposit_event)
     assert must_have_event(all_netting_channel_events, total_deposit_event)
 
-    RaidenAPI(app0.raiden).channel_close(registry_address, token_address, app1.raiden.address)
+    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address)
 
     all_netting_channel_events = get_all_netting_channel_events(
-        proxy_manager=app0.raiden.proxy_manager,
+        proxy_manager=app0.proxy_manager,
         token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
-        contract_manager=app0.raiden.contract_manager,
+        contract_manager=app0.contract_manager,
     )
 
     closed_events = get_netting_channel_closed_events(
-        proxy_manager=app0.raiden.proxy_manager,
+        proxy_manager=app0.proxy_manager,
         token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=contract_manager,
@@ -378,24 +370,24 @@ def test_query_events(
         "event": ChannelEvent.CLOSED,
         "args": {
             "channel_identifier": channel_id,
-            "closing_participant": to_checksum_address(app0.raiden.address),
+            "closing_participant": to_checksum_address(app0.address),
         },
     }
     assert must_have_event(closed_events, closed_event)
     assert must_have_event(all_netting_channel_events, closed_event)
 
-    settle_expiration = app0.raiden.rpc_client.block_number() + settle_timeout + 5
-    app0.raiden.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
+    settle_expiration = app0.rpc_client.block_number() + settle_timeout + 5
+    app0.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
-        proxy_manager=app0.raiden.proxy_manager,
+        proxy_manager=app0.proxy_manager,
         token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
-        contract_manager=app0.raiden.contract_manager,
+        contract_manager=app0.contract_manager,
     )
 
     settled_events = get_netting_channel_settled_events(
-        proxy_manager=app0.raiden.proxy_manager,
+        proxy_manager=app0.proxy_manager,
         token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=contract_manager,
@@ -410,36 +402,51 @@ def test_query_events(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_secret_revealed_on_chain(
-    raiden_chain, deposit, settle_timeout, token_addresses, retry_interval_initial
+    raiden_chain: List[RaidenService],
+    deposit,
+    settle_timeout,
+    token_addresses,
+    retry_interval_initial,
 ):
     """ A node must reveal the secret on-chain if it's known and the channel is closed. """
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
     )
     assert token_network_address
 
-    amount = 10
-    identifier = 1
-    target = app2.raiden.address
+    amount = PaymentAmount(10)
+    identifier = PaymentID(1)
+    target = TargetAddress(app2.address)
     secret, secrethash = factories.make_secret_with_hash()
 
     # Reveal the secret, but do not unlock it off-chain
-    app1_hold_event_handler = app1.raiden.raiden_event_handler
+    app1_hold_event_handler = app1.raiden_event_handler
+
+    msg = "test apps must have HoldRaidenEventHandler set"
+    assert isinstance(app1_hold_event_handler, HoldRaidenEventHandler), msg
+
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
-    app0.raiden.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[
+            create_route_state_for_route(
+                apps=raiden_chain,
+                token_address=token_address,
+                fee_estimate=FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount)),
+            )
+        ],
     )
 
-    with watch_for_unlock_failures(*raiden_chain), block_offset_timeout(app0.raiden):
+    with watch_for_unlock_failures(*raiden_chain), block_offset_timeout(app0):
         wait_for_state_change(
-            app2.raiden, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval_initial
+            app2, ReceiveSecretReveal, {"secrethash": secrethash}, retry_interval_initial
         )
 
     channel_state2_1 = get_channelstate(app2, app1, token_network_address)
@@ -456,19 +463,20 @@ def test_secret_revealed_on_chain(
     channel_close_event = ContractSendChannelClose(
         canonical_identifier=channel_state2_1.canonical_identifier,
         balance_proof=balance_proof,
-        triggered_by_block_hash=app0.raiden.rpc_client.blockhash_from_blocknumber(BLOCK_ID_LATEST),
+        triggered_by_block_hash=app0.rpc_client.blockhash_from_blocknumber(BLOCK_ID_LATEST),
     )
-    current_state = app2.raiden.wal.state_manager.current_state
-    app2.raiden.raiden_event_handler.on_raiden_events(
-        raiden=app2.raiden, chain_state=current_state, events=[channel_close_event]
+
+    assert app2.wal, "test apps must be started by the fixture."
+    current_state = views.state_from_raiden(app2)
+
+    app2.raiden_event_handler.on_raiden_events(
+        raiden=app2, chain_state=current_state, events=[channel_close_event]
     )
 
     settle_expiration = (
-        app0.raiden.rpc_client.block_number()
-        + settle_timeout
-        + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        app0.rpc_client.block_number() + settle_timeout + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    app0.raiden.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
+    app0.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
     # TODO:
     # - assert on the transferred amounts on-chain (for settle and unlock)
@@ -481,7 +489,7 @@ def test_secret_revealed_on_chain(
 
     with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
         wait_for_state_change(
-            app2.raiden,
+            app2,
             ContractReceiveSecretReveal,
             {"secrethash": secrethash},
             retry_interval_initial,
@@ -490,18 +498,18 @@ def test_secret_revealed_on_chain(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_wait):
+def test_clear_closed_queue(raiden_network: List[RaidenService], token_addresses, network_wait):
     """ Closing a channel clears the respective message queue. """
     app0, app1 = raiden_network
 
-    hold_event_handler = app1.raiden.raiden_event_handler
+    hold_event_handler = app1.raiden_event_handler
     assert isinstance(hold_event_handler, HoldRaidenEventHandler)
 
-    registry_address = app0.raiden.default_registry.address
+    registry_address = app0.default_registry.address
     token_address = token_addresses[0]
-    chain_state0 = views.state_from_app(app0)
+    chain_state0 = views.state_from_raiden(app0)
     token_network_address = views.get_token_network_address_by_token_address(
-        chain_state0, app0.raiden.default_registry.address, token_address
+        chain_state0, app0.default_registry.address, token_address
     )
     assert token_network_address
     token_network = views.get_token_network_by_address(chain_state0, token_network_address)
@@ -509,12 +517,9 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
 
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
-    assert (
-        channel_identifier
-        in token_network.partneraddresses_to_channelidentifiers[app1.raiden.address]
-    )
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[app1.address]
 
-    target = app1.raiden.address
+    target = app1.address
     secret = Secret(keccak(target))
     secrethash = sha256_secrethash(secret)
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -522,7 +527,7 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
     # make an unconfirmed transfer to ensure the nodes have communicated
     amount = PaymentAmount(10)
     payment_identifier = PaymentID(1337)
-    app0.raiden.start_mediated_transfer_with_secret(
+    app0.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=amount,
         target=TargetAddress(target),
@@ -530,53 +535,53 @@ def test_clear_closed_queue(raiden_network: List[App], token_addresses, network_
         secret=secret,
     )
 
-    app1.raiden.transport.stop()
-    app1.raiden.transport.greenlet.get()
+    app1.transport.stop()
+    app1.transport.greenlet.get()
 
     # make sure to wait until the queue is created
     def has_initiator_events():
-        assert app0.raiden.wal, "raiden server must have been started"
-        initiator_events = app0.raiden.wal.storage.get_events()
+        assert app0.wal, "raiden server must have been started"
+        initiator_events = app0.wal.storage.get_events()
         return search_for_item(initiator_events, SendLockedTransfer, {})
 
     assert wait_until(has_initiator_events, network_wait)
 
     # assert the specific queue is present
-    chain_state0 = views.state_from_app(app0)
+    chain_state0 = views.state_from_raiden(app0)
     queues0 = views.get_all_messagequeues(chain_state=chain_state0)
     assert [
         (queue_id, queue)
         for queue_id, queue in queues0.items()
-        if queue_id.recipient == app1.raiden.address
+        if queue_id.recipient == app1.address
         and queue_id.canonical_identifier.channel_identifier == channel_identifier
         and queue
     ]
 
     # A ChannelClose event will be generated, this will be polled by both apps
-    RaidenAPI(app0.raiden).channel_close(registry_address, token_address, app1.raiden.address)
+    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address)
 
-    with block_offset_timeout(app0.raiden, "Could not get close event"):
+    with block_offset_timeout(app0, "Could not get close event"):
         waiting.wait_for_close(
-            app0.raiden,
+            app0,
             registry_address,
             token_address,
             [channel_identifier],
-            app0.raiden.alarm.sleep_time,
+            app0.alarm.sleep_time,
         )
 
     # assert all queues with this partner are gone or empty
-    chain_state0 = views.state_from_app(app0)
+    chain_state0 = views.state_from_raiden(app0)
     queues0 = views.get_all_messagequeues(chain_state=chain_state0)
     assert not [
         (queue_id, queue)
         for queue_id, queue in queues0.items()
-        if queue_id.recipient == app1.raiden.address and queue
+        if queue_id.recipient == app1.address and queue
     ]
 
-    chain_state1 = views.state_from_app(app1)
+    chain_state1 = views.state_from_raiden(app1)
     queues1 = views.get_all_messagequeues(chain_state=chain_state1)
     assert not [
         (queue_id, queue)
         for queue_id, queue in queues1.items()
-        if queue_id.recipient == app0.raiden.address and queue
+        if queue_id.recipient == app0.address and queue
     ]

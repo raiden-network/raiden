@@ -6,8 +6,8 @@ import gevent
 import pytest
 from gevent.event import AsyncResult
 
-from raiden.app import App
 from raiden.constants import Environment, RoutingMode
+from raiden.raiden_service import RaidenService
 from raiden.settings import CapabilitiesConfig
 from raiden.tests.utils.network import (
     CHAIN,
@@ -24,7 +24,7 @@ from raiden.tests.utils.network import (
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.transport import ParsedURL
 from raiden.utils.typing import (
-    Address,
+    BlockNumber,
     BlockTimeout,
     ChainID,
     Iterable,
@@ -58,6 +58,7 @@ def raiden_chain(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Optional[OneToNAddress],
+    monitoring_service_address: MonitoringServiceAddress,
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -73,7 +74,6 @@ def raiden_chain(
     blockchain_type: str,
     contracts_path: Path,
     user_deposit_address: UserDepositAddress,
-    monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
     logs_storage: str,
     register_tokens: bool,
@@ -84,7 +84,7 @@ def raiden_chain(
     enable_rest_api: bool,
     port_generator: Iterator[Port],
     capabilities: CapabilitiesConfig,
-) -> Iterable[List[App]]:
+) -> Iterable[List[RaidenService]]:
 
     if len(token_addresses) != 1:
         raise ValueError("raiden_chain only works with a single token")
@@ -107,7 +107,7 @@ def raiden_chain(
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
         user_deposit_address=user_deposit_address,
-        monitoring_service_contract_address=monitoring_service_contract_address,
+        monitoring_service_contract_address=monitoring_service_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         database_basedir=base_datadir,
@@ -127,7 +127,7 @@ def raiden_chain(
         capabilities_config=capabilities,
     )
 
-    confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
+    confirmed_block = BlockNumber(raiden_apps[0].confirmation_blocks + 1)
     blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
     if start_raiden_apps:
@@ -166,11 +166,6 @@ def raiden_chain(
     yield raiden_apps
 
     shutdown_apps_and_cleanup_tasks(raiden_apps)
-
-
-@pytest.fixture
-def monitoring_service_contract_address() -> Address:
-    return Address(bytes([1] * 20))
 
 
 @pytest.fixture
@@ -213,6 +208,7 @@ def raiden_network(
     token_addresses: List[TokenAddress],
     token_network_registry_address: TokenNetworkRegistryAddress,
     one_to_n_address: Optional[OneToNAddress],
+    monitoring_service_address: MonitoringServiceAddress,
     channels_per_node: int,
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
@@ -228,7 +224,6 @@ def raiden_network(
     blockchain_type: str,
     contracts_path: Path,
     user_deposit_address: Optional[UserDepositAddress],
-    monitoring_service_contract_address: MonitoringServiceAddress,
     broadcast_rooms: List[str],
     logs_storage: str,
     register_tokens: bool,
@@ -239,7 +234,7 @@ def raiden_network(
     enable_rest_api: bool,
     port_generator: Iterator[Port],
     capabilities: CapabilitiesConfig,
-) -> Iterable[List[App]]:
+) -> Iterable[List[RaidenService]]:
     service_registry_address = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
@@ -255,7 +250,7 @@ def raiden_network(
         service_registry_address=service_registry_address,
         one_to_n_address=one_to_n_address,
         user_deposit_address=user_deposit_address,
-        monitoring_service_contract_address=monitoring_service_contract_address,
+        monitoring_service_contract_address=monitoring_service_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         database_basedir=base_datadir,
@@ -274,7 +269,7 @@ def raiden_network(
         capabilities_config=capabilities,
     )
 
-    confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
+    confirmed_block = BlockNumber(raiden_apps[0].confirmation_blocks + 1)
     blockchain_services.proxy_manager.client.wait_until_block(target_block_number=confirmed_block)
 
     if start_raiden_apps:
@@ -328,10 +323,10 @@ class RestartNode:
     def link_exception_to(self, result: AsyncResult) -> None:
         self.async_result = result
 
-    def __call__(self, app: App) -> None:
+    def __call__(self, service: RaidenService) -> None:
         if self.async_result is not None:
-            app.raiden.greenlet.link_exception(self.async_result)
-        app.start()
+            service.greenlet.link_exception(self.async_result)
+        service.start()
 
 
 @pytest.fixture

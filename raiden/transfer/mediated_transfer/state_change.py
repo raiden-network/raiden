@@ -39,7 +39,7 @@ class ActionInitInitiator(StateChange):
 
 @dataclass(frozen=True)
 class ActionInitMediator(BalanceProofStateChange):
-    """ Initial state for a new mediator.
+    """Initial state for a new mediator.
 
     Args:
         from_hop: The payee route.
@@ -59,7 +59,7 @@ class ActionInitMediator(BalanceProofStateChange):
 
 @dataclass(frozen=True)
 class ActionInitTarget(BalanceProofStateChange):
-    """ Initial state for a new target.
+    """Initial state for a new target.
 
     Args:
         from_hop: The payee route.
@@ -77,7 +77,7 @@ class ActionInitTarget(BalanceProofStateChange):
 
 @dataclass(frozen=True)
 class ActionTransferReroute(BalanceProofStateChange):
-    """ A transfer will be rerouted
+    """A transfer will be rerouted
 
     Args:
         transfer: the transfer being re-routed

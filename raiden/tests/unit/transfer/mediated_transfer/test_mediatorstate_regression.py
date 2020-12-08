@@ -47,7 +47,7 @@ LONG_EXPIRATION = factories.create_properties(
 
 
 def test_payer_enter_danger_zone_with_transfer_payed():
-    """ A mediator may have paid the next hop (payee), and didn't get paid by
+    """A mediator may have paid the next hop (payee), and didn't get paid by
     the previous hop (payer).
 
     When this happens, an assertion must not be hit, because it means the
@@ -65,6 +65,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state=None,
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
@@ -86,6 +87,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
             mediator_state=new_state,
             state_change=block_state_change,
             channelidentifiers_to_channels=channels.channel_map,
+            addresses_to_channel=channels.addresses_to_channel(),
             nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
         )
@@ -100,6 +102,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state=new_state,
         state_change=receive_secret,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
@@ -120,6 +123,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state=paid_state,
         state_change=expired_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
     )
@@ -170,6 +174,7 @@ def test_regression_send_refund():
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
@@ -219,6 +224,7 @@ def test_regression_send_refund():
         mediator_state=iteration.new_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
@@ -231,7 +237,7 @@ def test_regression_send_refund():
 
 
 def test_regression_mediator_send_lock_expired_with_new_block():
-    """ The mediator must send the lock expired, but it must **not** clear
+    """The mediator must send the lock expired, but it must **not** clear
     itself if it has not **received** the corresponding message.
     """
     pseudo_random_generator = random.Random()
@@ -243,6 +249,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         mediator_state=None,
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
@@ -264,6 +271,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         mediator_state=init_iteration.new_state,
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
@@ -286,7 +294,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
 
 
 def test_regression_mediator_task_no_routes():
-    """ The mediator must only be cleared after the waiting transfer's lock has
+    """The mediator must only be cleared after the waiting transfer's lock has
     been handled.
 
     If a node receives a transfer to mediate, but there is no route available
@@ -324,6 +332,7 @@ def test_regression_mediator_task_no_routes():
         mediator_state=None,
         state_change=init_state_change,
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
@@ -364,6 +373,7 @@ def test_regression_mediator_task_no_routes():
         mediator_state=init_iteration.new_state,
         state_change=Block(block_number=expired_block_number, gas_limit=0, block_hash=block_hash),
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
@@ -380,6 +390,7 @@ def test_regression_mediator_task_no_routes():
             message_identifier=message_identifier,
         ),
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
@@ -392,7 +403,7 @@ def test_regression_mediator_task_no_routes():
 
 
 def test_regression_mediator_not_update_payer_state_twice():
-    """ Regression Test for https://github.com/raiden-network/raiden/issues/3086
+    """Regression Test for https://github.com/raiden-network/raiden/issues/3086
     Make sure that after a lock expired the mediator doesn't update the pair
     twice causing EventUnlockClaimFailed to be generated at every block.
     """
@@ -415,6 +426,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=None,
         state_change=init_state_change,
         channelidentifiers_to_channels=pair.channel_map,
+        addresses_to_channel=pair.addresses_to_channel(),
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
@@ -436,6 +448,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=current_state,
         state_change=block,
         channelidentifiers_to_channels=pair.channel_map,
+        addresses_to_channel=pair.addresses_to_channel(),
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
@@ -460,6 +473,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=current_state,
         state_change=receive_secret,
         channelidentifiers_to_channels=pair.channel_map,
+        addresses_to_channel=pair.addresses_to_channel(),
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=next_block.block_number,
@@ -482,6 +496,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=current_state,
         state_change=next_block,
         channelidentifiers_to_channels=pair.channel_map,
+        addresses_to_channel=pair.addresses_to_channel(),
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
@@ -492,7 +507,7 @@ def test_regression_mediator_not_update_payer_state_twice():
 
 
 def test_regression_onchain_secret_reveal_must_update_channel_state():
-    """ If a secret is learned off-chain and then on-chain, the state of the
+    """If a secret is learned off-chain and then on-chain, the state of the
     lock must be updated in the channel.
     """
     pseudo_random_generator = random.Random()
@@ -516,6 +531,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             secret=secret, sender=payee_channel.partner_state.address
         ),
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
@@ -536,6 +552,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             block_hash=setup.block_hash,
         ),
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
@@ -569,6 +586,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             message_identifier=message_identifier,
         ),
         channelidentifiers_to_channels=setup.channel_map,
+        addresses_to_channel=setup.channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
@@ -597,6 +615,7 @@ def test_regression_unavailable_nodes_must_be_properly_filtered():
         mediator_state=None,
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         nodeaddresses_to_networkstates=all_nodes_offline,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,

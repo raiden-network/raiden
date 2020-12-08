@@ -2,12 +2,12 @@ import pytest
 from eth_utils import keccak
 
 from raiden.api.python import RaidenAPI
-from raiden.app import App
 from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.transfers import Unlock
+from raiden.raiden_service import RaidenService
 from raiden.settings import MediationFeeConfig
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import make_transaction_hash
@@ -39,27 +39,27 @@ from raiden.utils.typing import (
 from raiden.waiting import wait_for_block
 
 
-def get_messages(app: App) -> List[Message]:
+def get_messages(app: RaidenService) -> List[Message]:
     assert isinstance(
-        app.raiden.transport, TestMatrixTransport
+        app.transport, TestMatrixTransport
     ), "Transport is not a `TestMatrixTransport`"
 
-    return app.raiden.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM]
+    return app.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM]
 
 
-def reset_messages(app: App) -> None:
+def reset_messages(app: RaidenService) -> None:
     assert isinstance(
-        app.raiden.transport, TestMatrixTransport
+        app.transport, TestMatrixTransport
     ), "Transport is not a `TestMatrixTransport`"
 
-    app.raiden.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM] = []
+    app.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM] = []
 
 
-def wait_all_apps(raiden_network: List[App]) -> None:
-    last_known_block = max(app.raiden.rpc_client.block_number() for app in raiden_network)
+def wait_all_apps(raiden_network: List[RaidenService]) -> None:
+    last_known_block = max(app.rpc_client.block_number() for app in raiden_network)
 
     for app in raiden_network:
-        wait_for_block(app.raiden, last_known_block, 0.5)
+        wait_for_block(app, last_known_block, 0.5)
 
 
 @raise_on_failure
@@ -70,7 +70,7 @@ def wait_all_apps(raiden_network: List[App]) -> None:
 )
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
-    raiden_network: List[App], token_addresses: List[TokenAddress]
+    raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
 ) -> None:
     """
     We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
@@ -80,11 +80,11 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     withdraw it is checked that the correct messages are sent.
     """
     app0, app1, app2 = raiden_network
-    api0 = RaidenAPI(app0.raiden)
+    api0 = RaidenAPI(app0)
     api0.channel_open(
         token_address=token_addresses[0],
-        registry_address=app0.raiden.default_registry.address,
-        partner_address=app1.raiden.address,
+        registry_address=app0.default_registry.address,
+        partner_address=app1.address,
     )
     wait_all_apps(raiden_network)
 
@@ -95,8 +95,8 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 
     api0.set_total_channel_deposit(
         token_address=token_addresses[0],
-        registry_address=app0.raiden.default_registry.address,
-        partner_address=app1.raiden.address,
+        registry_address=app0.default_registry.address,
+        partner_address=app1.address,
         total_deposit=TokenAmount(10),
     )
     wait_all_apps(raiden_network)
@@ -118,8 +118,8 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 
     api0.set_total_channel_withdraw(
         token_address=token_addresses[0],
-        registry_address=app0.raiden.default_registry.address,
-        partner_address=app1.raiden.address,
+        registry_address=app0.default_registry.address,
+        partner_address=app1.address,
         total_withdraw=WithdrawAmount(5),
     )
     wait_all_apps(raiden_network)
@@ -146,7 +146,7 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 @pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_during_mediated_transfer(
-    raiden_network, number_of_nodes, deposit, token_addresses, network_wait
+    raiden_network: List[RaidenService], number_of_nodes, deposit, token_addresses, network_wait
 ):
     """
     Tests that PFSCapacityUpdates and PFSFeeUpdates are being
@@ -154,8 +154,8 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
     """
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    token_network_registry_address = app0.raiden.default_registry.address
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
     token_network_address = views.get_token_network_address_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
@@ -179,9 +179,10 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
         amount=amount,
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
+        routes=[[app0.address, app1.address, app2.address]],
     )
 
-    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
+    with block_timeout_for_transfer_by_secrethash(app1, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -193,7 +194,7 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
             [],
         )
 
-    with block_timeout_for_transfer_by_secrethash(app1.raiden, secrethash):
+    with block_timeout_for_transfer_by_secrethash(app1, secrethash):
         wait_assert(
             assert_succeeding_transfer_invariants,
             token_network_address,
@@ -237,7 +238,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
     sent only once with the most recent state change in a batch.
     """
     app0, app1 = raiden_network
-    chain_state = views.state_from_app(app0)
+    chain_state = views.state_from_raiden(app0)
 
     # There have been two PFSCapacityUpdates and two PFSFeeUpdates per channel per node
     assert len(get_messages(app0)) == 4
@@ -256,7 +257,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
     new_total_deposit_1 = pfs_capacity_update_2_of_app0.other_capacity * 2
 
     deposit_transaction_1 = TransactionChannelDeposit(
-        app1.raiden.address, TokenAmount(new_total_deposit_1), chain_state.block_number
+        app1.address, TokenAmount(new_total_deposit_1), chain_state.block_number
     )
     channel_deposit_1 = ContractReceiveChannelDeposit(
         transaction_hash=make_transaction_hash(),
@@ -269,7 +270,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
 
     new_total_deposit_2 = new_total_deposit_1 * 2
     deposit_transaction_2 = TransactionChannelDeposit(
-        app1.raiden.address, TokenAmount(new_total_deposit_2), chain_state.block_number
+        app1.address, TokenAmount(new_total_deposit_2), chain_state.block_number
     )
 
     channel_deposit_2 = ContractReceiveChannelDeposit(
@@ -283,7 +284,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
 
     state_changes = [channel_deposit_1, channel_deposit_2]
 
-    app0.raiden.handle_state_changes(state_changes=state_changes)
+    app0.handle_state_changes(state_changes=state_changes)
 
     # Now we should see that app0 send 2 new messages,
     # one PFSCapacityUpdate and one PFSFeeUpdate with
@@ -316,7 +317,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
         secret=Secret(lock_secret_1),
         signature=Signature(bytes(65)),
     )
-    unlock_message_1.sign(app1.raiden.signer)
+    unlock_message_1.sign(app1.signer)
     balance_proof_1 = balanceproof_from_envelope(unlock_message_1)
 
     unlock_1 = ReceiveUnlock(
@@ -342,7 +343,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
         signature=Signature(bytes(65)),
     )
 
-    unlock_message_2.sign(app1.raiden.signer)
+    unlock_message_2.sign(app1.signer)
 
     balance_proof_2 = balanceproof_from_envelope(unlock_message_2)
 
@@ -355,7 +356,7 @@ def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raide
 
     state_changes_2 = [unlock_1, unlock_2]
 
-    app0.raiden.handle_state_changes(state_changes=state_changes_2)
+    app0.handle_state_changes(state_changes=state_changes_2)
 
     assert len(get_messages(app0)) == 7
     assert len([x for x in get_messages(app0) if isinstance(x, PFSCapacityUpdate)]) == 4

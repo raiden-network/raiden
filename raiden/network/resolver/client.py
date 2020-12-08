@@ -33,7 +33,7 @@ def reveal_secret_with_resolver(
     log.debug("Using resolver to fetch secret", resolver_endpoint=resolver_endpoint)
 
     assert isinstance(raiden.wal, WriteAheadLog), "RaidenService has not been started"
-    current_state = raiden.wal.state_manager.current_state
+    current_state = raiden.wal.get_current_state()
 
     if current_state is None:
         return False

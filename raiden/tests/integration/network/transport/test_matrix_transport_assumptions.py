@@ -291,7 +291,7 @@ def test_assumption_search_user_directory_returns_federated_users(chain_id, loca
 
 @pytest.mark.parametrize("matrix_server_count", [3])
 def test_assumption_cannot_override_room_alias(local_matrix_servers):
-    """ Issue: https://github.com/raiden-network/raiden/issues/5366
+    """Issue: https://github.com/raiden-network/raiden/issues/5366
 
     This test creates a room on one matrix server (1) asserting that the room
     has been "federated" to the other servers (2 & 3). In addition, Once the room is
@@ -335,7 +335,7 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
 def test_assumption_federation_works_after_original_server_goes_down(
     chain_id, local_matrix_servers_with_executor
 ):
-    """ Check that a federated broadcast room keeps working after the original server goes down.
+    """Check that a federated broadcast room keeps working after the original server goes down.
 
     This creates a federation of three matrix servers and a client for each.
     It then checks that all nodes receive messages from the broadcast room.

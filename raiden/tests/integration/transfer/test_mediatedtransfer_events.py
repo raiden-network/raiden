@@ -29,11 +29,12 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         amount=PaymentAmount(amount),
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
+        routes=[[app0.address, app1.address, app2.address]],
     )
 
     def test_initiator_events():
-        assert not has_unlock_failure(app0.raiden)
-        initiator_events = app0.raiden.wal.storage.get_events()
+        assert not has_unlock_failure(app0)
+        initiator_events = app0.wal.storage.get_events()
         secret_reveal = search_for_item(initiator_events, SendSecretReveal, {})
         unlock_success = search_for_item(initiator_events, EventUnlockSuccess, {})
         return secret_reveal and unlock_success
@@ -41,8 +42,8 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     assert wait_until(test_initiator_events, network_wait)
 
     def test_mediator_events():
-        assert not has_unlock_failure(app1.raiden)
-        mediator_events = app1.raiden.wal.storage.get_events()
+        assert not has_unlock_failure(app1)
+        mediator_events = app1.wal.storage.get_events()
         unlock_success = search_for_item(mediator_events, EventUnlockSuccess, {})
         unlock_claim_success = search_for_item(mediator_events, EventUnlockClaimSuccess, {})
         return unlock_success and unlock_claim_success
@@ -50,8 +51,8 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     assert wait_until(test_mediator_events, network_wait)
 
     def test_target_events():
-        assert not has_unlock_failure(app2.raiden)
-        target_events = app2.raiden.wal.storage.get_events()
+        assert not has_unlock_failure(app2)
+        target_events = app2.wal.storage.get_events()
         return (
             search_for_item(target_events, SendSecretRequest, {})
             and search_for_item(target_events, SendSecretReveal, {})

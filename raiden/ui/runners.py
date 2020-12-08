@@ -6,8 +6,8 @@ import gevent.monkey
 import structlog
 from gevent.event import AsyncResult
 
-from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
-from raiden.ui.app import run_app
+from raiden.tasks import check_chain_id, check_gas_reserve, check_rdn_deposits, check_version
+from raiden.ui.app import run_raiden_service
 from raiden.utils.gevent import spawn_named
 from raiden.utils.system import get_system_spec
 
@@ -18,30 +18,30 @@ def run_services(options: Dict[str, Any]) -> None:
     if options["config_file"]:
         log.debug("Using config file", config_file=options["config_file"])
 
-    app = run_app(**options)
+    raiden_service = run_raiden_service(**options)
 
     gevent_tasks: List[gevent.Greenlet] = list()
 
     if options["console"]:
         from raiden.ui.console import Console
 
-        console = Console(app)
+        console = Console(raiden_service)
         console.start()
 
         gevent_tasks.append(console)
 
     gevent_tasks.append(spawn_named("check_version", check_version, get_system_spec()["raiden"]))
-    gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, app.raiden))
+    gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, raiden_service))
     gevent_tasks.append(
         spawn_named(
-            "check_network_id",
-            check_network_id,
-            app.raiden.rpc_client.chain_id,
-            app.raiden.rpc_client.web3,
+            "check_chain_id",
+            check_chain_id,
+            raiden_service.rpc_client.chain_id,
+            raiden_service.rpc_client.web3,
         )
     )
 
-    spawn_user_deposit_task = app.raiden.default_user_deposit and (
+    spawn_user_deposit_task = raiden_service.default_user_deposit and (
         options["pathfinding_service_address"] or options["enable_monitoring"]
     )
     if spawn_user_deposit_task:
@@ -49,8 +49,8 @@ def run_services(options: Dict[str, Any]) -> None:
             spawn_named(
                 "check_rdn_deposits",
                 check_rdn_deposits,
-                app.raiden,
-                app.raiden.default_user_deposit,
+                raiden_service,
+                raiden_service.default_user_deposit,
             )
         )
 
@@ -85,7 +85,7 @@ def run_services(options: Dict[str, Any]) -> None:
     # gevent.signal.signal(signal.SIGPIPE, sig_set)  # pylint: disable=no-member
 
     # quit if any task exits, successfully or not
-    app.raiden.greenlet.link(stop_event)
+    raiden_service.greenlet.link(stop_event)
     for task in gevent_tasks:
         task.link(stop_event)
 
@@ -98,10 +98,12 @@ def run_services(options: Dict[str, Any]) -> None:
         for task in gevent_tasks:
             task.kill()
 
-        app.raiden.stop()
+        raiden_service.stop()
 
         gevent.joinall(
-            set(gevent_tasks + [app.raiden]), app.config.shutdown_timeout, raise_error=True
+            set(gevent_tasks + [raiden_service]),
+            raiden_service.config.shutdown_timeout,
+            raise_error=True,
         )
 
-        app.stop()
+        raiden_service.stop()

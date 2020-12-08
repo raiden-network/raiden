@@ -4,8 +4,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
+from typing import Any, Tuple
 
-import networkx
+import marshmallow
 from eth_utils import to_hex
 
 from raiden.constants import (
@@ -28,7 +29,6 @@ from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.typing import (
     Address,
-    Any,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -59,7 +59,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
-    Tuple,
     Union,
     WithdrawAmount,
     typecheck,
@@ -96,15 +95,11 @@ def message_identifier_from_prng(prng: Random) -> MessageID:
     return MessageID(prng.randint(0, UINT64_MAX))
 
 
-def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
-    return sorted(sorted(edge) for edge in network.edges())
-
-
 @dataclass
 class PaymentMappingState(State):
-    """ Global map from secrethash to a transfer task.
+    """Global map from secrethash to a transfer task.
     This mapping is used to quickly dispatch state changes by secrethash, for
-    those that dont have a balance proof, e.g. SecretReveal.
+    those that don't have a balance proof, e.g. SecretReveal.
     This mapping forces one task per secrethash, assuming that secrethash collision
     is unlikely. Features like token swaps, that span multiple networks, must
     be encapsulated in a single task to work with this structure.
@@ -118,33 +113,6 @@ class PaymentMappingState(State):
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
     secrethashes_to_task: Dict[SecretHash, TransferTask] = field(repr=False, default_factory=dict)
-
-
-# This is necessary for the routing only, maybe it should be transient state
-# outside of the state tree.
-@dataclass(repr=False, eq=False)
-class TokenNetworkGraphState(State):
-    """ Stores the existing channels in the channel manager contract, used for
-    route finding.
-    """
-
-    token_network_address: TokenNetworkAddress
-    network: networkx.Graph = field(repr=False, default_factory=networkx.Graph)
-    channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
-        repr=False, default_factory=dict
-    )
-
-    def __repr__(self) -> str:
-        # pylint: disable=no-member
-        return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, TokenNetworkGraphState)
-            and self.token_network_address == other.token_network_address
-            and to_comparable_graph(self.network) == to_comparable_graph(other.network)
-            and self.channel_identifier_to_participants == other.channel_identifier_to_participants
-        )
 
 
 @dataclass
@@ -164,7 +132,7 @@ class RouteState(State):
 
     # TODO: Add timestamp
     route: List[Address]
-    forward_channel_id: ChannelID
+    swaps: Dict[Address, TokenNetworkAddress] = field(default_factory=dict)
     estimated_fee: FeeAmount = FeeAmount(0)
 
     @property
@@ -172,10 +140,20 @@ class RouteState(State):
         assert len(self.route) >= 1, "Route has no next hop"
         return self.route[1]
 
+    @property
+    def next_hop(self) -> Address:
+        """Identifies the next node
+
+        Use this to compare if two routes go to the same next node.
+
+        Planned change: Will return a token network in addition to the node address.
+        """
+        assert len(self.route) >= 1, "Route has no next hop"
+        return self.route[1]
+
     def __repr__(self) -> str:
-        return "RouteState ({}), channel_id: {}, fee: {}".format(
+        return "RouteState ({}), fee: {}".format(
             " -> ".join(to_checksum_address(addr) for addr in self.route),
-            self.forward_channel_id,
             self.estimated_fee,
         )
 
@@ -194,7 +172,7 @@ class HashTimeLockState(State):
         typecheck(self.expiration, T_BlockNumber)
         typecheck(self.secrethash, T_Secret)
 
-        from raiden.messages.transfers import Lock  # put here to avoid cyclic depenendcies
+        from raiden.messages.transfers import Lock  # put here to avoid cyclic dependencies
 
         lock = Lock(amount=self.amount, expiration=self.expiration, secrethash=self.secrethash)
         self.encoded = EncodedData(lock.as_bytes)
@@ -467,7 +445,6 @@ class TokenNetworkState(State):
 
     address: TokenNetworkAddress
     token_address: TokenAddress
-    network_graph: TokenNetworkGraphState = field(repr=False)
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState] = field(
         repr=False, default_factory=dict
     )
@@ -484,38 +461,60 @@ class TokenNetworkState(State):
         )
 
 
-@dataclass
+@dataclass(init=False)
 class TokenNetworkRegistryState(State):
     """ Corresponds to a registry smart contract. """
 
+    class Meta:
+        unknown = marshmallow.EXCLUDE
+        fields = [
+            "address",
+            "token_network_list",
+            "tokennetworkaddresses_to_tokennetworks",
+        ]  # only serialize attributes needed for init
+        load_only = ["tokennetworkaddresses_to_tokennetworks"]
+
     address: TokenNetworkRegistryAddress
     token_network_list: List[TokenNetworkState]
+    tokenaddresses_to_tokennetworkaddresses: Dict[TokenAddress, TokenNetworkAddress] = field(
+        repr=False
+    )
     tokennetworkaddresses_to_tokennetworks: Dict[TokenNetworkAddress, TokenNetworkState] = field(
         repr=False, default_factory=dict
     )
-    tokenaddresses_to_tokennetworkaddresses: Dict[TokenAddress, TokenNetworkAddress] = field(
-        repr=False, default_factory=dict
-    )
 
-    def __post_init__(self) -> None:
-        typecheck(self.address, T_Address)
+    def __init__(
+        self,
+        address: TokenNetworkRegistryAddress,
+        token_network_list: List[TokenNetworkState],
+        tokennetworkaddresses_to_tokennetworks: Dict[Any, TokenNetworkState] = None,
+    ) -> None:
+        # Fix inconsistent state from Alderaan releases. Can be removed when
+        # only reading state from Bespin or later is acceptable. Those releases
+        # could leave the token_network_list empty, even after TNs have been
+        # added.  The TNs were only available in the other attributes. See
+        # https://github.com/raiden-network/raiden/commit/922e4fdf0d54c150c1bada0d101f8085e04b68bd
+        if not token_network_list and tokennetworkaddresses_to_tokennetworks:
+            token_network_list = list(tokennetworkaddresses_to_tokennetworks.values())
 
-        if not self.tokennetworkaddresses_to_tokennetworks:
-            self.tokennetworkaddresses_to_tokennetworks: Dict[
-                TokenNetworkAddress, TokenNetworkState
-            ] = {token_network.address: token_network for token_network in self.token_network_list}
-        if not self.tokenaddresses_to_tokennetworkaddresses:
-            self.tokenaddresses_to_tokennetworkaddresses: Dict[
-                TokenAddress, TokenNetworkAddress
-            ] = {
-                token_network.token_address: token_network.address
-                for token_network in self.token_network_list
-            }
+        self.address = address
+        self.token_network_list = []
+        self.tokennetworkaddresses_to_tokennetworks = {}
+        self.tokenaddresses_to_tokennetworkaddresses = {}
+        for tn in token_network_list:
+            self.add_token_network(tn)
+
+    def add_token_network(self, token_network: TokenNetworkState) -> None:
+        self.token_network_list.append(token_network)
+        self.tokennetworkaddresses_to_tokennetworks[token_network.address] = token_network
+        self.tokenaddresses_to_tokennetworkaddresses[
+            token_network.token_address
+        ] = token_network.address
 
 
 @dataclass(repr=False)
 class ChainState(State):
-    """ Umbrella object that stores the per blockchain state.
+    """Umbrella object that stores the per blockchain state.
     For each registry smart contract there must be a token network registry. Within the
     token network registry the existing token networks and channels are registered.
 
@@ -557,3 +556,15 @@ class ChainState(State):
             len(self.payment_mapping.secrethashes_to_task),
             self.chain_id,
         )
+
+    @property
+    def addresses_to_channel(
+        self,
+    ) -> Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState]:
+        """ Find the channel for a partner by his address and token network """
+        return {
+            (token_network.address, channel.partner_state.address): channel
+            for token_network_registry in self.identifiers_to_tokennetworkregistries.values()
+            for token_network in token_network_registry.token_network_list
+            for channel in token_network.channelidentifiers_to_channels.values()
+        }

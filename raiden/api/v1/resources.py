@@ -6,7 +6,6 @@ from flask_restful import Resource
 
 from raiden.api.rest_utils import if_api_available
 from raiden.api.v1.encoding import (
-    BlockchainEventsRequestSchema,
     ChannelPatchSchema,
     ChannelPutSchema,
     ConnectionsConnectSchema,
@@ -14,15 +13,7 @@ from raiden.api.v1.encoding import (
     PaymentSchema,
     RaidenEventsRequestSchema,
 )
-from raiden.constants import BLOCK_ID_LATEST
-from raiden.utils.typing import (
-    TYPE_CHECKING,
-    Address,
-    Any,
-    BlockIdentifier,
-    TargetAddress,
-    TokenAddress,
-)
+from raiden.utils.typing import TYPE_CHECKING, Address, Any, TargetAddress, TokenAddress
 
 if TYPE_CHECKING:
     from raiden.api.rest import RestAPI
@@ -69,6 +60,12 @@ class VersionResource(BaseResource):
     @if_api_available
     def get(self) -> Response:
         return self.rest_api.get_raiden_version()
+
+
+class NodeSettingsResource(BaseResource):
+    @if_api_available
+    def get(self) -> Response:
+        return self.rest_api.get_node_settings()
 
 
 class ContractsResource(BaseResource):
@@ -146,62 +143,6 @@ class PartnersResourceByTokenAddress(BaseResource):
         )
 
 
-class BlockchainEventsNetworkResource(BaseResource):
-
-    get_schema = BlockchainEventsRequestSchema()
-
-    @if_api_available
-    def get(self) -> Response:
-        params = validate_query_params(self.get_schema)
-        from_block = params["from_block"] or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = params["to_block"] or BLOCK_ID_LATEST
-
-        return self.rest_api.get_blockchain_events_network(
-            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-
-class BlockchainEventsTokenResource(BaseResource):
-
-    get_schema = BlockchainEventsRequestSchema()
-
-    @if_api_available
-    def get(self, token_address: TokenAddress) -> Response:
-        params = validate_query_params(self.get_schema)
-        from_block = params["from_block"] or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = params["to_block"] or BLOCK_ID_LATEST
-
-        return self.rest_api.get_blockchain_events_token_network(
-            token_address=token_address, from_block=from_block, to_block=to_block
-        )
-
-
-class ChannelBlockchainEventsResource(BaseResource):
-
-    get_schema = BlockchainEventsRequestSchema()
-
-    @if_api_available
-    def get(
-        self,
-        token_address: TokenAddress,
-        partner_address: Address = None,
-        from_block: BlockIdentifier = None,
-        to_block: BlockIdentifier = None,
-    ) -> Response:
-        params = validate_query_params(self.get_schema)
-        from_block = params["from_block"] or self.rest_api.raiden_api.raiden.query_start_block
-        to_block = params["to_block"] or BLOCK_ID_LATEST
-
-        return self.rest_api.get_blockchain_events_channel(
-            token_address=token_address,
-            partner_address=partner_address,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-
 class RaidenInternalEventsResource(BaseResource):
 
     get_schema = RaidenEventsRequestSchema()
@@ -238,15 +179,6 @@ class MintTokenResource(BaseResource):
 class ConnectionsResource(BaseResource):
 
     put_schema = ConnectionsConnectSchema()
-
-    @if_api_available
-    def put(self, token_address: TokenAddress) -> Response:
-        kwargs = validate_json(self.put_schema)
-        return self.rest_api.connect(
-            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
-            token_address=token_address,
-            **kwargs,
-        )
 
     @if_api_available
     def delete(self, token_address: TokenAddress) -> Response:

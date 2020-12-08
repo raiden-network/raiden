@@ -2,10 +2,17 @@
 Changelog
 =========
 
+* :feature:`6563` Faster syncing with the blockchain.
+* :feature:`-` Update WebUI to version 1.1.1 https://github.com/raiden-network/webui/releases/tag/v1.1.1. Introduces a new "Quick Connect" that is simpler and more transparent.
+* :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
+* :feature:`6582` Add ``/settings`` endpoint with information about the used pathfinding service.
+* :feature:`6657` Support for recent geth versions.
+* :feature:`6541` Remove internal routing.
+
 * :release:`1.2.0 <2020-11-06>`
 * :feature:`6646` add [Matrix toDevice](https://matrix.org/docs/spec/client_server/r0.6.0#id70) message support in transport layer
-* :feature:`6608` Compatibility with synapse 1.19 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
-* :feature:`6482` Add support for capabilities. The Raiden client can show its capababilities to other clients via its matrix profile.
+* :feature:`6608` Compatibility with Synapse >= 1.12 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
+* :feature:`6482` Add support for client capabilities. Raiden clients can now negotiate supported features via their matrix profile.
 * :bug:`6444` Fix a race condition when processing blockchain events.
 
 * :release:`1.1.1 <2020-07-20>`

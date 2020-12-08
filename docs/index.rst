@@ -22,13 +22,13 @@ If you're new to Raiden and just want to install and try it out, you can either:
 
     * Use the `Raiden Wizard <https://docs.raiden.network/quick-start/>`_ for quickly installing and running a Raiden node.
     * :doc:`Read about different options for installing and firing up <overview_and_guide>` a Raiden client.
-    * Check out the :doc:`WebUI tutorial <webui_tutorial>` to quickly get started doing payments.
+    * Check out the `WebUI tutorial <https://docs.raiden.network/the-raiden-web-interface/the-raiden-web-interface>`_ to quickly get started doing payments.
 
 Developing on Raiden?
 ~~~~~~~~~~~~~~~~~~~~~
 If you're looking for documentation relevant for building on top of Raiden:
 
-    * Read the thorough guide to :doc:`get started with the Raiden API <api_walkthrough>`.
+    * Read the thorough guide to `get started with the Raiden API <https://docs.raiden.network/raiden-api-1/api-tutorial>`_.
     * Checkout the complete :doc:`API documentation <rest_api>`.
     * Read the document :doc:`How is Raiden Tested <testing>`.
 
@@ -60,9 +60,7 @@ Contents
   :caption: Using Raiden
 
   overview_and_guide
-  alderaan_mainnet_tutorial
-  api_walkthrough
-  webui_tutorial
+  getting_started
   rest_api
   raiden_services
   private_net_tutorial

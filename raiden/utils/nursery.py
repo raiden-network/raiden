@@ -6,7 +6,7 @@ from typing import Any, Callable, List, Optional, Set, Type
 
 import gevent
 import structlog
-from gevent import Greenlet
+from gevent import Greenlet, GreenletExit
 from gevent.event import AsyncResult
 from gevent.greenlet import SpawnedLink
 from gevent.lock import RLock
@@ -31,12 +31,17 @@ class Nursery(ABC):
 
 
 class Janitor:
-    """Tries to properly stop all subprocesses before quitting the script.
+    """Janitor to properly cleanup after spawned subprocesses and greenlets.
 
-    - This watches for the status of the subprocess, if the processes exits
-      with a non-zero error code then the failure is propagated.
-    - If for any reason this process is dying, then all the spawned processes
-      have to be killed in order for a proper clean up to happen.
+    The goal of the janitor is to:
+
+    - Propagate errors, if any of the watched processes / greenlets fails.
+    - Keep track of spawned subprocesses and greenlets and make sure that
+      everything is cleanup once the Janitor is done.
+        - If the janitor is exiting because the monitored block is done (i.e.
+          the with block is done executing), then a "clean" shutdown is
+          performed.
+        - Otherwise an exception occurred and the greenlets are killed it.
     """
 
     def __init__(self, stop_timeout: float = 20) -> None:
@@ -109,6 +114,10 @@ class Janitor:
                                 exception = SystemExit(exit_code)
                                 janitor._stop.set_exception(exception)
                         except Exception as exception:
+                            log.exception(
+                                "Process erroed! Propagating error.",
+                                args=process.args,
+                            )
                             janitor._stop.set_exception(exception)
 
                 with janitor._processes_lock:
@@ -139,20 +148,29 @@ class Janitor:
             def spawn_under_watch(function: Callable, *args: Any, **kwargs: Any) -> Greenlet:
                 greenlet = gevent.spawn(function, *args, **kwargs)
 
-                def kill_grenlet(_result: AsyncResult) -> None:
-                    # gevent.GreenletExit must **not** be used here, since that
-                    # exception is considered a successful run and it is not
-                    # re-raised on calls to `get`
-                    exception = RuntimeError("Janitor is stopping")
-                    greenlet.throw(exception)
+                # The callback provided to `AsyncResult.rawlink` is executed
+                # inside the Hub thread, the callback is calling `throw` which
+                # has to be called from the Hub, so here there is no need to
+                # wrap the callback in a SpawnedLink.
+                #
+                # `throw` does not raise the exception if the greenlet has
+                # finished, which is exactly the semantics needed here.
+                def stop_greenlet_from_hub(result: AsyncResult) -> None:
+                    """ Stop the greenlet if the nursery is stopped. """
+                    try:
+                        result.get()
+                    except BaseException as e:
+                        greenlet.throw(e)
+                    else:
+                        greenlet.throw(GreenletExit())
 
-                # The Event.rawlink is executed inside the Hub thread, which
-                # does validation and *raises on blocking calls*, to go around
-                # this a new greenlet has to be spawned, that in turn will
-                # raise the exception.
-                callback = SpawnedLink(kill_grenlet)
+                def propagate_error(g: Greenlet) -> None:
+                    """ If the greenlet fails, stop the nursery. """
+                    janitor._stop.set_exception(g.exception)
 
-                janitor._stop.rawlink(callback)
+                greenlet.link_exception(propagate_error)
+                janitor._stop.rawlink(stop_greenlet_from_hub)
+
                 return greenlet
 
             @staticmethod

@@ -5,12 +5,7 @@ import responses
 
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.transfer.state import (
-    ChainState,
-    TokenNetworkGraphState,
-    TokenNetworkRegistryState,
-    TokenNetworkState,
-)
+from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNetworkState
 from raiden.utils.typing import BlockNumber, TokenAmount
 
 # pylint: disable=redefined-outer-name
@@ -71,18 +66,11 @@ def token_network_state(
     token_network_address,
     token_id,
 ):
-    token_network_graph_state = TokenNetworkGraphState(token_network_address)
     token_network = TokenNetworkState(
         address=token_network_address,
         token_address=token_id,
-        network_graph=token_network_graph_state,
     )
-    token_network_registry_state.tokennetworkaddresses_to_tokennetworks[
-        token_network_address
-    ] = token_network
-    token_network_registry_state.tokenaddresses_to_tokennetworkaddresses[
-        token_id
-    ] = token_network_address
+    token_network_registry_state.add_token_network(token_network)
 
     mapping = chain_state.tokennetworkaddresses_to_tokennetworkregistryaddresses
     mapping[token_network_address] = token_network_registry_address

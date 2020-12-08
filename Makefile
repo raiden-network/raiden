@@ -48,7 +48,7 @@ ifdef CIRCLECI
 JOBS_ARG=--jobs=8
 endif
 LINT_PATHS = raiden/ tools/ setup.py
-ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
+ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' $(LINT_PATHS)
 
 lint: ISORT_CHECK_PARAMS := --diff --check-only
 lint: BLACK_CHECK_PARAMS := --check --diff

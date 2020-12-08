@@ -57,7 +57,7 @@ def test_parity_request_pruned_data_raises_an_exception(deploy_client: JSONRPCCl
 def test_parity_request_block_data_does_not_raise_an_exception(
     deploy_client: JSONRPCClient,
 ) -> None:
-    """ Interacting with a pruned block through eth_getBlock does not raise.
+    """Interacting with a pruned block through eth_getBlock does not raise.
 
     If this assumptions tests fails the `BlockchainEvents` has to be fixed.
     Currently it assumes that it can fetch metadata about any block, namely the

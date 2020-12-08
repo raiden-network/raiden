@@ -9,13 +9,13 @@ from http.client import HTTPSConnection
 from json import JSONDecodeError
 from os import PathLike
 from typing import IO, Any, Callable, List, Optional, Tuple, Union
-from urllib.parse import urlunparse
 
 import structlog
 from gevent import subprocess
 from mirakuru.base import ENV_UUID
 from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError, TimeoutExpired
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
+from requests.adapters import HTTPAdapter
 
 from raiden.utils.typing import Endpoint, Host, HostPort, Port
 
@@ -33,6 +33,21 @@ def split_endpoint(endpoint: Endpoint) -> HostPort:
     if not port:
         port = "0"
     return Host(host), Port(int(port))
+
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        self.timeout = 0
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
 
 
 class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
@@ -220,7 +235,7 @@ class JSONRPCExecutor(HTTPExecutor):  # pragma: no cover
         }
         conn.request(
             method=self.method,
-            url=urlunparse(self.url),
+            url=self.url.path,
             body=json.dumps(req_body),
             headers={"Accept": "application/json", "Content-Type": "application/json"},
         )

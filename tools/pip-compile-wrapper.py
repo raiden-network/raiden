@@ -47,7 +47,7 @@ class TargetType(Enum):
 
 
 def _resolve_source_dependencies() -> None:
-    """ Determine direct dependencies between requirements files
+    """Determine direct dependencies between requirements files
 
     Dependencies of the form ``-r <other-file>`` are recognized.
     """
@@ -79,7 +79,7 @@ def _run_pip_compile(
     dry_run: bool = False,
     pre: bool = False,
 ) -> None:
-    """ Run pip-compile with the given parameters
+    """Run pip-compile with the given parameters
 
     This automatically makes sure that packages listed in ``upgrade_packages`` are only passed
     for requirement files that already contain this package either in the source or the target.
@@ -156,7 +156,7 @@ def _run_pip_compile(
 
 
 def _resolve_deps(source_names: Iterable[str]) -> List[str]:
-    """ Partially order source_names based on their dependencies
+    """Partially order source_names based on their dependencies
 
     Raises an Exception if not possible.
     The resulting list has the following property: Each entry does not depend on a later entry.

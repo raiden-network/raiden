@@ -97,7 +97,7 @@ def assert_transfer_values(
 
 @dataclass(repr=False, eq=False)
 class Lock:
-    """ The lock datastructure.
+    """The lock datastructure.
 
     Args:
         amount: Amount of the token being transferred.
@@ -154,7 +154,7 @@ class Lock:
 
 @dataclass(repr=False, eq=False)
 class EnvelopeMessage(SignedRetrieableMessage):
-    """ Contains an on-chain message and shares its signature.
+    """Contains an on-chain message and shares its signature.
 
     For performance reasons envelope messages share the signature with the
     blockchain message. The same signature is used for authenticating for both
@@ -235,7 +235,7 @@ class SecretRequest(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class Unlock(EnvelopeMessage):
-    """ Message used to successfully unlock a lock.
+    """Message used to successfully unlock a lock.
 
     For this message to be valid the balance proof has to be updated to:
 
@@ -345,7 +345,7 @@ class RevealSecret(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
-    """ A transfer which signs that the partner can claim `locked_amount` if
+    """A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `secrethash`.
     """
 
@@ -428,7 +428,7 @@ class LockedTransferBase(EnvelopeMessage):
 
 @dataclass(repr=False, eq=False)
 class LockedTransfer(LockedTransferBase):
-    """ Message used to reserve tokens for a new mediated transfer.
+    """Message used to reserve tokens for a new mediated transfer.
 
     For this message to be valid, the sender must:
 
@@ -458,7 +458,7 @@ class LockedTransfer(LockedTransferBase):
 
 @dataclass(repr=False, eq=False)
 class RefundTransfer(LockedTransferBase):
-    """ A message used when a payee does not have any available routes to
+    """A message used when a payee does not have any available routes to
     forward the transfer.
 
     This message is used by the payee to refund the payer when no route is
@@ -475,7 +475,7 @@ class RefundTransfer(LockedTransferBase):
 
 @dataclass(repr=False, eq=False)
 class LockExpired(EnvelopeMessage):
-    """ Message used when a lock expires.
+    """Message used when a lock expires.
 
     This will complete an unsuccessful transfer off-chain.
 

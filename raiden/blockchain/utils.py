@@ -10,7 +10,7 @@ log = get_logger(__name__)
 
 
 class BlockBatchSizeAdjuster:
-    """ Helper to dynamically adjust the block batch size.
+    """Helper to dynamically adjust the block batch size.
 
     Internally it uses an exponential function of base ``base`` onto which the block range given
     in the config is mapped.
@@ -29,8 +29,6 @@ class BlockBatchSizeAdjuster:
         self._base = base
         self._step_size = step_size
 
-        self._scale_max = math.log(self._block_batch_size_config.max, self._base) + 1
-        self._scale_min = math.log(self._block_batch_size_config.min, self._base)
         self._scale_current = math.log(self._block_batch_size_config.initial, self._base)
 
     def _log(self, previous_batch_size: BlockNumber) -> None:
@@ -50,7 +48,7 @@ class BlockBatchSizeAdjuster:
             )
 
     def increase(self) -> None:
-        """ Increase the block batch size.
+        """Increase the block batch size.
 
         Does nothing if the value is already at the maximum.
         """
@@ -61,7 +59,7 @@ class BlockBatchSizeAdjuster:
         self._log(previous_batch_size)
 
     def decrease(self) -> None:
-        """ Decrease the batch size.
+        """Decrease the batch size.
 
         If the current value is already at the minimum raise ``BlockBatchSizeTooSmall``.
         """
@@ -78,7 +76,7 @@ class BlockBatchSizeAdjuster:
 
     @property
     def batch_size(self) -> BlockNumber:
-        """ Return the current batch size.
+        """Return the current batch size.
 
         Clamps the value to the range given in the config.
         """

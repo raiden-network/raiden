@@ -119,7 +119,7 @@ def get_reserve_estimate(raiden: "RaidenService", channels_to_open: int = 0) -> 
 
 
 def has_enough_gas_reserve(raiden: "RaidenService", channels_to_open: int = 0) -> Tuple[bool, int]:
-    """ Checks if the account has enough balance to handle the lifecycles of all
+    """Checks if the account has enough balance to handle the lifecycles of all
     open channels as well as the to be created channels.
 
     Note: This is just an estimation.

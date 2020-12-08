@@ -98,7 +98,7 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
 def test_transact_fails_if_the_account_does_not_have_enough_eth_to_pay_for_the_gas(
     deploy_client: JSONRPCClient,
 ) -> None:
-    """ The gas estimation does not fail if the transaction execution requires
+    """The gas estimation does not fail if the transaction execution requires
     more gas then the account's eth balance. However sending the transaction
     will.
     """

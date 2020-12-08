@@ -1,4 +1,5 @@
 import random
+from typing import Tuple
 
 from raiden.transfer import channel, routes
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
@@ -26,6 +27,7 @@ from raiden.transfer.state import NettingChannelState, RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
+    Address,
     BlockNumber,
     ChannelID,
     Dict,
@@ -33,6 +35,7 @@ from raiden.utils.typing import (
     NodeNetworkStateMap,
     Optional,
     SecretHash,
+    TokenNetworkAddress,
     cast,
 )
 
@@ -40,8 +43,8 @@ from raiden.utils.typing import (
 def clear_if_finalized(
     iteration: TransitionResult,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
-    """ Clear the initiator payment task if all transfers have been finalized
-    or expired. """
+    """Clear the initiator payment task if all transfers have been finalized
+    or expired."""
     state = cast(InitiatorPaymentState, iteration.new_state)
 
     if state is None:
@@ -87,7 +90,7 @@ def events_for_cancel_current_route(
 def cancel_current_route(
     payment_state: InitiatorPaymentState, initiator_state: InitiatorTransferState
 ) -> List[Event]:
-    """ Cancel current route.
+    """Cancel current route.
 
     This allows a new route to be tried.
     """
@@ -174,7 +177,7 @@ def handle_block(
 def handle_init(
     payment_state: Optional[InitiatorPaymentState],
     state_change: ActionInitInitiator,
-    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -182,7 +185,7 @@ def handle_init(
     events: List[Event] = list()
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
-            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            addresses_to_channel=addresses_to_channel,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             candidate_route_states=state_change.routes,
             transfer_description=state_change.transfer,
@@ -254,6 +257,7 @@ def handle_transferreroute(
     payment_state: InitiatorPaymentState,
     state_change: ActionTransferReroute,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -286,11 +290,13 @@ def handle_transferreroute(
     events: List[Event] = []
     events.extend(channel_events)
 
-    filtered_route_states = routes.filter_acceptable_routes(
-        route_states=payment_state.routes, blacklisted_channel_ids=payment_state.cancelled_channels
-    )
-
     old_description = initiator_state.transfer_description
+    filtered_route_states = routes.filter_acceptable_routes(
+        route_states=payment_state.routes,
+        blacklisted_channel_ids=payment_state.cancelled_channels,
+        addresses_to_channel=addresses_to_channel,
+        token_network_address=old_description.token_network_address,
+    )
     transfer_description = TransferDescriptionWithSecretState(
         token_network_registry_address=old_description.token_network_registry_address,
         payment_identifier=old_description.payment_identifier,
@@ -303,7 +309,7 @@ def handle_transferreroute(
     )
 
     sub_iteration = initiator.try_new_route(
-        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        addresses_to_channel=addresses_to_channel,
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         candidate_route_states=filtered_route_states,
         transfer_description=transfer_description,
@@ -343,8 +349,7 @@ def handle_lock_expired(
     - When the lock expires B will also send a LockExpired message to A
     - A needs to be able to properly process it
 
-    Related issue: https://github.com/raiden-network/raiden/issues/3183
-"""
+    Related issue: https://github.com/raiden-network/raiden/issues/3183"""
     initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
     if not initiator_state:
         return TransitionResult(payment_state, list())
@@ -468,6 +473,7 @@ def state_transition(
     payment_state: Optional[InitiatorPaymentState],
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -490,7 +496,7 @@ def state_transition(
         iteration = handle_init(
             payment_state=payment_state,
             state_change=state_change,
-            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            addresses_to_channel=addresses_to_channel,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
@@ -509,6 +515,7 @@ def state_transition(
             payment_state=payment_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
+            addresses_to_channel=addresses_to_channel,
             nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,

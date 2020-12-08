@@ -16,7 +16,7 @@ TM = TypeVar("TM", bound=Mapping)
 
 
 def check_dict_nested_attrs(item: Mapping, dict_data: Mapping) -> bool:
-    """ Checks the values from `dict_data` are contained in `item`
+    """Checks the values from `dict_data` are contained in `item`
 
     >>> d = {'a': 1, 'b': {'c': 2}}
     >>> check_dict_nested_attrs(d, {'a': 1})
@@ -42,7 +42,7 @@ def check_dict_nested_attrs(item: Mapping, dict_data: Mapping) -> bool:
 
 
 def check_nested_attrs(item: Any, attributes: Mapping) -> bool:
-    """ Checks the attributes from `item` match the values defined in `attributes`.
+    """Checks the attributes from `item` match the values defined in `attributes`.
 
     >>> from collections import namedtuple
     >>> A = namedtuple('A', 'a')
@@ -73,7 +73,7 @@ def check_nested_attrs(item: Any, attributes: Mapping) -> bool:
 def search_for_item(
     item_list: Iterable[T], item_type: Type[T], attributes: Mapping
 ) -> Optional[T]:
-    """ Search for the first item of type `item_type` with `attributes` in
+    """Search for the first item of type `item_type` with `attributes` in
     `item_list`.
 
     `attributes` are compared using the utility `check_nested_attrs`.
@@ -88,7 +88,7 @@ def search_for_item(
 def raiden_events_search_for_item(
     raiden: RaidenService, item_type: Type[TE], attributes: Mapping
 ) -> Optional[TE]:
-    """ Search for the first event of type `item_type` with `attributes` in the
+    """Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
     `attributes` are compared using the utility `check_nested_attrs`.
@@ -101,7 +101,7 @@ def raiden_events_search_for_item(
 def raiden_state_changes_search_for_item(
     raiden: RaidenService, item_type: Type[SC], attributes: Mapping
 ) -> Optional[SC]:
-    """ Search for the first event of type `item_type` with `attributes` in the
+    """Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
 
     `attributes` are compared using the utility `check_nested_attrs`.

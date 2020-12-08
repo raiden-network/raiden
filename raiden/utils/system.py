@@ -11,8 +11,7 @@ def get_project_root() -> str:
 
 
 def get_system_spec() -> Dict[str, Any]:
-    """Collect information about the system and installation.
-    """
+    """Collect information about the system and installation."""
     import platform
 
     import pkg_resources

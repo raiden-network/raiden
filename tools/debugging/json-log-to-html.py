@@ -376,6 +376,9 @@ td.fields {{
 .lvl-error {{
     color: #d04020;
 }}
+.lvl-critical {{
+    color: #f1053c;
+}}
 .fn {{
     color: #f040f0;
 }}
@@ -419,7 +422,7 @@ Record = namedtuple(
 
 @cached(LRUCache(maxsize=1_000))
 def truncate_logger_name(logger: str) -> str:
-    """ Truncate dotted logger path names.
+    """Truncate dotted logger path names.
 
     Keeps the last component unchanged.
 

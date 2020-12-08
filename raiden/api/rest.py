@@ -36,9 +36,6 @@ from raiden.api.v1.encoding import (
 )
 from raiden.api.v1.resources import (
     AddressResource,
-    BlockchainEventsNetworkResource,
-    BlockchainEventsTokenResource,
-    ChannelBlockchainEventsResource,
     ChannelsResource,
     ChannelsResourceByTokenAddress,
     ChannelsResourceByTokenAndPartnerAddress,
@@ -46,6 +43,7 @@ from raiden.api.v1.resources import (
     ConnectionsResource,
     ContractsResource,
     MintTokenResource,
+    NodeSettingsResource,
     PartnersResourceByTokenAddress,
     PaymentEventsResource,
     PaymentResource,
@@ -60,7 +58,7 @@ from raiden.api.v1.resources import (
     VersionResource,
     create_blueprint,
 )
-from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
+from raiden.constants import UINT256_MAX, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -74,7 +72,6 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAmount,
     InvalidBinaryAddress,
-    InvalidBlockNumberInput,
     InvalidNumberInput,
     InvalidPaymentIdentifier,
     InvalidRevealTimeout,
@@ -114,7 +111,6 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     Any,
-    BlockIdentifier,
     BlockTimeout,
     Dict,
     Endpoint,
@@ -135,9 +131,11 @@ from raiden.utils.typing import (
 
 log = structlog.get_logger(__name__)
 
+CHANNEL_NETWORK_STATE = "network_state"
 URLS_V1 = [
     ("/address", AddressResource),
     ("/version", VersionResource),
+    ("/settings", NodeSettingsResource),
     ("/contracts", ContractsResource),
     ("/channels", ChannelsResource),
     ("/channels/<hexaddress:token_address>", ChannelsResourceByTokenAddress),
@@ -170,20 +168,6 @@ URLS_V1 = [
     ),
     ("/status", StatusResource),
     ("/shutdown", ShutdownResource),
-    ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
-    ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
-    (
-        "/_debug/blockchain_events/token_network_registries/<hexaddress:token_address>/channels",
-        ChannelBlockchainEventsResource,
-        "tokenchanneleventsresourceblockchain",
-    ),
-    (
-        (
-            "/_debug/blockchain_events/token_network_registries/"
-            "<hexaddress:token_address>/channels/<hexaddress:partner_address>"
-        ),
-        ChannelBlockchainEventsResource,
-    ),
     ("/_debug/raiden_events", RaidenInternalEventsResource),
     ("/_testing/tokens/<hexaddress:token_address>/mint", MintTokenResource, "tokensmintresource"),
 ]
@@ -216,34 +200,6 @@ def encode_object_to_str(map_: Dict) -> None:
             continue
         if not isinstance(v, str):
             map_[k] = repr(v)
-
-
-def normalize_events_list(old_list: List) -> List:
-    """Internally the `event_type` key is prefixed with underscore but the API
-    returns an object without that prefix"""
-    new_list = []
-    for _event in old_list:
-        new_event = dict(_event)
-        if new_event.get("args"):
-            new_event["args"] = dict(new_event["args"])
-            encode_byte_values(new_event["args"])
-        # remove the queue identifier
-        if new_event.get("queue_identifier"):
-            del new_event["queue_identifier"]
-        # the events contain HexBytes values, convert those to strings
-        hexbytes_to_str(new_event)
-        # Some of the raiden events contain accounts and as such need to
-        # be exported in hex to the outside world
-        name = new_event["event"]
-        if name == "EventPaymentReceivedSuccess":
-            new_event["initiator"] = to_checksum_address(new_event["initiator"])
-        if name in ("EventPaymentSentSuccess", "EventPaymentSentFailed"):
-            new_event["target"] = to_checksum_address(new_event["target"])
-        encode_byte_values(new_event)
-        # encode unserializable objects
-        encode_object_to_str(new_event)
-        new_list.append(new_event)
-    return new_list
 
 
 def restapi_setup_urls(flask_api_context: Api, rest_api: "RestAPI", urls: List) -> None:
@@ -527,31 +483,35 @@ class RestAPI:  # pragma: no unittest
     def get_raiden_version(cls) -> Response:
         return api_response(result=dict(version=get_system_spec()["raiden"]))
 
+    def get_node_settings(self) -> Response:
+        pfs_config = self.raiden_api.raiden.config.pfs_config
+        settings = dict(pathfinding_service_address=pfs_config and pfs_config.info.url)
+
+        return api_response(result=settings)
+
     def get_contract_versions(self) -> Response:
         raiden = self.raiden_api.raiden
+        service_registry_address = raiden.default_service_registry and to_checksum_address(
+            raiden.default_service_registry.address
+        )
+        user_deposit_address = raiden.default_user_deposit and to_checksum_address(
+            raiden.default_user_deposit.address
+        )
+        monitoring_service_address = raiden.default_msc_address and to_checksum_address(
+            raiden.default_msc_address
+        )
+        one_to_n_address = raiden.default_one_to_n_address and to_checksum_address(
+            raiden.default_one_to_n_address
+        )
         contracts = dict(
             contracts_version=raiden.proxy_manager.contract_manager.contracts_version,
             token_network_registry_address=to_checksum_address(raiden.default_registry.address),
             secret_registry_address=to_checksum_address(raiden.default_secret_registry.address),
-            service_registry_address="",
-            user_deposit_address="",
-            monitoring_service_address="",
-            one_to_n_address="",
+            service_registry_address=service_registry_address,
+            user_deposit_address=user_deposit_address,
+            monitoring_service_address=monitoring_service_address,
+            one_to_n_address=one_to_n_address,
         )
-        if raiden.default_service_registry is not None:
-            contracts["service_registry_address"] = to_checksum_address(
-                raiden.default_service_registry.address
-            )
-        if raiden.default_user_deposit is not None:
-            contracts["user_deposit_address"] = to_checksum_address(
-                raiden.default_user_deposit.address
-            )
-        if raiden.default_msc_address is not None:
-            contracts["monitoring_service_address"] = to_checksum_address(
-                raiden.default_msc_address
-            )
-        if raiden.default_one_to_n_address is not None:
-            contracts["one_to_n_address"] = to_checksum_address(raiden.default_one_to_n_address)
 
         return api_response(result=contracts)
 
@@ -616,13 +576,17 @@ class RestAPI:  # pragma: no unittest
         )
 
         try:
-            self.raiden_api.mint_token_for(token_address=token_address, to=to, value=value)
+            transaction_hash = self.raiden_api.mint_token_for(
+                token_address=token_address, to=to, value=value
+            )
         except MintFailed as e:
             return api_error(f"Minting failed: {str(e)}", status_code=HTTPStatus.BAD_REQUEST)
         except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
-        return api_response(status_code=HTTPStatus.OK, result={})
+        return api_response(
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(transaction_hash))
+        )
 
     def open(
         self,
@@ -722,48 +686,10 @@ class RestAPI:  # pragma: no unittest
             except (DepositOverLimit, DepositMismatch, UnexpectedChannelState) as e:
                 return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        channel_state = views.get_channelstate_for(
-            views.state_from_raiden(self.raiden_api.raiden),
-            registry_address,
-            token_address,
-            partner_address,
+        result = self._updated_channel_state_from_addresses(
+            registry_address, partner_address, token_address
         )
-
-        result = self.channel_schema.dump(channel_state)
-
         return api_response(result=result, status_code=status_code)
-
-    def connect(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        token_address: TokenAddress,
-        funds: TokenAmount,
-        initial_channel_target: int = 3,
-        joinable_funds_target: float = 0.4,
-    ) -> Response:
-        log.debug(
-            "Connecting to token network",
-            node=self.checksum_address,
-            registry_address=to_checksum_address(registry_address),
-            token_address=to_checksum_address(token_address),
-            funds=funds,
-            initial_channel_target=initial_channel_target,
-            joinable_funds_target=joinable_funds_target,
-        )
-        try:
-            self.raiden_api.token_network_connect(
-                registry_address,
-                token_address,
-                funds,
-                initial_channel_target,
-                joinable_funds_target,
-            )
-        except (InsufficientEth, InsufficientFunds, InsufficientGasReserve) as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
-        except (InvalidAmount, InvalidBinaryAddress) as e:
-            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
-
-        return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
 
     def leave(
         self, registry_address: TokenNetworkRegistryAddress, token_address: TokenAddress
@@ -775,10 +701,13 @@ class RestAPI:  # pragma: no unittest
             token_address=to_checksum_address(token_address),
         )
         closed_channels = self.raiden_api.token_network_leave(registry_address, token_address)
-        closed_channels = [
-            self.channel_schema.dump(channel_state) for channel_state in closed_channels
-        ]
-        return api_response(result=closed_channels)
+
+        closed_channels_result = list()
+        for channel_state in closed_channels:
+            result = self._updated_channel_state(registry_address, channel_state)
+            closed_channels_result.append(result)
+
+        return api_response(result=closed_channels_result)
 
     def get_connection_managers_info(
         self, registry_address: TokenNetworkRegistryAddress
@@ -791,32 +720,15 @@ class RestAPI:  # pragma: no unittest
             registry_address=to_checksum_address(registry_address),
         )
         connection_managers = dict()
-        raiden_service = self.raiden_api.raiden
 
         for token in self.raiden_api.get_tokens_list(registry_address):
-            token_network_address = views.get_token_network_address_by_token_address(
-                views.state_from_raiden(self.raiden_api.raiden),
-                token_network_registry_address=registry_address,
-                token_address=token,
-            )
-            connection_manager = None
-
-            if token_network_address is not None:
-                try:
-                    connection_manager = raiden_service.connection_manager_for_token_network(
-                        token_network_address
-                    )
-                except InvalidBinaryAddress:
-                    pass
-
             open_channels = views.get_channelstate_open(
                 chain_state=views.state_from_raiden(self.raiden_api.raiden),
                 token_network_registry_address=registry_address,
                 token_address=token,
             )
-            if connection_manager is not None and open_channels:
-                connection_managers[to_checksum_address(connection_manager.token_address)] = {
-                    "funds": str(connection_manager.funds),
+            if open_channels:
+                connection_managers[to_checksum_address(token)] = {
                     "sum_deposits": str(
                         views.get_our_deposits_for_token_network(
                             views.state_from_raiden(self.raiden_api.raiden),
@@ -847,10 +759,12 @@ class RestAPI:  # pragma: no unittest
         )
         typecheck(raiden_service_result, list)
 
-        result = [
-            self.channel_schema.dump(channel_schema) for channel_schema in raiden_service_result
-        ]
-        return api_response(result=result)
+        channels_result = list()
+        for channel_state in raiden_service_result:
+            result = self._updated_channel_state(registry_address, channel_state)
+            channels_result.append(result)
+
+        return api_response(result=channels_result)
 
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> Response:
         log.debug(
@@ -884,51 +798,6 @@ class RestAPI:  # pragma: no unittest
             message = f'No token network registered for token "{pretty_address}"'
             return api_error(message, status_code=HTTPStatus.NOT_FOUND)
 
-    def get_blockchain_events_network(
-        self,
-        registry_address: TokenNetworkRegistryAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> Response:
-        log.debug(
-            "Getting network events",
-            node=self.checksum_address,
-            registry_address=to_checksum_address(registry_address),
-            from_block=from_block,
-            to_block=to_block,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_network(
-                registry_address=registry_address, from_block=from_block, to_block=to_block
-            )
-        except InvalidBlockNumberInput as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
-
-        return api_response(result=normalize_events_list(raiden_service_result))
-
-    def get_blockchain_events_token_network(
-        self,
-        token_address: TokenAddress,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> Response:
-        log.debug(
-            "Getting token network blockchain events",
-            node=self.checksum_address,
-            token_address=to_checksum_address(token_address),
-            from_block=from_block,
-            to_block=to_block,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_token_network(
-                token_address=token_address, from_block=from_block, to_block=to_block
-            )
-            return api_response(result=normalize_events_list(raiden_service_result))
-        except UnknownTokenAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-        except (InvalidBlockNumberInput, InvalidBinaryAddress) as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
-
     def get_raiden_events_payment_history_with_timestamps(
         self,
         registry_address: TokenNetworkRegistryAddress,
@@ -959,15 +828,15 @@ class RestAPI:  # pragma: no unittest
         result = []
         chain_state = views.state_from_raiden(self.raiden_api.raiden)
         for event in service_result:
-            if isinstance(event.wrapped_event, EventPaymentSentSuccess):
+            if isinstance(event.event, EventPaymentSentSuccess):
                 serialized_event = self.sent_success_payment_schema.serialize(
                     chain_state=chain_state, event=event
                 )
-            elif isinstance(event.wrapped_event, EventPaymentSentFailed):
+            elif isinstance(event.event, EventPaymentSentFailed):
                 serialized_event = self.failed_payment_schema.serialize(
                     chain_state=chain_state, event=event
                 )
-            elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
+            elif isinstance(event.event, EventPaymentReceivedSuccess):
                 serialized_event = self.received_success_payment_schema.serialize(
                     chain_state=chain_state, event=event
                 )
@@ -975,7 +844,7 @@ class RestAPI:  # pragma: no unittest
                 log.warning(
                     "Unexpected event",
                     node=self.checksum_address,
-                    unexpected_event=event.wrapped_event,
+                    unexpected_event=event.event,
                 )
 
             result.append(serialized_event)
@@ -993,34 +862,6 @@ class RestAPI:  # pragma: no unittest
         ]
         return api_response(result=events)
 
-    def get_blockchain_events_channel(
-        self,
-        token_address: TokenAddress,
-        partner_address: Address = None,
-        from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
-        to_block: BlockIdentifier = BLOCK_ID_LATEST,
-    ) -> Response:
-        log.debug(
-            "Getting channel blockchain events",
-            node=self.checksum_address,
-            token_address=to_checksum_address(token_address),
-            partner_address=optional_address_to_string(partner_address),
-            from_block=from_block,
-            to_block=to_block,
-        )
-        try:
-            raiden_service_result = self.raiden_api.get_blockchain_events_channel(
-                token_address=token_address,
-                partner_address=partner_address,
-                from_block=from_block,
-                to_block=to_block,
-            )
-            return api_response(result=normalize_events_list(raiden_service_result))
-        except (InvalidBlockNumberInput, InvalidBinaryAddress) as e:
-            return api_error(str(e), status_code=HTTPStatus.CONFLICT)
-        except UnknownTokenAddress as e:
-            return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
-
     def get_channel(
         self,
         registry_address: TokenNetworkRegistryAddress,
@@ -1035,12 +876,17 @@ class RestAPI:  # pragma: no unittest
             partner_address=to_checksum_address(partner_address),
         )
         try:
-            channel_state = self.raiden_api.get_channel(
-                registry_address=registry_address,
-                token_address=token_address,
-                partner_address=partner_address,
+            result = self._updated_channel_state_from_addresses(
+                registry_address, partner_address, token_address
             )
-            result = self.channel_schema.dump(channel_state)
+            if result is None:
+                msg = (
+                    f"Channel with partner '{to_checksum_address(partner_address)}' "
+                    f"for token '{to_checksum_address(token_address)}' could not be "
+                    f"found."
+                )
+                return api_error(errors=msg, status_code=HTTPStatus.NOT_FOUND)
+
             return api_response(result=result)
         except ChannelNotFound as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
@@ -1107,7 +953,7 @@ class RestAPI:  # pragma: no unittest
             identifier = create_default_identifier()
 
         try:
-            payment_status = self.raiden_api.transfer(
+            payment_status = self.raiden_api.transfer_and_wait(
                 registry_address=registry_address,
                 token_address=token_address,
                 target=target_address,
@@ -1153,6 +999,53 @@ class RestAPI:  # pragma: no unittest
         result = self.payment_schema.dump(payment)
         return api_response(result=result)
 
+    def _updated_channel_state_from_addresses(
+        self,
+        registry_address: TokenNetworkRegistryAddress,
+        partner_address: Address,
+        token_address: TokenAddress,
+    ) -> Optional[Dict]:
+        chain_state = views.state_from_raiden(self.raiden_api.raiden)
+        updated_channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if updated_channel_state:
+            result = self.channel_schema.dump(updated_channel_state)
+            result[CHANNEL_NETWORK_STATE] = views.get_node_network_status(
+                chain_state,
+                updated_channel_state.partner_state.address,
+            ).value
+        else:
+            result = None
+
+        return result
+
+    def _updated_channel_state(
+        self, registry_address: TokenNetworkRegistryAddress, channel_state: NettingChannelState
+    ) -> Optional[Dict]:
+        chain_state = views.state_from_raiden(self.raiden_api.raiden)
+        updated_channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            token_network_registry_address=registry_address,
+            token_address=channel_state.token_address,
+            partner_address=channel_state.partner_state.address,
+        )
+
+        if updated_channel_state:
+            result = self.channel_schema.dump(updated_channel_state)
+            result[CHANNEL_NETWORK_STATE] = views.get_node_network_status(
+                chain_state,
+                updated_channel_state.partner_state.address,
+            ).value
+        else:
+            result = None
+
+        return result
+
     def _deposit(
         self,
         registry_address: TokenNetworkRegistryAddress,
@@ -1191,11 +1084,7 @@ class RestAPI:  # pragma: no unittest
         except UnexpectedChannelState as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _withdraw(
@@ -1230,11 +1119,7 @@ class RestAPI:  # pragma: no unittest
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         # TODO handle InsufficientEth here
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _set_channel_reveal_timeout(
@@ -1268,11 +1153,7 @@ class RestAPI:  # pragma: no unittest
         except InvalidRevealTimeout as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def _close(
@@ -1298,11 +1179,7 @@ class RestAPI:  # pragma: no unittest
         except InsufficientEth as e:
             return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
-        updated_channel_state = self.raiden_api.get_channel(
-            registry_address, channel_state.token_address, channel_state.partner_state.address
-        )
-
-        result = self.channel_schema.dump(updated_channel_state)
+        result = self._updated_channel_state(registry_address, channel_state)
         return api_response(result=result)
 
     def patch_channel(

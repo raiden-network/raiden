@@ -94,7 +94,7 @@ def test_token_network_registry(
 
     # Register a valid token
     preblockhash = deploy_client.get_confirmed_blockhash()
-    token_network_address = token_network_registry_proxy.add_token(
+    _, token_network_address = token_network_registry_proxy.add_token(
         token_address=test_token_address,
         channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
         token_network_deposit_limit=TokenAmount(UINT256_MAX),

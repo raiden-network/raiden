@@ -39,14 +39,19 @@ of the easy of conversion.
 6- https://tools.ietf.org/html/rfc4122.html
 7- https://github.com/ulid/spec
 """
-from collections import namedtuple
+from dataclasses import dataclass
+from datetime import datetime
 
 from raiden.transfer.architecture import Event
 
 
-class TimestampedEvent(namedtuple("TimestampedEvent", "wrapped_event log_time")):
+@dataclass
+class TimestampedEvent:
+    event: Event
+    log_time: datetime
+
     def __getattr__(self, item: str) -> Event:
-        return getattr(self.wrapped_event, item)
+        return getattr(self.event, item)
 
 
 DB_CREATE_SETTINGS = """
@@ -67,7 +72,7 @@ CREATE TABLE IF NOT EXISTS state_changes (
 DB_CREATE_SNAPSHOT = """
 CREATE TABLE IF NOT EXISTS state_snapshot (
     identifier ULID PRIMARY KEY NOT NULL,
-    statechange_id ULID NOT NULL,
+    statechange_id ULID UNIQUE,
     statechange_qty INTEGER,
     data JSON,
     timestamp TIMESTAMP DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')) NOT NULL,

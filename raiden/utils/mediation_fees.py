@@ -27,8 +27,8 @@ def prepare_mediation_fee_config(
     ],
     cli_cap_mediation_fees: bool,
 ) -> MediationFeeConfig:
-    """ Converts the mediation fee CLI args to proper per-channel
-    mediation fees. """
+    """Converts the mediation fee CLI args to proper per-channel
+    mediation fees."""
     tn_to_flat_fee: Dict[TokenAddress, FeeAmount] = {
         # Add the defaults for flat fees for DAI/WETH
         WETH_TOKEN_ADDRESS: FeeAmount(DEFAULT_WETH_FLAT_FEE // 2),

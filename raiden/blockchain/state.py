@@ -6,7 +6,7 @@ otherwise the node will be susceptible to races due to reorgs. These races can
 crash the client in the best case, or be an attack vector in the worst case.
 Because of this, the event itself must already be confirmed.
 
-If possible, the confirmed data should be retrievied from the same block at
+If possible, the confirmed data should be retrieved from the same block at
 which the event was emitted. However, because of state pruning this is not
 always possible. If that block is pruned then the latest confirmed block must
 be used.
@@ -221,7 +221,8 @@ def get_contractreceivechannelbatchunlock_data_from_event(
 
 
 def get_contractreceivechannelnew_data_from_event(
-    chain_state: ChainState, event: DecodedEvent,
+    chain_state: ChainState,
+    event: DecodedEvent,
 ) -> Optional[NewChannelDetails]:
     token_network_address = TokenNetworkAddress(event.originating_contract)
     data = event.event_data

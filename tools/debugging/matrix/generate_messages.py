@@ -2,7 +2,6 @@
 import gevent.monkey  # isort:skip # noqa
 
 gevent.monkey.patch_all()  # isort:skip # noqa
-
 import argparse
 import json
 import logging.config
@@ -11,10 +10,12 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from itertools import repeat
 
+import gevent
 import structlog
 from gevent.pool import Pool
 
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room, User
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.network.transport.matrix.utils import login
 from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
@@ -23,6 +24,8 @@ from raiden.settings import (
 from raiden.tests.utils import factories
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Any, Dict, Iterator, RoomID
+
+setup_asyncio_event_loop()
 
 log = structlog.get_logger(__name__)
 

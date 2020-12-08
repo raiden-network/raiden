@@ -25,7 +25,7 @@ def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
 def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     deploy_client: JSONRPCClient,
 ) -> None:
-    """ Gas estimation fails if the transaction execution requires more gas
+    """Gas estimation fails if the transaction execution requires more gas
     than the block's gas limit.
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")

@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import json
 import os
 import sys
@@ -53,10 +54,10 @@ from raiden.ui.runners import run_services
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
+    ChainChoiceType,
     EnumChoiceType,
     GasPriceChoiceType,
     MatrixServerType,
-    NetworkChoiceType,
     PathRelativePath,
     apply_config_file,
     group,
@@ -65,16 +66,13 @@ from raiden.utils.cli import (
 )
 from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.profiling.greenlets import SwitchMonitoring
-from raiden.utils.profiling.memory import MemoryLogger
-from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
-ETH_NETWORKID_OPTION = "--network-id"
+ETH_CHAINID_OPTION = "--network-id"
 COMMUNICATION_ERROR = (
     f"\n"
     f"Communicating with an external service failed.\n"
@@ -98,6 +96,12 @@ class ReturnCode(Enum):
     ETH_ACCOUNT_ERROR = 6
     RAIDEN_CONFIGURATION_ERROR = 7
     SMART_CONTRACTS_CONFIGURATION_ERROR = 8
+
+
+def windows_not_supported(feature_name: str) -> None:
+    if os.name == "nt":
+        click.echo(f"{feature_name.title()} not supported on Windows")
+        exit(1)
 
 
 def write_stack_trace(ex: Exception) -> None:
@@ -179,21 +183,21 @@ def options(func: Callable) -> Callable:
             help="hex encoded address of the User Deposit contract.",
             type=ADDRESS_TYPE,
         ),
-        option("--console", help="Start the interactive raiden console", is_flag=True),
         option(
-            ETH_NETWORKID_OPTION,
+            ETH_CHAINID_OPTION,
+            "chain_id",
             help=(
-                "Specify the network name/id of the Ethereum network to run Raiden on.\n"
+                "Specify the chain name/id of the Ethereum network to run Raiden on.\n"
                 "Available networks:\n"
-                '"mainnet" - network id: 1\n'
-                '"ropsten" - network id: 3\n'
-                '"rinkeby" - network id: 4\n'
-                '"goerli" - network id: 5\n'
-                '"kovan" - network id: 42\n'
-                '"<NETWORK_ID>": use the given network id directly\n'
+                '"mainnet" - chain id: 1\n'
+                '"ropsten" - chain id: 3\n'
+                '"rinkeby" - chain id: 4\n'
+                '"goerli" - chain id: 5\n'
+                '"kovan" - chain id: 42\n'
+                '"<CHAIN_ID>": use the given chain id directly\n'
             ),
-            type=NetworkChoiceType(
-                ["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<NETWORK_ID>"]
+            type=ChainChoiceType(
+                ["mainnet", "ropsten", "rinkeby", "goerli", "kovan", "<CHAIN_ID>"]
             ),
             default="mainnet",
             show_default=True,
@@ -278,8 +282,7 @@ def options(func: Callable) -> Callable:
                 help=(
                     "Specify the routing mode to be used.\n"
                     '"pfs": use the path finding service\n'
-                    '"local": use local routing, but send updates to the PFS\n'
-                    '"private": use local routing and don\'t send updates to the PFS\n'
+                    '"private": only use direct channels and don\'t send updates to the PFS\n'
                 ),
                 type=EnumChoiceType(RoutingMode),
                 default=RoutingMode.PFS.value,
@@ -505,6 +508,20 @@ def options(func: Callable) -> Callable:
         ),
     ]
 
+    if importlib.util.find_spec("IPython"):
+        options_.append(
+            option("--console", help="Start the interactive raiden console", is_flag=True)
+        )
+    else:
+
+        def unsupported(_ctx: Any, _param: Any, value: bool) -> None:
+            if value:
+                raise click.BadParameter(
+                    "Console support is only available in development installs."
+                )
+
+        options_.append(option("--console", is_flag=True, hidden=True, callback=unsupported))
+
     for option_ in reversed(options_):
         func = option_(func)
     return func
@@ -535,6 +552,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
     enable_gevent_monitoring_signal()
 
     if flamegraph:  # pragma: no cover
+        windows_not_supported("flame graph")
+        from raiden.utils.profiling.sampler import FlameGraphCollector, TraceSampler
+
         os.makedirs(flamegraph, exist_ok=True)
 
         now = datetime.datetime.now().isoformat()
@@ -545,6 +565,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
         profiler = TraceSampler(flame)
 
     if switch_tracing is True:  # pragma: no cover
+        windows_not_supported("switch tracing")
+        from raiden.utils.profiling.greenlets import SwitchMonitoring
+
         switch_monitor = SwitchMonitoring()
 
     if kwargs["environment_type"] == Environment.DEVELOPMENT:
@@ -553,6 +576,9 @@ def run(ctx: Context, **kwargs: Any) -> None:
     memory_logger = None
     log_memory_usage_interval = kwargs.pop("log_memory_usage_interval", 0)
     if log_memory_usage_interval > 0:  # pragma: no cover
+        windows_not_supported("memory usage logging")
+        from raiden.utils.profiling.memory import MemoryLogger
+
         memory_logger = MemoryLogger(log_memory_usage_interval)
         memory_logger.start()
 
@@ -578,7 +604,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
             | assume all risk related thereto and hereby release, waive, discharge   |
             | and covenant not to hold liable Brainbot Labs Establishment or any of  |
             | its officers, employees or affiliates from and for any direct or       |
-            | indirect damage resulting from the the software or the use thereof.    |
+            | indirect damage resulting from the software or the use thereof.        |
             | Such to the extent as permissible by applicable laws and regulations.  |
             |                                                                        |
             | Privacy warning: Please be aware, that by using the Raiden Client,     |
@@ -608,7 +634,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
     # Name used in the exception handlers, make sure the kwargs contains the
     # key with the correct name by always running it.
-    name_or_id = ID_TO_CHAINNAME.get(kwargs["network_id"], kwargs["network_id"])
+    name_or_id = ID_TO_CHAINNAME.get(kwargs["chain_id"], kwargs["chain_id"])
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
@@ -787,7 +813,7 @@ def smoketest(
 
                 # Matrix server
                 args["one_to_n_contract_address"] = "0x" + "1" * 40
-                args["routing_mode"] = RoutingMode.LOCAL
+                args["routing_mode"] = RoutingMode.PRIVATE
                 args["flat_fee"] = ()
                 args["proportional_fee"] = ()
                 args["proportional_imbalance_fee"] = ()

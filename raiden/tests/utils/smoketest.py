@@ -9,18 +9,18 @@ from http import HTTPStatus
 from pathlib import Path
 from subprocess import TimeoutExpired
 from tempfile import mkdtemp
-from typing import IO, ContextManager, NamedTuple
+from typing import IO, NamedTuple
 
 import click
 import requests
 from eth_typing import URI, HexStr
 from eth_utils import remove_0x_prefix, to_canonical_address
 from gevent import sleep
+from typing_extensions import Protocol
 from web3 import HTTPProvider, Web3
 from web3.contract import Contract
 
 from raiden.accounts import AccountManager
-from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     BLOCK_ID_LATEST,
     DISCOVERY_DEFAULT_ROOM,
@@ -48,11 +48,11 @@ from raiden.tests.utils.eth_node import (
     parity_keystore,
     run_private_blockchain,
 )
-from raiden.tests.utils.smartcontracts import deploy_token
+from raiden.tests.utils.smartcontracts import deploy_token, is_tx_hash_bytes
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
-from raiden.ui.app import run_app
+from raiden.ui.app import run_raiden_service
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.keys import privatekey_to_address
@@ -106,6 +106,11 @@ TEST_PRIVKEY = PrivateKey(
     b"\xc4\xdd\x14?\xfa\x81\x0e\xf1\x80\x9aj\x11\xf2\xbcD"
 )
 TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
+
+
+class StepPrinter(Protocol):
+    def __call__(self, description: str, error: bool = False) -> None:
+        ...
 
 
 def ensure_executable(cmd):
@@ -210,11 +215,12 @@ def deploy_smoketest_contracts(
         proxy_manager=proxy_manager,
         block_identifier=BLOCK_ID_LATEST,
     )
-    user_deposit_proxy.init(
+    transaction_hash = user_deposit_proxy.init(
         monitoring_service_address=MonitoringServiceAddress(monitoring_service_address),
         one_to_n_address=OneToNAddress(one_to_n_address),
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(transaction_hash)
 
     addresses = {
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
@@ -242,7 +248,15 @@ def setup_testchain(
     eth_client: EthClient, free_port_generator: Iterator[Port], base_datadir: str, base_logdir: str
 ) -> Iterator[Dict[str, Any]]:
 
-    ensure_executable(eth_client.value)
+    # This mapping exists to facilitate the transition from parity to
+    # openethereum. When all traces of parity are remove, just use
+    # ``eth_client.value`` again.
+    eth_client_to_executable = {
+        EthClient.GETH: "geth",
+        EthClient.PARITY: "openethereum",
+    }
+
+    ensure_executable(eth_client_to_executable[eth_client])
 
     rpc_port = next(free_port_generator)
     p2p_port = next(free_port_generator)
@@ -296,7 +310,7 @@ def setup_testchain(
 
 @contextmanager
 def setup_matrix_for_smoketest(
-    print_step: Callable,
+    print_step: StepPrinter,
     free_port_generator: Iterable[Port],
     broadcast_rooms_aliases: Iterable[str],
 ) -> Iterator[List[Tuple["ParsedURL", HTTPExecutor]]]:
@@ -311,7 +325,7 @@ def setup_matrix_for_smoketest(
 @contextmanager
 def setup_testchain_for_smoketest(
     eth_client: EthClient,
-    print_step: Callable,
+    print_step: StepPrinter,
     free_port_generator: Iterator[Port],
     base_datadir: str,
     base_logdir: str,
@@ -335,7 +349,7 @@ class RaidenTestSetup(NamedTuple):
 
 def setup_raiden(
     matrix_server: str,
-    print_step: Callable,
+    print_step: StepPrinter,
     contracts_version,
     eth_rpc_endpoint: str,
     web3: Web3,
@@ -394,14 +408,14 @@ def setup_raiden(
         "gas_price": "fast",
         "keystore_path": keystore,
         "matrix_server": matrix_server,
-        "network_id": str(CHAINNAME_TO_ID["smoketest"]),
+        "chain_id": str(CHAINNAME_TO_ID["smoketest"]),
         "password_file": click.File()(os.path.join(base_datadir, "pw")),
         "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
         "environment_type": Environment.DEVELOPMENT,
     }
 
-    # Wait until the secret registry is confirmed, otherwise the App
+    # Wait until the secret registry is confirmed, otherwise the RaidenService
     # inialization will fail, needed for the check
     # `check_ethereum_confirmed_block_is_not_pruned`.
     current_block = client.block_number()
@@ -413,41 +427,42 @@ def setup_raiden(
     return RaidenTestSetup(args=args, token=token, contract_addresses=contract_addresses)
 
 
-def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
+def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
     print_step("Starting Raiden")
 
     app = None
     try:
-        app = run_app(**setup.args)
-        raiden_api = app.raiden.raiden_api
+        app = run_raiden_service(**setup.args)
+        raiden_api = app.raiden_api
         assert raiden_api is not None  # for mypy
+        partner_address = Address(b"1" * 20)
 
-        block = BlockNumber(app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
+        block = BlockNumber(app.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
         # Proxies now use the confirmed block hash to query the chain for
         # prerequisite checks. Wait a bit here to make sure that the confirmed
         # block hash contains the deployed token network or else things break
-        wait_for_block(raiden=app.raiden, block_number=block, retry_timeout=1.0)
+        wait_for_block(raiden=app, block_number=block, retry_timeout=1.0)
 
         raiden_api.channel_open(
             registry_address=TokenNetworkRegistryAddress(
                 setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
             token_address=TokenAddress(to_canonical_address(setup.token.address)),
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+            partner_address=partner_address,
         )
         raiden_api.set_total_channel_deposit(
             registry_address=TokenNetworkRegistryAddress(
                 setup.contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
             ),
             token_address=TokenAddress(to_canonical_address(setup.token.address)),
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+            partner_address=partner_address,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
         token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
 
         print_step("Running smoketest")
 
-        raiden_service = app.raiden
+        raiden_service = app
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()
         events_token_addresses = [
             event["args"]["token_address"] for event in token_network_added_events
@@ -464,7 +479,7 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
             chain_state=views.state_from_raiden(raiden_service),
             token_network_registry_address=raiden_service.default_registry.address,
             token_address=token_networks[0],
-            partner_address=ConnectionManager.BOOTSTRAP_ADDR,
+            partner_address=partner_address,
         )
         assert channel_state
 
@@ -481,22 +496,20 @@ def run_smoketest(print_step: Callable, setup: RaidenTestSetup) -> None:
         assert response.status_code == HTTPStatus.OK
 
         response_json = json.loads(response.content)
-        assert response_json[0]["partner_address"] == to_checksum_address(
-            ConnectionManager.BOOTSTRAP_ADDR
-        )
+        assert response_json[0]["partner_address"] == to_checksum_address(partner_address)
         assert response_json[0]["state"] == "opened"
         assert int(response_json[0]["balance"]) > 0
     finally:
         if app is not None:
             app.stop()
-            app.raiden.greenlet.get()
+            app.greenlet.get()
 
 
 @contextmanager
 def setup_smoketest(
     *,
     eth_client: EthClient,
-    print_step: Callable,
+    print_step: StepPrinter,
     free_port_generator: Iterator[Port],
     debug: bool = False,
     stdout: IO = None,
@@ -506,16 +519,14 @@ def setup_smoketest(
     make_requests_insecure()
 
     datadir = mkdtemp()
-    testchain_manager: ContextManager[Dict[str, Any]] = setup_testchain_for_smoketest(
+    testchain_manager = setup_testchain_for_smoketest(
         eth_client=eth_client,
         print_step=print_step,
         free_port_generator=free_port_generator,
         base_datadir=datadir,
         base_logdir=datadir,
     )
-    matrix_manager: ContextManager[
-        List[Tuple[ParsedURL, HTTPExecutor]]
-    ] = setup_matrix_for_smoketest(
+    matrix_manager = setup_matrix_for_smoketest(
         print_step=print_step,
         free_port_generator=free_port_generator,
         broadcast_rooms_aliases=[
@@ -567,7 +578,7 @@ def setup_smoketest(
 
 
 @contextmanager
-def step_printer(step_count, stdout):
+def step_printer(step_count, stdout) -> Iterator[StepPrinter]:
     step = 0
 
     def print_step(description: str, error: bool = False) -> None:

@@ -33,6 +33,7 @@ from raiden.utils.typing import (
     Optional,
     TokenAddress,
     TokenAmount,
+    TransactionHash,
     Tuple,
     UserDepositAddress,
 )
@@ -131,6 +132,9 @@ class UserDeposit:
     def get_total_deposit(
         self, address: Address, block_identifier: BlockIdentifier
     ) -> TokenAmount:
+        return self.proxy.functions.total_deposit(address).call(block_identifier=block_identifier)
+
+    def get_balance(self, address: Address, block_identifier: BlockIdentifier) -> TokenAmount:
         return self.proxy.functions.balances(address).call(block_identifier=block_identifier)
 
     def whole_balance(self, block_identifier: BlockIdentifier) -> TokenAmount:
@@ -162,7 +166,7 @@ class UserDeposit:
         monitoring_service_address: MonitoringServiceAddress,
         one_to_n_address: OneToNAddress,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         """ Initialize the UserDeposit contract with MS and OneToN addresses """
         check_address_has_code_handle_pruned_block(
             client=self.client,
@@ -206,14 +210,14 @@ class UserDeposit:
                 )
                 raise BrokenPreconditionError(msg)
 
-        self._init(
+        return self._init(
             monitoring_service_address=monitoring_service_address,
             one_to_n_address=one_to_n_address,
         )
 
     def _init(
         self, monitoring_service_address: MonitoringServiceAddress, one_to_n_address: OneToNAddress
-    ) -> None:
+    ) -> TransactionHash:
         log_details: Dict[str, Any] = {}
         estimated_transaction = self.client.estimate_gas(
             self.proxy, "init", log_details, monitoring_service_address, one_to_n_address
@@ -280,6 +284,7 @@ class UserDeposit:
                     raise RaidenRecoverableError(msg)
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
+            return transaction_mined.transaction_hash
 
     def effective_balance(self, address: Address, block_identifier: BlockIdentifier) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
@@ -297,7 +302,7 @@ class UserDeposit:
         beneficiary: Address,
         total_deposit: TokenAmount,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
+    ) -> TransactionHash:
         """ Increase the total deposit of the beneficiary's account to `total_deposit`. """
 
         token_address = self.token_address(given_block_identifier)
@@ -316,10 +321,9 @@ class UserDeposit:
         # other operation.
         current_inflight = self._inflight_deposits.get(beneficiary)
         if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
-            current_inflight.async_result.get()
-            return
+            return TransactionHash(current_inflight.async_result.get())
 
-        with self._deposit_inflight(beneficiary, total_deposit):
+        with self._deposit_inflight(beneficiary, total_deposit) as inflight_deposit:
             log_details = {
                 "given_block_identifier": format_block_id(given_block_identifier),
                 "previous_total_deposit": previous_total_deposit,
@@ -332,17 +336,19 @@ class UserDeposit:
             if estimated_transaction is not None:
                 transaction_hash = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(
+            transaction_mined_hash = self._deposit_check_result(
                 transaction_hash, token, beneficiary, total_deposit, amount_to_deposit
             )
+            inflight_deposit.async_result.set(transaction_mined_hash)
+            return transaction_mined_hash
 
     def approve_and_deposit(
         self,
         beneficiary: Address,
         total_deposit: TokenAmount,
         given_block_identifier: BlockIdentifier,
-    ) -> None:
-        """ Deposit provided amount into the user-deposit contract
+    ) -> TransactionHash:
+        """Deposit provided amount into the user-deposit contract
         to the beneficiary's account.
 
         This function will also call approve with the *same* amount of tokens
@@ -366,10 +372,9 @@ class UserDeposit:
 
         current_inflight = self._inflight_deposits.get(beneficiary)
         if current_inflight is not None and current_inflight.total_deposit >= total_deposit:
-            current_inflight.async_result.get()
-            return
+            return TransactionHash(current_inflight.async_result.get())
 
-        with self._deposit_inflight(beneficiary, total_deposit):
+        with self._deposit_inflight(beneficiary, total_deposit) as inflight_deposit:
             # Make sure another `approve` transactions is not sent before the
             # deposit, otherwise the value would be overwritten.
             transaction_sent = None
@@ -386,14 +391,16 @@ class UserDeposit:
                 if estimated_transaction is not None:
                     transaction_sent = self.client.transact(estimated_transaction)
 
-            self._deposit_check_result(
+            transaction_mined_hash = self._deposit_check_result(
                 transaction_sent, token, beneficiary, total_deposit, amount_to_deposit
             )
+            inflight_deposit.async_result.set(transaction_mined_hash)
+            return transaction_mined_hash
 
     def plan_withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
-    ) -> BlockNumber:
-        """ Announce that you plan to withdraw tokens from the UserDeposit contract
+    ) -> Tuple[TransactionHash, BlockNumber]:
+        """Announce that you plan to withdraw tokens from the UserDeposit contract
 
         Returns the block number at which the withdraw is ready.
         """
@@ -411,11 +418,14 @@ class UserDeposit:
                 transaction_sent=transaction_sent, amount_to_plan_withdraw=amount
             )
 
-        assert transaction_mined is not None, "_plan_withdraw_check_result returned None"
+        return (
+            transaction_mined.transaction_hash,
+            BlockNumber(transaction_mined.receipt["blockNumber"] + self.get_withdraw_delay()),
+        )
 
-        return BlockNumber(transaction_mined.receipt["blockNumber"] + self.get_withdraw_delay())
-
-    def withdraw(self, amount: TokenAmount, given_block_identifier: BlockIdentifier) -> None:
+    def withdraw(
+        self, amount: TokenAmount, given_block_identifier: BlockIdentifier
+    ) -> TransactionHash:
         """ Withdraw tokens from UDC, requires a mature withdraw plan"""
 
         token_address = self.token_address(given_block_identifier)
@@ -438,7 +448,7 @@ class UserDeposit:
             transaction_sent = None
             if estimated_transaction is not None:
                 transaction_sent = self.client.transact(estimated_transaction)
-            self._withdraw_check_result(
+            return self._withdraw_check_result(
                 transaction_sent=transaction_sent,
                 amount_to_withdraw=amount,
                 token=token,
@@ -489,13 +499,18 @@ class UserDeposit:
                 )
                 raise BrokenPreconditionError(msg)
 
-            if total_deposit <= previous_total_deposit:
+            if total_deposit < previous_total_deposit:
                 msg = (
                     f"Current total deposit {previous_total_deposit} is already larger "
                     f"than the requested total deposit amount {total_deposit}"
                 )
                 raise BrokenPreconditionError(msg)
-
+            if total_deposit == previous_total_deposit:
+                msg = (
+                    f"Current total deposit {previous_total_deposit} is the same as "
+                    "the requested total deposit amount."
+                )
+                raise BrokenPreconditionError(msg)
             if current_balance < amount_to_deposit:
                 msg = (
                     f"new_total_deposit - previous_total_deposit = {amount_to_deposit} "
@@ -509,22 +524,28 @@ class UserDeposit:
     @contextmanager
     def _deposit_inflight(
         self, beneficiary: Address, total_deposit: TokenAmount
-    ) -> Iterator[None]:
-        """ Updates the `_inflight_deposits` dictionary to handle concurrent deposits.
+    ) -> Iterator[InflightDeposit]:
+        """Updates the `_inflight_deposits` dictionary to handle concurrent deposits.
 
-        Note: This must be called after `_deposit_preconditions`.
+        Note:
+          This must be called after `_deposit_preconditions`.
+          The returned InflightDeposit.async_result has to be set within the 'with' block,
+          when no Exception is raised
         """
         async_result = AsyncResult()
         current_inflight = InflightDeposit(total_deposit, async_result)
         self._inflight_deposits[beneficiary] = current_inflight
 
         try:
-            yield
+            yield current_inflight
         except Exception as e:
             async_result.set_exception(e)
             raise
         else:
-            async_result.set_result(None)
+            assert async_result.ready(), (
+                "The AsyncResult created by this contextmanager must be"
+                "set within the 'with' block!"
+            )
         finally:
             # Clearing the dictionary is not strictly necessary since the
             # deposit is always increasing. But it is just nice to clear up the
@@ -543,7 +564,7 @@ class UserDeposit:
         beneficiary: Address,
         total_deposit: TokenAmount,
         amount_to_deposit: TokenAmount,
-    ) -> None:
+    ) -> TransactionHash:
         if transaction_sent is None:
             failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blocknumber = failed_at["number"]
@@ -663,6 +684,8 @@ class UserDeposit:
                     raise RaidenRecoverableError(msg)
 
                 raise RaidenRecoverableError("Deposit failed of unknown reason")
+            else:
+                return transaction_mined.transaction_hash
 
     def _plan_withdraw_preconditions(
         self, amount_to_plan_withdraw: TokenAmount, given_block_identifier: BlockIdentifier
@@ -672,7 +695,7 @@ class UserDeposit:
             raise BrokenPreconditionError("Planned withdraw amount must be greater than zero.")
 
         try:
-            current_balance = self.get_total_deposit(
+            current_balance = self.get_balance(
                 address=self.node_address, block_identifier=given_block_identifier
             )
         except ValueError:
@@ -723,7 +746,7 @@ class UserDeposit:
 
     def _plan_withdraw_check_result(
         self, transaction_sent: Optional[TransactionSent], amount_to_plan_withdraw: TokenAmount
-    ) -> Optional[TransactionMined]:
+    ) -> TransactionMined:
         if transaction_sent is None:
             failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blocknumber = failed_at["number"]
@@ -748,7 +771,7 @@ class UserDeposit:
 
             failed_at_blocknumber = BlockNumber(transaction_mined.receipt["blockNumber"])
 
-            current_balance = self.get_total_deposit(
+            current_balance = self.get_balance(
                 address=self.node_address, block_identifier=failed_at_blocknumber
             )
 
@@ -768,7 +791,7 @@ class UserDeposit:
         amount_to_withdraw: TokenAmount,
         token: Token,
         previous_token_balance: TokenAmount,
-    ) -> None:
+    ) -> TransactionHash:
         if transaction_sent is None:
             failed_at = self.client.get_block(BLOCK_ID_LATEST)
             failed_at_blocknumber = failed_at["number"]
@@ -821,3 +844,5 @@ class UserDeposit:
                 raise RaidenRecoverableError("Token transfer during withdraw failed.")
 
             raise RaidenRecoverableError("Withdraw failed for an unknown reason.")
+        else:
+            return transaction_mined.transaction_hash

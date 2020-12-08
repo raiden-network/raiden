@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.api.rest import APIServer
-from raiden.app import App
+from raiden.raiden_service import RaidenService
 from raiden.tests.integration.api.utils import prepare_api_server
 from raiden.utils.typing import List
 
@@ -11,7 +11,7 @@ from raiden.utils.typing import List
 #       the server is no longer running even though the teardown has not
 #       been invoked.
 @pytest.fixture
-def api_server_test_instance(raiden_network: List[App]) -> APIServer:
+def api_server_test_instance(raiden_network: List[RaidenService]) -> APIServer:
     api_server = prepare_api_server(raiden_network[0])
 
     return api_server

@@ -5,11 +5,11 @@ import time
 
 import gevent
 import IPython
+import nest_asyncio
 from eth_utils import denoms, to_canonical_address
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST, UINT256_MAX
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
@@ -38,7 +38,7 @@ ENDC = "\033[0m"
 
 
 def print_usage() -> None:
-    print(f"\tuse `{HEADER}app{OKBLUE}` to interact with the top level Raiden App API.")
+    print(f"\tuse `{HEADER}app{OKBLUE}` to interact with the top level Raiden API.")
     print(f"\t{OKBLUE}use `{HEADER}raiden{OKBLUE}` to interact with the raiden service.")
     print(
         "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
@@ -54,13 +54,13 @@ def print_usage() -> None:
 
 
 class Console(gevent.Greenlet):
-    """ A service starting an interactive ipython session when receiving the
+    """A service starting an interactive ipython session when receiving the
     SIGSTP signal (e.g. via keyboard shortcut CTRL-Z).
     """
 
-    def __init__(self, app: App) -> None:
+    def __init__(self, raiden_service: RaidenService) -> None:
         super().__init__()
-        self.app = app
+        self.raiden_service = raiden_service
         self.console_locals: Dict[str, Any] = {}
 
     def _run(self) -> None:  # pylint: disable=method-hidden
@@ -78,7 +78,7 @@ class Console(gevent.Greenlet):
         sys.stderr = err
 
         def lastlog(n: int = 10, prefix: str = None, level: str = None) -> None:
-            """ Print the last `n` log lines to stdout.
+            """Print the last `n` log lines to stdout.
             Use `prefix='p2p'` to filter for a specific logger.
             Use `level=INFO` to filter for a specific level.
             Level- and prefix-filtering are applied before tailing the log.
@@ -96,13 +96,12 @@ class Console(gevent.Greenlet):
             for line in (err.getvalue().strip().split("\n") or [])[-n:]:
                 print(line)
 
-        tools = ConsoleTools(self.app.raiden)
+        tools = ConsoleTools(self.raiden_service)
 
         self.console_locals = {
-            "app": self.app,
-            "raiden": self.app.raiden,
+            "raiden": self.raiden_service,
             "denoms": denoms,
-            "proxy_manager": self.app.raiden.proxy_manager,
+            "proxy_manager": self.raiden_service.proxy_manager,
             "tools": tools,
             "lasterr": lasterr,
             "lastlog": lastlog,
@@ -113,6 +112,7 @@ class Console(gevent.Greenlet):
         print("Entering Console" + OKGREEN)
         print("Tip:" + OKBLUE)
         print_usage()
+        nest_asyncio.apply()
         IPython.start_ipython(argv=[], user_ns=self.console_locals)
 
         sys.exit(0)
@@ -135,7 +135,7 @@ class ConsoleTools:
         timeout: int = 60,
         auto_register: bool = True,
     ) -> AddressHex:
-        """ Create a proxy for a new HumanStandardToken (ERC20), that is
+        """Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
         Per default it will be registered with 'raiden'.
 
@@ -177,7 +177,7 @@ class ConsoleTools:
         token_address_hex: AddressHex,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> TokenNetwork:
-        """ Register a token with the raiden token manager.
+        """Register a token with the raiden token manager.
 
         Args:
             registry_address_hex: a hex encoded registry address.
@@ -194,7 +194,7 @@ class ConsoleTools:
             registry_address, BLOCK_ID_LATEST
         )
 
-        token_network_address = registry.add_token(
+        _, token_network_address = registry.add_token(
             token_address=token_address,
             channel_participant_deposit_limit=TokenAmount(UINT256_MAX),
             token_network_deposit_limit=TokenAmount(UINT256_MAX),
@@ -214,14 +214,14 @@ class ConsoleTools:
         total_deposit: TokenAmount,
         settle_timeout: BlockTimeout = None,
     ) -> None:
-        """ Convenience method to open a channel.
+        """Convenience method to open a channel.
 
         Args:
             registry_address_hex: hex encoded address of the registry for the channel.
             token_address_hex: hex encoded address of the token for the channel.
             peer_address_hex: hex encoded address of the channel peer.
             total_deposit: amount of total funding for the channel.
-            settle_timeout: amount of blocks for the settle time (if None use app defaults).
+            settle_timeout: amount of blocks for the settle time (if None use defaults).
 
         Return:
             netting_channel: the (newly opened) netting channel object.
@@ -240,7 +240,7 @@ class ConsoleTools:
         )
 
     def wait_for_contract(self, contract_address_hex: AddressHex, timeout: int = None) -> bool:
-        """ Wait until a contract is mined
+        """Wait until a contract is mined
 
         Args:
             contract_address_hex: hex encoded address of the contract

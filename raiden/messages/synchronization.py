@@ -9,7 +9,7 @@ from raiden.utils.typing import ClassVar, MessageID
 
 @dataclass(repr=False, eq=False)
 class Processed(SignedRetrieableMessage):
-    """ Used by the recipient when a message which has to be validated against
+    """Used by the recipient when a message which has to be validated against
     blockchain data was successfully processed.
 
     This message is only used to confirm the processing of messages which have
@@ -58,7 +58,7 @@ class Processed(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
-    """ Informs the sender that the message was received *and* persisted.
+    """Informs the sender that the message was received *and* persisted.
 
     Notes:
         - This message provides a weaker guarantee in respect to the Processed

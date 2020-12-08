@@ -59,7 +59,7 @@ def events_for_onchain_secretreveal(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> List[Event]:
-    """ Emits the event for revealing the secret on-chain if the transfer
+    """Emits the event for revealing the secret on-chain if the transfer
     can not be settled off-chain.
     """
     transfer = target_state.transfer
@@ -263,7 +263,7 @@ def handle_block(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> TransitionResult[TargetTransferState]:
-    """ After Raiden learns about a new block this function must be called to
+    """After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
     """
     transfer = target_state.transfer

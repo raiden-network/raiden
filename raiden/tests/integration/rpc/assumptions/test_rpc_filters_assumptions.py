@@ -36,8 +36,8 @@ def test_filter_start_block_inclusive(deploy_client: JSONRPCClient) -> None:
 
 
 def test_filter_end_block_inclusive(deploy_client: JSONRPCClient) -> None:
-    """ A filter includes events from the block given in from_block
-    until and including end_block. """
+    """A filter includes events from the block given in from_block
+    until and including end_block."""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     # call the create event function twice and wait for confirmation each time

@@ -31,7 +31,6 @@ from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     SuccessfulTransactionState,
-    TokenNetworkGraphState,
     TokenNetworkState,
     TransactionChannelDeposit,
     TransactionExecutionStatus,
@@ -44,7 +43,6 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveNewTokenNetwork,
-    ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
@@ -91,7 +89,6 @@ def contractreceivenewtokennetwork_from_event(
         token_network=TokenNetworkState(
             address=token_network_address,
             token_address=token_address,
-            network_graph=TokenNetworkGraphState(token_network_address),
         ),
         transaction_hash=event.transaction_hash,
         block_number=event.block_number,
@@ -229,23 +226,6 @@ def contractreceivechannelclosed_from_event(
     )
 
 
-def contractreceiverouteclosed_from_event(event: DecodedEvent) -> ContractReceiveRouteClosed:
-    data = event.event_data
-    args = data["args"]
-    channel_identifier = args["channel_identifier"]
-
-    return ContractReceiveRouteClosed(
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=event.chain_id,
-            token_network_address=TokenNetworkAddress(event.originating_contract),
-            channel_identifier=channel_identifier,
-        ),
-        transaction_hash=event.transaction_hash,
-        block_number=event.block_number,
-        block_hash=event.block_hash,
-    )
-
-
 def contractreceiveupdatetransfer_from_event(
     channel_state: NettingChannelState, event: DecodedEvent
 ) -> ContractReceiveUpdateTransfer:
@@ -371,8 +351,6 @@ def blockchainevent_to_statechange(
 
         if canonical_identifier is not None:
             return contractreceivechannelclosed_from_event(canonical_identifier, event)
-        else:
-            return contractreceiverouteclosed_from_event(event)
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(

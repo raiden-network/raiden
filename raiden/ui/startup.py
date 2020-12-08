@@ -134,22 +134,22 @@ class ServicesBundle:
             )
 
 
-def load_deployed_contracts_data(config: RaidenConfig, network_id: ChainID) -> Dict[str, Any]:
+def load_deployed_contracts_data(config: RaidenConfig, chain_id: ChainID) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits
     the program with an error
     """
-    check_raiden_environment(network_id, config.environment_type)
+    check_raiden_environment(chain_id, config.environment_type)
 
     deployed_contracts_data: Dict[str, Any] = dict()
     contracts_version = RAIDEN_CONTRACT_VERSION
 
     config.contracts_path = contracts_precompiled_path(contracts_version)
 
-    if network_id in ID_TO_CHAINNAME and ID_TO_CHAINNAME[network_id] != "smoketest":
+    if chain_id in ID_TO_CHAINNAME and ID_TO_CHAINNAME[chain_id] != "smoketest":
         deployment_data = get_contracts_deployment_info(
-            chain_id=network_id, version=contracts_version
+            chain_id=chain_id, version=contracts_version
         )
         if not deployment_data:
             return deployed_contracts_data
@@ -287,7 +287,7 @@ def services_bundle_from_contracts_deployment(
 
     Also depending on the given arguments populate config with PFS related settings
     """
-    node_network_id = config.chain_id
+    node_chain_id = config.chain_id
     environment_type = config.environment_type
 
     user_deposit_address = deployed_addresses.user_deposit_address
@@ -327,7 +327,7 @@ def services_bundle_from_contracts_deployment(
             pfs_url=pathfinding_service_address,
             routing_mode=routing_mode,
             service_registry=proxies["service_registry"],
-            node_network_id=node_network_id,
+            node_chain_id=node_chain_id,
             token_network_registry_address=TokenNetworkRegistryAddress(
                 token_network_registry_address
             ),

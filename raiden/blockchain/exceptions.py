@@ -16,24 +16,15 @@ class UnknownRaidenEventType(RaidenUnrecoverableError):
     """
 
 
-class UnknownExternalEventType(RaidenRecoverableError):
-    """Raised if decoding an event from a third-party smart contract failed.
-
-    This cannot be an unrecoverable error, because third party contracts are
-    not controlled. If this was an unrecoverable it would open a surface for
-    attacks.
-    """
-
-
 class EthGetLogsTimeout(RaidenRecoverableError):
-    """ Raised when an eth.getLogs RPC call caused a ReadTimeout exception.
+    """Raised when an eth.getLogs RPC call caused a ReadTimeout exception.
 
     It is used to automatically tune the block batching size.
     """
 
 
 class BlockBatchSizeTooSmall(RaidenUnrecoverableError):
-    """ Raised when the block batch size would have to be reduced below the minimum allowed value.
+    """Raised when the block batch size would have to be reduced below the minimum allowed value.
 
     This is an unrecoverable error since it indicates that either the connected Eth-node or the
     network connection is not capable of supporting minimum performance requirements for the

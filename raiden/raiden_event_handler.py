@@ -406,7 +406,7 @@ class RaidenEventHandler(EventHandler):
         )
 
         if channel_state is None:
-            raise RaidenUnrecoverableError("ContractSendChannelWithdraw for inexesting channel.")
+            raise RaidenUnrecoverableError("ContractSendChannelWithdraw for non-existing channel.")
 
         channel_proxy = raiden.proxy_manager.payment_channel(
             channel_state=channel_state, block_identifier=confirmed_block_identifier
@@ -462,7 +462,7 @@ class RaidenEventHandler(EventHandler):
         )
 
         if channel_state is None:
-            raise RaidenUnrecoverableError("ContractSendChannelClose for inexesting channel.")
+            raise RaidenUnrecoverableError("ContractSendChannelClose for non-existing channel.")
 
         channel_proxy = raiden.proxy_manager.payment_channel(
             channel_state=channel_state, block_identifier=confirmed_block_identifier
@@ -494,7 +494,7 @@ class RaidenEventHandler(EventHandler):
 
             if channel_state is None:
                 raise RaidenUnrecoverableError(
-                    "ContractSendChannelUpdateTransfer for inexesting channel."
+                    "ContractSendChannelUpdateTransfer for non-existing channel."
                 )
 
             channel = raiden.proxy_manager.payment_channel(
@@ -546,7 +546,7 @@ class RaidenEventHandler(EventHandler):
         )
         if channel_state is None:
             raise RaidenUnrecoverableError(
-                "ContractSendChannelBatchUnlock for inexesting channel."
+                "ContractSendChannelBatchUnlock for non-existing channel."
             )
 
         confirmed_block_identifier = state_from_raiden(raiden).block_hash
@@ -695,7 +695,7 @@ class RaidenEventHandler(EventHandler):
         )
 
         if channel_state is None:
-            raise RaidenUnrecoverableError("ContractSendChannelSettle for inexesting channel.")
+            raise RaidenUnrecoverableError("ContractSendChannelSettle for non-existing channel.")
 
         confirmed_block_identifier = chain_state.block_hash
         payment_channel: PaymentChannel = raiden.proxy_manager.payment_channel(

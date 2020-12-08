@@ -1,7 +1,7 @@
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, TransferRole
 from raiden.transfer.state import (
     ChainState,
     ChannelState,
@@ -31,7 +31,6 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from raiden.app import App  # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
 
 # TODO: Either enforce immutability or make a copy of the values returned by
@@ -39,7 +38,7 @@ if TYPE_CHECKING:
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
-    """ Return the identifiers for all nodes accross all token network registries which
+    """Return the identifiers for all nodes accross all token network registries which
     have a channel open with this one.
     """
     addresses = set()
@@ -59,31 +58,9 @@ def block_number(chain_state: ChainState) -> BlockNumber:
     return chain_state.block_number
 
 
-def count_token_network_channels(
-    chain_state: ChainState,
-    token_network_registry_address: TokenNetworkRegistryAddress,
-    token_address: TokenAddress,
-) -> int:
-    token_network = get_token_network_by_token_address(
-        chain_state, token_network_registry_address, token_address
-    )
-
-    if token_network is not None:
-        count = len(token_network.network_graph.network)
-    else:
-        count = 0
-
-    return count
-
-
 def state_from_raiden(raiden: "RaidenService") -> ChainState:  # pragma: no unittest
     assert raiden.wal, "raiden.wal not set"
-    # TODO: current_state should not be optional
-    return raiden.wal.state_manager.current_state  # type: ignore
-
-
-def state_from_app(app: "App") -> ChainState:  # pragma: no unittest
-    return state_from_raiden(app.raiden)
+    return raiden.wal.get_current_state()
 
 
 def get_pending_transactions(chain_state: ChainState) -> List[ContractSendEvent]:
@@ -112,7 +89,10 @@ def get_participants_addresses(
     )
 
     if token_network is not None:
-        addresses = set(token_network.network_graph.network.nodes())
+        addresses = set()
+        for channel_state in token_network.channelidentifiers_to_channels.values():
+            addresses.add(channel_state.partner_state.address)
+            addresses.add(channel_state.our_state.address)
     else:
         addresses = set()
 
@@ -402,19 +382,6 @@ def get_channelstate_settled(
     )
 
 
-def role_from_transfer_task(transfer_task: TransferTask) -> str:
-    """Return the role and type for the transfer. Throws an exception on error"""
-    # pragma: no cover
-    if isinstance(transfer_task, InitiatorTask):
-        return "initiator"
-    if isinstance(transfer_task, MediatorTask):
-        return "mediator"
-    if isinstance(transfer_task, TargetTask):
-        return "target"
-
-    raise ValueError("Argument to role_from_transfer_task is not a TransferTask")
-
-
 def secret_from_transfer_task(
     transfer_task: TransferTask, secrethash: SecretHash
 ) -> Optional[Secret]:
@@ -429,7 +396,7 @@ def secret_from_transfer_task(
     return transfer_state.transfer_description.secret
 
 
-def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Optional[str]:
+def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Optional[TransferRole]:
     """
     Returns 'initiator', 'mediator' or 'target' to signify the role the node has
     in a transfer. If a transfer task is not found for the secrethash then the
@@ -438,7 +405,7 @@ def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Option
     task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     if not task:
         return None
-    return role_from_transfer_task(task)
+    return task.role
 
 
 def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Optional[Secret]:
@@ -513,8 +480,8 @@ def filter_channels_by_partneraddress(
 def filter_channels_by_status(
     channel_states: List[NettingChannelState], exclude_states: Optional[List[ChannelState]] = None
 ) -> List[NettingChannelState]:
-    """ Filter the list of channels by excluding ones
-    for which the state exists in `exclude_states`. """
+    """Filter the list of channels by excluding ones
+    for which the state exists in `exclude_states`."""
 
     if exclude_states is None:
         exclude_states = []

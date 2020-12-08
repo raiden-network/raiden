@@ -1,7 +1,11 @@
-import gevent
-import gevent.monkey
+import gevent  # isort:skip # noqa
+import gevent.monkey  # isort:skip # noqa
 
-gevent.monkey.patch_all()
+gevent.monkey.patch_all()  # isort:skip # noqa
+
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
+
+setup_asyncio_event_loop()
 
 if True:
     import sys

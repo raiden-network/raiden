@@ -28,9 +28,9 @@ class Runnable:
         self.greenlets: List[Greenlet] = list()
 
     def start(self) -> None:
-        """ Synchronously start task
+        """Synchronously start task
 
-        Reimplements in children an call super().start() at end to start _run()
+        Reimplements in children a call super().start() at end to start _run()
         Start-time exceptions may be raised
         """
         if self.greenlet:
@@ -46,14 +46,14 @@ class Runnable:
         self.greenlet.start()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:
-        """ Reimplements in children to busy wait here
+        """Reimplements in children to busy wait here
 
         This busy wait should be finished gracefully after stop(),
-        or be killed and re-raise on subtasks exception """
+        or be killed and re-raise on subtasks exception"""
         raise NotImplementedError
 
     def stop(self) -> None:
-        """ Synchronous stop, gracefully tells _run() to exit
+        """Synchronous stop, gracefully tells _run() to exit
 
         Should wait subtasks to finish.
         Stop-time exceptions may be raised, run exceptions should not (accessible via get())
@@ -61,9 +61,9 @@ class Runnable:
         raise NotImplementedError
 
     def on_error(self, subtask: Greenlet) -> None:
-        """ Default callback for substasks link_exception
+        """Default callback for substasks link_exception
 
-        Default callback re-raises the exception inside _run() """
+        Default callback re-raises the exception inside _run()"""
         log.error(
             "Runnable subtask died!",
             this=self,

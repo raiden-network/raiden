@@ -21,6 +21,7 @@ from raiden.utils.typing import (
     Optional,
     TokenAddress,
     TokenAmount,
+    TransactionHash,
 )
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
@@ -73,8 +74,8 @@ class Token:
             self.proxy.functions.allowance(owner, spender).call(block_identifier=block_identifier)
         )
 
-    def approve(self, allowed_address: Address, allowance: TokenAmount) -> None:
-        """ Approve `allowed_address` to transfer up to `deposit` amount of token.
+    def approve(self, allowed_address: Address, allowance: TokenAmount) -> TransactionHash:
+        """Approve `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
 
@@ -125,6 +126,8 @@ class Token:
                         f"the requested allowance and enough eth to pay the gas. There may "
                         f"be a problem with the token contract."
                     )
+                else:
+                    return transaction_mined.transaction_hash
 
             else:
                 failed_at = self.client.get_block(BLOCK_ID_LATEST)
@@ -165,7 +168,7 @@ class Token:
     def total_supply(
         self, block_identifier: BlockIdentifier = BLOCK_ID_LATEST
     ) -> Optional[TokenAmount]:
-        """ Return the total supply of the token at the given block identifier.
+        """Return the total supply of the token at the given block identifier.
 
         Because Token is just an interface, it is not possible to check the
         bytecode during the proxy instantiation. This means it is possible for
@@ -181,8 +184,8 @@ class Token:
 
         return None
 
-    def transfer(self, to_address: Address, amount: TokenAmount) -> None:
-        """ Transfer `amount` tokens to `to_address`.
+    def transfer(self, to_address: Address, amount: TokenAmount) -> TransactionHash:
+        """Transfer `amount` tokens to `to_address`.
 
         Note:
 
@@ -230,7 +233,7 @@ class Token:
                 transaction_mined = self.client.poll_transaction(transaction_sent)
 
                 if was_transaction_successfully_mined(transaction_mined):
-                    return
+                    return transaction_mined.transaction_hash
 
                 failed_at_block_number = BlockNumber(transaction_mined.receipt["blockNumber"])
                 check_for_insufficient_token_balance(failed_at_block_number)
