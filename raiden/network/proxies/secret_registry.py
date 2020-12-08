@@ -6,7 +6,10 @@ from eth_utils import decode_hex, encode_hex, is_binary_address
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
-from raiden.constants import GAS_REQUIRED_PER_SECRET_IN_BATCH
+from raiden.constants import (
+    GAS_REQUIRED_PER_SECRET_IN_BATCH,
+    GAS_REQUIRED_REGISTER_SECRET_BATCH_BASE,
+)
 from raiden.exceptions import (
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
@@ -161,10 +164,15 @@ class SecretRegistry:
         transaction_mined = None
 
         if estimated_transaction is not None:
-            estimated_transaction.estimated_gas = safe_gas_limit(
-                estimated_transaction.estimated_gas,
-                len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
+            gas_limit = safe_gas_limit(
+                GAS_REQUIRED_REGISTER_SECRET_BATCH_BASE
+                + len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
             )
+            assert estimated_transaction.estimated_gas <= gas_limit, (
+                f"Our safe gas calculation must be larger than the gas cost estimated by the "
+                f"ethereum node, but {estimated_transaction.estimated_gas} > {gas_limit}."
+            )
+            estimated_transaction.estimated_gas = gas_limit
 
             try:
                 transaction_sent = self.client.transact(estimated_transaction)

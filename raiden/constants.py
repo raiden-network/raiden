@@ -1,4 +1,3 @@
-import math
 from enum import Enum
 
 from eth_utils import keccak, to_canonical_address
@@ -157,7 +156,10 @@ class RoutingMode(Enum):
     PRIVATE = "private"
 
 
-GAS_REQUIRED_PER_SECRET_IN_BATCH = math.ceil(UNLOCK_TX_GAS_LIMIT / MAXIMUM_PENDING_TRANSFERS)
+# See gas measurements in raiden contracts for these values, rounded up
+GAS_REQUIRED_REGISTER_SECRET_BATCH_BASE = 23000
+GAS_REQUIRED_PER_SECRET_IN_BATCH = 26000
+
 GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL = 100_000
 
 CHECK_RDN_MIN_DEPOSIT_INTERVAL = 5 * 60
