@@ -96,6 +96,10 @@ def ignore_candidates(
     pass
 
 
+def ignore_close(partner_address: Address) -> None:  # pylint: disable=unused-argument
+    pass
+
+
 def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
     client = new_client(ignore_messages, ignore_member_join, servers[0])
     admin_power_level = {"users": {client.user_id: 100}}

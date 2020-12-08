@@ -51,7 +51,7 @@ def wait_for_future(future: Future, callback: Callable, **kwargs: Any) -> None:
 
 
 def create_task_callback(
-    callback: Callable[[Any, Any], None],
+    callback: Callable[..., None],
     *args: Any,
     **kwargs: Any,
 ) -> Callable:
@@ -71,6 +71,6 @@ def create_task_callback(
         return _greenlet_callback
 
 
-def wrap_callback(callback: Callable[[Any, Any], None], *args: Any, **kwargs: Any) -> None:
+def wrap_callback(callback: Callable[..., None], *args: Any, **kwargs: Any) -> None:
     callback_greenlet = gevent.Greenlet(callback, *args, **kwargs)
     callback_greenlet.start()
