@@ -1,6 +1,5 @@
 import binascii
-import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from eth_utils import (
     is_0x_prefixed,
@@ -23,7 +22,7 @@ from raiden.constants import (
     UINT256_MAX,
 )
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
-from raiden.storage.serialization.fields import IntegerToStringField
+from raiden.storage.serialization.schemas import IntegerToStringField
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
@@ -91,20 +90,6 @@ class AddressField(fields.Field):
             raise self.make_error("null_address")
 
         return value
-
-
-class TimeStampField(fields.DateTime):
-    def _serialize(
-        self, value: Optional[datetime.datetime], attr: Any, obj: Any, **kwargs
-    ) -> Optional[str]:
-        if value is not None:
-            return value.isoformat()
-        return None
-
-    def _deserialize(self, value, attr, data, **kwargs) -> Optional[datetime.datetime]:
-        if value is not None:
-            return datetime.datetime.fromisoformat(value)
-        return None
 
 
 class SecretField(fields.Field):
@@ -206,11 +191,6 @@ class BaseListSchema(Schema):
         decoding_class = self.opts.decoding_class  # type: ignore # pylint: disable=no-member
         list_ = data["data"]
         return decoding_class(list_)
-
-
-class BlockchainEventsRequestSchema(BaseSchema):
-    from_block = IntegerToStringField(missing=None)
-    to_block = IntegerToStringField(missing=None)
 
 
 class RaidenEventsRequestSchema(BaseSchema):
@@ -332,14 +312,14 @@ class ConnectionsConnectSchema(BaseSchema):
 class EventPaymentSchema(BaseSchema):
     block_number = IntegerToStringField()
     identifier = IntegerToStringField()
-    log_time = TimeStampField()
+    log_time = fields.DateTime()
     token_address = AddressField(missing=None)
 
     def serialize(self, chain_state: ChainState, event: TimestampedEvent) -> Dict[str, Any]:
         serialized_event = self.dump(event)
         token_network = get_token_network_by_address(
             chain_state=chain_state,
-            token_network_address=event.wrapped_event.token_network_address,
+            token_network_address=event.event.token_network_address,  # type: ignore
         )
         assert token_network, "Token network object should be registered if we got events with it"
         serialized_event["token_address"] = to_checksum_address(token_network.token_address)

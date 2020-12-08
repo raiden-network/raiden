@@ -1,20 +1,26 @@
+#!/usr/bin/env python
+import gevent.monkey
+
+gevent.monkey.patch_all()  # isort:skip # noqa
+
 import json
 
 import click
-import gevent.monkey
+import gevent
 import structlog
 from eth_account import Account
 from eth_utils import decode_hex
 
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.utils.signer import LocalSigner
 
-gevent.monkey.patch_all()
-
+setup_asyncio_event_loop()
 
 log = structlog.get_logger(__name__)
 
 if True:
     import sys
+
     from raiden.network.transport.matrix.client import GMatrixClient
     from raiden.network.transport.matrix.utils import login
 

@@ -402,7 +402,6 @@ def test_channelstate_send_lockedtransfer():
             RouteState(
                 # pylint: disable=E1101
                 route=[channel_state.partner_state.address],
-                forward_channel_id=channel_state.canonical_identifier.channel_identifier,
             )
         ],
     )
@@ -874,7 +873,7 @@ def test_interwoven_transfers():
 
 
 def test_channel_never_expires_lock_with_secret_onchain():
-    """ Send a mediated transfer and register secret on chain.
+    """Send a mediated transfer and register secret on chain.
     The lock must be moved into secrethashes_to_onchain_unlockedlocks
     """
     our_model1, _ = create_model(70)
@@ -908,7 +907,6 @@ def test_channel_never_expires_lock_with_secret_onchain():
             RouteState(
                 # pylint: disable=E1101
                 route=[channel_state.partner_state.address],
-                forward_channel_id=channel_state.canonical_identifier.channel_identifier,
             )
         ],
     )
@@ -931,7 +929,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
 
 
 def test_regression_must_update_balanceproof_remove_expired_lock():
-    """ A remove expire lock message contains a balance proof and changes the
+    """A remove expire lock message contains a balance proof and changes the
     pending locks, the receiver must update the channel state.
     """
     our_model1, _ = create_model(70)
@@ -997,7 +995,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
 
 
 def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():
-    """ Remove expired lock messages must be ignored if the lock was unlocked
+    """Remove expired lock messages must be ignored if the lock was unlocked
     on-chain.
     """
     our_model1, _ = create_model(70)
@@ -1118,7 +1116,7 @@ def test_channel_must_accept_expired_locks():
 
 
 def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
-    """ Ensure that on-chain secret registration becomes a noop
+    """Ensure that on-chain secret registration becomes a noop
     if the lock has already expired.
     """
     our_model1, _ = create_model(70)
@@ -1366,7 +1364,7 @@ def test_refund_transfer_does_not_match_received():
 
 
 def test_action_close_must_change_the_channel_state():
-    """ A closed channel must not be used for transactions, even if the
+    """A closed channel must not be used for transactions, even if the
     transaction was not confirmed on-chain.
     """
     our_model1, _ = create_model(70)
@@ -1386,7 +1384,7 @@ def test_action_close_must_change_the_channel_state():
 
 
 def test_update_must_be_called_if_close_lost_race():
-    """ If both participants call close, the node that lost the transaction
+    """If both participants call close, the node that lost the transaction
     race must call updateTransfer.
     """
     our_model1, _ = create_model(70)
@@ -1430,7 +1428,7 @@ def test_update_must_be_called_if_close_lost_race():
 
 
 def test_update_transfer():
-    """ This tests that receiving an update transfer event for a
+    """This tests that receiving an update transfer event for a
     closed channel sets the update_transaction member
     """
     our_model1, _ = create_model(70)
@@ -1519,7 +1517,7 @@ def test_get_amount_locked():
 
 
 def test_valid_lock_expired_for_unlocked_lock():
-    """ This tests that locked and unlocked locks behave the same when
+    """This tests that locked and unlocked locks behave the same when
     they are checked with `is_valid_lock_expired`.
     This tests issue #2828
     """

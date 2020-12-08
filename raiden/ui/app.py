@@ -11,7 +11,6 @@ from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
 from raiden.constants import (
     BLOCK_ID_LATEST,
     DOC_URL,
@@ -37,6 +36,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import make_room_alias
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
+from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_HTTP_SERVER_PORT,
     DEFAULT_MATRIX_KNOWN_SERVERS,
@@ -47,10 +47,9 @@ from raiden.settings import (
     ServiceConfig,
 )
 from raiden.ui.checks import (
-    check_ethereum_client_is_supported,
+    check_ethereum_chain_id,
     check_ethereum_confirmed_block_is_not_pruned,
     check_ethereum_has_accounts,
-    check_ethereum_network_id,
     check_sql_version,
     check_synced,
 )
@@ -144,16 +143,16 @@ def get_account_and_private_key(
     return to_canonical_address(address_hex), privatekey_bin
 
 
-def get_smart_contracts_start_at(network_id: ChainID) -> BlockNumber:
-    if network_id == Networks.MAINNET.value:
+def get_smart_contracts_start_at(chain_id: ChainID) -> BlockNumber:
+    if chain_id == Networks.MAINNET.value:
         smart_contracts_start_at = EthereumForks.CONSTANTINOPLE.value
-    elif network_id == Networks.ROPSTEN.value:
+    elif chain_id == Networks.ROPSTEN.value:
         smart_contracts_start_at = RopstenForks.CONSTANTINOPLE.value
-    elif network_id == Networks.KOVAN.value:
+    elif chain_id == Networks.KOVAN.value:
         smart_contracts_start_at = KovanForks.CONSTANTINOPLE.value
-    elif network_id == Networks.RINKEBY.value:
+    elif chain_id == Networks.RINKEBY.value:
         smart_contracts_start_at = RinkebyForks.CONSTANTINOPLE.value
-    elif network_id == Networks.GOERLI.value:
+    elif chain_id == Networks.GOERLI.value:
         smart_contracts_start_at = GoerliForks.CONSTANTINOPLE.value
     else:
         smart_contracts_start_at = GENESIS_BLOCK_NUMBER
@@ -195,7 +194,7 @@ def start_api_server(
     return api_server
 
 
-def run_app(
+def run_raiden_service(
     address: Address,
     keystore_path: str,
     gas_price: Callable,
@@ -210,7 +209,7 @@ def run_app(
     web_ui: bool,
     datadir: Optional[str],
     matrix_server: str,
-    network_id: ChainID,
+    chain_id: ChainID,
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     pathfinding_service_address: str,
@@ -226,7 +225,7 @@ def run_app(
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
-) -> App:
+) -> RaidenService:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     token_network_registry_deployed_at: Optional[BlockNumber]
@@ -240,8 +239,7 @@ def run_app(
 
     check_sql_version()
     check_ethereum_has_accounts(account_manager)
-    check_ethereum_client_is_supported(web3)
-    check_ethereum_network_id(network_id, web3)
+    check_ethereum_chain_id(chain_id, web3)
 
     address, privatekey = get_account_and_private_key(account_manager, address, password_file)
 
@@ -275,7 +273,7 @@ def run_app(
     )
 
     config = RaidenConfig(
-        chain_id=network_id,
+        chain_id=chain_id,
         environment_type=environment_type,
         reveal_timeout=default_reveal_timeout,
         settle_timeout=default_settle_timeout,
@@ -290,7 +288,7 @@ def run_app(
     config.services.pathfinding_max_paths = pathfinding_max_paths
     config.transport.server = matrix_server
 
-    contracts = load_deployed_contracts_data(config, network_id)
+    contracts = load_deployed_contracts_data(config, chain_id)
 
     rpc_client = JSONRPCClient(
         web3=web3,
@@ -306,7 +304,7 @@ def run_app(
         )
 
     if token_network_registry_deployed_at is None:
-        smart_contracts_start_at = get_smart_contracts_start_at(network_id)
+        smart_contracts_start_at = get_smart_contracts_start_at(chain_id)
     else:
         smart_contracts_start_at = token_network_registry_deployed_at
 
@@ -378,7 +376,7 @@ def run_app(
         os.path.join(
             datadir,
             f"node_{pex(address)}",
-            f"netid_{network_id}",
+            f"netid_{chain_id}",
             f"network_{pex(raiden_bundle.token_network_registry.address)}",
             f"v{RAIDEN_DB_VERSION}_log.db",
         )
@@ -388,7 +386,7 @@ def run_app(
     print(f"Raiden is running in {environment_type.value.lower()} mode")
     print(
         "\nYou are connected to the '{}' network and the DB path is: {}".format(
-            ID_TO_CHAINNAME.get(network_id, network_id), database_path
+            ID_TO_CHAINNAME.get(chain_id, chain_id), database_path
         )
     )
 
@@ -419,25 +417,13 @@ def run_app(
 
     message_handler = MessageHandler()
 
-    one_to_n_address = (
-        services_bundle.one_to_n.address if services_bundle.one_to_n is not None else None
-    )
-    monitoring_service_address = (
-        services_bundle.monitoring_service.address
-        if services_bundle.monitoring_service is not None
-        else None
-    )
-    raiden_app = App(
+    raiden_service = RaidenService(
         config=config,
         rpc_client=rpc_client,
         proxy_manager=proxy_manager,
         query_start_block=smart_contracts_start_at,
-        default_registry=raiden_bundle.token_network_registry,
-        default_secret_registry=raiden_bundle.secret_registry,
-        default_service_registry=services_bundle.service_registry,
-        default_user_deposit=services_bundle.user_deposit,
-        default_one_to_n_address=one_to_n_address,
-        default_msc_address=monitoring_service_address,
+        raiden_bundle=raiden_bundle,
+        services_bundle=services_bundle,
         transport=matrix_transport,
         raiden_event_handler=event_handler,
         message_handler=message_handler,
@@ -445,7 +431,7 @@ def run_app(
         api_server=api_server,
     )
 
-    raiden_app.start()
+    raiden_service.start()
 
     if config.pfs_config is not None:
         # This has to be done down here since there is a circular dependency
@@ -461,4 +447,4 @@ def run_app(
             matrix_server_was_autoselected=(config.transport.server == MATRIX_AUTO_SELECT_SERVER),
         )
 
-    return raiden_app
+    return raiden_service

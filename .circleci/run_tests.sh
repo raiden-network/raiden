@@ -27,7 +27,7 @@ dormant_signal=SIGUSR1
 ./.circleci/kill_if_no_output.py \
     --dormant-timeout=${dormant_timeout} \
     --dormant-signal=${dormant_signal} \
-    --kill-timeout=15 \
+    --kill-timeout=20 \
     --kill-signal=SIGKILL \
     coverage \
     run \

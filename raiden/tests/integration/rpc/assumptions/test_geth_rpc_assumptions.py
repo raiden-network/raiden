@@ -66,7 +66,7 @@ def test_geth_request_pruned_data_raises_an_exception(
 def test_geth_request_block_data_does_not_raise_an_exception(
     deploy_client: JSONRPCClient, web3: Web3
 ) -> None:
-    """ Interacting with a pruned block through eth_getBlock does not raise.
+    """Interacting with a pruned block through eth_getBlock does not raise.
 
     If this assumptions tests fails the `BlockchainEvents` has to be fixed.
     Currently it assumes that it can fetch metadata about any block, namely the
@@ -116,7 +116,7 @@ def test_geth_request_block_data_does_not_raise_an_exception(
 def test_geth_discover_next_available_nonce_concurrent_transactions(
     deploy_client: JSONRPCClient, skip_if_parity: bool  # pylint: disable=unused-argument
 ) -> None:
-    """ Test that geth_discover_next_available nonce works correctly
+    """Test that geth_discover_next_available nonce works correctly
 
     Reproduced the problem seen here:
     https://github.com/raiden-network/raiden/pull/3683#issue-264551799

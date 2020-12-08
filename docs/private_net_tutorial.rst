@@ -198,7 +198,7 @@ From the output, we remember the address of the UserDeposit contract.
 
 .. code:: bash
 
- (env) $ export UserDeposit="0x50E5f50b98a78615163E89A65fD60D551933CaE2"    
+ (env) $ export UserDeposit="0x50E5f50b98a78615163E89A65fD60D551933CaE2"
 
 
 We deploy another Token contract that's going to be transferred on Raiden network.
@@ -244,4 +244,4 @@ And you can start the Raiden client:
 
 .. code:: bash
 
- (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --user-deposit-contract-address $UserDeposit --routing-mode local --password-file passwd_file
+ (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --user-deposit-contract-address $UserDeposit --routing-mode private --password-file passwd_file

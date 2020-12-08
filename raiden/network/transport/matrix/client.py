@@ -1,4 +1,5 @@
 import itertools
+import json
 import time
 from datetime import datetime
 from functools import wraps
@@ -21,18 +22,17 @@ from matrix_client.user import User
 from requests import Response
 from requests.adapters import HTTPAdapter
 
-from raiden.constants import Environment
+from raiden.constants import Environment, RTCMessageType
 from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
 from raiden.network.transport.matrix.sync_progress import SyncProgress
 from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.utils.typing import AddressHex
+from raiden.utils.typing import AddressHex, RoomID
 
 log = structlog.get_logger(__name__)
 
 SHUTDOWN_TIMEOUT = 35
-MSG_QUEUE_MAX_SIZE = 10  # This are matrix sync batches, not messages
 
 MatrixMessage = Dict[str, Any]
 # No room means it's a toDevice message
@@ -86,7 +86,7 @@ class Room(MatrixRoom):
         return f"<Room id={self.room_id!r} canonical_alias={self.canonical_alias!r}>"
 
     def update_local_alias(self) -> bool:
-        """ Fetch the server local canonical alias for the room.
+        """Fetch the server local canonical alias for the room.
 
         This is an optimization over the general `update_aliases()` method which fetches the
         entire room state (which can be large in Raiden) and then discards all non-alias events.
@@ -230,6 +230,21 @@ class GMatrixHttpApi(MatrixHttpApi):
     def get_presence(self, user_id: str) -> Dict[str, Any]:
         return self._send("GET", f"/presence/{quote(user_id)}/status")
 
+    def invite(self, room_id: RoomID, call_id: str, sdp_description: str) -> None:
+        message = {"type": RTCMessageType.OFFER.value, "sdp": sdp_description, "call_id": call_id}
+        self._send_signalling(room_id, message)
+
+    def answer(self, room_id: RoomID, call_id: str, sdp_description: str) -> None:
+        message = {"type": RTCMessageType.ANSWER.value, "sdp": sdp_description, "call_id": call_id}
+        self._send_signalling(room_id, message)
+
+    def hangup(self, room_id: RoomID, call_id: str) -> None:
+        message = {"type": RTCMessageType.HANGUP.value, "call_id": call_id}
+        self._send_signalling(room_id, message)
+
+    def _send_signalling(self, room_id: RoomID, message: Dict[str, str]) -> None:
+        self.send_message(room_id=room_id, text_content=json.dumps(message), msgtype="m.notice")
+
     def get_aliases(self, room_id: str) -> Dict[str, Any]:
         """
         Perform GET /rooms/{room_id}/aliases.
@@ -318,7 +333,7 @@ class GMatrixClient(MatrixClient):
         not_rooms: Optional[Iterable[Room]] = None,
         limit: Optional[int] = None,
     ) -> Optional[int]:
-        """ Create a matrix sync filter
+        """Create a matrix sync filter
 
         A whitelist and blacklist of rooms can be supplied optionally. If
         no whitelist ist given, all rooms are whitelisted. The blacklist is
@@ -527,14 +542,25 @@ class GMatrixClient(MatrixClient):
         Returns:
             user_list: list of users returned by server-side search
         """
-        response = self.api._send("POST", "/user_directory/search", {"search_term": term})
+        try:
+            response = self.api._send("POST", "/user_directory/search", {"search_term": term})
+        except MatrixRequestError as ex:
+            if ex.code >= 500:
+                log.error(
+                    "Ignoring Matrix error in `search_user_directory`",
+                    exc_info=ex,
+                    term=term,
+                )
+                return list()
+            else:
+                raise ex
         try:
             return [
                 User(self.api, _user["user_id"], _user["display_name"])
                 for _user in response["results"]
             ]
         except KeyError:
-            return []
+            return list()
 
     def set_presence_state(self, state: str) -> Dict:
         return self.api._send(
@@ -556,7 +582,7 @@ class GMatrixClient(MatrixClient):
     def create_room(
         self, alias: str = None, is_public: bool = False, invitees: List[str] = None, **kwargs: Any
     ) -> MatrixRoom:
-        """ Create a new room on the homeserver.
+        """Create a new room on the homeserver.
 
         Args:
             alias (str): The canonical_alias of the room.
@@ -693,7 +719,7 @@ class GMatrixClient(MatrixClient):
         response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]],
         stop_event: Event,
     ) -> None:
-        """ Worker to process network messages from the asynchronous transport.
+        """Worker to process network messages from the asynchronous transport.
 
         Note that this worker will process the messages in the order of
         delivery. However, the underlying protocol may not guarantee that
@@ -753,6 +779,7 @@ class GMatrixClient(MatrixClient):
     def _handle_responses(self, currently_queued_responses: List[JSONResponse]) -> None:
 
         all_messages: MatrixSyncMessages = []
+
         for response in currently_queued_responses:
             for presence_update in response["presence"]["events"]:
                 for callback in list(self.presence_listeners.values()):
@@ -765,7 +792,12 @@ class GMatrixClient(MatrixClient):
 
             # Add toDevice messages to message queue
             if response["to_device"]["events"]:
-                all_messages.append((None, response["to_device"]["events"],))
+                all_messages.append(
+                    (
+                        None,
+                        response["to_device"]["events"],
+                    )
+                )
 
             for room_id, invite_room in response["rooms"]["invite"].items():
                 for listener in self.invite_listeners[:]:

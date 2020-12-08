@@ -39,6 +39,8 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    TransactionHash,
+    Tuple,
     typecheck,
 )
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
@@ -83,7 +85,7 @@ class TokenNetworkRegistry:
     def get_token_network(
         self, token_address: TokenAddress, block_identifier: BlockIdentifier
     ) -> Optional[TokenNetworkAddress]:
-        """ Return the token network address for the given token or None if
+        """Return the token network address for the given token or None if
         there is no correspoding address.
         """
         typecheck(token_address, T_TargetAddress)
@@ -104,7 +106,7 @@ class TokenNetworkRegistry:
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
         given_block_identifier: BlockIdentifier,
-    ) -> TokenNetworkAddress:
+    ) -> Tuple[TransactionHash, TokenNetworkAddress]:
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
@@ -231,7 +233,7 @@ class TokenNetworkRegistry:
         channel_participant_deposit_limit: TokenAmount,
         token_network_deposit_limit: TokenAmount,
         log_details: Dict[Any, Any],
-    ) -> TokenNetworkAddress:
+    ) -> Tuple[TransactionHash, TokenNetworkAddress]:
         token_network_address = None
 
         kwargs = {
@@ -509,7 +511,10 @@ class TokenNetworkRegistry:
                 f"reason. Reference block {failed_at_blockhash} "
                 f"{failed_at_blocknumber}."
             )
-        return token_network_address
+        return (
+            TransactionHash(transaction_mined.transaction_hash),
+            TokenNetworkAddress(token_network_address),
+        )
 
     def filter_token_added_events(self) -> List[Dict[str, Any]]:
         filter_ = self.proxy.events.TokenNetworkCreated.createFilter(
@@ -555,13 +560,13 @@ class TokenNetworkRegistry:
         )
 
     def get_token_network_created(self, block_identifier: BlockIdentifier) -> int:
-        """ Returns the number of TokenNetwork contracts created so far in the
+        """Returns the number of TokenNetwork contracts created so far in the
         token network registry.
         """
         return self.proxy.functions.token_network_created().call(block_identifier=block_identifier)
 
     def get_max_token_networks(self, block_identifier: BlockIdentifier) -> int:
-        """ Returns the maximal number of TokenNetwork contracts that the
+        """Returns the maximal number of TokenNetwork contracts that the
         token network registry.
         """
         return self.proxy.functions.max_token_networks().call(block_identifier=block_identifier)

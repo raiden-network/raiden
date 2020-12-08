@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
-from eth_utils import to_canonical_address
-from networkx import Graph
 
 from raiden.exceptions import SerializationError
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
@@ -17,7 +15,7 @@ from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, With
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
-from raiden.transfer import state, state_change
+from raiden.transfer import state
 from raiden.utils.signer import LocalSigner
 
 # Required for test_message_identical. It would be better to have a set of
@@ -139,11 +137,6 @@ messages.append(
 
 
 @dataclass
-class ClassWithGraphObject:
-    graph: Graph
-
-
-@dataclass
 class ClassWithInt:
     value: int
 
@@ -192,24 +185,8 @@ def test_serialize_missing_attribute():
         JSONSerializer.serialize(instance)
 
 
-def test_serialization_networkx_graph():
-    p1 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4C")
-    p2 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4D")
-    p3 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4E")
-    p4 = to_canonical_address("0x5522070585a1a275631ba69c444ac0451AA9Fe4F")
-
-    e = [(p1, p2), (p2, p3), (p3, p4)]
-    graph = Graph(e)
-    instance = ClassWithGraphObject(graph)
-
-    data = JSONSerializer.serialize(instance)
-    restored_instance = JSONSerializer.deserialize(data)
-
-    assert instance.graph.edges == restored_instance.graph.edges
-
-
-def test_actioninitchain_restore():
-    """ ActionInitChain *must* restore the previous pseudo random generator
+def test_chainstate_restore():
+    """ChainState *must* restore the previous pseudo random generator
     state.
 
     Message identifiers are used for confirmation messages, e.g. delivered and
@@ -225,25 +202,7 @@ def test_actioninitchain_restore():
     will not match the previous IDs and the message queues won't be properly
     cleared up.
     """
-    pseudo_random_generator = random.Random()
-    block_number = 577
-    our_address = factories.make_address()
-    chain_id = 777
 
-    original_obj = state_change.ActionInitChain(
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
-        block_hash=factories.make_block_hash(),
-        our_address=our_address,
-        chain_id=chain_id,
-    )
-
-    decoded_obj = JSONSerializer.deserialize(JSONSerializer.serialize(original_obj))
-
-    assert original_obj == decoded_obj
-
-
-def test_chainstate_restore():
     pseudo_random_generator = random.Random()
     block_number = 577
     our_address = factories.make_address()
@@ -270,14 +229,14 @@ def test_encoding_and_decoding():
 
 
 def test_bad_messages():
-    "SerializationErrors should be raised on all kinds of wrong messages"
+    """SerializationErrors should be raised on all kinds of wrong messages"""
     for message in ["{}", "[]", '"foo"', "123"]:
         with pytest.raises(SerializationError):
             MessageSerializer.deserialize(message)
 
 
 def test_message_identical() -> None:
-    """ Will fail if the messages changed since the committed version
+    """Will fail if the messages changed since the committed version
 
     If you intend to change the serialized messages, then update the messages
     on disc (see comment inside test). This test exists only to prevent

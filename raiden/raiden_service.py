@@ -10,7 +10,7 @@ from uuid import UUID
 import filelock
 import gevent
 import structlog
-from eth_utils import is_binary_address, to_hex
+from eth_utils import to_hex
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 from web3.types import BlockData
@@ -19,19 +19,12 @@ from raiden import routing
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
-from raiden.blockchain.events import (
-    BlockchainEvents,
-    SmartContractEvents,
-    secret_registry_events,
-    token_network_events,
-    token_network_registry_events,
-)
+from raiden.blockchain.events import BlockchainEvents
+from raiden.blockchain.filters import RaidenContractFilter
 from raiden.blockchain_events_handler import after_blockchain_statechange
-from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     ABSENT_SECRET,
     BLOCK_ID_LATEST,
-    EMPTY_TRANSACTION_HASH,
     GENESIS_BLOCK_NUMBER,
     SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
@@ -40,10 +33,10 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     BrokenPreconditionError,
-    InvalidBinaryAddress,
     InvalidDBData,
     InvalidSecret,
     InvalidSecretHash,
+    InvalidSettleTimeout,
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
@@ -53,9 +46,7 @@ from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.messages.encode import message_from_sendevent
 from raiden.network.proxies.proxy_manager import ProxyManager
-from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
@@ -64,6 +55,7 @@ from raiden.services import send_pfs_update, update_monitoring_service_from_bala
 from raiden.settings import RaidenConfig
 from raiden.storage import sqlite, wal
 from raiden.storage.serialization import DictSerializer, JSONSerializer
+from raiden.storage.sqlite import HIGH_STATECHANGE_ULID, Range
 from raiden.storage.wal import WriteAheadLog
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
@@ -99,19 +91,18 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
-from raiden.transfer.state import ChainState, TokenNetworkRegistryState
+from raiden.transfer.state import ChainState, RouteState, TokenNetworkRegistryState
 from raiden.transfer.state_change import (
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
-    ActionInitChain,
     BalanceProofStateChange,
     Block,
     ContractReceiveChannelDeposit,
-    ContractReceiveNewTokenNetworkRegistry,
     ReceiveUnlock,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.ui.startup import RaidenBundle, ServicesBundle
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.gevent import spawn_named
 from raiden.utils.logging import redact_secret
@@ -125,8 +116,6 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     InitiatorAddress,
-    MonitoringServiceAddress,
-    OneToNAddress,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -136,7 +125,6 @@ from raiden.utils.typing import (
     SecretRegistryAddress,
     TargetAddress,
     TokenNetworkAddress,
-    TokenNetworkRegistryAddress,
     WithdrawAmount,
     typecheck,
 )
@@ -145,7 +133,6 @@ from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, "PaymentStatus"]]
-ConnectionManagerDict = Dict[TokenNetworkAddress, ConnectionManager]
 
 PFS_UPDATE_CAPACITY_STATE_CHANGES = (
     ContractReceiveChannelDeposit,
@@ -196,6 +183,7 @@ def initiator_init(
     token_network_address: TokenNetworkAddress,
     target_address: TargetAddress,
     lock_timeout: BlockTimeout = None,
+    route_states: List[RouteState] = None,
 ) -> Tuple[Optional[str], ActionInitInitiator]:
     transfer_state = TransferDescriptionWithSecretState(
         token_network_registry_address=raiden.default_registry.address,
@@ -209,48 +197,48 @@ def initiator_init(
         lock_timeout=lock_timeout,
     )
 
-    error_msg, routes, feedback_token = routing.get_best_routes(
-        chain_state=views.state_from_raiden(raiden),
-        token_network_address=token_network_address,
-        one_to_n_address=raiden.default_one_to_n_address,
-        from_address=InitiatorAddress(raiden.address),
-        to_address=target_address,
-        amount=transfer_amount,
-        previous_address=None,
-        pfs_config=raiden.config.pfs_config,
-        privkey=raiden.privkey,
-    )
+    error_msg = None
 
-    # Only prepare feedback when token is available
-    if feedback_token is not None:
-        for route_state in routes:
-            raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
+    if route_states is None:
+        error_msg, route_states, feedback_token = routing.get_best_routes(
+            chain_state=views.state_from_raiden(raiden),
+            token_network_address=token_network_address,
+            one_to_n_address=raiden.default_one_to_n_address,
+            from_address=InitiatorAddress(raiden.address),
+            to_address=target_address,
+            amount=transfer_amount,
+            previous_address=None,
+            pfs_config=raiden.config.pfs_config,
+            privkey=raiden.privkey,
+        )
 
-    return error_msg, ActionInitInitiator(transfer_state, routes)
+        # Only prepare feedback when token is available
+        if feedback_token is not None:
+            for route_state in route_states:
+                raiden.route_to_feedback_token[tuple(route_state.route)] = feedback_token
+
+    return error_msg, ActionInitInitiator(transfer_state, route_states)
 
 
 def smart_contract_filters_from_node_state(
     chain_state: ChainState,
-    contract_manager: ContractManager,
-    token_network_registry_address: TokenNetworkRegistryAddress,
     secret_registry_address: SecretRegistryAddress,
-) -> List[SmartContractEvents]:
+) -> RaidenContractFilter:
+    token_network_registries = chain_state.identifiers_to_tokennetworkregistries.values()
+    token_networks = [tn for tnr in token_network_registries for tn in tnr.token_network_list]
+    channels_of_token_network = {
+        tn.address: set(tn.channelidentifiers_to_channels.keys())
+        for tn in token_networks
+        if tn.channelidentifiers_to_channels
+    }
 
-    token_networks = views.get_token_network_addresses(chain_state, token_network_registry_address)
-
-    registry_listener = token_network_registry_events(
-        token_network_registry_address, contract_manager
+    return RaidenContractFilter(
+        secret_registry_address=secret_registry_address,
+        token_network_registry_addresses={tnr.address for tnr in token_network_registries},
+        token_network_addresses={tn.address for tn in token_networks},
+        channels_of_token_network=channels_of_token_network,
+        ignore_secret_registry_until_channel_found=not channels_of_token_network,
     )
-    secret_listener = secret_registry_events(secret_registry_address, contract_manager)
-    token_listeners = [
-        token_network_events(token_network_address, contract_manager)
-        for token_network_address in token_networks
-    ]
-
-    listeners: List[SmartContractEvents] = [registry_listener, secret_listener]
-    listeners.extend(token_listeners)
-
-    return listeners
 
 
 class PaymentStatus(NamedTuple):
@@ -271,9 +259,9 @@ class PaymentStatus(NamedTuple):
 
 
 class SyncTimeout:
-    """ Helper to determine if the sync should halt or continue.
+    """Helper to determine if the sync should halt or continue.
 
-    The goal of this helper is to stop synching before the block
+    The goal of this helper is to stop syncing before the block
     `current_confirmed_head` is pruned, otherwise JSON-RPC requests will start
     to fail.
     """
@@ -294,7 +282,7 @@ class SyncTimeout:
         return has_time and has_blocks_unsynched
 
 
-class SynchornizationState(Enum):
+class SynchronizationState(Enum):
     FULLY_SYNCED = "fully_synced"
     PARTIALLY_SYNCED = "partially_synced"
 
@@ -307,12 +295,8 @@ class RaidenService(Runnable):
         rpc_client: JSONRPCClient,
         proxy_manager: ProxyManager,
         query_start_block: BlockNumber,
-        default_registry: TokenNetworkRegistry,
-        default_secret_registry: SecretRegistry,
-        default_service_registry: Optional[ServiceRegistry],
-        default_user_deposit: Optional[UserDeposit],
-        default_one_to_n_address: Optional[OneToNAddress],
-        default_msc_address: Optional[MonitoringServiceAddress],
+        raiden_bundle: RaidenBundle,
+        services_bundle: Optional[ServicesBundle],
         transport: MatrixTransport,
         raiden_event_handler: EventHandler,
         message_handler: MessageHandler,
@@ -321,18 +305,59 @@ class RaidenService(Runnable):
         api_server: Optional[APIServer] = None,
     ) -> None:
         super().__init__()
-        self.tokennetworkaddrs_to_connectionmanagers: ConnectionManagerDict = dict()
+
+        # check that the settlement timeout fits the limits of the contract
+        settlement_timeout_min = raiden_bundle.token_network_registry.settlement_timeout_min(
+            BLOCK_ID_LATEST
+        )
+        settlement_timeout_max = raiden_bundle.token_network_registry.settlement_timeout_max(
+            BLOCK_ID_LATEST
+        )
+        invalid_settle_timeout = (
+            config.settle_timeout < settlement_timeout_min
+            or config.settle_timeout > settlement_timeout_max
+            or config.settle_timeout < config.reveal_timeout * 2
+        )
+        if invalid_settle_timeout:
+            raise InvalidSettleTimeout(
+                (
+                    "Settlement timeout for Registry contract {} must "
+                    "be in range [{}, {}], is {}"
+                ).format(
+                    to_checksum_address(raiden_bundle.token_network_registry.address),
+                    settlement_timeout_min,
+                    settlement_timeout_max,
+                    config.settle_timeout,
+                )
+            )
+
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
+
+        one_to_n_address = None
+        monitoring_service_address = None
+        service_registry: Optional[ServiceRegistry] = None
+        user_deposit: Optional[UserDeposit] = None
+
+        if services_bundle:
+            if services_bundle.one_to_n:
+                one_to_n_address = services_bundle.one_to_n.address
+
+            if services_bundle.monitoring_service:
+                monitoring_service_address = services_bundle.monitoring_service.address
+
+            service_registry = services_bundle.service_registry
+            user_deposit = services_bundle.user_deposit
 
         self.rpc_client = rpc_client
         self.proxy_manager = proxy_manager
-        self.default_registry = default_registry
+        self.default_registry = raiden_bundle.token_network_registry
         self.query_start_block = query_start_block
-        self.default_one_to_n_address = default_one_to_n_address
-        self.default_secret_registry = default_secret_registry
-        self.default_service_registry = default_service_registry
-        self.default_user_deposit = default_user_deposit
-        self.default_msc_address = default_msc_address
+        self.default_services_bundle = services_bundle
+        self.default_one_to_n_address = one_to_n_address
+        self.default_secret_registry = raiden_bundle.secret_registry
+        self.default_service_registry = service_registry
+        self.default_user_deposit = user_deposit
+        self.default_msc_address = monitoring_service_address
         self.routing_mode = routing_mode
         self.config = config
 
@@ -409,6 +434,10 @@ class RaidenService(Runnable):
         # applied, will be executed once the blockchain state is synchronized
         # because of the node's queues.
         self.ready_to_process_events = False
+
+        # Counters used for state snapshotting
+        self.state_change_qty_snapshot = 0
+        self.state_change_qty = 0
 
     def start(self) -> None:
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
@@ -524,7 +553,7 @@ class RaidenService(Runnable):
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
 
     def _start_transport(self, chain_state: ChainState) -> None:
-        """ Initialize the transport and related facilities.
+        """Initialize the transport and related facilities.
 
         Note:
             The node has first to `_synchronize_with_blockchain` before
@@ -551,8 +580,39 @@ class RaidenService(Runnable):
         )
 
         for neighbour in views.all_neighbour_nodes(chain_state):
-            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                self.async_start_health_check_for(neighbour)
+            self.async_start_health_check_for(neighbour)
+
+    def _make_initial_state(self) -> ChainState:
+        # On first run Raiden needs to fetch all events for the payment
+        # network, to reconstruct all token network graphs and find opened
+        # channels
+        #
+        # The value `self.query_start_block` is an optimization, because
+        # Raiden has to poll all events until the last confirmed block,
+        # using the genesis block would result in fetchs for a few million
+        # of unnecessary blocks. Instead of querying all these unnecessary
+        # blocks, the configuration variable `query_start_block` is used to
+        # start at the block which `TokenNetworkRegistry`  was deployed.
+        last_log_block_number = self.query_start_block
+        last_log_block_hash = self.rpc_client.blockhash_from_blocknumber(last_log_block_number)
+
+        initial_state = ChainState(
+            pseudo_random_generator=random.Random(),
+            block_number=last_log_block_number,
+            block_hash=last_log_block_hash,
+            our_address=self.address,
+            chain_id=self.rpc_client.chain_id,
+        )
+        token_network_registry_address = self.default_registry.address
+        token_network_registry = TokenNetworkRegistryState(
+            token_network_registry_address,
+            [],  # empty list of token network states as it's the node's startup
+        )
+        initial_state.identifiers_to_tokennetworkregistries[
+            token_network_registry_address
+        ] = token_network_registry
+
+        return initial_state
 
     def _initialize_wal(self) -> None:
         if self.database_dir is not None:
@@ -574,20 +634,22 @@ class RaidenService(Runnable):
         storage.log_run()
 
         try:
+            initial_state = self._make_initial_state()
             (
+                state_snapshot,
+                state_change_start,
                 state_change_qty_snapshot,
-                state_change_qty_pending,
-                restore_wal,
-            ) = wal.restore_to_state_change(
-                transition_function=node.state_transition,
-                storage=storage,
-                state_change_identifier=sqlite.HIGH_STATECHANGE_ULID,
-                node_address=self.address,
+            ) = wal.restore_or_init_snapshot(
+                storage=storage, node_address=self.address, initial_state=initial_state
             )
 
-            self.wal = restore_wal
-            self.state_change_qty_snapshot = state_change_qty_snapshot
-            self.state_change_qty = state_change_qty_snapshot + state_change_qty_pending
+            state, state_change_qty_unapplied = wal.replay_state_changes(
+                node_address=self.address,
+                state=state_snapshot,
+                state_change_range=Range(state_change_start, HIGH_STATECHANGE_ULID),
+                storage=storage,
+                transition_function=node.state_transition,  # type: ignore
+            )
         except SerializationError:
             raise RaidenUnrecoverableError(
                 "Could not restore state. "
@@ -596,74 +658,40 @@ class RaidenService(Runnable):
                 "version of the Raiden client."
             )
 
-        if self.wal.state_manager.current_state is None:
+        if state_change_qty_snapshot == 0:
             print(
                 "This is the first time Raiden is being used with this address. "
                 "Processing all the events may take some time. Please wait ..."
             )
-            log.debug(
-                "No recoverable state available, creating initial state.",
-                node=to_checksum_address(self.address),
-            )
 
-            # On first run Raiden needs to fetch all events for the payment
-            # network, to reconstruct all token network graphs and find opened
-            # channels
-            last_log_block_number = self.query_start_block
-            last_log_block_hash = self.rpc_client.blockhash_from_blocknumber(last_log_block_number)
+        self.state_change_qty_snapshot = state_change_qty_snapshot
+        self.state_change_qty = state_change_qty_snapshot + state_change_qty_unapplied
 
-            # The value `self.query_start_block` is an optimization, because
-            # Raiden has to poll all events until the last confirmed block,
-            # using the genesis block would result in fetchs for a few million
-            # of unnecessary blocks. Instead of querying all these unnecessary
-            # blocks, the configuration variable `query_start_block` is used to
-            # start at the block which `TokenNetworkRegistry`  was deployed.
-            init_state_change = ActionInitChain(
-                pseudo_random_generator=random.Random(),
-                block_number=last_log_block_number,
-                block_hash=last_log_block_hash,
-                our_address=self.address,
-                chain_id=self.rpc_client.chain_id,
-            )
-            token_network_registry = TokenNetworkRegistryState(
-                self.default_registry.address,
-                [],  # empty list of token network states as it's the node's startup
-            )
-            new_network_state_change = ContractReceiveNewTokenNetworkRegistry(
-                transaction_hash=EMPTY_TRANSACTION_HASH,
-                token_network_registry=token_network_registry,
-                block_number=last_log_block_number,
-                block_hash=last_log_block_hash,
-            )
+        msg = "The state must be a ChainState instance."
+        assert isinstance(state, ChainState), msg
 
-            self.handle_and_track_state_changes([init_state_change, new_network_state_change])
-        else:
-            # The `Block` state change is dispatched only after all the events
-            # for that given block have been processed, filters can be safely
-            # installed starting from this position without losing events.
-            last_log_block_number = views.block_number(self.wal.state_manager.current_state)
-            log.debug(
-                "Restored state from WAL",
-                last_restored_block=last_log_block_number,
-                node=to_checksum_address(self.address),
-            )
+        self.wal = WriteAheadLog(state, storage, node.state_transition)
 
-            known_networks = views.get_token_network_registry_address(
-                views.state_from_raiden(self)
-            )
-            if known_networks and self.default_registry.address not in known_networks:
-                configured_registry = to_checksum_address(self.default_registry.address)
-                known_registries = lpex(known_networks)
-                raise RuntimeError(
-                    f"Token network address mismatch.\n"
-                    f"Raiden is configured to use the smart contract "
-                    f"{configured_registry}, which conflicts with the current known "
-                    f"smart contracts {known_registries}"
-                )
+        # The `Block` state change is dispatched only after all the events
+        # for that given block have been processed, filters can be safely
+        # installed starting from this position without losing events.
+        last_log_block_number = views.block_number(self.wal.get_current_state())
+        log.debug(
+            "Querying blockchain from block",
+            last_restored_block=last_log_block_number,
+            node=to_checksum_address(self.address),
+        )
 
-        # Restore the current snapshot group
-        state_change_qty = self.wal.storage.count_state_changes()
-        self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
+        known_networks = views.get_token_network_registry_address(views.state_from_raiden(self))
+        if known_networks and self.default_registry.address not in known_networks:
+            configured_registry = to_checksum_address(self.default_registry.address)
+            known_registries = lpex(known_networks)
+            raise RuntimeError(
+                f"Token network address mismatch.\n"
+                f"Raiden is configured to use the smart contract "
+                f"{configured_registry}, which conflicts with the current known "
+                f"smart contracts {known_registries}"
+            )
 
     def _log_sync_progress(
         self, polled_block_number: BlockNumber, target_block: BlockNumber
@@ -712,19 +740,19 @@ class RaidenService(Runnable):
         # starting from this position without missing events.
         last_block_number = views.block_number(chain_state)
 
-        filters = smart_contract_filters_from_node_state(
+        event_filter = smart_contract_filters_from_node_state(
             chain_state,
-            self.contract_manager,
-            self.default_registry.address,
             self.default_secret_registry.address,
         )
+        log.debug("initial filter", event_filter=event_filter, node=self.address)
         blockchain_events = BlockchainEvents(
             web3=self.rpc_client.web3,
             chain_id=chain_state.chain_id,
             contract_manager=self.contract_manager,
             last_fetched_block=last_block_number,
-            event_filters=filters,
+            event_filter=event_filter,
             block_batch_size_config=self.config.blockchain.block_batch_size_config,
+            node_address=self.address,
         )
 
         self.last_log_block = last_block_number
@@ -735,8 +763,8 @@ class RaidenService(Runnable):
         # before calling it
         self.blockchain_events = blockchain_events
 
-        synchronization_state = SynchornizationState.PARTIALLY_SYNCED
-        while synchronization_state is SynchornizationState.PARTIALLY_SYNCED:
+        synchronization_state = SynchronizationState.PARTIALLY_SYNCED
+        while synchronization_state is SynchronizationState.PARTIALLY_SYNCED:
             latest_block = self.rpc_client.get_block(block_identifier=BLOCK_ID_LATEST)
             synchronization_state = self._best_effort_synchronize(latest_block)
 
@@ -784,13 +812,13 @@ class RaidenService(Runnable):
 
     def get_block_number(self) -> BlockNumber:
         assert self.wal, f"WAL object not yet initialized. node:{self!r}"
-        return views.block_number(self.wal.state_manager.current_state)  # type: ignore
+        return views.block_number(self.wal.get_current_state())
 
     def on_messages(self, messages: List[Message]) -> None:
         self.message_handler.on_messages(self, messages)
 
     def handle_and_track_state_changes(self, state_changes: List[StateChange]) -> None:
-        """ Dispatch the state change and does not handle the exceptions.
+        """Dispatch the state change and does not handle the exceptions.
 
         When the method is used the exceptions are tracked and re-raised in the
         raiden service thread.
@@ -808,7 +836,7 @@ class RaidenService(Runnable):
             self.add_pending_greenlet(greenlet)
 
     def handle_state_changes(self, state_changes: List[StateChange]) -> List[Greenlet]:
-        """ Dispatch the state change and return the processing threads.
+        """Dispatch the state change and return the processing threads.
 
         Use this for error reporting, failures in the returned greenlets,
         should be re-raised using `gevent.joinall` with `raise_error=True`.
@@ -915,21 +943,20 @@ class RaidenService(Runnable):
         )
 
         self.state_change_qty += len(state_changes)
-
-        if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
-            self.snapshot()
+        self._maybe_snapshot()
 
         if self.ready_to_process_events:
             return self.async_handle_events(chain_state=new_state, raiden_events=events)
         else:
             return list()
 
-    def snapshot(self) -> None:
-        assert self.wal, "WAL must be set."
+    def _maybe_snapshot(self) -> None:
+        if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
+            assert self.wal, "WAL must be set."
 
-        log.debug("Storing snapshot")
-        self.wal.snapshot(self.state_change_qty)
-        self.state_change_qty_snapshot = self.state_change_qty
+            log.debug("Storing snapshot")
+            self.wal.snapshot(self.state_change_qty)
+            self.state_change_qty_snapshot = self.state_change_qty
 
     def async_handle_events(
         self, chain_state: ChainState, raiden_events: List[RaidenEvent]
@@ -1030,8 +1057,8 @@ class RaidenService(Runnable):
         if self.transport:
             self.transport.immediate_health_check_for(node_address)
 
-    def _best_effort_synchronize(self, latest_block: BlockData) -> SynchornizationState:
-        """ Called with the current latest block, tries to synchronize with the
+    def _best_effort_synchronize(self, latest_block: BlockData) -> SynchronizationState:
+        """Called with the current latest block, tries to synchronize with the
         *confirmed* head of the chain in a best effort manner, it is not
         guaranteed to succeed in a single call since `latest_block` may become
         pruned.
@@ -1055,8 +1082,8 @@ class RaidenService(Runnable):
 
     def _best_effort_synchronize_with_confirmed_head(
         self, current_confirmed_head: BlockNumber, timeout: float
-    ) -> SynchornizationState:
-        """ Tries to synchronize with the blockchain events up to
+    ) -> SynchronizationState:
+        """Tries to synchronize with the blockchain events up to
         `current_confirmed_head`. This may stop before being fully synchronized
         if the number of `current_confirmed_head` is close to be pruned.
 
@@ -1066,8 +1093,8 @@ class RaidenService(Runnable):
         missed important events, like a channel close, while the transport
         layer is running, this can lead to loss of funds.
 
-        It is very important for `current_confirmed_head` to be an confirmed
-        block that has not been pruned. Uncorfirmed blocks are a problem
+        It is very important for `current_confirmed_head` to be a confirmed
+        block that has not been pruned. Unconfirmed blocks are a problem
         because of reorgs, since some operations performed based on the events
         are irreversible, namely sending a balance proof after a channel
         deposit, once a node accepts a deposit, these tokens can be used to do
@@ -1077,7 +1104,7 @@ class RaidenService(Runnable):
         fetch data which is not available in an event, the original event block
         is used, however that block may have been pruned if the synchronization
         is considerably lagging behind (which happens after long restarts), so
-        a new block number is necessary to be used as a fallback, an `latest`
+        a new block number is necessary to be used as a fallback, a `latest`
         is not a valid option because of the reorgs.
 
         This function takes care of fetching blocks in batches and confirming
@@ -1194,7 +1221,6 @@ class RaidenService(Runnable):
 
         log.debug(
             "Synchronized to a new confirmed block",
-            event_filters_qty=len(self.blockchain_events._address_to_filters),
             sync_elapsed=guard.time_elapsed(),
             block_number=current_synched_block_number,
         )
@@ -1203,9 +1229,9 @@ class RaidenService(Runnable):
         assert current_synched_block_number <= current_confirmed_head, msg
 
         if current_synched_block_number < current_confirmed_head:
-            return SynchornizationState.PARTIALLY_SYNCED
+            return SynchronizationState.PARTIALLY_SYNCED
 
-        return SynchornizationState.FULLY_SYNCED
+        return SynchronizationState.FULLY_SYNCED
 
     def _initialize_transactions_queues(self, chain_state: ChainState) -> None:
         """Initialize the pending transaction queue from the previous run.
@@ -1242,7 +1268,7 @@ class RaidenService(Runnable):
             self.add_pending_greenlet(greeenlet)
 
     def _initialize_payment_statuses(self, chain_state: ChainState) -> None:
-        """ Re-initialize targets_to_identifiers_to_statuses.
+        """Re-initialize targets_to_identifiers_to_statuses.
 
         Restore the PaymentStatus for any pending payment. This is not tied to
         a specific protocol message but to the lifecycle of a payment, i.e.
@@ -1380,7 +1406,7 @@ class RaidenService(Runnable):
             )
 
     def _initialize_channel_fees(self) -> None:
-        """ Initializes the fees of all open channels to the latest set values.
+        """Initializes the fees of all open channels to the latest set values.
 
         This includes a recalculation of the dynamic rebalancing fees.
         """
@@ -1435,8 +1461,6 @@ class RaidenService(Runnable):
         all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
 
         for neighbour in all_neighbour_nodes:
-            if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
-                continue
             neighbour_addresses.append(neighbour)
 
         events_queues = views.get_all_messagequeues(chain_state)
@@ -1457,27 +1481,6 @@ class RaidenService(Runnable):
 
         message.sign(self.signer)
 
-    def connection_manager_for_token_network(
-        self, token_network_address: TokenNetworkAddress
-    ) -> ConnectionManager:
-        if not is_binary_address(token_network_address):
-            raise InvalidBinaryAddress("token address is not valid.")
-
-        known_token_networks = views.get_token_network_addresses(
-            views.state_from_raiden(self), self.default_registry.address
-        )
-
-        if token_network_address not in known_token_networks:
-            raise InvalidBinaryAddress("token is not registered.")
-
-        manager = self.tokennetworkaddrs_to_connectionmanagers.get(token_network_address)
-
-        if manager is None:
-            manager = ConnectionManager(self, token_network_address)
-            self.tokennetworkaddrs_to_connectionmanagers[token_network_address] = manager
-
-        return manager
-
     def mediated_transfer_async(
         self,
         token_network_address: TokenNetworkAddress,
@@ -1487,8 +1490,9 @@ class RaidenService(Runnable):
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
+        route_states: List[RouteState] = None,
     ) -> PaymentStatus:
-        """ Transfer `amount` between this node and `target`.
+        """Transfer `amount` between this node and `target`.
 
         This method will start an asynchronous transfer, the transfer might fail
         or succeed depending on a couple of factors:
@@ -1503,29 +1507,6 @@ class RaidenService(Runnable):
                 secret = random_secret()
             else:
                 secret = ABSENT_SECRET
-
-        payment_status = self.start_mediated_transfer_with_secret(
-            token_network_address=token_network_address,
-            amount=amount,
-            target=target,
-            identifier=identifier,
-            secret=secret,
-            secrethash=secrethash,
-            lock_timeout=lock_timeout,
-        )
-
-        return payment_status
-
-    def start_mediated_transfer_with_secret(
-        self,
-        token_network_address: TokenNetworkAddress,
-        amount: PaymentAmount,
-        target: TargetAddress,
-        identifier: PaymentID,
-        secret: Secret,
-        secrethash: SecretHash = None,
-        lock_timeout: BlockTimeout = None,
-    ) -> PaymentStatus:
 
         if secrethash is None:
             secrethash = sha256_secrethash(secret)
@@ -1597,6 +1578,7 @@ class RaidenService(Runnable):
             token_network_address=token_network_address,
             target_address=target,
             lock_timeout=lock_timeout,
+            route_states=route_states,
         )
 
         # FIXME: Dispatch the state change even if there are no routes to

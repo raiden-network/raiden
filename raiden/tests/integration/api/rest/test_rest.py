@@ -8,16 +8,17 @@ import pytest
 from eth_utils import is_checksum_address, to_checksum_address, to_hex
 from flask import url_for
 
+from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.constants import Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
+from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     INTERNAL_ROUTING_DEFAULT_FEE_PERC,
 )
 from raiden.tests.integration.api.rest.utils import (
     api_url_for,
-    assert_no_content_response,
     assert_proper_response,
     assert_response_with_code,
     assert_response_with_error,
@@ -30,14 +31,26 @@ from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
+from raiden.tests.utils.transfer import (
+    block_offset_timeout,
+    create_route_state_for_route,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.state import ChannelState
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID
+from raiden.utils.typing import (
+    BlockNumber,
+    FeeAmount,
+    List,
+    PaymentAmount,
+    PaymentID,
+    TargetAddress,
+    TokenAddress,
+)
 from raiden.waiting import (
     TransferWaitResult,
     wait_for_block,
@@ -192,6 +205,19 @@ def test_api_get_raiden_version(api_server_test_instance: APIServer):
 
 @raise_on_failure
 @pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_get_node_settings(api_server_test_instance: APIServer):
+    request = grequests.get(api_url_for(api_server_test_instance, "nodesettingsresource"))
+    response = request.send().response
+    assert_proper_response(response)
+
+    pfs_config = api_server_test_instance.rest_api.raiden_api.raiden.config.pfs_config
+    assert get_json_response(response) == {
+        "pathfinding_service_address": pfs_config and pfs_config.info.url
+    }
+
+
+@raise_on_failure
+@pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_get_contract_infos(api_server_test_instance: APIServer):
     request = grequests.get(api_url_for(api_server_test_instance, "contractsresource"))
     response = request.send().response
@@ -209,7 +235,7 @@ def test_api_get_contract_infos(api_server_test_instance: APIServer):
         "one_to_n_address",
     ]:
         address = json[contract_name]
-        if address != "":
+        if address is not None:
             assert is_checksum_address(address)
 
 
@@ -373,13 +399,13 @@ def test_query_partners_by_token(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_timestamp_format(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
-):
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+) -> None:
     _, app1 = raiden_network
     amount = 200
     identifier = 42
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     payment_url = api_url_for(
         api_server_test_instance,
@@ -417,7 +443,7 @@ def test_get_token_network_for_token(
     api_server_test_instance,
     token_amount,
     token_addresses,
-    raiden_network,
+    raiden_network: List[RaidenService],
     contract_manager,
     retry_timeout,
     unregistered_token,
@@ -429,8 +455,10 @@ def test_get_token_network_for_token(
     # Here, the block at which the contract was deployed should be confirmed by Raiden.
     # Therefore, until that block is received.
     wait_for_block(
-        raiden=app0.raiden,
-        block_number=app0.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1,
+        raiden=app0,
+        block_number=BlockNumber(
+            app0.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
         retry_timeout=retry_timeout,
     )
 
@@ -457,9 +485,7 @@ def test_get_token_network_for_token(
     assert_proper_response(register_response, status_code=HTTPStatus.CREATED)
     token_network_address = get_json_response(register_response)["token_network_address"]
 
-    wait_for_token_network(
-        app0.raiden, app0.raiden.default_registry.address, new_token_address, 0.1
-    )
+    wait_for_token_network(app0, app0.default_registry.address, new_token_address, 0.1)
 
     # now it should return the token address
     token_request = grequests.get(
@@ -479,214 +505,36 @@ def test_get_token_network_for_token(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("number_of_tokens", [1])
 @pytest.mark.parametrize("enable_rest_api", [True])
-# For non-red eyes mainnet code set number_of_tokens to 2 and uncomment the code
-# at the end of this test
-def test_get_connection_managers_info(api_server_test_instance: APIServer, token_addresses):
-    # check that there are no registered tokens
+def test_get_connections_info(
+    raiden_network: List[RaidenService],
+    api_server_test_instance: APIServer,
+    token_addresses: List[TokenAddress],
+):
+    token_address = token_addresses[0]
+
+    # Check that there are no registered tokens
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
     result = get_json_response(response)
     assert len(result) == 0
 
-    funds = 100
-    token_address1 = to_checksum_address(token_addresses[0])
-    connect_data_obj = {"funds": funds}
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "connectionsresource", token_address=token_address1),
-        json=connect_data_obj,
+    # Create a channel
+    app0 = raiden_network[0]
+    RaidenAPI(app0).channel_open(
+        registry_address=app0.default_registry.address,
+        token_address=token_address,
+        partner_address=factories.make_address(),
     )
-    response = request.send().response
-    assert_no_content_response(response)
 
-    # check that there now is one registered channel manager
+    # Check that there is a channel for one token, now
+    cs_token_address = to_checksum_address(token_address)
     request = grequests.get(api_url_for(api_server_test_instance, "connectionsinforesource"))
     response = request.send().response
     result = get_json_response(response)
     assert isinstance(result, dict) and len(result.keys()) == 1
-    assert token_address1 in result
-    assert isinstance(result[token_address1], dict)
-    assert set(result[token_address1].keys()) == {"funds", "sum_deposits", "channels"}
-
-    # funds = 100
-    # token_address2 = to_checksum_address(token_addresses[1])
-    # connect_data_obj = {
-    #     'funds': funds,
-    # }
-    # request = grequests.put(
-    #     api_url_for(
-    #         api_server_test_instance,
-    #         'connectionsresource',
-    #         token_address=token_address2,
-    #     ),
-    #     json=connect_data_obj,
-    # )
-    # response = request.send().response
-    # assert_no_content_response(response)
-
-    # # check that there now are two registered channel managers
-    # request = grequests.get(
-    #     api_url_for(api_server_test_instance, 'connectionsinforesource'),
-    # )
-    # response = request.send().response
-    # result = response.json()
-    # assert isinstance(result, dict) and len(result.keys()) == 2
-    # assert token_address2 in result
-    # assert isinstance(result[token_address2], dict)
-    # assert set(result[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("number_of_tokens", [1])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_connect_insufficient_reserve(api_server_test_instance: APIServer, token_addresses):
-
-    # Burn all eth and then try to connect to a token network
-    burn_eth(api_server_test_instance.rest_api.raiden_api.raiden.rpc_client)
-    funds = 100
-    token_address1 = to_checksum_address(token_addresses[0])
-    connect_data_obj = {"funds": funds}
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "connectionsresource", token_address=token_address1),
-        json=connect_data_obj,
-    )
-    response = request.send().response
-    assert_proper_response(response, HTTPStatus.PAYMENT_REQUIRED)
-    json_response = get_json_response(response)
-    assert "The account balance is below the estimated amount" in json_response["errors"]
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_network_events(api_server_test_instance: APIServer, token_addresses):
-    # let's create a new channel
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
-    channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
-    }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
-    )
-    response = request.send().response
-
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "blockchaineventsnetworkresource",
-            from_block=GENESIS_BLOCK_NUMBER,
-        )
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(get_json_response(response)) > 0
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_token_events(api_server_test_instance: APIServer, token_addresses):
-    # let's create a new channel
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
-    channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
-    }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
-    )
-    response = request.send().response
-
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "blockchaineventstokenresource",
-            token_address=token_address,
-            from_block=GENESIS_BLOCK_NUMBER,
-        )
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(get_json_response(response)) > 0
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_channel_events(api_server_test_instance: APIServer, token_addresses):
-    # let's create a new channel
-    partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
-    token_address = token_addresses[0]
-    settle_timeout = 1650
-    channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": to_checksum_address(token_address),
-        "settle_timeout": str(settle_timeout),
-    }
-    request = grequests.put(
-        api_url_for(api_server_test_instance, "channelsresource"), json=channel_data_obj
-    )
-    response = request.send().response
-
-    assert_proper_response(response, status_code=HTTPStatus.CREATED)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "tokenchanneleventsresourceblockchain",
-            token_address=token_address,
-            from_block=str(GENESIS_BLOCK_NUMBER),
-        )
-    )
-    response = request.send().response
-    assert_proper_response(response, status_code=HTTPStatus.OK)
-    assert len(get_json_response(response)) > 0
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [1])
-@pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize("enable_rest_api", [True])
-def test_token_events_errors_for_unregistered_token(api_server_test_instance):
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "tokenchanneleventsresourceblockchain",
-            token_address="0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-            from_block="5",
-            to_block="20",
-        )
-    )
-    response = request.send().response
-    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
-
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance,
-            "channelblockchaineventsresource",
-            token_address="0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-            partner_address="0x61C808D82A3Ac53231750daDc13c777b59313bD9",
-            from_block="5",
-            to_block="20",
-        )
-    )
-    response = request.send().response
-    assert_response_with_error(response, status_code=HTTPStatus.NOT_FOUND)
+    assert cs_token_address in result
+    assert isinstance(result[cs_token_address], dict)
+    assert set(result[cs_token_address].keys()) == {"sum_deposits", "channels"}
 
 
 @raise_on_failure
@@ -694,22 +542,18 @@ def test_token_events_errors_for_unregistered_token(api_server_test_instance):
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("number_of_tokens", [2])
 def test_payment_events_endpoints(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     app0, app1, app2 = raiden_network
 
     token_address0 = token_addresses[0]
-    token_address2 = token_addresses[1]
-
-    app0_address = app0.raiden.address
-    app1_address = app1.raiden.address
-    app2_address = app2.raiden.address
+    token_address1 = token_addresses[1]
 
     app0_server = api_server_test_instance
     app1_server = prepare_api_server(app1)
     app2_server = prepare_api_server(app2)
 
-    # Payment 1: app0 is sending tokens of token1 to app1
+    # Payment 1: app0 is sending tokens of token0 to app1
     identifier1 = PaymentID(10)
     amount1 = PaymentAmount(10)
     secret1, secrethash1 = factories.make_secret_with_hash()
@@ -718,13 +562,13 @@ def test_payment_events_endpoints(
             app0_server,
             "token_target_paymentresource",
             token_address=to_checksum_address(token_address0),
-            target_address=to_checksum_address(app1_address),
+            target_address=to_checksum_address(app1.address),
         ),
         json={"amount": str(amount1), "identifier": str(identifier1), "secret": to_hex(secret1)},
     )
     request.send()
 
-    # Payment 2: app0 is sending some tokens of token2 to app2
+    # Payment 2: app0 is sending some tokens of token1 to app2
     identifier2 = PaymentID(20)
     amount2 = PaymentAmount(10)
     secret2, secrethash2 = factories.make_secret_with_hash()
@@ -732,14 +576,14 @@ def test_payment_events_endpoints(
         api_url_for(
             app0_server,
             "token_target_paymentresource",
-            token_address=to_checksum_address(token_address2),
-            target_address=to_checksum_address(app2_address),
+            token_address=to_checksum_address(token_address1),
+            target_address=to_checksum_address(app2.address),
         ),
         json={"amount": str(amount2), "identifier": str(identifier2), "secret": to_hex(secret2)},
     )
     request.send()
 
-    # Payment 3: app0 is sending some tokens of token1 to app2
+    # Payment 3: app0 is sending some tokens of token0 to app2
     identifier3 = PaymentID(30)
     amount3 = PaymentAmount(17)
     secret3, secrethash3 = factories.make_secret_with_hash()
@@ -748,48 +592,28 @@ def test_payment_events_endpoints(
             app0_server,
             "token_target_paymentresource",
             token_address=to_checksum_address(token_address0),
-            target_address=to_checksum_address(app1_address),
+            target_address=to_checksum_address(app1.address),
         ),
         json={"amount": str(amount3), "identifier": str(identifier3), "secret": to_hex(secret3)},
     )
     request.send()
 
-    # Payment 4: app1 also sends some tokens to app2
-    identifier4 = PaymentID(40)
-    amount4 = PaymentAmount(5)
-    secret4, secrethash4 = factories.make_secret_with_hash()
-    request = grequests.post(
-        api_url_for(
-            app1_server,
-            "token_target_paymentresource",
-            token_address=to_checksum_address(token_address0),
-            target_address=to_checksum_address(app2_address),
-        ),
-        json={"amount": str(amount4), "identifier": str(identifier4), "secret": to_hex(secret4)},
-    )
-    request.send()
-
     timeout = block_offset_timeout(
-        app2.raiden, "Waiting for transfer received success in the WAL timed out"
+        app2, "Waiting for transfer received success in the WAL timed out"
     )
     with watch_for_unlock_failures(*raiden_network), timeout:
         result = wait_for_received_transfer_result(
-            app1.raiden, identifier1, amount1, app1.raiden.alarm.sleep_time, secrethash1
+            app1, identifier1, amount1, app1.alarm.sleep_time, secrethash1
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
         result = wait_for_received_transfer_result(
-            app2.raiden, identifier2, amount2, app2.raiden.alarm.sleep_time, secrethash2
+            app2, identifier2, amount2, app2.alarm.sleep_time, secrethash2
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
         result = wait_for_received_transfer_result(
-            app1.raiden, identifier3, amount3, app1.raiden.alarm.sleep_time, secrethash3
-        )
-        msg = f"Unexpected transfer result: {str(result)}"
-        assert result == TransferWaitResult.UNLOCKED, msg
-        result = wait_for_received_transfer_result(
-            app2.raiden, identifier4, amount4, app2.raiden.alarm.sleep_time, secrethash4
+            app1, identifier3, amount3, app1.alarm.sleep_time, secrethash3
         )
         msg = f"Unexpected transfer result: {str(result)}"
         assert result == TransferWaitResult.UNLOCKED, msg
@@ -798,49 +622,37 @@ def test_payment_events_endpoints(
     event_sent_1 = {
         "event": "EventPaymentSentSuccess",
         "identifier": str(identifier1),
-        "target": to_checksum_address(app1_address),
+        "target": to_checksum_address(app1.address),
         "token_address": to_checksum_address(token_address0),
     }
     event_sent_2 = {
         "event": "EventPaymentSentSuccess",
         "identifier": str(identifier2),
-        "target": to_checksum_address(app2_address),
-        "token_address": to_checksum_address(token_address2),
+        "target": to_checksum_address(app2.address),
+        "token_address": to_checksum_address(token_address1),
     }
     event_sent_3 = {
         "event": "EventPaymentSentSuccess",
         "identifier": str(identifier3),
-        "target": to_checksum_address(app1_address),
-        "token_address": to_checksum_address(token_address0),
-    }
-    event_sent_4 = {
-        "event": "EventPaymentSentSuccess",
-        "identifier": str(identifier4),
-        "target": to_checksum_address(app2_address),
+        "target": to_checksum_address(app1.address),
         "token_address": to_checksum_address(token_address0),
     }
     event_received_1 = {
         "event": "EventPaymentReceivedSuccess",
         "identifier": str(identifier1),
-        "initiator": to_checksum_address(app0_address),
+        "initiator": to_checksum_address(app0.address),
         "token_address": to_checksum_address(token_address0),
     }
     event_received_2 = {
         "event": "EventPaymentReceivedSuccess",
         "identifier": str(identifier2),
-        "initiator": to_checksum_address(app0_address),
-        "token_address": to_checksum_address(token_address2),
+        "initiator": to_checksum_address(app0.address),
+        "token_address": to_checksum_address(token_address1),
     }
     event_received_3 = {
         "event": "EventPaymentReceivedSuccess",
         "identifier": str(identifier3),
-        "initiator": to_checksum_address(app0_address),
-        "token_address": to_checksum_address(token_address0),
-    }
-    event_received_4 = {
-        "event": "EventPaymentReceivedSuccess",
-        "identifier": str(identifier4),
-        "initiator": to_checksum_address(app1_address),
+        "initiator": to_checksum_address(app0.address),
         "token_address": to_checksum_address(token_address0),
     }
 
@@ -862,14 +674,13 @@ def test_payment_events_endpoints(
     json_response = get_json_response(response)
     assert must_have_event(json_response, event_received_1)
     assert must_have_event(json_response, event_received_3)
-    assert must_have_event(json_response, event_sent_4)
+
     # test endpoint without (partner and token) for target2
     request = grequests.get(api_url_for(app2_server, "paymentresource"))
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
     assert must_have_event(json_response, event_received_2)
-    assert must_have_event(json_response, event_received_4)
 
     # test endpoint without partner for app0
     request = grequests.get(
@@ -885,7 +696,11 @@ def test_payment_events_endpoints(
     # test endpoint without partner for app0 but with limit/offset to get only first
     request = grequests.get(
         api_url_for(
-            app0_server, "token_paymentresource", token_address=token_address0, limit=1, offset=0,
+            app0_server,
+            "token_paymentresource",
+            token_address=token_address0,
+            limit=1,
+            offset=0,
         )
     )
     response = request.send().response
@@ -899,7 +714,11 @@ def test_payment_events_endpoints(
     # to get only second transfer of token_address
     request = grequests.get(
         api_url_for(
-            app0_server, "token_paymentresource", token_address=token_address0, limit=1, offset=1,
+            app0_server,
+            "token_paymentresource",
+            token_address=token_address0,
+            limit=1,
+            offset=1,
         )
     )
     response = request.send().response
@@ -920,7 +739,6 @@ def test_payment_events_endpoints(
     json_response = get_json_response(response)
     assert must_have_events(json_response, event_received_1)
     assert must_have_events(json_response, event_received_3)
-    assert must_have_events(json_response, event_sent_4)
 
     # test endpoint of app2 without partner for token_address
     request = grequests.get(
@@ -929,11 +747,11 @@ def test_payment_events_endpoints(
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_events(json_response, event_received_4)
+    assert len(json_response) == 0
 
     # test endpoint of app2 without partner for token_address2
     request = grequests.get(
-        api_url_for(app2_server, "token_paymentresource", token_address=token_address2)
+        api_url_for(app2_server, "token_paymentresource", token_address=token_address1)
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
@@ -946,7 +764,7 @@ def test_payment_events_endpoints(
             app0_server,
             "token_target_paymentresource",
             token_address=token_address0,
-            target_address=app1_address,
+            target_address=app1.address,
         )
     )
     response = request.send().response
@@ -960,8 +778,8 @@ def test_payment_events_endpoints(
         api_url_for(
             app0_server,
             "token_target_paymentresource",
-            token_address=token_address2,
-            target_address=app2_address,
+            token_address=token_address1,
+            target_address=app2.address,
         )
     )
     response = request.send().response
@@ -977,21 +795,20 @@ def test_payment_events_endpoints(
             app1_server,
             "token_target_paymentresource",
             token_address=token_address0,
-            target_address=app2_address,
+            target_address=app2.address,
         )
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert len(json_response) == 1
-    assert must_have_event(json_response, event_sent_4)
+    assert len(json_response) == 0
 
     request = grequests.get(
         api_url_for(
             app1_server,
             "token_target_paymentresource",
             token_address=token_address0,
-            target_address=app0_address,
+            target_address=app0.address,
         )
     )
     response = request.send().response
@@ -1007,7 +824,7 @@ def test_payment_events_endpoints(
             app1_server,
             "token_target_paymentresource",
             token_address=token_address0,
-            target_address=app1_address,
+            target_address=app1.address,
         )
     )
     response = request.send().response
@@ -1021,7 +838,7 @@ def test_payment_events_endpoints(
             app2_server,
             "token_target_paymentresource",
             token_address=token_address0,
-            target_address=app0_address,
+            target_address=app0.address,
         )
     )
     response = request.send().response
@@ -1035,8 +852,8 @@ def test_payment_events_endpoints(
         api_url_for(
             app2_server,
             "token_target_paymentresource",
-            token_address=token_address2,
-            target_address=app0_address,
+            token_address=token_address1,
+            target_address=app0.address,
         )
     )
     response = request.send().response
@@ -1052,13 +869,12 @@ def test_payment_events_endpoints(
             app2_server,
             "token_target_paymentresource",
             token_address=token_address0,
-            target_address=app1_address,
+            target_address=app1.address,
         )
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.OK)
     json_response = get_json_response(response)
-    assert must_have_events(json_response, event_received_4)
     assert not must_have_event(json_response, event_received_2)
 
     # also add a test for filtering by wrong token address
@@ -1066,8 +882,8 @@ def test_payment_events_endpoints(
         api_url_for(
             app2_server,
             "token_target_paymentresource",
-            token_address=app1_address,
-            target_address=app1_address,
+            token_address=app1.address,
+            target_address=app1.address,
         )
     )
     response = request.send().response
@@ -1081,13 +897,13 @@ def test_payment_events_endpoints(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_channel_events_raiden(
-    api_server_test_instance: APIServer, raiden_network, token_addresses
+    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
 ):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
-    target_address = app1.raiden.address
+    target_address = app1.address
 
     request = grequests.post(
         api_url_for(
@@ -1106,11 +922,11 @@ def test_channel_events_raiden(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("enable_rest_api", [True])
-def test_pending_transfers_endpoint(raiden_network, token_addresses):
+def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_addresses):
     initiator, mediator, target = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(mediator), mediator.raiden.default_registry.address, token_address
+        views.state_from_raiden(mediator), mediator.default_registry.address, token_address
     )
     assert token_network_address
 
@@ -1120,14 +936,14 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     fee_margin = calculate_fee_margin(amount_to_send, expected_fee)
     # This is 0,4% of ~150, so ~1.2 which gets rounded to 1
     actual_fee = 1
-    identifier = 42
+    identifier = PaymentID(42)
 
     initiator_server = prepare_api_server(initiator)
     mediator_server = prepare_api_server(mediator)
     target_server = prepare_api_server(target)
 
-    target.raiden.message_handler = target_wait = WaitForMessage()
-    mediator.raiden.message_handler = mediator_wait = WaitForMessage()
+    target.message_handler = target_wait = WaitForMessage()
+    mediator.message_handler = mediator_wait = WaitForMessage()
 
     secret = factories.make_secret()
     secrethash = sha256_secrethash(secret)
@@ -1140,15 +956,26 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     response = request.send().response
     assert response.status_code == 200 and response.content == b"[]"
 
-    target_hold = target.raiden.raiden_event_handler
+    target_hold = target.raiden_event_handler
+    assert isinstance(
+        target_hold, HoldRaidenEventHandler
+    ), "test app must use HoldRaidenEventHandler"
+
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
-    initiator.raiden.start_mediated_transfer_with_secret(
+    initiator.mediated_transfer_async(
         token_network_address=token_network_address,
         amount=PaymentAmount(amount_to_send - expected_fee - fee_margin),
-        target=target.raiden.address,
+        target=TargetAddress(target.address),
         identifier=identifier,
         secret=secret,
+        route_states=[
+            create_route_state_for_route(
+                apps=raiden_network,
+                token_address=token_address,
+                fee_estimate=expected_fee,
+            )
+        ],
     )
 
     transfer_arrived = target_wait.wait_for_message(LockedTransfer, {"payment_identifier": 42})
@@ -1170,7 +997,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
 
     mediator_unlock = mediator_wait.wait_for_message(Unlock, {})
     target_unlock = target_wait.wait_for_message(Unlock, {})
-    target_hold.release_secretrequest_for(target.raiden, secrethash)
+    target_hold.release_secretrequest_for(target, secrethash)
     gevent.joinall({mediator_unlock, target_unlock}, raise_error=True)
 
     for server in (initiator_server, mediator_server, target_server):

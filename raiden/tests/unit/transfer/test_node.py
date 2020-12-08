@@ -51,7 +51,6 @@ from raiden.transfer.state import (
     NetworkState,
     PendingLocksState,
     RouteState,
-    TokenNetworkGraphState,
     TokenNetworkRegistryState,
     TokenNetworkState,
 )
@@ -228,7 +227,6 @@ def test_maybe_add_tokennetwork_unknown_token_network_registry(chain_state, toke
     token_network = TokenNetworkState(
         address=token_network_address,
         token_address=token_address,
-        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
     msg = "test state invalid, token_network_registry already in chain_state"
     assert (
@@ -251,7 +249,6 @@ def test_handle_new_token_network(chain_state, token_network_address):
     token_network = TokenNetworkState(
         address=token_network_address,
         token_address=token_address,
-        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
     token_network_registry_address = factories.make_address()
     state_change = ContractReceiveNewTokenNetwork(
@@ -270,11 +267,14 @@ def test_handle_new_token_network(chain_state, token_network_address):
     ]
     assert token_network_registry.address == token_network_registry_address
     assert not transition_result.events
-    assert get_networks(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry_address,
-        token_address=token_address,
-    ) == (token_network_registry, token_network)
+    assert (
+        get_networks(
+            chain_state=chain_state,
+            token_network_registry_address=token_network_registry_address,
+            token_address=token_address,
+        )
+        == (token_network_registry, token_network)
+    )
 
 
 def test_is_transaction_expired():
@@ -311,9 +311,6 @@ def test_subdispatch_by_canonical_id(chain_state):
     token_network = TokenNetworkState(
         address=canonical_identifier.token_network_address,
         token_address=factories.make_address(),
-        network_graph=TokenNetworkGraphState(
-            token_network_address=channel_state.token_network_address
-        ),
     )
     token_network.partneraddresses_to_channelidentifiers[
         partner_model.participant_address
@@ -380,12 +377,7 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
 
     mediator_state = MediatorTransferState(
         secrethash=UNIT_SECRETHASH,
-        routes=[
-            RouteState(
-                route=[netting_channel_state.partner_state.address],
-                forward_channel_id=netting_channel_state.canonical_identifier.channel_identifier,
-            )
-        ],
+        routes=[RouteState(route=[netting_channel_state.partner_state.address])],
     )
     subtask = MediatorTask(
         token_network_address=netting_channel_state.canonical_identifier.token_network_address,
@@ -413,7 +405,6 @@ def test_handle_new_token_network_registry(chain_state, token_network_address):
     token_network = TokenNetworkState(
         address=token_network_address,
         token_address=token_address,
-        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
     token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]

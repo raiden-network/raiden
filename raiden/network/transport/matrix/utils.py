@@ -145,7 +145,9 @@ class DisplayNameCache:
                         # We ignore the error here and set user presence: SERVER_ERROR at the
                         # calling site
                         log.error(
-                            f"Ignoring failed `get_display_name` for user {user}", exc_info=ex
+                            "Ignoring Matrix error in `get_display_name`",
+                            exc_info=ex,
+                            user_id=user.user_id,
                         )
 
                 if user.displayname is not None:
@@ -164,7 +166,7 @@ class DisplayNameCache:
 
 
 class UserAddressManager:
-    """ Matrix user <-> eth address mapping and user / address reachability helper.
+    """Matrix user <-> eth address mapping and user / address reachability helper.
 
     In Raiden the smallest unit of addressability is a node with an associated Ethereum address.
     In Matrix it's a user. Matrix users are (at the moment) bound to a specific homeserver.
@@ -206,9 +208,9 @@ class UserAddressManager:
         self._listener_id: Optional[UUID] = None
 
     def start(self) -> None:
-        """ Start listening for presence updates.
+        """Start listening for presence updates.
 
-        Should be called before ``.login()`` is called on the underlying client. """
+        Should be called before ``.login()`` is called on the underlying client."""
         assert self._listener_id is None, "UserAddressManager.start() called twice"
         self._stop_event.clear()
         self._listener_id = self._client.add_presence_listener(self._presence_listener)
@@ -239,14 +241,14 @@ class UserAddressManager:
         _ = self._address_to_userids[address]
 
     def add_userid_for_address(self, address: Address, user_id: str) -> None:
-        """ Add a ``user_id`` for the given ``address``.
+        """Add a ``user_id`` for the given ``address``.
 
         Implicitly adds the address if it was unknown before.
         """
         self._address_to_userids[address].add(user_id)
 
     def add_userids_for_address(self, address: Address, user_ids: Iterable[str]) -> None:
-        """ Add multiple ``user_ids`` for the given ``address``.
+        """Add multiple ``user_ids`` for the given ``address``.
 
         Implicitly adds any addresses if they were unknown before.
         """
@@ -277,7 +279,7 @@ class UserAddressManager:
         return self._address_to_capabilities.get(address, PeerCapabilities({}))
 
     def force_user_presence(self, user: User, presence: UserPresence) -> None:
-        """ Forcibly set the ``user`` presence to ``presence``.
+        """Forcibly set the ``user`` presence to ``presence``.
 
         This method is only provided to cover an edge case in our use of the Matrix protocol and
         should **not** generally be used.
@@ -285,7 +287,7 @@ class UserAddressManager:
         self._userid_to_presence[user.user_id] = presence
 
     def populate_userids_for_address(self, address: Address, force: bool = False) -> None:
-        """ Populate known user ids for the given ``address`` from the server directory.
+        """Populate known user ids for the given ``address`` from the server directory.
 
         If ``force`` is ``True`` perform the directory search even if there
         already are known users.
@@ -342,16 +344,15 @@ class UserAddressManager:
         """ This pulls the `avatar_url` for a given user/user_id and parses the capabilities.  """
         try:
             user: User = self._client.get_user(user_id)
+            avatar_url = user.get_avatar_url()
+            if avatar_url is not None:
+                return PeerCapabilities(deserialize_capabilities(avatar_url))
         except MatrixRequestError:
-            return PeerCapabilities({})
-        avatar_url = user.get_avatar_url()
-        if avatar_url is not None:
-            return PeerCapabilities(deserialize_capabilities(avatar_url))
-        else:
-            return PeerCapabilities({})
+            log.debug("Could not fetch capabilities", user_id=user_id)
+        return PeerCapabilities({})
 
     def get_reachability_from_matrix(self, user_ids: Iterable[str]) -> AddressReachability:
-        """ Get the current reachability without any side effects
+        """Get the current reachability without any side effects
 
         Since his does not even do any caching, don't use it for the normal
         communication between participants in a channel.
@@ -575,7 +576,7 @@ class MessageAckTimingKeeper:
 
 
 def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
-    """ Join the public broadcast through the alias `broadcast_room_alias`.
+    """Join the public broadcast through the alias `broadcast_room_alias`.
 
     When a new Matrix instance is deployed the broadcast room _must_ be created
     and aliased, Raiden will not use a server that does not have the discovery
@@ -651,19 +652,37 @@ def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: s
     client.login(username, password, sync=False, device_id="raiden")
 
     # Because this is the first login, the display name has to be set, this
-    # prevents the impersonation metioned above. subsequent calls will reuse
+    # prevents the impersonation mentioned above. subsequent calls will reuse
     # the authentication token and the display name will be properly set.
     signature_bytes = signer.sign(client.user_id.encode())
     signature_hex = encode_hex(signature_bytes)
 
     user = client.get_user(client.user_id)
-    current_display_name = user.get_display_name()
+
+    try:
+        current_display_name = user.get_display_name()
+    except MatrixRequestError as ex:
+        # calling site
+        log.error(
+            "Ignoring Matrix error in `get_display_name`",
+            exc_info=ex,
+            user_id=user.user_id,
+        )
+        current_display_name = ""
 
     # Only set the display name if necessary, since this is a slow operation.
     if current_display_name != signature_hex:
         user.set_display_name(signature_hex)
 
-    current_capabilities = user.get_avatar_url() or ""
+    try:
+        current_capabilities = user.get_avatar_url() or ""
+    except MatrixRequestError as ex:
+        log.error(
+            "Ignoring Matrix error in `get_avatar_url`",
+            exc_info=ex,
+            user_id=user.user_id,
+        )
+        current_capabilities = ""
 
     # Only set the capabilities if necessary.
     if current_capabilities != cap_str:
@@ -762,15 +781,14 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     # display_name should be an address in the USERID_RE format
     match = USERID_RE.match(user.user_id)
     if not match:
+        log.warning("Invalid user id", user=user.user_id)
         return None
 
-    msg = (
-        "The User instance provided to validate_userid_signature must have the "
-        "displayname attribute set. Make sure to warm the value using the "
-        "DisplayNameCache."
-    )
     displayname = user.displayname
-    assert displayname is not None, msg
+
+    if displayname is None:
+        log.warning("Displayname not set", user=user.user_id)
+        return None
 
     encoded_address = match.group(1)
     address: Address = to_canonical_address(encoded_address)
@@ -779,9 +797,11 @@ def validate_userid_signature(user: User) -> Optional[Address]:
         if DISPLAY_NAME_HEX_RE.match(displayname):
             signature_bytes = decode_hex(displayname)
         else:
+            log.warning("Displayname invalid format", user=user.user_id, displayname=displayname)
             return None
         recovered = recover(data=user.user_id.encode(), signature=Signature(signature_bytes))
         if not (address and recovered and recovered == address):
+            log.warning("Unexpected signer of displayname", user=user.user_id)
             return None
     except (
         DecodeError,
@@ -874,7 +894,11 @@ def make_client(
     last_ex = None
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(
-            handle_messages_callback, handle_member_join_callback, server_url, *args, **kwargs
+            handle_messages_callback,
+            handle_member_join_callback,
+            server_url,
+            *args,
+            **kwargs,
         )
 
         retries = 3
@@ -971,7 +995,7 @@ def validate_and_parse_message(data: Any, peer_address: Address) -> List[Message
 
 def my_place_or_yours(our_address: Address, partner_address: Address) -> Address:
     """Convention to compare two addresses. Compares lexicographical
-    order and returns the preceding address """
+    order and returns the preceding address"""
 
     if our_address == partner_address:
         raise ValueError("Addresses to compare must differ")

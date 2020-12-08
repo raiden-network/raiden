@@ -65,7 +65,7 @@ from raiden.exceptions import (
     ReplacementTransactionUnderpriced,
 )
 from raiden.network.rpc.middleware import block_hash_cache_middleware
-from raiden.utils.ethereum_clients import is_supported_client
+from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.smart_contracts import safe_gas_limit
@@ -231,7 +231,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the web3 rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3"
+            "enabled. Please run it with '--http.api eth,net,web3'"
         )
 
     try:
@@ -239,7 +239,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the eth rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3"
+            "enabled. Please run it with '--http.api eth,net,web3'"
         )
 
     try:
@@ -247,7 +247,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the net rpc interface "
-            "enabled. Please run it with --rpcapi eth,net,web3"
+            "enabled. Please run it with '--http.api eth,net,web3'"
         )
 
 
@@ -338,7 +338,7 @@ def check_address_has_code(
     given_block_identifier: BlockIdentifier,
     expected_code: bytes = None,
 ) -> None:
-    """ Checks that the given address contains code.
+    """Checks that the given address contains code.
 
     Use this function to detect errors prior to sending transactions, which is
     faster to interact and easier to debug. These are the problem that can be
@@ -386,7 +386,7 @@ def check_address_has_code_handle_pruned_block(
     given_block_identifier: BlockIdentifier,
     expected_code: bytes = None,
 ) -> None:
-    """ Checks that the given address contains code.
+    """Checks that the given address contains code.
 
     If `given_block_identifier` points to a pruned block, fallbacks to use
     `latest` instead.
@@ -525,15 +525,15 @@ def inspect_client_error(
     return ClientErrorInspectResult.PROPAGATE_ERROR
 
 
-class ParityCallType(Enum):
+class CallType(Enum):
     ESTIMATE_GAS = 1
     CALL = 2
 
 
-def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallType) -> bool:
+def check_value_error(value_error: ValueError, call_type: CallType) -> bool:
     """
-    For parity failing calls and functions do not return None if the transaction
-    will fail but instead throw a ValueError exception.
+    For parity and geth >= v1.9.15, failing calls and functions do not return
+    None if the transaction will fail but instead throw a ValueError exception.
 
     This function checks the thrown exception to see if it's the correct one and
     if yes returns True, if not returns False
@@ -543,26 +543,26 @@ def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallT
     except json.JSONDecodeError:
         return False
 
-    if call_type == ParityCallType.ESTIMATE_GAS:
-        code_checks_out = error_data["code"] == -32016
-        message_checks_out = "The execution failed due to an exception" in error_data["message"]
-    elif call_type == ParityCallType.CALL:
-        # TODO: refactor
-        # TODO: rename
-        if (
-            error_data["code"] == -32000
-            and "invalid opcode: opcode 0xfe not defined" in error_data["message"]
-        ):
-            return True
-        if error_data["code"] == -32000 and "execution reverted" in error_data["message"]:
-            return True
-        code_checks_out = error_data["code"] == -32015
-        message_checks_out = "VM execution error" in error_data["message"]
-    else:
-        raise ValueError("Called check_value_error_for_parity() with illegal call type")
+    expected_errors = {
+        CallType.ESTIMATE_GAS: [
+            # parity
+            (-32016, "The execution failed due to an exception"),
+        ],
+        CallType.CALL: [
+            # geth
+            (-32000, "invalid opcode: opcode 0xfe not defined"),
+            (-32000, "execution reverted"),
+            # parity
+            (-32015, "VM execution error"),
+        ],
+    }
 
-    if code_checks_out and message_checks_out:
-        return True
+    if call_type not in expected_errors:
+        raise ValueError("Called check_value_error() with illegal call type")
+
+    for expected_code, expected_msg in expected_errors[call_type]:
+        if error_data["code"] == expected_code and expected_msg in error_data["message"]:
+            return True
 
     return False
 
@@ -578,7 +578,7 @@ def is_infura(web3: Web3) -> bool:
 def patched_web3_eth_estimate_gas(
     self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
 ) -> Wei:
-    """ Temporary workaround until next web3.py release (5.X.X)
+    """Temporary workaround until next web3.py release (5.X.X)
 
     Current master of web3.py has this implementation already:
     https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
@@ -594,7 +594,7 @@ def patched_web3_eth_estimate_gas(
     try:
         result = self.web3.manager.request_blocking(RPCEndpoint("eth_estimateGas"), params)
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
+        if check_value_error(e, CallType.ESTIMATE_GAS):
             result = None
         else:
             # else the error is not denoting estimate gas failure and is something else
@@ -619,7 +619,7 @@ def patched_web3_eth_call(
             RPCEndpoint("eth_call"), [transaction, block_identifier]
         )
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.CALL):
+        if check_value_error(e, CallType.CALL):
             result = ""
         else:
             # else the error is not denoting a revert, something is wrong
@@ -654,7 +654,7 @@ def estimate_gas_for_function(
     try:
         gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
     except ValueError as e:
-        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
+        if check_value_error(e, CallType.ESTIMATE_GAS):
             gas_estimate = Wei(0)
         else:
             # else the error is not denoting estimate gas failure and is something else
@@ -726,9 +726,9 @@ def make_sane_poa_middleware(
 
 
 def make_patched_web3_get_block(
-    original_func: Callable[[Eth, BlockIdentifier, bool], BlockData]
-) -> Callable[[Eth, BlockIdentifier, bool], BlockData]:
-    """ Patch Eth.getBlock() to retry in case of ``BlockNotFound``
+    original_func: Callable[[BlockIdentifier, bool], BlockData]
+) -> Callable[[BlockIdentifier, bool], BlockData]:
+    """Patch Eth.getBlock() to retry in case of ``BlockNotFound``
 
     Infura sometimes erroneously returns a `null` response for
     ``eth_getBlockByNumber`` and ``eth_getBlockByHash`` for existing blocks.
@@ -745,12 +745,12 @@ def make_patched_web3_get_block(
     """
 
     def patched_web3_get_block(  # type: ignore
-        self: Eth, block_identifier: BlockIdentifier, full_transactions: bool = False
+        block_identifier: BlockIdentifier, full_transactions: bool = False
     ) -> BlockData:
         last_ex: Optional[Exception] = None
         for remaining_retries in range(WEB3_BLOCK_NOT_FOUND_RETRY_COUNT, 0, -1):
             try:
-                return original_func(self, block_identifier, full_transactions)
+                return original_func(block_identifier, full_transactions)
             except BlockNotFound as ex:
                 log.warning(
                     "Block not found, retrying",
@@ -799,7 +799,7 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # Infura sometimes erroneously returns `null` for existing (but very recent) blocks.
         # Work around this by retrying those requests.
         # See docstring for details.
-        Eth.getBlock = make_patched_web3_get_block(Eth.getBlock)  # type: ignore
+        web3.eth.getBlock = make_patched_web3_get_block(web3.eth.getBlock)
 
 
 @dataclass
@@ -1039,8 +1039,10 @@ class JSONRPCClient:
         version = web3.clientVersion
         supported, eth_node, _ = is_supported_client(version)
 
-        if not supported or eth_node is None:
-            raise EthNodeInterfaceError(f"Unsupported Ethereum client {version}")
+        if eth_node is None or supported is VersionSupport.UNSUPPORTED:
+            raise EthNodeInterfaceError(f'Unsupported Ethereum client "{version}"')
+        if supported is VersionSupport.WARN:
+            log.warn(f'Unsupported Ethereum client version "{version}"')
 
         address = privatekey_to_address(privkey)
         available_nonce = discover_next_available_nonce(web3, eth_node, address)
@@ -1153,7 +1155,7 @@ class JSONRPCClient:
         return pending.estimate_gas(self.get_checking_block())
 
     def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
-        """ Allocates an unique `nonce` and send the transaction to the blockchain.
+        """Allocates an unique `nonce` and send the transaction to the blockchain.
 
         This can fail for a few reasons:
 
@@ -1464,7 +1466,7 @@ class JSONRPCClient:
         )
 
     def poll_transaction(self, transaction_sent: TransactionSent) -> TransactionMined:
-        """ Wait until the `transaction_hash` is mined, confirmed, handling
+        """Wait until the `transaction_hash` is mined, confirmed, handling
         reorgs.
 
         Consider the following reorg, where a transaction is mined at block B,
@@ -1563,7 +1565,7 @@ class JSONRPCClient:
         required_gas: int,
         block_identifier: BlockIdentifier,
     ) -> None:
-        """ After estimate gas failure checks if our address has enough balance.
+        """After estimate gas failure checks if our address has enough balance.
 
         If the account did not have enough ETH balance to execute the
         transaction, it raises an `InsufficientEth` error.
@@ -1610,7 +1612,7 @@ class JSONRPCClient:
     def transaction_failed_with_a_require(
         self, transaction_hash: TransactionHash
     ) -> Optional[bool]:
-        """ Tries to determine if the transaction with `transaction_hash`
+        """Tries to determine if the transaction with `transaction_hash`
         failed because of a `require` expression.
         """
 

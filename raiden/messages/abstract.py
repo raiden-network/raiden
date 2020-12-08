@@ -7,7 +7,7 @@ from raiden.utils.typing import Address, Any, Callable, ClassVar, MessageID, Opt
 
 
 class cached_property:
-    """ Same as functools.cached_property in python 3.8
+    """Same as functools.cached_property in python 3.8
 
     See https://docs.python.org/3/library/functools.html#functools.cached_property.
     Remove after upgrading to python3.8
@@ -68,7 +68,7 @@ class SignedMessage(AuthenticatedMessage):
         return f"<{self.__class__.__name__} ...>"
 
     def _data_to_sign(self) -> bytes:
-        """ Return the binary data to be/which was signed
+        """Return the binary data to be/which was signed
 
         Must be implemented by subclasses.
         """

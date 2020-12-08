@@ -1,17 +1,13 @@
-import pytest
-
 from raiden.tests.utils import factories
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import (
-    TokenNetworkGraphState,
     TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionExecutionStatus,
 )
 from raiden.transfer.views import (
-    count_token_network_channels,
     filter_channels_by_partneraddress,
     filter_channels_by_status,
     get_networks,
@@ -20,7 +16,6 @@ from raiden.transfer.views import (
     get_token_network_addresses,
     get_token_network_registry_by_token_network_address,
     get_transfer_secret,
-    role_from_transfer_task,
 )
 from raiden.utils.copy import deepcopy
 
@@ -56,17 +51,6 @@ def test_filter_channels_by_status_empty_excludes():
     assert (
         filter_channels_by_status(channel_states=channel_states, exclude_states=None)
         == channel_states
-    )
-
-
-def test_count_token_network_channels_no_token_network(chain_state):
-    assert (
-        count_token_network_channels(
-            chain_state=chain_state,
-            token_network_registry_address=factories.make_address(),
-            token_address=factories.make_address(),
-        )
-        == 0
     )
 
 
@@ -106,11 +90,6 @@ def test_token_identifiers_empty_list_for_token_network_registry_none(chain_stat
         )
         == list()
     )
-
-
-def test_role_from_transfer_task_raises_value_error():
-    with pytest.raises(ValueError):
-        role_from_transfer_task(object())
 
 
 def test_get_transfer_secret_none_for_none_transfer_state(chain_state):
@@ -400,10 +379,13 @@ def test_listings():
         )
         == []
     )
-    assert views.get_token_network_addresses(
-        chain_state=test_state.chain_state,
-        token_network_registry_address=test_state.token_network_registry_address,
-    ) == [test_state.token_network_address]
+    assert (
+        views.get_token_network_addresses(
+            chain_state=test_state.chain_state,
+            token_network_registry_address=test_state.token_network_registry_address,
+        )
+        == [test_state.token_network_address]
+    )
     assert (
         views.get_token_identifiers(
             chain_state=test_state.chain_state,
@@ -411,10 +393,13 @@ def test_listings():
         )
         == []
     )
-    assert views.get_token_identifiers(
-        chain_state=test_state.chain_state,
-        token_network_registry_address=test_state.token_network_registry_address,
-    ) == [test_state.token_address]
+    assert (
+        views.get_token_identifiers(
+            chain_state=test_state.chain_state,
+            token_network_registry_address=test_state.token_network_registry_address,
+        )
+        == [test_state.token_address]
+    )
     assert views.get_token_network_registry_address(chain_state=test_state.chain_state) == [
         test_state.token_network_registry_address
     ]
@@ -429,31 +414,39 @@ def test_get_networks(chain_state, token_network_address):
     chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry_empty.address
     ] = token_network_registry_empty
-    assert get_networks(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry_empty.address,
-        token_address=token_address,
-    ) == (token_network_registry_empty, None)
+    assert (
+        get_networks(
+            chain_state=chain_state,
+            token_network_registry_address=token_network_registry_empty.address,
+            token_address=token_address,
+        )
+        == (token_network_registry_empty, None)
+    )
 
     chain_state = orig_chain_state
     token_network = TokenNetworkState(
         address=token_network_address,
         token_address=token_address,
-        network_graph=TokenNetworkGraphState(token_network_address=token_network_address),
     )
     token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )
-    assert get_networks(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry.address,
-        token_address=token_address,
-    ) == (None, None)
+    assert (
+        get_networks(
+            chain_state=chain_state,
+            token_network_registry_address=token_network_registry.address,
+            token_address=token_address,
+        )
+        == (None, None)
+    )
     chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry.address
     ] = token_network_registry
-    assert get_networks(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry.address,
-        token_address=token_address,
-    ) == (token_network_registry, token_network)
+    assert (
+        get_networks(
+            chain_state=chain_state,
+            token_network_registry_address=token_network_registry.address,
+            token_address=token_address,
+        )
+        == (token_network_registry, token_network)
+    )

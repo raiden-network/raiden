@@ -11,9 +11,7 @@ from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer import node
-from raiden.transfer.architecture import StateManager
-from raiden.transfer.state import NettingChannelState
-from raiden.transfer.state_change import ActionInitChain
+from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
@@ -199,20 +197,20 @@ class MockRaidenService:
             state_transition = node.state_transition
 
         serializer = JSONSerializer()
-        state_manager = StateManager(state_transition, None)
-        storage = SerializedSQLiteStorage(":memory:", serializer)
-        self.wal = WriteAheadLog(state_manager, storage)
-
-        state_change = ActionInitChain(
+        initial_state = ChainState(
             pseudo_random_generator=random.Random(),
             block_number=BlockNumber(0),
             block_hash=factories.make_block_hash(),
             our_address=self.rpc_client.address,
             chain_id=self.rpc_client.chain_id,
         )
-        with self.wal.process_state_change_atomically() as dispatcher:
-            dispatcher.dispatch(state_change)
+        wal = WriteAheadLog(
+            state=initial_state,
+            storage=SerializedSQLiteStorage(":memory:", serializer),
+            state_transition=state_transition,
+        )
 
+        self.wal = wal
         self.transport = Mock()
 
     def on_messages(self, messages):
@@ -244,7 +242,7 @@ def make_raiden_service_mock(
     raiden_service = MockRaidenService()
     chain_state = MockChainState()
     wal = Mock()
-    wal.state_manager.current_state = chain_state
+    wal.get_current_state.return_value = chain_state
     raiden_service.wal = wal
 
     token_network = MockTokenNetwork()

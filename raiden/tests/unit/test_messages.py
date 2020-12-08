@@ -142,7 +142,7 @@ def test_fee_update():
 
 
 def test_fee_schedule_state():
-    """ Don't serialize internal functions
+    """Don't serialize internal functions
 
     Regression test for https://github.com/raiden-network/raiden/issues/4367
     """
@@ -151,7 +151,7 @@ def test_fee_schedule_state():
 
 
 def test_tamper_request_monitoring():
-    """ This test shows ways, how the current implementation of the RequestMonitoring's
+    """This test shows ways, how the current implementation of the RequestMonitoring's
     signature scheme might be used by an attacker to tamper with the BalanceProof that is
     incorporated in the RequestMonitoring message, if not all three signatures are verified."""
     msc_address = bytes([1] * 20)

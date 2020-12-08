@@ -2,10 +2,10 @@ import gevent
 import pytest
 from eth_utils import keccak
 
-from raiden.app import App
 from raiden.constants import BLOCK_ID_LATEST, EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, RevealSecret, Unlock
+from raiden.raiden_service import RaidenService
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
@@ -22,6 +22,7 @@ from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_un
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
+from raiden.transfer.state import RouteState
 from raiden.utils.typing import (
     BlockExpiration,
     InitiatorAddress,
@@ -62,15 +63,17 @@ def open_and_wait_for_channels(app_channels, registry_address, token, deposit, s
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("settle_timeout", [64])  # default settlement is too low for 3 hops
-def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_timeout, deposit):
-    """ The transfer should proceed without triggering an assert.
+def test_regression_unfiltered_routes(
+    raiden_network: List[RaidenService], token_addresses, settle_timeout, deposit
+):
+    """The transfer should proceed without triggering an assert.
 
     Transfers failed in networks where two or more paths to the destination are
     possible but they share same node as a first hop.
     """
     app0, app1, app2, app3, app4 = raiden_network
     token = token_addresses[0]
-    registry_address = app0.raiden.default_registry.address
+    registry_address = app0.default_registry.address
 
     # Topology:
     #
@@ -86,6 +89,7 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
         token_address=token,
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
+        routes=[[app0.address, app1.address, app2.address, app4.address]],
     )
 
 
@@ -93,31 +97,32 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_regression_revealsecret_after_secret(
-    raiden_network: List[App], token_addresses: List[TokenAddress]
+    raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
 ) -> None:
-    """ A RevealSecret message received after a Unlock message must be cleanly
+    """A RevealSecret message received after a Unlock message must be cleanly
     handled.
     """
     app0, app1, app2 = raiden_network
     token = token_addresses[0]
     identifier = PaymentID(1)
-    token_network_registry_address = app0.raiden.default_registry.address
-    token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), token_network_registry_address, token
+    token_network_registry_address = app0.default_registry.address
+    token_network = views.get_token_network_by_token_address(
+        views.state_from_raiden(app0), token_network_registry_address, token
     )
-    assert token_network_address, "The fixtures must register the token"
+    assert token_network, "The fixtures must register the token"
 
-    payment_status = app0.raiden.mediated_transfer_async(
-        token_network_address,
+    payment_status = app0.mediated_transfer_async(
+        token_network.address,
         amount=PaymentAmount(1),
-        target=TargetAddress(app2.raiden.address),
+        target=TargetAddress(app2.address),
         identifier=identifier,
+        route_states=[RouteState(route=[app0.address, app1.address, app2.address])],
     )
     with watch_for_unlock_failures(*raiden_network):
         assert payment_status.payment_done.wait()
 
-    assert app1.raiden.wal, "The fixtures must start the app."
-    event = raiden_events_search_for_item(app1.raiden, SendSecretReveal, {})
+    assert app1.wal, "The fixtures must start the app."
+    event = raiden_events_search_for_item(app1, SendSecretReveal, {})
     assert event
 
     reveal_secret = RevealSecret(
@@ -125,17 +130,17 @@ def test_regression_revealsecret_after_secret(
         secret=event.secret,
         signature=EMPTY_SIGNATURE,
     )
-    app2.raiden.sign(reveal_secret)
-    app1.raiden.on_messages([reveal_secret])
+    app2.sign(reveal_secret)
+    app1.on_messages([reveal_secret])
 
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_regression_multiple_revealsecret(
-    raiden_network: List[App], token_addresses: List[TokenAddress]
+    raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
 ) -> None:
-    """ Multiple RevealSecret messages arriving at the same time must be
+    """Multiple RevealSecret messages arriving at the same time must be
     handled properly.
 
     Unlock handling followed these steps:
@@ -155,14 +160,14 @@ def test_regression_multiple_revealsecret(
     app0, app1 = raiden_network
     token = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_app(app0), app0.raiden.default_registry.address, token
+        views.state_from_raiden(app0), app0.default_registry.address, token
     )
     assert token_network_address
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
 
     payment_identifier = PaymentID(1)
     secret, secrethash = make_secret_with_hash()
-    expiration = BlockExpiration(app0.raiden.get_block_number() + 100)
+    expiration = BlockExpiration(app0.get_block_number() + 100)
     lock_amount = PaymentWithFeeAmount(10)
     lock = Lock(amount=lock_amount, expiration=expiration, secrethash=secrethash)
 
@@ -178,23 +183,21 @@ def test_regression_multiple_revealsecret(
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=transferred_amount,
         locked_amount=LockedAmount(lock_amount),
-        recipient=app1.raiden.address,
+        recipient=app1.address,
         locksroot=Locksroot(lock.lockhash),
         lock=lock,
-        target=TargetAddress(app1.raiden.address),
-        initiator=InitiatorAddress(app0.raiden.address),
+        target=TargetAddress(app1.address),
+        initiator=InitiatorAddress(app0.address),
         signature=EMPTY_SIGNATURE,
-        metadata=Metadata(
-            routes=[RouteMetadata(route=[app0.raiden.address, app1.raiden.address])]
-        ),
+        metadata=Metadata(routes=[RouteMetadata(route=[app0.address, app1.address])]),
     )
-    app0.raiden.sign(mediated_transfer)
-    app1.raiden.on_messages([mediated_transfer])
+    app0.sign(mediated_transfer)
+    app1.on_messages([mediated_transfer])
 
     reveal_secret = RevealSecret(
         message_identifier=make_message_identifier(), secret=secret, signature=EMPTY_SIGNATURE
     )
-    app0.raiden.sign(reveal_secret)
+    app0.sign(reveal_secret)
 
     token_network_address = channelstate_0_1.token_network_address
     unlock = Unlock(
@@ -210,10 +213,10 @@ def test_regression_multiple_revealsecret(
         secret=secret,
         signature=EMPTY_SIGNATURE,
     )
-    app0.raiden.sign(unlock)
+    app0.sign(unlock)
 
     messages = [unlock, reveal_secret]
-    receive_method = app1.raiden.on_messages
+    receive_method = app1.on_messages
     wait = set(gevent.spawn_later(0.1, receive_method, [data]) for data in messages)
 
     gevent.joinall(wait, raise_error=True)
@@ -241,12 +244,12 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
 @pytest.mark.parametrize("number_of_nodes", [5])
 @pytest.mark.parametrize("channels_per_node", [0])
 def test_regression_payment_complete_after_refund_to_the_initiator(
-    raiden_network, token_addresses, settle_timeout, deposit
+    raiden_network: List[RaidenService], token_addresses, settle_timeout, deposit
 ):
     """Regression test for issue #3915"""
     app0, app1, app2, app3, app4 = raiden_network
     token = token_addresses[0]
-    registry_address = app0.raiden.default_registry.address
+    registry_address = app0.default_registry.address
 
     # Topology:
     #
@@ -265,6 +268,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         token_address=token,
         amount=deposit,
         identifier=PaymentID(1),
+        routes=[[app1.address, app2.address]],
     )
 
     # Send a transfer that will result in a refund app1->app0
@@ -276,11 +280,13 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         identifier=PaymentID(2),
         timeout=20,
         expect_unlock_failures=True,
+        routes=[
+            [app0.address, app1.address, app2.address],
+            [app0.address, app3.address, app4.address, app2.address],
+        ],
     )
 
     assert raiden_state_changes_search_for_item(
-        raiden=app0.raiden, item_type=ReceiveTransferCancelRoute, attributes={}
+        raiden=app0, item_type=ReceiveTransferCancelRoute, attributes={}
     )
-    assert raiden_events_search_for_item(
-        raiden=app0.raiden, item_type=EventRouteFailed, attributes={}
-    )
+    assert raiden_events_search_for_item(raiden=app0, item_type=EventRouteFailed, attributes={})

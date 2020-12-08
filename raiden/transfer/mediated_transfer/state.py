@@ -54,7 +54,7 @@ class LockedTransferState(State):
 
 @dataclass
 class LockedTransferUnsignedState(LockedTransferState):
-    """ State for a transfer created by the local node which contains a hash
+    """State for a transfer created by the local node which contains a hash
     time lock and may be sent.
     """
 
@@ -75,7 +75,7 @@ class LockedTransferUnsignedState(LockedTransferState):
 
 @dataclass
 class LockedTransferSignedState(LockedTransferState):
-    """ State for a received transfer which contains a hash time lock and a
+    """State for a received transfer which contains a hash time lock and a
     signed balance proof.
     """
 
@@ -101,7 +101,7 @@ class LockedTransferSignedState(LockedTransferState):
 
 @dataclass
 class TransferDescriptionWithSecretState(State):
-    """ Describes a transfer (target, amount, and token) and contains an
+    """Describes a transfer (target, amount, and token) and contains an
     additional secret that can be used with a hash-time-lock.
     """
 
@@ -140,7 +140,7 @@ class InitiatorTransferState(State):
 
 @dataclass
 class InitiatorPaymentState(State):
-    """ State of a payment for the initiator node.
+    """State of a payment for the initiator node.
     A single payment may have multiple transfers. E.g. because if one of the
     transfers fails or timeouts another transfer will be started with a
     different secrethash.
@@ -153,7 +153,7 @@ class InitiatorPaymentState(State):
 
 @dataclass
 class MediationPairState(State):
-    """ State for a mediated transfer.
+    """State for a mediated transfer.
     A mediator will pay payee node knowing that there is a payer node to cover
     the token expenses. This state keeps track of transfers for
     the payer and payee, and the current state of the payment.
@@ -209,7 +209,7 @@ class MediationPairState(State):
 
 @dataclass
 class MediatorTransferState(State):
-    """ State of a transfer for the mediator node.
+    """State of a transfer for the mediator node.
     A mediator may manage multiple channels because of refunds, but all these
     channels will be used for the same transfer (not for different payments).
     Args:

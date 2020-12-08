@@ -1,13 +1,14 @@
 import datetime
 
 import pytest
+from marshmallow.fields import DateTime
 
-from raiden.api.v1.encoding import AddressField, BaseSchema, HexAddressConverter, TimeStampField
+from raiden.api.v1.encoding import AddressField, BaseSchema, HexAddressConverter
 from raiden.utils.typing import Address
 
 
 class SchemaTest(BaseSchema):
-    timestamp = TimeStampField()
+    timestamp = DateTime()
 
     class Meta:
         fields = ("timestamp",)

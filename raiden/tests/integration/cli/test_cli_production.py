@@ -62,8 +62,8 @@ def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
     child.expect(".*Communicating with an external service failed.")
 
 
-@pytest.mark.parametrize("changed_args", [{"network_id": "42"}])
-def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
+@pytest.mark.parametrize("changed_args", [{"chain_id": "42"}])
+def test_cli_wrong_chain_id_try_kovan(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
     expect_cli_until_acknowledgment(child)
     child.expect("The configured network.*differs from the Ethereum client's network")

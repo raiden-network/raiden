@@ -2,7 +2,6 @@
 from gevent import monkey  # isort:skip # noqa
 
 monkey.patch_all()  # isort:skip # noqa
-
 import argparse
 import json
 import re
@@ -15,6 +14,10 @@ from urllib.parse import urlsplit
 import gevent
 import requests
 import structlog
+
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
+
+setup_asyncio_event_loop()
 
 NODE_SECTION_RE = re.compile("^node[0-9]+")
 API_VERSION = "v1"

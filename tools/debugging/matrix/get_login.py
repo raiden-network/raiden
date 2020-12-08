@@ -19,7 +19,10 @@ from raiden.utils.signer import LocalSigner
     required=True,
 )
 @click.password_option(
-    "--password", confirmation_prompt=False, help="Password to unlock the keystore file."
+    "--password",
+    confirmation_prompt=False,
+    help="Password to unlock the keystore file.",
+    default="",
 )
 def get_login(address, password) -> None:
     path = os.path.expanduser("~/.ethereum/keystore")
@@ -34,7 +37,7 @@ def get_login(address, password) -> None:
     for i in range(1, 5):
         print(
             f"\ttransport {i:02d}:",
-            encode_hex(signer.sign(f"transport{i:02d}.raiden.network".encode())),
+            encode_hex(signer.sign(f"transport.transport{i:02d}.raiden.network".encode())),
         )
 
 

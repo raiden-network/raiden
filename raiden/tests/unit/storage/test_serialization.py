@@ -1,11 +1,10 @@
-import random
 from pathlib import Path
 
 import marshmallow
 import pytest
 
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.serialization.fields import (
+from raiden.storage.serialization.schemas import (
     AddressField,
     BytesField,
     IntegerToStringField,
@@ -21,9 +20,10 @@ from raiden.transfer.events import (
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.transfer.state_change import ActionInitChain
+from raiden.transfer.state_change import Block
 from raiden.utils.typing import (
     BlockExpiration,
+    BlockGasLimit,
     BlockNumber,
     ChainID,
     Nonce,
@@ -92,12 +92,10 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
     # Satisfy the foreign-key constraint for state change ID
     ids = storage.write_state_changes(
         [
-            ActionInitChain(
-                pseudo_random_generator=random.Random(),
+            Block(
                 block_number=BlockNumber(1),
+                gas_limit=BlockGasLimit(1),
                 block_hash=factories.make_block_hash(),
-                our_address=factories.make_address(),
-                chain_id=ChainID(1),
             )
         ]
     )
@@ -121,7 +119,7 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
 
 
 def test_restore_queueids_to_queues(chain_state, netting_channel_state):
-    """ Test that withdraw messages are restorable if they exist in
+    """Test that withdraw messages are restorable if they exist in
     chain_state.queueids_to_queues.
     """
     recipient = netting_channel_state.partner_state.address
@@ -155,7 +153,7 @@ def test_restore_queueids_to_queues(chain_state, netting_channel_state):
 
 
 def test_serialize_contract_send_subclass(chain_state):
-    """ Serializing must preserve class
+    """Serializing must preserve class
 
     Regression test for https://github.com/raiden-network/raiden/issues/6075
     """

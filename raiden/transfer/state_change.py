@@ -1,6 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
-from random import Random
 
 from raiden.constants import EMPTY_SECRETHASH
 from raiden.settings import MediationFeeConfig
@@ -37,7 +36,6 @@ from raiden.utils.typing import (
     SecretRegistryAddress,
     Signature,
     T_Address,
-    T_BlockHash,
     T_BlockNumber,
     T_Secret,
     T_SecretHash,
@@ -62,7 +60,7 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class Block(StateChange):
-    """ Transition used when a new block is mined.
+    """Transition used when a new block is mined.
     Args:
         block_number: The current block_number.
     """
@@ -77,7 +75,7 @@ class Block(StateChange):
 
 @dataclass(frozen=True)
 class ActionCancelPayment(StateChange):
-    """ The user requests the transfer to be cancelled.
+    """The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
     state of the transfer.
     """
@@ -145,20 +143,6 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     @property
     def token_network_address(self) -> TokenNetworkAddress:
         return self.canonical_identifier.token_network_address
-
-
-@dataclass(frozen=True)
-class ActionInitChain(StateChange):
-    pseudo_random_generator: Random = field(compare=False)
-    block_number: BlockNumber
-    block_hash: BlockHash
-    our_address: Address
-    chain_id: ChainID
-
-    def __post_init__(self) -> None:
-        typecheck(self.block_number, T_BlockNumber)
-        typecheck(self.block_hash, T_BlockHash)
-        typecheck(self.chain_id, int)
 
 
 @dataclass(frozen=True)
@@ -242,7 +226,7 @@ class ActionChannelSetRevealTimeout(StateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):
-    """ Registers a new token network registry.
+    """Registers a new token network registry.
     A token network registry corresponds to a registry smart contract.
     """
 
@@ -282,7 +266,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
-    """ All the locks were claimed via the blockchain.
+    """All the locks were claimed via the blockchain.
 
     Used when all the hash time locks were unlocked and a log ChannelUnlocked is emitted
     by the token network contract.
@@ -331,21 +315,9 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         return self.canonical_identifier.token_network_address
 
 
-@dataclass(frozen=True)
-class ContractReceiveRouteClosed(ContractReceiveStateChange):
-    """ A channel was closed and this node is NOT a participant. """
-
-    canonical_identifier: CanonicalIdentifier
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
-
-    @property
-    def token_network_address(self) -> TokenNetworkAddress:
-        return self.canonical_identifier.token_network_address
-
-
+# FIXME: remove on next breaking release
+# This needs to be kept, so that the state changes that are already in the DB
+# continue to be decodable.
 @dataclass(frozen=True)
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier

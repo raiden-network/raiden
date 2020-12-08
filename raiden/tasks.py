@@ -13,8 +13,8 @@ from web3.types import BlockData
 
 from raiden.constants import (
     BLOCK_ID_LATEST,
+    CHECK_CHAIN_ID_INTERVAL,
     CHECK_GAS_RESERVE_INTERVAL,
-    CHECK_NETWORK_ID_INTERVAL,
     CHECK_RDN_MIN_DEPOSIT_INTERVAL,
     CHECK_VERSION_INTERVAL,
     LATEST,
@@ -122,18 +122,18 @@ def check_rdn_deposits(
         gevent.sleep(CHECK_RDN_MIN_DEPOSIT_INTERVAL)
 
 
-def check_network_id(network_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
+def check_chain_id(chain_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
     """ Check periodically if the underlying ethereum client's network id has changed"""
     while True:
         current_id = web3.eth.chainId
-        if network_id != current_id:
+        if chain_id != current_id:
             raise RuntimeError(
-                f"Raiden was running on network with id {network_id} and it detected "
+                f"Raiden was running on network with id {chain_id} and it detected "
                 f"that the underlying ethereum client network id changed to {current_id}."
                 f" Changing the underlying blockchain while the Raiden node is running "
                 f"is not supported."
             )
-        gevent.sleep(CHECK_NETWORK_ID_INTERVAL)
+        gevent.sleep(CHECK_CHAIN_ID_INTERVAL)
 
 
 class AlarmTask(Runnable):
@@ -171,7 +171,7 @@ class AlarmTask(Runnable):
             self.callbacks = list()
 
     def register_callback(self, callback: Callable) -> None:
-        """ Register a new callback.
+        """Register a new callback.
 
         Note:
             The callback will be executed in the AlarmTask context and for
@@ -196,7 +196,7 @@ class AlarmTask(Runnable):
             self._maybe_run_callbacks(latest_block)
 
     def _maybe_run_callbacks(self, latest_block: BlockData) -> None:
-        """ Run the callbacks if there is at least one new block.
+        """Run the callbacks if there is at least one new block.
 
         The callbacks are executed only if there is a new block, otherwise the
         filters may try to poll for an inexisting block number and the Ethereum

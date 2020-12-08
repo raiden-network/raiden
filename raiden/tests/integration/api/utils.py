@@ -4,7 +4,7 @@ import gevent
 import psutil
 
 from raiden.api.rest import APIServer
-from raiden.app import App
+from raiden.raiden_service import RaidenService
 from raiden.utils.typing import Port
 
 
@@ -25,13 +25,13 @@ def wait_for_listening_port(
     raise RuntimeError(f"{port_number} is not bound")
 
 
-def prepare_api_server(raiden_app: App) -> APIServer:
-    api_server = raiden_app.raiden.api_server
+def prepare_api_server(raiden_app: RaidenService) -> APIServer:
+    api_server = raiden_app.api_server
     if api_server is None:
         raise RuntimeError("REST API not enabled, enable it using the `enable_rest_api` fixture")
 
     assert api_server is not None
-    config = raiden_app.raiden.config
+    config = raiden_app.config
     port = config.rest_api.port
     assert port is not None, "REST API port is `None`"
 

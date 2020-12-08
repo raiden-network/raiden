@@ -11,7 +11,6 @@ from raiden.constants import EMPTY_SIGNATURE, LOCKSROOT_OF_NO_LOCKS, UINT64_MAX,
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import Lock, LockedTransfer, LockExpired, RefundTransfer, Unlock
-from raiden.storage.ulid import ULID
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.channel import compute_locksroot
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -168,10 +167,6 @@ def create_properties(properties: Properties, defaults: Properties = None) -> Pr
     return _replace_properties(properties, full_defaults)
 
 
-def make_ulid() -> ULID:
-    return ULID(random.randint(0, 2 ** 128).to_bytes(16, "big"))
-
-
 def make_uint256() -> int:
     return random.randint(0, UINT256_MAX)
 
@@ -320,7 +315,9 @@ def make_lock() -> HashTimeLockState:
     )
 
 
-def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[PrivateKey, Address]:
+def make_privkey_address(
+    privatekey: bytes = EMPTY,
+) -> Tuple[PrivateKey, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
     return privatekey, address
@@ -351,9 +348,9 @@ def make_hop_to_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
 # In this module constants are in the bottom because we need some of the
 # factories.
 # Prefixing with UNIT_ to differ from the default globals.
-UNIT_SETTLE_TIMEOUT = 50
-UNIT_REVEAL_TIMEOUT = 5
-UNIT_TRANSFER_AMOUNT = 50
+UNIT_SETTLE_TIMEOUT = BlockTimeout(50)
+UNIT_REVEAL_TIMEOUT = BlockTimeout(5)
+UNIT_TRANSFER_AMOUNT = TokenAmount(50)
 UNIT_TRANSFER_FEE = 2
 UNIT_SECRET = Secret(b"secretsecretsecretsecretsecretse")
 UNIT_SECRETHASH = sha256_secrethash(UNIT_SECRET)
@@ -823,11 +820,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         NettingChannelStateProperties(canonical_identifier=balance_proof.canonical_identifier)
     )
 
-    route_state = RouteState(
-        # pylint: disable=E1101
-        route=[netting_channel_state.partner_state.address, transfer.target],
-        forward_channel_id=netting_channel_state.canonical_identifier.channel_identifier,
-    )
+    route_state = RouteState(route=[netting_channel_state.partner_state.address, transfer.target])
 
     return LockedTransferUnsignedState(
         balance_proof=balance_proof,
@@ -1116,6 +1109,14 @@ class ChannelSet:
     def nodeaddresses_to_networkstates(self) -> NodeNetworkStateMap:
         return {channel.partner_state.address: NetworkState.REACHABLE for channel in self.channels}
 
+    def addresses_to_channel(
+        self, token_network_address: TokenNetworkAddress = UNIT_TOKEN_NETWORK_ADDRESS
+    ) -> Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState]:
+        return {
+            (token_network_address, channel.partner_state.address): channel
+            for channel in self.channels
+        }
+
     def our_address(self, index: int) -> Address:
         return self.channels[index].our_state.address
 
@@ -1138,7 +1139,6 @@ class ChannelSet:
 
         return RouteState(
             route=route,
-            forward_channel_id=channel.canonical_identifier.channel_identifier,
             estimated_fee=estimated_fee,
         )
 
@@ -1188,18 +1188,24 @@ def make_channel_set_from_amounts(amounts: List[TokenAmount]) -> ChannelSet:
 
 
 def mediator_make_channel_pair(
-    defaults: NettingChannelStateProperties = None, amount: TokenAmount = UNIT_TRANSFER_AMOUNT
+    defaults: NettingChannelStateProperties = None,
+    amount: TokenAmount = UNIT_TRANSFER_AMOUNT,
+    token_network_address: TokenNetworkAddress = UNIT_TOKEN_NETWORK_ADDRESS,
 ) -> ChannelSet:
     properties_list = [
         NettingChannelStateProperties(
-            canonical_identifier=make_canonical_identifier(channel_identifier=1),
+            canonical_identifier=make_canonical_identifier(
+                channel_identifier=1, token_network_address=token_network_address
+            ),
             our_state=NettingChannelEndStateProperties.OUR_STATE,
             partner_state=NettingChannelEndStateProperties(
                 address=UNIT_TRANSFER_SENDER, balance=amount
             ),
         ),
         NettingChannelStateProperties(
-            canonical_identifier=make_canonical_identifier(channel_identifier=2),
+            canonical_identifier=make_canonical_identifier(
+                channel_identifier=2, token_network_address=token_network_address
+            ),
             our_state=replace(NettingChannelEndStateProperties.OUR_STATE, balance=amount),
             partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
         ),
@@ -1220,10 +1226,7 @@ def mediator_make_init_action(
     forwards = [get_forward_channel(route) for route in transfer.routes]
     assert len(forwards) == len(transfer.routes)
 
-    route_states = [
-        RouteState(route=route, forward_channel_id=forwards[idx])
-        for idx, route in enumerate(transfer.routes)
-    ]
+    route_states = [RouteState(route=route) for idx, route in enumerate(transfer.routes)]
 
     return ActionInitMediator(
         from_hop=channels.get_hop(0),
@@ -1250,8 +1253,7 @@ def initiator_make_init_action(
     assert len(forwards) == len(routes)
 
     route_states = [
-        RouteState(route=route, forward_channel_id=forwards[idx], estimated_fee=estimated_fee)
-        for idx, route in enumerate(routes)
+        RouteState(route=route, estimated_fee=estimated_fee) for idx, route in enumerate(routes)
     ]
 
     return ActionInitInitiator(transfer=transfer, routes=route_states)
@@ -1321,10 +1323,7 @@ def make_transfers_pair(
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         route_states = [
-            RouteState(
-                route=[channel.partner_state.address for channel in channels[payer_index:]],
-                forward_channel_id=channels[payee_index].canonical_identifier.channel_identifier,
-            )
+            RouteState(route=[channel.partner_state.address for channel in channels[payer_index:]])
         ]
 
         lockedtransfer_event = channel.send_lockedtransfer(
@@ -1407,9 +1406,7 @@ def make_chain_state(
     token_network_address = channel_set.channels[0].canonical_identifier.token_network_address
     token_address = make_address()
 
-    token_network = TokenNetworkState(
-        address=token_network_address, token_address=token_address, network_graph=None
-    )
+    token_network = TokenNetworkState(address=token_network_address, token_address=token_address)
     for netting_channel in channel_set.channels:
         token_network.channelidentifiers_to_channels[
             netting_channel.canonical_identifier.channel_identifier
@@ -1455,10 +1452,7 @@ def make_node_availability_map(nodes):
 
 
 def make_route_from_channel(channel: NettingChannelState) -> RouteState:
-    return RouteState(
-        route=[channel.our_state.address, channel.partner_state.address],
-        forward_channel_id=channel.canonical_identifier.channel_identifier,
-    )
+    return RouteState(route=[channel.our_state.address, channel.partner_state.address])
 
 
 @dataclass(frozen=True)
@@ -1502,7 +1496,7 @@ def create_network(
     state = token_network_state
     channels = list()
 
-    for count, route in enumerate(routes, 1):
+    for route in routes:
         if route.address1 == our_address:
             channel = route_properties_to_channel(route)
             state_change = ContractReceiveChannelNew(
@@ -1530,8 +1524,5 @@ def create_network(
             pseudo_random_generator=random.Random(),
         )
         state = iteration.new_state
-
-        assert len(state.network_graph.channel_identifier_to_participants) == count
-        assert len(state.network_graph.network.edges()) == count
 
     return state, channels

@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 
 @enum.unique
 class PFSError(enum.IntEnum):
-    """ Error codes as returned by the PFS.
+    """Error codes as returned by the PFS.
 
     Defined in the pathfinding_service.exceptions module in
     https://github.com/raiden-network/raiden-services
@@ -110,13 +110,13 @@ class RaidenValidationError(RaidenRecoverableError):
 
 
 class PaymentConflict(RaidenRecoverableError):
-    """ Raised when there is another payment with the same identifier but the
+    """Raised when there is another payment with the same identifier but the
     attributes of the payment don't match.
     """
 
 
 class InsufficientFunds(RaidenError):
-    """ Raised when provided account doesn't have token funds to complete the
+    """Raised when provided account doesn't have token funds to complete the
     requested deposit.
 
     Used when a *user* tries to deposit a given amount of token in a channel,
@@ -125,7 +125,7 @@ class InsufficientFunds(RaidenError):
 
 
 class DepositOverLimit(RaidenError):
-    """ Raised when the requested deposit is over the limit
+    """Raised when the requested deposit is over the limit
 
     Used when a *user* tries to deposit a given amount of token in a channel,
     but the amount is over the testing limit.
@@ -133,7 +133,7 @@ class DepositOverLimit(RaidenError):
 
 
 class DepositMismatch(RaidenRecoverableError):
-    """ Raised when the requested deposit is lower than actual channel deposit
+    """Raised when the requested deposit is lower than actual channel deposit
 
     Used when a *user* tries to deposit a given amount of tokens in a channel,
     but the on-chain amount is already higher.
@@ -176,18 +176,18 @@ class InvalidSecretHash(RaidenError):
 
 
 class InvalidAmount(RaidenError):
-    """ Raised when the user provided value is not a positive integer and
+    """Raised when the user provided value is not a positive integer and
     cannot be used to define a transfer value.
     """
 
 
 class InvalidSettleTimeout(RaidenError):
-    """ Raised when the user provided timeout value is less than the minimum
+    """Raised when the user provided timeout value is less than the minimum
     settle timeout"""
 
 
 class InvalidRevealTimeout(RaidenError):
-    """ Raised when the channel's settle timeout is less than
+    """Raised when the channel's settle timeout is less than
     double the user provided reveal timeout value.
     condition: settle_timeout < reveal_timeout * 2
     """
@@ -202,8 +202,7 @@ class InvalidPaymentIdentifier(RaidenError):
 
 
 class SamePeerAddress(RaidenError):
-    """ Raised when a user tries to perform an action that requires two different partners
-    """
+    """Raised when a user tries to perform an action that requires two different partners"""
 
 
 class UnknownTokenAddress(RaidenError):
@@ -231,13 +230,13 @@ class InvalidTokenAddress(RaidenError):
 
 
 class InvalidTokenNetworkDepositLimit(RaidenError):
-    """ Raised when an invalid token network deposit
+    """Raised when an invalid token network deposit
     limit is passed to the token network registry proxy.
     """
 
 
 class InvalidChannelParticipantDepositLimit(RaidenError):
-    """ Raised when an invalid channel participant
+    """Raised when an invalid channel participant
     deposit limit is passed to the token network registry proxy.
     """
 
@@ -297,28 +296,21 @@ class EthereumNonceTooLow(RaidenUnrecoverableError):
     """Raised when a new transaction is sent with a nonce that has been used already."""
 
 
-class ChannelOutdatedError(RaidenError):
-    """ Raised when an action is invoked on a channel whose
-    identifier has been replaced with a new channel identifier
-    due to a close/re-open of current channel.
-    """
-
-
 class InsufficientGasReserve(RaidenError):
-    """ Raised when an action cannot be done because the available balance
+    """Raised when an action cannot be done because the available balance
     is not sufficient for the lifecycles of all active channels.
     """
 
 
 class InsufficientEth(RaidenError):
-    """ Raised when an on-chain action failed because we could not pay for
+    """Raised when an on-chain action failed because we could not pay for
     the gas. (The case we try to avoid with `InsufficientGasReserve`
     exceptions.)
     """
 
 
 class BrokenPreconditionError(RaidenError):
-    """ Raised when the chain doesn't satisfy transaction preconditions
+    """Raised when the chain doesn't satisfy transaction preconditions
     that proxies check at the specified block.
 
     This exception should be used, when the proxy already sees that,
@@ -379,7 +371,7 @@ class UndefinedMediationFee(RaidenError):
 
 
 class TokenNetworkDeprecated(RaidenError):
-    """ Raised when the token network proxy safety switch
+    """Raised when the token network proxy safety switch
     is turned on (i.e deprecated).
     """
 

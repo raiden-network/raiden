@@ -4,15 +4,16 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from types import TracebackType
-from typing import Generator
+from typing import Generator, Iterable, cast
 
 import gevent
+import ulid
 from eth_utils import to_normalized_address
+from ulid import MAX_ULID, MIN_ULID, ULID
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.serialization import SerializationBase
-from raiden.storage.ulid import ULID, ULIDMonotonicFactory
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.transfer.architecture import Event, State, StateChange
 from raiden.utils.system import get_system_spec
@@ -54,8 +55,8 @@ class Range(Generic[ID]):
             raise ValueError("last must be larger or equal to first")
 
 
-LOW_STATECHANGE_ULID = StateChangeID(ULID((0).to_bytes(16, "big")))
-HIGH_STATECHANGE_ULID = StateChangeID(ULID((2 ** 128 - 1).to_bytes(16, "big")))
+LOW_STATECHANGE_ULID = StateChangeID(MIN_ULID)
+HIGH_STATECHANGE_ULID = StateChangeID(MAX_ULID)
 RANGE_ALL_STATE_CHANGES = Range(LOW_STATECHANGE_ULID, HIGH_STATECHANGE_ULID)
 
 
@@ -124,11 +125,11 @@ def assert_sqlite_version() -> bool:  # pragma: no unittest
 
 
 def adapt_ulid_identifier(ulid: ULID) -> bytes:
-    return ulid.identifier
+    return ulid.bytes
 
 
 def convert_ulid_identifier(data: bytes) -> ULID:
-    return ULID(identifier=data)
+    return ulid.from_bytes(data)
 
 
 def _sanitize_limit_and_offset(
@@ -212,21 +213,31 @@ def _query_to_string(query: FilteredDBQuery) -> Tuple[str, List[str]]:
     return query_where_str, args
 
 
+def _prepend_and_save_ids(
+    ulid_factory: ulid.api.api.Api, ids: List[ID], items: Iterable[Tuple[Any, ...]]
+) -> Iterator:
+    item: tuple
+    for item in items:
+        next_id = cast(ID, ulid_factory.new())
+        ids.append(next_id)
+        yield (next_id, *item)
+
+
 def write_state_change(
-    ulid_factory: ULIDMonotonicFactory, cursor: sqlite3.Cursor, state_change: str
+    ulid_factory: ulid.api.api.Api, cursor: sqlite3.Cursor, state_change: str
 ) -> StateChangeID:
     """Write `state_change` to the database and returns the corresponding ID."""
 
     query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
 
-    new_id = ulid_factory.new()
+    new_id = StateChangeID(ulid_factory.new())
     cursor.execute(query, (new_id, state_change))
 
     return new_id
 
 
 def write_events(
-    ulid_factory: ULIDMonotonicFactory,
+    ulid_factory: ulid.api.api.Api,
     cursor: sqlite3.Cursor,
     events: List[Tuple[StateChangeID, str]],
 ) -> List[EventID]:
@@ -237,7 +248,7 @@ def write_events(
         "   identifier, source_statechange_id, data"
         ") VALUES(?, ?, ?)"
     )
-    cursor.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
+    cursor.executemany(query, _prepend_and_save_ids(ulid_factory, events_ids, events))
 
     return events_ids
 
@@ -279,7 +290,7 @@ class SQLiteStorage:
         # Reference: https://github.com/python/mypy/issues/4928
         self._ulid_factories: Dict = dict()
 
-    def _ulid_factory(self, id_type: Type[ID]) -> ULIDMonotonicFactory[ID]:
+    def _ulid_factory(self, id_type: Type[ID]) -> ulid.api.api.Api:
         """Return an ULID Factory for a specific table.
 
         In order to guarantee ID monotonicity for a specific table it's
@@ -318,12 +329,12 @@ class SQLiteStorage:
             )
             result = query_last_id.fetchone()
 
+            provider = ulid.providers.monotonic.Provider(ulid.providers.default.Provider())
             if result:
-                timestamp = result[0].timestamp
-            else:
-                timestamp = None
+                timestamp = result[0].timestamp()
+                provider.prev_timestamp = ulid.codec.decode_timestamp(timestamp)
 
-            factory = ULIDMonotonicFactory(start=timestamp)
+            factory = ulid.api.api.Api(provider)
             self._ulid_factories[table_name] = factory
 
         return factory
@@ -363,15 +374,22 @@ class SQLiteStorage:
 
         return int(result[0][0])
 
+    def has_snapshot(self) -> bool:
+        cursor = self.conn.cursor()
+        query = cursor.execute("SELECT EXISTS(SELECT 1 FROM state_snapshot)")
+        result = query.fetchone()
+
+        return bool(result[0])
+
     def write_state_changes(self, state_changes: List[str]) -> List[StateChangeID]:
-        """Write `state_changes` to the database and returns the correspoding IDs."""
+        """Write `state_changes` to the database and returns the corresponding IDs."""
         ulid_factory = self._ulid_factory(StateChangeID)
 
         state_change_data = list()
         state_change_ids = list()
         for state_change in state_changes:
             new_id = ulid_factory.new()
-            state_change_ids.append(new_id)
+            state_change_ids.append(StateChangeID(new_id))
             state_change_data.append((new_id, state_change))
 
         query = "INSERT INTO state_changes(identifier, data) VALUES(?, ?)"
@@ -380,10 +398,27 @@ class SQLiteStorage:
 
         return state_change_ids
 
+    def write_first_state_snapshot(self, snapshot: str) -> SnapshotID:
+        if self.has_snapshot():
+            raise RuntimeError(
+                "write_first_state_snapshot can only be used for an unitialized node."
+            )
+
+        snapshot_id = SnapshotID(self._ulid_factory(SnapshotID).new())
+
+        query = (
+            "INSERT INTO state_snapshot (identifier, statechange_id, statechange_qty, data) "
+            "VALUES(?, NULL, 0, ?)"
+        )
+        self.conn.execute(query, (snapshot_id, snapshot))
+        self.maybe_commit()
+
+        return snapshot_id
+
     def write_state_snapshot(
         self, snapshot: str, statechange_id: StateChangeID, statechange_qty: int
     ) -> SnapshotID:
-        snapshot_id = self._ulid_factory(SnapshotID).new()
+        snapshot_id = SnapshotID(self._ulid_factory(SnapshotID).new())
 
         query = (
             "INSERT INTO state_snapshot (identifier, statechange_id, statechange_qty, data) "
@@ -403,7 +438,7 @@ class SQLiteStorage:
             "   identifier, source_statechange_id, data"
             ") VALUES(?, ?, ?)"
         )
-        self.conn.executemany(query, ulid_factory.prepend_and_save_ids(events_ids, events))
+        self.conn.executemany(query, _prepend_and_save_ids(ulid_factory, events_ids, events))
         self.maybe_commit()
 
         return events_ids
@@ -417,7 +452,7 @@ class SQLiteStorage:
     def get_snapshot_before_state_change(
         self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotEncodedRecord]:
-        """ Returns the Snapshot which can be used to restore the State with
+        """Returns the Snapshot which can be used to restore the State with
         the StateChange `state_change_identifier` applied.
 
         If `state_change_identifier` has a snapshot, that is returned,
@@ -440,7 +475,7 @@ class SQLiteStorage:
 
         cursor = self.conn.execute(
             "SELECT identifier, statechange_qty, statechange_id, data FROM state_snapshot "
-            "WHERE statechange_id <= ? "
+            "WHERE statechange_id <= ? OR statechange_id IS NULL "
             "ORDER BY identifier DESC LIMIT 1",
             (state_change_identifier,),
         )
@@ -555,7 +590,7 @@ class SQLiteStorage:
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
     ) -> List[StateChangeEncodedRecord]:
-        """ Return a batch of state change records (identifier and data)
+        """Return a batch of state change records (identifier and data)
 
         The batch size can be tweaked with the `limit` and `offset` arguments.
 
@@ -648,7 +683,7 @@ class SQLiteStorage:
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
     ) -> List[EventEncodedRecord]:
-        """ Return a batch of event records
+        """Return a batch of event records
 
         The batch size can be tweaked with the `limit` and `offset` arguments.
 
@@ -703,7 +738,7 @@ class SQLiteStorage:
         offset: int = None,
         token_network_address: TokenNetworkAddress = None,
         partner_address: Address = None,
-    ) -> List[TimestampedEvent]:
+    ) -> List[Tuple[str, datetime]]:
 
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
@@ -785,7 +820,7 @@ class SQLiteStorage:
         args.append(limit)
         args.append(offset)
         cursor.execute(query, args)
-        return [TimestampedEvent(entry[0], entry[1]) for entry in cursor]
+        return [(entry[0], entry[1]) for entry in cursor]
 
     def get_events_with_timestamps(
         self,
@@ -793,12 +828,12 @@ class SQLiteStorage:
         offset: int = None,
         filters: List[Tuple[str, Any]] = None,
         logical_and: bool = True,
-    ) -> List[TimestampedEvent]:
+    ) -> List[Tuple[str, datetime]]:
         entries = self._query_events(
             limit=limit, offset=offset, filters=filters, logical_and=logical_and
         )
 
-        return [TimestampedEvent(entry[0], entry[1]) for entry in entries]
+        return [(entry[0], entry[1]) for entry in entries]
 
     def get_events(self, limit: int = None, offset: int = None) -> List[str]:
         entries = self._query_events(limit, offset)
@@ -874,7 +909,7 @@ class SQLiteStorage:
 
 
 class SerializedSQLiteStorage:
-    """ A wrapper around SQLiteStorage that automatically serializes and
+    """A wrapper around SQLiteStorage that automatically serializes and
     deserializes the data.
 
     SQLiteStorage is necessary for database upgrades. Upgrades are necessary
@@ -904,6 +939,11 @@ class SerializedSQLiteStorage:
         ]
         return self.database.write_state_changes(serialized_data)
 
+    def write_first_state_snapshot(self, snapshot: State) -> SnapshotID:
+        serialized_data = self.serializer.serialize(snapshot)
+
+        return self.database.write_first_state_snapshot(serialized_data)
+
     def write_state_snapshot(
         self, snapshot: State, statechange_id: StateChangeID, statechange_qty: int
     ) -> SnapshotID:
@@ -912,7 +952,7 @@ class SerializedSQLiteStorage:
         return self.database.write_state_snapshot(serialized_data, statechange_id, statechange_qty)
 
     def write_events(self, events: List[Tuple[StateChangeID, Event]]) -> List[EventID]:
-        """ Save events.
+        """Save events.
 
         Args:
             events: List of Event objects and the corresponding state change id.
@@ -937,7 +977,7 @@ class SerializedSQLiteStorage:
             result = SnapshotRecord(
                 row.identifier,
                 row.state_change_qty,
-                row.state_change_identifier,
+                row.state_change_identifier or LOW_STATECHANGE_ULID,
                 deserialized_data,
             )
         else:
@@ -1010,8 +1050,8 @@ class SerializedSQLiteStorage:
             partner_address=partner_address,
         )
         return [
-            TimestampedEvent(self.serializer.deserialize(event.wrapped_event), event.log_time)
-            for event in events
+            TimestampedEvent(self.serializer.deserialize(data), timestamp)
+            for data, timestamp in events
         ]
 
     def get_events_with_timestamps(
@@ -1025,8 +1065,8 @@ class SerializedSQLiteStorage:
             limit=limit, offset=offset, filters=filters, logical_and=logical_and
         )
         return [
-            TimestampedEvent(self.serializer.deserialize(event.wrapped_event), event.log_time)
-            for event in events
+            TimestampedEvent(self.serializer.deserialize(data), timestamp)
+            for data, timestamp in events
         ]
 
     def get_events(self, limit: int = None, offset: int = None) -> List[Event]:

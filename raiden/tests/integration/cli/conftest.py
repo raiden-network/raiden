@@ -44,10 +44,15 @@ def raiden_testchain(
         base_logdir=base_logdir,
     )
 
+    def dont_print_step(
+        description: str, error: bool = False  # pylint: disable=unused-argument
+    ) -> None:
+        pass
+
     with testchain_manager as testchain:
         result = setup_raiden(
             matrix_server=MATRIX_AUTO_SELECT_SERVER,
-            print_step=lambda x: None,
+            print_step=dont_print_step,
             contracts_version=cli_tests_contracts_version,
             eth_rpc_endpoint=testchain["eth_rpc_endpoint"],
             web3=testchain["web3"],
@@ -92,6 +97,9 @@ def cli_args(
     if changed_args is not None:
         for k, v in changed_args.items():
             initial_args[k] = v
+
+    # The CLI param is `--network-id` for legacy reasons. We use `chain_id` as variable name.
+    initial_args["network_id"] = initial_args.pop("chain_id")
 
     # This assumes that there is only one Raiden instance per CLI test
     base_logfile = os.path.join(logs_storage, "raiden_nodes", "cli_test.log")

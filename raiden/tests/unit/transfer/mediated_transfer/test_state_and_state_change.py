@@ -79,9 +79,7 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
         channel_identifier=factories.make_channel_identifier(),
     )
 
-    route_state = RouteState(
-        route=[factories.make_address()], forward_channel_id=factories.make_channel_identifier()
-    )
+    route_state = RouteState(route=[factories.make_address()])
 
     not_a_route_state = object()
     valid_transfer = factories.create(factories.LockedTransferSignedStateProperties())

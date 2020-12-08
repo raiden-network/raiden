@@ -1,4 +1,3 @@
-import math
 from enum import Enum
 
 from eth_utils import keccak, to_canonical_address
@@ -21,7 +20,6 @@ from raiden.utils.typing import (
     Signature,
     TokenAddress,
     TokenAmount,
-    TransactionHash,
 )
 
 LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
@@ -49,27 +47,22 @@ GENESIS_BLOCK_NUMBER = BlockNumber(0)
 
 
 class EthereumForks(Enum):
-    BYZANTIUM = BlockNumber(4_370_000)
     CONSTANTINOPLE = BlockNumber(7_280_000)
 
 
 class RopstenForks(Enum):
-    BYZANTIUM = BlockNumber(1_700_000)
     CONSTANTINOPLE = BlockNumber(4_230_000)
 
 
 class KovanForks(Enum):
-    BYZANTIUM = BlockNumber(0)
     CONSTANTINOPLE = BlockNumber(4_230_000)
 
 
 class RinkebyForks(Enum):
-    BYZANTIUM = BlockNumber(0)
     CONSTANTINOPLE = BlockNumber(3_660_663)
 
 
 class GoerliForks(Enum):
-    BYZANTIUM = BlockNumber(0)
     CONSTANTINOPLE = BlockNumber(0)
 
 
@@ -108,7 +101,6 @@ NULL_ADDRESS_HEX = to_hex_address(Address(NULL_ADDRESS_BYTES))
 NULL_ADDRESS_CHECKSUM = to_checksum_address(Address(NULL_ADDRESS_BYTES))
 
 EMPTY_HASH = BlockHash(bytes(32))
-EMPTY_TRANSACTION_HASH = TransactionHash(bytes(32))
 EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
 EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_SIGNATURE = Signature(bytes(65))
@@ -161,17 +153,19 @@ class RoutingMode(Enum):
     """Routing mode configuration that can be chosen on the command line"""
 
     PFS = "pfs"
-    LOCAL = "local"
     PRIVATE = "private"
 
 
-GAS_REQUIRED_PER_SECRET_IN_BATCH = math.ceil(UNLOCK_TX_GAS_LIMIT / MAXIMUM_PENDING_TRANSFERS)
+# See gas measurements in raiden contracts for these values, rounded up
+GAS_REQUIRED_REGISTER_SECRET_BATCH_BASE = 23000
+GAS_REQUIRED_PER_SECRET_IN_BATCH = 26000
+
 GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL = 100_000
 
 CHECK_RDN_MIN_DEPOSIT_INTERVAL = 5 * 60
 CHECK_GAS_RESERVE_INTERVAL = 5 * 60
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
-CHECK_NETWORK_ID_INTERVAL = 5 * 60
+CHECK_CHAIN_ID_INTERVAL = 5 * 60
 
 DEFAULT_HTTP_REQUEST_TIMEOUT = 10.0  # seconds
 
@@ -196,10 +190,10 @@ ETH_GET_LOGS_THRESHOLD_FAST = ETH_GET_LOGS_TIMEOUT // 4
 ETH_GET_LOGS_THRESHOLD_SLOW = ETH_GET_LOGS_TIMEOUT // 2
 
 # Keep in sync with .circleci/config.yaml
-HIGHEST_SUPPORTED_GETH_VERSION = "1.9.11"
+HIGHEST_SUPPORTED_GETH_VERSION = "1.9.21"
 LOWEST_SUPPORTED_GETH_VERSION = "1.9.7"
 # this is the last stable version as of this comment
-HIGHEST_SUPPORTED_PARITY_VERSION = "2.7.2"
+HIGHEST_SUPPORTED_PARITY_VERSION = "3.1.0"
 LOWEST_SUPPORTED_PARITY_VERSION = "1.7.6"
 
 WEB3_BLOCK_NOT_FOUND_RETRY_COUNT = 3
@@ -218,3 +212,26 @@ PROPORTIONAL_MED_FEE_MIN = 0
 PROPORTIONAL_MED_FEE_MAX = 1_000_000
 IMBALANCE_MED_FEE_MIN = 0
 IMBALANCE_MED_FEE_MAX = 50_000
+
+
+# Web RTC constants
+class RTCMessageType(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+    CANDIDATES = "candidates"
+    HANGUP = "hangup"
+
+
+class SDPTypes(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+
+
+class RTCChannelState(Enum):
+    CONNECTING = "connecting"
+    OPEN = "open"
+    CLOSING = "closing"
+    CLOSED = "closed"
+
+
+WEB_RTC_CHANNEL_TIMEOUT = 10

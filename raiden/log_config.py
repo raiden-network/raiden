@@ -64,7 +64,7 @@ class LogFilter:
     """ Utility for filtering log records on module level rules """
 
     def __init__(self, config: Dict[str, str], default_level: str):
-        """ Initializes a new `LogFilter`
+        """Initializes a new `LogFilter`
 
         Args:
             config: Dictionary mapping module names to logging level
@@ -149,6 +149,9 @@ def configure_debug_logfile_path(debug_log_file_path: Optional[str]) -> str:
 
     # From here and on determine default based on user's system
     time = datetime.datetime.utcnow().isoformat()
+    if os.name == "nt":
+        # Windows does not allow colons in file names
+        time = time.replace(":", "_")
     debug_log_file_name = f"raiden-debug_{time}.log"
 
     home = os.path.expanduser("~")

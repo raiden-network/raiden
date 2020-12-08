@@ -1,25 +1,20 @@
-from heapq import heappop, heappush
 from uuid import UUID
 
-import networkx
 import structlog
 from eth_utils import to_canonical_address
 
 from raiden.exceptions import ServiceRequestFailed
 from raiden.messages.metadata import RouteMetadata
 from raiden.network.pathfinding import PFSConfig, query_paths
-from raiden.settings import INTERNAL_ROUTING_DEFAULT_FEE_PERC
 from raiden.transfer import channel, views
-from raiden.transfer.state import ChainState, ChannelState, NetworkState, RouteState
+from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     BlockNumber,
-    ChannelID,
     FeeAmount,
     InitiatorAddress,
     List,
-    NamedTuple,
     OneToNAddress,
     Optional,
     PaymentAmount,
@@ -48,36 +43,12 @@ def get_best_routes(
     token_network = views.get_token_network_by_address(chain_state, token_network_address)
     assert token_network, "The token network must be validated and exist."
 
-    try:
-        # networkx returns a generator, consume the result since it will be
-        # iterated over multiple times.
-        all_neighbors = list(
-            networkx.all_neighbors(token_network.network_graph.network, from_address)
-        )
-    except networkx.NetworkXError:
-        # If `our_address` is not in the graph, no channels opened with the
-        # address.
-        log.debug(
-            "Node does not have a channel in the requested token network.",
-            source=to_checksum_address(from_address),
-            target=to_checksum_address(to_address),
-            amount=amount,
-        )
-        return ("Node does not have a channel in the requested token network.", list(), None)
-
-    error_closed = 0
-    error_no_route = 0
-    error_no_capacity = 0
-    error_not_online = 0
-    error_direct = None
-    shortest_routes: List[Neighbour] = list()
-
     # Always use a direct channel if available:
     # - There are no race conditions and the capacity is guaranteed to be
     #   available.
     # - There will be no mediation fees
     # - The transfer will be faster
-    if to_address in all_neighbors:
+    if Address(to_address) in token_network.partneraddresses_to_channelidentifiers.keys():
         for channel_id in token_network.partneraddresses_to_channelidentifiers[
             Address(to_address)
         ]:
@@ -91,153 +62,65 @@ def get_best_routes(
 
             if is_usable is channel.ChannelUsability.USABLE:
                 direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)],
-                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
-                    estimated_fee=FeeAmount(0),
+                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0)
                 )
-                return (None, [direct_route], None)
+                return None, [direct_route], None
 
-            error_direct = is_usable
+    if pfs_config is None or one_to_n_address is None:
+        log.warning("Pathfinding Service could not be used.")
+        return "Pathfinding Service could not be used.", list(), None
 
-    latest_channel_opened_at = BlockNumber(0)
-    for partner_address in all_neighbors:
-        for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]:
-            channel_state = token_network.channelidentifiers_to_channels[channel_id]
-
-            if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
-                error_closed += 1
-                continue
-
-            latest_channel_opened_at = max(
-                latest_channel_opened_at, channel_state.open_transaction.finished_block_number
-            )
-
-            try:
-                route = networkx.shortest_path(  # pylint: disable=E1121
-                    token_network.network_graph.network, partner_address, to_address
-                )
-            except (networkx.NetworkXNoPath, networkx.NodeNotFound):
-                error_no_route += 1
-            else:
-                distributable = channel.get_distributable(
-                    channel_state.our_state, channel_state.partner_state
-                )
-
-                network_status = views.get_node_network_status(
-                    chain_state, channel_state.partner_state.address
-                )
-
-                if distributable < amount:
-                    error_no_capacity += 1
-                elif network_status != NetworkState.REACHABLE:
-                    error_not_online += 1
-                else:
-                    nonrefundable = amount > channel.get_distributable(
-                        channel_state.partner_state, channel_state.our_state
-                    )
-
-                    # The complete route includes the initiator, add it to the beginning
-                    complete_route = [Address(from_address)] + route
-                    neighbour = Neighbour(
-                        length=len(route),
-                        nonrefundable=nonrefundable,
-                        partner_address=partner_address,
-                        channelid=channel_state.identifier,
-                        route=complete_route,
-                    )
-                    heappush(shortest_routes, neighbour)
-
-    if not shortest_routes:
-        qty_channels = sum(
-            len(token_network.partneraddresses_to_channelidentifiers[partner_address])
-            for partner_address in all_neighbors
+    # Does any channel have sufficient capacity for the payment?
+    channels = [
+        token_network.channelidentifiers_to_channels[channel_id]
+        for channels_to_partner in token_network.partneraddresses_to_channelidentifiers.values()
+        for channel_id in channels_to_partner
+    ]
+    for channel_state in channels:
+        payment_with_fee_amount = PaymentWithFeeAmount(amount)
+        is_usable = channel.is_channel_usable_for_new_transfer(
+            channel_state, payment_with_fee_amount, None
         )
-        error_msg = (
-            f"None of the existing channels could be used to complete the "
-            f"transfer. From the {qty_channels} existing channels. "
-            f"{error_closed} are closed. {error_not_online} are not online. "
-            f"{error_no_route} don't have a route to the target in the given "
-            f"token network. {error_no_capacity} don't have enough capacity for "
-            f"the requested transfer."
-        )
-        if error_direct is not None:
-            error_msg += f"direct channel {error_direct}."
+        if is_usable is channel.ChannelUsability.USABLE:
+            break
+    else:
+        return ("You have no suitable channel to initiate this payment.", list(), None)
 
-        log.warning(
-            "None of the existing channels could be used to complete the transfer",
-            from_address=to_checksum_address(from_address),
-            to_address=to_checksum_address(to_address),
-            error_closed=error_closed,
-            error_no_route=error_no_route,
-            error_no_capacity=error_no_capacity,
-            error_direct=error_direct,
-            error_not_online=error_not_online,
-        )
-        return (error_msg, list(), None)
-
-    if pfs_config is not None and one_to_n_address is not None:
-        pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            one_to_n_address=one_to_n_address,
-            from_address=from_address,
-            to_address=to_address,
-            amount=amount,
-            previous_address=previous_address,
-            pfs_config=pfs_config,
-            privkey=privkey,
-            pfs_wait_for_block=latest_channel_opened_at,
+    # Make sure that the PFS knows about the last channel we opened
+    latest_channel_opened_at = 0
+    for channel_state in token_network.channelidentifiers_to_channels.values():
+        latest_channel_opened_at = max(
+            latest_channel_opened_at, channel_state.open_transaction.finished_block_number
         )
 
-        if not pfs_error_msg:
-            # As of version 0.5 it is possible for the PFS to return an empty
-            # list of routes without an error message.
-            if not pfs_routes:
-                return ("PFS could not find any routes", list(), None)
+    pfs_error_msg, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
+        chain_state=chain_state,
+        token_network_address=token_network_address,
+        one_to_n_address=one_to_n_address,
+        from_address=from_address,
+        to_address=to_address,
+        amount=amount,
+        previous_address=previous_address,
+        pfs_config=pfs_config,
+        privkey=privkey,
+        pfs_wait_for_block=BlockNumber(latest_channel_opened_at),
+    )
 
-            log.info(
-                "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
-            )
-            return (pfs_error_msg, pfs_routes, pfs_feedback_token)
-
+    if pfs_error_msg:
         log.warning(
             "Request to Pathfinding Service was not successful. "
-            "No routes to the target are found.",
+            "No routes to the target were found.",
             pfs_message=pfs_error_msg,
         )
-        return (pfs_error_msg, list(), None)
+        return pfs_error_msg, list(), None
 
-    else:
-        available_routes = list()
+    if not pfs_routes:
+        # As of version 0.5 it is possible for the PFS to return an empty
+        # list of routes without an error message.
+        return "PFS could not find any routes", list(), None
 
-        while shortest_routes:
-            neighbour = heappop(shortest_routes)
-
-            # https://github.com/raiden-network/raiden/issues/4751
-            # Internal routing doesn't know how much fees the initiator will be charged,
-            # so it should set a percentage on top of the original amount
-            # for the whole route.
-            estimated_fee = FeeAmount(round(INTERNAL_ROUTING_DEFAULT_FEE_PERC * amount))
-            if neighbour.length == 1:  # Target is our direct neighbour, pay no fees.
-                estimated_fee = FeeAmount(0)
-
-            available_routes.append(
-                RouteState(
-                    route=neighbour.route,
-                    forward_channel_id=neighbour.channelid,
-                    estimated_fee=estimated_fee,
-                )
-            )
-
-        return (None, available_routes, None)
-
-
-class Neighbour(NamedTuple):
-    length: int  # first item used for ordering
-    nonrefundable: bool
-    partner_address: Address
-    channelid: ChannelID
-    route: List[Address]
+    log.info("Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token)
+    return pfs_error_msg, pfs_routes, pfs_feedback_token
 
 
 def get_best_routes_pfs(
@@ -305,13 +188,7 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(
-            RouteState(
-                route=canonical_path,
-                forward_channel_id=channel_state.identifier,
-                estimated_fee=estimated_fee,
-            )
-        )
+        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee))
 
     return None, paths, feedback_token
 
@@ -321,7 +198,10 @@ def resolve_routes(
     token_network_address: TokenNetworkAddress,
     chain_state: ChainState,
 ) -> List[RouteState]:
-    """ resolve the forward_channel_id for a given route """
+    """resolve the forward_channel_id for a given route
+
+    TODO: We don't have ``forward_channel_id``, anymore. Does this function still make sense?
+    """
 
     resolvable = []
     for route_metadata in routes:
@@ -338,7 +218,6 @@ def resolve_routes(
             resolvable.append(
                 RouteState(
                     route=route_metadata.route,
-                    forward_channel_id=channel_state.canonical_identifier.channel_identifier,
                     # This is only used in the mediator, so fees are set to 0
                     estimated_fee=FeeAmount(0),
                 )

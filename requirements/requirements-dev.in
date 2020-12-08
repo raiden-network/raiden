@@ -7,7 +7,7 @@
 -r requirements-docs.txt
 
 # Dependencies
-pip-tools~=5.2.1  # this is used by 'deps.py'
+pip-tools~=5.4.0  # this is used by 'deps.py'
 
 # Linting
 flake8
@@ -18,7 +18,7 @@ isort
 readme-renderer
 pylint
 mypy
-black==19.10b0
+black==20.8b1
 
 # Testing
 pytest
@@ -32,9 +32,11 @@ responses
 flaky
 
 # Debugging
+ipython
 pdbpp
 colour
 py-spy
+nest-asyncio
 
 # Continuous Integration
 coverage
@@ -44,3 +46,4 @@ bump2version
 
 # Test support
 matrix-synapse==1.19.1
+six>=1.13.0  # work around bad deps declaration in treq, see https://github.com/twisted/treq/commit/934e127a2b915bf02be86d23f2cf8a65bcdb2533#r42782781

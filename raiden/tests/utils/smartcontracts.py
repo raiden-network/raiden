@@ -9,8 +9,19 @@ from raiden.network.pathfinding import get_random_pfs
 from raiden.network.proxies.custom_token import CustomToken
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils.typing import Any, Dict, List, TokenAmount, Tuple
+from raiden.utils.typing import Any, Dict, List, T_TransactionHash, TokenAmount, Tuple
 from raiden_contracts.contract_manager import ContractManager
+
+
+def is_tx_hash_bytes(bytes_: Any) -> bool:
+    """
+    Check wether the `bytes_` is a bytes object with the correct number of bytes
+    for a transaction,
+    but do not query any blockchain node to check for transaction validity.
+    """
+    if isinstance(bytes_, T_TransactionHash):
+        return len(bytes_) == 32
+    return False
 
 
 def deploy_token(
@@ -95,8 +106,12 @@ def deploy_service_registry_and_set_urls(
     c2_token_proxy.mint_for(c2_price, c2_client.address)
     assert c2_token_proxy.balance_of(c2_client.address) > 0
     c2_token_proxy.approve(allowed_address=service_registry_address, allowance=c2_price)
-    c2_service_proxy.deposit(block_identifier=BLOCK_ID_LATEST, limit_amount=c2_price)
-    c2_service_proxy.set_url(urls[1])
+    transaction_hash = c2_service_proxy.deposit(
+        block_identifier=BLOCK_ID_LATEST, limit_amount=c2_price
+    )
+    assert is_tx_hash_bytes(transaction_hash)
+    transaction_hash = c2_service_proxy.set_url(urls[1])
+    assert is_tx_hash_bytes(transaction_hash)
 
     c3_price = c3_service_proxy.current_price(block_identifier=BLOCK_ID_LATEST)
     c3_token_proxy.mint_for(c3_price, c3_client.address)
@@ -138,14 +153,22 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
     return compiled_contracts
 
 
-def deploy_rpc_test_contract(
-    deploy_client: JSONRPCClient, name: str
-) -> Tuple[Contract, TxReceipt]:
+def compile_test_smart_contract(name: str) -> Tuple[Dict[str, Any], str]:
+    """ Compiles the smart contract `name`. """
     contract_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "smart_contracts", f"{name}.sol")
     )
     contracts = compile_files_cwd([contract_path])
     contract_key = os.path.basename(contract_path) + ":" + name
+
+    return contracts, contract_key
+
+
+def deploy_rpc_test_contract(
+    deploy_client: JSONRPCClient, name: str
+) -> Tuple[Contract, TxReceipt]:
+
+    contracts, contract_key = compile_test_smart_contract(name)
 
     contract_proxy, receipt = deploy_client.deploy_single_contract(
         contract_name=name, contract=contracts[contract_key]

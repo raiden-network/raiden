@@ -20,6 +20,7 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
+from raiden.tests.utils.smartcontracts import is_tx_hash_bytes
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.state import (
@@ -72,11 +73,12 @@ def test_payment_channel_proxy_basics(
     )
     start_block = web3.eth.blockNumber
 
-    channel_identifier, _, _ = token_network_proxy.new_netting_channel(
+    channel_details = token_network_proxy.new_netting_channel(
         partner=partner,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    channel_identifier = channel_details.channel_identifier
     assert channel_identifier is not None
 
     channel_state = NettingChannelState(
@@ -166,7 +168,7 @@ def test_payment_channel_proxy_basics(
         target_block_number=BlockNumber(rpc_client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
     )
 
-    channel_proxy_1.settle(
+    transaction_hash = channel_proxy_1.settle(
         transferred_amount=TokenAmount(0),
         locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,
@@ -175,6 +177,7 @@ def test_payment_channel_proxy_basics(
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
         block_identifier=BLOCK_ID_LATEST,
     )
+    assert is_tx_hash_bytes(transaction_hash)
     assert channel_proxy_1.settled(BLOCK_ID_LATEST) is True
     # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
     channel_events = get_all_netting_channel_events(
@@ -187,11 +190,12 @@ def test_payment_channel_proxy_basics(
     )
     assert len(channel_events) == 4
 
-    new_channel_identifier, _, _ = token_network_proxy.new_netting_channel(
+    channel_details = token_network_proxy.new_netting_channel(
         partner=partner,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
         given_block_identifier=BLOCK_ID_LATEST,
     )
+    new_channel_identifier = channel_details.channel_identifier
     assert new_channel_identifier is not None
 
     channel_state = NettingChannelState(

@@ -43,7 +43,7 @@ class AccountDescription(NamedTuple):
 
 
 class GenesisDescription(NamedTuple):
-    """ Genesis configuration for a geth PoA private chain.
+    """Genesis configuration for a geth PoA private chain.
 
     Args:
         prefunded_accounts: iterable list of privatekeys whose
@@ -85,22 +85,21 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
     Return:
         cmd-args list
     """
-    node_config = [
-        "nodekeyhex",
-        "port",
-        "rpcport",
-        "bootnodes",
-        "minerthreads",
-        "unlock",
-        "password",
-    ]
+    node_config = {
+        "nodekeyhex": "nodekeyhex",
+        "port": "port",
+        "rpcport": "http.port",
+        "bootnodes": "bootnodes",
+        "minerthreads": "minerthreads",
+        "unlock": "unlock",
+        "password": "password",
+    }
 
     cmd = ["geth"]
 
-    for config in node_config:
+    for config, option in node_config.items():
         if config in node:
-            value = node[config]
-            cmd.extend([f"--{config}", str(value)])
+            cmd.extend([f"--{option}", str(node[config])])
 
     # Add parameters that are only required in newer versions
     geth_version_string, _ = subprocess.Popen(
@@ -128,10 +127,10 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
     # configuration flag.
     cmd.extend(
         [
-            "--rpc",
-            "--rpcapi",
+            "--http",
+            "--http.api",
             "eth,net,web3,personal,debug",
-            "--rpcaddr",
+            "--http.addr",
             "127.0.0.1",
             "--networkid",
             str(chain_id),
@@ -169,7 +168,7 @@ def parity_to_cmd(
         "bootnodes": "bootnodes",
     }
 
-    cmd = ["parity"]
+    cmd = ["openethereum"]
 
     for config, option in node_config.items():
         if config in node:
@@ -287,7 +286,7 @@ def parity_keyfile(datadir: str) -> str:
 
 
 def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: int = 10) -> None:
-    """ Wait until the given addresses have a balance.
+    """Wait until the given addresses have a balance.
 
     Raises a ValueError if any of the addresses still have no balance after ``retries``.
     """
@@ -468,7 +467,7 @@ def run_private_blockchain(
     verbosity: str,
     genesis_description: GenesisDescription,
 ) -> Iterator[List[JSONRPCExecutor]]:
-    """ Starts a private network with private_keys accounts funded.
+    """Starts a private network with private_keys accounts funded.
 
     Args:
         web3: A Web3 instance used to check when the private chain is running.

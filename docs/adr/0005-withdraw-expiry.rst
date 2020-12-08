@@ -1,5 +1,5 @@
 Withdraw & Expiry
-=================
+*****************
 
 **Status**: implemented
 **Deciders**: @konradkonrad @palango @hackaugusto @rakanalh

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Any, Dict, NewType, Tuple, Type, Union
 
-from eth_typing import (  # NOQA pylint:disable=unused-import; noqa: F401; pylint: disable=unused-import
+from eth_typing import (  # NOQA pylint:disable=unused-import
     Address,
     BlockNumber,
     ChecksumAddress,

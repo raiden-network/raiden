@@ -7,9 +7,10 @@ from uuid import UUID
 
 import click
 import gevent
-import requests
 import structlog
 from eth_utils import decode_hex, to_canonical_address, to_hex
+from requests.exceptions import RequestException
+from requests.sessions import Session
 from web3 import Web3
 
 from raiden.constants import (
@@ -28,7 +29,9 @@ from raiden.exceptions import (
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
 from raiden.utils.formatting import to_checksum_address
+from raiden.utils.http import TimeoutHTTPAdapter
 from raiden.utils.signer import LocalSigner
+from raiden.utils.system import get_system_spec
 from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import (
     Address,
@@ -122,12 +125,27 @@ class IOU:
         return data
 
 
+USER_AGENT_STR = (
+    (
+        "Raiden/{raiden}/DB:{raiden_db_version}/{python_implementation}/"
+        "{python_version}/{system}/{architecture}/{distribution}"
+    )
+    .format(**get_system_spec())
+    .replace(" ", "-")
+)
+
+session = Session()
+session.headers["User-Agent"] = USER_AGENT_STR
+timeout_adapter = TimeoutHTTPAdapter(timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+session.mount("http://", timeout_adapter)
+session.mount("https://", timeout_adapter)
+
 MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
 def get_pfs_info(url: str) -> PFSInfo:
     try:
-        response = requests.get(f"{url}/api/v1/info", timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+        response = session.get(f"{url}/api/v1/info")
         infos = get_response_json(response)
         matrix_server_info = urlparse(infos["matrix_server"])
 
@@ -149,10 +167,10 @@ def get_pfs_info(url: str) -> PFSInfo:
             matrix_server=matrix_server_info.netloc,
             matrix_room_id=infos.get("matrix_room_id"),
         )
-    except requests.exceptions.RequestException as e:
+    except RequestException as e:
         msg = "Selected Pathfinding Service did not respond"
         raise ServiceRequestFailed(msg) from e
-    except (json.JSONDecodeError, requests.exceptions.RequestException, KeyError, ValueError) as e:
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
         msg = "Selected Pathfinding Service returned unexpected reply"
         raise ServiceRequestFailed(msg) from e
 
@@ -229,7 +247,7 @@ def configure_pfs_or_exit(
     pfs_url: str,
     routing_mode: RoutingMode,
     service_registry: Optional[ServiceRegistry],
-    node_network_id: ChainID,
+    node_chain_id: ChainID,
     token_network_registry_address: TokenNetworkRegistryAddress,
     pathfinding_max_fee: TokenAmount,
 ) -> PFSInfo:
@@ -281,11 +299,11 @@ def configure_pfs_or_exit(
             f"Raiden will shut down. Please try a different Pathfinding Service."
         )
 
-    if not node_network_id == pathfinding_service_info.chain_id:
+    if not node_chain_id == pathfinding_service_info.chain_id:
         raise RaidenError(
             f"Invalid reply from Pathfinding Service {pfs_url}\n"
             f"Pathfinding Service is not operating on the same network "
-            f"({pathfinding_service_info.chain_id}) as your node is ({node_network_id}).\n"
+            f"({pathfinding_service_info.chain_id}) as your node is ({node_chain_id}).\n"
             f"Raiden will shut down. Please choose a different Pathfinding Service."
         )
 
@@ -358,7 +376,7 @@ def check_pfs_transport_configuration(
 def check_pfs_for_production(
     service_registry: Optional[ServiceRegistry], pfs_info: PFSInfo
 ) -> None:
-    """ Checks that the PFS in `pfs_info` is registered in the service registry
+    """Checks that the PFS in `pfs_info` is registered in the service registry
     and that the URL matches.
 
     Should only be called in production mode.
@@ -401,7 +419,7 @@ def get_last_iou(
     signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
-        response = requests.get(
+        response = session.get(
             f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
             params=dict(
                 sender=to_checksum_address(sender),
@@ -409,7 +427,6 @@ def get_last_iou(
                 timestamp=timestamp,
                 signature=signature,
             ),
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
 
         data = json.loads(response.content).get("last_iou")
@@ -426,7 +443,7 @@ def get_last_iou(
             chain_id=data["chain_id"],
             signature=Signature(decode_hex(data["signature"])),
         )
-    except (requests.exceptions.RequestException, ValueError, KeyError) as e:
+    except (RequestException, ValueError, KeyError) as e:
         raise ServiceRequestFailed(str(e))
 
 
@@ -527,12 +544,10 @@ def post_pfs_paths(
     url: str, token_network_address: TokenNetworkAddress, payload: Dict[str, Any]
 ) -> Tuple[List[Dict[str, Any]], UUID]:
     try:
-        response = requests.post(
-            f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths",
-            json=payload,
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        response = session.post(
+            f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths", json=payload
         )
-    except requests.RequestException as e:
+    except RequestException as e:
         raise ServiceRequestFailed(
             f"Could not connect to Pathfinding Service ({str(e)})",
             dict(parameters=payload, exc_info=True),
@@ -581,7 +596,7 @@ def query_paths(
     value: PaymentAmount,
     pfs_wait_for_block: BlockNumber,
 ) -> Tuple[List[Dict[str, Any]], Optional[UUID]]:
-    """ Query paths from the PFS.
+    """Query paths from the PFS.
 
     Send a request to the /paths endpoint of the PFS specified in service_config, and
     retry in case of a failed request if it makes sense.
@@ -704,12 +719,11 @@ def post_pfs_feedback(
     )
 
     try:
-        requests.post(
+        session.post(
             f"{pfs_config.info.url}/api/v1/{to_checksum_address(token_network_address)}/feedback",
             json=payload,
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
-    except requests.RequestException as e:
+    except RequestException as e:
         log.warning(
             "Could not send feedback to Pathfinding Service", exception_=str(e), payload=payload
         )

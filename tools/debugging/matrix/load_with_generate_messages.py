@@ -2,14 +2,16 @@
 from gevent import monkey  # isort:skip
 
 monkey.patch_all()  # isort:skip
-
 import argparse
 import os
 import time
 from dataclasses import dataclass
 from typing import Iterator, List
 
+from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.utils.nursery import Janitor, Nursery
+
+setup_asyncio_event_loop()
 
 CWD = os.path.dirname(os.path.abspath(__file__))
 GENERATE_MESSAGES_SCRIPT = os.path.join(CWD, "generate_messages.py")
