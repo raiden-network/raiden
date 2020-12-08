@@ -225,6 +225,11 @@ IMBALANCE_MED_FEE_MIN = 0
 IMBALANCE_MED_FEE_MAX = 50_000
 
 
+class MatrixMessageType(Enum):
+    TEXT = "m.text"
+    NOTICE = "m.notice"
+
+
 # Web RTC constants
 class RTCMessageType(Enum):
     OFFER = "offer"
@@ -249,6 +254,14 @@ class RTCSignallingState(Enum):
     STABLE = "stable"
     HAVE_LOCAL_OFFER = "have-local-offer"
     HAVE_REMOTE_OFFER = "have-remote-offer"
+    CLOSED = "closed"
+
+
+class ICEConnectionState(Enum):
+    NEW = "new"
+    CHECKING = "checking"
+    COMPLETED = "completed"
+    FAILED = "failed"
     CLOSED = "closed"
 
 
