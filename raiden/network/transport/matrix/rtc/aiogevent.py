@@ -5,13 +5,14 @@ import asyncio
 import selectors
 import socket
 import sys
-from asyncio import AbstractEventLoopPolicy, Future, SelectorEventLoop
+from asyncio import AbstractEventLoopPolicy, Event as AIOEvent, Future, SelectorEventLoop
 from typing import Any, Dict, cast
 
 import gevent.core
 import gevent.event
 import gevent.hub
 import greenlet
+from gevent.event import Event as GEvent
 
 socketpair = socket.socketpair
 
@@ -219,6 +220,18 @@ def yield_future(future, loop=None):
     future.add_done_callback(wakeup_event)
     event.wait()
     return future.result()
+
+
+def yield_aio_event(aio_event: AIOEvent) -> GEvent:
+
+    task = asyncio.ensure_future(aio_event.wait())
+    g_event = GEvent()
+
+    def wakeup_event(fut):
+        g_event.set()
+
+    task.add_done_callback(wakeup_event)
+    return g_event
 
 
 def wrap_greenlet(gt, loop=None) -> Future:
