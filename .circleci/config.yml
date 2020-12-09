@@ -1,5 +1,8 @@
 version: 2.1
-
+parameters:
+  run_default_workflows:
+    default: true
+    type: boolean
 
 templates:
   filter-tag-templates: &only-tagged-version-filter
@@ -103,7 +106,7 @@ commands:
           name: Configuring PATH
           command: |
             echo 'export PATH=~/venv-${PYTHON_VERSION_SHORT}/bin:~/.local/bin:${PATH}' >> ${BASH_ENV}
-            echo 'export RAIDEN_VERSION=$(python setup.py --version)' >> ${BASH_ENV}
+            echo 'export RAIDEN_VERSION=$(python3 setup.py --version)' >> ${BASH_ENV}
 
   checkout-and-persist:
     steps:
@@ -174,24 +177,65 @@ commands:
       py-version:
         <<: *py-version-template
     steps:
+      - run:
+          name: Preparing environment
+          command: |
+            export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
+            echo "export OS_NAME=$OS_NAME" >> ${BASH_ENV}
+            if [[ ${OS_NAME} == "MACOS" ]]; then
+              echo "export PYENV_ROOT=~/.local-MACOS/.pyenv" >> ${BASH_ENV}
+              if [[ $PYTHON_VERSION_SHORT == 3.8 ]]; then
+                export PYENV_PYTHON_VERSION=3.8.6
+              elif [[ $PYTHON_VERSION_SHORT == 3.7 ]]; then
+                export PYENV_PYTHON_VERSION=3.7.9
+              else
+                exit 1
+              fi
+              echo "export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION" >> ${BASH_ENV}
+            fi
+            echo "SHA: ${CIRCLE_SHA1}"
+            echo "TAG: ${CIRCLE_TAG}"
       - attach-and-link:
           py-version: << parameters.py-version >>
-      - config-path
+      - restore_cache:
+          keys:
+          - system-deps-pyenv-v4-{{ arch }}-<< parameters.py-version >>
+      - run:
+          name: Installing Python on MacOS
+          command: |
+            if [[ ${OS_NAME} == "MACOS" ]]; then
+              if [[ ! -x $PYENV_ROOT ]]; then
+                git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
+              fi
+              export PATH=${PYENV_ROOT}/bin:${PATH}
+              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYENV_PYTHON_VERSION -sv
+            fi
+      - save_cache:
+          key: system-deps-pyenv-v4-{{ arch }}-<< parameters.py-version >>
+          paths:
+          - "~/.local-MACOS/.pyenv"
       - restore_cache:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - python-deps-v4-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-          - python-deps-v4-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v7-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v7-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
           command: |
-            export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
+            if [[ ${OS_NAME} == "MACOS" ]]; then
+              export PATH=${PYENV_ROOT}/bin:${PATH}
+              eval "$(pyenv init -)"
+              pyenv local $PYENV_PYTHON_VERSION
+              echo "Detected MacOS: Using pyenv Python at $(pyenv which python<< parameters.py-version >>)"
+            fi
             if [ ! -x ~/venv-<< parameters.py-version >>/bin/python ]; then
+              echo "Virtual env not found. Creating virtual env using $(python<< parameters.py-version >> --version)."
               python<< parameters.py-version >> -m venv ~/venv-<< parameters.py-version >>-${OS_NAME}
             fi
             ln -nfs ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >>
             echo 'export VENV_PATH="$HOME/venv-<< parameters.py-version >>"' >> ${BASH_ENV}
+      - config-path
       - run:
           name: Installing dependencies
           command: |
@@ -202,7 +246,7 @@ commands:
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
       - save_cache:
-          key: python-deps-v4-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          key: python-deps-v7-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
           - "~/venv-<< parameters.py-version >>-LINUX"
           - "~/venv-<< parameters.py-version >>-MACOS"
@@ -214,6 +258,7 @@ commands:
           root: "~"
           paths:
           - venv-<< parameters.py-version >>-*
+          - .local-MACOS/.pyenv/versions/
 
 jobs:
   # This job exists to generate the `*.egg-info` metadata.
@@ -678,6 +723,7 @@ jobs:
 
 workflows:
   raiden-default:
+    when: << pipeline.parameters.run_default_workflows >>
     jobs:
       - checkout
 
@@ -771,6 +817,7 @@ workflows:
             - test-integration
 
   deploy-release:
+    when: << pipeline.parameters.run_default_workflows >>
     jobs:
       - checkout:
           filters:
@@ -872,6 +919,7 @@ workflows:
             <<: *only-tagged-version-filter
 
   nightly:
+    when: << pipeline.parameters.run_default_workflows >>
     jobs:
       - checkout
 
