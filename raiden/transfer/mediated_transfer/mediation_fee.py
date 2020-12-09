@@ -82,7 +82,7 @@ def _collect_x_values(
     all_x_vals = [x - balance_in for x in penalty_func_in.x_list] + [
         balance_out - x for x in penalty_func_out.x_list
     ]
-    limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)
+    limited_x_vals = (max(min(x, balance_out, max_x), 0) for x in all_x_vals)  # type: ignore
     return sorted(set(Fraction(x) for x in limited_x_vals))
 
 
@@ -187,7 +187,7 @@ class FeeScheduleState(State):
         if self.imbalance_penalty:
             typecheck(self.imbalance_penalty, list)
             x_list, y_list = tuple(zip(*self.imbalance_penalty))
-            self._penalty_func = Interpolate(x_list, y_list)  # type: ignore
+            self._penalty_func = Interpolate(x_list, y_list)
 
     def fee(self, balance: Balance, amount: Fraction) -> Fraction:
         return (

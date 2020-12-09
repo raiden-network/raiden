@@ -199,7 +199,9 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
-def find_intersection(fee_func: Interpolate, line: Callable[[int], Fraction]) -> Optional[float]:
+def find_intersection(
+    fee_func: Interpolate, line: Callable[[int], Fraction]
+) -> Optional[Fraction]:
     """Returns the x value where both functions intersect
 
     `fee_func` is a piecewise linear function while `line` is a straight line
@@ -266,7 +268,7 @@ def get_amount_without_fees(
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return PaymentWithFeeAmount(int(round(amount_without_fees)))
+    return PaymentWithFeeAmount(int(round(amount_without_fees)))  # type: ignore
 
 
 def sanity_check(

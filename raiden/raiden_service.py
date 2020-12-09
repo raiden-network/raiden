@@ -388,6 +388,7 @@ class RaidenService(Runnable):
 
         self.contract_manager = ContractManager(config.contracts_path)
         self.wal: Optional[WriteAheadLog] = None
+        self.db_lock: Optional[filelock.UnixFileLock] = None
 
         if self.config.database_path != ":memory:":
             database_dir = os.path.dirname(config.database_path)
@@ -617,6 +618,9 @@ class RaidenService(Runnable):
     def _initialize_wal(self) -> None:
         if self.database_dir is not None:
             try:
+                assert (
+                    self.db_lock is not None
+                ), "If a database_dir is present, a lock for the database has to exist"
                 self.db_lock.acquire(timeout=0)
                 assert self.db_lock.is_locked, f"Database not locked. node:{self!r}"
             except (filelock.Timeout, AssertionError) as ex:
