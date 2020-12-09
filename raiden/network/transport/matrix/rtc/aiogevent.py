@@ -223,7 +223,16 @@ def yield_future(future, loop=None):
 
 
 def yield_aio_event(aio_event: AIOEvent) -> GEvent:
+    """
+    Converts an asyncio.Event into a gevent.event.Event
 
+    Will set the returned GEvent whenever the underlying
+    aio_event is set. Used to wait for an asyncio.Event
+    inside of a greenlet
+
+    params:
+        aio_event: Asyncio.Event to wait on
+    """
     task = asyncio.ensure_future(aio_event.wait())
     g_event = GEvent()
 
