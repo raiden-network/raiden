@@ -3,6 +3,7 @@ import json
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from json import JSONDecodeError
 from typing import TYPE_CHECKING, Counter as CounterType, Union
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -1129,15 +1130,17 @@ class MatrixTransport(Runnable):
             partner_addresses = [
                 address for address in self._extract_addresses(room) if address is not None
             ]
-            if (
-                partner_addresses
-                and self._address_mgr.get_address_reachability(partner_addresses[0])
-                == AddressReachability.REACHABLE
-                and self._capability_usable(
-                    Capabilities.WEBRTC,
-                    self._address_mgr.get_address_capabilities(partner_addresses[0]),
-                )
-            ):
+            if not partner_addresses:
+                return
+            is_reachable = (
+                self._address_mgr.get_address_reachability(partner_addresses[0])
+                is AddressReachability.REACHABLE
+            )
+            is_web_rtc_usable = self._capability_usable(
+                Capabilities.WEBRTC,
+                self._address_mgr.get_address_capabilities(partner_addresses[0]),
+            )
+            if is_reachable and is_web_rtc_usable:
                 rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_addresses[0])
                 rtc_partner.sync_events.aio_allow_init.set()
 
@@ -1281,10 +1284,8 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         for partner_address, call_message in call_messages:
-
-            content = json.loads(call_message["content"]["body"])
-
             try:
+                content = json.loads(call_message["content"]["body"])
                 rtc_message_type = content["type"]
                 log.debug(
                     "Received signaling message",
@@ -1309,11 +1310,11 @@ class MatrixTransport(Runnable):
                         partner_address=to_checksum_address(partner_address),
                         type=rtc_message_type,
                     )
-            except KeyError:
+            except (KeyError, JSONDecodeError):
                 self.log.warning(
                     "Malformed signalling message",
                     partner_address=partner_address,
-                    content=content,
+                    content=call_message["content"]["body"],
                 )
                 continue
 
@@ -1683,7 +1684,7 @@ class MatrixTransport(Runnable):
 
         if (
             self._address_mgr.get_address_reachability(partner_address)
-            != AddressReachability.REACHABLE
+            is not AddressReachability.REACHABLE
         ):
             return
 

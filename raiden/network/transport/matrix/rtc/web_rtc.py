@@ -51,15 +51,11 @@ class CoroutineHandler:
         if cancel:
             self.cancel_all_pending()
 
-        pending_coroutines = [
-            coroutine
-            for coroutine in self.coroutines
-            if not coroutine.done() and not coroutine.cancelled()
-        ]
+        pending_coroutines = [coroutine for coroutine in self.coroutines if not coroutine.done()]
         log.debug("Waiting for coroutines", coroutines=pending_coroutines)
 
         try:
-            await asyncio.gather(*pending_coroutines)
+            await asyncio.gather(*pending_coroutines, return_exceptions=True)
         except CancelledError:
             log.debug(
                 "Pending coroutines cancelled",
@@ -78,6 +74,29 @@ class CoroutineHandler:
 class RTCPartner(CoroutineHandler):
     @dataclass
     class SyncEvents:
+        """
+        SyncEvents is a set of events which helps synchronizing the signaling process.
+        As not all messages of the signalling process (offer, answer, candidates, hangup) are
+        able to be processed in an arbitrary order, the events help to either wait or drop
+        incoming messages.
+
+        allow_init: when set offers and answers can be processed
+        allow_candidates: when set candidates can be processed
+        allow_hangup: when set a hangup message can be processes
+
+        Conditions:
+
+        allow candidates after remote description is set (in process_signalling)
+        allow init only if partner is reachable
+        after remote_description being received clear allow_init (only one offer per cycle)
+        allow hang up only after at least one other message is received, drop otherwise
+        clear hang up after hang up is received
+
+        FIXME: This is not the best maintainable solution. Should be improved in the future
+               Data races will be reduced once there are unique call ids per connection
+               establishment (not partner)
+        """
+
         aio_allow_init: AIOEvent = field(default_factory=AIOEvent)
         aio_allow_candidates: AIOEvent = field(default_factory=AIOEvent)
         aio_allow_hangup: AIOEvent = field(default_factory=AIOEvent)
