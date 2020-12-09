@@ -25,10 +25,10 @@ from raiden.constants import (
     MATRIX_AUTO_SELECT_SERVER,
     WEB_RTC_CHANNEL_TIMEOUT,
     Capabilities,
+    CommunicationMedium,
     Environment,
     MatrixMessageType,
     RTCMessageType,
-    SDPTypes,
 )
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
@@ -558,6 +558,17 @@ class MatrixTransport(Runnable):
 
         if self._raiden_service:
             self._web_rtc_manager.stop()
+            for (
+                partner_address,
+                rtc_partner,
+            ) in self._web_rtc_manager.address_to_rtc_partners.items():
+                hang_up_message = {
+                    "type": RTCMessageType.HANGUP,
+                    "call_id": rtc_partner.call_id,
+                }
+                self._send_raw(
+                    partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE
+                )
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -894,7 +905,6 @@ class MatrixTransport(Runnable):
                     if partner in self._web_rtc_manager.address_to_rtc_partners
                 ]:
                     self._web_rtc_manager.close_connection(partner)
-                    self._client.api.hangup(room.room_id, "")
             except MatrixRequestError as ex:
                 raise TransportError("could not leave room due to MatrixRequestError") from ex
 
@@ -1312,7 +1322,7 @@ class MatrixTransport(Runnable):
                     )
             except (KeyError, JSONDecodeError):
                 self.log.warning(
-                    "Malformed signalling message",
+                    "Malformed signaling message",
                     partner_address=partner_address,
                     content=call_message["content"]["body"],
                 )
@@ -1335,27 +1345,35 @@ class MatrixTransport(Runnable):
         retrier = self._get_retrier(queue.queue_identifier.recipient)
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
-    def _send_raw(self, receiver_address: Address, data: str) -> None:
+    def _send_raw(
+        self,
+        receiver_address: Address,
+        data: str,
+        message_type: MatrixMessageType = MatrixMessageType.TEXT,
+    ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        # Try sending using webRTC
-        if self._web_rtc_manager.has_ready_channel(receiver_address):
-            self.log.debug(
-                "Send raw using webRTC message",
-                receiver=to_checksum_address(receiver_address),
-                data=data.replace("\n", "\\n"),
+        send_medium = (
+            CommunicationMedium.WEB_RTC
+            if self._web_rtc_manager.has_ready_channel(receiver_address)
+            else CommunicationMedium.TO_DEVICE
+            if self._capability_usable(
+                Capabilities.TODEVICE, self._address_mgr.get_address_capabilities(receiver_address)
             )
+            else CommunicationMedium.ROOM
+        )
+        self.log.debug(
+            "Send raw message",
+            receiver=to_checksum_address(receiver_address),
+            send_medium=send_medium.value,
+            data=data.replace("\n", "\\n"),
+        )
+
+        if send_medium == CommunicationMedium.WEB_RTC:
             self._web_rtc_manager.send_message_for_address(receiver_address, data)
             return
 
-        # Try sending using toDevice message
-        capabilities = self._address_mgr.get_address_capabilities(receiver_address)
-        if self._capability_usable(Capabilities.TODEVICE, capabilities):
-            self.log.debug(
-                "Send raw using toDevice message",
-                receiver=to_checksum_address(receiver_address),
-                data=data.replace("\n", "\\n"),
-            )
+        if send_medium == CommunicationMedium.TO_DEVICE:
             online_userids = {
                 user_id
                 for user_id in self._address_mgr.get_userids_for_address(receiver_address)
@@ -1365,35 +1383,33 @@ class MatrixTransport(Runnable):
                 self.log.debug("No online user_ids", online_userids=online_userids)
                 return
 
-            body = {
-                user_id: {"*": {"msgtype": "m.text", "body": data}} for user_id in online_userids
+            messages = {
+                user_id: {"*": {"msgtype": message_type.value, "body": data}}
+                for user_id in online_userids
             }
 
-            self._client.api.send_to_device(event_type="m.room.message", messages=body)
+            self._client.api.send_to_device(event_type="m.room.message", messages=messages)
             return
 
-        # Try sending using existing room
-        room = self._get_room_for_address(receiver_address, require_online_peer=True)
-        if room:
-            self.log.debug(
-                "Send raw using room message",
-                receiver=to_checksum_address(receiver_address),
-                room=room,
-                data=data.replace("\n", "\\n"),
+        if send_medium == CommunicationMedium.ROOM:
+            room = self._get_room_for_address(receiver_address, require_online_peer=True)
+            if room:
+                self._client.api.send_message(
+                    room_id=room.room_id, text_content=data, msgtype=message_type.value
+                )
+                return
+            # It is possible there is no room yet. This happens when:
+            #
+            # - The room creation is started by a background thread running
+            # `whitelist`, and the room can be used by a another thread.
+            # - The room should be created by the partner, and this node is waiting
+            # on it.
+            # - No user for the requested address is online
+            #
+            # This is not a problem since the messages are retried regularly.
+            self.log.warning(
+                "No room for receiver", receiver=to_checksum_address(receiver_address)
             )
-            room.send_text(data)
-            return
-
-        # It is possible there is no room yet. This happens when:
-        #
-        # - The room creation is started by a background thread running
-        # `whitelist`, and the room can be used by a another thread.
-        # - The room should be created by the partner, and this node is waiting
-        # on it.
-        # - No user for the requested address is online
-        #
-        # This is not a problem since the messages are retried regularly.
-        self.log.warning("No room for receiver", receiver=to_checksum_address(receiver_address))
 
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
@@ -1555,6 +1571,7 @@ class MatrixTransport(Runnable):
 
         assert self._raiden_service is not None, "_raiden_service not set"
 
+        self._web_rtc_manager.get_rtc_partner(address).sync_events.aio_allow_init.set()
         lower_address = my_place_or_yours(self._raiden_service.address, address)
 
         if lower_address == self._raiden_service.address:
@@ -1569,11 +1586,17 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+
+        is_to_device = self._capability_usable(
+            Capabilities.TODEVICE, self._address_mgr.get_address_capabilities(partner_address)
+        )
+
         # we need to wait for an online partner and an existing room
         while (
             self._get_room_for_address(partner_address, require_online_peer=True) is None
-            or not self._started
-        ):
+            and not is_to_device
+        ) or not self._started:
+
             self.log.debug(
                 "Waiting for partner reachable to create rtc channel",
                 partner_address=to_checksum_address(partner_address),
@@ -1609,14 +1632,11 @@ class MatrixTransport(Runnable):
                 node=self.checksummed_address,
                 partner_address=to_checksum_address(partner_address),
             )
-            room = self._get_room_for_address(partner_address)
-            if room:
-                self._client.api.hangup(
-                    room.room_id,
-                    self._web_rtc_manager.get_rtc_partner(partner_address).get_call_id(
-                        self._raiden_service.address
-                    ),
-                )
+            hang_up_message = {
+                "type": RTCMessageType.HANGUP,
+                "call_id": self._web_rtc_manager.get_rtc_partner(partner_address).call_id,
+            }
+            self._send_raw(partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE)
             self._web_rtc_manager.close_connection(partner_address)
 
     def _handle_sdp_callback(
@@ -1641,24 +1661,20 @@ class MatrixTransport(Runnable):
             return
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        call_id = rtc_partner.get_call_id(self._raiden_service.address)
-        room = self._get_room_for_address(partner_address, require_online_peer=True)
-
-        if room is None:
-            return
 
         sdp_type = rtc_session_description.type
-        message = {"type": sdp_type, "sdp": rtc_session_description.sdp, "call_id": call_id}
+        message = {
+            "type": sdp_type,
+            "sdp": rtc_session_description.sdp,
+            "call_id": rtc_partner.call_id,
+        }
         self.log.debug(
             f"Send {sdp_type} to partner",
             partner_address=to_checksum_address(partner_address),
             sdp_description=message,
         )
 
-        if sdp_type == SDPTypes.OFFER.value:
-            self._client.api.invite(room.room_id, call_id, rtc_session_description.sdp)
-        if sdp_type == SDPTypes.ANSWER.value:
-            self._client.api.answer(room.room_id, call_id, rtc_session_description.sdp)
+        self._send_raw(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
 
     def _handle_candidates_callback(
         self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
@@ -1670,12 +1686,12 @@ class MatrixTransport(Runnable):
             return
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        call_id = rtc_partner.get_call_id(self._raiden_service.address)
-        room = self._get_room_for_address(partner_address, require_online_peer=True)
-        if room is None:
-            return
-
-        self._client.api.candidates(room_id=room.room_id, call_id=call_id, candidates=candidates)
+        message = {
+            "type": RTCMessageType.CANDIDATES.value,
+            "candidates": candidates,
+            "call_id": rtc_partner.call_id,
+        }
+        self._send_raw(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
 
     def _handle_closed_connection(self, partner_address: Address) -> None:
 

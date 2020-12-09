@@ -225,6 +225,12 @@ IMBALANCE_MED_FEE_MIN = 0
 IMBALANCE_MED_FEE_MAX = 50_000
 
 
+class CommunicationMedium(Enum):
+    WEB_RTC = "webRTC"
+    TO_DEVICE = "toDevice"
+    ROOM = "room"
+
+
 class MatrixMessageType(Enum):
     TEXT = "m.text"
     NOTICE = "m.notice"
