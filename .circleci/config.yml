@@ -355,6 +355,7 @@ jobs:
           name: Install dependencies
           command: |
             pip install git+https://github.com/raiden-network/scenario-player.git
+            pip install -Ue ~/raiden
       - run:
           name: Set Locale
           command: |
