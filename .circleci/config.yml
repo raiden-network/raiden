@@ -856,26 +856,6 @@ workflows:
           filters:
             <<: *only-tagged-version-filter
 
-      - build-binary-linux:
-          name: build-binary-linux-armv7l
-          resource: "small"
-          remote-host: "armv7"
-          architecture: "armv7l"
-          requires:
-            - prepare-python-linux
-          filters:
-            <<: *only-tagged-version-filter
-
-      - build-binary-linux:
-          name: build-binary-linux-aarch64
-          resource: "small"
-          remote-host: "armv8"
-          architecture: "aarch64"
-          requires:
-            - prepare-python-linux
-          filters:
-            <<: *only-tagged-version-filter
-
       - build-binary-macos:
           requires:
             - prepare-python-macos
@@ -892,8 +872,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
-            - build-binary-linux-aarch64
             - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
@@ -902,8 +880,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
-            - build-binary-linux-aarch64
             - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
@@ -912,8 +888,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
-            - build-binary-linux-aarch64
             - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
@@ -1017,22 +991,6 @@ workflows:
           requires:
             - finalize
 
-      - build-binary-linux:
-          name: build-binary-linux-armv7l
-          resource: "small"
-          remote-host: "armv7"
-          architecture: "armv7l"
-          requires:
-            - finalize
-
-      - build-binary-linux:
-          name: build-binary-linux-aarch64
-          resource: "small"
-          remote-host: "armv8"
-          architecture: "aarch64"
-          requires:
-            - finalize
-
       - prepare-system-macos:
           requires:
             - checkout
@@ -1052,8 +1010,6 @@ workflows:
           context: "Raiden Context"
           requires:
             - build-binary-linux-x86
-            - build-binary-linux-armv7l
-            - build-binary-linux-aarch64
             - build-binary-macos
 
     triggers:
