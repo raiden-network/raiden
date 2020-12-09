@@ -195,12 +195,13 @@ class RaidenAPI:  # pragma: no unittest
         self, settle_timeout: BlockTimeout, reveal_timeout: BlockTimeout
     ) -> None:
         min_reveal_timeout = self.config.minimum_reveal_timeout
-        if reveal_timeout <= min_reveal_timeout:
+        if reveal_timeout < min_reveal_timeout:
             if reveal_timeout <= 0:
                 raise InvalidRevealTimeout("reveal_timeout should be larger than zero.")
             else:
                 raise InvalidRevealTimeout(
-                    f"reveal_timeout is required to be larger than { min_reveal_timeout - 1}"
+                    "reveal_timeout is lower than the required minimum value of"
+                    f" { min_reveal_timeout }"
                 )
 
         if settle_timeout < reveal_timeout * 2:
