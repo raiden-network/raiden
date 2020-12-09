@@ -31,7 +31,7 @@ def setup_asyncio_event_loop() -> Generator:
 
 def spawn_coroutine(
     coroutine: Union[Coroutine, Future],
-    callback: Optional[Callable[[Any, Any], None]],
+    callback: Optional[Callable[..., None]],
     **kwargs: Any,
 ) -> Greenlet:
     """Spawns a greenlet which runs a coroutine inside waiting for the result"""
@@ -43,7 +43,9 @@ def spawn_coroutine(
     return wrapped_coroutine
 
 
-def wait_for_future(future: Future, callback: Callable, **kwargs: Any) -> None:
+def wait_for_future(
+    future: Future, callback: Optional[Callable[..., None]], **kwargs: Any
+) -> None:
     """yield future and call callback with the result"""
     result = yield_future(future)
     if callback is not None:

@@ -1,22 +1,9 @@
 import itertools
-import json
 import time
 from datetime import datetime
 from functools import wraps
 from itertools import repeat
-from typing import (
-    Any,
-    Callable,
-    Container,
-    Dict,
-    Iterable,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Container, Dict, Iterable, Iterator, List, Optional, Tuple
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -34,13 +21,13 @@ from matrix_client.user import User
 from requests import Response
 from requests.adapters import HTTPAdapter
 
-from raiden.constants import Environment, RTCMessageType
+from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
 from raiden.network.transport.matrix.sync_progress import SyncProgress
 from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.utils.typing import AddressHex, RoomID
+from raiden.utils.typing import AddressHex
 
 log = structlog.get_logger(__name__)
 
@@ -241,31 +228,6 @@ class GMatrixHttpApi(MatrixHttpApi):
 
     def get_presence(self, user_id: str) -> Dict[str, Any]:
         return self._send("GET", f"/presence/{quote(user_id)}/status")
-
-    def invite(self, room_id: RoomID, call_id: str, sdp_description: str) -> None:
-        message = {"type": RTCMessageType.OFFER.value, "sdp": sdp_description, "call_id": call_id}
-        self._send_signalling(room_id, message)
-
-    def answer(self, room_id: RoomID, call_id: str, sdp_description: str) -> None:
-        message = {"type": RTCMessageType.ANSWER.value, "sdp": sdp_description, "call_id": call_id}
-        self._send_signalling(room_id, message)
-
-    def hangup(self, room_id: RoomID, call_id: str) -> None:
-        message = {"type": RTCMessageType.HANGUP.value, "call_id": call_id}
-        self._send_signalling(room_id, message)
-
-    def candidates(
-        self, room_id: RoomID, call_id: str, candidates: List[Dict[str, Union[int, str]]]
-    ) -> None:
-        message = {"type": "candidates", "call_id": call_id, "candidates": candidates}
-        self._send_signalling(room_id, message)
-
-    def _send_signalling(
-        self,
-        room_id: RoomID,
-        message: Mapping[str, Any],
-    ) -> None:
-        self.send_message(room_id=room_id, text_content=json.dumps(message), msgtype="m.notice")
 
     def get_aliases(self, room_id: str) -> Dict[str, Any]:
         """
