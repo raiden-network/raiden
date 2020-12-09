@@ -775,7 +775,7 @@ def login(
     return first_login(client, signer, username, capstr)
 
 
-@cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())
+@cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())  # type: ignore # noqa E501
 def validate_userid_signature(user: User) -> Optional[Address]:
     """ Validate a userId format and signature on displayName, and return its address"""
     # display_name should be an address in the USERID_RE format

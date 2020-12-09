@@ -106,7 +106,7 @@ class RaidenFilter(logging.Filter):
         super().__init__(name)
         self._log_filter = LogFilter(log_level_config, default_level=DEFAULT_LOG_LEVEL)
 
-    def filter(self, record: logging.LogRecord) -> int:
+    def filter(self, record: logging.LogRecord) -> bool:
         return self._log_filter.should_log(record.name, record.levelname)
 
 

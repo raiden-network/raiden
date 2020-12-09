@@ -542,7 +542,7 @@ def setup_smoketest(
         stdout_manager = contextlib.nullcontext()
     else:
         assert stdout is not None
-        stdout_manager = contextlib.redirect_stdout(stdout)
+        stdout_manager = contextlib.redirect_stdout(stdout)  # type: ignore
 
     with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
         try:

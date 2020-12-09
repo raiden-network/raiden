@@ -29,6 +29,7 @@ repos:
       - id: check-vcs-permalinks
       - id: check-yaml
       - id: debug-statements
+        exclude: '^raiden/ui/cli.py$'
       - id: detect-private-key
       - id: end-of-file-fixer
         exclude: .bumpversion_client.cfg
@@ -61,7 +62,7 @@ repos:
       - id: black
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.720
+    rev: v0.790
     hooks:
       - id: mypy
         entry: tools/pre-commit/pre-commit-wrapper.py mypy
