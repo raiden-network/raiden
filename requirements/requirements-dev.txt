@@ -10,6 +10,7 @@ alabaster==0.7.12         # via -r requirements-docs.txt, sphinx
 aniso8601==7.0.0          # via -r requirements.txt, flask-restful
 apipkg==1.5               # via execnet
 appdirs==1.4.3            # via black
+appnope==0.1.0            # via ipython
 asn1crypto==1.3.0         # via -r requirements.txt, coincurve
 astroid==2.4.2            # via pylint
 astunparse==1.6.2         # via -r requirements-docs.txt, sphinxcontrib-httpexample
@@ -95,7 +96,7 @@ mirakuru==2.1.2           # via -r requirements.txt
 msgpack==0.6.1            # via matrix-synapse
 multiaddr==0.0.9          # via -r requirements.txt, ipfshttpclient
 mypy-extensions==0.4.3    # via -r requirements.txt, black, mypy, raiden-contracts, typing-inspect
-mypy==0.782               # via -r requirements-dev.in
+mypy==0.790               # via -r requirements-dev.in
 nest-asyncio==1.4.3       # via -r requirements-dev.in
 netaddr==0.7.19           # via -r requirements.txt, matrix-synapse, multiaddr
 netifaces==0.10.9         # via -r requirements.txt, aioice

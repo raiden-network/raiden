@@ -25,11 +25,11 @@ def imbalance_fee_receiver(
         return FeeAmount(0)
 
     # Calculate the mediators balance
-    balance = fee_schedule._penalty_func.x_list[-1] - balance
+    balance = fee_schedule._penalty_func.x_list[-1] - balance  # type: ignore
     try:
         return FeeAmount(
             # Mediator is gaining balance on his channel side
-            round(
+            round(  # type: ignore
                 fee_schedule._penalty_func(balance + amount) - fee_schedule._penalty_func(balance)
             )
         )
@@ -46,7 +46,7 @@ def imbalance_fee_sender(
     try:
         return FeeAmount(
             # Mediator is loosing balance on his channel side
-            round(
+            round(  # type: ignore
                 fee_schedule._penalty_func(balance - amount) - fee_schedule._penalty_func(balance)
             )
         )
@@ -105,7 +105,7 @@ def get_amount_with_fees(
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return PaymentWithFeeAmount(int(round(amount_with_fees)))
+    return PaymentWithFeeAmount(int(round(amount_with_fees)))  # type: ignore
 
 
 def get_initial_amount_for_amount_after_fees(
