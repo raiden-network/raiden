@@ -3,6 +3,7 @@ import random
 import gevent
 import pytest
 from eth_utils import keccak
+from gevent import Timeout
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -642,7 +643,10 @@ def test_channel_withdraw_expired(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_settled_lock(
-    token_addresses: List[TokenAddress], raiden_network: List[RaidenService], deposit: TokenAmount
+    token_addresses: List[TokenAddress],
+    raiden_network: List[RaidenService],
+    deposit: TokenAmount,
+    retry_timeout,
 ) -> None:
     """Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
@@ -715,7 +719,7 @@ def test_settled_lock(
         [channelstate_0_1.identifier],
         app1.alarm.sleep_time,
     )
-    current_block = app0.rpc_client.block_number()
+    current_block = app1.rpc_client.block_number()
 
     netting_channel = app1.proxy_manager.payment_channel(
         channel_state=channelstate_1_0, block_identifier=BLOCK_ID_LATEST
@@ -733,9 +737,15 @@ def test_settled_lock(
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2
     expected_balance1 = initial_balance1 + deposit1 + amount * 2
+    waiting.wait_for_block(app0, current_block, retry_timeout)
 
-    assert token_proxy.balance_of(address0) == expected_balance0
-    assert token_proxy.balance_of(address1) == expected_balance1
+    # The asserts can fail if we do not wait a bit because app1
+    # needs to unlock its tokens after settle. The wait() above helps
+    # to wait for the block in which the settle happened.
+    # Token_proxy queries against state of app0 which can be off by a block or two
+    with Timeout(10):
+        assert token_proxy.balance_of(address0) == expected_balance0
+        assert token_proxy.balance_of(address1) == expected_balance1
 
 
 @raise_on_failure
