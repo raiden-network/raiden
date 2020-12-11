@@ -26,7 +26,7 @@ bitarray==1.2.1           # via -r requirements-dev.txt, eth-account
 black==20.8b1             # via -r requirements-dev.txt
 bleach==3.1.4             # via -r requirements-dev.txt, matrix-synapse, readme-renderer
 bump2version==1.0.1       # via -r requirements-dev.txt
-cachetools==4.1.1         # via -r requirements-dev.txt
+cachetools==4.2.0         # via -r requirements-dev.txt
 canonicaljson==1.4.0      # via -r requirements-dev.txt, matrix-synapse, signedjson
 certifi==2019.3.9         # via -r requirements-dev.txt, requests
 cffi==1.12.3              # via -r requirements-dev.txt, aiortc, bcrypt, coincurve, cryptography, pylibsrtp, pynacl
