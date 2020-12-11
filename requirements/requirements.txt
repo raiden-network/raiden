@@ -12,7 +12,7 @@ attrs==19.3.0             # via jsonschema
 av==8.0.2                 # via aiortc
 base58==2.0.0             # via multiaddr
 bitarray==1.2.1           # via eth-account
-cachetools==4.1.1         # via -r requirements.in
+cachetools==4.2.0         # via -r requirements.in
 certifi==2019.3.9         # via requests
 cffi==1.12.3              # via aiortc, coincurve, cryptography, pylibsrtp
 chardet==3.0.4            # via requests
