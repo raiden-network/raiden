@@ -28,6 +28,7 @@ pytest-xdist
 grequests
 pexpect
 hypothesis
+raiden-api-client
 responses
 flaky
 

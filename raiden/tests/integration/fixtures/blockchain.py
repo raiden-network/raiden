@@ -17,7 +17,7 @@ from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import TokenAddress
-from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
+from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN, CONTRACT_HUMAN_STANDARD_TOKEN
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -114,6 +114,16 @@ def unregistered_token(token_amount, deploy_client, contract_manager) -> TokenAd
     contract_proxy, _ = deploy_client.deploy_single_contract(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         contract=contract_manager.get_contract(CONTRACT_HUMAN_STANDARD_TOKEN),
+        constructor_parameters=(token_amount, 2, "raiden", "Rd"),
+    )
+    return TokenAddress(to_canonical_address(contract_proxy.address))
+
+
+@pytest.fixture
+def unregistered_custom_token(token_amount, deploy_client, contract_manager) -> TokenAddress:
+    contract_proxy, _ = deploy_client.deploy_single_contract(
+        contract_name=CONTRACT_CUSTOM_TOKEN,
+        contract=contract_manager.get_contract(CONTRACT_CUSTOM_TOKEN),
         constructor_parameters=(token_amount, 2, "raiden", "Rd"),
     )
     return TokenAddress(to_canonical_address(contract_proxy.address))

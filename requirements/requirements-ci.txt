@@ -11,10 +11,10 @@ altgraph==0.16.1          # via macholib, pyinstaller
 aniso8601==7.0.0          # via -r requirements-dev.txt, flask-restful
 apipkg==1.5               # via -r requirements-dev.txt, execnet
 appdirs==1.4.3            # via -r requirements-dev.txt, black
-appnope==0.1.0            # via -r requirements-dev.txt, ipython
 asn1crypto==1.3.0         # via -r requirements-dev.txt, coincurve
 astroid==2.4.2            # via -r requirements-dev.txt, pylint
 astunparse==1.6.2         # via -r requirements-dev.txt, sphinxcontrib-httpexample
+attrdict==2.0.1           # via -r requirements-dev.txt, raiden-api-client
 attrs==19.3.0             # via -r requirements-dev.txt, automat, flake8-bugbear, hypothesis, jsonschema, matrix-synapse, pytest, service-identity, treq, twisted
 automat==0.7.0            # via -r requirements-dev.txt, twisted
 av==8.0.2                 # via -r requirements-dev.txt, aiortc
@@ -85,7 +85,7 @@ jinja2==2.10.1            # via -r requirements-dev.txt, flask, matrix-synapse, 
 jsonschema==3.2.0         # via -r requirements-dev.txt, matrix-synapse, web3
 lazy-object-proxy==1.4.1  # via -r requirements-dev.txt, astroid
 lru-dict==1.1.6           # via -r requirements-dev.txt, web3
-macholib==1.14            # via -r requirements-ci.in, pyinstaller
+macholib==1.14            # via -r requirements-ci.in
 markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==8.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
@@ -151,12 +151,13 @@ python-dateutil==2.8.0    # via s3cmd
 python-magic==0.4.15      # via s3cmd
 pytz==2019.1              # via -r requirements-dev.txt, babel, flask-restful
 pyyaml==5.1.1             # via -r requirements-dev.txt, matrix-synapse
+raiden-api-client==1.1.0  # via -r requirements-dev.txt
 raiden-contracts==0.37.1  # via -r requirements-dev.txt
 raiden-webui==1.1.1       # via -r requirements-dev.txt
 readme-renderer==28.0     # via -r requirements-dev.txt
 regex==2020.6.8           # via -r requirements-dev.txt, black
 releases==1.6.3           # via -r requirements-dev.txt
-requests==2.25.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, responses, sphinx, sphinxcontrib-images, treq, web3
+requests==2.25.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, raiden-api-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.15        # via -r requirements-dev.txt
 rlp==1.1.0                # via -r requirements-dev.txt, eth-account, eth-rlp, raiden-contracts
 s3cmd==2.1.0              # via -r requirements-ci.in
@@ -165,7 +166,7 @@ semver==2.8.1             # via -r requirements-dev.txt, raiden-contracts
 service-identity==18.1.0  # via -r requirements-dev.txt, matrix-synapse, twisted
 signedjson==1.1           # via -r requirements-dev.txt, matrix-synapse
 simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
-six==1.15.0               # via -r requirements-dev.txt, astroid, astunparse, automat, bcrypt, bleach, cryptography, flake8-tuple, flask-cors, flask-restful, jsonschema, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
+six==1.15.0               # via -r requirements-dev.txt, astroid, astunparse, attrdict, automat, bcrypt, bleach, cryptography, flake8-tuple, flask-cors, flask-restful, jsonschema, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
 sortedcontainers==2.1.0   # via -r requirements-dev.txt, hypothesis, matrix-synapse
 sphinx-rtd-theme==0.5.0   # via -r requirements-dev.txt
