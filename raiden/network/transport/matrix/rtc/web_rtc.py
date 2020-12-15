@@ -210,6 +210,12 @@ class RTCPartner(CoroutineHandler):
                 signaling_state=self.peer_connection.signalingState,
                 ice_connection_state=self.peer_connection.iceConnectionState,
             )
+            asyncio.create_task(self.close())
+            return None
+
+        except AttributeError as ex:
+            self.log.error("Attribute error in coroutine", coroutine=coroutine, exception=ex)
+            asyncio.create_task(self.close())
             return None
 
     async def _set_local_description(self, description: RTCSessionDescription) -> None:
@@ -269,7 +275,7 @@ class RTCPartner(CoroutineHandler):
 
         self.peer_connection.on(
             "datachannel",
-            partial(on_datachannel, self, self.node_address, self._handle_message_callback),
+            partial(on_datachannel, self, self.node_address),
         )
         answer = await self._try_signaling(self.peer_connection.createAnswer())
         if answer is None:
