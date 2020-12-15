@@ -1,8 +1,4 @@
 version: 2.1
-parameters:
-  run_default_workflows:
-    default: true
-    type: boolean
 
 templates:
   filter-tag-templates: &only-tagged-version-filter
@@ -54,6 +50,8 @@ templates:
     PARITY_VERSION: 'v3.1.0'
     SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.6.3/solc-static-linux'
     SOLC_VERSION: 'v0.6.3'
+    PYENV_PYTHON_VERSION_38: '3.8.6'
+    PYENV_PYTHON_VERSION_37: '3.7.9'
 
 
 orbs:
@@ -185,9 +183,9 @@ commands:
             if [[ ${OS_NAME} == "MACOS" ]]; then
               echo "export PYENV_ROOT=~/.local-MACOS/.pyenv" >> ${BASH_ENV}
               if [[ $PYTHON_VERSION_SHORT == 3.8 ]]; then
-                export PYENV_PYTHON_VERSION=3.8.6
+                export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION_38
               elif [[ $PYTHON_VERSION_SHORT == 3.7 ]]; then
-                export PYENV_PYTHON_VERSION=3.7.9
+                export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION_37
               else
                 exit 1
               fi
@@ -723,7 +721,6 @@ jobs:
 
 workflows:
   raiden-default:
-    when: << pipeline.parameters.run_default_workflows >>
     jobs:
       - checkout
 
@@ -817,7 +814,6 @@ workflows:
             - test-integration
 
   deploy-release:
-    when: << pipeline.parameters.run_default_workflows >>
     jobs:
       - checkout:
           filters:
@@ -893,7 +889,6 @@ workflows:
             <<: *only-tagged-version-filter
 
   nightly:
-    when: << pipeline.parameters.run_default_workflows >>
     jobs:
       - checkout
 
