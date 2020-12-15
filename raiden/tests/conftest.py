@@ -1,11 +1,10 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
 import gevent  # isort:skip # noqa
-from gevent import monkey  # isort:skip # noqa
-
-from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
+from gevent import monkey, Timeout  # isort:skip # noqa
 
 monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
 
+import asyncio
 import contextlib
 import datetime
 import os
@@ -17,6 +16,11 @@ import time
 import pytest
 import structlog
 
+from raiden.network.transport.matrix.rtc.aiogevent import yield_future
+from raiden.network.transport.matrix.rtc.utils import (
+    ASYNCIO_LOOP_RUNNING_TIMEOUT,
+    setup_asyncio_event_loop,
+)
 from raiden.utils.ethereum_clients import VersionSupport
 
 # Execute these before the raiden imports because rewrites can't work after the
@@ -512,8 +516,23 @@ if sys.platform == "darwin":
 @pytest.fixture(autouse=True)
 def asyncio_loop(request):
     if request.node.get_closest_marker("asyncio") is not None:
-        asyncio_greenlet = setup_asyncio_event_loop()
+        event_loop = setup_asyncio_event_loop(RuntimeError)
         yield
-        gevent.kill(asyncio_greenlet)
+        log.debug("Killing asyncio loop")
+        if event_loop.is_running():
+            tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+            log.debug("Canceling outstanding tasks", tasks=tasks)
+            for task in tasks:
+                task.cancel()
+            yield_future(asyncio.gather(*tasks, return_exceptions=True))
+        event_loop.stop()
+        with Timeout(ASYNCIO_LOOP_RUNNING_TIMEOUT, RuntimeError):
+            while event_loop.is_running():
+                gevent.sleep(0.05)
+        event_loop.close()
+        with Timeout(ASYNCIO_LOOP_RUNNING_TIMEOUT, RuntimeError):
+            while not event_loop.is_closed():
+                gevent.sleep(0.05)
     else:
+        log.debug("NO ASYNC IO MARKER FOUND")
         yield

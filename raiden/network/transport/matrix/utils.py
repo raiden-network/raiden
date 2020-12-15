@@ -189,9 +189,7 @@ class UserAddressManager:
         self,
         client: GMatrixClient,
         displayname_cache: DisplayNameCache,
-        address_reachability_changed_callback: Callable[
-            [Address, AddressReachability, PeerCapabilities], None
-        ],
+        address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
         user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
         _log_context: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -405,10 +403,7 @@ class UserAddressManager:
             new_address_reachability, now
         )
         self._address_to_capabilities[address] = capabilities
-
-        self._address_reachability_changed_callback(
-            address, new_address_reachability, capabilities
-        )
+        self._address_reachability_changed_callback(address, new_address_reachability)
 
     def _presence_listener(self, event: Dict[str, Any], presence_update_id: int) -> None:
         """

@@ -136,10 +136,9 @@ def user_presence_callback(user_presence):
 
 
 @pytest.fixture
-def address_reachability_callback(address_reachability, address_capability):
-    def _callback(address, reachability, capabilities):
+def address_reachability_callback(address_reachability):
+    def _callback(address, reachability):
         address_reachability[address] = reachability
-        address_capability[address] = capabilities
 
     return _callback
 

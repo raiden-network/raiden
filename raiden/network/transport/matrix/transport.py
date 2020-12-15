@@ -87,7 +87,6 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
-    PeerCapabilities,
     RoomID,
     Set,
     Tuple,
@@ -563,7 +562,7 @@ class MatrixTransport(Runnable):
                 rtc_partner,
             ) in self._web_rtc_manager.address_to_rtc_partners.items():
                 hang_up_message = {
-                    "type": RTCMessageType.HANGUP,
+                    "type": RTCMessageType.HANGUP.value,
                     "call_id": rtc_partner.call_id,
                 }
                 self._send_raw(
@@ -666,8 +665,7 @@ class MatrixTransport(Runnable):
             self._address_mgr.track_address_presence(node_address, user_ids)
 
             # Now capabilites are available, only open rooms when no toDevice is available
-            capabilities = self._address_mgr.get_address_capabilities(node_address)
-            if not self._capability_usable(Capabilities.TODEVICE, capabilities):
+            if not self._capability_usable(Capabilities.TODEVICE, node_address):
                 # Start the room creation early on. This reduces latency for channel
                 # partners, by removing the latency of creating the room on the first
                 # message.
@@ -1148,7 +1146,7 @@ class MatrixTransport(Runnable):
             )
             is_web_rtc_usable = self._capability_usable(
                 Capabilities.WEBRTC,
-                self._address_mgr.get_address_capabilities(partner_addresses[0]),
+                partner_addresses[0],
             )
             if is_reachable and is_web_rtc_usable:
                 rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_addresses[0])
@@ -1353,13 +1351,13 @@ class MatrixTransport(Runnable):
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
+        is_to_device = self._capability_usable(Capabilities.TODEVICE, receiver_address)
+
         send_medium = (
             CommunicationMedium.WEB_RTC
             if self._web_rtc_manager.has_ready_channel(receiver_address)
             else CommunicationMedium.TO_DEVICE
-            if self._capability_usable(
-                Capabilities.TODEVICE, self._address_mgr.get_address_capabilities(receiver_address)
-            )
+            if is_to_device
             else CommunicationMedium.ROOM
         )
         self.log.debug(
@@ -1414,14 +1412,6 @@ class MatrixTransport(Runnable):
     def _get_room_for_address(
         self, address: Address, require_online_peer: bool = False
     ) -> Optional[Room]:
-        # if this function ever gets called after stop event is set
-        # the assertion will trigger an error
-        msg = (
-            f"address not health checked: "
-            f"node: {self._user_id}, "
-            f"peer: {to_checksum_address(address)}"
-        )
-        assert address and self._address_mgr.is_address_known(address), msg
 
         room_candidates = []
         room_ids = self._get_room_ids_for_address(address)
@@ -1586,10 +1576,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-
-        is_to_device = self._capability_usable(
-            Capabilities.TODEVICE, self._address_mgr.get_address_capabilities(partner_address)
-        )
+        is_to_device = self._capability_usable(Capabilities.TODEVICE, partner_address)
 
         # we need to wait for an online partner and an existing room
         while (
@@ -1633,7 +1620,7 @@ class MatrixTransport(Runnable):
                 partner_address=to_checksum_address(partner_address),
             )
             hang_up_message = {
-                "type": RTCMessageType.HANGUP,
+                "type": RTCMessageType.HANGUP.value,
                 "call_id": self._web_rtc_manager.get_rtc_partner(partner_address).call_id,
             }
             self._send_raw(partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE)
@@ -1715,19 +1702,15 @@ class MatrixTransport(Runnable):
             suffix in room.canonical_alias for suffix in self._config.broadcast_rooms
         )
 
-    def _capability_usable(
-        self, capability: Capabilities, partner_capabilies: PeerCapabilities
-    ) -> bool:
+    def _capability_usable(self, capability: Capabilities, partner_address: Address) -> bool:
         """ Checks if a given capability is enabled for the local and the partner node """
 
         own_caps = capconfig_to_dict(self._config.capabilities_config)
+        partner_caps = self._address_mgr.get_address_capabilities(partner_address)
 
         key = capability.value
         return bool(
-            key in own_caps
-            and own_caps[key]
-            and key in partner_capabilies
-            and partner_capabilies[key]
+            key in own_caps and own_caps[key] and key in partner_caps and partner_caps[key]
         )
 
     def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
@@ -1737,7 +1720,7 @@ class MatrixTransport(Runnable):
         greenlet.name = f"invite node:{self.checksummed_address} user:{user}"
 
     def _address_reachability_changed(
-        self, address: Address, reachability: AddressReachability, capabilities: PeerCapabilities
+        self, address: Address, reachability: AddressReachability
     ) -> None:
         if reachability is AddressReachability.REACHABLE:
             node_reachability = NetworkState.REACHABLE
@@ -1746,7 +1729,7 @@ class MatrixTransport(Runnable):
             if retrier:
                 retrier.notify()
 
-            if self._capability_usable(Capabilities.WEBRTC, capabilities):
+            if self._capability_usable(Capabilities.WEBRTC, address):
                 # if lower address spawn worker to create web rtc channel
                 self._maybe_initialize_web_rtc(address)
 
@@ -1807,12 +1790,11 @@ class MatrixTransport(Runnable):
             )
             return
 
-        capabilities = self._address_mgr.get_address_capabilities(peer_address)
-        if self._capability_usable(Capabilities.TODEVICE, capabilities):
+        if self._capability_usable(Capabilities.TODEVICE, peer_address):
             self.log.debug(
                 "Both partner and we have `toDevice` capability, skipping room creation",
                 partner=to_checksum_address(peer_address),
-                parter_caps=capabilities,
+                parter_caps=self._address_mgr.get_address_capabilities(peer_address),
             )
             return
 
@@ -1849,9 +1831,8 @@ class MatrixTransport(Runnable):
         # push to front
         room_ids = [room_id] + [r for r in room_ids if r != room_id]
         self._address_to_room_ids[address] = room_ids
-        if self._capability_usable(
-            Capabilities.WEBRTC, self._address_mgr.get_address_capabilities(address)
-        ):
+
+        if self._capability_usable(Capabilities.WEBRTC, address):
             rtc_partner = self._web_rtc_manager.get_rtc_partner(address)
             rtc_partner.sync_events.aio_allow_init.set()
 
