@@ -66,7 +66,7 @@ log = structlog.get_logger(__name__)
 cached_deserialize = lru_cache()(MessageSerializer.deserialize)
 
 JOIN_RETRIES = 10
-USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
+USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})((?:\.[0-9a-f]{8})?(?::.+))?$")
 DISPLAY_NAME_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{130}$")
 ROOM_NAME_SEPARATOR = "_"
 ROOM_NAME_PREFIX = "raiden"
@@ -119,6 +119,20 @@ def address_from_userid(user_id: str) -> Optional[Address]:
     address: Address = to_canonical_address(encoded_address)
 
     return address
+
+
+def server_uri_from_userid(user_id: str) -> Optional[Address]:
+    # FIXME (ML) this can be optimized and should be checked for correctness!!
+
+    match = USERID_RE.match(user_id)
+    if not match:
+        return None
+
+    server_uri = match.group(2)
+    if server_uri.startswith(":"):
+        server_uri = server_uri[1:]
+
+    return server_uri
 
 
 class DisplayNameCache:
@@ -550,6 +564,63 @@ class UserAddressManager:
         return log.bind(**context)
 
 
+class MultiListenerUserAddressManager(UserAddressManager):
+
+    def __init__(
+        self,
+        client: GMatrixClient,
+        presence_listener_clients: List[GMatrixClient],
+        displayname_cache: DisplayNameCache,
+        address_reachability_changed_callback: Callable[
+            [Address, AddressReachability, PeerCapabilities], None
+        ],
+        user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
+        _log_context: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(client, displayname_cache, address_reachability_changed_callback, user_presence_changed_callback,_log_context)
+
+        # additional listener ids without the one from the main client
+        self._other_client_to_listener_id: Dict[GMatrixClient, Optional[UUID]] = {client: None for client in presence_listener_clients}
+
+    def start(self) -> None:
+        """Start listening for presence updates.
+        Should be called before ``.login()`` is called on the underlying client."""
+        # Re-implemeted from super class, so that the main-client will not 
+        # register a presence listener that is not filtering by home-server
+        assert self._listener_id is None, "UserAddressManager.start() called twice"
+        self._stop_event.clear()
+        self._listener_id = self._add_own_server_presence_listener(self._client) 
+
+        for client, listener_id in self._other_client_to_listener_id.items():
+            assert listener_id is None, "We shouldn't have create a listener before starting"
+            listener_id = self._add_own_server_presence_listener(client)
+            self._other_client_to_listener_id[client] = listener_id
+
+    def stop(self) -> None:
+        for client, listener_id in self._other_client_to_listener_id.items():
+            client.remove_presence_listener(listener_id)
+        super().stop()
+
+    @staticmethod
+    def _presence_event_on_own_server(event: Dict[str, Any], client: GMatrixClient) -> Dict[str, Any]:
+        # FIXME Don't compare on every callback, but compile a regex for each uri-filter,
+        # FIXME Also compile the http strip regex
+
+        server_uri = re.sub(r'^https?:\/\/.*', '', client.api.base_url)
+        user_id = event["sender"]
+        return server_uri_from_userid(user_id) == server_uri
+
+    def _add_own_server_presence_listener(self, client: GMatrixClient) -> UUID:
+        # Wrapping closure passes the client used for filtering
+        def _presence_listener(event: Dict[str, Any], presence_update_id: int) -> None:
+            if self._presence_event_on_own_server(event, client):
+                return self._presence_listener(event, presence_update_id)
+            # FIXME this is too verbose, even for debug! remove before merging PR
+            log.debug("Ignoring presence event from other server", event=event)
+        return client.add_presence_listener(_presence_listener)
+
+
+
 class MessageAckTimingKeeper:
     def __init__(self) -> None:
         self._seen_messages: Set[MessageID] = set()
@@ -883,6 +954,37 @@ def make_client(
     Returns:
         GMatrixClient instance for one of the available servers
     """
+    clients = make_multiple_clients(
+        handle_messages_callback,
+        handle_member_join_callback,
+        servers,
+        max_num_clients=1,
+        *args,
+        **kwargs
+    )
+    return clients[0]
+
+def make_multiple_clients(
+    handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    handle_member_join_callback: Callable[[Room], None],
+    servers: List[str],
+    max_num_clients: Optional[int] = None,
+    *args: Any,
+    **kwargs: Any,
+) -> List[GMatrixClient]:
+    """Given a list of possible servers, chooses the closest available and create a GMatrixClient
+
+    Params:
+        servers: list of servers urls, with scheme (http or https)
+        max_num_clients: Don't return more than `limit_num_clients` clients, even if more
+         servers would be reachable. If None, return all reachable server's clients
+        Rest of args and kwargs are forwarded to GMatrixClient constructor
+    Returns:
+        GMatrixClient instances for all available clients, sorted by availability (rtt)
+    """
+    if not max_num_clients:
+        max_num_clients = len(servers)
+
     if len(servers) > 1:
         sorted_servers = sort_servers_closest(servers)
         log.debug("Selecting best matrix server", sorted_servers=sorted_servers)
@@ -891,14 +993,14 @@ def make_client(
     else:
         raise TransportError("No valid servers list given")
 
+    if not max_num_clients >= 1:
+        raise TransportError("Invalid `max_num_clients` given.")
+
     last_ex = None
+    clients = list()
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(
-            handle_messages_callback,
-            handle_member_join_callback,
-            server_url,
-            *args,
-            **kwargs,
+            handle_messages_callback, handle_member_join_callback, server_url, *args, **kwargs
         )
 
         retries = 3
@@ -924,7 +1026,14 @@ def make_client(
                     server_ident=client.api.server_ident,
                     average_rtt=rtt,
                 )
-                return client
+                clients.append(client)
+                if max_num_clients:
+                    if len(clients) == max_num_clients:
+                        return clients
+
+    if clients:
+        assert len(clients) <= max_num_clients, "Invalid length of created clients"
+        return clients
 
     raise TransportError(
         "Unable to find a reachable Matrix server. Please check your network connectivity."

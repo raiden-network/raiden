@@ -358,7 +358,7 @@ class GMatrixClient(MatrixClient):
         """Create a matrix sync filter
 
         A whitelist and blacklist of rooms can be supplied optionally. If
-        no whitelist ist given, all rooms are whitelisted. The blacklist is
+        no whitelist is given, all rooms are whitelisted. The blacklist is
         applied on top of the whitelist.
 
         Ref. https://matrix.org/docs/spec/client_server/r0.6.0#api-endpoints
