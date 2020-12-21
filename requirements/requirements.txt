@@ -59,7 +59,7 @@ netifaces==0.10.9         # via -r requirements.in, aioice
 objgraph==3.5.0           # via -r requirements.in
 parsimonious==0.8.1       # via eth-abi
 protobuf==3.11.3          # via web3
-psutil==5.7.3             # via -r requirements.in, mirakuru
+psutil==5.8.0             # via -r requirements.in, mirakuru
 py-ecc==1.4.7             # via raiden-contracts
 py-solc==3.2.0            # via raiden-contracts
 pycparser==2.19           # via cffi
