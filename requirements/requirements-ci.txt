@@ -90,7 +90,7 @@ markupsafe==1.1.1         # via -r requirements-dev.txt, jinja2
 marshmallow-dataclass==8.0.0  # via -r requirements-dev.txt
 marshmallow-enum==1.5.1   # via -r requirements-dev.txt
 marshmallow-polyfield==5.9  # via -r requirements-dev.txt
-marshmallow==3.9.1        # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
+marshmallow==3.10.0       # via -r requirements-dev.txt, marshmallow-dataclass, marshmallow-enum, marshmallow-polyfield
 matrix-client==0.3.2      # via -r requirements-dev.txt
 matrix-synapse==1.19.1    # via -r requirements-dev.txt
 mccabe==0.6.1             # via -r requirements-dev.txt, flake8, pylint
