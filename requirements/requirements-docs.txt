@@ -19,7 +19,7 @@ pygments==2.6.1           # via sphinx
 pyparsing==2.4.0          # via packaging
 pytz==2019.1              # via babel
 releases==1.6.3           # via -r requirements-docs.in
-requests==2.25.0          # via sphinx, sphinxcontrib-images
+requests==2.25.1          # via sphinx, sphinxcontrib-images
 semantic-version==2.6.0   # via releases
 six==1.15.0               # via astunparse, packaging, sphinxcontrib-httpdomain
 snowballstemmer==1.2.1    # via sphinx

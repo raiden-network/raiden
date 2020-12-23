@@ -157,7 +157,7 @@ raiden-webui==1.1.1       # via -r requirements-dev.txt
 readme-renderer==28.0     # via -r requirements-dev.txt
 regex==2020.6.8           # via -r requirements-dev.txt, black
 releases==1.6.3           # via -r requirements-dev.txt
-requests==2.25.0          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, raiden-api-client, responses, sphinx, sphinxcontrib-images, treq, web3
+requests==2.25.1          # via -r requirements-dev.txt, grequests, ipfshttpclient, matrix-client, raiden-api-client, responses, sphinx, sphinxcontrib-images, treq, web3
 responses==0.10.15        # via -r requirements-dev.txt
 rlp==2.0.0                # via -r requirements-dev.txt, eth-account, eth-rlp, raiden-contracts
 s3cmd==2.1.0              # via -r requirements-ci.in
