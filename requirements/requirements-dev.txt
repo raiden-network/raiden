@@ -163,7 +163,7 @@ six==1.15.0               # via -r requirements-dev.in, -r requirements-docs.txt
 snowballstemmer==1.2.1    # via -r requirements-docs.txt, sphinx
 sortedcontainers==2.1.0   # via hypothesis, matrix-synapse
 sphinx-rtd-theme==0.5.0   # via -r requirements-docs.txt
-sphinx==3.3.1             # via -r requirements-docs.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinx==3.4.1             # via -r requirements-docs.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
 sphinxcontrib-applehelp==1.0.2  # via -r requirements-docs.txt, sphinx
 sphinxcontrib-devhelp==1.0.2  # via -r requirements-docs.txt, sphinx
 sphinxcontrib-htmlhelp==1.0.3  # via -r requirements-docs.txt, sphinx
