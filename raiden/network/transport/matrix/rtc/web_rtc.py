@@ -57,7 +57,10 @@ class CoroutineHandler:
         logger.debug("Waiting for coroutines", coroutines=pending_coroutines)
 
         try:
-            await asyncio.gather(*pending_coroutines, return_exceptions=True)
+            return_values = await asyncio.gather(*pending_coroutines, return_exceptions=True)
+            for value in return_values:
+                if isinstance(value, Exception):
+                    raise value
         except CancelledError:
             logger.debug(
                 "Pending coroutines cancelled",
@@ -325,13 +328,12 @@ class RTCPartner(CoroutineHandler):
             self.channel.send(message)
 
             try:
-                while (
-                    self.peer_connection.sctp._data_channel_queue
-                    or self.peer_connection.sctp._outbound_queue
-                ):
-                    await self.peer_connection.sctp._data_channel_flush()
-                    while self.peer_connection.sctp._outbound_queue:
-                        await self.peer_connection.sctp._transmit()
+                # empty outbound queue by transmitting chunks
+                await self.peer_connection.sctp._transmit()
+                # flush message into outbound queue
+                await self.peer_connection.sctp._data_channel_flush()
+                # transmit chunks in outbound queue
+                await self.peer_connection.sctp._transmit()
             except ConnectionError:
                 self.log.debug("Connection error occurred while trying to send message")
                 await self.close()
