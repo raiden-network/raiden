@@ -525,7 +525,8 @@ def asyncio_loop(request):
             for task in tasks:
                 task.cancel()
             yield_future(asyncio.gather(*tasks, return_exceptions=True))
-        event_loop.stop()
+
+        event_loop.call_soon_threadsafe(event_loop.stop)
         with Timeout(ASYNCIO_LOOP_RUNNING_TIMEOUT, RuntimeError):
             while event_loop.is_running():
                 gevent.sleep(0.05)
@@ -533,6 +534,7 @@ def asyncio_loop(request):
         with Timeout(ASYNCIO_LOOP_RUNNING_TIMEOUT, RuntimeError):
             while not event_loop.is_closed():
                 gevent.sleep(0.05)
+
     else:
         log.debug("NO ASYNC IO MARKER FOUND")
         yield
