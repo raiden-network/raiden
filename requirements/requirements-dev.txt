@@ -141,7 +141,7 @@ pysha3==1.0.2             # via -r requirements.txt
 pytest-forked==1.1.3      # via pytest-xdist
 pytest-random==0.2        # via -r requirements-dev.in
 pytest-select==0.1.2      # via -r requirements-dev.in
-pytest-xdist==2.1.0       # via -r requirements-dev.in
+pytest-xdist==2.2.0       # via -r requirements-dev.in
 pytest==6.2.1             # via -r requirements-dev.in, pytest-forked, pytest-random, pytest-select, pytest-xdist
 pytz==2019.1              # via -r requirements-docs.txt, -r requirements.txt, babel, flask-restful
 pyyaml==5.1.1             # via matrix-synapse
