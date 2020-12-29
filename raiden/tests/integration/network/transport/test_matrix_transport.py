@@ -1017,7 +1017,7 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     "roaming_peer",
     [pytest.param("high", id="roaming_high"), pytest.param("low", id="roaming_low")],
 )
-@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
+@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=True)])
 def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     # 6 transports on 3 servers, where (0,3), (1,4), (2,5) are one the same server
     (
@@ -1047,9 +1047,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs0_0.immediate_health_check_for(raiden_service1.address)
     transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
-    wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_0, raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_0, transport_rs1_0)
 
     # Node two switches to second server
@@ -1059,9 +1056,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs1_1.start(raiden_service1, [], "")
     transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
-    wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_1, raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_0, transport_rs1_1)
 
     # Node two switches to third server
@@ -1070,9 +1064,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
 
     transport_rs1_2.start(raiden_service1, [], "")
     transport_rs1_2.immediate_health_check_for(raiden_service0.address)
-
-    wait_for_room_with_address(transport_rs0_0, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_2, raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_0, transport_rs1_2)
     # Node one switches to second server, Node two back to first
@@ -1085,9 +1076,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs0_1.immediate_health_check_for(raiden_service1.address)
     transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
-    wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_0, raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_1, transport_rs1_0)
 
     # Node two joins on second server again
@@ -1097,9 +1085,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs1_1.start(raiden_service1, [], "")
     transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
-    wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_1, raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_1, transport_rs1_1)
 
     # Node two switches to third server
@@ -1108,9 +1093,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
 
     transport_rs1_2.start(raiden_service1, [], "")
     transport_rs1_2.immediate_health_check_for(raiden_service0.address)
-
-    wait_for_room_with_address(transport_rs0_1, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_2, raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_1, transport_rs1_2)
 
@@ -1123,9 +1105,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs1_0.start(raiden_service1, [], "")
     transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
-    wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_0, raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_0)
 
     # Node two switches to second server
@@ -1135,9 +1114,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs1_1.start(raiden_service1, [], "")
     transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
-    wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_1, raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_1)
 
     # Node two joins on third server
@@ -1146,9 +1122,6 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
 
     transport_rs1_2.start(raiden_service1, [], "")
     transport_rs1_2.immediate_health_check_for(raiden_service0.address)
-
-    wait_for_room_with_address(transport_rs0_2, raiden_service1.address)
-    wait_for_room_with_address(transport_rs1_2, raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_2)
 
