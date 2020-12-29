@@ -145,7 +145,7 @@ pysha3==1.0.2             # via -r requirements-dev.txt
 pytest-forked==1.1.3      # via -r requirements-dev.txt, pytest-xdist
 pytest-random==0.2        # via -r requirements-dev.txt
 pytest-select==0.1.2      # via -r requirements-dev.txt
-pytest-xdist==2.1.0       # via -r requirements-dev.txt
+pytest-xdist==2.2.0       # via -r requirements-dev.txt
 pytest==6.2.1             # via -r requirements-dev.txt, pytest-forked, pytest-random, pytest-select, pytest-xdist
 python-dateutil==2.8.0    # via s3cmd
 python-magic==0.4.15      # via s3cmd
