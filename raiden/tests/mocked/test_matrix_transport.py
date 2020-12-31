@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 import gevent
 import pytest
@@ -8,6 +8,7 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.constants import EMPTY_SIGNATURE, Environment
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages.abstract import Message
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
@@ -23,7 +24,7 @@ from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Address, BlockExpiration, PaymentAmount, PaymentID, RoomID
+from raiden.utils.typing import Address, BlockExpiration, PaymentAmount, PaymentID
 
 USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
 USERID1 = f"@{to_hex_address(factories.HOP1)}:Wonderland"  # pylint: disable=no-member
@@ -84,16 +85,6 @@ def mock_matrix(
     monkeypatch.setattr(User, "get_display_name", lambda _: "random_display_name")
     monkeypatch.setattr(transport_module, "make_client", make_client_monkey)
 
-    def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
-        klass, address: Address
-    ) -> List[str]:
-        return ["!roomID:server"]
-
-    def mock_set_room_id_for_address(  # pylint: disable=unused-argument
-        self, address: Address, room_id: Optional[str]
-    ):
-        pass
-
     def mock_on_messages(messages):  # pylint: disable=unused-argument
         for message in messages:
             assert message
@@ -122,10 +113,6 @@ def mock_matrix(
     transport._address_mgr.add_userid_for_address(Address(factories.HOP1), USERID1)
     transport._client.user_id = USERID0
 
-    monkeypatch.setattr(
-        MatrixTransport, "_get_room_ids_for_address", mock_get_room_ids_for_address
-    )
-    monkeypatch.setattr(MatrixTransport, "_set_room_id_for_address", mock_set_room_id_for_address)
     monkeypatch.setattr(transport._raiden_service, "on_messages", mock_on_messages)
     monkeypatch.setattr(GMatrixClient, "get_user_presence", mock_get_user_presence)
     monkeypatch.setattr(GMatrixClient, "join_room", mock_join_room)
@@ -232,67 +219,6 @@ def invite_state(signer, mock_matrix):
             },
         ]
     }
-
-
-@pytest.mark.parametrize("signer", [make_signer()])
-def test_reject_invite_of_invalid_room(
-    mock_matrix: MatrixTransport, monkeypatch, signer, invite_state
-):
-
-    invalid_room_id = RoomID("!someroom:invalidserver")
-    user = create_new_users_for_address(signer)[0]
-    mock_matrix._displayname_cache.warm_users([user])
-
-    leave_room_called = False
-
-    def mock_leave_room(room_id):
-        nonlocal leave_room_called
-        if room_id == invalid_room_id:
-            leave_room_called = True
-
-    monkeypatch.setattr(mock_matrix._client.api, "leave_room", mock_leave_room)
-
-    with pytest.raises(AssertionError):
-        mock_matrix._handle_invite(invalid_room_id, invite_state)
-    assert leave_room_called
-
-
-@pytest.mark.parametrize(
-    "partner_config_for_room",
-    [{"number_of_partners": 1, "users_per_address": 1, "number_of_base_users": 1}],
-)
-def test_leave_after_member_join(mock_matrix, room_with_members):
-    # create a valid room with one external member
-    room = room_with_members[0]
-    user = create_new_users_for_address(make_signer())[0]
-    room.client = mock_matrix._client
-    mock_matrix._client.rooms[room.room_id] = room
-
-    # response showing that user from another address joins the room
-    response_list = list()
-    member_join = {
-        "room_id": 9,
-        "type": "m.room.member",
-        "state_key": user.user_id,
-        "content": {"membership": "join", "displayname": user.displayname},
-    }
-    response = {
-        "presence": {"events": {}},
-        "to_device": {"events": {}},
-        "rooms": {
-            "invite": {},
-            "leave": {},
-            "join": {
-                room.room_id: {
-                    "state": {"events": {}},
-                    "ephemeral": {"events": {}},
-                    "timeline": {"prev_batch": "PREV_SYNC_TOKEN", "events": [member_join]},
-                }
-            },
-        },
-    }
-    response_list.append(response)
-    mock_matrix._client._handle_responses(response_list)
 
 
 @pytest.fixture
@@ -413,7 +339,6 @@ def make_message(sign: bool = True) -> Message:
 
 
 def make_message_text(sign=True, overwrite_data=None):
-    room = Room(None, "!roomID:server")  # type: ignore
     if not overwrite_data:
         data = MessageSerializer.serialize(make_message(sign=sign))
     else:
@@ -422,36 +347,36 @@ def make_message_text(sign=True, overwrite_data=None):
     event = dict(
         type="m.room.message", sender=USERID1, content={"msgtype": "m.text", "body": data}
     )
-    return room, event
+    return event
 
 
 def test_normal_processing_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
-    room, event = make_message_text()
-    assert mock_matrix._handle_sync_messages([(room, [event])])
+    event = make_message_text()
+    assert mock_matrix._handle_sync_messages([(None, [event])])
 
 
 def test_processing_invalid_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     invalid_json = '{"foo": 1,'
-    room, event = make_message_text(overwrite_data=invalid_json)
-    assert not mock_matrix._handle_sync_messages([(room, [event])])
+    event = make_message_text(overwrite_data=invalid_json)
+    assert not mock_matrix._handle_sync_messages([(None, [event])])
 
 
 def test_non_signed_message_is_rejected(
     mock_matrix, skip_userid_validation
 ):  # pylint: disable=unused-argument
-    room, event = make_message_text(sign=False)
-    assert not mock_matrix._handle_sync_messages([(room, [event])])
+    event = make_message_text(sign=False)
+    assert not mock_matrix._handle_sync_messages([(None, [event])])
 
 
 def test_sending_nonstring_body(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
-    room, event = make_message_text(overwrite_data=b"somebinarydata")
-    assert not mock_matrix._handle_sync_messages([(room, [event])])
+    event = make_message_text(overwrite_data=b"somebinarydata")
+    assert not mock_matrix._handle_sync_messages([(None, [event])])
 
 
 @pytest.mark.parametrize(
@@ -464,16 +389,25 @@ def test_sending_nonstring_body(  # pylint: disable=unused-argument
 def test_processing_invalid_message_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation, message_input
 ):
-    room, event = make_message_text(overwrite_data=message_input)
-    assert not mock_matrix._handle_sync_messages([(room, [event])])
+    event = make_message_text(overwrite_data=message_input)
+    assert not mock_matrix._handle_sync_messages([(None, [event])])
 
 
 def test_processing_invalid_message_type_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
-    room, event = make_message_text(overwrite_data=invalid_message)
-    assert not mock_matrix._handle_sync_messages([(room, [event])])
+    event = make_message_text(overwrite_data=invalid_message)
+    assert not mock_matrix._handle_sync_messages([(None, [event])])
+
+
+def test_message_in_p2p_room_raises(  # pylint: disable=unused-argument
+    mock_matrix, skip_userid_validation
+):
+    event = make_message_text()
+    room = Room(None, "!roomID:server")  # type: ignore
+    with pytest.raises(RaidenUnrecoverableError):
+        mock_matrix._handle_sync_messages([(room, [event])])
 
 
 @pytest.mark.parametrize("retry_interval_initial", [0.01])

@@ -15,10 +15,10 @@ import structlog
 from aiortc import RTCSessionDescription
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
-from gevent.lock import RLock
+from gevent.lock import Semaphore
 from gevent.pool import Pool
-from gevent.queue import Empty, JoinableQueue
-from matrix_client.errors import MatrixError, MatrixHttpLibError, MatrixRequestError
+from gevent.queue import JoinableQueue
+from matrix_client.errors import MatrixError, MatrixHttpLibError
 
 import raiden
 from raiden.constants import (
@@ -41,7 +41,6 @@ from raiden.network.transport.matrix.client import (
     MatrixMessage,
     MatrixSyncMessages,
     Room,
-    User,
 )
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.utils import (
@@ -71,7 +70,7 @@ from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, Qu
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils.capabilities import capconfig_to_dict
-from raiden.utils.formatting import to_checksum_address, to_hex_address
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
@@ -132,7 +131,7 @@ class _RetryQueue(Runnable):
         self.receiver = receiver
         self._message_queue: List[_RetryQueue._MessageData] = list()
         self._notify_event = gevent.event.Event()
-        self._lock = gevent.lock.Semaphore()
+        self._lock = Semaphore()
         self._idle_since: int = 0  # Counter of idle iterations
         super().__init__()
         self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
@@ -429,15 +428,10 @@ class MatrixTransport(Runnable):
             client=self._client,
             displayname_cache=self._displayname_cache,
             address_reachability_changed_callback=self._address_reachability_changed,
-            user_presence_changed_callback=self._user_presence_changed,
             _log_context={"transport_uuid": str(self._uuid)},
         )
 
-        self._address_to_room_ids: Dict[Address, List[RoomID]] = defaultdict(list)
-        self._client.add_invite_listener(self._handle_invite)
-
-        # Forbids concurrent room creation.
-        self.room_creation_lock: Dict[Address, RLock] = defaultdict(RLock)
+        self._client.add_invite_listener(self._reject_invite)
 
         self._counters: Dict[str, CounterType[Tuple[str, MessageID]]] = {}
         self._message_timing_keeper: Optional[MessageAckTimingKeeper] = None
@@ -489,14 +483,16 @@ class MatrixTransport(Runnable):
                 prev_auth_data=prev_auth_data,
                 capabilities=capabilities,
             )
-        except ValueError:
+        except ValueError as ex:
             # `ValueError` may be raised if `get_user` provides invalid data to
             # the `User` constructor. This is either a bug in the login, that
             # tries to get the user after a failed login, or a bug in the
             # Matrix SDK.
-            raise RaidenUnrecoverableError("Matrix SDK failed to properly set the userid")
-        except MatrixHttpLibError:
-            raise RaidenUnrecoverableError("The Matrix homeserver seems to be unavailable.")
+            raise RaidenUnrecoverableError("Matrix SDK failed to properly set the userid") from ex
+        except MatrixHttpLibError as ex:
+            raise RaidenUnrecoverableError(
+                "The Matrix homeserver seems to be unavailable."
+            ) from ex
 
         self.log = log.bind(
             current_user=self._user_id,
@@ -521,7 +517,6 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix started", config=self._config)
 
         # Handle any delayed invites in the future
-        self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
         self._schedule_new_greenlet(self._health_check_worker)
         self._schedule_new_greenlet(self._set_presence, UserPresence.ONLINE)
 
@@ -535,13 +530,6 @@ class MatrixTransport(Runnable):
         if self._stop_event.is_set():
             return
         self._client.set_presence_state(state.value)
-
-    def _process_queued_invites(self) -> None:
-        if self._invite_queue:
-            self.log.debug("Processing queued invites", queued_invites=len(self._invite_queue))
-            for room_id, state in self._invite_queue:
-                self._handle_invite(room_id, state)
-            self._invite_queue.clear()
 
     def _run(self) -> None:  # type: ignore
         """ Runnable main method, perform wait on long-running subtasks """
@@ -676,51 +664,34 @@ class MatrixTransport(Runnable):
             self.log.debug(
                 "Healthcheck already enabled", peer_address=to_checksum_address(node_address)
             )
-        else:
-            self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
+            return
 
-            self._address_mgr.add_address(node_address)
-            user_ids = self.get_user_ids_for_address(node_address)
-            self._address_mgr.track_address_presence(node_address, user_ids)
+        self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
 
-            # Now capabilites are available, only open rooms when no toDevice is available
-            if not self._capability_usable(Capabilities.TODEVICE, node_address):
-                # Start the room creation early on. This reduces latency for channel
-                # partners, by removing the latency of creating the room on the first
-                # message.
-                #
-                # This does not reduce latency for target<->initiator communication,
-                # since the target may be the node with lower address, and therefore
-                # the node that has to create the room.
-                self._maybe_create_room_for_address(node_address)
-                # Ensure network state is updated in case we already know about the user presences
-                # representing the target node
+        self._address_mgr.add_address(node_address)
+        user_ids = self.get_user_ids_for_address(node_address)
+        self._address_mgr.track_address_presence(node_address, user_ids)
+
+        # Now capabilites are available, we require at least toDevice
+        if not self._capability_usable(Capabilities.TODEVICE, node_address):
+            # We no longer support node-to-node communication via rooms
+            self.log.warning(
+                "Will not be able to communicate with peer, toDevice not supported",
+                peer=node_address,
+            )
 
     def _health_check_worker(self) -> None:
         """ Worker to process healthcheck requests. """
-        # Instead of busy-looping on the queue, this code used to use
-        #
-        #    gevent.wait({self._healthcheck_queue, self._stop_event}, count=1)
-        #
-        # Due to https://github.com/gevent/gevent/issues/1540 this caused AssertionErrors to be
-        # printed during startup since, as soon as a node has open channels, the healthcheck
-        # queue's internal event will always be already set before the first wait call here.
-        #
-        # Investigating this issue did suggest that apart from the exception printed on stderr
-        # this seemed to have no other negative effects. However to make sure we changed the code
-        # to it's current form.
-        #
-        # FIXME: Once the linked gevent bug has been fixed remove the busy loop and switch back to
-        #        using `wait()` and remove the comment above.
-
         while True:
-            try:
-                self.immediate_health_check_for(self._healthcheck_queue.get(timeout=0.25))
-            except Empty:
-                pass
+            gevent.wait(  # pylint: disable=gevent-disable-wait
+                {self._healthcheck_queue, self._stop_event}, count=1
+            )
+
             if self._stop_event.is_set():
                 self.log.debug("Health check worker exiting, stop is set")
                 return
+
+            self.immediate_health_check_for(self._healthcheck_queue.get())
 
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         """Queue messages to be sent.
@@ -868,69 +839,9 @@ class MatrixTransport(Runnable):
         self._client.set_sync_filter_id(prev_sync_filter_id)
 
         for room in self._client.rooms.values():
-            partner_address = self._extract_addresses(room)
-            # invalid rooms with multiple addresses should be left already
-            msg = (
-                "rooms with multiple partners should be left instantly "
-                "after the join event arrives. "
-                "This should be handled by member_join_callback()"
-            )
-            assert len(partner_address) <= 1, msg
-            # should contain only one element which is the partner's address
-            if len(partner_address) == 1 and partner_address[0] is not None:
-                self.log.debug(
-                    "Found room",
-                    room=room,
-                    aliases=room.aliases,
-                    members=room.get_joined_members(),
-                )
-                self._set_room_id_for_address(partner_address[0], room.room_id)
-
-            self.log.debug(
-                "Found room",
-                room=room,
-                canonical_alias=room.canonical_alias,
-                members=room.get_joined_members(),
-            )
-
-    def _leave_unexpected_rooms(
-        self, rooms_to_leave: List[Room], reason: str = "No reason given"
-    ) -> None:
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        def to_string_representation(partner: Optional[Address]) -> str:
-            if partner is not None:
-                return to_checksum_address(partner)
-            else:
-                return "NoAddressUser"
-
-        for room in rooms_to_leave:
-            partners: List[Optional[Address]] = self._extract_addresses(room)
-            self.log.warning(
-                "Leaving Room",
-                reason=reason,
-                canonical_alias=room.canonical_alias,
-                room_id=room.room_id,
-                partners=[to_string_representation(partner) for partner in partners],
-            )
-            try:
-                self.retry_api_call(room.leave)
-                # close web rtc connection for all addresses in this room
-                for partner in [
-                    partner
-                    for partner in partners
-                    if partner in self._web_rtc_manager.address_to_rtc_partners
-                ]:
-                    self._web_rtc_manager.close_connection(partner)
-            except MatrixRequestError as ex:
-                raise TransportError("could not leave room due to MatrixRequestError") from ex
-
-            # update address_to_room_ids (remove room_id for address)
-            for valid_partner in [partner for partner in partners if partner is not None]:
-                address_to_room_ids = self._get_room_ids_for_address(valid_partner)
-                self._address_to_room_ids[valid_partner] = [
-                    room_id for room_id in address_to_room_ids if room_id != room.room_id
-                ]
+            # We no longer use private rooms for node-to-node communcation.
+            # Leave any that are still lingering.
+            room.leave()
 
     def _initialize_broadcast_rooms(self) -> None:
         msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
@@ -1037,24 +948,13 @@ class MatrixTransport(Runnable):
                     return True
         return False
 
-    def _handle_invite(self, room_id: RoomID, state: dict) -> None:
+    def _reject_invite(self, room_id: RoomID, state: dict) -> None:
         """Handle an invite request.
 
-        Always join a room, even if the partner is not whitelisted. That was
-        previously done to prevent a malicious node from inviting and spamming
-        the user. However, there are cases where nodes trying to create rooms
-        for a channel might race and an invite would be received by one node
-        which did not yet whitelist the inviting node, as a result the invite
-        would wrongfully be ignored. This change removes the whitelist check.
-        To prevent spam, we make sure we ignore presence updates and messages
-        from non-whitelisted nodes.
+        We no longer use peer to peer rooms for communication.
+        Reject all incoming invites.
         """
         if self._stop_event.ready():
-            return
-
-        if self._starting:
-            self.log.debug("Queueing invite", room_id=room_id)
-            self._invite_queue.append((room_id, state))
             return
 
         invite_events = [
@@ -1066,80 +966,19 @@ class MatrixTransport(Runnable):
         ]
 
         if not invite_events or not invite_events[0]:
-            self.log.debug("Invite: no invite event found", room_id=room_id)
-            return  # there should always be one and only one invite membership event for us
-
-        self.log.debug("Got invite", room_id=room_id)
+            # Invalid invite, ignore
+            return
 
         sender = invite_events[0]["sender"]
-        user = self._client.get_user(sender)
-        self._displayname_cache.warm_users([user])
-        peer_address = validate_userid_signature(user)
 
-        if not peer_address:
-            self.log.debug(
-                "Got invited to a room by invalid signed user - ignoring",
-                room_id=room_id,
-                user=user,
-            )
-            return
+        self.log.debug("Rejecting invite", room_id=room_id, sender=sender)
 
-        sender_join_events = [
-            event
-            for event in state["events"]
-            if event["type"] == "m.room.member"
-            and event["content"].get("membership") == "join"
-            and event["state_key"] == sender
-        ]
-
-        if not sender_join_events or not sender_join_events[0]:
-            self.log.debug("Invite: no sender join event", room_id=room_id)
-            return  # there should always be one and only one join membership event for the sender
-
-        join_rules_events = [
-            event for event in state["events"] if event["type"] == "m.room.join_rules"
-        ]
-
-        # room privacy as seen from the event
-        private_room: bool = False
-        if join_rules_events:
-            join_rules_event = join_rules_events[0]
-            private_room = join_rules_event["content"].get("join_rule") == "invite"
-
-        # Ignore the room if it is not private, since that can be an attack
-        # vector, e.g. secret reveal messages would be available to any user that
-        # knows the room id. (only private rooms are used since ce246af806)
-        # this also filters invites to broadcast rooms
-        if private_room is False:
-            self.log.debug("Invite: ignoring room since it is not private", room_id=room_id)
-            return
-
-        room = None
-        # try to join the room
-        try:
-            room = self.retry_api_call(self._client.join_room, room_id_or_alias=room_id)
-        except MatrixRequestError as ex:
-            # this is catching invitation to room of invalid server -> rejecting the invite
-            if ex.code == 404 and ex.content == {
-                "errcode": "M_UNKNOWN",
-                "error": "No known servers",
-            }:
-                # reject invite by "leaving" the room
-                dummy_room = Room(self._client, room_id)
-                self._leave_unexpected_rooms([dummy_room])
-
-        assert room is not None, f"joining room {room} failed"
-
-        self.log.debug(
-            "Joined from invite",
+        self.retry_api_call(
+            self._client.api.send_state_event,
             room_id=room_id,
-            canonical_alias=room.canonical_alias,
-            inviting_address=to_checksum_address(peer_address),
+            event_type="m.room.member",
+            content={"membership": "leave"},
         )
-
-        # room state may not populated yet, so we populate 'invite_only' from event
-        room.invite_only = private_room
-        self._set_room_id_for_address(address=peer_address, room_id=room_id)
 
     def _handle_member_join(self, room: Room) -> None:
         if self._is_broadcast_room(room):
@@ -1148,28 +987,6 @@ class MatrixTransport(Runnable):
                 f"Joined Broadcast Rooms: {list(self.broadcast_rooms.keys())}"
                 f"Should be joined to: {self._config.broadcast_rooms}"
             )
-
-        if self._has_multiple_partner_addresses(room):
-            self._leave_unexpected_rooms(
-                [room], "Users from more than one address joined the room"
-            )
-        else:
-            partner_addresses = [
-                address for address in self._extract_addresses(room) if address is not None
-            ]
-            if not partner_addresses:
-                return
-            is_reachable = (
-                self._address_mgr.get_address_reachability(partner_addresses[0])
-                is AddressReachability.REACHABLE
-            )
-            is_web_rtc_usable = self._capability_usable(
-                Capabilities.WEBRTC,
-                partner_addresses[0],
-            )
-            if is_reachable and is_web_rtc_usable:
-                rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_addresses[0])
-                rtc_partner.sync_events.aio_allow_init.set()
 
     def _validate_matrix_messages(
         self, room: Optional[Room], messages: List[MatrixMessage]
@@ -1214,7 +1031,13 @@ class MatrixTransport(Runnable):
 
             if room and self._is_broadcast_room(room):
                 # This must not happen. Nodes must not listen on broadcast rooms.
-                raise RuntimeError(f"Received message in broadcast room {room.canonical_alias}")
+                raise RaidenUnrecoverableError(
+                    f"Received message in broadcast room {room.canonical_alias}"
+                )
+            elif room:
+                # We no longer accept node-to-node communication messages in private rooms and
+                # should not be in any.
+                raise RaidenUnrecoverableError(f"Received message in room {room.canonical_alias}.")
 
             if not self._address_mgr.is_address_known(peer_address) and is_raiden_message:
                 self.log.debug(
@@ -1222,20 +1045,6 @@ class MatrixTransport(Runnable):
                     sender=user,
                     sender_address=to_checksum_address(peer_address),
                     room=room,
-                )
-                continue
-
-            # rooms we created and invited user, or we're invited specifically by them
-            room_ids = self._get_room_ids_for_address(peer_address)
-
-            if room and room.room_id not in room_ids:
-                self.log.debug(
-                    "Ignoring invalid message",
-                    peer_user=user.user_id,
-                    peer_address=to_checksum_address(peer_address),
-                    room=room,
-                    expected_room_ids=room_ids,
-                    reason="unknown room for user",
                 )
                 continue
 
@@ -1372,25 +1181,26 @@ class MatrixTransport(Runnable):
 
         is_to_device = self._capability_usable(Capabilities.TODEVICE, receiver_address)
 
-        send_medium = (
+        communication_medium = (
             CommunicationMedium.WEB_RTC
             if self._web_rtc_manager.has_ready_channel(receiver_address)
             else CommunicationMedium.TO_DEVICE
             if is_to_device
             else CommunicationMedium.ROOM
         )
+
         self.log.debug(
             "Send raw message",
             receiver=to_checksum_address(receiver_address),
-            send_medium=send_medium.value,
+            send_medium=communication_medium.value,
             data=data.replace("\n", "\\n"),
         )
 
-        if send_medium == CommunicationMedium.WEB_RTC:
+        if communication_medium is CommunicationMedium.WEB_RTC:
             self._web_rtc_manager.send_message_for_address(receiver_address, data)
             return
 
-        if send_medium == CommunicationMedium.TO_DEVICE:
+        elif communication_medium is CommunicationMedium.TO_DEVICE:
             online_userids = {
                 user_id
                 for user_id in self._address_mgr.get_userids_for_address(receiver_address)
@@ -1407,171 +1217,12 @@ class MatrixTransport(Runnable):
 
             self._client.api.send_to_device(event_type="m.room.message", messages=messages)
             return
-
-        if send_medium == CommunicationMedium.ROOM:
-            room = self._get_room_for_address(receiver_address, require_online_peer=True)
-            if room:
-                self._client.api.send_message(
-                    room_id=room.room_id, text_content=data, msgtype=message_type.value
-                )
-                return
-            # It is possible there is no room yet. This happens when:
-            #
-            # - The room creation is started by a background thread running
-            # `whitelist`, and the room can be used by a another thread.
-            # - The room should be created by the partner, and this node is waiting
-            # on it.
-            # - No user for the requested address is online
-            #
-            # This is not a problem since the messages are retried regularly.
-            self.log.warning(
-                "No room for receiver", receiver=to_checksum_address(receiver_address)
+        else:
+            self.log.error(
+                "Can't communicate with peer. No supported communication medium available.",
+                peer=receiver_address,
+                peer_communication_medium=communication_medium,
             )
-
-    def _get_room_for_address(
-        self, address: Address, require_online_peer: bool = False
-    ) -> Optional[Room]:
-
-        room_candidates = []
-        room_ids = self._get_room_ids_for_address(address)
-        if room_ids:
-            while room_ids:
-                room_id = room_ids.pop(0)
-                room = self._client.rooms[room_id]
-                if self._is_broadcast_room(room):
-                    self.log.warning(
-                        "Ignoring broadcast room for peer",
-                        room=room,
-                        peer=to_checksum_address(address),
-                    )
-                    continue
-                room_candidates.append(room)
-
-        if room_candidates:
-            if not require_online_peer:
-                # Return the first existing room
-                room = room_candidates[0]
-                self.log.debug(
-                    "Existing room",
-                    room=room,
-                    members=room.get_joined_members(),
-                    require_online_peer=require_online_peer,
-                )
-                return room
-            else:
-                # The caller needs a room with a peer that is online
-                online_userids = {
-                    user_id
-                    for user_id in self._address_mgr.get_userids_for_address(address)
-                    if self._address_mgr.get_userid_presence(user_id)
-                    in USER_PRESENCE_REACHABLE_STATES
-                }
-                while room_candidates:
-                    room = room_candidates.pop(0)
-                    has_online_peers = online_userids.intersection(
-                        {user.user_id for user in room.get_joined_members()}
-                    )
-                    if has_online_peers:
-                        self.log.debug(
-                            "Existing room",
-                            room=room,
-                            members=room.get_joined_members(),
-                            require_online_peer=require_online_peer,
-                        )
-                        return room
-
-        return None
-
-    def _maybe_create_room_for_address(self, address: Address) -> None:
-        if self._stop_event.ready():
-            return None
-
-        if self._get_room_for_address(address):
-            return None
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        # The rooms creation is asymetric, only the node with the lower
-        # address is responsible to create the room. This fixes race conditions
-        # were the two nodes try to create a room with each other at the same
-        # time, leading to communications problems if the nodes choose a
-        # different room.
-        #
-        # This does not introduce a new attack vector, since not creating the
-        # room is the same as being unresponsive.
-        room_creator_address = my_place_or_yours(
-            our_address=self._raiden_service.address, partner_address=address
-        )
-        if self._raiden_service.address != room_creator_address:
-            self.log.debug(
-                "This node should not create the room",
-                partner_address=to_checksum_address(address),
-            )
-            return None
-
-        with self.room_creation_lock[address]:
-            candidates = self._client.search_user_directory(to_normalized_address(address))
-            self._displayname_cache.warm_users(candidates)
-
-            partner_users = [
-                user for user in candidates if validate_userid_signature(user) == address
-            ]
-            partner_user_ids = [user.user_id for user in partner_users]
-
-            if not partner_users:
-                self.log.error(
-                    "Partner doesn't have a user", partner_address=to_checksum_address(address)
-                )
-
-                return None
-
-            room = self._client.create_room(None, invitees=partner_user_ids, is_public=False)
-            self.log.debug("Created private room", room=room, invitees=partner_users)
-
-            self.log.debug(
-                "Fetching room members", room=room, partner_address=to_checksum_address(address)
-            )
-
-            def partner_joined(fetched_members: Optional[List[User]]) -> bool:
-                if fetched_members is None:
-                    return False
-                return any(member.user_id in partner_user_ids for member in fetched_members)
-
-            members = self.retry_api_call(
-                room.get_joined_members, verify_response=partner_joined, force_resync=True
-            )
-
-            assert members is not None, "fetching members failed"
-
-            if not partner_joined(members):
-                self.log.debug(
-                    "Peer has not joined from invite yet, should join eventually",
-                    room=room,
-                    partner_address=to_checksum_address(address),
-                    retry_interval=RETRY_INTERVAL,
-                )
-
-            # Here, the list of valid user ids is composed of
-            # all known partner user ids along with our own.
-            # If our partner roams, the user will be invited to
-            # the room, resulting in multiple user ids for the partner.
-            # If we roam, a new user and room will be created and only
-            # the new user shall be in the room.
-            valid_user_ids = partner_user_ids + [self._client.user_id]
-            has_unexpected_user_ids = any(
-                member.user_id not in valid_user_ids for member in members
-            )
-
-            if has_unexpected_user_ids:
-                self._leave_unexpected_rooms([room], "Private room has unexpected participants")
-                return None
-
-            self._address_mgr.add_userids_for_address(
-                address, {user.user_id for user in partner_users}
-            )
-
-            self._set_room_id_for_address(address, room.room_id)
-            self.log.debug("Channel room", peer_address=to_checksum_address(address), room=room)
 
     def _maybe_initialize_web_rtc(self, address: Address) -> None:
 
@@ -1597,17 +1248,18 @@ class MatrixTransport(Runnable):
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
         is_to_device = self._capability_usable(Capabilities.TODEVICE, partner_address)
 
-        # we need to wait for an online partner and an existing room
-        while (
-            self._get_room_for_address(partner_address, require_online_peer=True) is None
-            and not is_to_device
-        ) or not self._started:
+        if not is_to_device:
+            self.log.warning(
+                "Can't open WebRTC channel to peer not supporting ToDevice.", peer=partner_address
+            )
+            return
+
+        # we need to wait for an online partner
+        while not self._started:
 
             self.log.debug(
                 "Waiting for partner reachable to create rtc channel",
                 partner_address=to_checksum_address(partner_address),
-                has_room=self._get_room_for_address(partner_address, require_online_peer=True)
-                is not None,
                 transport_started=self._started,
             )
             rtc_partner.sync_events.aio_allow_init.clear()
@@ -1732,12 +1384,6 @@ class MatrixTransport(Runnable):
             key in own_caps and own_caps[key] and key in partner_caps and partner_caps[key]
         )
 
-    def _user_presence_changed(self, user: User, _presence: UserPresence) -> None:
-        # maybe inviting user used to also possibly invite user's from presence changes
-        assert self._raiden_service is not None, "_raiden_service not set"
-        greenlet = self._schedule_new_greenlet(self._maybe_invite_user, user)
-        greenlet.name = f"invite node:{self.checksummed_address} user:{user}"
-
     def _address_reachability_changed(
         self, address: Address, reachability: AddressReachability
     ) -> None:
@@ -1766,106 +1412,10 @@ class MatrixTransport(Runnable):
         state_change = ActionChangeNodeNetworkState(address, node_reachability)
         self._raiden_service.handle_and_track_state_changes([state_change])
 
-    def _maybe_invite_user(self, user: User) -> None:
-        """Invite user if necessary.
-
-        - Only the node with the smallest address should do
-          the invites, just like the rule to
-          prevent race conditions while creating the room.
-
-        - Invites are necessary for roaming, when the higher
-          address node roams, a new user is created. Therefore, the new
-          user will not be in the room because the room is private.
-          This newly created user has to be invited.
-        """
-        msg = "Invite user must not be called on a non-started transport"
-        assert self._raiden_service is not None, msg
-
-        peer_address = validate_userid_signature(user)
-        if not peer_address:
-            return
-
-        room_ids = self._get_room_ids_for_address(peer_address)
-        if not room_ids:
-            return
-
-        if len(room_ids) >= 2:
-            # TODO: Handle malicious partner creating
-            # and additional room.
-            # This cannot lead to loss of funds,
-            # it is just unexpected behavior.
-            self.log.debug(
-                "Multiple rooms exist with peer",
-                peer_address=to_checksum_address(peer_address),
-                rooms=room_ids,
-            )
-
-        inviter = my_place_or_yours(
-            our_address=self._raiden_service.address, partner_address=peer_address
-        )
-        if inviter != self._raiden_service.address:
-            self.log.debug(
-                "This node is not the inviter", inviter=to_checksum_address(peer_address)
-            )
-            return
-
-        if self._capability_usable(Capabilities.TODEVICE, peer_address):
-            self.log.debug(
-                "Both partner and we have `toDevice` capability, skipping room creation",
-                partner=to_checksum_address(peer_address),
-                parter_caps=self._address_mgr.get_address_capabilities(peer_address),
-            )
-            return
-
-        room = self._client.rooms[room_ids[0]]
-        if not room._members:
-            room.get_joined_members(force_resync=True)
-
-        if user.user_id not in room._members:
-            self.log.debug(
-                "Inviting", peer_address=to_checksum_address(peer_address), user=user, room=room
-            )
-            try:
-                room.invite_user(user.user_id)
-            except (json.JSONDecodeError, MatrixRequestError):
-                self.log.warning(
-                    "Exception inviting user, maybe their server is not healthy",
-                    peer_address=to_checksum_address(peer_address),
-                    user=user,
-                    room=room,
-                    exc_info=True,
-                )
-
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
-
-    def _set_room_id_for_address(self, address: Address, room_id: RoomID) -> None:
-
-        assert not room_id or room_id in self._client.rooms, "Invalid room_id"
-
-        room_ids = self._get_room_ids_for_address(address)
-
-        # push to front
-        room_ids = [room_id] + [r for r in room_ids if r != room_id]
-        self._address_to_room_ids[address] = room_ids
-
-        if self._capability_usable(Capabilities.WEBRTC, address):
-            rtc_partner = self._web_rtc_manager.get_rtc_partner(address)
-            rtc_partner.sync_events.aio_allow_init.set()
-
-    def _get_room_ids_for_address(self, address: Address) -> List[RoomID]:
-        address_hex: AddressHex = to_hex_address(address)
-        room_ids = self._address_to_room_ids[address]
-
-        self.log.debug("Room ids for address", for_address=address_hex, room_ids=room_ids)
-
-        return [
-            room_id
-            for room_id in room_ids
-            if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
-        ]
 
     def retry_api_call(
         self,
