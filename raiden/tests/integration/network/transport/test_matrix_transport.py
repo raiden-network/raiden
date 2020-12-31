@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import gevent
 import pytest
 from gevent import Timeout
-from matrix_client.errors import MatrixRequestError
 
 import raiden
 from raiden.constants import (
@@ -29,7 +28,6 @@ from raiden.network.transport.matrix.utils import (
     ReachabilityState,
     UserPresence,
     make_room_alias,
-    my_place_or_yours,
 )
 from raiden.raiden_service import RaidenService
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
@@ -59,7 +57,7 @@ from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.capabilities import capconfig_to_dict, deserialize_capabilities
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Dict, List, PeerCapabilities, TokenNetworkAddress, cast
+from raiden.utils.typing import Address, Dict, List, PeerCapabilities, TokenNetworkAddress
 from raiden.waiting import wait_for_network_state
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
@@ -180,14 +178,6 @@ def wait_for_peer_reachable(transport: MatrixTransport, target_address: Address,
         target_reachability=AddressReachability.REACHABLE,
         timeout=timeout,
     )
-
-
-def wait_for_room_with_address(transport: MatrixTransport, address: Address, timeout: int = 10):
-    with Timeout(timeout):
-        room = transport._get_room_for_address(address)
-        while room is None:
-            transport._client.processed.wait()
-            room = transport._get_room_for_address(address)
 
 
 @pytest.mark.parametrize("matrix_server_count", [2])
@@ -794,166 +784,6 @@ def test_pfs_broadcast_messages(
 
     transport.stop()
     transport.greenlet.get()
-
-
-@pytest.mark.parametrize("number_of_transports", [2])
-@pytest.mark.parametrize("matrix_server_count", [2])
-@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
-def test_matrix_invite_private_room_happy_case(matrix_transports):
-    """ Test that a room has been created between two communicating nodes."""
-
-    # initialize transport
-    raiden_service0 = MockRaidenService(None)
-    raiden_service1 = MockRaidenService(None)
-    transport0, transport1 = matrix_transports
-    transport0.start(raiden_service0, [], None)
-    transport1.start(raiden_service1, [], None)
-    # start health check to create private room
-    transport0.immediate_health_check_for(transport1._raiden_service.address)
-    transport1.immediate_health_check_for(transport0._raiden_service.address)
-    # wait for room synchronization of transports
-    # due to asynchronous room creation
-    wait_for_room_with_address(transport0, raiden_service1.address)
-    wait_for_room_with_address(transport1, raiden_service0.address)
-    # check that there exist a room state by server
-    # meaning that both user are members of the room
-    room = transport0._get_room_for_address(raiden_service1.address)
-    assert room is not None
-    room_id = room.room_id
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state0 = transport0._client.api.get_room_state(room_id)
-                room_state1 = transport1._client.api.get_room_state(room_id)
-                break
-            except MatrixRequestError:
-                gevent.sleep(0.1)
-
-    assert room_state0 is not None
-    assert room_state1 is not None
-
-
-@pytest.mark.parametrize("matrix_server_count", [2])
-@pytest.mark.parametrize("number_of_transports", [2])
-@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
-def test_matrix_invite_retry_with_offline_invitee(
-    matrix_transports: List[MatrixTransport],
-) -> None:
-    """The inviter should create the room and send the invite even if the
-    target node is offline.
-    """
-    raiden_service0: RaidenService = cast(RaidenService, MockRaidenService(None))
-    raiden_service1: RaidenService = cast(RaidenService, MockRaidenService(None))
-
-    transport0, transport1 = matrix_transports
-
-    room_creator_address = my_place_or_yours(raiden_service0.address, raiden_service1.address)
-    if room_creator_address == raiden_service0.address:
-        inviter_service = raiden_service0
-        invitee_service = raiden_service1
-
-        inviter_transport = transport0
-        invitee_transport = transport1
-    else:
-        inviter_service = raiden_service1
-        invitee_service = raiden_service0
-
-        inviter_transport = transport1
-        invitee_transport = transport0
-
-    # Initialize the invitee and stop it before the invite happens
-    invitee_transport.start(invitee_service, [], None)
-    invitee_transport.stop()
-
-    inviter_transport.start(inviter_service, [], None)
-    inviter_transport.immediate_health_check_for(invitee_service.address)
-
-    wait_for_peer_unreachable(inviter_transport, invitee_service.address)
-    assert not is_reachable(inviter_transport, invitee_service.address)
-
-    room = inviter_transport._get_room_for_address(invitee_service.address)
-    assert room, "The inviter should have created the room, even if the invitee is offline."
-
-    invitee_transport.start(invitee_service, [], None)
-    invitee_transport.immediate_health_check_for(inviter_service.address)
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state0 = inviter_transport._client.api.get_room_state(room.room_id)
-                break
-            except MatrixRequestError:
-                gevent.sleep(0.1)
-
-    assert room_state0 is not None
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state1 = invitee_transport._client.api.get_room_state(room.room_id)
-                break
-            except MatrixRequestError as ex:
-                print(ex, transport0._client.user_id, transport1._client.user_id)
-                gevent.sleep(0.5)
-
-    assert room_state1 is not None
-
-    assert is_reachable(inviter_transport, invitee_service.address)
-    assert is_reachable(invitee_transport, inviter_service.address)
-
-
-@pytest.mark.parametrize("number_of_transports", [2])
-@pytest.mark.parametrize("matrix_server_count", [2])
-@pytest.mark.parametrize("capabilities", [CapabilitiesConfig(to_device=False)])
-def test_matrix_invitee_receives_invite_on_restart(
-    matrix_transports: List[MatrixTransport],
-) -> None:
-    """The invitee should receive the invite, even if the inviter is offline."""
-    raiden_service0: RaidenService = cast(RaidenService, MockRaidenService(None))
-    raiden_service1: RaidenService = cast(RaidenService, MockRaidenService(None))
-
-    transport0, transport1 = matrix_transports
-
-    room_creator_address = my_place_or_yours(raiden_service0.address, raiden_service1.address)
-    if room_creator_address == raiden_service0.address:
-        inviter_service = raiden_service0
-        invitee_service = raiden_service1
-
-        inviter_transport = transport0
-        invitee_transport = transport1
-    else:
-        inviter_service = raiden_service1
-        invitee_service = raiden_service0
-
-        inviter_transport = transport1
-        invitee_transport = transport0
-
-    # Initialize the invitee and stop it before the invite happens
-    invitee_transport.start(invitee_service, [], None)
-    invitee_transport.stop()
-
-    inviter_transport.start(inviter_service, [], None)
-    inviter_transport.immediate_health_check_for(invitee_service.address)
-
-    room = inviter_transport._get_room_for_address(invitee_service.address)
-    assert room, "The inviter should have created the room, even if the invitee is offline."
-
-    # Now stop the inviter and check the invitee received the invite
-    inviter_transport.stop()
-
-    invitee_transport.start(invitee_service, [], None)
-    invitee_transport.immediate_health_check_for(inviter_service.address)
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while True:
-            try:
-                room_state1 = invitee_transport._client.api.get_room_state(room.room_id)
-                break
-            except MatrixRequestError:
-                gevent.sleep(0.1)
-
-    assert room_state1 is not None
 
 
 @pytest.mark.parametrize("matrix_server_count", [3])
