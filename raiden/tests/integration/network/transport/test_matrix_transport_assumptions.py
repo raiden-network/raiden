@@ -11,7 +11,6 @@ from matrix_client.errors import MatrixRequestError
 
 from raiden.constants import DeviceIDs
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
-from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import (
     UserPresence,
     address_from_userid,
@@ -37,7 +36,7 @@ from raiden.tests.utils.transport import (
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
-from raiden.utils.typing import Address, Any, Dict, Generator, List, Tuple
+from raiden.utils.typing import Address, Any, Dict, Generator, Tuple
 
 # https://matrix.org/docs/spec/appendices#user-identifiers
 USERID_VALID_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz-.=_/"
@@ -502,65 +501,6 @@ def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
 
     with pytest.raises(MatrixRequestError):
         kicked_transport._client.api.kick_user(room_id, non_admin_user_ids[1])
-
-
-@pytest.mark.parametrize("number_of_transports", [20])
-@pytest.mark.parametrize("matrix_server_count", [1])
-def test_assumption_receive_all_state_events_upon_first_sync_after_join(
-    matrix_transports, number_of_transports, monkeypatch
-):
-    """
-    Test that independently of the number of timeline events in the room
-    the first sync after the join always contains all room state events
-    more explicitly all member joins. This means the user always knows
-    all members of a room at the first sync after the joining the room.
-    (Some state events are placed in the timeline history. That does not
-    change the logic but it must be given that no state events are filtered
-    due to limitation of the timeline limit filter)
-    """
-    transports: List[MatrixTransport] = list()
-    # it is necessary to monkeypatch leave_unexpected_rooms
-    # otherwise rooms would be left automatically when members > 2
-    monkeypatch.setattr(
-        MatrixTransport, "_leave_unexpected_rooms", lambda self, rooms_to_leave, reason: None
-    )
-
-    # start all transports
-    for transport in matrix_transports:
-        raiden_service = MockRaidenService()
-        transport.start(raiden_service, [], None)
-        transports.append(transport)
-
-    transport0 = transports[0]
-    transport1 = transports[1]
-    room0 = transport0._client.create_room()
-
-    # invite every user but transport[1]
-    for transport in transports[2:]:
-        room0.invite_user(transport._user_id)
-        transport0._client.synced.wait()
-
-    # wait for every user to be joined
-    while len(room0.get_joined_members()) < number_of_transports - 1:
-        transport0._client.synced.wait()
-
-    # start filling timeline events by sending messages
-    for i in range(1, 100):
-        room0.send_text(f"ping{i}")
-        gevent.sleep(0.05)
-
-    # finally invite transport[1]
-    room0.invite_user(transport1._user_id)
-
-    # wait for the first sync after join
-    while room0.room_id not in transport1._client.rooms:
-        transport1._client.synced.wait()
-    transport1._client.synced.wait()
-
-    # check that all information about existing members are received
-    assert (
-        len(transport1._client.rooms[room0.room_id].get_joined_members()) == number_of_transports
-    )
 
 
 @raise_on_failure
