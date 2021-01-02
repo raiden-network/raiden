@@ -4,6 +4,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from json import JSONDecodeError
+from random import randint
 from typing import TYPE_CHECKING, Counter as CounterType, Union
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -103,6 +104,8 @@ RETRY_INTERVAL = 0.1
 RETRY_INTERVAL_MULTIPLIER = 1.55
 # A RetryQueue is considered idle after this many iterations without a message
 RETRY_QUEUE_IDLE_AFTER = 10
+
+SET_PRESENCE_INTERVAL = 60
 
 
 @dataclass
@@ -518,6 +521,18 @@ class MatrixTransport(Runnable):
         # Handle any delayed invites in the future
         self._schedule_new_greenlet(self._process_queued_invites, in_seconds_from_now=1)
         self._schedule_new_greenlet(self._health_check_worker)
+        self._schedule_new_greenlet(self._set_presence, UserPresence.ONLINE)
+
+    def _set_presence(self, state: UserPresence) -> None:
+
+        waiting_period = randint(1, SET_PRESENCE_INTERVAL)
+        gevent.wait(  # pylint: disable=gevent-disable-wait
+            {self._stop_event}, timeout=waiting_period
+        )
+
+        if self._stop_event.is_set():
+            return
+        self._client.set_presence_state(state.value)
 
     def _process_queued_invites(self) -> None:
         if self._invite_queue:

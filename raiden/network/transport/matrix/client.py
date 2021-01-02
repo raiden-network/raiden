@@ -548,7 +548,9 @@ class GMatrixClient(MatrixClient):
 
     def set_presence_state(self, state: str) -> Dict:
         return self.api._send(
-            "PUT", f"/presence/{quote(self.user_id)}/status", {"presence": state}
+            "PUT",
+            f"/presence/{quote(self.user_id)}/status",
+            {"presence": state, "status_msg": str(time.time())},
         )
 
     def _mkroom(self, room_id: str) -> Room:
