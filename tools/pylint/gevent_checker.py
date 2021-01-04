@@ -3,11 +3,6 @@ from astroid.scoped_nodes import Module
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
-JOINALL_ID = "gevent-joinall"
-JOINALL_MSG = (
-    "First argument of joinall must have type set to avoid deadlocks. NOTE: set "
-    "comprehensions are false positives, use `set(<generator>)` instead."
-)
 JOINALL_RAISE_ERROR_ID = "gevent-joinall-raise-error"
 JOINALL_RAISE_ERROR_MSG = (
     "`joinall` should always re-raise exceptions from the underlying greenlets, "
@@ -140,7 +135,6 @@ class GeventChecker(BaseChecker):
     name = "gevent"
     priority = -1
     msgs = {
-        "E6491": (JOINALL_MSG, JOINALL_ID, "Waiting with joinall on a non set is an error."),
         "E6493": (
             GROUP_JOIN_MSG,
             GROUP_JOIN_ID,
@@ -173,12 +167,7 @@ class GeventChecker(BaseChecker):
         name e.g. `f()` or a path e.g. `v.f()`.
         """
         try:
-            self._force_joinall_to_use_set(node)
-        except InferenceError:
-            pass
-
-        try:
-            self._force_joinall_to_set_raise_error(node)
+            self._force_joinall_to_raise_error(node)
         except InferenceError:
             pass
 
@@ -202,32 +191,7 @@ class GeventChecker(BaseChecker):
         except InferenceError:
             pass
 
-    def _force_joinall_to_use_set(self, node):
-        """This detect usages of the form:
-
-            >>> from gevent import joinall
-            >>> joinall(...)
-
-        or:
-
-            >>> import gevent
-            >>> gevent.joinall(...)
-        """
-        for inferred_func in node.func.infer():
-            if is_gevent_joinall(inferred_func):
-
-                try:
-                    is_every_value_a_set = all(
-                        inferred_first_arg.pytype() == "builtins.set"
-                        for inferred_first_arg in node.args[0].infer()
-                    )
-                except InferenceError:
-                    is_every_value_a_set = False
-
-                if not is_every_value_a_set:
-                    self.add_message(JOINALL_ID, node=node)
-
-    def _force_joinall_to_set_raise_error(self, node):
+    def _force_joinall_to_raise_error(self, node):
         """This detect usages of the form:
 
             >>> from gevent import joinall
@@ -290,7 +254,7 @@ class GeventChecker(BaseChecker):
                     )
 
                 if not is_raise_error_true:
-                    self.add_message(JOINALL_ID, node=node)
+                    self.add_message(JOINALL_RAISE_ERROR_ID, node=node)
 
     def _forbid_calls_to_input(self, node):
         """This detect usages of the form:
