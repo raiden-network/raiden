@@ -33,7 +33,6 @@ enable=
     del-method-used,
     exception-in-del,
     expression-not-assigned,
-    gevent-joinall,
     gevent-joinall-raise-error,
     gevent-disable-wait,
     gevent-group-join,
