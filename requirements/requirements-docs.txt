@@ -23,8 +23,8 @@ requests==2.25.1          # via sphinx, sphinxcontrib-images
 semantic-version==2.6.0   # via releases
 six==1.15.0               # via astunparse, packaging, sphinxcontrib-httpdomain
 snowballstemmer==1.2.1    # via sphinx
-sphinx-rtd-theme==0.5.0   # via -r requirements-docs.in
 sphinx==3.4.1             # via -r requirements-docs.in, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
+sphinx_rtd_theme==0.5.1   # via -r requirements-docs.in
 sphinxcontrib-applehelp==1.0.2  # via sphinx
 sphinxcontrib-devhelp==1.0.2  # via sphinx
 sphinxcontrib-htmlhelp==1.0.3  # via sphinx
