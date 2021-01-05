@@ -7,7 +7,7 @@
 -r requirements-docs.txt
 
 # Dependencies
-pip-tools~=5.4.0  # this is used by 'deps.py'
+pip-tools~=5.5.0  # this is used by 'deps.py'
 
 # Linting
 flake8

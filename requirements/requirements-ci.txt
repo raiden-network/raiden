@@ -112,7 +112,7 @@ pexpect==4.8.0            # via -r requirements-dev.txt, ipython
 phonenumbers==8.10.13     # via -r requirements-dev.txt, matrix-synapse
 pickleshare==0.7.5        # via -r requirements-dev.txt, ipython
 pillow==7.2.0             # via -r requirements-dev.txt, matrix-synapse
-pip-tools==5.4.0          # via -r requirements-dev.txt
+pip-tools==5.5.0          # via -r requirements-dev.txt
 pluggy==0.12.0            # via -r requirements-dev.txt, pytest
 prometheus-client==0.3.1  # via -r requirements-dev.txt, matrix-synapse
 prompt-toolkit==3.0.5     # via -r requirements-dev.txt, ipython
@@ -166,7 +166,7 @@ semver==2.8.1             # via -r requirements-dev.txt, raiden-contracts
 service-identity==18.1.0  # via -r requirements-dev.txt, matrix-synapse, twisted
 signedjson==1.1           # via -r requirements-dev.txt, matrix-synapse
 simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
-six==1.15.0               # via -r requirements-dev.txt, astroid, astunparse, attrdict, automat, bcrypt, bleach, cryptography, flake8-tuple, flask-cors, flask-restful, jsonschema, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
+six==1.15.0               # via -r requirements-dev.txt, astroid, astunparse, attrdict, automat, bcrypt, bleach, cryptography, flake8-tuple, flask-cors, flask-restful, jsonschema, multiaddr, packaging, parsimonious, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
 sortedcontainers==2.1.0   # via -r requirements-dev.txt, hypothesis, matrix-synapse
 sphinx-rtd-theme==0.5.1   # via -r requirements-dev.txt
