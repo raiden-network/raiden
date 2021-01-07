@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import gevent
 import pytest
+from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
@@ -23,6 +24,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
 )
 from raiden.tests.utils import factories
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transport import (
@@ -558,3 +560,29 @@ def test_assumption_receive_all_state_events_upon_first_sync_after_join(
     assert (
         len(transport1._client.rooms[room0.room_id].get_joined_members()) == number_of_transports
     )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_assumption_broadcast_queue_delays_shutdown(raiden_chain):
+    raiden_node = raiden_chain[0]
+    # mark broadcast queue dirty
+    from gevent.queue import JoinableQueue
+
+    raiden_node.transport._broadcast_queue = JoinableQueue(unfinished_tasks=1)
+    # spawn a "stop" and give it some time
+    gevent.spawn(raiden_node.stop)
+    gevent.sleep(10)
+    msg = "Transport stopped before broadcast queue is empty"
+    assert not raiden_node.transport._client.stop_event.is_set(), msg
+    assert raiden_node.wal is not None, "Node stopped even though transport is not ready"
+    # mark broadcast queue clean
+    raiden_node.transport._broadcast_queue.task_done()
+    assert raiden_node.transport._broadcast_queue.unfinished_tasks == 0
+    # now the node stop should succeed
+    with Timeout(10):
+        while True:
+            if raiden_node.wal is None:
+                break
+            gevent.sleep(1)
+    assert raiden_node.wal is None, "Node did not stop"
