@@ -41,7 +41,6 @@ scenario:
       - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
       - transfer: {from: 0, to: 1, amount: 500_000_000_000_000_000, expected_http_status: 200}
       ## Wait for Monitor Request to be sent
-      - wait_blocks: 1
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
       - close_channel: {from: 0, to: 1}
