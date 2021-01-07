@@ -567,6 +567,8 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
         self.log.debug("Matrix stopping")
+        # Ensure, we send all broadcast messages before shutting down
+        self._broadcast_queue.join()
         self._stop_event.set()
         self._broadcast_event.set()
 
