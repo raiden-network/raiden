@@ -525,7 +525,7 @@ class MatrixTransport(Runnable):
 
     def _set_presence(self, state: UserPresence) -> None:
 
-        waiting_period = randint(1, SET_PRESENCE_INTERVAL)
+        waiting_period = randint(SET_PRESENCE_INTERVAL // 4, SET_PRESENCE_INTERVAL)
         gevent.wait(  # pylint: disable=gevent-disable-wait
             {self._stop_event}, timeout=waiting_period
         )
