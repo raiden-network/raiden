@@ -924,7 +924,7 @@ class RaidenService(Runnable):
         for monitoring_update in monitoring_updates.values():
             update_monitoring_service_from_balance_proof(
                 raiden=self,
-                chain_state=old_state,
+                chain_state=new_state,
                 new_balance_proof=monitoring_update.balance_proof,
                 non_closing_participant=self.address,
             )
