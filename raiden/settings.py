@@ -93,7 +93,7 @@ MIN_REI_THRESHOLD = TokenAmount(55 * 10 ** 17)  # about 1.1$
 MONITORING_REWARD = TokenAmount(5 * 10 ** 18)  # about 1$
 
 MIN_MONITORING_AMOUNT_DAI = TokenAmount(1 * 10 ** 18)  # naive approach about 1$
-MIN_MONITORING_AMOUNT_WETH = TokenAmount(4 * 10 ** 15)  # naive approach about 1$
+MIN_MONITORING_AMOUNT_WETH = TokenAmount(900 * 10 ** 12)  # naive approach about 1$
 
 MIN_REVEAL_TIMEOUT = BlockTimeout(20)
 
