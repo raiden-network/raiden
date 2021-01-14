@@ -258,7 +258,7 @@ class EthAuthProvider:
         if not (await self.account_handler.check_user_exists(user_id)):
             self.log.info("First login, creating new user: user=%r", user_id)
             registered_user_id = await self.account_handler.register_user(localpart=localpart)
-            await self.account_handler.register_device(registered_user_id, device_id="raiden")
+            await self.account_handler.register_device(registered_user_id, device_id="RAIDEN")
 
         return True
 

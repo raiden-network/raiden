@@ -644,7 +644,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: s
 
     # Disabling sync because login is done before the transport is fully
     # initialized, i.e. the inventory rooms don't have the callbacks installed.
-    client.login(username, password, sync=False, device_id="raiden")
+    client.login(username, password, sync=False, device_id="RAIDEN")
 
     # Because this is the first login, the display name has to be set, this
     # prevents the impersonation mentioned above. subsequent calls will reuse
