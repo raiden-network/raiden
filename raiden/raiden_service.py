@@ -855,7 +855,6 @@ class RaidenService(Runnable):
             ],
         )
 
-        old_state = views.state_from_raiden(self)
         raiden_events = []
 
         with self.wal.process_state_change_atomically() as dispatcher:
@@ -864,7 +863,6 @@ class RaidenService(Runnable):
                 raiden_events.extend(events)
 
         return self._trigger_state_change_effects(
-            old_state=old_state,
             new_state=views.state_from_raiden(self),
             state_changes=state_changes,
             events=raiden_events,
@@ -872,7 +870,6 @@ class RaidenService(Runnable):
 
     def _trigger_state_change_effects(
         self,
-        old_state: ChainState,
         new_state: ChainState,
         state_changes: List[StateChange],
         events: List[Event],
@@ -1126,7 +1123,6 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events, msg
 
-        old_state = views.state_from_raiden(self)
         state_changes = []
         raiden_events = []
 
@@ -1213,7 +1209,6 @@ class RaidenService(Runnable):
         )
 
         event_greenlets = self._trigger_state_change_effects(
-            old_state=old_state,
             new_state=views.state_from_raiden(self),
             state_changes=state_changes,
             events=raiden_events,
