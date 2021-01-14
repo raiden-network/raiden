@@ -38,14 +38,14 @@ nodes:
 scenario:
   serial:
     tasks:
-      - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
-      - transfer: {from: 0, to: 1, amount: 500_000_000_000_000_000, expected_http_status: 200}
+      - open_channel: {from: 0, to: 1, total_deposit: 2_000_000_000_000_000_000}
+      - transfer: {from: 0, to: 1, amount: 1_000_000_000_000_000_000, expected_http_status: 200}
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
       - close_channel: {from: 0, to: 1}
       ## Wait for channel to be closed
       - wait_blocks: 1
-      - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
+      - assert: {from: 0, to: 1, total_deposit: 2_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "closed"}
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "ChannelClosed"
