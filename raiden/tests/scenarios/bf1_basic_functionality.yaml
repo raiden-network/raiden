@@ -98,7 +98,7 @@ scenario:
       - serial:
           name: "Assert after 10 payments from 3 to 0"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 0, balance_sum: 2_010_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 1_990_000_000_000_000_000}
       - serial:
@@ -109,14 +109,14 @@ scenario:
       - serial:
           name: "Assert after 10 payments from 1 to 4"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 1, balance_sum: 1_990_000_000_000_000_000}
             - assert_sum: {from: 4, balance_sum: 2_010_000_000_000_000_000}
       - serial:
           name: "Check that IOUs exist after the payments"
           tasks:
             # Add a wait until all ious are processed correctly
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert_pfs_history: {source: 3, target: 0, request_count: 10}
             - assert_pfs_iou: {source: 3, amount: "{{ 10 * pfs_fee }}" }
             - assert_pfs_history: {source: 1, target: 4, request_count: 10}
@@ -139,7 +139,7 @@ scenario:
       - serial:
           name: "Assert after 10 payments from 2 to 4"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 2, balance_sum: 1_890_000_000_000_000_000}
             - assert_sum: {from: 4, balance_sum: 2_020_000_000_000_000_000}
       - serial:
@@ -150,7 +150,7 @@ scenario:
       - serial:
           name: "Assert after 5 payments from 0 to 2"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 2, balance_sum: 1_895_000_000_000_000_000}
             - assert_sum: {from: 0, balance_sum: 2_005_000_000_000_000_000}
       - parallel:
@@ -160,7 +160,7 @@ scenario:
       - serial:
           name: "Assert after deposit from 2 to 3"
           tasks:
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 2, to: 3, total_deposit: 1_100_000_000_000_000_000, total_withdraw: 100_000_000_000_000_000, state: "opened"}
       - parallel:
           name: "1 deposits extra 10% in the channel with 0"
@@ -169,7 +169,7 @@ scenario:
       - serial:
           name: "Assert after deposit from 1 to 0"
           tasks:
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 1, to: 0, total_deposit: 1_100_000_000_000_000_000, state: "opened"}
       - serial:
           name: "Make 100 payments from 0 to 3"
@@ -179,16 +179,16 @@ scenario:
       - serial:
           name: "Assert after 100 payments from 0 to 3"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 0, balance_sum: 1_905_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 2_090_000_000_000_000_000}
       - serial:
           name: "Stop node 0 and wait 100s, then start it again"
           tasks:
             - stop_node: 0
-            - wait: 100
+            - wait: {{ wait_short }}
             - start_node: 0
-            - wait: 100
+            - wait: {{ wait_short }}
       - serial:
           name: "Make 10 payments from 0 to 3 after restart"
           repeat: 10
@@ -197,7 +197,7 @@ scenario:
       - serial:
           name: "Assert after 10 payments from 0 to 3"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 0, balance_sum: 1_895_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 2_100_000_000_000_000_000}
       - serial:
@@ -208,7 +208,7 @@ scenario:
       - serial:
           name: "Assert after 100 payments from 3 to 0"
           tasks:
-            - wait: 300
+            - wait: {{ wait_long }}
             - assert_sum: {from: 0, balance_sum: 1_995_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 2_000_000_000_000_000_000}
       - serial:
@@ -218,7 +218,7 @@ scenario:
       - serial:
           name: "Assert after closing channel between 0 and 4"
           tasks:
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "ChannelClosed"
