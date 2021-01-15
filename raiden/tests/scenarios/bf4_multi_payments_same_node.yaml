@@ -51,7 +51,7 @@ scenario:
             - open_channel: {from: 1, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 4, to: 5, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
-      - wait: 100
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert after channel openings"
           tasks:
@@ -79,7 +79,7 @@ scenario:
                 tasks:
                   - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, lock_timeout: 30}
       # Make sure that all transfers are finalized before asserting
-      - wait: 100
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert balances after transfers"
           tasks:

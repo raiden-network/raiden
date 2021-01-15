@@ -76,7 +76,7 @@ scenario:
             - open_channel: {from: 8, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 9, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
       # Make sure the PFS has all balance updates
-      - wait: 100
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert after channel openings"
           tasks:
@@ -111,7 +111,7 @@ scenario:
             - transfer: {from: 8, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
             - transfer: {from: 9, to: 0, amount: 500_000_000_000_000_000, expected_http_status: 200}
       # Make sure the PFS has all balance updates
-      - wait: 100
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert after balancing channels"
           tasks:
@@ -146,7 +146,7 @@ scenario:
             - transfer: {from: 8, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - transfer: {from: 9, to: 5, amount: 1_000_000_000_000_000, expected_http_status: 200}
       # Make sure the PFS has all balance updates
-      - wait: 100
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert after first round of payments through node0"
           tasks:
@@ -218,7 +218,7 @@ scenario:
             - transfer: {from: 9, to: 7, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - transfer: {from: 9, to: 8, amount: 1_000_000_000_000_000, expected_http_status: 200}
       # Make sure the PFS has all balance updates
-      - wait: 300
+      - wait: {{ wait_long }}
       - parallel:
           name: "Assert after second round of payments through node0"
           tasks:

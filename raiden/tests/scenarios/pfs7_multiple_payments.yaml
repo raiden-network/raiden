@@ -58,7 +58,7 @@ scenario:
       - serial:
           name: "adding a wait before the asserts"
           tasks:
-            - wait: 60
+            - wait: {{ wait_long }}
       - parallel:
           name: "Assert after opening and depositing"
           tasks:
@@ -82,7 +82,7 @@ scenario:
       - serial:
           name: "Assert after 100 payments from 0 to 3"
           tasks:
-            - wait: 10
+            - wait: {{ wait_short }}
             - assert_sum: {from: 0, balance_sum: 500_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 3_500_000_000_000_000_000}
       - serial:

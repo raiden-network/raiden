@@ -48,7 +48,7 @@ scenario:
       - serial:
           name: "Allow time for nodes to learn about their channels"
           tasks:
-            - wait: 30
+            - wait: {{ wait_short }}
       - parallel:
           name: "Verify if channels were opened correctly"
           tasks:
@@ -90,7 +90,7 @@ scenario:
       - serial:
           name: "Give the nodes time to complete the earlier deposits and channel opening"
           tasks:
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Checking for the channel state to be unchanged"
           tasks:
@@ -104,14 +104,14 @@ scenario:
           name: "node2 does different cases of deposit with node4"
           tasks:
             - open_channel: {from: 2, to: 4, total_deposit: 0, expected_http_status: 201}
-            - wait: 100
+            - wait: {{ wait_short }}
             - deposit: {from: 2, to: 4, total_deposit: 100_000_000_000_000_000}
-            - wait: 100
+            - wait: {{ wait_short }}
             # Try to make a deposit smaller than the amount that was deposited
             - deposit: {from: 2, to: 4, total_deposit: 30_000_000_000_000_000, expected_http_status: 409}
             # Make a deposit bigger than the deposited amount
             - deposit: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000}
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Verify the channels"
           tasks:
@@ -132,10 +132,10 @@ scenario:
             - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             # node4 deposits tokens into the node0-node4 channel
             - deposit: {from: 4, to: 0, total_deposit: 25_000_000_000_000_000}
-            - wait: 100
+            - wait: {{ wait_short }}
             # node0 performs a payment to node4 (path 0<->1<->2<->4)
             - transfer: {from: 0, to: 4, amount: 50_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 0, to: 1, total_deposit: 100_000_000_000_000_000, balance: 50_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 150_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 50_000_000_000_000_000, state: "opened"}
@@ -144,12 +144,12 @@ scenario:
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "opened"}
             # node2 sends all of its tokens to node1 (one transfer)
             - transfer: {from: 2, to: 1, amount: 150_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 0, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
             # node2 tries to send another tokens payment to node1 (fail no route with enough capacity)
             - transfer: {from: 2, to: 1, amount: 150_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
       - serial:
           name: "Multiple multi hop payments"
           repeat: 10
@@ -159,7 +159,7 @@ scenario:
       - serial:
           name: "Allow nodes to process the payments"
           tasks:
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Sanity check"
           tasks:
@@ -178,13 +178,13 @@ scenario:
           tasks:
             - stop_node: 1
             # give it time to shutdown
-            - wait: 100
+            - wait: {{ wait_short }}
       - serial:
           name: "Multi hop payment node2"
           tasks:
             # node0 sends 10 tokens to node2 (using the 0 <-> 4 <-> 2 route)
             - transfer: {from: 0, to: 2, amount: 10_000_000_000_000_000, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Assert transfer was executed correctly"
           tasks:
@@ -198,7 +198,7 @@ scenario:
           name: "Restarting node1"
           tasks:
             - start_node: 1
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Checking for the node3 <-> node2 channel state"
           tasks:
@@ -210,7 +210,7 @@ scenario:
           name: "Payment from node3 to node2"
           tasks:
             - transfer: {from: 3, to: 2, amount: 99_000_000_000_000_000, lock_timeout: 30}
-      - wait: 100
+      - wait: {{ wait_short }}
       - serial:
           name: "Checking if payments were made successfully"
           tasks:
@@ -218,7 +218,7 @@ scenario:
             - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 2_000_000_000_000_000, state: "opened"}
             # Also node0 makes a deposit to node0 <-> node1 channel
             - deposit: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000}
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Also check if node0 -> node1 -> node2 -> node3 path has enough capacity for transfer of 200_000_000_000_000_000"
           tasks:
@@ -232,14 +232,14 @@ scenario:
           name: "Closing down channel node4 <-> node2"
           tasks:
             - close_channel: {from: 4, to: 2}
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "closed"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "closed"}
       - serial:
           name: "Payment from node0 to node3"
           tasks:
             - transfer: {from: 0, to: 3, amount: 200_000_000_000_000_000, lock_timeout: 30}
-      - wait: 100
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert channels after transfers"
           tasks:
@@ -254,20 +254,20 @@ scenario:
           tasks:
             # node2 tries to make a deposit to the channel that is being closed (fail 409)
             - deposit: {from: 2, to: 4, total_deposit: 200_000_000_000_000_000, expected_http_status: 409}
-            - wait: 100
+            - wait: {{ wait_short }}
             # node2 sends tokens to node1
             - transfer: {from: 2, to: 1, amount: 10_000_000_000_000_000, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 190_000_000_000_000_000, state: "opened"}
             # node1 sends tokens to node0
             - transfer: {from: 1, to: 0, amount: 10_000_000_000_000_000, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
             - assert: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 350_000_000_000_000_000, state: "opened"}
             # node4 sends tokens to node2 (0 -> 1-> 2)
             - transfer: {from: 4, to: 2, amount: 10_000_000_000_000_000, lock_timeout: 30}
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Assert for the channel states after mediated transfers were completed"
           tasks:
@@ -281,7 +281,7 @@ scenario:
           name: "node4 Closes his channel with node0"
           tasks:
             - close_channel: {from: 4, to: 0}
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Check if channel was closed"
           tasks:
@@ -299,7 +299,7 @@ scenario:
           tasks:
             - leave_network: {from: 0}
             - leave_network: {from: 1}
-            - wait: 100
+            - wait: {{ wait_short }}
       - serial:
           name: "Check that channel node2 <-> node3 is still open"
           tasks:
@@ -309,7 +309,7 @@ scenario:
           name: "node2 closes the channel with node3"
           tasks:
             - close_channel: {from: 2, to: 3}
-            - wait: 100
+            - wait: {{ wait_short }}
       - parallel:
           name: "Check final state of the channels"
           tasks:
