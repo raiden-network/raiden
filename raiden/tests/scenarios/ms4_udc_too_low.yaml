@@ -51,11 +51,7 @@ scenario:
           repeat: 10
           tasks:
             - transfer: {from: 0, to: 1, amount: 50_000_000_000_000_000, expected_http_status: 200}
-      - serial:
-          name: "Make monitor request"
-          tasks:
-            - wait_blocks: 1
-            - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
+      - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - serial:
           name: "Stop node1"
           tasks:
