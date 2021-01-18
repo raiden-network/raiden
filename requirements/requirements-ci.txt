@@ -121,7 +121,7 @@ psutil==5.8.0             # via -r requirements-dev.txt, mirakuru
 ptyprocess==0.6.0         # via -r requirements-dev.txt, pexpect
 py-ecc==1.4.7             # via -r requirements-dev.txt, raiden-contracts
 py-solc==3.2.0            # via -r requirements-dev.txt, raiden-contracts
-py-spy==0.3.3             # via -r requirements-dev.txt
+py-spy==0.3.4             # via -r requirements-dev.txt
 py==1.9.0                 # via -r requirements-dev.txt, pytest
 pyasn1-modules==0.2.5     # via -r requirements-dev.txt, matrix-synapse, service-identity
 pyasn1==0.4.5             # via -r requirements-dev.txt, matrix-synapse, pyasn1-modules, service-identity
@@ -169,8 +169,8 @@ simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
 six==1.15.0               # via -r requirements-dev.txt, astroid, astunparse, attrdict, automat, bcrypt, bleach, cryptography, flake8-tuple, flask-cors, flask-restful, jsonschema, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
 sortedcontainers==2.1.0   # via -r requirements-dev.txt, hypothesis, matrix-synapse
-sphinx==3.4.1             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
-sphinx_rtd_theme==0.5.1   # via -r requirements-dev.txt
+sphinx-rtd-theme==0.5.1   # via -r requirements-dev.txt
+sphinx==3.4.3             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
 sphinxcontrib-applehelp==1.0.2  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-devhelp==1.0.2  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-htmlhelp==1.0.3  # via -r requirements-dev.txt, sphinx
