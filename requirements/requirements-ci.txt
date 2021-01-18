@@ -133,7 +133,7 @@ pyflakes==2.2.0           # via -r requirements-dev.txt, flake8
 pygments==2.6.1           # via -r requirements-dev.txt, ipython, pdbpp, readme-renderer, sphinx
 pyhamcrest==1.9.0         # via -r requirements-dev.txt, twisted
 pyinstaller-hooks-contrib==2020.7  # via pyinstaller
-pyinstaller==4.1          # via -r requirements-ci.in
+pyinstaller==4.2          # via -r requirements-ci.in
 pylibsrtp==0.6.6          # via -r requirements-dev.txt, aiortc
 pylint==2.6.0             # via -r requirements-dev.txt
 pymacaroons==0.13.0       # via -r requirements-dev.txt, matrix-synapse
@@ -169,8 +169,8 @@ simplejson==3.16.0        # via -r requirements-dev.txt, canonicaljson
 six==1.15.0               # via -r requirements-dev.txt, astroid, astunparse, attrdict, automat, bcrypt, bleach, cryptography, flake8-tuple, flask-cors, flask-restful, jsonschema, multiaddr, packaging, parsimonious, pip-tools, protobuf, pyhamcrest, pymacaroons, pynacl, pyopenssl, pyrsistent, python-dateutil, readme-renderer, responses, sphinxcontrib-httpdomain, structlog, traitlets, treq
 snowballstemmer==1.2.1    # via -r requirements-dev.txt, sphinx
 sortedcontainers==2.1.0   # via -r requirements-dev.txt, hypothesis, matrix-synapse
-sphinx==3.4.1             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
-sphinx_rtd_theme==0.5.1   # via -r requirements-dev.txt
+sphinx-rtd-theme==0.5.1   # via -r requirements-dev.txt
+sphinx==3.4.3             # via -r requirements-dev.txt, releases, sphinx-rtd-theme, sphinxcontrib-httpdomain, sphinxcontrib-httpexample, sphinxcontrib-images
 sphinxcontrib-applehelp==1.0.2  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-devhelp==1.0.2  # via -r requirements-dev.txt, sphinx
 sphinxcontrib-htmlhelp==1.0.3  # via -r requirements-dev.txt, sphinx
