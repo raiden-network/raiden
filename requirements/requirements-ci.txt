@@ -58,7 +58,7 @@ flake8-comprehensions==3.3.1  # via -r requirements-dev.txt
 flake8-tuple==0.4.1       # via -r requirements-dev.txt
 flake8==3.8.4             # via -r requirements-dev.txt, flake8-bugbear, flake8-comprehensions, flake8-tuple
 flaky==3.7.0              # via -r requirements-dev.txt
-flask-cors==3.0.9         # via -r requirements-dev.txt
+flask-cors==3.0.10        # via -r requirements-dev.txt
 flask-restful==0.3.8      # via -r requirements-dev.txt
 flask==1.1.2              # via -r requirements-dev.txt, flask-cors, flask-restful
 frozendict==1.2           # via -r requirements-dev.txt, canonicaljson, matrix-synapse
