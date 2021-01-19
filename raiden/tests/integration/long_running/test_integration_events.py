@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import gevent
 import pytest
 from eth_utils import keccak
@@ -8,6 +10,7 @@ from raiden.api.python import RaidenAPI
 from raiden.blockchain.events import get_all_netting_channel_events, get_contract_events
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
 from raiden.network.proxies.proxy_manager import ProxyManager
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
@@ -30,7 +33,7 @@ from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state import BalanceProofSignedState
-from raiden.transfer.state_change import ContractReceiveSecretReveal
+from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
@@ -457,43 +460,56 @@ def test_secret_revealed_on_chain(
     # The channels are out-of-sync. app1 has sent the unlock, however we are
     # intercepting it and app2 has not received the updated balance proof
 
-    # Close the channel. This must register the secret on chain
-    balance_proof = channel_state2_1.partner_state.balance_proof
-    assert isinstance(balance_proof, BalanceProofSignedState)
-    channel_close_event = ContractSendChannelClose(
-        canonical_identifier=channel_state2_1.canonical_identifier,
-        balance_proof=balance_proof,
-        triggered_by_block_hash=app0.rpc_client.blockhash_from_blocknumber(BLOCK_ID_LATEST),
-    )
+    # Mock the contract's unlock method to find out who is doing the unlock
+    unlockers = []
+    orig_unlock = TokenNetwork.unlock
 
-    assert app2.wal, "test apps must be started by the fixture."
-    current_state = views.state_from_raiden(app2)
+    def _mocked_unlock(self: TokenNetwork, *args, **kwargs):
+        unlockers.append(self.node_address)
+        return orig_unlock(self, *args, **kwargs)
 
-    app2.raiden_event_handler.on_raiden_events(
-        raiden=app2, chain_state=current_state, events=[channel_close_event]
-    )
-
-    settle_expiration = (
-        app0.rpc_client.block_number() + settle_timeout + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-    )
-    app0.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
-
-    # TODO:
-    # - assert on the transferred amounts on-chain (for settle and unlock)
-
-    # The channel app0-app1 should continue with the protocol off-chain, once
-    # the secret is released on-chain by app2
-    assert_synced_channel_state(
-        token_network_address, app0, deposit - amount, [], app1, deposit + amount, []
-    )
-
-    with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(10):
-        wait_for_state_change(
-            app2,
-            ContractReceiveSecretReveal,
-            {"secrethash": secrethash},
-            retry_interval_initial,
+    with patch.object(TokenNetwork, "unlock", _mocked_unlock):
+        # Close the channel. This must register the secret on chain
+        balance_proof = channel_state2_1.partner_state.balance_proof
+        assert isinstance(balance_proof, BalanceProofSignedState)
+        channel_close_event = ContractSendChannelClose(
+            canonical_identifier=channel_state2_1.canonical_identifier,
+            balance_proof=balance_proof,
+            triggered_by_block_hash=app0.rpc_client.blockhash_from_blocknumber(BLOCK_ID_LATEST),
         )
+
+        assert app2.wal, "test apps must be started by the fixture."
+        current_state = views.state_from_raiden(app2)
+
+        app2.raiden_event_handler.on_raiden_events(
+            raiden=app2, chain_state=current_state, events=[channel_close_event]
+        )
+
+        settle_expiration = (
+            app0.rpc_client.block_number() + settle_timeout + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        )
+        app0.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
+
+        # TODO:
+        # - assert on the transferred amounts on-chain (for settle and unlock)
+
+        # The channel app0-app1 should continue with the protocol off-chain, once
+        # the secret is released on-chain by app2
+        assert_synced_channel_state(
+            token_network_address, app0, deposit - amount, [], app1, deposit + amount, []
+        )
+
+        with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(20):
+            wait_for_state_change(
+                app1,
+                ContractReceiveChannelBatchUnlock,
+                {},
+                retry_interval_initial,
+            )
+
+    # Check that only the correct node did the unlock. Prevents regression of
+    # https://github.com/raiden-network/raiden/issues/6706
+    assert unlockers == [app2.address]
 
 
 @raise_on_failure
