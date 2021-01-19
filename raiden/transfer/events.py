@@ -168,7 +168,20 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
 
 @dataclass(frozen=True)
 class ContractSendChannelBatchUnlock(ContractSendEvent):
-    """ Event emitted when the lock must be claimed on-chain. """
+    """Look for unlocks that we should do after settlement
+
+    This will only lead to an on-chain unlock if there are locks that can be
+    unlocked to our benefit.
+
+    Usually, we would check if this is the case in the state machine and skip
+    the creation of this event if no profitable locks are found. But if a
+    channel was closed with another BP than the latest one, we need to look in
+    the database for the locks that correspond to the on-chain data. Searching
+    the database is not possible in the state machine, so we create this event
+    in every case and do the check in the event handler.
+    Since locks for both receiving and sending transfers can potentially return
+    tokens to use, this event leads to 0-2 on-chain transactions.
+    """
 
     canonical_identifier: CanonicalIdentifier
     sender: Address  # sender of the lock
