@@ -123,7 +123,28 @@ def write_stack_trace(ex: Exception) -> None:
         )
 
 
+def get_version(short: bool) -> str:
+    if short:
+        return get_system_spec()["raiden"]
+    else:
+        return json.dumps(get_system_spec(), indent=2)
+
+
+def handle_version_option(ctx: Context, _param: Any, value: bool) -> None:
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo(get_version(short=True))
+    ctx.exit()
+
+
 OPTIONS = [
+    option(
+        "--version",
+        is_flag=True,
+        callback=handle_version_option,
+        expose_value=False,
+        is_eager=True,
+    ),
     option(
         "--datadir",
         help="Directory for storing raiden data.",
@@ -594,7 +615,7 @@ def run(ctx: Context, **kwargs: Any) -> None:
         raiden_config = setup_raiden_config(**kwargs)
         kwargs["config"] = raiden_config
 
-        raiden_version = get_system_spec()["raiden"]
+        raiden_version = get_version(short=True)
         click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
 
         click.secho(
@@ -734,12 +755,11 @@ KNOWN_OPTIONS = {param.name.replace("_", "-") for param in run.params}.union(FLA
 
 @run.command()
 @option("--short", is_flag=True, help="Only display Raiden version")
-def version(short: bool) -> None:
+@click.pass_context
+def version(ctx: Context, short: bool) -> None:
     """Print version information and exit. """
-    if short:
-        print(get_system_spec()["raiden"])
-    else:
-        print(json.dumps(get_system_spec(), indent=2))
+    click.echo(get_version(short=short))
+    ctx.exit(0)
 
 
 @run.command()
