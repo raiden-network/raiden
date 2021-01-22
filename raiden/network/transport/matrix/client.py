@@ -245,6 +245,13 @@ class GMatrixHttpApi(MatrixHttpApi):
     def __repr__(self) -> str:
         return f"<GMatrixHttpApi base_url={self.base_url}>"
 
+    def disable_push_notifications(self) -> Dict[str, Any]:
+        return self._send(
+            "PUT",
+            "/pushrules/global/override/.m.master.rule/enabled/",
+            content={"enabled": True},
+        )
+
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
