@@ -77,7 +77,7 @@ executors:
 
   macos:
     macos:
-      xcode: "10.1.0"
+      xcode: "12.3.0"
     # The macos builder doesn't support different python versions but we define the parameter
     # anyway to be compatible with the shared step definitions
     parameters:
