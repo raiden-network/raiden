@@ -248,7 +248,7 @@ class GMatrixHttpApi(MatrixHttpApi):
     def disable_push_notifications(self) -> Dict[str, Any]:
         return self._send(
             "PUT",
-            "/pushrules/global/override/.m.master.rule/enabled/",
+            "/pushrules/global/override/.m.rule.master/enabled/",
             content={"enabled": True},
         )
 
