@@ -288,8 +288,22 @@ class PendingWithdrawState:
 
 @dataclass
 class NettingChannelEndState(State):
-    """ The state of one of the nodes in a two party netting channel. """
+    """The state of one of the nodes in a two party netting channel.
 
+    The `node` owning `NettingChannelEndState.address` is the acting node in this setup,
+    from which's perspective the state of a uni-directional channel is seen.
+    A `partner` in the NettingChannelEndState is always the other participant of a
+    bi-directional channel.
+
+    Thus, a NettingChannelEndState represents a uni-directional channel from the `node`'s
+    perspective, where transfers flow from the `node` to the `partner`.
+    All locks that are memorized in the internal datastructures are locks that were created by
+    the `node`.
+    They will either be unlocked off-chain by the `node` itself,
+    or unlocked on-chain by the partner, or on the partners behalf.
+    """
+
+    #: Address of the `node` from which the state of the channel is seen
     address: Address
     contract_balance: Balance
     onchain_total_withdraw: WithdrawAmount = field(default=WithdrawAmount(0))
@@ -297,28 +311,35 @@ class NettingChannelEndState(State):
         repr=False, default_factory=dict
     )
     withdraws_expired: List[ExpiredWithdrawState] = field(repr=False, default_factory=list)
-    #: Locks which have been introduced with a locked transfer, however the
-    #: secret is not known yet
+    #: Locks which have been introduced with a locked transfer by the node, however the
+    #: secret is not known to the partner yet
     secrethashes_to_lockedlocks: Dict[SecretHash, HashTimeLockState] = field(
         repr=False, default_factory=dict
     )
-    #: Locks for which the secret is known, but the partner has not sent an
-    #: unlock off chain yet.
+    #: Locks for which the secret is known to the partner, but the node has not sent an
+    #: unlock to the partner off chain yet.
     secrethashes_to_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
-    #: Locks for which the secret is known, the partner has not sent an
-    #: unlocked off chain yet, and the secret has been registered onchain
+    #: Locks for which the secret is known to the partner, the node has not sent an
+    #: unlock to the partner off chain yet and the secret has been registered on-chain
     #: before the lock has expired.
     secrethashes_to_onchain_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
+    #: The most recent balance-proof the `node` owes the `partner`.
+    #: Can also not be signed by the `node` yet, and thus not yet communicated with the partner.
+    #: The signed balance proofs will be used by the partner to achieve off-chain settlement
+    #: of funds where the partner is the beneficiary.
     balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
-    #: A list of the pending locks, in order of insertion. Used for calculating
-    #: the locksroot.
+    #: A list of the pending locks the `node` has created, in order of insertion.
+    #: Used for calculating the locksroot.
     pending_locks: PendingLocksState = field(
         repr=False, default_factory=make_empty_pending_locks_state
     )
+    #: The on-chain locksroot of pending locks the `node` has created.
+    #: This can be provided by the `partner` either upon calling `closeChannel()`
+    #: or `updateNonClosingBalanceProof()` during settlement.
     onchain_locksroot: Locksroot = LOCKSROOT_OF_NO_LOCKS
     nonce: Nonce = field(default=Nonce(0))
 
@@ -349,7 +370,15 @@ class NettingChannelEndState(State):
 
 @dataclass
 class NettingChannelState(State):
-    """ The state of a netting channel. """
+    """The state of a netting channel.
+
+    Since a NettingChannel in Raiden is not represented by two independent uni-directional
+    channels, this represents the bi-directional channel between us and a partner node.
+
+    It holds information that concern on-chain channel parameters and states,
+    and it also holds the states of the two underlying uni-directional
+    channels, which only exist conceptual as an abstraction.
+    """
 
     canonical_identifier: CanonicalIdentifier
     token_address: TokenAddress = field(repr=False)
@@ -357,8 +386,17 @@ class NettingChannelState(State):
     reveal_timeout: BlockTimeout = field(repr=False)
     settle_timeout: BlockTimeout = field(repr=False)
     fee_schedule: FeeScheduleState = field(repr=False)
+
+    # This represents the state of the uni-directional channel from us to the partner node.
+    # It contains the state of information concerning funds that originate from us and flow
+    # to the partner
     our_state: NettingChannelEndState
+
+    # This represents the state of the uni-directional channel from the partner to us.
+    # It contains the state of information concerning funds that originate from the partner and
+    # flow to us
     partner_state: NettingChannelEndState
+
     open_transaction: SuccessfulTransactionState
     close_transaction: Optional[TransactionExecutionStatus] = None
     settle_transaction: Optional[TransactionExecutionStatus] = None
