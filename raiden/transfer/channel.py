@@ -1225,20 +1225,6 @@ def get_distributable(
     return TokenAmount(min(overflow_limit, distributable))
 
 
-def get_batch_unlock(
-    end_state: NettingChannelEndState,
-) -> Optional[PendingLocksState]:
-    """Unlock proof for entire pending locks
-
-    The unlock proof contains all the locks, tightly packed, needed by the token
-    network contract to verify the secret expiry and calculate the token amounts to transfer.
-    """
-
-    if len(end_state.pending_locks.locks) == 0:  # pylint: disable=len-as-condition
-        return None
-    return end_state.pending_locks
-
-
 def get_lock(
     end_state: NettingChannelEndState, secrethash: SecretHash
 ) -> Optional[HashTimeLockState]:
