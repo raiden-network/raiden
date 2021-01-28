@@ -67,7 +67,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
     SendUnlock,
 )
-from raiden.transfer.state import ChainState, NettingChannelEndState, NettingChannelState
+from raiden.transfer.state import ChainState, NettingChannelState
 from raiden.transfer.views import (
     get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
@@ -75,15 +75,7 @@ from raiden.transfer.views import (
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
-from raiden.utils.typing import (
-    MYPY_ANNOTATION,
-    TYPE_CHECKING,
-    Address,
-    BlockIdentifier,
-    Dict,
-    List,
-    Nonce,
-)
+from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, Dict, List, Nonce
 from raiden_contracts.constants import MessageTypeId
 
 if TYPE_CHECKING:
@@ -107,21 +99,6 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedWithdraw,
     EventRouteFailed,
 )
-
-
-def unlock(
-    payment_channel: PaymentChannel,
-    end_state: NettingChannelEndState,
-    sender: Address,
-    receiver: Address,
-    given_block_identifier: BlockIdentifier,
-) -> None:  # pragma: no unittest
-    payment_channel.unlock(
-        sender=sender,
-        receiver=receiver,
-        pending_locks=end_state.pending_locks,
-        given_block_identifier=given_block_identifier,
-    )
 
 
 def _update_lock_info(
@@ -671,11 +648,10 @@ class RaidenEventHandler(EventHandler):
 
             skip_unlock = gain.from_partner_locks == 0
             if not skip_unlock:
-                unlock(
-                    payment_channel=payment_channel,
-                    end_state=restored_channel_state.partner_state,
+                payment_channel.unlock(
                     sender=partner_address,
                     receiver=our_address,
+                    pending_locks=restored_channel_state.partner_state.pending_locks,
                     given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                 )
 
@@ -711,9 +687,8 @@ class RaidenEventHandler(EventHandler):
             skip_unlock = gain.from_our_locks == 0
             if not skip_unlock:
                 try:
-                    unlock(
-                        payment_channel=payment_channel,
-                        end_state=restored_channel_state.our_state,
+                    payment_channel.unlock(
+                        pending_locks=restored_channel_state.our_state.pending_locks,
                         sender=our_address,
                         receiver=partner_address,
                         given_block_identifier=channel_unlock_event.triggered_by_block_hash,
