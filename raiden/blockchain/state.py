@@ -20,10 +20,10 @@ well.
 """
 from dataclasses import dataclass
 
+import structlog
 from eth_utils import to_hex
 
 from raiden.blockchain.events import DecodedEvent
-from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.restore import (
@@ -45,6 +45,8 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
 )
+
+log = structlog.get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -171,6 +173,7 @@ def get_contractreceivechannelbatchunlock_data_from_event(
     elif participant2 == chain_state.our_address:
         partner = participant1
     else:
+        log.debug("Discarding unlock event, we're not part of it")
         return None
 
     channel_identifiers = token_network_state.partneraddresses_to_channelidentifiers[partner]
@@ -210,12 +213,11 @@ def get_contractreceivechannelbatchunlock_data_from_event(
                 )
                 break
 
-    msg = (
-        f"Can not resolve channel_id for unlock with locksroot {to_hex(locksroot)} and "
-        f"partner {to_checksum_address(partner)}."
-    )
     if canonical_identifier is None:
-        raise RaidenUnrecoverableError(msg)
+        log.warning(
+            f"Can not resolve channel_id for unlock with locksroot {to_hex(locksroot)} and "
+            f"partner {to_checksum_address(partner)}."
+        )
 
     return canonical_identifier
 

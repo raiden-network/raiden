@@ -375,8 +375,6 @@ def blockchainevent_to_statechange(
 
         if canonical_identifier is not None:
             return contractreceivechannelbatchunlock_from_event(canonical_identifier, event)
-        else:
-            log.debug("Discarding unlock event, we're not part of it", raiden_event=event)
 
     else:
         log.error("Unknown event type", raiden_event=event)
