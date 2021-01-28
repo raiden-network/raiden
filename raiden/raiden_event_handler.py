@@ -27,7 +27,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.architecture import Event
-from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
+from raiden.transfer.channel import get_batch_unlock_gain
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -116,13 +116,10 @@ def unlock(
     receiver: Address,
     given_block_identifier: BlockIdentifier,
 ) -> None:  # pragma: no unittest
-    pending_locks = get_batch_unlock(end_state)
-    assert pending_locks, "pending lock set is missing"
-
     payment_channel.unlock(
         sender=sender,
         receiver=receiver,
-        pending_locks=pending_locks,
+        pending_locks=end_state.pending_locks,
         given_block_identifier=given_block_identifier,
     )
 

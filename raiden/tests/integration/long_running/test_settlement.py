@@ -693,8 +693,7 @@ def test_settled_lock(
 
     # Save the pending locks from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
-    batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
-    assert batch_unlock
+    pending_locks = channelstate_0_1.our_state.pending_locks
 
     hold_event_handler.release_secretrequest_for(app1, secrethash)
 
@@ -731,7 +730,7 @@ def test_settled_lock(
         netting_channel.unlock(
             sender=channelstate_0_1.our_state.address,
             receiver=channelstate_0_1.partner_state.address,
-            pending_locks=batch_unlock,
+            pending_locks=pending_locks,
             given_block_identifier=current_block,
         )
 
