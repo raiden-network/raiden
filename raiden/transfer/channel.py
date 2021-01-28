@@ -1113,41 +1113,6 @@ def get_amount_locked(end_state: NettingChannelEndState) -> LockedAmount:
     return LockedAmount(result)
 
 
-def get_batch_unlock_gain(
-    channel_state: NettingChannelState,
-) -> UnlockGain:
-    """Collect amounts for unlocked/unclaimed locks and onchain unlocked locks.
-    Note: this function does not check expiry, so the values make only sense during settlement.
-
-    Returns:
-        gain_from_partner_locks: locks amount received and unlocked on-chain
-        gain_from_our_locks: locks amount which are unlocked or unclaimed
-    """
-    sum_from_partner_locks = sum(
-        unlock.lock.amount
-        for unlock in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
-    )
-    gain_from_partner_locks = TokenAmount(sum_from_partner_locks)
-
-    """
-    The current participant will gain from unlocking its own locks when:
-    - The partner never managed to provide the secret to unlock the locked amount.
-    - The partner provided the secret to claim the locked amount but the current
-      participant node never sent out the unlocked balance proof and the partner
-      did not unlock the lock on-chain.
-    """
-    our_locked_locks_amount = sum(
-        lock.amount for lock in channel_state.our_state.secrethashes_to_lockedlocks.values()
-    )
-    our_unclaimed_locks_amount = sum(
-        lock.amount for lock in channel_state.our_state.secrethashes_to_unlockedlocks.values()
-    )
-    gain_from_our_locks = TokenAmount(our_locked_locks_amount + our_unclaimed_locks_amount)
-    return UnlockGain(
-        from_partner_locks=gain_from_partner_locks, from_our_locks=gain_from_our_locks
-    )
-
-
 def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
     """Calculates the capacity of the given channel
 

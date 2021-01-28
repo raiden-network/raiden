@@ -27,7 +27,6 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.architecture import Event
-from raiden.transfer.channel import get_batch_unlock_gain
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -560,6 +559,10 @@ class RaidenEventHandler(EventHandler):
         chain_state: ChainState,
         channel_unlock_event: ContractSendChannelBatchUnlock,
     ) -> None:
+        """Potentially unlock locked tokens after settlement
+
+        See ContractSendChannelBatchUnlock for more details
+        """
         assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = channel_unlock_event.canonical_identifier
@@ -644,9 +647,12 @@ class RaidenEventHandler(EventHandler):
             )
             _update_lock_info(restored_channel_state, channel_state, chain_state)
 
-            gain = get_batch_unlock_gain(restored_channel_state)
+            onchain_unlocked = (
+                restored_channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
+            )
+            gain = sum(unlock.lock.amount for unlock in onchain_unlocked)
 
-            skip_unlock = gain.from_partner_locks == 0
+            skip_unlock = gain == 0
             if not skip_unlock:
                 payment_channel.unlock(
                     sender=partner_address,
@@ -682,9 +688,10 @@ class RaidenEventHandler(EventHandler):
             )
             _update_lock_info(restored_channel_state, channel_state, chain_state)
 
-            gain = get_batch_unlock_gain(restored_channel_state)
+            unclaimed = restored_channel_state.our_state.secrethashes_to_lockedlocks.values()
+            gain = sum(lock.amount for lock in unclaimed)
 
-            skip_unlock = gain.from_our_locks == 0
+            skip_unlock = gain == 0
             if not skip_unlock:
                 try:
                     payment_channel.unlock(
