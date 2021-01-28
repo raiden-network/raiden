@@ -126,7 +126,7 @@ click==7.1.2
     #   flask
     #   pip-tools
     #   raiden-contracts
-coincurve==13.0.0
+coincurve==14.0.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
