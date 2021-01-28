@@ -252,7 +252,7 @@ frozendict==1.2
     #   -r requirements-dev.txt
     #   canonicaljson
     #   matrix-synapse
-gevent==21.1.1
+gevent==21.1.2
     # via
     #   -r requirements-dev.txt
     #   grequests
