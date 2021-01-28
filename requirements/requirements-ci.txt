@@ -176,7 +176,7 @@ eth-account==0.5.4
     # via
     #   -r requirements-dev.txt
     #   web3
-eth-hash[pycryptodome]==0.2.0
+eth-hash[pycryptodome]==0.3.1
     # via
     #   -r requirements-dev.txt
     #   eth-utils
@@ -202,11 +202,12 @@ eth-typing==2.2.1
     #   eth-utils
     #   raiden-contracts
     #   web3
-eth-utils==1.9.5
+eth-utils==1.10.0
     # via
     #   -r requirements-dev.txt
     #   eth-abi
     #   eth-account
+    #   eth-hash
     #   eth-keyfile
     #   eth-keys
     #   eth-rlp
