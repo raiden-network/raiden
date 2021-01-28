@@ -217,8 +217,7 @@ six==1.15.0
     #   parsimonious
     #   protobuf
     #   pyrsistent
-    #   structlog
-structlog==20.1.0
+structlog==20.2.0
     # via -r requirements.in
 toml==0.10.2
     # via -r requirements.in

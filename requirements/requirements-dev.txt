@@ -582,7 +582,6 @@ six==1.15.0
     #   readme-renderer
     #   responses
     #   sphinxcontrib-httpdomain
-    #   structlog
     #   traitlets
     #   treq
 snowballstemmer==1.2.1
@@ -635,7 +634,7 @@ sphinxcontrib-serializinghtml==1.1.4
     # via
     #   -r requirements-docs.txt
     #   sphinx
-structlog==20.1.0
+structlog==20.2.0
     # via -r requirements.txt
 toml==0.10.2
     # via
