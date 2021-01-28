@@ -166,8 +166,8 @@ def _update_lock_info(
         # relevant to us, anymore. Otherwise, we would not have deleted the
         # payment task.
         # One case where this is necessary: We are a mediator and didn't unlock
-        # the receiver's BP, but the secret has been registered on-chain. We
-        # will receive an Unlock from our sender and delete our MediatorTask,
+        # the payee's BP, but the secret has been registered on-chain. We
+        # will receive an Unlock from the payer and delete our MediatorTask,
         # since we got our tokens. After deleting the task, we won't listen for
         # on-chain unlocks, so we wrongly consider the tokens in the outgoing
         # channel to be ours and send an on-chain unlock although we won't
