@@ -19,7 +19,6 @@ from raiden.tests.utils.factories import (
 from raiden.transfer import channel
 from raiden.transfer.channel import (
     compute_locksroot,
-    get_batch_unlock_gain,
     get_secret,
     get_status,
     handle_block,
@@ -345,37 +344,6 @@ def make_unlock_partial_proof_state(amount):
     return UnlockPartialProofState(
         lock=make_hash_time_lock_state(amount), secret=factories.UNIT_SECRET
     )
-
-
-def test_get_batch_unlock_gain():
-    channel_state = factories.create(factories.NettingChannelStateProperties())
-    channel_state.our_state = replace(
-        channel_state.our_state,
-        secrethashes_to_lockedlocks={
-            factories.make_secret_hash(): make_hash_time_lock_state(1),
-            factories.make_secret_hash(): make_hash_time_lock_state(2),
-        },
-        secrethashes_to_unlockedlocks={
-            factories.make_secret_hash(): make_unlock_partial_proof_state(4)
-        },
-        secrethashes_to_onchain_unlockedlocks={
-            factories.make_secret_hash(): make_unlock_partial_proof_state(8)
-        },
-    )
-    channel_state.partner_state = replace(
-        channel_state.partner_state,
-        secrethashes_to_lockedlocks={factories.make_secret_hash(): make_hash_time_lock_state(16)},
-        secrethashes_to_unlockedlocks={
-            factories.make_secret_hash(): make_unlock_partial_proof_state(32)
-        },
-        secrethashes_to_onchain_unlockedlocks={
-            factories.make_secret_hash(): make_unlock_partial_proof_state(64),
-            factories.make_secret_hash(): make_unlock_partial_proof_state(128),
-        },
-    )
-    unlock_gain = get_batch_unlock_gain(channel_state)
-    assert unlock_gain.from_partner_locks == 192
-    assert unlock_gain.from_our_locks == 7
 
 
 def test_handle_block_closed_channel():
