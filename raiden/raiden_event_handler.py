@@ -66,7 +66,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
     SendUnlock,
 )
-from raiden.transfer.state import ChainState, NettingChannelState
+from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import (
     get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
@@ -101,8 +101,8 @@ UNEVENTFUL_EVENTS = (
 
 
 def _update_lock_info(
-    state_to_update: NettingChannelState,
-    update_from_state: NettingChannelState,
+    old_state: NettingChannelEndState,
+    new_state: NettingChannelEndState,
     chain_state: ChainState,
 ) -> None:
     """Update old channel state with lock information from current state
@@ -110,46 +110,38 @@ def _update_lock_info(
     Call this after settlement, when you need to work on an older locksroot
     because the channel has been settled with an outdated balance proof.
     """
-    assert update_from_state.settle_transaction, "Channel must be settled"
-    for old_state, new_state in [
-        (state_to_update.our_state, update_from_state.our_state),
-        (state_to_update.partner_state, update_from_state.partner_state),
-    ]:
-        # After settlement, no unlocks can be processed. So all locks that are
-        # still present in the balance proof are locked, unless their secret is
-        # registered on-chain.
-        old_state.secrethashes_to_lockedlocks.update(
-            {
-                secret: unlock.lock
-                for secret, unlock in old_state.secrethashes_to_unlockedlocks.items()
-            }
-        )
-        old_state.secrethashes_to_unlockedlocks = {}
+    # After settlement, no unlocks can be processed. So all locks that are
+    # still present in the balance proof are locked, unless their secret is
+    # registered on-chain.
+    old_state.secrethashes_to_lockedlocks.update(
+        {secret: unlock.lock for secret, unlock in old_state.secrethashes_to_unlockedlocks.items()}
+    )
+    old_state.secrethashes_to_unlockedlocks = {}
 
-        # In the time between the states, some locks might have been unlocked
-        # on-chain. Update their state to "on-chain unlocked".
-        for secret, updated_unlock in new_state.secrethashes_to_onchain_unlockedlocks.items():
-            try:
-                del old_state.secrethashes_to_lockedlocks[secret]
-            except KeyError:
-                continue
-            old_state.secrethashes_to_onchain_unlockedlocks[secret] = updated_unlock
+    # In the time between the states, some locks might have been unlocked
+    # on-chain. Update their state to "on-chain unlocked".
+    for secret, updated_unlock in new_state.secrethashes_to_onchain_unlockedlocks.items():
+        try:
+            del old_state.secrethashes_to_lockedlocks[secret]
+        except KeyError:
+            continue
+        old_state.secrethashes_to_onchain_unlockedlocks[secret] = updated_unlock
 
-        # If we don't have a task for the secret, then that lock can't be
-        # relevant to us, anymore. Otherwise, we would not have deleted the
-        # payment task.
-        # One case where this is necessary: We are a mediator and didn't unlock
-        # the payee's BP, but the secret has been registered on-chain. We
-        # will receive an Unlock from the payer and delete our MediatorTask,
-        # since we got our tokens. After deleting the task, we won't listen for
-        # on-chain unlocks, so we wrongly consider the tokens in the outgoing
-        # channel to be ours and send an on-chain unlock although we won't
-        # unlock any tokens to our benefit.
-        old_state.secrethashes_to_lockedlocks = {
-            secret: lock
-            for secret, lock in old_state.secrethashes_to_lockedlocks.items()
-            if secret in chain_state.payment_mapping.secrethashes_to_task
-        }
+    # If we don't have a task for the secret, then that lock can't be
+    # relevant to us, anymore. Otherwise, we would not have deleted the
+    # payment task.
+    # One case where this is necessary: We are a mediator and didn't unlock
+    # the payee's BP, but the secret has been registered on-chain. We
+    # will receive an Unlock from the payer and delete our MediatorTask,
+    # since we got our tokens. After deleting the task, we won't listen for
+    # on-chain unlocks, so we wrongly consider the tokens in the outgoing
+    # channel to be ours and send an on-chain unlock although we won't
+    # unlock any tokens to our benefit.
+    old_state.secrethashes_to_lockedlocks = {
+        secret: lock
+        for secret, lock in old_state.secrethashes_to_lockedlocks.items()
+        if secret in chain_state.payment_mapping.secrethashes_to_task
+    }
 
 
 class EventHandler(ABC):
@@ -645,7 +637,9 @@ class RaidenEventHandler(EventHandler):
                 canonical_identifier=canonical_identifier,
                 state_change_identifier=state_change_identifier,
             )
-            _update_lock_info(restored_channel_state, channel_state, chain_state)
+            _update_lock_info(
+                restored_channel_state.partner_state, channel_state.partner_state, chain_state
+            )
 
             onchain_unlocked = (
                 restored_channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
@@ -686,7 +680,9 @@ class RaidenEventHandler(EventHandler):
                 canonical_identifier=canonical_identifier,
                 state_change_identifier=state_change_identifier,
             )
-            _update_lock_info(restored_channel_state, channel_state, chain_state)
+            _update_lock_info(
+                restored_channel_state.our_state, channel_state.our_state, chain_state
+            )
 
             unclaimed = restored_channel_state.our_state.secrethashes_to_lockedlocks.values()
             gain = sum(lock.amount for lock in unclaimed)
