@@ -16,6 +16,7 @@ flake8
 flake8-comprehensions
 flake8-bugbear
 flake8-tuple
+flake8-fixme
 isort
 readme-renderer
 pylint
