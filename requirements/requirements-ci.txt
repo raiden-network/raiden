@@ -392,7 +392,7 @@ mypy-extensions==0.4.3
     #   typing-inspect
 mypy==0.790
     # via -r requirements-dev.txt
-nest-asyncio==1.4.3
+nest-asyncio==1.5.1
     # via -r requirements-dev.txt
 netaddr==0.7.19
     # via
