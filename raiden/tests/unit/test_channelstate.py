@@ -1264,10 +1264,7 @@ def test_channelstate_get_unlock_proof():
     end_state.secrethashes_to_unlockedlocks = unlocked_locks
     end_state.pending_locks = pending_locks
 
-    unlock_proof = channel.get_batch_unlock(end_state)
-    assert len(unlock_proof.locks) == len(end_state.pending_locks.locks)
-    leaves_packed = b"".join(unlock_proof.locks)
-
+    leaves_packed = b"".join(end_state.pending_locks.locks)
     recomputed_pending_locks = pending_locks_from_packed_data(leaves_packed)
     assert len(recomputed_pending_locks.locks) == len(end_state.pending_locks.locks)
 
