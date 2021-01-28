@@ -787,7 +787,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.13.1
+web3==5.15.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
