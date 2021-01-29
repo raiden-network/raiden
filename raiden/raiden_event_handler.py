@@ -646,8 +646,7 @@ class RaidenEventHandler(EventHandler):
             )
             gain = sum(unlock.lock.amount for unlock in onchain_unlocked)
 
-            skip_unlock = gain == 0
-            if not skip_unlock:
+            if gain > 0:
                 payment_channel.unlock(
                     sender=partner_address,
                     receiver=our_address,
@@ -687,8 +686,7 @@ class RaidenEventHandler(EventHandler):
             unclaimed = restored_channel_state.our_state.secrethashes_to_lockedlocks.values()
             gain = sum(lock.amount for lock in unclaimed)
 
-            skip_unlock = gain == 0
-            if not skip_unlock:
+            if gain > 0:
                 try:
                     payment_channel.unlock(
                         pending_locks=restored_channel_state.our_state.pending_locks,
