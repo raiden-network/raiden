@@ -499,7 +499,7 @@ def test_secret_revealed_on_chain(
             token_network_address, app0, deposit - amount, [], app1, deposit + amount, []
         )
 
-        with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(20):
+        with watch_for_unlock_failures(*raiden_chain), gevent.Timeout(40):
             wait_for_state_change(
                 app1,
                 ContractReceiveChannelBatchUnlock,
