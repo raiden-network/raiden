@@ -17,10 +17,16 @@ def copy_metadata(package_name):
 
 # Add metadata of all required packages to allow pkg_resources.require() to work
 required_packages = [("raiden", [])]
+processed_packages = set()  # break out of circular dependencies
 while required_packages:
     req_name, req_extras = required_packages.pop()
     for req in pkg_resources.get_distribution(req_name).requires(req_extras):
-        required_packages.append((req.project_name, list(req.extras)))
+        dep_tuple = (req.project_name, tuple(req.extras))
+        if dep_tuple in processed_packages:
+            continue
+
+        required_packages.append(dep_tuple)
+        processed_packages.add(dep_tuple)
     try:
         datas.extend(copy_metadata(req_name))
     except AssertionError:
