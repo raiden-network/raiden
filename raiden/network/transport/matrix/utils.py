@@ -671,7 +671,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: s
         user.set_display_name(signature_hex)
 
     try:
-        current_capabilities = user.get_avatar_url() or ""
+        current_capabilities = user.api.get_avatar_url(user.user_id) or ""
     except MatrixRequestError as ex:
         log.error(
             "Ignoring Matrix error in `get_avatar_url`",
