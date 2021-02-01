@@ -342,7 +342,7 @@ class UserAddressManager:
         """ This pulls the `avatar_url` for a given user/user_id and parses the capabilities.  """
         try:
             user: User = self._client.get_user(user_id)
-            avatar_url = user.get_avatar_url()
+            avatar_url = user.api.get_avatar_url(user.user_id)
             if avatar_url is not None:
                 return PeerCapabilities(deserialize_capabilities(avatar_url))
         except MatrixRequestError:
