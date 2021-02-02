@@ -341,8 +341,7 @@ class UserAddressManager:
     def query_capabilities_for_user_id(self, user_id: str) -> PeerCapabilities:
         """ This pulls the `avatar_url` for a given user/user_id and parses the capabilities.  """
         try:
-            user: User = self._client.get_user(user_id)
-            avatar_url = user.api.get_avatar_url(user.user_id)
+            avatar_url = self._client.api.get_avatar_url(user_id)
             if avatar_url is not None:
                 return PeerCapabilities(deserialize_capabilities(avatar_url))
         except MatrixRequestError:
@@ -671,7 +670,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: s
         user.set_display_name(signature_hex)
 
     try:
-        current_capabilities = user.api.get_avatar_url(user.user_id) or ""
+        current_capabilities = client.api.get_avatar_url(client.user_id) or ""
     except MatrixRequestError as ex:
         log.error(
             "Ignoring Matrix error in `get_avatar_url`",
