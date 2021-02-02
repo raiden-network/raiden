@@ -70,7 +70,7 @@ bitarray==1.2.1
     #   eth-account
 black==20.8b1
     # via -r requirements-dev.in
-bleach==3.1.4
+bleach==3.3.0
     # via
     #   matrix-synapse
     #   readme-renderer
@@ -367,6 +367,7 @@ objgraph==3.5.0
 packaging==19.0
     # via
     #   -r requirements-docs.txt
+    #   bleach
     #   pytest
     #   sphinx
 parsimonious==0.8.1
