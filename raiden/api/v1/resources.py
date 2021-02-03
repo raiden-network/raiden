@@ -12,6 +12,7 @@ from raiden.api.v1.encoding import (
     MintTokenSchema,
     PaymentSchema,
     RaidenEventsRequestSchema,
+    UserDepositPostSchema,
 )
 from raiden.utils.typing import TYPE_CHECKING, Address, Any, TargetAddress, TokenAddress
 
@@ -253,6 +254,15 @@ class PendingTransfersResourceByTokenAndPartnerAddress(BaseResource):
     @if_api_available
     def get(self, token_address: TokenAddress, partner_address: Address) -> Response:
         return self.rest_api.get_pending_transfers(token_address, partner_address)
+
+
+class UserDepositResource(BaseResource):
+    post_schema = UserDepositPostSchema()
+
+    @if_api_available
+    def post(self) -> Response:
+        kwargs = validate_json(self.post_schema)
+        return self.rest_api.send_udc_transaction(**kwargs)
 
 
 class StatusResource(BaseResource):
