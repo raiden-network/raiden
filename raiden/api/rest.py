@@ -55,6 +55,7 @@ from raiden.api.v1.resources import (
     ShutdownResource,
     StatusResource,
     TokensResource,
+    UserDepositResource,
     VersionResource,
     create_blueprint,
 )
@@ -89,6 +90,7 @@ from raiden.exceptions import (
     TokenNotRegistered,
     UnexpectedChannelState,
     UnknownTokenAddress,
+    UserDepositNotConfigured,
     WithdrawMismatch,
 )
 from raiden.network.rpc.client import JSONRPCClient
@@ -166,6 +168,7 @@ URLS_V1 = [
         PendingTransfersResourceByTokenAndPartnerAddress,
         "pending_transfers_resource_by_token_and_partner",
     ),
+    ("/user_deposit", UserDepositResource),
     ("/status", StatusResource),
     ("/shutdown", ShutdownResource),
     ("/_debug/raiden_events", RaidenInternalEventsResource),
@@ -1325,6 +1328,131 @@ class RestAPI:  # pragma: no unittest
             )
         except (ChannelNotFound, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
+
+    def _deposit_to_udc(self, total_deposit: TokenAmount) -> Response:
+        log.debug(
+            "Depositing to UDC",
+            node=self.checksum_address,
+            total_deposit=total_deposit,
+        )
+
+        try:
+            transaction_hash = self.raiden_api.set_total_udc_deposit(total_deposit)
+        except (InsufficientEth, InsufficientFunds) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
+        except (DepositOverLimit, DepositMismatch) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except UserDepositNotConfigured as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
+        except RaidenRecoverableError as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+
+        return api_response(
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(transaction_hash))
+        )
+
+    def _plan_withdraw_from_udc(self, planned_withdraw_amount: TokenAmount) -> Response:
+        log.debug(
+            "Planning a withdraw from UDC",
+            node=self.checksum_address,
+            planned_withdraw_amount=planned_withdraw_amount,
+        )
+
+        try:
+            (transaction_hash, planned_withdraw_block_number) = self.raiden_api.plan_udc_withdraw(
+                planned_withdraw_amount
+            )
+        except InsufficientEth as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
+        except WithdrawMismatch as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except UserDepositNotConfigured as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
+        except RaidenRecoverableError as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+
+        result = dict(
+            transaction_hash=encode_hex(transaction_hash),
+            planned_withdraw_block_number=planned_withdraw_block_number,
+        )
+        return api_response(status_code=HTTPStatus.OK, result=result)
+
+    def _withdraw_from_udc(self, amount: TokenAmount) -> Response:
+        log.debug(
+            "Withdraw from UDC",
+            node=self.checksum_address,
+            amount=amount,
+        )
+
+        try:
+            transaction_hash = self.raiden_api.withdraw_from_udc(amount)
+        except InsufficientEth as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
+        except WithdrawMismatch as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+        except UserDepositNotConfigured as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
+        except RaidenRecoverableError as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
+
+        return api_response(
+            status_code=HTTPStatus.OK, result=dict(transaction_hash=encode_hex(transaction_hash))
+        )
+
+    def send_udc_transaction(
+        self,
+        total_deposit: TokenAmount = None,
+        planned_withdraw_amount: TokenAmount = None,
+        withdraw_amount: TokenAmount = None,
+    ) -> Response:
+        log.debug(
+            "Sending UDC transaction",
+            node=self.checksum_address,
+            total_deposit=total_deposit,
+            planned_withdraw_amount=planned_withdraw_amount,
+            withdraw_amount=withdraw_amount,
+        )
+
+        if total_deposit is not None and planned_withdraw_amount is not None:
+            return api_error(
+                errors="Cannot deposit to UDC and plan a withdraw at the same time",
+                status_code=HTTPStatus.BAD_REQUEST,
+            )
+
+        if total_deposit is not None and withdraw_amount is not None:
+            return api_error(
+                errors="Cannot deposit to UDC and withdraw at the same time",
+                status_code=HTTPStatus.BAD_REQUEST,
+            )
+
+        if withdraw_amount is not None and planned_withdraw_amount is not None:
+            return api_error(
+                errors="Cannot withdraw from UDC and plan a withdraw at the same time",
+                status_code=HTTPStatus.BAD_REQUEST,
+            )
+
+        empty_request = (
+            total_deposit is None and planned_withdraw_amount is None and withdraw_amount is None
+        )
+        if empty_request:
+            return api_error(
+                errors=(
+                    "Nothing to do. Should either provide 'total_deposit', "
+                    "'planned_withdraw_amount' or 'withdraw_amount' argument"
+                ),
+                status_code=HTTPStatus.BAD_REQUEST,
+            )
+
+        if total_deposit is not None:
+            result = self._deposit_to_udc(total_deposit)
+
+        elif planned_withdraw_amount is not None:
+            result = self._plan_withdraw_from_udc(planned_withdraw_amount)
+
+        elif withdraw_amount is not None:
+            result = self._withdraw_from_udc(withdraw_amount)
+
+        return result
 
     def get_status(self) -> Response:
         if self.available:
