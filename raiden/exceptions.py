@@ -390,3 +390,9 @@ class MatrixSyncMaxTimeoutReached(RaidenRecoverableError):
 
 class ConfigurationError(RaidenError):
     """ Raised when there is something wrong with the provided Raiden Configuration/arguments """
+
+
+class UserDepositNotConfigured(RaidenRecoverableError):
+    """Raised when trying to perform operations on a user deposit contract but none has been
+    configured for the Raiden node.
+    """

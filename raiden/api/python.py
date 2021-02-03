@@ -26,6 +26,7 @@ from raiden.exceptions import (
     TokenNotRegistered,
     UnexpectedChannelState,
     UnknownTokenAddress,
+    UserDepositNotConfigured,
     WithdrawMismatch,
 )
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, PythonApiConfig
@@ -49,6 +50,7 @@ from raiden.utils.typing import (
     Address,
     Any,
     BlockIdentifier,
+    BlockNumber,
     BlockTimeout,
     ChannelID,
     Dict,
@@ -69,6 +71,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
     TransactionHash,
+    Tuple,
     WithdrawAmount,
 )
 
@@ -1166,6 +1169,151 @@ class RaidenAPI:  # pragma: no unittest
                 channel_id = partner_channel.identifier
 
         return transfer_tasks_view(transfer_tasks, token_address, channel_id)
+
+    def set_total_udc_deposit(self, new_total_deposit: TokenAmount) -> TransactionHash:
+        """Set the `total_deposit` in the UserDeposit contract by sending an on-chain transaction.
+
+        Raises:
+            UserDepositNotConfigured: No UserDeposit is configured for the
+                Raiden node.
+            DepositMismatch: The new `total_deposit` is not higher than the
+                previous one.
+            DepositOverLimit: Either an overflow happened or the
+                `whole_balance_limit` of the UserDeposit contract is exceeded.
+            InsufficientFunds: Not enough tokens for the deposit.
+            RaidenRecoverableError: The transaction failed for any reason.
+
+        Returns: TransactionHash of the successfully mined transaction.
+        """
+        user_deposit = self.raiden.default_user_deposit
+
+        if user_deposit is None:
+            raise UserDepositNotConfigured("No UserDeposit contract is configured.")
+
+        chain_state = views.state_from_raiden(self.raiden)
+        confirmed_block_identifier = chain_state.block_hash
+
+        current_total_deposit = user_deposit.get_total_deposit(
+            address=self.address, block_identifier=confirmed_block_identifier
+        )
+        addendum = new_total_deposit - current_total_deposit
+
+        whole_balance = user_deposit.whole_balance(block_identifier=confirmed_block_identifier)
+        whole_balance_limit = user_deposit.whole_balance_limit(
+            block_identifier=confirmed_block_identifier
+        )
+
+        token_address = user_deposit.token_address(block_identifier=confirmed_block_identifier)
+        token = self.raiden.proxy_manager.token(
+            token_address, block_identifier=confirmed_block_identifier
+        )
+        balance = token.balance_of(
+            address=self.address, block_identifier=confirmed_block_identifier
+        )
+
+        if new_total_deposit <= current_total_deposit:
+            raise DepositMismatch("Total deposit did not increase.")
+
+        if whole_balance + addendum > UINT256_MAX:
+            raise DepositOverLimit("Deposit overflow.")
+
+        if whole_balance + addendum > whole_balance_limit:
+            msg = f"Deposit of {addendum} would have exceeded the UDC balance limit."
+            raise DepositOverLimit(msg)
+
+        if balance < addendum:
+            msg = f"Not enough balance to deposit. Available={balance} Needed={addendum}"
+            raise InsufficientFunds(msg)
+
+        return user_deposit.approve_and_deposit(
+            beneficiary=self.address,
+            total_deposit=new_total_deposit,
+            given_block_identifier=confirmed_block_identifier,
+        )
+
+    def plan_udc_withdraw(self, amount: TokenAmount) -> Tuple[TransactionHash, BlockNumber]:
+        """Plan a withdraw of `amount` from the UserDeposit contract by sending an on-chain
+        transaction.
+
+        Raises:
+            UserDepositNotConfigured: No UserDeposit is configured for the
+                Raiden node.
+            WithdrawMismatch: Withdrawing more than the available balance or
+                a zero or negative amount.
+            RaidenRecoverableError: The transaction failed for any reason.
+
+        Returns:
+            Tuple of the TransactionHash and the BlockNumber at which the
+            withdraw is ready.
+        """
+        user_deposit = self.raiden.default_user_deposit
+
+        if user_deposit is None:
+            raise UserDepositNotConfigured("No UserDeposit contract is configured.")
+
+        chain_state = views.state_from_raiden(self.raiden)
+        confirmed_block_identifier = chain_state.block_hash
+
+        balance = user_deposit.get_balance(
+            address=self.address, block_identifier=confirmed_block_identifier
+        )
+
+        if amount <= 0:
+            raise WithdrawMismatch("Withdraw amount must be greater than zero.")
+
+        if amount > balance:
+            msg = f"The withdraw of {amount} is bigger than the current balance of {balance}."
+            raise WithdrawMismatch(msg)
+
+        return user_deposit.plan_withdraw(
+            amount=amount, given_block_identifier=confirmed_block_identifier
+        )
+
+    def withdraw_from_udc(self, amount: TokenAmount) -> TransactionHash:
+        """Withdraw an `amount` from the UserDeposit contract by sending an on-chain
+        transaction. The withdraw has to be planned first with `plan_udc_withdraw`.
+
+        Raises:
+            UserDepositNotConfigured: No UserDeposit is configured for the
+                Raiden node.
+            WithdrawMismatch: Withdrawing more than the planned withdraw amount
+                or at an earlier block than the planned withdraw is ready.
+            RaidenRecoverableError: The transaction failed for any reason.
+
+        Returns: TransactionHash of the successfully mined transaction.
+        """
+        user_deposit = self.raiden.default_user_deposit
+
+        if user_deposit is None:
+            raise UserDepositNotConfigured("No UserDeposit contract is configured.")
+
+        chain_state = views.state_from_raiden(self.raiden)
+        confirmed_block_identifier = chain_state.block_hash
+        block_number = chain_state.block_number
+
+        withdraw_plan = user_deposit.get_withdraw_plan(
+            withdrawer_address=self.address, block_identifier=confirmed_block_identifier
+        )
+        whole_balance = user_deposit.whole_balance(block_identifier=confirmed_block_identifier)
+
+        if amount <= 0:
+            raise WithdrawMismatch("Withdraw amount must be greater than zero.")
+
+        if amount > withdraw_plan.withdraw_amount:
+            raise WithdrawMismatch("Withdrawing more than planned.")
+
+        if block_number < withdraw_plan.withdraw_block:
+            raise WithdrawMismatch(
+                f"Withdrawing too early. Planned withdraw at block "
+                f"{withdraw_plan.withdraw_block}. Current block: {block_number}."
+            )
+
+        if whole_balance - amount < 0:
+            raise WithdrawMismatch("Whole balance underflow.")
+
+        return user_deposit.withdraw(
+            amount=amount, given_block_identifier=confirmed_block_identifier
+        )
 
     def shutdown(self) -> None:
         self.raiden.stop()

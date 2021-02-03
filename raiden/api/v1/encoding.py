@@ -367,3 +367,9 @@ class EventPaymentReceivedSuccessSchema(EventPaymentSchema):
             "log_time",
             "token_address",
         )
+
+
+class UserDepositPostSchema(BaseSchema):
+    total_deposit = IntegerToStringField(default=None, missing=None)
+    planned_withdraw_amount = IntegerToStringField(default=None, missing=None)
+    withdraw_amount = IntegerToStringField(default=None, missing=None)
