@@ -5,8 +5,8 @@ The Raiden project utilizes the `Architectural Decision Records <https://github.
 
 The following is an overview of the Raiden ADRs
 
-Contents
---------
+Finished ADRs
+-------------
 
 .. toctree::
   :maxdepth: 1
@@ -16,3 +16,15 @@ Contents
   0004-python-dependency-management
   0005-withdraw-expiry
   0006-transport-mulitlayer-with-webRTC
+  0007-drain-imbalance-fee
+  0008-connection-manager-prevents-fast-sync
+  0010-refunds
+
+Discussion Documents
+--------------------
+
+.. toctree::
+  :maxdepth: 1
+
+  0011-routing-with-token-swaps
+  0012-token-swaps
