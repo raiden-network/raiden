@@ -78,6 +78,7 @@ Contents
   :maxdepth: 2
   :caption: Other
 
+  other/safe-usage
   config_file
   trademarks
 
