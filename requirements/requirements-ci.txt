@@ -279,7 +279,7 @@ hyperlink==19.0.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-hypothesis==6.0.4
+hypothesis==6.1.1
     # via -r requirements-dev.txt
 idna==2.8
     # via

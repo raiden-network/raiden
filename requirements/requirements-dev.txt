@@ -251,7 +251,7 @@ hexbytes==0.2.0
     #   web3
 hyperlink==19.0.0
     # via twisted
-hypothesis==6.0.4
+hypothesis==6.1.1
     # via -r requirements-dev.in
 idna==2.8
     # via
