@@ -4,11 +4,11 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-aioice==0.6.18
+aioice==0.7.3
     # via
     #   -r requirements.txt
     #   aiortc
-aiortc==1.0.0
+aiortc==1.1.1
     # via -r requirements.txt
 alabaster==0.7.12
     # via
@@ -120,7 +120,7 @@ constantly==15.1.0
     # via twisted
 coverage==5.3.1
     # via -r requirements-dev.in
-crc32c==2.0
+crc32c==2.2
     # via
     #   -r requirements.txt
     #   aiortc
@@ -139,6 +139,10 @@ decorator==4.4.2
     # via
     #   ipython
     #   traitlets
+dnspython==2.1.0
+    # via
+    #   -r requirements.txt
+    #   aioice
 docutils==0.14
     # via
     #   -r requirements-docs.txt
