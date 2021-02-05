@@ -4,9 +4,9 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-aioice==0.6.18
+aioice==0.7.3
     # via aiortc
-aiortc==1.0.0
+aiortc==1.1.1
     # via -r requirements.in
 aniso8601==7.0.0
     # via flask-restful
@@ -43,7 +43,7 @@ coincurve==14.0.0
     #   raiden-contracts
 colorama==0.4.4
     # via -r requirements.in
-crc32c==2.0
+crc32c==2.2
     # via aiortc
 cryptography==3.2
     # via aiortc
@@ -51,6 +51,8 @@ cytoolz==0.10.1
     # via
     #   eth-keyfile
     #   eth-utils
+dnspython==2.1.0
+    # via aioice
 eth-abi==2.1.0
     # via
     #   eth-account
