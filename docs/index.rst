@@ -64,7 +64,6 @@ Contents
   rest_api
   raiden_services
   private_net_tutorial
-  glossary
 
 .. toctree::
   :maxdepth: 2
@@ -80,6 +79,7 @@ Contents
 
   other/safe-usage
   config_file
+  glossary
   trademarks
 
 .. toctree::
