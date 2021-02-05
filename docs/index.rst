@@ -78,6 +78,7 @@ Contents
   :caption: Other
 
   other/safe-usage
+  other/known-issues
   config_file
   glossary
   trademarks
