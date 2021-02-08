@@ -128,6 +128,30 @@ Querying Information About Your Raiden Node
           "version": "0.100.5a1.dev157+geb2af878d"
       }
 
+.. _api_settings:
+
+.. http:get:: /api/(version)/settings
+
+   Queries the settings of your Raiden node. At the moment only the URL of the pathfinding service is returned. The endpoint will provide more settings in the future.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/settings HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "pathfinding_service_address": "https://pfs.transport04.raiden.network"
+      }
+
 Deploying
 =========
 .. note::
