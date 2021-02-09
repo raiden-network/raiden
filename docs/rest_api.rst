@@ -76,6 +76,8 @@ However, when Raiden fails to process the incoming request and raises an excepti
 This is because we rely on our underlying stack to handle this while we take care of shutting down the API server preventing further incoming requests caused the exception in the first place from tampering with a state that was corrupted.
 In any way, we consider :http:statuscode:`500` errors as bugs in the Raiden client. If you encounter such errors, please report the bug `here <https://github.com/raiden-network/raiden/issues/new?template=bug_report.md>`_.
 
+.. _api_endpoints:
+
 Endpoints
 ***********
 
@@ -83,6 +85,8 @@ Following are the available API endpoints with which you can interact with Raide
 
 Querying Information About Your Raiden Node
 ===============================================
+
+.. _api_address:
 
 .. http:get:: /api/(version)/address
 
@@ -268,6 +272,8 @@ Querying Information About Channels and Tokens
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
+.. _api_channel_info:
+
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
 
    Query information about one of your channels. The channel is specified by the address of the token and the partner's address.
@@ -305,6 +311,8 @@ Querying Information About Channels and Tokens
     - The channel does not exist
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+.. _api_tokens:
 
 .. http:get:: /api/(version)/tokens
 
@@ -462,6 +470,8 @@ Querying Information About Channels and Tokens
 Channel Management
 ==================
 
+.. _api_open_channel:
+
 .. http:put:: /api/(version)/channels
 
    Opens (i. e. creates) a channel.
@@ -524,6 +534,8 @@ Channel Management
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
+.. _api_close_channel:
+
 .. http:patch:: /api/(version)/channels/(token_address)/(partner_address)
 
    This request is used to close a channel or to increase the deposit in it.
@@ -540,6 +552,8 @@ Channel Management
           "state": "closed"
       }
 
+.. _api_increase_deposit:
+
    **Example Request (increase deposit)**:
 
    .. http:example:: curl wget httpie python-requests
@@ -551,6 +565,8 @@ Channel Management
       {
           "total_deposit": "100"
       }
+
+.. _api_withdraw:
 
    **Example Request (withdraw tokens)**:
 
@@ -661,6 +677,7 @@ Connection Management
    :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
    :resjsonarr int channels: Number of channels currently open for that token
 
+.. _api_leave_tn:
 
 .. http:delete:: /api/(version)/connections/(token_address)
 
@@ -701,6 +718,8 @@ Connection Management
 
 Payments
 ========
+
+.. _api_init_payment:
 
 .. http:post:: /api/(version)/payments/(token_address)/(target_address)
 
@@ -789,7 +808,7 @@ For ``raiden_events`` you can provide a ``limit`` and an ``offset`` number which
 ``raiden_events`` contain a timestamp field, ``log_time``, indicating when they were written to the write-ahead log.
 The format of ``log_time`` is ISO8601 with milliseconds.
 
-
+.. _api_list_payments:
 
 .. http:get:: /api/(version)/payments/(token_address)/(target_address)
 
