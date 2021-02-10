@@ -45,7 +45,7 @@ colorama==0.4.4
     # via -r requirements.in
 crc32c==2.2
     # via aiortc
-cryptography==3.2
+cryptography==3.3.2
     # via aiortc
 cytoolz==0.10.1
     # via

@@ -144,7 +144,7 @@ crc32c==2.2
     # via
     #   -r requirements-dev.txt
     #   aiortc
-cryptography==3.2
+cryptography==3.3.2
     # via
     #   -r requirements-dev.txt
     #   aiortc
