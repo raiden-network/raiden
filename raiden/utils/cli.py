@@ -2,17 +2,20 @@ import errno
 import json
 import os
 import re
+from abc import ABCMeta, abstractmethod
 from enum import EnumMeta
 from itertools import groupby
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, MutableMapping, Union
+from typing import Any, Callable, Dict, List, MutableMapping, Optional, Set
 
 import click
 import requests
-from click import Choice, MissingParameter
+import structlog
+from click import Choice
 from click._compat import term_len
+from click.core import ParameterSource  # type: ignore
 from click.formatting import iter_rows, measure_table, wrap_text
 from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
@@ -22,6 +25,8 @@ from raiden.exceptions import ConfigurationError, InvalidChecksummedAddress
 from raiden.network.rpc.middleware import faster_gas_price_strategy
 from raiden.utils.formatting import address_checksum_and_decode
 from raiden_contracts.constants import CHAINNAME_TO_ID
+
+log = structlog.get_logger(__name__)
 
 CONTEXT_KEY_DEFAULT_OPTIONS = "raiden.options_using_default"
 LOG_CONFIG_OPTION_NAME = "log_config"
@@ -66,103 +71,68 @@ class HelpFormatter(click.HelpFormatter):
             lines = iter(wrap_text(second, text_width).splitlines())
             if lines:
                 self.write(next(lines) + "\n")
-                for line in lines:
-                    self.write("%*s%s\n" % (first_col + self.current_indent, "", line))
+            for line in lines:
+                self.write("%*s%s\n" % (first_col + self.current_indent, "", line))
             else:
                 self.write("\n")
 
 
 class Context(click.Context):
-    def make_formatter(self):
-        return HelpFormatter(width=self.terminal_width, max_width=self.max_content_width)
+    formatter_class = HelpFormatter
 
 
-class CustomContextMixin:
-    """ Use above context class instead of the click default """
-
-    def make_context(self, info_name, args, parent=None, **extra):
-        """
-        This function when given an info name and arguments will kick
-        off the parsing and create a new :class:`Context`.  It does not
-        invoke the actual command callback though.
-
-        :param info_name: the info name for this invokation.  Generally this
-                          is the most descriptive name for the script or
-                          command.  For the toplevel script it's usually
-                          the name of the script, for commands below it it's
-                          the name of the script.
-        :param args: the arguments to parse as list of strings.
-        :param parent: the parent context if available.
-        :param extra: extra keyword arguments forwarded to the context
-                      constructor.
-        """
-        for key, value in iter(self.context_settings.items()):  # type: ignore
-            if key not in extra:
-                extra[key] = value
-        ctx = Context(self, info_name=info_name, parent=parent, **extra)  # type: ignore
-        with ctx.scope(cleanup=False):
-            self.parse_args(ctx, args)  # type: ignore
-        return ctx
-
-
-class UsesDefaultValueOptionMixin(click.Option):
-    def full_process_value(self, ctx, value):
-        """
-        Slightly modified copy of ``Option.full_process_value()`` that records which options use
-        default values in ``ctx.meta['raiden.options_using_default']``.
-
-        This is then used in ``apply_config_file()`` to establish precedence between values given
-        via the config file and the cli.
-        """
-        if value is None and self.prompt is not None and not ctx.resilient_parsing:  # type: ignore
-            return self.prompt_for_value(ctx)
-
-        value = self.process_value(ctx, value)
-
-        if value is None:
-            value = self.get_default(ctx)
-            if not self.value_is_missing(value):
-                ctx.meta.setdefault(CONTEXT_KEY_DEFAULT_OPTIONS, set()).add(self.name)
-
-        if self.required and self.value_is_missing(value):
-            raise MissingParameter(ctx=ctx, param=self)
-
-        return value
-
-
-class GroupableOption(UsesDefaultValueOptionMixin, click.Option):
+class GroupableOption(click.Option):
     def __init__(
         self,
         param_decls=None,
         show_default=False,
         prompt=False,
         confirmation_prompt=False,
+        prompt_required=True,
         hide_input=False,
         is_flag=None,
         flag_value=None,
         multiple=False,
         count=False,
         allow_from_autoenv=True,
+        type=None,  # pylint: disable=redefined-builtin
+        help=None,  # pylint: disable=redefined-builtin
+        hidden=False,
+        show_choices=True,
+        show_envvar=False,
         option_group=None,
+        option_parser_cls=None,
+        option_parser_priority=None,
         **attrs,
     ):
-        super().__init__(
+        super().__init__(  # type: ignore
             param_decls,
             show_default,
             prompt,
             confirmation_prompt,
+            prompt_required,
             hide_input,
             is_flag,
             flag_value,
             multiple,
             count,
             allow_from_autoenv,
+            type,
+            help,
+            hidden,
+            show_choices,
+            show_envvar,
             **attrs,
         )
         self.option_group = option_group
+        self.option_parser = None
+        if option_parser_cls is not None:
+            self.option_parser = option_parser_cls(self.name, priority=option_parser_priority)
 
 
-class GroupableOptionCommand(CustomContextMixin, click.Command):
+class GroupableOptionCommand(click.Command):
+    context_class = Context
+
     def format_options(self, ctx, formatter):
         def keyfunc(o):
             value = getattr(o, "option_group", None)
@@ -188,7 +158,71 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
                     formatter.write_dl(group_options, widths=widths)
 
 
-class GroupableOptionCommandGroup(CustomContextMixin, click.Group):
+class GroupableOptionCommandGroup(click.Group):
+    context_class = Context
+
+    def __init__(
+        self,
+        use_option_parsers=True,
+        **attrs,
+    ):
+        super().__init__(**attrs)
+        parsers = list()
+        for param in self.params:
+            # make this compatible with unmodified click.Option
+            parser = getattr(param, "option_parser", None)
+            if parser is not None:
+                parsers.append(parser)
+                for param in self.params:
+                    parser.register_param(param)
+        self._extra_parsers = sorted(parsers)
+        self._name_to_param = {param.name: param for param in self.params}
+        self.use_option_parsers = use_option_parsers
+
+    @staticmethod
+    def _process_parse_result(ctx, param_name, source, value, parser_value):
+        # since all parsers set the value as ParameterSource.DEFAULT_MAP,
+        # we can overwrite either previously set parser values, or values
+        # that come from the options default values
+
+        can_be_overwritten = value is None or source in (
+            ParameterSource.DEFAULT_MAP,
+            ParameterSource.DEFAULT,
+        )
+
+        # Special case: Merge logging config, when there is something
+        # provided from the CLI. CLI logger takes precedence
+        if param_name == LOG_CONFIG_OPTION_NAME and source is ParameterSource.COMMANDLINE:
+            parser_value = {**parser_value, **value}
+            can_be_overwritten = True
+
+        if can_be_overwritten:
+            ctx.params[param_name] = parser_value
+            ctx.set_parameter_source(param_name, ParameterSource.DEFAULT_MAP)
+
+    def invoke(self, ctx):
+        if self.use_option_parsers is True:
+            for parser in self._extra_parsers:
+                parser_value = ctx.params[parser.name]
+                if parser_value is not None:
+                    parser_source = ctx.get_parameter_source(parser.name)
+                    try:
+                        parse_result = parser.parse(ctx, parser_value, parser_source)
+                        for param_name, value in ctx.params.items():
+                            source = ctx.get_parameter_source(param_name)
+                            parser_value = parse_result.get(param_name)
+                            if parser_value is not None:
+                                param = self._name_to_param[param_name]
+                                parsed_value = param.full_process_value(ctx, parser_value)
+                                self._process_parse_result(
+                                    ctx, param_name, source, value, parsed_value
+                                )
+                    except ParsingException:
+                        ctx.params[parser.name] = None
+                        ctx.set_parameter_source(parser.name, ParameterSource.DEFAULT_MAP)
+
+        return super().invoke(ctx)
+
     def format_options(self, ctx, formatter):
         GroupableOptionCommand.format_options(self, ctx, formatter)  # type: ignore
         self.format_commands(ctx, formatter)
@@ -232,7 +266,7 @@ class AddressType(click.ParamType):
         try:
             return address_checksum_and_decode(value)
         except InvalidChecksummedAddress as e:
-            self.fail(str(e))
+            self.fail(str(e), param, ctx)
 
 
 class LogLevelConfigType(click.ParamType):
@@ -247,8 +281,19 @@ class LogLevelConfigType(click.ParamType):
     )
 
     def convert(self, value, param, ctx):  # pylint: disable=unused-argument
+        # First validate the value:
+        if isinstance(value, dict):
+            for key, val in value.items():
+                recombined_str = f"{key}:{val}"
+                if not self._validate_re.match(recombined_str):
+                    self.fail(f"`{recombined_str}` is not a valid logging format.", param, ctx)
+
+            # If this is a dict already, return directly
+            return value
         if not self._validate_re.match(value):
-            self.fail("Invalid log config format")
+            self.fail(f"`{value}` is not a valid logging format.", param, ctx)
+
+        # Parse to dict
         level_config = dict()
         if value.strip(" ") == "":
             return None  # default value
@@ -303,6 +348,10 @@ class GasPriceChoiceType(click.Choice):
             except ValueError:
                 self.fail(f"invalid numeric gas price: {value}", param, ctx)
         else:
+            if callable(value):
+                # the convert() method has to be idempotent, so when the value is callable
+                # we assume it is already the correct gas-price-strategies function
+                return value
             gas_price_string = super().convert(value, param, ctx)
             if gas_price_string == "fast":
                 return faster_gas_price_strategy
@@ -319,6 +368,18 @@ class MatrixServerType(click.Choice):
 
 class HypenTemplate(Template):
     idpattern = r"(?-i:[_a-zA-Z-][_a-zA-Z0-9-]*)"
+
+
+class ExpandablePath(click.Path):
+    def convert(self, value, param, ctx):
+        value = os.path.expanduser(value)
+        return super().convert(value, param, ctx)
+
+
+class ExpandableFile(click.File):
+    def convert(self, value, param, ctx):
+        value = os.path.expanduser(value)
+        return super().convert(value, param, ctx)
 
 
 class PathRelativePath(click.Path):
@@ -340,7 +401,7 @@ class PathRelativePath(click.Path):
                 value = self.expand_default(value, ctx.params)
             except KeyError as ex:
                 raise RuntimeError(
-                    "Subsitution parameter not found in context. "
+                    "Substitution parameter not found in context. "
                     "Make sure it's defined with `is_eager=True`."  # noqa: C812
                 ) from ex
 
@@ -351,99 +412,106 @@ class PathRelativePath(click.Path):
         return HypenTemplate(default).substitute(params)
 
 
-def apply_config_file(
-    command_function: Union[click.Command, click.Group],
-    cli_params: Dict[str, Any],
-    ctx,
-    config_file_option_name="config_file",
-):
-    """ Applies all options set in the config file to `cli_params` """
-    options_using_default = ctx.meta.get(CONTEXT_KEY_DEFAULT_OPTIONS, set())
-    paramname_to_param = {param.name: param for param in command_function.params}
+class ParsingException(Exception):
+    pass
 
-    external_to_internal_map = dict()
-    for param in command_function.params:
-        for ext_name in param.opts:
-            # only allow '--' cli options to be parseable from the config
-            if ext_name.startswith("--"):
-                external_to_internal_map[ext_name[2:]] = param.name
 
-    path_params = {
-        param.name
-        for param in command_function.params
-        if isinstance(param.type, (click.Path, click.File))
-    }
+class Parser(metaclass=ABCMeta):
+    def __init__(self, param_name: str, priority: int = None):
+        self.name = param_name
+        self.priority = priority or self.default_priority
+        self.name_map: MutableMapping[str, str] = dict()
+        self._internal_names: Set[str] = set()
 
-    config_file_path = Path(cli_params[config_file_option_name])
-    config_file_values: MutableMapping[str, Any] = dict()
-    try:
-        with config_file_path.open() as config_file:
-            config_file_values = load(config_file)
-    except OSError as ex:
-        # Silently ignore if 'file not found' and the config file path is the default and
-        # the option wasn't explicitly supplied on the command line
-        config_file_param = paramname_to_param[config_file_option_name]
-        config_file_default_path = Path(
-            config_file_param.type.expand_default(  # type: ignore
-                config_file_param.get_default(ctx), cli_params
-            )
-        )
-        default_config_missing = (
-            ex.errno == errno.ENOENT
-            and config_file_path.resolve() == config_file_default_path.resolve()
-            and config_file_option_name in options_using_default
-        )
-        if default_config_missing:
-            cli_params["config_file"] = None
-        else:
-            raise ConfigurationError(f"Error opening config file: {ex}")
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, Parser):
+            return NotImplemented
+        # "invert the sorting, so that higher priority means earlier parsing"
+        return self.priority > other.priority
 
-    except TomlDecodeError as ex:
-        raise ConfigurationError(f"Error loading config file: {ex}")
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Parser):
+            return NotImplemented
 
-    parsed_options = set()
-    for config_name, config_value in config_file_values.items():
+        return self.priority == other.priority
+
+    @property
+    @abstractmethod
+    def default_priority(self) -> int:
+        pass
+
+    def get_internal_name(self, name: str) -> Optional[str]:
+        """Convert parser-specific parameter name to click-internal name
+
+        Get the click-internal name (name of call argument of wrapped function)
+        from the names used in the parser.
+        This method has to be "idempotent", so that if the click-internal name is provided as
+        argument, it will simply pass through this name
+        """
+
+        if name in self._internal_names:
+            return name
+        return self.name_map.get(name)
+
+    def register_param(self, param: click.Parameter):
+        """Registers a click.Parameter so that the mapping from "external" name to "internal"
+        name can be memorized
+
+        Overwrite this method only when the parser uses
+        different parameter names than the parameter names as defined by the `option(  )`
+        """
+
+        for opt_name in param.opts:
+            if opt_name.startswith("--"):
+                opt_name = opt_name[2:]
+            self.name_map[opt_name] = param.name
+            self._internal_names.add(param.name)
+
+    @abstractmethod
+    def parse(self, ctx: Context, value: Any, source: ParameterSource) -> Dict[str, Any]:
+        """Parses more values to provide to clicks 'ctx.params' based the value of a parameter
+
+        value - the value of the parameter for `self.name` that was parsed by click
+        source - the ParameterSource where the value of `self.name` was set by click.
+        ctx - The current click `Context`
+
+        This method should return a dictionary that maps the "internal" parameter name
+        to the parameter values as read in by the parser.
+
+        In order to get the internal name from the parameter name as defined by the parser,
+        the `self.get_internal_name()` method should be called.
+        """
+        pass
+
+
+class ConfigParser(Parser):
+    default_priority = 99
+
+    def parse(self, ctx: Context, value: Any, source: ParameterSource) -> Dict[str, Any]:
+        config_path = Path(value)
+
         try:
-            config_name_int = external_to_internal_map[config_name]
-        except KeyError as ex:
-            raise ConfigurationError(
-                f"Unknown setting '{config_name}' found in config file"
-            ) from ex
-        else:
-            if config_name_int in parsed_options:
-                ambiguous_settings = [
-                    ext_name
-                    for ext_name, int_name in external_to_internal_map.items()
-                    if int_name == config_name_int
-                ]
-                raise ConfigurationError(
-                    f"Ambiguous setting '{config_name}' found in config file, please"
-                    f"only use one of {ambiguous_settings}"
-                )
+            with config_path.open() as config_file:
+                parsed_config_dict = load(config_file)
+                config_dict = dict()
+                for ext_name, value in parsed_config_dict.items():
+                    int_name = self.get_internal_name(ext_name)
+                    if int_name is None:
+                        raise ConfigurationError(f"Config file option '{ext_name}' not known.")
+                    config_dict[int_name] = value
+
+                return config_dict
+        except OSError as ex:
+            # Silently ignore if 'file not found' and the config file path is the default and
+            # the option wasn't explicitly supplied on the command line
+            default_config_missing = ex.errno == errno.ENOENT and source == ParameterSource.DEFAULT
+            if default_config_missing:
+                return dict()
             else:
-                parsed_options.add(config_name_int)
+                raise ConfigurationError(f"Error opening config file: {ex}")
 
-        if config_name_int in path_params:
-            # Allow users to use `~` in paths in the config file
-            config_value = os.path.expanduser(config_value)
-
-        if config_name_int == LOG_CONFIG_OPTION_NAME:
-            # Uppercase log level names
-            config_value = {k: v.upper() for k, v in config_value.items()}
-        else:
-            # Pipe config file values through cli converter to ensure correct types
-            # We exclude `log-config` because it already is a dict when loading from toml
-            try:
-                config_value = paramname_to_param[config_name_int].type.convert(
-                    config_value, paramname_to_param[config_name_int], ctx
-                )
-            except click.BadParameter as ex:
-                raise ConfigurationError(f"Invalid config file setting '{config_name}': {ex}")
-
-        # Only use the config file value if the option wasn't explicitly given on the command line
-        option_has_default = paramname_to_param[config_name_int].default is not None
-        if not option_has_default or config_name_int in options_using_default:
-            cli_params[config_name_int] = config_value
+        except TomlDecodeError as ex:
+            raise ConfigurationError(f"Error loading config file: {ex}")
 
 
 def get_matrix_servers(

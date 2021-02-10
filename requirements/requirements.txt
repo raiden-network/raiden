@@ -32,7 +32,7 @@ cffi==1.12.3
     #   pylibsrtp
 chardet==3.0.4
     # via requests
-click==7.1.2
+click==8.0.0a1
     # via
     #   -r requirements.in
     #   flask

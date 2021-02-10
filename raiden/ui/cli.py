@@ -13,7 +13,6 @@ from typing import Any, AnyStr, Callable, Optional
 import click
 import filelock
 import structlog
-from click import Context
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from urllib3.exceptions import ReadTimeoutError
 
@@ -56,11 +55,14 @@ from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
     ChainChoiceType,
+    ConfigParser,
+    Context,
     EnumChoiceType,
+    ExpandableFile,
+    ExpandablePath,
     GasPriceChoiceType,
     MatrixServerType,
     PathRelativePath,
-    apply_config_file,
     group,
     option,
     option_group,
@@ -148,8 +150,8 @@ OPTIONS = [
     option(
         "--datadir",
         help="Directory for storing raiden data.",
-        default=lambda: os.path.join(os.path.expanduser("~"), ".raiden"),
-        type=click.Path(
+        default="~/.raiden",
+        type=ExpandablePath(
             exists=False,
             dir_okay=True,
             file_okay=False,
@@ -158,6 +160,7 @@ OPTIONS = [
             allow_dash=False,
         ),
         show_default=True,
+        is_eager=True,
     ),
     option(
         "--config-file",
@@ -166,7 +169,10 @@ OPTIONS = [
         type=PathRelativePath(
             file_okay=True, dir_okay=False, exists=False, readable=True, resolve_path=True
         ),
+        is_eager=True,
         show_default=True,
+        option_parser_cls=ConfigParser,
+        option_parser_priority=1,
     ),
     option(
         "--keystore-path",
@@ -175,7 +181,7 @@ OPTIONS = [
             " provide it using this argument."
         ),
         default=None,
-        type=click.Path(exists=True),
+        type=ExpandablePath(exists=True),
         show_default=True,
     ),
     option(
@@ -192,7 +198,7 @@ OPTIONS = [
         "--password-file",
         help="Text file containing the password for the provided account",
         default=None,
-        type=click.File(lazy=True),
+        type=ExpandableFile(lazy=True),
         show_default=True,
     ),
     option(
@@ -373,10 +379,10 @@ OPTIONS = [
             "--log-file",
             help="file path for logging to file",
             default=None,
-            type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+            type=ExpandablePath(dir_okay=False, writable=True, resolve_path=True),
             show_default=True,
         ),
-        option("--log-json", help="Output log lines in JSON format", is_flag=True),
+        option("--log-json/--no-log-json", help="Output log lines in JSON format"),
         option(
             "--debug-logfile-path",
             help=(
@@ -386,7 +392,7 @@ OPTIONS = [
                 " - Linux: ~/.raiden/raiden_debug_XXX.log\n"
                 "\nIf there is a problem with expanding home it is placed under /tmp"
             ),
-            type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+            type=ExpandablePath(dir_okay=False, writable=True, resolve_path=True),
         ),
         option(
             "--disable-debug-logfile",
@@ -434,7 +440,7 @@ OPTIONS = [
         option(
             "--flamegraph",
             help=("Directory to save stack data used to produce flame graphs."),
-            type=click.Path(
+            type=ExpandablePath(
                 exists=False,
                 dir_okay=True,
                 file_okay=False,
@@ -541,18 +547,26 @@ def options(func: Callable) -> Callable:
     return func
 
 
-@group(invoke_without_command=True, context_settings={"max_content_width": 120})
+@group(
+    invoke_without_command=True,
+    context_settings={"max_content_width": 120},
+)
 @options
 @click.pass_context
 def run(ctx: Context, **kwargs: Any) -> None:
+    return _run(ctx=ctx, **kwargs)
+
+
+def _run(ctx: Context, **kwargs: Any) -> None:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     switch_monitor = None
     profiler = None
     memory_logger = None
     try:
-        if kwargs["config_file"]:
-            apply_config_file(run, kwargs, ctx)
+        if kwargs["config_file"] is not None:
+            source = ctx.get_parameter_source("config_file")  # type: ignore
+            log.debug("Using config file", config_file=kwargs["config_file"], set_by=source)
 
         configure_logging(
             kwargs["log_config"],
@@ -562,14 +576,13 @@ def run(ctx: Context, **kwargs: Any) -> None:
             debug_log_file_path=kwargs["debug_logfile_path"],
         )
 
-        # If still present, this means we read in a file provided by the user
-        if kwargs["config_file"]:
-            log.debug("Using config file", config_file=kwargs["config_file"])
+        enable_gevent_monitoring_signal()
+
+        if ctx.invoked_subcommand is not None:
+            return
 
         flamegraph = kwargs.pop("flamegraph", None)
         switch_tracing = kwargs.pop("switch_tracing", None)
-
-        enable_gevent_monitoring_signal()
 
         if flamegraph:  # pragma: no cover
             windows_not_supported("flame graph")
@@ -600,11 +613,6 @@ def run(ctx: Context, **kwargs: Any) -> None:
 
             memory_logger = MemoryLogger(log_memory_usage_interval)
             memory_logger.start()
-
-        if ctx.invoked_subcommand is not None:
-            # Pass parsed args on to subcommands.
-            ctx.obj = kwargs
-            return
 
         # Name used in the exception handlers, make sure the kwargs contains the
         # key with the correct name by always running it.
@@ -766,7 +774,7 @@ def version(ctx: Context, short: bool) -> None:
 @option(
     "--report-path",
     help="Store report at this location instead of a temp file.",
-    type=click.Path(dir_okay=False, writable=True, resolve_path=True),
+    type=ExpandablePath(dir_okay=False, writable=True, resolve_path=True),
 )
 @option("--debug", is_flag=True, help="Drop into pdb on errors.")
 @option(
@@ -778,6 +786,12 @@ def version(ctx: Context, short: bool) -> None:
 )
 @click.pass_context
 def smoketest(
+    ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
+) -> None:  # pragma: no cover
+    return _smoketest(ctx=ctx, debug=debug, eth_client=eth_client, report_path=report_path)
+
+
+def _smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
     """ Test, that the raiden installation is sane. """
