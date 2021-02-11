@@ -139,6 +139,21 @@ def handle_version_option(ctx: Context, _param: Any, value: bool) -> None:
     ctx.exit()
 
 
+def check_rpc_enabled_for_flag(ctx: Context, _param: Any, value: bool) -> Any:
+    if value is not True:
+        # if the option is not enabled, then don't do the check
+        return value
+    rpc_enabled = ctx.params.get("rpc")
+    if rpc_enabled is not True:
+        msg = (
+            f"RPC has to be enabled (`--rpc` flag) for option `{_param.name}`!"
+            f" Disabling `{_param.name}` option automatically."
+        )
+        click.secho(msg, fg="yellow")
+        return False
+    return value
+
+
 OPTIONS = [
     option(
         "--version",
@@ -146,6 +161,7 @@ OPTIONS = [
         callback=handle_version_option,
         expose_value=False,
         is_eager=True,
+        allow_from_autoenv=False,
     ),
     option(
         "--datadir",
@@ -344,10 +360,9 @@ OPTIONS = [
             show_default=True,
         ),
         option(
-            "--enable-monitoring",
+            "--enable-monitoring/--no-enable-monitoring",
             help="Enable broadcasting of balance proofs to the monitoring services.",
             default=False,
-            is_flag=True,
         ),
     ),
     option_group(
@@ -395,12 +410,13 @@ OPTIONS = [
             type=ExpandablePath(dir_okay=False, writable=True, resolve_path=True),
         ),
         option(
-            "--disable-debug-logfile",
+            "--debug-logfile/--no-debug-logfile",
+            " /--disable-debug-logfile",
+            default=True,
             help=(
-                "Disable the debug logfile feature. This is independent of "
+                "Enable the debug logfile feature. This is independent of "
                 "the normal logging setup"
             ),
-            is_flag=True,
         ),
     ),
     option_group(
@@ -410,6 +426,7 @@ OPTIONS = [
             help="Start with or without the RPC server.",
             default=True,
             show_default=True,
+            is_eager=True,
         ),
         option(
             "--rpccorsdomain",
@@ -427,6 +444,7 @@ OPTIONS = [
         ),
         option(
             "--web-ui/--no-web-ui",
+            callback=check_rpc_enabled_for_flag,
             help=(
                 "Start with or without the web interface. Requires --rpc. "
                 "It will be accessible at http://<api-address>. "
@@ -450,7 +468,9 @@ OPTIONS = [
             ),
             default=None,
         ),
-        option("--switch-tracing", help="Enable switch tracing", is_flag=True, default=False),
+        option(
+            "--switch-tracing/--no-switch-tracing", help="Enable switch tracing", default=False
+        ),
         option(
             "--unrecoverable-error-should-crash",
             help=(
@@ -530,14 +550,20 @@ OPTIONS = [
 ]
 
 if find_spec("IPython"):
-    OPTIONS.append(option("--console", help="Start the interactive raiden console", is_flag=True))
+    OPTIONS.append(
+        option(
+            "--console/--no-console", help="Start the interactive raiden console", default=False
+        )
+    )
 else:
 
     def unsupported(_ctx: Any, _param: Any, value: bool) -> None:
         if value:
             raise click.BadParameter("Console support is only available in development installs.")
 
-    OPTIONS.append(option("--console", is_flag=True, hidden=True, callback=unsupported))
+    OPTIONS.append(
+        option("--console/--no-console", hidden=True, callback=unsupported, default=False)
+    )
 
 
 def options(func: Callable) -> Callable:
@@ -572,7 +598,7 @@ def _run(ctx: Context, **kwargs: Any) -> None:
             kwargs["log_config"],
             log_json=kwargs["log_json"],
             log_file=kwargs["log_file"],
-            disable_debug_logfile=kwargs["disable_debug_logfile"],
+            disable_debug_logfile=not kwargs["debug_logfile"],
             debug_log_file_path=kwargs["debug_logfile_path"],
         )
 
@@ -801,7 +827,7 @@ def _smoketest(
 
     assert ctx.parent, MYPY_ANNOTATION
     environment_type = ctx.parent.params["environment_type"]
-    disable_debug_logfile = ctx.parent.params["disable_debug_logfile"]
+    debug_logfile = ctx.parent.params["debug_logfile"]
 
     if report_path is None:
         report_file = mktemp(suffix=".log")
@@ -813,7 +839,7 @@ def _smoketest(
     configure_logging(
         logger_level_config={"": "DEBUG"},
         log_file=report_file,
-        disable_debug_logfile=disable_debug_logfile,
+        disable_debug_logfile=not debug_logfile,
     )
 
     def append_report(subject: str, data: Optional[AnyStr] = None) -> None:

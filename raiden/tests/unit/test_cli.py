@@ -1,7 +1,5 @@
 import json
 import os
-from typing import Any, Dict, Tuple
-from unittest import mock
 from unittest.mock import patch
 
 import pytest
@@ -20,39 +18,11 @@ from raiden.exceptions import (
     ReplacementTransactionUnderpriced,
 )
 from raiden.network.rpc.middleware import faster_gas_price_strategy
+from raiden.tests.utils.cli import assert_invoked_kwargs, get_cli_result, get_invoked_kwargs
 from raiden.ui import cli
 from raiden.ui.cli import ReturnCode
 from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 from raiden.utils.system import get_system_spec
-
-
-def get_invoked_kwargs(cli_input, cli_runner, capture_function):
-
-    cli_args = cli_input.split()
-    command = cli_args[0]
-    assert command == "raiden"
-    call_args = cli_args[1:] or None
-
-    with mock.patch(capture_function, autospec=True) as mock_run:
-        result = cli_runner.invoke(cli.run, call_args)
-        assert result.exit_code == 0
-        assert not result.output
-        assert not result.exception
-        assert mock_run.called
-        args, kwargs = mock_run.call_args
-
-    return args, kwargs
-
-
-def assert_invoked_kwargs(
-    kwargs: Dict[str, Any], expected_args: Dict[str, Tuple[ParameterSource, Any]]
-):
-    ctx = kwargs["ctx"]
-
-    for call_arg_name, (expected_setter, expected_value) in expected_args.items():
-        assert call_arg_name in kwargs
-        assert kwargs[call_arg_name] == expected_value
-        assert ctx.get_parameter_source(call_arg_name) == expected_setter
 
 
 @pytest.fixture
@@ -165,7 +135,7 @@ def test_raiden_defaults(cli_runner, tmp_path):
         "matrix_server": "auto",
         "log_config": {"": "INFO"},
         "log_json": False,
-        "disable_debug_logfile": False,
+        "debug_logfile": True,
         "rpc": True,
         "rpccorsdomain": "http://localhost:*/*",
         "api_address": "127.0.0.1:5001",
@@ -186,6 +156,27 @@ def test_raiden_defaults(cli_runner, tmp_path):
 
     _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
     assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
+
+
+def test_raiden_disable_on_no_rpc(cli_runner):
+
+    cli_command = "raiden --no-rpc --web-ui"
+
+    expected_invoke_kwargs = {
+        "rpc": (ParameterSource.COMMANDLINE, False),
+        # assert this is set to false automatically, because it requires --rpc
+        "web_ui": (ParameterSource.COMMANDLINE, False),
+    }
+
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
+    assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
+
+    result = get_cli_result(cli_command, cli_runner, "raiden.ui.cli._run")
+    expected_output = (
+        "RPC has to be enabled (`--rpc` flag) for option `web_ui`! "
+        "Disabling `web_ui` option automatically."
+    )
+    assert expected_output in result.output
 
 
 def test_smoketest_defaults(cli_runner):
