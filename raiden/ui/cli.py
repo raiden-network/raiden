@@ -13,6 +13,7 @@ from typing import Any, AnyStr, Callable, List, Optional
 import click
 import filelock
 import structlog
+from click.core import ParameterSource  # type: ignore
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from urllib3.exceptions import ReadTimeoutError
 
@@ -70,7 +71,7 @@ from raiden.utils.cli import (
 from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.system import get_system_spec
-from raiden.utils.typing import MYPY_ANNOTATION
+from raiden.utils.typing import MYPY_ANNOTATION, ChainID
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
@@ -651,6 +652,20 @@ def _run(ctx: Context, **kwargs: Any) -> None:
 
         raiden_version = get_version(short=True)
         click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
+
+        enable_monitoring = kwargs["enable_monitoring"]
+        if enable_monitoring is False:
+            moni_source = ctx.get_parameter_source("enable_monitoring")  # type: ignore
+            is_mainnet = kwargs["chain_id"] == ChainID(1)
+
+            if moni_source is ParameterSource.DEFAULT and is_mainnet:
+                msg = (
+                    "WARNING: You did not enable monitoring (`--enable-monitoring`) while "
+                    "connecting to the Ethereum mainnet.\n"
+                    "Be aware that you could lose funds when "
+                    "disconnecting unintentionally!"
+                )
+                click.secho(msg, bold=True, fg="red")
 
         click.secho(
             textwrap.dedent(
