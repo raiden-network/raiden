@@ -61,9 +61,6 @@ def raiden_testchain(
         )
 
         args = result.args
-        # The setup of the testchain returns a TextIOWrapper but
-        # for the tests we need a filename
-        args["password_file"] = args["password_file"].name
         print("setup_raiden took", time.monotonic() - start_time)
         yield args
 

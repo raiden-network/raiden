@@ -8,7 +8,7 @@ from enum import Enum
 from importlib.util import find_spec
 from io import StringIO
 from tempfile import NamedTemporaryFile, mktemp
-from typing import Any, AnyStr, Callable, Optional
+from typing import Any, AnyStr, Callable, List, Optional
 
 import click
 import filelock
@@ -841,6 +841,7 @@ def _smoketest(
                 stdout=raiden_stdout,
                 append_report=append_report,
             ) as setup:
+
                 args = setup.args
                 port = next(free_port_generator)
 
@@ -854,15 +855,23 @@ def _smoketest(
                 args["proportional_fee"] = ()
                 args["proportional_imbalance_fee"] = ()
 
-                for option_ in run.params:
-                    if option_.name in args.keys():
-                        args[option_.name] = option_.process_value(ctx, args[option_.name])
-                    else:
-                        args[option_.name] = option_.default
+                @group(invoke_without_command=True, use_option_parsers=False)
+                @options
+                def _setup_raiden_config(**kwargs: Any) -> None:
+                    raiden_config = setup_raiden_config(**kwargs)
+                    args["config"] = raiden_config
+                    args.update(kwargs)
+                    return
 
-                raiden_config = setup_raiden_config(**args)
-                args["config"] = raiden_config
+                # This will run all the generated `args` through the parsing,
+                # and fill in missing values by their CLI defaults
 
+                # If no empty `args` is provided, it would use sys.argv[1:] and thus the
+                # call args for the outer smoketest() method
+                call_args: List[str] = list()
+                _setup_raiden_config(
+                    args=call_args, default_map=args.copy(), standalone_mode=False
+                )
                 run_smoketest(print_step=print_step, setup=setup)
 
             append_report("Raiden Node stdout", raiden_stdout.getvalue())
