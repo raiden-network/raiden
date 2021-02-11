@@ -409,7 +409,7 @@ def setup_raiden(
         "keystore_path": keystore,
         "matrix_server": matrix_server,
         "chain_id": str(CHAINNAME_TO_ID["smoketest"]),
-        "password_file": click.File()(os.path.join(base_datadir, "pw")),
+        "password_file": os.path.join(base_datadir, "pw"),
         "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
         "environment_type": Environment.DEVELOPMENT,
