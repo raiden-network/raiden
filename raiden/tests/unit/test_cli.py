@@ -1,13 +1,16 @@
 import json
-from functools import partial
+import os
+from typing import Any, Dict, Tuple
+from unittest import mock
 from unittest.mock import patch
 
 import pytest
+from click.core import ParameterSource  # type: ignore
 from click.testing import CliRunner
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 
 from raiden.accounts import KeystoreAuthenticationError, KeystoreFileNotFound
-from raiden.constants import EthClient
+from raiden.constants import Environment, EthClient, RoutingMode
 from raiden.exceptions import (
     APIServerPortInUseError,
     ConfigurationError,
@@ -16,20 +19,51 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     ReplacementTransactionUnderpriced,
 )
+from raiden.network.rpc.middleware import faster_gas_price_strategy
 from raiden.ui import cli
 from raiden.ui.cli import ReturnCode
 from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
+from raiden.utils.system import get_system_spec
+
+
+def get_invoked_kwargs(cli_input, cli_runner, capture_function):
+
+    cli_args = cli_input.split()
+    command = cli_args[0]
+    assert command == "raiden"
+    call_args = cli_args[1:] or None
+
+    with mock.patch(capture_function, autospec=True) as mock_run:
+        result = cli_runner.invoke(cli.run, call_args)
+        assert result.exit_code == 0
+        assert not result.output
+        assert not result.exception
+        assert mock_run.called
+        args, kwargs = mock_run.call_args
+
+    return args, kwargs
+
+
+def assert_invoked_kwargs(
+    kwargs: Dict[str, Any], expected_args: Dict[str, Tuple[ParameterSource, Any]]
+):
+    ctx = kwargs["ctx"]
+
+    for call_arg_name, (expected_setter, expected_value) in expected_args.items():
+        assert call_arg_name in kwargs
+        assert kwargs[call_arg_name] == expected_value
+        assert ctx.get_parameter_source(call_arg_name) == expected_setter
 
 
 @pytest.fixture
 def cli_runner(tmp_path):
-    runner = CliRunner()
+    runner = CliRunner(env={"HOME": str(tmp_path)})
     with runner.isolated_filesystem():
-        yield partial(runner.invoke, env={"HOME": str(tmp_path)})
+        yield runner
 
 
 def test_cli_version(cli_runner):
-    result = cli_runner(cli.run, ["version"])
+    result = cli_runner.invoke(cli.run, ["version"])
     result_json = json.loads(result.output)
     result_expected_keys = {
         "raiden",
@@ -42,6 +76,155 @@ def test_cli_version(cli_runner):
     }
     assert result_expected_keys == result_json.keys()
     assert result.exit_code == 0
+
+
+@pytest.mark.parametrize(
+    ("arg_list"),
+    [
+        ["version", "--short"],
+        ["--version"],
+    ],
+)
+def test_cli_version_short(cli_runner, arg_list):
+    result = cli_runner.invoke(cli.run, arg_list)
+    version = result.output.rstrip()
+    expected_short_version = get_system_spec()["raiden"]
+    assert version == expected_short_version
+    assert result.exit_code == 0
+
+
+def test_raiden_read_config(tmp_path, cli_runner):
+
+    config = """
+        datadir = "~/datadir_from_config_file"
+        network-id = 42
+        default-reveal-timeout = 21
+        [log-config]
+        "" = "DEBUG"
+        "raiden.network" = "INFO"
+        "raiden.transfer" = "WARNING"
+        """
+
+    # Config file should exist at the default location (~/.raiden/config.toml)
+    datadir = f"{tmp_path}/.raiden/"
+    filename = datadir + "config.toml"
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+
+    with open(filename, "w") as f:
+        f.write(config)
+
+    cli_command = "raiden --log-config raiden.transfer:INFO"
+
+    expected_args = {
+        # Config file set by default, but path was resolved
+        "config_file": (ParameterSource.DEFAULT, filename),
+        # Check mapping of custom internal_name (`network-id` -> `chain_id`)
+        "chain_id": (ParameterSource.DEFAULT_MAP, 42),
+        "default_reveal_timeout": (ParameterSource.DEFAULT_MAP, 21),
+        # Check for merging of config, where CLI takes precedence for loggers
+        "log_config": (
+            ParameterSource.DEFAULT_MAP,
+            {"": "DEBUG", "raiden.network": "INFO", "raiden.transfer": "INFO"},
+        ),
+        # Letting the config overwrite the datadir AFTER it was read in,
+        # does only work when no CLI option for the datadir was given
+        "datadir": (ParameterSource.DEFAULT_MAP, f"{tmp_path}/datadir_from_config_file"),
+    }
+
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
+    assert_invoked_kwargs(kwargs, expected_args)
+
+
+def test_raiden_defaults(cli_runner, tmp_path):
+    # The expected paths will be resolved from home, which is the tmp_path
+    datadir = f"{tmp_path}/.raiden"
+    config_file_path = f"{datadir}/config.toml"
+    # create an empty config file, otherwise the config file parsers sets the `config_file`
+    # kwarg to `None`
+    os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
+    open(config_file_path, "w").close()
+
+    expected_defaults = {
+        "datadir": datadir,
+        "config_file": config_file_path,
+        "chain_id": 1,
+        "environment_type": Environment.PRODUCTION,
+        "accept_disclaimer": False,
+        "blockchain_query_interval": 5.0,
+        "default_reveal_timeout": 50,
+        "default_settle_timeout": 500,
+        "sync_check": True,
+        "gas_price": faster_gas_price_strategy,
+        "eth_rpc_endpoint": "http://127.0.0.1:8545",
+        "routing_mode": RoutingMode.PFS,
+        "pathfinding_service_address": "auto",
+        "pathfinding_max_paths": 3,
+        "pathfinding_max_fee": 50000000000000000,
+        "pathfinding_iou_timeout": 200000,
+        "enable_monitoring": False,
+        "matrix_server": "auto",
+        "log_config": {"": "INFO"},
+        "log_json": False,
+        "disable_debug_logfile": False,
+        "rpc": True,
+        "rpccorsdomain": "http://localhost:*/*",
+        "api_address": "127.0.0.1:5001",
+        "web_ui": True,
+        "switch_tracing": False,
+        "unrecoverable_error_should_crash": False,
+        "log_memory_usage_interval": 0,
+        "cap_mediation_fees": True,
+        "console": False,
+    }
+
+    cli_command = "raiden"
+
+    expected_invoke_kwargs = {
+        arg_name: (ParameterSource.DEFAULT, arg_value)
+        for arg_name, arg_value in expected_defaults.items()
+    }
+
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
+    assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
+
+
+def test_smoketest_defaults(cli_runner):
+
+    cli_command = "raiden smoketest"
+
+    expected_args = {
+        "debug": (ParameterSource.DEFAULT, False),
+        "eth_client": (ParameterSource.DEFAULT, EthClient.GETH),
+    }
+
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._smoketest")
+    assert_invoked_kwargs(kwargs, expected_args)
+
+
+def test_smoketest(cli_runner):
+
+    # check debug flag
+    cli_command = "raiden smoketest --debug"
+
+    expected_args = {
+        "debug": (ParameterSource.COMMANDLINE, True),
+    }
+
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._smoketest")
+    assert_invoked_kwargs(kwargs, expected_args)
+
+
+def test_parent_for_subcommand(cli_runner):
+
+    cli_command = "raiden --environment-type development smoketest"
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._smoketest")
+
+    ctx = kwargs["ctx"]
+
+    assert ctx.parent is not None
+
+    assert ctx.parent.get_parameter_source("environment_type") == ParameterSource.COMMANDLINE
+    assert ctx.parent.params["environment_type"] == Environment.DEVELOPMENT
 
 
 def mock_raises(exception):
@@ -69,7 +252,7 @@ def test_run_error_reporting(cli_runner, monkeypatch):
 
     for exception, code in caught_exceptions.items():
         monkeypatch.setattr(cli, "run_services", mock_raises(exception))
-        result = cli_runner(cli.run, "--accept-disclaimer")
+        result = cli_runner.invoke(cli.run, "--accept-disclaimer")
         assert result.exception.code == code
 
 
