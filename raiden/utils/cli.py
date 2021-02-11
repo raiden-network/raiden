@@ -217,7 +217,7 @@ class GroupableOptionCommandGroup(click.Group):
                                 self._process_parse_result(
                                     ctx, param_name, source, value, parsed_value
                                 )
-                    except ParsingException:
+                    except SkipParsing:
                         ctx.params[parser.name] = None
                         ctx.set_parameter_source(parser.name, ParameterSource.DEFAULT_MAP)
 
@@ -412,7 +412,7 @@ class PathRelativePath(click.Path):
         return HypenTemplate(default).substitute(params)
 
 
-class ParsingException(Exception):
+class SkipParsing(Exception):
     pass
 
 
@@ -506,7 +506,8 @@ class ConfigParser(Parser):
             # the option wasn't explicitly supplied on the command line
             default_config_missing = ex.errno == errno.ENOENT and source == ParameterSource.DEFAULT
             if default_config_missing:
-                return dict()
+                msg = f"Default configuration file {value} not found. Skipping parsing."
+                raise SkipParsing(msg)
             else:
                 raise ConfigurationError(f"Error opening config file: {ex}")
 
