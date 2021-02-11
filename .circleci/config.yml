@@ -104,7 +104,7 @@ commands:
           name: Configuring PATH
           command: |
             echo 'export PATH=~/venv-${PYTHON_VERSION_SHORT}/bin:~/.local/bin:${PATH}' >> ${BASH_ENV}
-            echo 'export RAIDEN_VERSION=$(python3 setup.py --version)' >> ${BASH_ENV}
+            echo 'export CI_RAIDEN_VERSION=$(python3 setup.py --version)' >> ${BASH_ENV}
 
   checkout-and-persist:
     steps:
@@ -687,8 +687,8 @@ jobs:
                 command: |
                   rm dist/archive/*.txt
                   echo "TAG: ${CIRCLE_TAG}"
-                  RAIDEN_VERSION=${CIRCLE_TAG}
-                  ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${RAIDEN_VERSION} dist/archive/
+                  CI_RAIDEN_VERSION=${CIRCLE_TAG}
+                  ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${CI_RAIDEN_VERSION} dist/archive/
 
   deploy-pypi:
     parameters:
