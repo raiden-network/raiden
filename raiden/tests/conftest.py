@@ -25,6 +25,7 @@ from raiden.utils.ethereum_clients import VersionSupport
 
 # Execute these before the raiden imports because rewrites can't work after the
 # module has been imported.
+pytest.register_assert_rewrite("raiden.tests.utils.cli")
 pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
 pytest.register_assert_rewrite("raiden.tests.utils.factories")
 pytest.register_assert_rewrite("raiden.tests.utils.messages")
