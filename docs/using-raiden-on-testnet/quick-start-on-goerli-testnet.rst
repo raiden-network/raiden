@@ -1,3 +1,5 @@
+.. _quickstart_goerli:
+
 Quick Start on Görli Testnet
 ============================
 

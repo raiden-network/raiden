@@ -3,8 +3,8 @@ Using Raiden on Mainnet
 
 .. warning::
    Before you start, make sure Raiden is
-   correctly installed and configured by following the :doc:`manual installation
-   instructions <../installation/starting-raiden-manually>`.
+   correctly installed and configured by following the :doc:`installation
+   instructions <../overview_and_guide>`.
 
    Also make sure you have read and understood the :doc:`safe usage
    guidelines <../other/safe-usage>` before starting to use Raiden.

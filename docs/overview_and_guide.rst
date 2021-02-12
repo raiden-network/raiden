@@ -24,7 +24,12 @@ Below we will give details on how to use the self contained application bundles 
 Installation via Raiden Wizard
 ******************************
 
-See the `Raiden Wizard documentation <https://docs.raiden.network/quick-start/>`_.
+If you are new to Raiden or just want to use it without caring too much for the technical details, we recommend the Raiden Wizard to get started.
+
+.. toctree::
+  :maxdepth: 2
+
+  installation/quick-start/README
 
 Installation from GitHub
 ************************
