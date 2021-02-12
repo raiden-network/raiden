@@ -10,7 +10,7 @@ from flask import url_for
 
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer
-from raiden.constants import Environment
+from raiden.constants import BLOCK_ID_LATEST, Environment
 from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -1061,6 +1061,140 @@ def test_api_testnet_token_mint(api_server_test_instance: APIServer, token_addre
     request = grequests.post(url, json=dict(to=user_address, value=1))
     response = request.send().response
     assert_response_with_code(response, HTTPStatus.PAYMENT_REQUIRED)
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_udc_api(api_server_test_instance: APIServer, retry_timeout):
+    url = api_url_for(api_server_test_instance, "userdepositresource")
+    raiden_address = api_server_test_instance.rest_api.raiden_api.address
+    raiden_service = api_server_test_instance.rest_api.raiden_api.raiden
+
+    user_deposit = raiden_service.default_user_deposit
+    assert user_deposit
+    initial_deposit = user_deposit.get_total_deposit(raiden_address, BLOCK_ID_LATEST)
+
+    # try invalid withdraw plans
+    for value in [-1, 0, initial_deposit + 1]:
+        request = grequests.post(url, json={"planned_withdraw_amount": str(value)})
+        response = request.send().response
+        assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # cannot withdraw without a plan
+    request = grequests.post(url, json={"withdraw_amount": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    request = grequests.post(url, json={"planned_withdraw_amount": str(initial_deposit)})
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+    json_response = get_json_response(response)
+
+    withdraw_plan = user_deposit.get_withdraw_plan(raiden_address, BLOCK_ID_LATEST)
+    withdraw_amount = withdraw_plan.withdraw_amount
+    assert withdraw_amount == initial_deposit
+    assert json_response["planned_withdraw_block_number"] == withdraw_plan.withdraw_block
+
+    # cannot withdraw before planned withdraw block
+    request = grequests.post(url, json={"withdraw_amount": str(withdraw_amount)})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    wait_for_block(
+        raiden=raiden_service,
+        block_number=BlockNumber(
+            withdraw_plan.withdraw_block + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
+        retry_timeout=retry_timeout,
+    )
+
+    # try invalid withdraw amounts
+    for value in [-1, 0, withdraw_amount + 1]:
+        request = grequests.post(url, json={"withdraw_amount": str(value)})
+        response = request.send().response
+        assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    request = grequests.post(url, json={"withdraw_amount": str(withdraw_amount)})
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+
+    wait_for_block(
+        raiden=raiden_service,
+        block_number=BlockNumber(
+            raiden_service.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+        ),
+        retry_timeout=retry_timeout,
+    )
+
+    new_balance = user_deposit.get_balance(raiden_address, BLOCK_ID_LATEST)
+    assert new_balance == initial_deposit - withdraw_amount
+
+    # try invalid deposit amounts
+    for value in [-1, 0, initial_deposit]:
+        request = grequests.post(url, json={"total_deposit": str(value)})
+        response = request.send().response
+        assert_response_with_error(response, HTTPStatus.CONFLICT)
+
+    # try to deposit more than available
+    unavailable_deposit_amount = initial_deposit + withdraw_amount + 1
+    request = grequests.post(url, json={"total_deposit": str(unavailable_deposit_amount)})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.PAYMENT_REQUIRED)
+
+    new_total_deposit = initial_deposit + 1
+    request = grequests.post(url, json={"total_deposit": str(new_total_deposit)})
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.OK)
+
+    updated_total_deposit = user_deposit.get_total_deposit(raiden_address, BLOCK_ID_LATEST)
+    assert updated_total_deposit == new_total_deposit
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_udc_api_with_invalid_parameters(api_server_test_instance: APIServer):
+    url = api_url_for(api_server_test_instance, "userdepositresource")
+
+    request = grequests.post(url, json={})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    request = grequests.post(url, json={"total_deposit": "1", "planned_withdraw_amount": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    request = grequests.post(url, json={"total_deposit": "1", "withdraw_amount": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+    request = grequests.post(url, json={"withdraw_amount": "1", "planned_withdraw_amount": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.parametrize("user_deposit_address", [None])
+def test_no_udc_configured(api_server_test_instance: APIServer, retry_timeout):
+    url = api_url_for(api_server_test_instance, "userdepositresource")
+
+    request = grequests.post(url, json={"planned_withdraw_amount": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.NOT_FOUND)
+
+    request = grequests.post(url, json={"withdraw_amount": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.NOT_FOUND)
+
+    request = grequests.post(url, json={"total_deposit": "1"})
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.NOT_FOUND)
 
 
 @raise_on_failure
