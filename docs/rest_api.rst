@@ -899,6 +899,122 @@ Querying node state
    :statuscode 500: Internal Raiden error
 
 
+User Deposit for services
+===================
+
+For paying the :doc:`Raiden Services <raiden_services>` it is necessary to have RDN (Raiden Network Tokens) in the User Deposit Contract (UDC). 
+This endpoint can be used to deposit to and withdraw from the UDC.
+
+
+.. http:post:: /api/(version)/user_deposit
+
+   **Deposit**
+
+   Deposit RDN tokens to the UDC.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/user_deposit HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "total_deposit": "200000"
+      }
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "transaction_hash": "0xc5988c93c07cf1579e73d39ee2a3d6e948d959d11015465a77817e5239165170"
+      }
+
+   :statuscode 200: Deposit was successful
+   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 402: Insufficient balance to do a deposit or insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: No UDC is configured on the Raiden node
+   :statuscode 409: The provided ``total_deposit`` is not higher than the previous ``total_deposit`` or attempted to deposit more RDN than the UDC limit would allow
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+   **Plan a withdraw**
+
+   Before RDN can be withdrawn from the UDC the withdraw must be planned.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/user_deposit HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "planned_withdraw_amount": "1500"
+      }
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "planned_withdraw_block_number": 4269933,
+         "transaction_hash": "0xec6a0d010d740df20ca8b3b6456e9deaab8abf3787cb676ee244bef7d28aa4fc"
+      }
+
+   :statuscode 200: Withdraw plan was successful
+   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 402: Insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: No UDC is configured on the Raiden node
+   :statuscode 409: The provided ``planned_withdraw_amount`` is higher than the balance in the UDC or not greater than zero
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+   **Withdraw**
+
+   Withdraw RDN from the UDC. Can only be done after 100 blocks after the withdraw was planned.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/user_deposit HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "withdraw_amount": "1500"
+      }
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "transaction_hash": "0xfc7edd195c6cc0c9391d84dd83b7aa9dbfffbcfc107e5c33a5ab912c0d92416c"
+      }
+
+   :statuscode 200: Withdraw was successful
+   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 402: Insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: No UDC is configured on the Raiden node
+   :statuscode 409: The provided ``withdraw_amount`` is higher than the planned amount or not greater than zero or the withdraw is too early
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+
 API endpoints for testing
 =========================
 
