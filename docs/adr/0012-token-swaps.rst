@@ -33,7 +33,7 @@ Earn Fees by Providing Token Swaps
 
 In addition to providing normal mediation, mediators can also choose to
 act as an exchange between different token networks. The mediator will
-have to excplitly accept the legal risks and choose reasonable exchange
+have to explicitly accept the legal risks and choose reasonable exchange
 rates.
 
 Migrate Between Contract Versions
@@ -49,7 +49,7 @@ This can be mitigated by having some mediators open channels in the new
 contracts while keeping their old channels open. Then these mediators
 can mediate payments between the old and new networks.
 
-This will require support for multiple token network registries in the
+This will require support for multiple token network registries in
 the client. As a consequence, multiple token networks for the same token
 also have to be supported.
 
@@ -62,7 +62,7 @@ BTC, tokens on Ethereum, tokens on sidechains or other blockchains.
 
 Compared to the other use cases, this brings additional problems, since
 the PFS will not be able to find routes outside of Ethereum and we will
-have to coordinate with non-Raiden clients. As a consquence, this should
+have to coordinate with non-Raiden clients. As a consequence, this should
 be left out of the initial implementation. But we should keep it in
 mind, so that we don’t accidentally make it harder to add support for
 this in a later step.
@@ -109,7 +109,7 @@ will arise.
 Finding Routes Through Multiple Networks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Currently, the PFS handles each token network seperately, which prevents
+Currently, the PFS handles each token network separately, which prevents
 it from finding routes across different token networks. Implementing
 support for cross-TN-routes requires some changes to the data structures
 used in the PFS. Doing this naively will result in slow pathfinding,
