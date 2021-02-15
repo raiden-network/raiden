@@ -915,6 +915,11 @@ class RaidenService(Runnable):
                     pfs_fee_updates.add(canonical_identifier)
                 else:
                     pfs_capacity_updates.add(canonical_identifier)
+            if isinstance(state_change, Block):
+                self.transport.expire_services_addresses(
+                    self.rpc_client.get_block(state_change.block_hash)["timestamp"],
+                    state_change.block_number,
+                )
 
         for event in events:
             if isinstance(event, PFS_UPDATE_FEE_EVENTS):
