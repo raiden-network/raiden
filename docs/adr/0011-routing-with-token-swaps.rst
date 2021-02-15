@@ -4,7 +4,7 @@ Routing With Built-In Token Swaps
 Use Case
 --------
 
-Buyer’s and sellers usually each have a preferred currency/token. When
+Buyers and sellers usually each have a preferred currency/token. When
 both parties prefer different tokens, one party has to accept dealing
 with a non-preferred token. In addition to being inconvenient, this can
 also require open a new channel, this making the payment slow and
@@ -18,7 +18,7 @@ Concept
 -------
 
 Node A wants to pay node B an amount of 10 T2 tokens, but A only has T1
-tokens. A requests a route from the PFS:
+tokens. Node A requests a route from the PFS:
 
 ::
 
@@ -52,5 +52,5 @@ Problems
    the same time.
 -  Behavior not clear for non-strict routing
 -  The route can fail due to changes in conversion rate. This can be
-   mitigated by adding some safety margin, but the increases the price
+   mitigated by adding some safety margin, but this increases the price
    for the sender.
