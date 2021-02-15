@@ -1,5 +1,4 @@
 import json
-import os
 from unittest.mock import patch
 
 import pytest
@@ -76,18 +75,17 @@ def test_raiden_read_config(tmp_path, cli_runner):
         """
 
     # Config file should exist at the default location (~/.raiden/config.toml)
-    datadir = f"{tmp_path}/.raiden/"
-    filename = datadir + "config.toml"
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    datadir = tmp_path / ".raiden"
+    datadir.mkdir(parents=True, exist_ok=True)
+    config_file = datadir / "config.toml"
 
-    with open(filename, "w") as f:
-        f.write(config)
+    config_file.write_text(config)
 
     cli_command = "raiden --log-config raiden.transfer:INFO"
 
     expected_args = {
         # Config file set by default, but path was resolved
-        "config_file": (ParameterSource.DEFAULT, filename),
+        "config_file": (ParameterSource.DEFAULT, str(config_file)),
         # Check mapping of custom internal_name (`network-id` -> `chain_id`)
         "chain_id": (ParameterSource.DEFAULT_MAP, 42),
         "default_reveal_timeout": (ParameterSource.DEFAULT_MAP, 21),
@@ -98,7 +96,7 @@ def test_raiden_read_config(tmp_path, cli_runner):
         ),
         # Letting the config overwrite the datadir AFTER it was read in,
         # does only work when no CLI option for the datadir was given
-        "datadir": (ParameterSource.DEFAULT_MAP, f"{tmp_path}/datadir_from_config_file"),
+        "datadir": (ParameterSource.DEFAULT_MAP, str(tmp_path / "datadir_from_config_file")),
     }
 
     _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
@@ -107,16 +105,17 @@ def test_raiden_read_config(tmp_path, cli_runner):
 
 def test_raiden_defaults(cli_runner, tmp_path):
     # The expected paths will be resolved from home, which is the tmp_path
-    datadir = f"{tmp_path}/.raiden"
-    config_file_path = f"{datadir}/config.toml"
+    datadir = tmp_path / ".raiden"
+    datadir.mkdir(parents=True, exist_ok=True)
+    config_file = datadir / "config.toml"
+    config_file.touch()
+
     # create an empty config file, otherwise the config file parsers sets the `config_file`
     # kwarg to `None`
-    os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
-    open(config_file_path, "w").close()
 
     expected_defaults = {
-        "datadir": datadir,
-        "config_file": config_file_path,
+        "datadir": str(datadir),
+        "config_file": str(config_file),
         "chain_id": 1,
         "environment_type": Environment.PRODUCTION,
         "accept_disclaimer": False,
@@ -142,7 +141,7 @@ def test_raiden_defaults(cli_runner, tmp_path):
         "web_ui": True,
         "switch_tracing": False,
         "unrecoverable_error_should_crash": False,
-        "log_memory_usage_interval": 0,
+        "log_memory_usage_interval": 0.0,
         "cap_mediation_fees": True,
         "console": False,
     }
@@ -160,23 +159,78 @@ def test_raiden_defaults(cli_runner, tmp_path):
 
 def test_raiden_disable_on_no_rpc(cli_runner):
 
-    cli_command = "raiden --no-rpc --web-ui"
+    cli_command = "raiden --no-rpc --web-ui --accept-disclaimer"
 
     expected_invoke_kwargs = {
         "rpc": (ParameterSource.COMMANDLINE, False),
-        # assert this is set to false automatically, because it requires --rpc
-        "web_ui": (ParameterSource.COMMANDLINE, False),
+        "web_ui": (ParameterSource.COMMANDLINE, True),
+        "accept_disclaimer": (ParameterSource.COMMANDLINE, True),
+    }
+
+    # first check the correct invoke options
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
+    assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
+
+    # Check for correct warning output
+    result = get_cli_result(cli_command, cli_runner, "raiden.ui.cli.run_services")
+    expected_output = (
+        "RPC has to be enabled (`--rpc` option) for option "
+        "`--web-ui`!"
+        " Disabling Web-UI option automatically."
+    )
+
+    assert expected_output in result.output
+
+    # Check that the web-ui was disabled (after click parsing, but before setting up the
+    # config)
+    args, _ = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli.run_services")
+
+    call_kwarg_dict = args[0]
+    rest_config = call_kwarg_dict["config"].rest_api
+    assert call_kwarg_dict["rpc"] is False
+    assert call_kwarg_dict["web_ui"] is False
+
+    assert rest_config.rest_api_enabled is False
+    assert rest_config.web_ui_enabled is False
+
+
+def test_no_monitoring_mainnet_warning(cli_runner):
+
+    cli_command = "raiden --accept-disclaimer"
+
+    expected_invoke_kwargs = {
+        "enable_monitoring": (ParameterSource.DEFAULT, False),
+        "chain_id": (ParameterSource.DEFAULT, 1),
+        "accept_disclaimer": (ParameterSource.COMMANDLINE, True),
     }
 
     _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
     assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
 
-    result = get_cli_result(cli_command, cli_runner, "raiden.ui.cli._run")
+    result = get_cli_result(cli_command, cli_runner, "raiden.ui.cli.run_services")
+
     expected_output = (
-        "RPC has to be enabled (`--rpc` flag) for option `web_ui`! "
-        "Disabling `web_ui` option automatically."
+        "WARNING: You did not enable monitoring (`--enable-monitoring`) while "
+        "connecting to the Ethereum mainnet.\n"
+        "Be aware that you could lose funds when "
+        "disconnecting unintentionally!"
     )
     assert expected_output in result.output
+
+    cli_command = "raiden --accept-disclaimer --network-id 42"
+
+    expected_invoke_kwargs = {
+        "enable_monitoring": (ParameterSource.DEFAULT, False),
+        "chain_id": (ParameterSource.COMMANDLINE, 42),
+        "accept_disclaimer": (ParameterSource.COMMANDLINE, True),
+    }
+
+    _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
+    assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
+
+    result = get_cli_result(cli_command, cli_runner, "raiden.ui.cli.run_services")
+
+    assert expected_output not in result.output
 
 
 def test_smoketest_defaults(cli_runner):
