@@ -49,6 +49,7 @@ from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.transport import populate_services_addresses
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.raiden_event_handler import EventHandler
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
@@ -575,7 +576,10 @@ class RaidenService(Runnable):
             neighbour_nodes=[to_checksum_address(address) for address in health_check_list],
             node=to_checksum_address(self.address),
         )
-
+        if self.default_service_registry is not None:
+            populate_services_addresses(
+                self.transport, self.default_service_registry, BLOCK_ID_LATEST
+            )
         self.transport.start(
             raiden_service=self, prev_auth_data=None, health_check_list=health_check_list
         )
