@@ -415,3 +415,11 @@ class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
     @property
     def token_network_address(self) -> TokenNetworkAddress:
         return self.canonical_identifier.token_network_address
+
+
+@dataclass(frozen=True)
+class UpdateServicesAddressesStateChange(StateChange):
+    """ A `RegisteredService` contract event was received. """
+
+    service: Address
+    valid_till: int

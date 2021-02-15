@@ -44,6 +44,7 @@ from raiden.utils.typing import (
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
+    EVENT_REGISTERED_SERVICE,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
@@ -209,6 +210,10 @@ def decode_raiden_event_to_internal(
     elif event == ChannelEvent.UNLOCKED:
         args["receiver"] = to_canonical_address(args["receiver"])
         args["sender"] = to_canonical_address(args["sender"])
+
+    elif event == EVENT_REGISTERED_SERVICE:
+        args["service_address"] = to_canonical_address(args.pop("service"))
+        assert "valid_till" in args, f"{EVENT_REGISTERED_SERVICE} without 'valid_till'"
 
     return DecodedEvent(
         chain_id=chain_id,

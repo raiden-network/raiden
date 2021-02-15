@@ -1,6 +1,6 @@
 """Module to map a blockchain event to a state change.
 
-All fuctions that map an event to a state change must be side-effect free. If
+All functions that map an event to a state change must be side-effect free. If
 any additional data is necessary, either from the database or the blockchain
 itself, an utility should be added to `raiden.blockchain.state`, and then
 called by `blockchainevent_to_statechange`.
@@ -46,6 +46,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
+    UpdateServicesAddressesStateChange,
 )
 from raiden.utils.typing import (
     Balance,
@@ -58,6 +59,7 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
 )
 from raiden_contracts.constants import (
+    EVENT_REGISTERED_SERVICE,
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
@@ -304,6 +306,15 @@ def contractreceivechannelbatchunlock_from_event(
     )
 
 
+def update_service_addresses_from_event(event: DecodedEvent) -> UpdateServicesAddressesStateChange:
+    data = event.event_data
+    args = data["args"]
+
+    return UpdateServicesAddressesStateChange(
+        service=args["service_address"], valid_till=args["valid_till"]
+    )
+
+
 def blockchainevent_to_statechange(
     raiden_config: RaidenConfig,
     proxy_manager: ProxyManager,
@@ -375,6 +386,9 @@ def blockchainevent_to_statechange(
 
         if canonical_identifier is not None:
             return contractreceivechannelbatchunlock_from_event(canonical_identifier, event)
+
+    elif event_name == EVENT_REGISTERED_SERVICE:
+        return update_service_addresses_from_event(event)
 
     else:
         log.error("Unknown event type", raiden_event=event)
