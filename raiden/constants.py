@@ -87,6 +87,12 @@ class Capabilities(Enum):
     TODEVICE = "toDevice"  # supports sending and receiving toDevice messages on Matrix
 
 
+class DeviceIDs(Enum):
+    RAIDEN = "RAIDEN"
+    PFS = "PATH_FINDING"
+    MS = "MONITORING"
+
+
 class ServerListType(Enum):
     ACTIVE_SERVERS = "active_servers"
     ALL_SERVERS = "all_servers"

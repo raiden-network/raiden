@@ -27,6 +27,7 @@ from raiden.constants import (
     WEB_RTC_CHANNEL_TIMEOUT,
     Capabilities,
     CommunicationMedium,
+    DeviceIDs,
     Environment,
     MatrixMessageType,
     RTCMessageType,
@@ -484,6 +485,7 @@ class MatrixTransport(Runnable):
             login(
                 client=self._client,
                 signer=self._raiden_service.signer,
+                device_id=DeviceIDs.RAIDEN,
                 prev_auth_data=prev_auth_data,
                 capabilities=capabilities,
             )

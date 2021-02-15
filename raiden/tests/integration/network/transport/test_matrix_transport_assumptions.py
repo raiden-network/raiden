@@ -9,6 +9,7 @@ import pytest
 from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 
+from raiden.constants import DeviceIDs
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.transport import MatrixTransport
 from raiden.network.transport.matrix.utils import (
@@ -55,7 +56,7 @@ def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
     client = make_client(ignore_messages, ignore_member_join, [server])
     signer = factories.make_signer()
 
-    login(client, signer)
+    login(client, signer, DeviceIDs.RAIDEN)
 
     return client, signer
 
