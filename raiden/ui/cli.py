@@ -140,21 +140,6 @@ def handle_version_option(ctx: Context, _param: Any, value: bool) -> None:
     ctx.exit()
 
 
-def check_rpc_enabled_for_flag(ctx: Context, _param: Any, value: bool) -> Any:
-    if value is not True:
-        # if the option is not enabled, then don't do the check
-        return value
-    rpc_enabled = ctx.params.get("rpc")
-    if rpc_enabled is not True:
-        msg = (
-            f"RPC has to be enabled (`--rpc` flag) for option `{_param.name}`!"
-            f" Disabling `{_param.name}` option automatically."
-        )
-        click.secho(msg, fg="yellow")
-        return False
-    return value
-
-
 OPTIONS = [
     option(
         "--version",
@@ -416,7 +401,7 @@ OPTIONS = [
             default=True,
             help=(
                 "Enable the debug logfile feature. This is independent of "
-                "the normal logging setup"
+                "the normal logging setup. [default: enabled]"
             ),
         ),
     ),
@@ -445,7 +430,6 @@ OPTIONS = [
         ),
         option(
             "--web-ui/--no-web-ui",
-            callback=check_rpc_enabled_for_flag,
             help=(
                 "Start with or without the web interface. Requires --rpc. "
                 "It will be accessible at http://<api-address>. "
@@ -591,9 +575,6 @@ def _run(ctx: Context, **kwargs: Any) -> None:
     profiler = None
     memory_logger = None
     try:
-        if kwargs["config_file"] is not None:
-            source = ctx.get_parameter_source("config_file")  # type: ignore
-            log.debug("Using config file", config_file=kwargs["config_file"], set_by=source)
 
         configure_logging(
             kwargs["log_config"],
@@ -602,6 +583,12 @@ def _run(ctx: Context, **kwargs: Any) -> None:
             disable_debug_logfile=not kwargs["debug_logfile"],
             debug_log_file_path=kwargs["debug_logfile_path"],
         )
+
+        if kwargs["config_file"] is not None:
+            source = ctx.get_parameter_source("config_file")  # type: ignore
+            log.debug(
+                "Using config file", config_file=kwargs["config_file"], set_by=source.name.title()
+            )
 
         enable_gevent_monitoring_signal()
 
@@ -645,14 +632,28 @@ def _run(ctx: Context, **kwargs: Any) -> None:
         # key with the correct name by always running it.
         name_or_id = ID_TO_CHAINNAME.get(kwargs["chain_id"], kwargs["chain_id"])
 
-        # construct the config here, so that eventual misconfigurations can raise
-        # before the disclaimer and before starting any services
-        raiden_config = setup_raiden_config(**kwargs)
-        kwargs["config"] = raiden_config
-
         raiden_version = get_version(short=True)
         click.secho(f"Welcome to Raiden, version {raiden_version}!", fg="green")
 
+        # construct the config here, so that eventual misconfigurations can raise
+        # before the disclaimer and before starting any services
+
+        web_ui, rpc = kwargs.get("web_ui"), kwargs.get("rpc")
+
+        if rpc is not True and web_ui is True:
+
+            rpc_param = ctx.command.opt_name_to_param["rpc"]  # type: ignore
+            web_ui_param = ctx.command.opt_name_to_param["web_ui"]  # type: ignore
+            msg = (
+                f"RPC has to be enabled (`{' / '.join(rpc_param.opts)}` option) for option "
+                f"`{' / '.join(web_ui_param.opts)}`!"
+                f" Disabling Web-UI option automatically."
+            )
+            click.secho(msg, fg="yellow")
+            kwargs["web_ui"] = False
+
+        raiden_config = setup_raiden_config(**kwargs)
+        kwargs["config"] = raiden_config
         enable_monitoring = kwargs["enable_monitoring"]
         if enable_monitoring is False:
             moni_source = ctx.get_parameter_source("enable_monitoring")  # type: ignore

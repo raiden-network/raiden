@@ -15,7 +15,7 @@ import requests
 import structlog
 from click import Choice
 from click._compat import term_len
-from click.core import ParameterSource  # type: ignore
+from click.core import ParameterSource, augment_usage_errors  # type: ignore
 from click.formatting import iter_rows, measure_table, wrap_text
 from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
@@ -71,10 +71,10 @@ class HelpFormatter(click.HelpFormatter):
             lines = iter(wrap_text(second, text_width).splitlines())
             if lines:
                 self.write(next(lines) + "\n")
-            for line in lines:
-                self.write("%*s%s\n" % (first_col + self.current_indent, "", line))
-            else:
-                self.write("\n")
+                for line in lines:
+                    self.write("%*s%s\n" % (first_col + self.current_indent, "", line))
+                else:
+                    self.write("\n")
 
 
 class Context(click.Context):
@@ -167,17 +167,21 @@ class GroupableOptionCommandGroup(click.Group):
         **attrs,
     ):
         super().__init__(**attrs)
-        parsers = list()
+        self._extra_parsers = list()
+        self.internal_to_external_names = dict()
+        self.opt_name_to_param = dict()
+        self.use_option_parsers = use_option_parsers
+
         for param in self.params:
+            self.opt_name_to_param[param.name] = param
+
             # make this compatible with unmodified click.Option
             parser = getattr(param, "option_parser", None)
             if parser is not None:
-                parsers.append(parser)
+                self._extra_parsers.append(parser)
                 for param in self.params:
                     parser.register_param(param)
-        self._extra_parsers = sorted(parsers)
-        self._name_to_param = {param.name: param for param in self.params}
-        self.use_option_parsers = use_option_parsers
+        self._extra_parsers.sort()
 
     @staticmethod
     def _process_parse_result(ctx, param_name, source, value, parser_value):
@@ -212,11 +216,21 @@ class GroupableOptionCommandGroup(click.Group):
                             source = ctx.get_parameter_source(param_name)
                             parser_value = parse_result.get(param_name)
                             if parser_value is not None:
-                                param = self._name_to_param[param_name]
-                                parsed_value = param.full_process_value(ctx, parser_value)
-                                self._process_parse_result(
-                                    ctx, param_name, source, value, parsed_value
-                                )
+                                param = self.opt_name_to_param[param_name]
+                                with augment_usage_errors(ctx, param=param):
+                                    try:
+                                        parsed_value = param.full_process_value(ctx, parser_value)
+                                        if param.callback is not None:
+                                            value = param.callback(ctx, param, parsed_value)
+                                    except Exception:
+                                        if not ctx.resilient_parsing:
+                                            raise
+                                        parsed_value = None
+
+                                if param.expose_value:
+                                    self._process_parse_result(
+                                        ctx, param_name, source, value, parsed_value
+                                    )
                     except SkipParsing:
                         ctx.params[parser.name] = None
                         ctx.set_parameter_source(parser.name, ParameterSource.DEFAULT_MAP)
@@ -512,7 +526,7 @@ class ConfigParser(Parser):
                 raise ConfigurationError(f"Error opening config file: {ex}")
 
         except TomlDecodeError as ex:
-            raise ConfigurationError(f"Error loading config file: {ex}")
+            raise ConfigurationError(f"Error loading config file: {ex}") from ex
 
 
 def get_matrix_servers(
