@@ -15,6 +15,7 @@ from raiden.transfer.events import (
     ContractSendChannelWithdraw,
     ContractSendSecretReveal,
     SendWithdrawRequest,
+    UpdateServicesAddresses,
 )
 from raiden.transfer.identifiers import (
     CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
@@ -62,6 +63,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawConfirmation,
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
+    UpdateServicesAddressesStateChange,
 )
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
@@ -729,6 +731,13 @@ def handle_receive_processed(
     return TransitionResult(chain_state, events)
 
 
+def handle_update_services_addresses_state_change(
+    chain_state: ChainState, state_change: UpdateServicesAddressesStateChange
+) -> TransitionResult[ChainState]:
+
+    return TransitionResult(chain_state, [UpdateServicesAddresses.from_state_change(state_change)])
+
+
 def handle_receive_unlock(
     chain_state: ChainState, state_change: ReceiveUnlock
 ) -> TransitionResult[ChainState]:
@@ -838,6 +847,9 @@ def handle_state_change(
     elif type(state_change) == ReceiveWithdrawExpired:
         assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_expired(chain_state, state_change)
+    elif type(state_change) == UpdateServicesAddressesStateChange:
+        assert isinstance(state_change, UpdateServicesAddressesStateChange), MYPY_ANNOTATION
+        iteration = handle_update_services_addresses_state_change(chain_state, state_change)
     else:
         iteration = TransitionResult(chain_state, [])
 

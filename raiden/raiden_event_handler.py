@@ -51,6 +51,7 @@ from raiden.transfer.events import (
     SendWithdrawConfirmation,
     SendWithdrawExpired,
     SendWithdrawRequest,
+    UpdateServicesAddresses,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -220,6 +221,9 @@ class RaidenEventHandler(EventHandler):
             elif type(event) == ContractSendChannelWithdraw:
                 assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
                 self.handle_contract_send_channelwithdraw(raiden, event)
+            elif type(event) == UpdateServicesAddresses:
+                assert isinstance(event, UpdateServicesAddresses), MYPY_ANNOTATION
+                self.handle_update_services_addresses(raiden, event)
             elif type(event) in UNEVENTFUL_EVENTS:
                 pass
             else:
@@ -822,6 +826,14 @@ class RaidenEventHandler(EventHandler):
             )
         except InsufficientEth as e:
             raise RaidenUnrecoverableError(str(e)) from e
+
+    @staticmethod
+    def handle_update_services_addresses(
+        raiden: "RaidenService", update_services_addresses: UpdateServicesAddresses
+    ) -> None:  # pragma: no unittest
+        raiden.transport.update_services_addresses(
+            {update_services_addresses.service_address: update_services_addresses.validity}
+        )
 
 
 class PFSFeedbackEventHandler(RaidenEventHandler):

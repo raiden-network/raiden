@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from eth_utils import to_hex
 
@@ -32,6 +33,9 @@ from raiden.utils.typing import (
     TokenNetworkRegistryAddress,
     WithdrawAmount,
 )
+
+if TYPE_CHECKING:
+    from raiden.transfer.state_change import UpdateServicesAddressesStateChange
 
 # pylint: disable=too-many-arguments,too-few-public-methods
 
@@ -205,6 +209,23 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         secrethash = sha256_secrethash(self.secret)
         return "ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})".format(
             to_hex(secrethash), to_hex(self.triggered_by_block_hash)
+        )
+
+
+@dataclass(frozen=True)
+class UpdateServicesAddresses(Event):
+    """Transition used when adding a new service address."""
+
+    service_address: Address
+    validity: int
+
+    @staticmethod
+    def from_state_change(
+        state_change: "UpdateServicesAddressesStateChange",
+    ) -> "UpdateServicesAddresses":
+        return UpdateServicesAddresses(
+            service_address=state_change.service,
+            validity=state_change.valid_till,
         )
 
 
