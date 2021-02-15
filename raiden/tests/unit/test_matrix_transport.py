@@ -14,7 +14,7 @@ from matrix_client.user import User
 
 import raiden.network.transport.matrix.client
 import raiden.network.transport.matrix.utils
-from raiden.constants import ServerListType
+from raiden.constants import DeviceIDs, ServerListType
 from raiden.exceptions import TransportError
 from raiden.messages.synchronization import Processed
 from raiden.messages.transfers import RevealSecret
@@ -59,7 +59,7 @@ def test_login_for_the_first_time_must_set_the_display_name():
 
     signer = make_signer()
 
-    user = login(client=client, signer=signer)
+    user = login(client=client, signer=signer, device_id=DeviceIDs.RAIDEN)
 
     # client.user_id will be set by login
     assert client.user_id.startswith(f"@{to_normalized_address(signer.address)}")

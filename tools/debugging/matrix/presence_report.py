@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import gevent.monkey
 
+from raiden.constants import DeviceIDs
+
 gevent.monkey.patch_all()  # isort:skip # noqa
 
 import json
@@ -65,7 +67,11 @@ def main(keystore_file: str, password: str, host: str, room_id: str, other_user_
     private_key = get_private_key(keystore_file, password)
     client = GMatrixClient(host)
 
-    user = login(client=client, signer=LocalSigner(private_key=decode_hex(private_key)))
+    user = login(
+        client=client,
+        signer=LocalSigner(private_key=decode_hex(private_key)),
+        device_id=DeviceIDs.RAIDEN,
+    )
 
     log.info("Logged in", user=user, server=host, room_id=room_id)
     # print("TKN: \n" + client.token)
