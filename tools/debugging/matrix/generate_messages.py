@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import gevent.monkey  # isort:skip # noqa
 
+from raiden.constants import DeviceIDs
+
 gevent.monkey.patch_all()  # isort:skip # noqa
 import argparse
 import json
@@ -176,7 +178,7 @@ def new_user(matrix_server_url: str) -> LoggedUser:
     signer = factories.make_signer()
 
     with logtime(USER) as details:
-        user = login(client, signer)
+        user = login(client, signer, DeviceIDs.RAIDEN)
         details["user_id"] = user.user_id
 
     return LoggedUser(client, signer, user)

@@ -39,6 +39,7 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 from structlog._config import BoundLoggerLazyProxy
 
+from raiden.constants import DeviceIDs
 from raiden.exceptions import (
     InvalidSignature,
     RaidenUnrecoverableError,
@@ -592,7 +593,9 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
         )
 
 
-def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: str) -> User:
+def first_login(
+    client: GMatrixClient, signer: Signer, username: str, cap_str: str, device_id: DeviceIDs
+) -> User:
     """Login within a server.
 
     There are multiple cases where a previous auth token can become invalid and
@@ -643,7 +646,7 @@ def first_login(client: GMatrixClient, signer: Signer, username: str, cap_str: s
 
     # Disabling sync because login is done before the transport is fully
     # initialized, i.e. the inventory rooms don't have the callbacks installed.
-    client.login(username, password, sync=False, device_id="RAIDEN")
+    client.login(username, password, sync=False, device_id=device_id.value)
     client.api.disable_push_notifications()
 
     # Because this is the first login, the display name has to be set, this
@@ -730,6 +733,7 @@ def login_with_token(client: GMatrixClient, user_id: str, access_token: str) -> 
 def login(
     client: GMatrixClient,
     signer: Signer,
+    device_id: DeviceIDs,
     prev_auth_data: Optional[str] = None,
     capabilities: Dict[str, Any] = None,
 ) -> User:
@@ -767,7 +771,7 @@ def login(
         capstr = serialize_capabilities(capabilities)
     except ValueError:
         raise Exception("error serializing")
-    return first_login(client, signer, username, capstr)
+    return first_login(client, signer, username, capstr, device_id)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())  # type: ignore # noqa E501
