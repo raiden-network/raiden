@@ -8,6 +8,7 @@ import structlog
 from eth_typing import URI
 from eth_utils import is_address, to_canonical_address
 from web3 import HTTPProvider, Web3
+from web3.types import BlockIdentifier
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -33,8 +34,9 @@ from raiden.exceptions import ConfigurationError, RaidenError
 from raiden.message_handler import MessageHandler
 from raiden.network.pathfinding import check_pfs_transport_configuration
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.network.transport import MatrixTransport
+from raiden.network.transport import MatrixTransport, populate_services_addresses
 from raiden.network.transport.matrix import make_room_alias
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
 from raiden.raiden_service import RaidenService
@@ -112,6 +114,8 @@ def setup_matrix(
     services_config: ServiceConfig,
     environment_type: Environment,
     routing_mode: RoutingMode,
+    service_registry: Optional[ServiceRegistry],
+    block_identifier: BlockIdentifier,
 ) -> MatrixTransport:
     # Add PFS broadcast room when not in private mode
     if routing_mode != RoutingMode.PRIVATE:
@@ -122,7 +126,11 @@ def setup_matrix(
     if services_config.monitoring_enabled is True:
         transport_config.broadcast_rooms.append(MONITORING_BROADCASTING_ROOM)
 
-    return MatrixTransport(config=transport_config, environment=environment_type)
+    transport = MatrixTransport(config=transport_config, environment=environment_type)
+    if service_registry is not None:
+        populate_services_addresses(transport, service_registry, block_identifier)
+
+    return transport
 
 
 def get_account_and_private_key(
@@ -435,7 +443,12 @@ def run_raiden_service(
     )
 
     matrix_transport = setup_matrix(
-        config.transport, config.services, config.environment_type, routing_mode
+        config.transport,
+        config.services,
+        config.environment_type,
+        routing_mode,
+        services_bundle.service_registry,
+        BLOCK_ID_LATEST,
     )
 
     event_handler: EventHandler = RaidenEventHandler()
