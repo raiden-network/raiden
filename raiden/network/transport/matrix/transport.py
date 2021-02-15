@@ -19,6 +19,7 @@ from gevent.lock import Semaphore
 from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError
+from web3.types import BlockIdentifier
 
 import raiden
 from raiden.constants import (
@@ -36,6 +37,7 @@ from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.synchronization import Delivered, Processed
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixMessage,
@@ -441,6 +443,8 @@ class MatrixTransport(Runnable):
             self._counters["dispatch"] = Counter()
             self._message_timing_keeper = MessageAckTimingKeeper()
 
+        self.services_addresses: Dict[Address, int] = dict()
+
     def __repr__(self) -> str:
         if self._raiden_service is not None:
             node = f" node:{self.checksummed_address}"
@@ -735,6 +739,33 @@ class MatrixTransport(Runnable):
             )
 
             self._send_with_retry(queue)
+
+    def update_services_addresses(self, addresses_validity: Dict[Address, int]) -> None:
+        """Update the registered services addresses.
+
+        This should be called
+        - prior to the transport startup, to populate initial addresses
+        - on new `ServiceRegistry.sol::RegisteredService` event
+        """
+        for address, validity in addresses_validity.items():
+            self.services_addresses[address] = validity
+
+    def expire_services_addresses(self, current_timestamp: int, block_number: int) -> None:
+        """Check registered service addresses for registration expiry. Purge addresses that
+        are no longer valid from `service_addresses`.
+
+        This should be called on a new `Block` event, with the current timestamp from `Block`.
+        """
+        for address, validity in self.services_addresses.items():
+            if validity < current_timestamp:
+                log.info(
+                    "Retiring service address, registration expired.",
+                    validity=validity,
+                    current_timestamp=current_timestamp,
+                    block_number=block_number,
+                    address=address,
+                )
+                self.services_addresses.pop(address)
 
     def broadcast(self, room: str, message: Message) -> None:
         """Broadcast a message to a public room.
@@ -1457,3 +1488,25 @@ class MatrixTransport(Runnable):
         if last_ex is None:
             return return_value
         raise last_ex
+
+
+def populate_services_addresses(
+    transport: MatrixTransport,
+    service_registry: ServiceRegistry,
+    block_identifier: BlockIdentifier,
+) -> None:
+    if service_registry is not None:
+        services_addresses: Dict[Address, int] = dict()
+        for index in range(service_registry.ever_made_deposits_len(block_identifier)):
+            address = service_registry.ever_made_deposits(block_identifier, index)
+            if address is None:
+                continue
+            if service_registry.has_valid_registration(block_identifier, address):
+                services_addresses[
+                    address
+                ] = service_registry.proxy.functions.service_valid_till.call(
+                    block_identifier=block_identifier
+                ).get(
+                    address
+                )
+        transport.update_services_addresses(services_addresses)
