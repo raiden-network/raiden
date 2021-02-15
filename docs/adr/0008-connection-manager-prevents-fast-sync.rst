@@ -59,7 +59,7 @@ are code paths in the Raiden code base that are only required by the CM
 that caused bugs in the past. It is not clear if the CM in its current
 form helps us to achieve our goals and its behavior of doing
 transactions at times after joining a TN can make Raiden look bad at
-times of high gas costs. In other words, user is not made explicitly
+times of high gas costs. In other words, the user is not made explicitly
 aware that these channels incur gas costs and this problem is even more
 pronounced during times of high gas costs.
 

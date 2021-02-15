@@ -26,7 +26,7 @@ initiator. The initiator does not do anything on receiving the refund
 and the payment times out. This is the worst possible apporoach because:
 
 -  Refunds don’t provide any benefit
--  Doing refunds locks up additional funds until the payment times out
+-  Refunds lock up additional funds until the payment times out
 -  Refunds significantly increase complexity of the mediation code
 
 The light client has an incomplete and untested refund implementation,
