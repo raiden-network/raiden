@@ -11,6 +11,7 @@ from web3._utils.filters import construct_event_filter_params
 from web3.types import BlockNumber, EventData, FilterParams, LogReceipt
 
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     ABI,
@@ -23,8 +24,10 @@ from raiden.utils.typing import (
 )
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    EVENT_REGISTERED_SERVICE,
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
@@ -125,6 +128,7 @@ class RaidenContractFilter:
     )
     secret_registry_address: Optional[SecretRegistryAddress] = None
     ignore_secret_registry_until_channel_found: bool = False
+    service_registry: Optional[ServiceRegistry] = None
 
     def __bool__(self) -> bool:
         return bool(
@@ -225,6 +229,20 @@ class RaidenContractFilter:
                 }
                 for tn, channels in self.channels_of_token_network.items()
             )
+        if self.service_registry is not None:
+            filters.append(
+                {
+                    "_name": "service_registered",
+                    "fromBlock": from_block,
+                    "toBlock": to_block,
+                    "address": self.service_registry.address,
+                    "topics": [
+                        get_topics_of_events(self.service_registry.proxy.abi)[
+                            EVENT_REGISTERED_SERVICE
+                        ]
+                    ],
+                }
+            )
 
         # The filters contain a ``_name`` key, which does not belong into
         # FilterParams. But that key is very helpful when debugging and it
@@ -236,12 +254,15 @@ class RaidenContractFilter:
         tnr_abi = contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY)
         tn_abi = contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK)
         secret_registry_abi = contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY)
+        service_registry_abi = contract_manager.get_contract_abi(CONTRACT_SERVICE_REGISTRY)
         abis = {
             **{Address(tnr): tnr_abi for tnr in self.token_network_registry_addresses},
             **{Address(tn): tn_abi for tn in self.token_network_addresses},
         }
         if self.secret_registry_address:
             abis[Address(self.secret_registry_address)] = secret_registry_abi
+        if self.service_registry:
+            abis[Address(self.service_registry.address)] = service_registry_abi
         return abis
 
     def union(self, other: "RaidenContractFilter") -> "RaidenContractFilter":
@@ -273,4 +294,8 @@ class RaidenContractFilter:
                 self.ignore_secret_registry_until_channel_found
                 and other.ignore_secret_registry_until_channel_found
             ),
+            # We must not have two different non-None service registries. Choose the non-None one.
+            service_registry=(
+                {self.service_registry, other.service_registry} - {None} or {None}
+            ).pop(),
         )

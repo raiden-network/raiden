@@ -224,6 +224,7 @@ def initiator_init(
 def smart_contract_filters_from_node_state(
     chain_state: ChainState,
     secret_registry_address: SecretRegistryAddress,
+    service_registry: Optional[ServiceRegistry],
 ) -> RaidenContractFilter:
     token_network_registries = chain_state.identifiers_to_tokennetworkregistries.values()
     token_networks = [tn for tnr in token_network_registries for tn in tnr.token_network_list]
@@ -239,6 +240,7 @@ def smart_contract_filters_from_node_state(
         token_network_addresses={tn.address for tn in token_networks},
         channels_of_token_network=channels_of_token_network,
         ignore_secret_registry_until_channel_found=not channels_of_token_network,
+        service_registry=service_registry,
     )
 
 
@@ -751,7 +753,9 @@ class RaidenService(Runnable):
         event_filter = smart_contract_filters_from_node_state(
             chain_state,
             self.default_secret_registry.address,
+            self.default_service_registry,
         )
+
         log.debug("initial filter", event_filter=event_filter, node=self.address)
         blockchain_events = BlockchainEvents(
             web3=self.rpc_client.web3,
