@@ -13,7 +13,6 @@ from typing import Any, AnyStr, Callable, List, Optional
 import click
 import filelock
 import structlog
-from click.core import ParameterSource  # type: ignore
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from urllib3.exceptions import ReadTimeoutError
 
@@ -656,10 +655,9 @@ def _run(ctx: Context, **kwargs: Any) -> None:
         kwargs["config"] = raiden_config
         enable_monitoring = kwargs["enable_monitoring"]
         if enable_monitoring is False:
-            moni_source = ctx.get_parameter_source("enable_monitoring")  # type: ignore
             is_mainnet = kwargs["chain_id"] == ChainID(1)
 
-            if moni_source is ParameterSource.DEFAULT and is_mainnet:
+            if is_mainnet:
                 msg = (
                     "WARNING: You did not enable monitoring (`--enable-monitoring`) while "
                     "connecting to the Ethereum mainnet.\n"

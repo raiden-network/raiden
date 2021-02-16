@@ -194,18 +194,31 @@ def test_raiden_disable_on_no_rpc(cli_runner):
     assert rest_config.web_ui_enabled is False
 
 
-def test_no_monitoring_mainnet_warning(cli_runner):
-
-    cli_command = "raiden --accept-disclaimer"
-
-    expected_invoke_kwargs = {
-        "enable_monitoring": (ParameterSource.DEFAULT, False),
-        "chain_id": (ParameterSource.DEFAULT, 1),
-        "accept_disclaimer": (ParameterSource.COMMANDLINE, True),
-    }
+@pytest.mark.parametrize(
+    ("cli_command", "expected_kwargs"),
+    [
+        (
+            "raiden --accept-disclaimer",
+            {
+                "enable_monitoring": (ParameterSource.DEFAULT, False),
+                "chain_id": (ParameterSource.DEFAULT, 1),
+                "accept_disclaimer": (ParameterSource.COMMANDLINE, True),
+            },
+        ),
+        (
+            "raiden --no-enable-monitoring --network-id 1 --accept-disclaimer",
+            {
+                "enable_monitoring": (ParameterSource.COMMANDLINE, False),
+                "chain_id": (ParameterSource.COMMANDLINE, 1),
+                "accept_disclaimer": (ParameterSource.COMMANDLINE, True),
+            },
+        ),
+    ],
+)
+def test_no_monitoring_mainnet_warning(cli_runner, cli_command, expected_kwargs):
 
     _, kwargs = get_invoked_kwargs(cli_command, cli_runner, "raiden.ui.cli._run")
-    assert_invoked_kwargs(kwargs, expected_invoke_kwargs)
+    assert_invoked_kwargs(kwargs, expected_kwargs)
 
     result = get_cli_result(cli_command, cli_runner, "raiden.ui.cli.run_services")
 
