@@ -6,7 +6,7 @@ Join a Token Network
 You can join a token network by either:
 
 -  :ref:`Quick Connect <webui_quick_connect>`
--  :ref:`Registering a new token <webui_join_tn>`
+-  :ref:`Registering a new token <webui_register_token>`
 
 .. note::
 
@@ -52,14 +52,14 @@ channel.
 
 .. warning:: *Quick Connect* is an on-chain activity that will consume some of your ETH. Opening fewer channels will reduce the gas cost proportionally.
 
-You are now ready to make the first payment!
+You are now ready to :ref:`make your first payment <webui_payment>`!
 
-.. include:: payment.rst
+.. _webui_register_token:
 
 Registering a new token
 -----------------------
 
-.. warning:: Registering a new token is only relevant on the testnets. The tokens allowed on mainnet for the Alderaan release are DAI and W-ETH. 
+.. warning:: Registering a new token is only relevant on the testnets. The tokens allowed on mainnet for the Alderaan release are DAI and W-ETH.
 
 
 If you want to join the network for a token and that token is not

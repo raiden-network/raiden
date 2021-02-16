@@ -23,7 +23,7 @@ To open a channel, a PUT request is made to the
 
 .. note::
 
-    Raiden utilizes a RESTful API where all URL paths starts with ``/api/`` followed by a version number. The current API version is ``1`` and therefore all requests begins with ``/api/v1/``. 
+    Raiden utilizes a RESTful API where all URL paths starts with ``/api/`` followed by a version number. The current API version is ``1`` and therefore all requests begins with ``/api/v1/``.
 
 
 This will create a new channel and a successful request will return you
@@ -52,5 +52,3 @@ generated. This means that there now is a channel with that identifier
 inside the token network.
 
 We're now ready to start sending W-ETH tokens!
-
-.. include:: make-a-payment.rst

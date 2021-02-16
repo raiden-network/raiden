@@ -1,3 +1,5 @@
+.. _webui_payment:
+
 Make a Payment
 ==============
 
