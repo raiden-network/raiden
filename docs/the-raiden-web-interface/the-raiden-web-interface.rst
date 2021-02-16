@@ -10,13 +10,6 @@ The easiest way to do so is by using the :doc:`quick start guide <../installatio
 **Once you have a Raiden node up and running the WebUI will be available
 on** `http://localhost:5001 <http://localhost:5001/>`__\ **.**
 
-.. _overview-1:
-
-Overview
-========
-
-This tutorial will teach you how to:
-
 .. include:: screens.rst
 
 .. include:: join-a-token-network.rst
