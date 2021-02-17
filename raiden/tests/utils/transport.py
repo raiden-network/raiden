@@ -116,6 +116,7 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
         client = new_client(ignore_messages, ignore_member_join, server)
 
         # A user must join the room to create the room in the federated server
+        log.debug("canonical alias", alias=room.canonical_alias)
         room = client.join_room(room.canonical_alias)
 
         server_name = server.netloc
