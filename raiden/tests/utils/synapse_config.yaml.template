@@ -100,3 +100,6 @@ password_providers:
 
 # Whether to allow non server admins to create groups on this server
 enable_group_creation: false
+
+# we need to set an empty blacklist to not blacklist localhost
+ip_range_blacklist: []

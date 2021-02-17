@@ -398,7 +398,7 @@ pip-tools==5.5.0
     # via -r requirements-dev.in
 pluggy==0.12.0
     # via pytest
-prometheus-client==0.9.0
+prometheus-client==0.8.0
     # via matrix-synapse
 prompt-toolkit==3.0.5
     # via ipython
