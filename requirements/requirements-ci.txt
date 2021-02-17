@@ -573,7 +573,7 @@ pytest-select==0.1.2
     # via -r requirements-dev.txt
 pytest-xdist==2.2.0
     # via -r requirements-dev.txt
-pytest==6.2.1
+pytest==6.2.2
     # via
     #   -r requirements-dev.txt
     #   pytest-forked
@@ -692,7 +692,7 @@ sortedcontainers==2.1.0
     #   matrix-synapse
 sphinx-rtd-theme==0.5.1
     # via -r requirements-dev.txt
-sphinx==3.4.3
+sphinx==3.5.1
     # via
     #   -r requirements-dev.txt
     #   releases
