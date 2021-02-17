@@ -601,7 +601,7 @@ sortedcontainers==2.1.0
     #   matrix-synapse
 sphinx-rtd-theme==0.5.1
     # via -r requirements-docs.txt
-sphinx==3.4.3
+sphinx==3.5.1
     # via
     #   -r requirements-docs.txt
     #   releases
