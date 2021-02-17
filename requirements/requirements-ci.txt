@@ -370,7 +370,7 @@ marshmallow==3.10.0
     #   marshmallow-polyfield
 matrix-client==0.3.2
     # via -r requirements-dev.txt
-matrix-synapse==1.19.1
+matrix-synapse==1.27.0
     # via -r requirements-dev.txt
 mccabe==0.6.1
     # via
@@ -451,7 +451,7 @@ pluggy==0.12.0
     # via
     #   -r requirements-dev.txt
     #   pytest
-prometheus-client==0.3.1
+prometheus-client==0.9.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
