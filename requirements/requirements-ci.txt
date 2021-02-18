@@ -317,7 +317,7 @@ ipython-genutils==0.2.0
     # via
     #   -r requirements-dev.txt
     #   traitlets
-ipython==7.19.0
+ipython==7.20.0
     # via -r requirements-dev.txt
 isort==5.7.0
     # via
@@ -536,7 +536,7 @@ pylibsrtp==0.6.6
     # via
     #   -r requirements-dev.txt
     #   aiortc
-pylint==2.6.0
+pylint==2.6.2
     # via -r requirements-dev.txt
 pymacaroons==0.13.0
     # via
