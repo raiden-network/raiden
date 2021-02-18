@@ -317,7 +317,7 @@ ipython-genutils==0.2.0
     # via
     #   -r requirements-dev.txt
     #   traitlets
-ipython==7.19.0
+ipython==7.20.0
     # via -r requirements-dev.txt
 isort==5.7.0
     # via
