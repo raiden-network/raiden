@@ -283,7 +283,7 @@ ipfshttpclient==0.7.0a1
     #   web3
 ipython-genutils==0.2.0
     # via traitlets
-ipython==7.19.0
+ipython==7.20.0
     # via -r requirements-dev.in
 isort==5.7.0
     # via
