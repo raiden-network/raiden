@@ -138,7 +138,7 @@ constantly==15.1.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-coverage==5.3.1
+coverage==5.4
     # via -r requirements-dev.txt
 crc32c==2.2
     # via
