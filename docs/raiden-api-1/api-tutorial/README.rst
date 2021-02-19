@@ -29,14 +29,14 @@ Overview
 You're now ready to start interacting with the different endpoints and
 learn how they can be used to:
 
-.. include:: 1-join-a-token-network.rst
+.. include:: 1-join-a-token-network.inc.rst
 
-.. include:: 2-open-a-channel.rst
+.. include:: 2-open-a-channel.inc.rst
 
-.. include:: 3-deposit.rst
+.. include:: 3-deposit.inc.rst
 
-.. include:: 3-make-a-payment.rst
+.. include:: 3-make-a-payment.inc.rst
 
-.. include:: withdraw-tokens.rst
+.. include:: withdraw-tokens.inc.rst
 
-.. include:: 4-settle-payments-and-close-channels.rst
+.. include:: 4-settle-payments-and-close-channels.inc.rst
