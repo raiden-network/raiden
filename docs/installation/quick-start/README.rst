@@ -15,6 +15,7 @@ In this tutorial we will walk through the steps to:
 .. include:: get-metamask.rst
 .. include:: infura-quick-start.rst
 .. include:: download-and-run-the-raiden-wizard.rst
+.. include:: known-issues.rst
 
 
 Prerequisites
