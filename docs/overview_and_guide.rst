@@ -112,7 +112,7 @@ You will need a local or remote Ethereum node to connect Raiden to.
 
 - Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ to install the go-ethereum client.
 - Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ to install the parity client.
-- Or sign up at a service like `Infura <https://infura.io>`_ to set up a remote node.
+- Or sign up at a service like `Infura <https://infura.io>`__ to set up a remote node.
 
 Now you are ready :ref:`to get started <running_raiden>`.
 
@@ -226,7 +226,7 @@ After account creation, launch Raiden with the path of your keystore supplied::
 
 - **Using Infura**
 
-Sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden directly::
+Sign up with `Infura <https://infura.io/>`__ to get an API token. After that you can start using Raiden directly::
 
     raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://<network>.infura.io/v3/<yourToken>"
 

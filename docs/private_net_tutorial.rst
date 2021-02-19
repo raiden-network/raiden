@@ -118,8 +118,7 @@ Figure out the value ``CONTRACTS_VERSION``
 .. code:: bash
 
  (env) $ cd raiden
- (env) $ grep 'CONTRACTS_VERSION = ' -r ../env/lib/python3.7/site-packages/raiden_contracts
-../env/lib/python3.7/site-packages/raiden_contracts/constants.py:CONTRACTS_VERSION = "0.25.0"
+ (env) $ grep 'CONTRACTS_VERSION = ' -r ../env/lib/python3.7/site-packages/raiden_contracts ../env/lib/python3.7/site-packages/raiden_contracts/constants.py:CONTRACTS_VERSION = "0.25.0"
 
 Copy the shown version somewhere.
 
@@ -244,4 +243,4 @@ And you can start the Raiden client:
 
 .. code:: bash
 
- (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --user-deposit-contract-address $UserDeposit --routing-mode private --password-file passwd_file
+   (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $DeployerAddress --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --console --no-sync-check --accept-disclaimer --user-deposit-contract-address $UserDeposit --routing-mode private --password-file passwd_file
