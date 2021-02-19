@@ -269,8 +269,14 @@ imagesize==1.1.0
     # via
     #   -r requirements-docs.txt
     #   sphinx
-importlib-metadata==2.0.0
-    # via pluggy
+importlib-metadata==3.4.0
+    # via
+    #   -r requirements.txt
+    #   flake8
+    #   flake8-comprehensions
+    #   jsonschema
+    #   pluggy
+    #   pytest
 incremental==17.5.0
     # via
     #   treq
@@ -536,7 +542,7 @@ requests==2.25.1
     #   web3
 responses==0.10.15
     # via -r requirements-dev.in
-rlp==2.0.0
+rlp==2.0.1
     # via
     #   -r requirements.txt
     #   eth-account
@@ -663,15 +669,18 @@ twisted[tls]==20.3.0
     #   treq
 typed-ast==1.4.0
     # via
+    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements.txt
     #   black
+    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
+    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements.txt
@@ -716,7 +725,9 @@ wmctrl==0.3
 wrapt==1.11.1
     # via astroid
 zipp==3.4.0
-    # via importlib-metadata
+    # via
+    #   -r requirements.txt
+    #   importlib-metadata
 zope.event==4.4
     # via
     #   -r requirements.txt

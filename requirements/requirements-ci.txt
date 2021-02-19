@@ -296,10 +296,15 @@ imagesize==1.1.0
     # via
     #   -r requirements-dev.txt
     #   sphinx
-importlib-metadata==2.0.0
+importlib-metadata==3.4.0
     # via
     #   -r requirements-dev.txt
+    #   flake8
+    #   flake8-comprehensions
+    #   jsonschema
     #   pluggy
+    #   pyinstaller
+    #   pytest
 incremental==17.5.0
     # via
     #   -r requirements-dev.txt
@@ -351,7 +356,9 @@ lru-dict==1.1.6
     #   -r requirements-dev.txt
     #   web3
 macholib==1.14
-    # via -r requirements-ci.in
+    # via
+    #   -r requirements-ci.in
+    #   pyinstaller
 markupsafe==1.1.1
     # via
     #   -r requirements-dev.txt
@@ -621,7 +628,7 @@ requests==2.25.1
     #   web3
 responses==0.10.15
     # via -r requirements-dev.txt
-rlp==2.0.0
+rlp==2.0.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
@@ -760,15 +767,18 @@ twisted[tls]==20.3.0
 typed-ast==1.4.0
     # via
     #   -r requirements-dev.txt
+    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements-dev.txt
     #   black
+    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
+    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements-dev.txt
