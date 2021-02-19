@@ -299,12 +299,7 @@ imagesize==1.1.0
 importlib-metadata==3.4.0
     # via
     #   -r requirements-dev.txt
-    #   flake8
-    #   flake8-comprehensions
-    #   jsonschema
     #   pluggy
-    #   pyinstaller
-    #   pytest
 incremental==17.5.0
     # via
     #   -r requirements-dev.txt
@@ -356,9 +351,7 @@ lru-dict==1.1.6
     #   -r requirements-dev.txt
     #   web3
 macholib==1.14
-    # via
-    #   -r requirements-ci.in
-    #   pyinstaller
+    # via -r requirements-ci.in
 markupsafe==1.1.1
     # via
     #   -r requirements-dev.txt
@@ -401,7 +394,7 @@ mypy-extensions==0.4.3
     #   mypy
     #   raiden-contracts
     #   typing-inspect
-mypy==0.790
+mypy==0.800
     # via -r requirements-dev.txt
 nest-asyncio==1.5.1
     # via -r requirements-dev.txt
@@ -767,18 +760,15 @@ twisted[tls]==20.3.0
 typed-ast==1.4.0
     # via
     #   -r requirements-dev.txt
-    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements-dev.txt
     #   black
-    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
-    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements-dev.txt
