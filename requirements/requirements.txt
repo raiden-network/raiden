@@ -121,6 +121,8 @@ hexbytes==0.2.0
     #   web3
 idna==2.8
     # via requests
+importlib-metadata==3.4.0
+    # via jsonschema
 ipfshttpclient==0.7.0a1
     # via web3
 itsdangerous==1.1.0
@@ -201,7 +203,7 @@ requests==2.25.1
     #   ipfshttpclient
     #   matrix-client
     #   web3
-rlp==2.0.0
+rlp==2.0.1
     # via
     #   eth-account
     #   eth-rlp
@@ -228,7 +230,10 @@ toml==0.10.2
 toolz==0.9.0
     # via cytoolz
 typing-extensions==3.7.4.3
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   importlib-metadata
+    #   web3
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
@@ -245,6 +250,8 @@ websockets==8.1
     # via web3
 werkzeug==1.0.1
     # via flask
+zipp==3.4.0
+    # via importlib-metadata
 zope.event==4.4
     # via gevent
 zope.interface==5.1.0
