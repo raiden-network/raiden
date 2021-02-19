@@ -138,7 +138,7 @@ constantly==15.1.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-coverage==5.3.1
+coverage==5.4
     # via -r requirements-dev.txt
 crc32c==2.2
     # via
@@ -571,7 +571,7 @@ pytest-random==0.2
     # via -r requirements-dev.txt
 pytest-select==0.1.2
     # via -r requirements-dev.txt
-pytest-xdist==2.2.0
+pytest-xdist==2.2.1
     # via -r requirements-dev.txt
 pytest==6.2.2
     # via
