@@ -74,6 +74,3 @@ After you have shut down your Raiden node, the Raiden Wizard can be used
 as a launcher for your node. When you start the Wizard, it will
 recognise that you already created a configuration for your node and
 show a "Launch" button.
-
-.. |image0| image:: ../.gitbook/assets/wizard_goerli.gif
-
