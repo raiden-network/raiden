@@ -10,16 +10,16 @@ Using Raiden on Mainnet
    guidelines <../other/safe-usage>` before starting to use Raiden.
 
 
-.. include:: whitelisted-tokens-1.rst
+.. include:: whitelisted-tokens-1.inc.rst
 
-.. include:: deposit-tokens-to-the-udc.rst
+.. include:: deposit-tokens-to-the-udc.inc.rst
 
-.. include:: join-a-token-network-1.rst
+.. include:: join-a-token-network-1.inc.rst
 
-.. include:: make-a-payment.rst
+.. include:: make-a-payment.inc.rst
 
-.. include:: deposit-tokens.rst
+.. include:: deposit-tokens.inc.rst
 
-.. include:: channel-status.rst
+.. include:: channel-status.inc.rst
 
-.. include:: mediation-fees.rst
+.. include:: mediation-fees.inc.rst
