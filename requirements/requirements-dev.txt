@@ -255,7 +255,7 @@ hexbytes==0.2.0
     #   web3
 hyperlink==19.0.0
     # via twisted
-hypothesis==6.1.1
+hypothesis==6.2.0
     # via -r requirements-dev.in
 idna==2.8
     # via
@@ -492,7 +492,7 @@ pytest-random==0.2
     # via -r requirements-dev.in
 pytest-select==0.1.2
     # via -r requirements-dev.in
-pytest-xdist==2.2.0
+pytest-xdist==2.2.1
     # via -r requirements-dev.in
 pytest==6.2.2
     # via
