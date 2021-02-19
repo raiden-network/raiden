@@ -571,7 +571,7 @@ pytest-random==0.2
     # via -r requirements-dev.txt
 pytest-select==0.1.2
     # via -r requirements-dev.txt
-pytest-xdist==2.2.0
+pytest-xdist==2.2.1
     # via -r requirements-dev.txt
 pytest==6.2.2
     # via
