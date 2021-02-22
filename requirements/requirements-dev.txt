@@ -353,7 +353,7 @@ mypy-extensions==0.4.3
     #   mypy
     #   raiden-contracts
     #   typing-inspect
-mypy==0.790
+mypy==0.812
     # via -r requirements-dev.in
 nest-asyncio==1.5.1
     # via -r requirements-dev.in
