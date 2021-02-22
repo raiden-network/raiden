@@ -75,7 +75,6 @@ class PFSInfo:
     version: str
     confirmed_block_number: BlockNumber
     matrix_server: str
-    matrix_room_id: Optional[str]
 
 
 @dataclass
@@ -165,7 +164,6 @@ def get_pfs_info(url: str) -> PFSInfo:
             version=infos["version"],
             confirmed_block_number=infos["network_info"]["confirmed_block"]["number"],
             matrix_server=matrix_server_info.netloc,
-            matrix_room_id=infos.get("matrix_room_id"),
         )
     except RequestException as e:
         msg = "Selected Pathfinding Service did not respond"
@@ -329,48 +327,6 @@ def configure_pfs_or_exit(
     log.info("Using Pathfinding Service", pfs_info=pathfinding_service_info)
 
     return pathfinding_service_info
-
-
-def check_pfs_transport_configuration(
-    pfs_info: PFSInfo,
-    pfs_was_autoselected: bool,
-    transport_pfs_broadcast_room_id: str,
-    matrix_server_url: str,
-    matrix_server_was_autoselected: bool,
-) -> None:
-    if pfs_info.matrix_room_id is None:
-        # Special case until all PFSs are upgraded to >= 0.12.0
-        log.warning(
-            "Can't check PFS transport configuration",
-            pfs_version=pfs_info.version,
-            min_required_version="0.12.0",
-            pfs_url=pfs_info.url,
-        )
-        return
-    if pfs_info.matrix_room_id != transport_pfs_broadcast_room_id:
-        msg = (
-            f"The Pathfinding Service at {pfs_info.url} is not connected to the "
-            f"same Matrix transport federation as this Raiden node."
-        )
-        if matrix_server_was_autoselected and pfs_was_autoselected:
-            msg += (
-                f"\nBoth the Matrix transport server at {matrix_server_url} and the PFS were "
-                f"automatically selected. This points to a server-side misconfiguration. "
-                f"Please report this issue at "
-                f"https://github.com/raiden-network/raiden/issues/new?template=bug_report.md"
-            )
-        else:
-            msg += (
-                "\nPlease verify that the Matrix transport server and PFS service you selected "
-                "are intended to be used together or use the automatic server selection."
-            )
-        msg += (
-            f"\n\n"
-            f"- Transport server PFS broadcast room-id: {transport_pfs_broadcast_room_id}\n"
-            f"- PFS server broadcast room-id: {pfs_info.matrix_room_id}"
-        )
-
-        raise RaidenError(msg)
 
 
 def check_pfs_for_production(

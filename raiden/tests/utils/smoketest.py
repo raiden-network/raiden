@@ -26,8 +26,6 @@ from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_ADDRESS,
     GENESIS_BLOCK_NUMBER,
-    MONITORING_BROADCASTING_ROOM,
-    PATH_FINDING_BROADCASTING_ROOM,
     SECONDS_PER_DAY,
     UINT256_MAX,
     Environment,
@@ -531,8 +529,6 @@ def setup_smoketest(
         free_port_generator=free_port_generator,
         broadcast_rooms_aliases=[
             make_room_alias(CHAINNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
-            make_room_alias(CHAINNAME_TO_ID["smoketest"], PATH_FINDING_BROADCASTING_ROOM),
-            make_room_alias(CHAINNAME_TO_ID["smoketest"], MONITORING_BROADCASTING_ROOM),
         ],
     )
 
