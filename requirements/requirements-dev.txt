@@ -255,7 +255,7 @@ hexbytes==0.2.0
     #   web3
 hyperlink==19.0.0
     # via twisted
-hypothesis==6.1.1
+hypothesis==6.3.0
     # via -r requirements-dev.in
 idna==2.8
     # via
@@ -272,11 +272,7 @@ imagesize==1.1.0
 importlib-metadata==3.4.0
     # via
     #   -r requirements.txt
-    #   flake8
-    #   flake8-comprehensions
-    #   jsonschema
     #   pluggy
-    #   pytest
 incremental==17.5.0
     # via
     #   treq
@@ -669,18 +665,15 @@ twisted[tls]==20.3.0
     #   treq
 typed-ast==1.4.0
     # via
-    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements.txt
     #   black
-    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
-    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements.txt
