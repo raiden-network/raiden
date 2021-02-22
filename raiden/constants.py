@@ -88,6 +88,7 @@ class Capabilities(Enum):
 
 
 class DeviceIDs(Enum):
+    ALL_DEVICES = "*"
     RAIDEN = "RAIDEN"
     PFS = "PATH_FINDING"
     MS = "MONITORING"
@@ -187,8 +188,6 @@ CHECK_CHAIN_ID_INTERVAL = 5 * 60
 DEFAULT_HTTP_REQUEST_TIMEOUT = 10.0  # seconds
 
 DISCOVERY_DEFAULT_ROOM = "discovery"
-MONITORING_BROADCASTING_ROOM = "monitoring"
-PATH_FINDING_BROADCASTING_ROOM = "path_finding"
 MATRIX_AUTO_SELECT_SERVER = "auto"
 
 # According to the smart contracts as of 07/08:

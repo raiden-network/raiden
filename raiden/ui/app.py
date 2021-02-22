@@ -17,8 +17,6 @@ from raiden.constants import (
     DOC_URL,
     GENESIS_BLOCK_NUMBER,
     MATRIX_AUTO_SELECT_SERVER,
-    MONITORING_BROADCASTING_ROOM,
-    PATH_FINDING_BROADCASTING_ROOM,
     RAIDEN_DB_VERSION,
     Environment,
     EthereumForks,
@@ -31,11 +29,9 @@ from raiden.constants import (
 )
 from raiden.exceptions import ConfigurationError, RaidenError
 from raiden.message_handler import MessageHandler
-from raiden.network.pathfinding import check_pfs_transport_configuration
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix import make_room_alias
 from raiden.raiden_event_handler import EventHandler, PFSFeedbackEventHandler, RaidenEventHandler
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -46,7 +42,6 @@ from raiden.settings import (
     PythonApiConfig,
     RaidenConfig,
     RestApiConfig,
-    ServiceConfig,
 )
 from raiden.ui.checks import (
     check_ethereum_chain_id,
@@ -105,24 +100,6 @@ def fetch_available_matrix_servers(
     log.debug("Available matrix servers", available_servers=available_servers)
 
     transport_config.available_servers = available_servers
-
-
-def setup_matrix(
-    transport_config: MatrixTransportConfig,
-    services_config: ServiceConfig,
-    environment_type: Environment,
-    routing_mode: RoutingMode,
-) -> MatrixTransport:
-    # Add PFS broadcast room when not in private mode
-    if routing_mode != RoutingMode.PRIVATE:
-        if PATH_FINDING_BROADCASTING_ROOM not in transport_config.broadcast_rooms:
-            transport_config.broadcast_rooms.append(PATH_FINDING_BROADCASTING_ROOM)
-
-    # Add monitoring service broadcast room if enabled
-    if services_config.monitoring_enabled is True:
-        transport_config.broadcast_rooms.append(MONITORING_BROADCASTING_ROOM)
-
-    return MatrixTransport(config=transport_config, environment=environment_type)
 
 
 def get_account_and_private_key(
@@ -434,11 +411,8 @@ def run_raiden_service(
         )
     )
 
-    matrix_transport = setup_matrix(
-        config.transport,
-        config.services,
-        config.environment_type,
-        routing_mode,
+    matrix_transport = MatrixTransport(
+        config=config.transport, environment=config.environment_type
     )
 
     event_handler: EventHandler = RaidenEventHandler()
@@ -479,19 +453,4 @@ def run_raiden_service(
     )
 
     raiden_service.start()
-
-    if config.pfs_config is not None:
-        # This has to be done down here since there is a circular dependency
-        # between the PFS and Transport
-        pfs_broadcast_room_key = make_room_alias(config.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-        check_pfs_transport_configuration(
-            pfs_info=config.pfs_config.info,
-            pfs_was_autoselected=(pathfinding_service_address == MATRIX_AUTO_SELECT_SERVER),
-            transport_pfs_broadcast_room_id=matrix_transport.broadcast_rooms[
-                pfs_broadcast_room_key
-            ].room_id,
-            matrix_server_url=matrix_transport.server_url,
-            matrix_server_was_autoselected=(config.transport.server == MATRIX_AUTO_SELECT_SERVER),
-        )
-
     return raiden_service

@@ -54,7 +54,6 @@ PFS_INFO = PFSInfo(
     operator="John Doe",
     version="0.0.3",
     matrix_server="http://matrix.example.com",
-    matrix_room_id="!room-id:matrix.example.com",
 )
 
 
@@ -235,7 +234,6 @@ def test_setup_proxies_all_addresses_are_known():
         operator="John Doe",
         version="0.0.3",
         matrix_server="http://matrix.example.com",
-        matrix_room_id="!room-id:matrix.example.com",
     )
     deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
@@ -295,7 +293,6 @@ def test_setup_proxies_no_service_registry_but_pfs() -> None:
         operator="John Doe",
         version="0.0.3",
         matrix_server="http://matrix.example.com",
-        matrix_room_id="!room-id:matrix.example.com",
     )
     deployed_addresses = load_deployment_addresses_from_contracts(contracts)
     with patch.object(pathfinding, "get_pfs_info", return_value=PFS_INFO):
