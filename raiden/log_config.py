@@ -279,7 +279,8 @@ def configure_logging(
         }
     )
     structlog.configure(
-        processors=processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        processors=processors  # type:ignore
+        + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=cache_logger_on_first_use,
