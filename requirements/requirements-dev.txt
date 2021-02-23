@@ -270,9 +270,7 @@ imagesize==1.1.0
     #   -r requirements-docs.txt
     #   sphinx
 importlib-metadata==3.4.0
-    # via
-    #   -r requirements.txt
-    #   pluggy
+    # via pluggy
 incremental==17.5.0
     # via
     #   treq
@@ -324,7 +322,7 @@ marshmallow-dataclass==8.0.0
     # via -r requirements.txt
 marshmallow-enum==1.5.1
     # via -r requirements.txt
-marshmallow-polyfield==5.9
+marshmallow-polyfield==5.10
     # via -r requirements.txt
 marshmallow==3.10.0
     # via
@@ -717,9 +715,7 @@ wmctrl==0.3
 wrapt==1.11.1
     # via astroid
 zipp==3.4.0
-    # via
-    #   -r requirements.txt
-    #   importlib-metadata
+    # via importlib-metadata
 zope.event==4.4
     # via
     #   -r requirements.txt

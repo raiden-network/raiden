@@ -360,7 +360,7 @@ marshmallow-dataclass==8.0.0
     # via -r requirements-dev.txt
 marshmallow-enum==1.5.1
     # via -r requirements-dev.txt
-marshmallow-polyfield==5.9
+marshmallow-polyfield==5.10
     # via -r requirements-dev.txt
 marshmallow==3.10.0
     # via
