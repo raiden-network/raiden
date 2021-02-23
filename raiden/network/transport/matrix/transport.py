@@ -767,56 +767,42 @@ class MatrixTransport(Runnable):
                 )
                 self.services_addresses.pop(address)
 
-    def broadcast(self, room: str, message: Message) -> None:
-        """Broadcast a message to a public room.
+    def broadcast(self, message: Message, device_id: DeviceIDs) -> None:
+        """Broadcast a message to all services via `to-device` multicast.
+        The `device_id` determines the topic of the broadcast message and
+        should be either DeviceIDs.MS for a broadcast to the registered Monitoring-Services
+        or DeviceIDs.PFS for a broadcast to the registered Pathfinding-Services.
 
-        These rooms aren't being listened on and therefore no reply could be heard, so these
-        messages are sent in a send-and-forget async way.
-        The actual room name is composed from the suffix given as parameter and chain name or id
-        e.g.: raiden_ropsten_discovery
+        The messages are sent in a send-and-forget async way, and there is no message
+        acknowledgment from the services.
+
         Params:
-            room: name suffix as passed in config['broadcast_rooms'] list
-            message: Message instance to be serialized and sent
+            message:    Message instance to be serialized and sent
+            device_id:  topic of broadcast (DeviceIDs.MS for monitoring, DeviceIDs.PFS for
+                        pathfinding)
         """
-        self._broadcast_queue.put((room, message))
+
+        if device_id not in (DeviceIDs.MS, DeviceIDs.PFS):
+            raise NotImplementedError(f"Broadcasting to device `{device_id}` is not supported.")
+
+        self._broadcast_queue.put((device_id.value, message))
         self._broadcast_event.set()
 
     def _broadcast_worker(self) -> None:
-        def _broadcast(room_name: str, serialized_message: str) -> None:
-            if not any(suffix in room_name for suffix in self._config.broadcast_rooms):
-                raise RuntimeError(
-                    f'Broadcast called on non-public room "{room_name}". '
-                    f"Known public rooms: {self._config.broadcast_rooms}."
-                )
-            room_name = make_room_alias(self.chain_id, room_name)
-            if room_name not in self.broadcast_rooms:
-                room = join_broadcast_room(self._client, f"#{room_name}:{self._server_name}")
-                self.broadcast_rooms[room_name] = room
-
-            existing_room = self.broadcast_rooms.get(room_name)
-            assert existing_room, f"Unknown broadcast room: {room_name!r}"
-
-            self.log.debug(
-                "Broadcast",
-                room_name=room_name,
-                room=existing_room,
-                data=serialized_message.replace("\n", "\\n"),
-            )
-            existing_room.send_text(serialized_message)
 
         while not self._stop_event.ready():
             self._broadcast_event.clear()
             messages: Dict[str, List[Message]] = defaultdict(list)
             while self._broadcast_queue.qsize() > 0:
-                room_name, message = self._broadcast_queue.get()
-                messages[room_name].append(message)
-            for room_name, messages_for_room in messages.items():
+                device_id, message = self._broadcast_queue.get()
+                messages[device_id].append(message)
+            for device_id, messages_for_device_id in messages.items():
                 serialized_messages = (
-                    MessageSerializer.serialize(message) for message in messages_for_room
+                    MessageSerializer.serialize(message) for message in messages_for_device_id
                 )
                 for message_batch in make_message_batches(serialized_messages):
-                    _broadcast(room_name, message_batch)
-                for _ in messages_for_room:
+                    self._multicast_raw(data=message_batch, device_id=device_id)
+                for _ in messages_for_device_id:
                     # Every message needs to be marked as done.
                     # Unfortunately there's no way to do that in one call :(
                     # https://github.com/gevent/gevent/issues/1436
@@ -1201,6 +1187,34 @@ class MatrixTransport(Runnable):
     def _send_with_retry(self, queue: MessagesQueue) -> None:
         retrier = self._get_retrier(queue.queue_identifier.recipient)
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
+
+    def _multicast_raw(
+        self,
+        data: str,
+        device_id: str = "*",
+    ) -> None:
+        assert self._raiden_service is not None, "_raiden_service not set"
+
+        # Construct the user without the help of the `UserAddressManager`
+        # This will not check for presence of the user-id and will
+        # ONLY send the data to the user-ids of the services on the node's connected homeserver.
+        user_ids = list()
+        for address in self.services_addresses.keys():
+            user_ids.append(f"@{to_normalized_address(address)}:{self._server_name}")
+
+        messages = {
+            user_id: {device_id: {"msgtype": MatrixMessageType.TEXT.value, "body": data}}
+            for user_id in user_ids
+        }
+
+        self.log.debug(
+            "Multicast (`to-device`)",
+            device_id=device_id,
+            receivers=user_ids,
+            data=data.replace("\n", "\\n"),
+        )
+
+        self._client.api.send_to_device(event_type="m.room.message", messages=messages)
 
     def _send_raw(
         self,
