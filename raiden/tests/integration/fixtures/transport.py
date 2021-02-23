@@ -83,6 +83,7 @@ def matrix_transports(
     broadcast_rooms: List[str],
     matrix_sync_timeout: int,
     capabilities: CapabilitiesConfig,
+    environment_type: Environment,
 ) -> Iterable[List[MatrixTransport]]:
     transports = []
     local_matrix_servers_str = [str(server) for server in local_matrix_servers]
@@ -101,7 +102,7 @@ def matrix_transports(
                     sync_timeout=matrix_sync_timeout,
                     capabilities_config=capabilities,
                 ),
-                environment=Environment.DEVELOPMENT,
+                environment=environment_type,
             )
         )
 

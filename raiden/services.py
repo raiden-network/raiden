@@ -1,10 +1,10 @@
 import structlog
 
-from raiden import constants
 from raiden.constants import (
     BLOCK_ID_LATEST,
     DAI_TOKEN_ADDRESS,
     WETH_TOKEN_ADDRESS,
+    DeviceIDs,
     Environment,
     RoutingMode,
 )
@@ -48,7 +48,7 @@ def send_pfs_update(
 
     capacity_msg = PFSCapacityUpdate.from_channel_state(channel_state)
     capacity_msg.sign(raiden.signer)
-    raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, capacity_msg)
+    raiden.transport.broadcast(capacity_msg, device_id=DeviceIDs.PFS)
     log.debug(
         "Sent a PFS Capacity Update",
         node=to_checksum_address(raiden.address),
@@ -60,7 +60,7 @@ def send_pfs_update(
         fee_msg = PFSFeeUpdate.from_channel_state(channel_state)
         fee_msg.sign(raiden.signer)
 
-        raiden.transport.broadcast(constants.PATH_FINDING_BROADCASTING_ROOM, fee_msg)
+        raiden.transport.broadcast(fee_msg, device_id=DeviceIDs.PFS)
         log.debug(
             "Sent a PFS Fee Update",
             node=to_checksum_address(raiden.address),
@@ -164,4 +164,4 @@ def update_monitoring_service_from_balance_proof(
         monitoring_service_contract_address=raiden.default_msc_address,
     )
     monitoring_message.sign(raiden.signer)
-    raiden.transport.broadcast(constants.MONITORING_BROADCASTING_ROOM, monitoring_message)
+    raiden.transport.broadcast(monitoring_message, device_id=DeviceIDs.MS)
