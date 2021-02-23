@@ -2,7 +2,7 @@ import pytest
 from eth_utils import keccak
 
 from raiden.api.python import RaidenAPI
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, RoutingMode
+from raiden.constants import DeviceIDs, RoutingMode
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
@@ -44,7 +44,7 @@ def get_messages(app: RaidenService) -> List[Message]:
         app.transport, TestMatrixTransport
     ), "Transport is not a `TestMatrixTransport`"
 
-    return app.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM]
+    return app.transport.broadcast_messages[DeviceIDs.PFS.value]
 
 
 def reset_messages(app: RaidenService) -> None:
@@ -52,7 +52,7 @@ def reset_messages(app: RaidenService) -> None:
         app.transport, TestMatrixTransport
     ), "Transport is not a `TestMatrixTransport`"
 
-    app.transport.broadcast_messages[PATH_FINDING_BROADCASTING_ROOM] = []
+    app.transport.broadcast_messages[DeviceIDs.PFS.value] = []
 
 
 def wait_all_apps(raiden_network: List[RaidenService]) -> None:
@@ -65,9 +65,6 @@ def wait_all_apps(raiden_network: List[RaidenService]) -> None:
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [0])
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
-)
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
@@ -143,7 +140,6 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_during_mediated_transfer(
     raiden_network: List[RaidenService], number_of_nodes, deposit, token_addresses, network_wait
@@ -230,7 +226,6 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize("broadcast_rooms", [[PATH_FINDING_BROADCASTING_ROOM]])
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_unique_capacity_and_fee_updates_during_mediated_transfer(raiden_network):
     """

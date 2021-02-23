@@ -23,7 +23,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from structlog import get_logger
 from synapse.handlers.auth import AuthHandler
 
-from raiden.constants import Environment
+from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
@@ -463,10 +463,10 @@ class TestMatrixTransport(MatrixTransport):
         self.broadcast_messages: DefaultDict[str, List[Message]] = defaultdict(list)
         self.send_messages: DefaultDict[QueueIdentifier, List[Message]] = defaultdict(list)
 
-    def broadcast(self, room: str, message: Message) -> None:
-        self.broadcast_messages[room].append(message)
+    def broadcast(self, message: Message, device_id: DeviceIDs) -> None:
+        self.broadcast_messages[device_id.value].append(message)
 
-        super().broadcast(room, message)
+        super().broadcast(message, device_id=device_id)
 
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         for queue in message_queues:

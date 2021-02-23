@@ -1,4 +1,3 @@
-import json
 import random
 from datetime import datetime
 from functools import partial
@@ -7,19 +6,20 @@ from unittest.mock import MagicMock
 
 import gevent
 import pytest
+from eth_utils import to_normalized_address
 from gevent import Timeout
 
 import raiden
 from raiden.constants import (
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_SIGNATURE,
-    MONITORING_BROADCASTING_ROOM,
-    PATH_FINDING_BROADCASTING_ROOM,
+    DeviceIDs,
     Environment,
     RoutingMode,
 )
 from raiden.exceptions import InsufficientEth
-from raiden.messages.path_finding_service import PFSFeeUpdate
+from raiden.messages.monitoring_service import RequestMonitoring
+from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue, _RetryQueue
@@ -57,12 +57,30 @@ from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.capabilities import capconfig_to_dict, deserialize_capabilities
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Dict, List, PeerCapabilities, TokenNetworkAddress
+from raiden.utils.typing import Address, Dict, List, PeerCapabilities
 from raiden.waiting import wait_for_network_state
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 
 TIMEOUT_MESSAGE_RECEIVE = 15
+
+
+@pytest.fixture
+def num_services():
+    return 2
+
+
+@pytest.fixture
+def services(num_services, matrix_transports):
+    service_addresses_to_expiry = {factories.make_address(): 9999 for _ in range(num_services)}
+    for transport in matrix_transports:
+        transport.update_services_addresses(service_addresses_to_expiry)
+    return [to_normalized_address(addr) for addr in service_addresses_to_expiry.keys()]
+
+
+@pytest.fixture
+def number_of_transports():
+    return 1
 
 
 class MessageHandler:
@@ -71,6 +89,31 @@ class MessageHandler:
 
     def on_messages(self, _, messages):
         self.bag.update(messages)
+
+
+def get_to_device_broadcast_messages(to_device_mock, expected_receiver_addresses, device_id):
+
+    collected_messages = list()
+    for _, kwargs in to_device_mock.call_args_list:
+        assert kwargs["event_type"] == "m.room.message"
+        # has to always be broadcasted to all services for each api call
+        messages_batch = list()
+        addresses = list()
+        for address, to_device_dict in kwargs["messages"].items():
+            # ignore home-server, but extract the address prefix
+            addresses.append(address.split(":")[0][1:])
+            assert to_device_dict.keys() == {device_id}
+            messages = to_device_dict[device_id]["body"].split("\n")
+            messages = [MessageSerializer.deserialize(message) for message in messages]
+
+            if not messages_batch:
+                messages_batch = messages
+            else:
+                assert messages_batch == messages
+        assert len(addresses) == len(expected_receiver_addresses)
+        assert set(addresses) == set(expected_receiver_addresses)
+        collected_messages += messages_batch
+    return collected_messages
 
 
 def ping_pong_message_success(transport0, transport1):
@@ -490,95 +533,57 @@ def test_matrix_discovery_room_offline_server(
     transport.greenlet.get()
 
 
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
-)
-def test_matrix_broadcast(
-    local_matrix_servers,
-    retries_before_backoff,
-    retry_interval_initial,
-    retry_interval_max,
-    broadcast_rooms,
-):
-    transport = MatrixTransport(
-        config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms,
-            retries_before_backoff=retries_before_backoff,
-            retry_interval_initial=retry_interval_initial,
-            retry_interval_max=retry_interval_max,
-            server=local_matrix_servers[0],
-            available_servers=[local_matrix_servers[0]],
-        ),
-        environment=Environment.DEVELOPMENT,
-    )
+@pytest.mark.parametrize("device_id", (DeviceIDs.PFS, DeviceIDs.MS))
+def test_matrix_broadcast(matrix_transports, services, device_id):
+
+    transport = matrix_transports[0]
+    matrix_api = transport._client.api
+    matrix_api.send_to_device = MagicMock(autospec=True)
+
     transport.start(MockRaidenService(None), [], "")
     gevent.idle()
 
-    ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport.broadcast_rooms.get(ms_room_name)
-    assert isinstance(ms_room, Room)
-
-    ms_room.send_text = MagicMock(spec=ms_room.send_text)
-
+    sent_messages = list()
     for i in range(5):
         message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)
-        transport.broadcast(MONITORING_BROADCASTING_ROOM, message)
+        sent_messages.append(message)
+        transport.broadcast(message, device_id=device_id)
     transport._schedule_new_greenlet(transport._broadcast_worker)
 
     gevent.idle()
 
-    assert ms_room.send_text.call_count >= 1
-    # messages could have been bundled
-    call_args_str = " ".join(str(arg) for arg in ms_room.send_text.call_args_list)
-    for i in range(5):
-        assert f'"message_identifier": "{i}"' in call_args_str
-
-    transport.stop()
-    transport.greenlet.get()
+    messages = get_to_device_broadcast_messages(
+        matrix_api.send_to_device, services, device_id.value
+    )
+    assert messages == sent_messages
 
 
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
-)
+@pytest.mark.parametrize("environment_type", [Environment.DEVELOPMENT])
 def test_monitoring_broadcast_messages(
-    local_matrix_servers,
-    retry_interval_initial,
-    retry_interval_max,
-    retries_before_backoff,
+    matrix_transports,
+    environment_type,
+    services,
     monkeypatch,
-    broadcast_rooms,
 ):
     """
     Test that RaidenService broadcast RequestMonitoring messages to
     MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
     """
-    transport = MatrixTransport(
-        config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
-            retries_before_backoff=retries_before_backoff,
-            retry_interval_initial=retry_interval_initial,
-            retry_interval_max=retry_interval_max,
-            server=local_matrix_servers[0],
-            available_servers=[local_matrix_servers[0]],
-        ),
-        environment=Environment.DEVELOPMENT,
-    )
-    transport._client.api.retry_timeout = 0
-    transport._send_raw = MagicMock()
+
+    transport = matrix_transports[0]
+    matrix_api = transport._client.api
+    matrix_api.retry_timeout = 0
+    matrix_api.send_to_device = MagicMock(autospec=True)
+
     raiden_service = MockRaidenService(None)
     raiden_service.config = RaidenConfig(
         chain_id=1234,
-        environment_type=Environment.DEVELOPMENT,
+        environment_type=environment_type,
         services=ServiceConfig(monitoring_enabled=True),
     )
 
     transport.start(raiden_service, [], None)
-
-    ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport.broadcast_rooms.get(ms_room_name)
-    assert isinstance(ms_room, Room)
-    ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
     raiden_service.transport = transport
     transport.log = MagicMock()
@@ -604,73 +609,59 @@ def test_monitoring_broadcast_messages(
     gevent.idle()
 
     with gevent.Timeout(2):
-        while ms_room.send_text.call_count < 1:
+        while matrix_api.send_to_device.call_count < 1:
             gevent.idle()
-    assert ms_room.send_text.call_count == 1
+    assert matrix_api.send_to_device.call_count == 1
+    messages = get_to_device_broadcast_messages(
+        matrix_api.send_to_device, services, DeviceIDs.MS.value
+    )
+    assert len(messages) == 1
+    assert isinstance(messages[0], RequestMonitoring)
 
-    transport.stop()
-    transport.greenlet.get()
 
-
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, MONITORING_BROADCASTING_ROOM]]
-)
+@pytest.mark.parametrize("environment_type", [Environment.PRODUCTION])
 @pytest.mark.parametrize(
     "channel_balance_dai, expected_messages",
     [[MIN_MONITORING_AMOUNT_DAI - 1, 0], [MIN_MONITORING_AMOUNT_DAI, 1]],
 )
 def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
-    local_matrix_servers,
-    retry_interval_initial,
-    retry_interval_max,
-    retries_before_backoff,
+    matrix_transports,
+    services,
     monkeypatch,
-    broadcast_rooms,
     channel_balance_dai,
     expected_messages,
+    environment_type,
 ):
     """
     Test that in PRODUCTION on DAI and WETH RaidenService broadcast RequestMonitoring messages
     to MONITORING_BROADCASTING_ROOM room on newly received balance proofs only when
     min threshold of channel balance is met
     """
-    transport = MatrixTransport(
-        config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms + [MONITORING_BROADCASTING_ROOM],
-            retries_before_backoff=retries_before_backoff,
-            retry_interval_initial=retry_interval_initial,
-            retry_interval_max=retry_interval_max,
-            server=local_matrix_servers[0],
-            available_servers=[local_matrix_servers[0]],
-        ),
-        environment=Environment.PRODUCTION,
-    )
-    transport._client.api.retry_timeout = 0
-    transport._send_raw = MagicMock()
+    transport = matrix_transports[0]
+    matrix_api = transport._client.api
+    matrix_api.retry_timeout = 0
+    matrix_api.send_to_device = MagicMock(autospec=True)
+
     raiden_service = MockRaidenService(None)
     raiden_service.config = RaidenConfig(
         chain_id=1234,
-        environment_type=Environment.PRODUCTION,
+        environment_type=environment_type,
         services=ServiceConfig(monitoring_enabled=True),
     )
 
     transport.start(raiden_service, [], None)
 
-    ms_room_name = make_room_alias(transport.chain_id, MONITORING_BROADCASTING_ROOM)
-    ms_room = transport.broadcast_rooms.get(ms_room_name)
-    assert isinstance(ms_room, Room)
-    ms_room.send_text = MagicMock(spec=ms_room.send_text)
-
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    fake_dai_token_network = TokenNetworkAddress(b"daidaidaidai")
+    fake_dai_token_network = factories.make_token_network_address()
     HOP1_BALANCE_PROOF_DAI = factories.BalanceProofSignedStateProperties(
         pkey=factories.HOP1_KEY,
         canonical_identifier=factories.create(
             CanonicalIdentifierProperties(token_network_address=fake_dai_token_network)
         ),
     )
+
     balance_proof = factories.create(HOP1_BALANCE_PROOF_DAI)
     channel_state = factories.create(
         factories.NettingChannelStateProperties(
@@ -704,51 +695,34 @@ def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
     # need a sleep here because it might take some time until message reaches room
     gevent.sleep(2)
 
-    assert ms_room.send_text.call_count == expected_messages
-
-    transport.stop()
-    transport.greenlet.get()
+    messages = get_to_device_broadcast_messages(
+        matrix_api.send_to_device, services, DeviceIDs.MS.value
+    )
+    assert len(messages) == expected_messages
+    if expected_messages >= 1:
+        assert isinstance(messages[0], RequestMonitoring)
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
-)
 def test_pfs_broadcast_messages(
-    local_matrix_servers,
-    retry_interval_initial,
-    retry_interval_max,
-    retries_before_backoff,
+    matrix_transports,
+    services,
     monkeypatch,
-    broadcast_rooms,
 ):
     """
     Test that RaidenService broadcasts PFSCapacityUpdate messages to
-    PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
+    all service addresses via to-device multicast
     """
-    transport = MatrixTransport(
-        config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms,
-            retries_before_backoff=retries_before_backoff,
-            retry_interval_initial=retry_interval_initial,
-            retry_interval_max=retry_interval_max,
-            server=local_matrix_servers[0],
-            available_servers=[local_matrix_servers[0]],
-        ),
-        environment=Environment.DEVELOPMENT,
-    )
-    transport._client.api.retry_timeout = 0
-    transport._send_raw = MagicMock()
+    transport = matrix_transports[0]
+    matrix_api = transport._client.api
+    matrix_api.retry_timeout = 0
+    matrix_api.send_to_device = MagicMock(autospec=True)
+
     raiden_service = MockRaidenService(None)
     raiden_service.config.services.monitoring_enabled = True
     raiden_service.routing_mode = RoutingMode.PFS
 
     transport.start(raiden_service, [], None)
-
-    pfs_room_name = make_room_alias(transport.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_room = transport.broadcast_rooms.get(pfs_room_name)
-    assert isinstance(pfs_room, Room)
-    pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
 
     raiden_service.transport = transport
     transport.log = MagicMock()
@@ -764,26 +738,31 @@ def test_pfs_broadcast_messages(
         lambda *a, **kw: channel_state,
     )
     send_pfs_update(raiden=raiden_service, canonical_identifier=balance_proof.canonical_identifier)
+
     gevent.idle()
     with gevent.Timeout(2):
-        while pfs_room.send_text.call_count < 1:
+        while matrix_api.send_to_device.call_count < 1:
             gevent.idle()
-    assert pfs_room.send_text.call_count == 1
+    assert matrix_api.send_to_device.call_count == 1
 
     # send PFSFeeUpdate
     channel_state = factories.create(factories.NettingChannelStateProperties())
     fee_update = PFSFeeUpdate.from_channel_state(channel_state)
     fee_update.sign(raiden_service.signer)
-    raiden_service.transport.broadcast(PATH_FINDING_BROADCASTING_ROOM, fee_update)
-    with gevent.Timeout(2):
-        while pfs_room.send_text.call_count < 2:
-            gevent.idle()
-    assert pfs_room.send_text.call_count == 2
-    msg_data = json.loads(pfs_room.send_text.call_args[0][0])
-    assert msg_data["type"] == "PFSFeeUpdate"
+    raiden_service.transport.broadcast(fee_update, device_id=DeviceIDs.PFS)
 
-    transport.stop()
-    transport.greenlet.get()
+    with gevent.Timeout(2):
+        while matrix_api.send_to_device.call_count < 2:
+            gevent.idle()
+    assert matrix_api.send_to_device.call_count == 2
+
+    messages = get_to_device_broadcast_messages(
+        matrix_api.send_to_device, services, DeviceIDs.PFS.value
+    )
+
+    assert len(messages) == 2
+    assert isinstance(messages[0], PFSCapacityUpdate)
+    assert isinstance(messages[1], PFSFeeUpdate)
 
 
 @pytest.mark.parametrize("matrix_server_count", [3])
@@ -980,14 +959,15 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("matrix_sync_timeout", [5_000])  # Shorten sync timeout to prevent timeout
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
-)
 def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     """Ensure that matrix server-side filters take effect on sync for broadcast room content.
 
+    Although broadcasting messages in rooms is not supported by raiden anymore,
+    we need this test to make sure that the sync filters for filtering out messages
+    in the discovery room work.
+
     The test sets up 3 transports where:
-    Transport0 sends a message to the PFS broadcast room.
+    Transport0 sends a message to the discovery broadcast room.
     Transport1 has an active sync filter ID that filters out broadcast room messages.
     Transport2 has NO active sync filter so it receives everything.
 
@@ -1024,8 +1004,8 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     transport1.start(raiden_service1, [], None)
     transport2.start(raiden_service2, [], None)
 
-    pfs_broadcast_room_alias = make_room_alias(transport0.chain_id, PATH_FINDING_BROADCASTING_ROOM)
-    pfs_broadcast_room_t0 = transport0.broadcast_rooms[pfs_broadcast_room_alias]
+    discovery_room_alias = make_room_alias(transport0.chain_id, DISCOVERY_DEFAULT_ROOM)
+    discovery_broadcast_room_t0 = transport0.broadcast_rooms[discovery_room_alias]
 
     # Get the sync helper to control flow of asynchronous syncs
     sync_progress1 = transport1._client.sync_progress
@@ -1044,7 +1024,7 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
     # throw an exception
     message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
     message_text = MessageSerializer.serialize(message)
-    pfs_broadcast_room_t0.send_text(message_text)
+    discovery_broadcast_room_t0.send_text(message_text)
 
     # wait for the current tokens to be processed + 1 additional sync
     # this must be done because the message should be in the sync after the stored token
@@ -1063,9 +1043,6 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
 @raise_on_failure
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_nodes", [3])
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
-)
 def test_transport_presence_updates(
     raiden_network: List[RaidenService], restart_node, retry_timeout
 ):
@@ -1135,9 +1112,6 @@ def test_transport_presence_updates(
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("adhoc_capability", [True])
-@pytest.mark.parametrize(
-    "broadcast_rooms", [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM]]
-)
 def test_transport_capabilities(raiden_network: List[RaidenService], capabilities, retry_timeout):
     """
     Test that raiden matrix users have the `avatar_url` set in a format understood

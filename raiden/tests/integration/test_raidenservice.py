@@ -4,13 +4,7 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import (
-    BLOCK_ID_LATEST,
-    DISCOVERY_DEFAULT_ROOM,
-    MONITORING_BROADCASTING_ROOM,
-    PATH_FINDING_BROADCASTING_ROOM,
-    RoutingMode,
-)
+from raiden.constants import BLOCK_ID_LATEST, DeviceIDs, RoutingMode
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.monitoring_service import RequestMonitoring
@@ -84,10 +78,6 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
-@pytest.mark.parametrize(
-    "broadcast_rooms",
-    [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
-)
 def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
     raiden_network: List[RaidenService],
     restart_node,
@@ -146,9 +136,9 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
                 ]
             )
 
-        assert num_matching_queued_messages(MONITORING_BROADCASTING_ROOM, RequestMonitoring) == 1
-        assert num_matching_queued_messages(PATH_FINDING_BROADCASTING_ROOM, PFSFeeUpdate) == 1
-        assert num_matching_queued_messages(PATH_FINDING_BROADCASTING_ROOM, PFSCapacityUpdate) == 1
+        assert num_matching_queued_messages(DeviceIDs.MS.value, RequestMonitoring) == 1
+        assert num_matching_queued_messages(DeviceIDs.PFS.value, PFSFeeUpdate) == 1
+        assert num_matching_queued_messages(DeviceIDs.PFS.value, PFSCapacityUpdate) == 1
 
         old_start_transport(*args, **kwargs)
 
