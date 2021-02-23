@@ -121,8 +121,6 @@ hexbytes==0.2.0
     #   web3
 idna==2.8
     # via requests
-importlib-metadata==3.4.0
-    # via jsonschema
 ipfshttpclient==0.7.0a1
     # via web3
 itsdangerous==1.1.0
@@ -139,7 +137,7 @@ marshmallow-dataclass==8.0.0
     # via -r requirements.in
 marshmallow-enum==1.5.1
     # via -r requirements.in
-marshmallow-polyfield==5.9
+marshmallow-polyfield==5.10
     # via -r requirements.in
 marshmallow==3.10.0
     # via
@@ -229,10 +227,7 @@ toml==0.10.2
 toolz==0.9.0
     # via cytoolz
 typing-extensions==3.7.4.3
-    # via
-    #   -r requirements.in
-    #   importlib-metadata
-    #   web3
+    # via -r requirements.in
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
@@ -249,8 +244,6 @@ websockets==8.1
     # via web3
 werkzeug==1.0.1
     # via flask
-zipp==3.4.0
-    # via importlib-metadata
 zope.event==4.4
     # via gevent
 zope.interface==5.1.0
