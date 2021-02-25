@@ -686,7 +686,7 @@ class RaidenAPI:  # pragma: no unittest
             block_identifier=blockhash
         )
 
-        addendum = total_deposit - channel_state.our_state.contract_balance
+        deposit_increase = total_deposit - channel_state.our_state.contract_balance
 
         channel_participant_deposit_limit = token_network_proxy.channel_participant_deposit_limit(
             block_identifier=blockhash
@@ -713,14 +713,17 @@ class RaidenAPI:  # pragma: no unittest
         # If this check succeeds it does not imply the `deposit` will
         # succeed, since the `deposit` transaction may race with another
         # transaction.
-        if not (balance >= addendum):
+        if not (balance >= deposit_increase):
             msg = "Not enough balance to deposit. {} Available={} Needed={}".format(
-                to_checksum_address(token_address), balance, addendum
+                to_checksum_address(token_address), balance, deposit_increase
             )
             raise InsufficientFunds(msg)
 
-        if network_balance + addendum > token_network_deposit_limit:
-            msg = f"Deposit of {addendum} would have exceeded the token network deposit limit."
+        if network_balance + deposit_increase > token_network_deposit_limit:
+            msg = (
+                f"Deposit of {deposit_increase} would have exceeded "
+                "the token network deposit limit."
+            )
             raise DepositOverLimit(msg)
 
         if total_deposit > channel_participant_deposit_limit:
@@ -1196,7 +1199,7 @@ class RaidenAPI:  # pragma: no unittest
         current_total_deposit = user_deposit.get_total_deposit(
             address=self.address, block_identifier=confirmed_block_identifier
         )
-        addendum = new_total_deposit - current_total_deposit
+        deposit_increase = new_total_deposit - current_total_deposit
 
         whole_balance = user_deposit.whole_balance(block_identifier=confirmed_block_identifier)
         whole_balance_limit = user_deposit.whole_balance_limit(
@@ -1214,15 +1217,15 @@ class RaidenAPI:  # pragma: no unittest
         if new_total_deposit <= current_total_deposit:
             raise DepositMismatch("Total deposit did not increase.")
 
-        if whole_balance + addendum > UINT256_MAX:
+        if whole_balance + deposit_increase > UINT256_MAX:
             raise DepositOverLimit("Deposit overflow.")
 
-        if whole_balance + addendum > whole_balance_limit:
-            msg = f"Deposit of {addendum} would have exceeded the UDC balance limit."
+        if whole_balance + deposit_increase > whole_balance_limit:
+            msg = f"Deposit of {deposit_increase} would have exceeded the UDC balance limit."
             raise DepositOverLimit(msg)
 
-        if balance < addendum:
-            msg = f"Not enough balance to deposit. Available={balance} Needed={addendum}"
+        if balance < deposit_increase:
+            msg = f"Not enough balance to deposit. Available={balance} Needed={deposit_increase}"
             raise InsufficientFunds(msg)
 
         return user_deposit.approve_and_deposit(
