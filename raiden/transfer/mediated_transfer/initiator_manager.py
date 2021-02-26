@@ -32,7 +32,6 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     List,
-    NodeNetworkStateMap,
     Optional,
     SecretHash,
     TokenNetworkAddress,
@@ -178,7 +177,6 @@ def handle_init(
     payment_state: Optional[InitiatorPaymentState],
     state_change: ActionInitInitiator,
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
@@ -186,7 +184,6 @@ def handle_init(
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             candidate_route_states=state_change.routes,
             transfer_description=state_change.transfer,
             pseudo_random_generator=pseudo_random_generator,
@@ -258,7 +255,6 @@ def handle_transferreroute(
     state_change: ActionTransferReroute,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
@@ -310,7 +306,6 @@ def handle_transferreroute(
 
     sub_iteration = initiator.try_new_route(
         addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         candidate_route_states=filtered_route_states,
         transfer_description=transfer_description,
         pseudo_random_generator=pseudo_random_generator,
@@ -474,7 +469,6 @@ def state_transition(
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[InitiatorPaymentState]]:
@@ -497,7 +491,6 @@ def state_transition(
             payment_state=payment_state,
             state_change=state_change,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
@@ -516,7 +509,6 @@ def state_transition(
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
