@@ -223,6 +223,7 @@ def wait_for_peer_reachable(transport: MatrixTransport, target_address: Address,
     )
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
 def test_matrix_message_sync(matrix_transports):
@@ -310,6 +311,7 @@ def test_matrix_message_sync(matrix_transports):
 
 
 @expect_failure
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
@@ -343,6 +345,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
         app0.greenlet.get()
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 def test_matrix_message_retry(
     local_matrix_servers,
     retry_interval_initial,
@@ -466,6 +469,7 @@ def test_join_invalid_discovery(
     transport.greenlet.get()
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [3])
 def test_matrix_cross_server_with_load_balance(matrix_transports):
@@ -765,6 +769,7 @@ def test_pfs_broadcast_messages(
     assert isinstance(messages[1], PFSFeeUpdate)
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize(
@@ -820,6 +825,7 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     assert ping_pong_message_success(transport0, transport1)
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
 @pytest.mark.parametrize(
@@ -935,6 +941,7 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_2)
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
 def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
@@ -1041,6 +1048,7 @@ def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
 
 
 @raise_on_failure
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_nodes", [3])
 def test_transport_presence_updates(
@@ -1051,6 +1059,7 @@ def test_transport_presence_updates(
     in the presence of filters which ignore all event updates
     from matrix for broadcast rooms except for the presence events.
     """
+
     app0, app1, app2 = raiden_network
 
     app0.transport.immediate_health_check_for(app1.address)
@@ -1109,6 +1118,7 @@ def test_transport_presence_updates(
 
 
 @raise_on_failure
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("adhoc_capability", [True])
