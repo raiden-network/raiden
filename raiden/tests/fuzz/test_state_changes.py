@@ -52,7 +52,6 @@ from raiden.transfer.state import (
     ChannelState,
     HashTimeLockState,
     NettingChannelState,
-    NetworkState,
     TokenNetworkRegistryState,
     TokenNetworkState,
     make_empty_pending_locks_state,
@@ -300,7 +299,6 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             block_hash=factories.make_block_hash(),
         )
         node.state_transition(client.chain_state, channel_new_state_change)
-        client.chain_state.nodeaddresses_to_networkstates[partner_address] = NetworkState.REACHABLE
 
     def new_channel_with_transaction(
         self, client_address: Address, partner_address: Address = None

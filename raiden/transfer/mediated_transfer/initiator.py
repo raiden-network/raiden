@@ -49,7 +49,6 @@ from raiden.utils.typing import (
     FeeAmount,
     List,
     MessageID,
-    NodeNetworkStateMap,
     Optional,
     PaymentAmount,
     PaymentWithFeeAmount,
@@ -224,7 +223,6 @@ def handle_block(
 
 def try_new_route(
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     candidate_route_states: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
@@ -236,20 +234,18 @@ def try_new_route(
     route_fee_exceeds_max = False
 
     channel_state = None
-    route_state = None
+    chosen_route_state = None
 
-    reachable_route_states = routes.filter_reachable_routes(
-        candidate_route_states, nodeaddresses_to_networkstates
-    )
-
-    for reachable_route_state in reachable_route_states:
-        candidate_channel_state = addresses_to_channel[
-            (transfer_description.token_network_address, reachable_route_state.route[1])
-        ]
+    for route_state in candidate_route_states:
+        candidate_channel_state = addresses_to_channel.get(
+            (transfer_description.token_network_address, route_state.next_hop_address)
+        )
+        if candidate_channel_state is None:
+            continue
 
         amount_with_fee = calculate_safe_amount_with_fee(
             payment_amount=transfer_description.amount,
-            estimated_fee=reachable_route_state.estimated_fee,
+            estimated_fee=route_state.estimated_fee,
         )
         # https://github.com/raiden-network/raiden/issues/4751
         # If the transfer amount + fees exceeds a percentage of the
@@ -268,14 +264,11 @@ def try_new_route(
         )
         if channel_usability_state is channel.ChannelUsability.USABLE:
             channel_state = candidate_channel_state
-            route_state = reachable_route_state
+            chosen_route_state = route_state
             break
 
-    if route_state is None:
-        if not reachable_route_states:
-            reason = "there is no route available"
-        else:
-            reason = "none of the available routes could be used"
+    if chosen_route_state is None:
+        reason = "none of the available routes could be used"
 
         if route_fee_exceeds_max:
             reason += (
@@ -303,12 +296,12 @@ def try_new_route(
             channel_state=channel_state,
             message_identifier=message_identifier,
             block_number=block_number,
-            route_state=route_state,
-            route_states=reachable_route_states,
+            route_state=chosen_route_state,
+            route_states=candidate_route_states,
         )
 
         initiator_state = InitiatorTransferState(
-            route=route_state,
+            route=chosen_route_state,
             transfer_description=transfer_description,
             channel_identifier=channel_state.identifier,
             transfer=lockedtransfer_event.transfer,
