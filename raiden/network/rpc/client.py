@@ -744,7 +744,7 @@ def make_patched_web3_get_block(
       - https://github.com/INFURA/infura/issues/43
     """
 
-    def patched_web3_get_block(  # type: ignore
+    def patched_web3_get_block(
         block_identifier: BlockIdentifier, full_transactions: bool = False
     ) -> BlockData:
         last_ex: Optional[Exception] = None
@@ -760,8 +760,8 @@ def make_patched_web3_get_block(
                 last_ex = ex
                 # Short delay
                 gevent.sleep(0.1)
-        if last_ex is not None:
-            raise last_ex
+        assert last_ex, "Retries can only happen due to exceptions"
+        raise last_ex
 
     return patched_web3_get_block
 
