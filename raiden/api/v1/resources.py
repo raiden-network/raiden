@@ -20,7 +20,9 @@ if TYPE_CHECKING:
     from raiden.api.rest import RestAPI
 
 
-def _validate(schema: marshmallow.Schema, data: Dict[str, Any]) -> Dict[str, Any]:
+def _validate(  # pylint: disable=inconsistent-return-statements
+    schema: marshmallow.Schema, data: Dict[str, Any]
+) -> Dict[str, Any]:
     try:
         return schema.load(data)
     except marshmallow.ValidationError as ex:

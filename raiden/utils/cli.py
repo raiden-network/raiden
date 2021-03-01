@@ -276,7 +276,9 @@ def option_group(name: str, *options: Callable):
 class AddressType(click.ParamType):
     name = "address"
 
-    def convert(self, value, param, ctx):  # pylint: disable=unused-argument
+    def convert(  # pylint: disable=unused-argument, inconsistent-return-statements
+        self, value, param, ctx
+    ):
         try:
             return address_checksum_and_decode(value)
         except InvalidChecksummedAddress as e:
@@ -319,7 +321,9 @@ class LogLevelConfigType(click.ParamType):
 
 
 class ChainChoiceType(click.Choice):
-    def convert(self, value, param, ctx):
+    def convert(  # pylint: disable=unused-argument, inconsistent-return-statements
+        self, value, param, ctx
+    ):
         if isinstance(value, int):
             return value
         elif isinstance(value, str) and value.isnumeric():
@@ -340,7 +344,7 @@ class EnumChoiceType(Choice):
             [choice.value for choice in enum_type], case_sensitive=case_sensitive  # type: ignore
         )
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # pylint: disable=inconsistent-return-statements
         try:
             return self._enum_type(value)
         except ValueError:
@@ -350,7 +354,7 @@ class EnumChoiceType(Choice):
 class GasPriceChoiceType(click.Choice):
     """ Returns a GasPriceStrategy for the choice """
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # pylint: disable=inconsistent-return-statements
         if isinstance(value, str) and value.isnumeric():
             try:
                 gas_price = int(value)

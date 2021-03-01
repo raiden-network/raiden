@@ -413,7 +413,7 @@ class LockedTransferBase(EnvelopeMessage):
 
     def _packed_data(self) -> bytes:
         return (
-            bytes([self.cmdid.value])
+            bytes([self.cmdid.value])  # pylint: disable=no-member
             + self.message_identifier.to_bytes(8, byteorder="big")
             + self.payment_identifier.to_bytes(8, byteorder="big")
             + self.lock.expiration.to_bytes(32, byteorder="big")
