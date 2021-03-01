@@ -26,7 +26,7 @@ asn1crypto==1.3.0
     # via
     #   -r requirements.txt
     #   coincurve
-astroid==2.4.2
+astroid==2.5.1
     # via pylint
 astunparse==1.6.2
     # via
@@ -463,7 +463,7 @@ pylibsrtp==0.6.6
     # via
     #   -r requirements.txt
     #   aiortc
-pylint==2.6.2
+pylint==2.7.2
     # via -r requirements-dev.in
 pymacaroons==0.13.0
     # via matrix-synapse
@@ -565,7 +565,6 @@ six==1.15.0
     #   -r requirements-dev.in
     #   -r requirements-docs.txt
     #   -r requirements.txt
-    #   astroid
     #   astunparse
     #   attrdict
     #   automat
