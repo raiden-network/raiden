@@ -84,7 +84,7 @@ Routing
 
 At the moment routing in Raiden works in a very simple manner. Each node has a global view of the network knowing the initial capacity of each channel by watching for the deposit events happening on chain. As a result each node keeps a graph of the network but that graph may be outdated due to the capacity changing because of offchain transfers.
 
-Each node tries to forward the transfer through the shortest path with enough capacity to the target. If at some poin the transfer can't go through due to the actual capacity not being sufficient or due to the node being offline then a special kind of LockedTransfer called a `Refund Transfer <https://github.com/raiden-network/raiden/blob/38971b372dafb3205cbd3df8cfc3306922a55eac/raiden/messages.py#L1344>`_ will be sent back to the payer, effectively refunding him the transferred amount and allowing him to try another route. This is repeated until either a route is found or we have no other ways to reach the target at which case the Transfer fails.
+Each node tries to forward the transfer through the shortest path with enough capacity to the target. If at some point the transfer can't go through due to the actual capacity not being sufficient or due to the node being offline then a special kind of LockedTransfer called a `Refund Transfer <https://github.com/raiden-network/raiden/blob/38971b372dafb3205cbd3df8cfc3306922a55eac/raiden/messages.py#L1344>`_ will be sent back to the payer, effectively refunding him the transferred amount and allowing him to try another route. This is repeated until either a route is found or we have no other ways to reach the target at which case the Transfer fails.
 
 If the transfer reaches the target and the protocol is followed properly as we saw in the :ref:`happy transfer case <happy-case-transfer-messages>` above then all the pending transfers in the path will be unlocked and the node balances will be updated.
 
@@ -119,7 +119,7 @@ Continuing from the example seen in the :ref:`pending transfers <pending-transfe
 In the figure above the following things happen:
 
 1. For the payment A->B->C , ``C`` follows the protocol and send the secret back to ``B``.
-2. At the same time ``A`` closes the channel and so the normal offchain protocol can not be followed. Instead we enter the channel `settlement lifecycle <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#channel-settlement>`_ lifecycle we saw in the previous section with ``A`` closing the channel with what he received from his partner ``B``.
+2. At the same time ``A`` closes the channel and so the normal offchain protocol can not be followed. Instead we enter the channel `settlement lifecycle <https://raiden-network-specification.readthedocs.io/en/latest/smart_contracts.html#channel-settlement>`_ we saw in the previous section with ``A`` closing the channel with what he received from his partner ``B``.
 3. Now ``B`` has to register the secret received by ``C`` onchain as he can no longer do it offchain. He has to prove that he knew the secret at a block height before the pending transfer's expiration. He does that by calling `registerSecret <https://github.com/raiden-network/raiden-contracts/blob/04fe5a6c33b2a34cd893c5e546b8df949e194947/raiden_contracts/contracts/SecretRegistry.sol#L20>`_ on the ``SecretRegistry`` contract.
 4. Now it's ``B``'s turn to update the contract with what he has received from ``A``. He will provide a hash of the merkle root, the transferred amount and the locked amount to the contract via the `updateNonclosingbalanceproof <https://github.com/raiden-network/raiden-contracts/blob/04fe5a6c33b2a34cd893c5e546b8df949e194947/raiden_contracts/contracts/TokenNetwork.sol#L536>`_ call.
 5. After both are done and the settlement period has passed then anyone can settle the channel and send the tokens amounts owed to ``A`` and ``B`` respectively back to its owners.
@@ -130,7 +130,7 @@ In the figure above the following things happen:
 Raiden Architecture
 ===================
 
-In this section we are going to see an explanation of how the code of the Raiden client is structured and how it implements the protocol detailed in the previous section and.
+In this section we are going to see an explanation of how the code of the Raiden client is structured and how it implements the protocol detailed in the previous section.
 
 
 Architecture Overview
