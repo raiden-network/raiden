@@ -711,9 +711,10 @@ def test_raidenapi_channel_lifecycle(
     assert channel12.our_state.contract_balance == deposit
     assert api1.get_channel_list(registry_address, token_address, api2.address) == [channel12]
 
-    # there is a channel open, they must be healthchecking each other
-    assert api1.get_node_network_state(api2.address) == NetworkState.REACHABLE
-    assert api2.get_node_network_state(api1.address) == NetworkState.REACHABLE
+    # there is a channel open. Since healthchecks don't exist anymore,
+    # the API still shouldn't know about the NetworkState
+    assert api1.get_node_network_state(api2.address) == NetworkState.UNKNOWN
+    assert api2.get_node_network_state(api1.address) == NetworkState.UNKNOWN
 
     api1.channel_close(registry_address, token_address, api2.address)
 
