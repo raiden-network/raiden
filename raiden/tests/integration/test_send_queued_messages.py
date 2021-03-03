@@ -155,6 +155,7 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
 
 
 @raise_on_failure
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
