@@ -202,6 +202,7 @@ def test_recovery_unhappy_case(
 
 
 @raise_on_failure
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])

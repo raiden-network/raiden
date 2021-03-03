@@ -9,7 +9,7 @@ from raiden.messages.abstract import Message
 from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
-from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
+from raiden.transfer.architecture import Event as RaidenEvent
 from raiden.transfer.mediated_transfer.events import SendSecretRequest, SendUnlock
 from raiden.transfer.state import ChainState
 from raiden.utils.formatting import to_checksum_address
@@ -178,14 +178,3 @@ def dont_handle_lock_expired_mock(app):
         return []
 
     return patch.object(app.message_handler, "handle_message_lockexpired", side_effect=do_nothing)
-
-
-def dont_handle_node_change_network_state():
-    """Returns a mock context where ActionChangeNodeNetworkState is not processed"""
-
-    def empty_state_transition(chain_state, state_change):  # pylint: disable=unused-argument
-        return TransitionResult(chain_state, list())
-
-    return patch(
-        "raiden.transfer.node.handle_action_change_node_network_state", empty_state_transition
-    )
