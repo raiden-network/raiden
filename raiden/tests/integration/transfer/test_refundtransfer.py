@@ -14,10 +14,7 @@ from raiden.tests.utils.events import (
     wait_for_state_change,
 )
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import (
-    dont_handle_lock_expired_mock,
-    dont_handle_node_change_network_state,
-)
+from raiden.tests.utils.protocol import dont_handle_lock_expired_mock
 from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
@@ -490,28 +487,27 @@ def test_different_view_of_last_bp_during_unlock(
     # At this point make sure that the initiator has not deleted the payment task
     assert secrethash in state_from_raiden(app0).payment_mapping.secrethashes_to_task
 
-    with dont_handle_node_change_network_state():
-        # now app1 goes offline
-        app1.stop()
-        app1.greenlet.get()
-        assert not app1
+    # now app1 goes offline
+    app1.stop()
+    app1.greenlet.get()
+    assert not app1
 
-        # Wait for lock expiration so that app0 sends a LockExpired
-        wait_for_block(
-            raiden=app0,
-            block_number=BlockNumber(channel.get_sender_expiration_threshold(lock.expiration) + 1),
-            retry_timeout=retry_timeout,
-        )
+    # Wait for lock expiration so that app0 sends a LockExpired
+    wait_for_block(
+        raiden=app0,
+        block_number=BlockNumber(channel.get_sender_expiration_threshold(lock.expiration) + 1),
+        retry_timeout=retry_timeout,
+    )
 
-        # make sure that app0 sent a lock expired message for the secrethash
-        wait_for_raiden_event(app0, SendLockExpired, {"secrethash": secrethash}, retry_timeout)
+    # make sure that app0 sent a lock expired message for the secrethash
+    wait_for_raiden_event(app0, SendLockExpired, {"secrethash": secrethash}, retry_timeout)
 
-        # now app0 closes the channel
-        RaidenAPI(app0).channel_close(
-            registry_address=token_network_registry_address,
-            token_address=token_address,
-            partner_address=app1.address,
-        )
+    # now app0 closes the channel
+    RaidenAPI(app0).channel_close(
+        registry_address=token_network_registry_address,
+        token_address=token_address,
+        partner_address=app1.address,
+    )
 
     count = 0
     on_raiden_events_original = app1.raiden_event_handler.on_raiden_events
