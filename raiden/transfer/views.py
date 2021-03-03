@@ -71,12 +71,16 @@ def get_all_messagequeues(chain_state: ChainState) -> QueueIdsToQueues:
     return chain_state.queueids_to_queues
 
 
-def get_networkstatuses(chain_state: ChainState) -> Dict:
+def get_networkstatuses(chain_state: ChainState) -> Dict:  # pylint: disable=unused-argument
     raise NotImplementedError()
 
 
 def get_node_network_status(chain_state: ChainState, node_address: Address) -> NetworkState:
-    raise NotImplementedError()
+    # pylint: disable=unused-argument
+
+    # Return dummy value, since apart from proxying the call to the PFS to
+    # query the user-id explicitly, we don't know the NetworkState
+    return NetworkState.UNKNOWN
 
 
 def get_participants_addresses(
