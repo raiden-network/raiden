@@ -37,7 +37,7 @@ click==8.0.0a1
     #   -r requirements.in
     #   flask
     #   raiden-contracts
-coincurve==14.0.0
+coincurve==15.0.0
     # via
     #   -r requirements.in
     #   raiden-contracts
