@@ -15,6 +15,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     block_timeout_for_transfer_by_secrethash,
+    create_route_state_for_route,
     transfer,
     wait_assert,
 )
@@ -168,6 +169,7 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
     reset_messages(app2)
 
     amount = PaymentAmount(10)
+
     secrethash = transfer(
         initiator_app=app0,
         target_app=app2,
@@ -175,7 +177,7 @@ def test_pfs_send_capacity_updates_during_mediated_transfer(
         amount=amount,
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
-        routes=[[app0.address, app1.address, app2.address]],
+        route_states=[create_route_state_for_route([app0, app1, app2], token_address)],
     )
 
     with block_timeout_for_transfer_by_secrethash(app1, secrethash):

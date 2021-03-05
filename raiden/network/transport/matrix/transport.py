@@ -352,6 +352,10 @@ class _RetryQueue(Runnable):
         return f"<{self.__class__.__name__} for {to_normalized_address(self.receiver)}>"
 
 
+def make_user_id(address: Address, home_server: str) -> str:
+    return f"@{to_normalized_address(address)}:{home_server}"
+
+
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"
@@ -455,9 +459,19 @@ class MatrixTransport(Runnable):
 
     @property
     def checksummed_address(self) -> Optional[AddressHex]:
-        if self._raiden_service is not None:
-            return to_checksum_address(self._raiden_service.address)
-        return None
+        address = self._node_address
+        if address is None:
+            return None
+        return to_checksum_address(self._raiden_service.address)
+
+    @property
+    def _node_address(self) -> Optional[Address]:
+        return self._raiden_service.address if self._raiden_service else None
+
+    @property
+    def user_id(self) -> Optional[str]:
+        address = self._node_address
+        return make_user_id(address, self._server_name) if address is not None else None
 
     def start(  # type: ignore
         self,
@@ -1200,7 +1214,8 @@ class MatrixTransport(Runnable):
         # ONLY send the data to the user-ids of the services on the node's connected homeserver.
         user_ids = list()
         for address in self.services_addresses.keys():
-            user_ids.append(f"@{to_normalized_address(address)}:{self._server_name}")
+            user_id = make_user_id(address, self._server_name)
+            user_ids.append(user_id)
 
         messages = {
             user_id: {device_id: {"msgtype": MatrixMessageType.TEXT.value, "body": data}}

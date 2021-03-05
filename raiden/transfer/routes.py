@@ -1,7 +1,14 @@
 from typing import Dict, Tuple
 
 from raiden.transfer.state import NettingChannelState, NetworkState, RouteState
-from raiden.utils.typing import Address, ChannelID, List, NodeNetworkStateMap, TokenNetworkAddress
+from raiden.utils.typing import (
+    Address,
+    ChannelID,
+    InitiatorAddress,
+    List,
+    NodeNetworkStateMap,
+    TokenNetworkAddress,
+)
 
 
 def filter_reachable_routes(
@@ -38,14 +45,28 @@ def filter_acceptable_routes(
 
 
 def prune_route_table(
-    route_states: List[RouteState], selected_route: RouteState
+    route_states: List[RouteState],
+    selected_route: RouteState,
+    initiator_address: InitiatorAddress,
 ) -> List[RouteState]:
     """Given a selected route, returns a filtered route table that
     contains only routes using the same forward channel and removes our own
     address in the process.
+    Our address is also removed from the address metadata, if we are not the initiator
     """
-    return [
-        RouteState(route=rs.route[1:])
-        for rs in route_states
-        if rs.next_hop == selected_route.next_hop
-    ]
+
+    pruned_routes = list()
+    for route_state in route_states:
+        # the condition will only forward relevant routes that involve the next hop
+        if route_state.next_hop == selected_route.next_hop:
+            # remove the head address from the route
+            route = route_state.route[1:]
+
+            address_metadata = route_state.address_metadata.copy()
+            route_head_address = route_state.route[0]
+            if route_head_address != initiator_address:
+                #  the target needs to receive the initiator's metadata,
+                #  so only remove the metadate when this is a hop
+                del address_metadata[route_head_address]
+            pruned_routes.append(RouteState(route=route, address_metadata=address_metadata))
+    return pruned_routes

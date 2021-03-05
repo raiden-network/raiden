@@ -70,9 +70,13 @@ EVMBytecode = NewType("EVMBytecode", T_EVMBytecode)
 
 GasMeasurements = Dict[str, int]
 
+
 T_Address = bytes
 
 AddressHex = HexAddress
+
+T_AddressMetadata = str
+AddressMetadata = NewType("AddressMetadata", T_AddressMetadata)
 
 T_Balance = int
 Balance = NewType("Balance", T_Balance)

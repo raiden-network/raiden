@@ -61,6 +61,7 @@ def get_best_routes(
             )
 
             if is_usable is channel.ChannelUsability.USABLE:
+                # FIXME query address_metadata from direct endpoint on PFS
                 direct_route = RouteState(
                     route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0)
                 )
@@ -158,6 +159,15 @@ def get_best_routes_pfs(
     paths = []
     for path_object in pfs_routes:
         path = path_object["path"]
+        # XXX serialize to dataclass, including capabilities
+        address_to_metadata = path_object["address_metadata"]
+        if not address_to_metadata:
+            log.warning("PFS didn't return path meta-data, skipping path.")
+            continue
+        if set(path) != set(address_to_metadata.keys()):
+            log.warning("PFS returned incorrect path metadata, skipping path.")
+            continue
+
         estimated_fee = path_object["estimated_fee"]
         canonical_path = [to_canonical_address(node) for node in path]
 
@@ -188,7 +198,13 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee))
+        paths.append(
+            RouteState(
+                route=canonical_path,
+                address_metadata=address_to_metadata,
+                estimated_fee=estimated_fee,
+            )
+        )
 
     return None, paths, feedback_token
 
