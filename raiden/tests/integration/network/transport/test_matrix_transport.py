@@ -2,7 +2,7 @@ import random
 from datetime import datetime
 from functools import partial
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import gevent
 import pytest
@@ -11,6 +11,7 @@ from gevent import Timeout
 
 import raiden
 from raiden.constants import (
+    BLOCK_ID_LATEST,
     DISCOVERY_DEFAULT_ROOM,
     EMPTY_SIGNATURE,
     DeviceIDs,
@@ -22,7 +23,12 @@ from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.network.transport.matrix.client import Room
-from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue, _RetryQueue
+from raiden.network.transport.matrix.transport import (
+    MatrixTransport,
+    MessagesQueue,
+    _RetryQueue,
+    populate_services_addresses,
+)
 from raiden.network.transport.matrix.utils import (
     AddressReachability,
     ReachabilityState,
@@ -50,6 +56,7 @@ from raiden.tests.utils.factories import (
     make_privkeys_ordered,
 )
 from raiden.tests.utils.mocks import MockRaidenService
+from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
@@ -57,6 +64,7 @@ from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.capabilities import capconfig_to_dict, deserialize_capabilities
 from raiden.utils.formatting import to_checksum_address
+from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import Address, Dict, List, PeerCapabilities
 from raiden.waiting import wait_for_network_state
 
@@ -1138,3 +1146,25 @@ def test_transport_capabilities(raiden_network: List[RaidenService], capabilitie
     msg = "capabilities were not collected in transport client"
     collected_capabilities = app0.transport._address_mgr.get_address_capabilities(app1.address)
     assert collected_capabilities == PeerCapabilities(expected_capabilities), msg
+
+
+def test_populate_services_addresses(
+    service_registry_address, private_keys, web3, contract_manager
+):
+    """
+    Test 'populate_services_addresses' parsing addresses from service_registry_contract.
+    """
+    c1_service_proxy, _ = deploy_service_registry_and_set_urls(
+        private_keys=private_keys,
+        web3=web3,
+        contract_manager=contract_manager,
+        service_registry_address=service_registry_address,
+    )
+    addresses = [privatekey_to_address(key) for key in private_keys]
+    transport = Mock()
+    populate_services_addresses(
+        transport=transport, service_registry=c1_service_proxy, block_identifier=BLOCK_ID_LATEST
+    )
+    registered_services = list(transport.update_services_addresses.call_args[0][0].keys())
+    assert len(registered_services) == 3
+    assert sorted(addresses) == sorted(registered_services)
