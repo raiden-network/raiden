@@ -1516,11 +1516,7 @@ def populate_services_addresses(
             if address is None:
                 continue
             if service_registry.has_valid_registration(block_identifier, address):
-                services_addresses[
+                services_addresses[address] = service_registry.proxy.functions.service_valid_till(
                     address
-                ] = service_registry.proxy.functions.service_valid_till.call(
-                    block_identifier=block_identifier
-                ).get(
-                    address
-                )
+                ).call(block_identifier=block_identifier)
         transport.update_services_addresses(services_addresses)
