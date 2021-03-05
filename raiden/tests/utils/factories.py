@@ -51,6 +51,7 @@ from raiden.utils.typing import (
     AdditionalHash,
     Address,
     AddressHex,
+    AddressMetadata,
     Any,
     Balance,
     BlockExpiration,
@@ -385,6 +386,10 @@ HOP1 = InitiatorAddress(privatekey_to_address(HOP1_KEY))
 HOP2 = Address(privatekey_to_address(HOP2_KEY))
 HOP3 = Address(privatekey_to_address(HOP3_KEY))
 ADDR = TargetAddress(b"addraddraddraddraddr")
+HOP1_ADDR_META = AddressMetadata(f"{to_canonical_address(HOP1)}:server1")
+HOP2_ADDR_META = AddressMetadata(f"{to_canonical_address(HOP2)}:server1")
+HOP3_ADDR_META = AddressMetadata(f"{to_canonical_address(HOP3)}:server1")
+TARGET_ADDR_META = AddressMetadata(f"{to_canonical_address(ADDR)}:server1")
 
 
 def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:
@@ -519,10 +524,13 @@ def _(properties, defaults=None) -> NettingChannelEndState:
 @dataclass(frozen=True)
 class RouteMetadataProperties(Properties):
     route: List[Address] = EMPTY
+    address_metadata: Dict[Address, AddressMetadata] = EMPTY
     TARGET_TYPE = RouteMetadata
 
 
-RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
+RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(
+    route=[HOP1, HOP2], address_metadata={HOP1: HOP1_ADDR_META, HOP2: HOP2_ADDR_META}
+)
 
 
 @dataclass(frozen=True)
@@ -531,7 +539,13 @@ class MetadataProperties(Properties):
     TARGET_TYPE = Metadata
 
 
-MetadataProperties.DEFAULTS = MetadataProperties(routes=[RouteMetadata(route=[HOP1, HOP2])])
+MetadataProperties.DEFAULTS = MetadataProperties(
+    routes=[
+        RouteMetadata(
+            route=[HOP1, HOP2], address_metadata={HOP1: HOP1_ADDR_META, HOP2: HOP2_ADDR_META}
+        )
+    ]
+)
 
 
 @dataclass(frozen=True)

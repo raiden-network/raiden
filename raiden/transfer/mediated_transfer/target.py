@@ -93,8 +93,9 @@ def handle_inittarget(
 ) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles an ActionInitTarget state change. """
     iteration: TransitionResult[Optional[TargetTransferState]]
+
     transfer = state_change.transfer
-    route = state_change.from_hop
+    from_hop = state_change.from_hop
 
     assert (
         channel_state.identifier == transfer.balance_proof.channel_identifier
@@ -111,7 +112,7 @@ def handle_inittarget(
         # proofs to be handled. This however, must only be done once, which is
         # enforced by the nonce increasing sequentially, which is verified by
         # the handler handle_receive_lockedtransfer.
-        target_state = TargetTransferState(route, transfer)
+        target_state = TargetTransferState(from_hop, transfer)
 
         safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number
@@ -124,6 +125,7 @@ def handle_inittarget(
         if safe_to_wait:
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             recipient = transfer.initiator
+            # XXX we also need to pass the user-id here
             secret_request = SendSecretRequest(
                 recipient=Address(recipient),
                 message_identifier=message_identifier,

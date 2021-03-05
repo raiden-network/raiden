@@ -18,7 +18,12 @@ from raiden.tests.utils.factories import (
     make_secret_with_hash,
 )
 from raiden.tests.utils.network import payment_channel_open_and_deposit
-from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_unlock_failures
+from raiden.tests.utils.transfer import (
+    create_route_state_for_route,
+    get_channelstate,
+    transfer,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
@@ -89,7 +94,7 @@ def test_regression_unfiltered_routes(
         token_address=token,
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
-        routes=[[app0.address, app1.address, app2.address, app4.address]],
+        route_states=[create_route_state_for_route([app2, app3], token)],
     )
 
 
@@ -105,18 +110,25 @@ def test_regression_revealsecret_after_secret(
     app0, app1, app2 = raiden_network
     token = token_addresses[0]
     identifier = PaymentID(1)
-    token_network_registry_address = app0.default_registry.address
+
     token_network = views.get_token_network_by_token_address(
-        views.state_from_raiden(app0), token_network_registry_address, token
+        views.state_from_raiden(app0),
+        app0.default_registry.address,
+        token,
     )
-    assert token_network, "The fixtures must register the token"
+    token_network_address = None  # TODO
+
+    route_state = create_route_state_for_route(
+        apps=raiden_network,
+        token_address=token,
+    )
 
     payment_status = app0.mediated_transfer_async(
         token_network.address,
         amount=PaymentAmount(1),
         target=TargetAddress(app2.address),
         identifier=identifier,
-        route_states=[RouteState(route=[app0.address, app1.address, app2.address])],
+        route_states=[route_state],
     )
     with watch_for_unlock_failures(*raiden_network):
         assert payment_status.payment_done.wait()
@@ -268,7 +280,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         token_address=token,
         amount=deposit,
         identifier=PaymentID(1),
-        routes=[[app1.address, app2.address]],
+        route_states=[create_route_state_for_route([app1, app2], token)],
     )
 
     # Send a transfer that will result in a refund app1->app0
@@ -280,9 +292,9 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         identifier=PaymentID(2),
         timeout=20,
         expect_unlock_failures=True,
-        routes=[
-            [app0.address, app1.address, app2.address],
-            [app0.address, app3.address, app4.address, app2.address],
+        route_states=[
+            create_route_state_for_route([app0, app1, app2], token),
+            create_route_state_for_route([app0, app3, app4, app2], token),
         ],
     )
 

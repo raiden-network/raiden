@@ -2159,6 +2159,7 @@ def handle_receive_lockedtransfer(
         lock = mediated_transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
+        # XXX don't we also need to pass the user-id here?
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
             message_identifier=mediated_transfer.message_identifier,

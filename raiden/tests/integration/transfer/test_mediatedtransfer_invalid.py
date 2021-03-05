@@ -18,6 +18,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     block_timeout_for_transfer_by_secrethash,
+    create_route_state_for_route,
     get_channelstate,
     sign_and_inject,
     transfer,
@@ -117,7 +118,7 @@ def test_receive_lockedtransfer_invalidnonce(
         amount=PaymentAmount(10),
         identifier=payment_identifier,
         timeout=network_wait * number_of_nodes,
-        routes=[[app0.address, app1.address, app2.address]],
+        route_states=[create_route_state_for_route([app0, app1, app2], token_address)],
     )
 
     repeated_nonce = Nonce(1)

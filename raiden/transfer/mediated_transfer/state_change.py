@@ -12,6 +12,7 @@ from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
+    AddressMetadata,
     BlockExpiration,
     List,
     MessageID,
@@ -68,11 +69,13 @@ class ActionInitTarget(BalanceProofStateChange):
 
     from_hop: HopState
     transfer: LockedTransferSignedState
+    initiator_address_meta: AddressMetadata
 
     def __post_init__(self) -> None:
         super().__post_init__()
         typecheck(self.from_hop, HopState)
         typecheck(self.transfer, LockedTransferSignedState)
+        typecheck(self.initiator_address_meta, AddressMetadata)
 
 
 @dataclass(frozen=True)

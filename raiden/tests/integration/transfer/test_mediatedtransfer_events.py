@@ -3,7 +3,7 @@ import pytest
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import has_unlock_failure, transfer
+from raiden.tests.utils.transfer import create_route_state_for_route, has_unlock_failure, transfer
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
@@ -29,7 +29,7 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         amount=PaymentAmount(amount),
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
-        routes=[[app0.address, app1.address, app2.address]],
+        route_states=[create_route_state_for_route([app0, app1, app2], token_address)],
     )
 
     def test_initiator_events():

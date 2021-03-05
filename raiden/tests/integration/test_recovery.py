@@ -16,6 +16,7 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
+    create_route_state_for_route,
     transfer,
     transfer_and_assert_path,
 )
@@ -132,6 +133,9 @@ def test_recovery_unhappy_case(
     # make a few transfers from app0 to app2
     amount = PaymentAmount(1)
     spent_amount = deposit - 2
+
+    route_apps = [app0, app1, app2]
+    route_state = create_route_state_for_route(route_apps, token_address)
     for identifier in range(spent_amount):
         transfer(
             initiator_app=app0,
@@ -140,7 +144,7 @@ def test_recovery_unhappy_case(
             amount=amount,
             identifier=PaymentID(identifier),
             timeout=network_wait * number_of_nodes,
-            routes=[[app0.address, app1.address, app2.address]],
+            route_states=[route_state],
         )
 
     app0.stop()

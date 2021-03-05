@@ -3,7 +3,6 @@ from eth_utils import to_hex
 from gevent import joinall
 from gevent.pool import Pool
 
-from raiden import routing
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
@@ -31,7 +30,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import HopState
+from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
@@ -45,7 +44,7 @@ from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     TYPE_CHECKING,
-    Address,
+    FeeAmount,
     List,
     Set,
     TargetAddress,
@@ -330,35 +329,93 @@ class MessageHandler:
 
         assert message.sender, "Invalid message dispatched, it should be signed"
 
+        # the passed route address metadata is only implicitly included
+        # here due to being part of the signed data in the balance proof
         from_transfer = lockedtransfersigned_from_message(message)
-        from_hop = HopState(
-            node_address=message.sender,
-            # pylint: disable=E1101
-            channel_identifier=from_transfer.balance_proof.channel_identifier,
-        )
-        if message.target == TargetAddress(raiden.address):
-            raiden.immediate_health_check_for(Address(message.initiator))
-            return [
-                ActionInitTarget(
-                    from_hop=from_hop,
-                    transfer=from_transfer,
-                    balance_proof=from_transfer.balance_proof,
-                    sender=from_transfer.balance_proof.sender,
-                )
-            ]
-        else:
-            route_states = routing.resolve_routes(
-                routes=message.metadata.routes,
-                token_network_address=from_transfer.balance_proof.token_network_address,
-                chain_state=views.state_from_raiden(raiden),
+
+        try:
+            first_route = message.metadata.routes[0]
+            # there shouldn't be more than 1 "route" sent by the sender anyways,
+            # but this is not enforced in any way
+            address_to_address_metadata = first_route.address_metadata
+            from_hop = HopState(
+                node_address=message.sender,
+                # pylint: disable=E1101
+                channel_identifier=from_transfer.balance_proof.channel_identifier,
+                address_metadata=address_to_address_metadata[message.sender],
             )
+        except IndexError:
+            log.warning(
+                f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
+                f"since there was no route information present."
+            )
+            return []
+        except KeyError:
+            log.warning(
+                f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
+                f"since the next hop's address metadata could not be resolved."
+            )
+            return []
+
+        balance_proof = from_transfer.balance_proof
+        sender = from_transfer.balance_proof.sender
+
+        if message.target == TargetAddress(raiden.address):
+            initiator_address_meta = address_to_address_metadata.get(message.initiator)
+            if initiator_address_meta is None:
+                log.warning(
+                    f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
+                    f"since the initiator's address metadata could not be resolved."
+                )
+                return []
+            else:
+
+                return [
+                    ActionInitTarget(
+                        from_hop=from_hop,
+                        initiator_address_meta=initiator_address_meta,
+                        transfer=from_transfer,
+                        balance_proof=balance_proof,
+                        sender=sender,
+                    )
+                ]
+        else:
+            route_states = []
+            for route_metadata in message.metadata.routes:
+                channel_state = views.get_channelstate_by_token_network_and_partner(
+                    chain_state=views.state_from_raiden(raiden),
+                    token_network_address=from_transfer.balance_proof.token_network_address,
+                    partner_address=route_metadata.route[1],
+                )
+                if channel_state is not None:
+                    try:
+                        route_state = RouteState(
+                            route=route_metadata.route,
+                            address_metadata=route_metadata.address_metadata,
+                            # This is only used in the mediator, so fees are set to 0
+                            estimated_fee=FeeAmount(0),
+                        )
+                        if not route_state.address_metadata:
+                            msg = "Did not receive address metadata from route. Ignoring route."
+                            log.warning(msg)
+                            continue
+
+                        route_states.append(route_state)
+                    except ValueError:
+                        # This means the address metadata is inconsistent, and the sending
+                        # node did provide wrong metadata.
+                        log.warning(
+                            "Received malformed route metadata. "
+                            "Ignoring received LockedTransfer"
+                        )
+                        continue
             return [
                 ActionInitMediator(
                     from_hop=from_hop,
                     route_states=route_states,
                     from_transfer=from_transfer,
-                    balance_proof=from_transfer.balance_proof,
-                    sender=from_transfer.balance_proof.sender,
+                    balance_proof=balance_proof,
+                    sender=sender,
                 )
             ]
 
