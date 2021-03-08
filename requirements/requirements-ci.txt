@@ -4,11 +4,11 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-aioice==0.7.3
+aioice==0.7.5
     # via
     #   -r requirements-dev.txt
     #   aiortc
-aiortc==1.1.1
+aiortc==1.2.0
     # via -r requirements-dev.txt
 alabaster==0.7.12
     # via
