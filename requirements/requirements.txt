@@ -4,9 +4,9 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-aioice==0.7.3
+aioice==0.7.5
     # via aiortc
-aiortc==1.1.1
+aiortc==1.2.0
     # via -r requirements.in
 aniso8601==7.0.0
     # via flask-restful
