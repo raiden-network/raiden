@@ -1,22 +1,23 @@
 import glob
 import os
 import sys
+from typing import List, Tuple
 
 import pkg_resources
 
 datas = []
-binaries = []
+binaries: List[Tuple[str, str]] = []
 
 
 # This is only needed until https://github.com/pyinstaller/pyinstaller/issues/3033 is fixed
-def copy_metadata(package_name):
+def copy_metadata(package_name: str) -> List[Tuple[str, str]]:
     dist = pkg_resources.get_distribution(package_name)
-    metadata_dir = dist.egg_info
+    metadata_dir = dist.egg_info  # type: ignore
     return [(metadata_dir, metadata_dir[len(dist.location) + len(os.sep) :])]
 
 
 # Add metadata of all required packages to allow pkg_resources.require() to work
-required_packages = [("raiden", [])]
+required_packages: List[Tuple[str, Tuple[str, ...]]] = [("raiden", ())]
 processed_packages = set()  # break out of circular dependencies
 while required_packages:
     req_name, req_extras = required_packages.pop()

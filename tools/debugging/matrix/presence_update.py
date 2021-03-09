@@ -1,9 +1,16 @@
-import gevent  # isort:skip # noqa
-import gevent.monkey  # isort:skip # noqa
+import gevent.monkey
 
-gevent.monkey.patch_all()  # isort:skip # noqa
+gevent.monkey.patch_all()
+
+# isort: split
+
+from typing import Optional
+
+import gevent
+
 
 from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
+
 
 setup_asyncio_event_loop()
 
@@ -17,13 +24,15 @@ ACCESS_TOKEN = "REDACTED"
 ROOM_ALIAS = "#room_name:server1"
 
 
-def main():
+def main() -> None:
     host = sys.argv[1]
 
-    client = GMatrixClient(host, user_id=USER_ID, token=ACCESS_TOKEN)
+    client = GMatrixClient(
+        lambda x: False, lambda x: None, host, user_id=USER_ID, token=ACCESS_TOKEN
+    )
     client.join_room(ROOM_ALIAS)
 
-    current_presence = "offline"
+    current_presence: Optional[str] = "offline"
     while True:
         if current_presence == "offline":
             client.set_presence_state(UserPresence.ONLINE.value)

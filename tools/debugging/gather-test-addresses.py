@@ -6,9 +6,9 @@ from json import JSONDecodeError
 from typing import Any, Dict, List, Optional, Set, TextIO
 
 import click
+from eth_utils import to_checksum_address
 from eth_utils.typing import ChecksumAddress
 
-from raiden.utils.formatting import to_checksum_address
 
 EVENT_FIELD_REGEXES = {
     "node": re.compile(r"(0x[0-9a-fA-F]{40})"),
@@ -34,6 +34,7 @@ def get_record_address(record: Dict[str, Any]) -> Optional[ChecksumAddress]:
             match = field_regex.match(record[event_field])
             if match:
                 return to_checksum_address(match.group(1))
+    return None
 
 
 def find_node_addresses(input_file: TextIO) -> Set[ChecksumAddress]:
@@ -57,7 +58,7 @@ def find_node_addresses(input_file: TextIO) -> Set[ChecksumAddress]:
 )
 @click.argument("input-file", type=click.File("rt"))
 @click.argument("output-file", type=click.File("wt"), default="-")
-def main(input_file, output_file):
+def main(input_file: TextIO, output_file: TextIO) -> None:
     node_addresses = find_node_addresses(input_file)
     click.secho(f"Found {len(node_addresses)} addresses", fg="green", err=True)
     for node_address in sorted(node_addresses):
@@ -70,4 +71,4 @@ def main(input_file, output_file):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter

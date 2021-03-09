@@ -9,6 +9,7 @@ from raiden.accounts import AccountManager
 from raiden.utils.cli import ADDRESS_TYPE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import Address
 
 
 @click.command()
@@ -24,7 +25,7 @@ from raiden.utils.signer import LocalSigner
     help="Password to unlock the keystore file.",
     default="",
 )
-def get_login(address, password) -> None:
+def get_login(address: Address, password: str) -> None:
     path = os.path.expanduser("~/.ethereum/keystore")
     if sys.platform.startswith("darwin"):
         path = os.path.expanduser("~/Library/Ethereum/keystore")
