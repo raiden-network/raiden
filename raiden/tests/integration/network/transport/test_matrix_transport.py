@@ -1145,6 +1145,7 @@ def test_transport_capabilities(raiden_network: List[RaidenService], capabilitie
 
     expected_capabilities = capconfig_to_dict(capabilities)
 
+    # XXX-UAM: Get userids from metadata
     app1_user_ids = app0.transport.get_user_ids_for_address(app1.address)
     assert len(app1_user_ids) == 1, "app1 should have exactly one user_id"
     app1_user = app0.transport._client.get_user(app1_user_ids.pop())
