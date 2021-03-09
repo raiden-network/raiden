@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import gevent.monkey
 
-from raiden.constants import DeviceIDs
+gevent.monkey.patch_all()
 
-gevent.monkey.patch_all()  # isort:skip # noqa
+# isort: split
 
 import json
+from typing import Any
 
 import click
 import gevent
@@ -13,6 +14,7 @@ import structlog
 from eth_account import Account
 from eth_utils import decode_hex
 
+from raiden.constants import DeviceIDs
 from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.utils.signer import LocalSigner
 
@@ -27,11 +29,11 @@ if True:
     from raiden.network.transport.matrix.utils import login
 
 
-def callback(event):
+def callback(event: Any) -> None:
     print(event)
 
 
-def get_private_key(keystore_file, password):
+def get_private_key(keystore_file: str, password: str) -> str:
     with open(keystore_file, "r") as keystore:
         try:
             private_key = Account.decrypt(
@@ -63,9 +65,9 @@ def get_private_key(keystore_file, password):
 @click.option(
     "--other-user-id", required=True, default="@xxx:transport01.raiden.network", type=str
 )
-def main(keystore_file: str, password: str, host: str, room_id: str, other_user_id: str):
+def main(keystore_file: str, password: str, host: str, room_id: str, other_user_id: str) -> None:
     private_key = get_private_key(keystore_file, password)
-    client = GMatrixClient(host)
+    client = GMatrixClient(lambda x: False, lambda x: None, host)
 
     user = login(
         client=client,
@@ -77,7 +79,7 @@ def main(keystore_file: str, password: str, host: str, room_id: str, other_user_
     # print("TKN: \n" + client.token)
 
     client.add_presence_listener(callback)
-    client.start_listener_thread()
+    client.start_listener_thread(10000, 1000)
 
     # try:
     client.join_room(room_id)
