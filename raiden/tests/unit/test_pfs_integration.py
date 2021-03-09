@@ -659,9 +659,11 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
     address1, _, _, _ = addresses
 
     # with the transfer of 50 the direct channel should be returned,
-    # so there must be not a pfs call
-    with patch("raiden.routing.get_best_routes_pfs") as pfs_request:
-        pfs_request.return_value = None, [], "feedback_token"
+    # so there must be not a route request to the pfs
+    with patch("raiden.routing.get_best_routes_pfs") as pfs_route_request, patch(
+        "raiden.routing.query_user"
+    ) as pfs_user_request:
+        pfs_route_request.return_value = None, [], "feedback_token"
         _, routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
@@ -674,7 +676,8 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             privkey=PRIVKEY,
         )
         assert routes[0].next_hop_address == address1
-        assert not pfs_request.called
+        assert not pfs_route_request.called
+        assert pfs_user_request.called
 
     # with the transfer of 51 the direct channel should not be returned,
     # so there must be a pfs call
