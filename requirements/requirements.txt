@@ -236,7 +236,7 @@ urllib3==1.25.3
     # via requests
 varint==1.0.2
     # via multiaddr
-web3==5.16.0
+web3==5.17.0
     # via
     #   -r requirements.in
     #   raiden-contracts
