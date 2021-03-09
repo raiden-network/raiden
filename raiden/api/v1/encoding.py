@@ -373,3 +373,12 @@ class UserDepositPostSchema(BaseSchema):
     total_deposit = IntegerToStringField(default=None, missing=None)
     planned_withdraw_amount = IntegerToStringField(default=None, missing=None)
     withdraw_amount = IntegerToStringField(default=None, missing=None)
+
+
+class Notification(BaseSchema):
+    notification_id = fields.String()
+    summary = fields.String()
+    body = fields.String()
+    urgency = fields.String(
+        default=None, missing=None, validate=validate.OneOf(["normal", "low", "critical"])
+    )
