@@ -540,8 +540,6 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._web_rtc_manager.node_address = self._raiden_service.address
 
-        # XXX-UAM health_check_list was used to whitelist/healthcheck
-        #  addresses after replaying state
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
 
@@ -695,14 +693,6 @@ class MatrixTransport(Runnable):
             pass
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
-
-    def async_start_health_check(self, node_address: Address) -> None:
-        # XXX-UAM implicitly used for whitelisting addresses
-        pass
-
-    def immediate_health_check_for(self, node_address: Address) -> None:
-        # XXX-UAM implicitly used for whitelisting addresses
-        pass
 
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         """Queue messages to be sent.
