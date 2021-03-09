@@ -2,6 +2,8 @@ import json
 import random
 from dataclasses import dataclass
 from datetime import datetime
+from json import JSONDecodeError
+from typing import Union
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -537,6 +539,35 @@ def post_pfs_paths(
             "Pathfinding Service returned invalid json",
             dict(response_text=response.text, exc_info=True),
         )
+
+
+def query_user(
+    pfs_config: PFSConfig,
+    user_address: Union[Address, TargetAddress],
+) -> str:
+    """ Get the matrix user_id for the given address from the PFS """
+    try:
+        response = session.get(
+            f"{pfs_config.info.url}/api/v1/user/{to_checksum_address(user_address)}",
+        )
+    except RequestException as e:
+        raise ServiceRequestFailed(
+            f"Could not connect to Pathfinding Service ({str(e)})",
+            dict(exc_info=True),
+        )
+
+    try:
+        response_json = get_response_json(response)
+    except (ValueError, JSONDecodeError):
+        raise ServiceRequestFailed(
+            "Pathfinding Service returned malformed json in response",
+            {"http_code": response.status_code},
+        )
+
+    if response.status_code != 200:
+        raise PFSReturnedError.from_response(response_json)
+
+    return response_json["user_id"]
 
 
 def query_paths(

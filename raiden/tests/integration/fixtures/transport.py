@@ -22,6 +22,14 @@ def synapse_config_generator():
         yield generator
 
 
+@pytest.fixture(autouse=True)
+def query_user_mock(local_matrix_servers, monkeypatch):
+    def query_user(_pfs_config, user_address):
+        return f"@0x{user_address.hex()}:{local_matrix_servers[0]}"
+
+    monkeypatch.setattr("raiden.routing.query_user", query_user)
+
+
 @pytest.fixture
 def matrix_server_count() -> int:
     return 1
