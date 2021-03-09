@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import pytest
@@ -10,18 +11,27 @@ from eth_utils import (
 from requests.exceptions import RequestException
 
 from raiden.constants import MATRIX_AUTO_SELECT_SERVER, RoutingMode
-from raiden.exceptions import RaidenError
+from raiden.exceptions import PFSReturnedError, RaidenError, ServiceRequestFailed
 from raiden.network.pathfinding import (
+    PFSConfig,
     PFSInfo,
     check_pfs_for_production,
     configure_pfs_or_exit,
+    query_user,
     session,
 )
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
+from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_OUR_ADDRESS, make_address
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils.keys import privatekey_to_address
-from raiden.utils.typing import BlockNumber, ChainID, TokenAmount, TokenNetworkRegistryAddress
+from raiden.utils.typing import (
+    BlockNumber,
+    BlockTimeout,
+    ChainID,
+    TokenAmount,
+    TokenNetworkRegistryAddress,
+)
 
 token_network_registry_address_test_default = TokenNetworkRegistryAddress(
     to_canonical_address("0xB9633dd9a9a71F22C933bF121d7a22008f66B908")
@@ -184,3 +194,47 @@ def test_check_pfs_for_production(
     )
     with pytest.raises(RaidenError):
         check_pfs_for_production(service_registry=service_registry, pfs_info=pfs_info)
+
+
+def test_query_user():
+    matrix_user_id = "0x12345678901234567890@homeserver"
+    pfs_config = PFSConfig(
+        info=PFSInfo(
+            url="mock-address",
+            chain_id=UNIT_CHAIN_ID,
+            token_network_registry_address=make_address(),
+            user_deposit_address=make_address(),
+            payment_address=make_address(),
+            confirmed_block_number=BlockNumber(100),
+            message="",
+            operator="",
+            version="",
+            price=TokenAmount(0),
+            matrix_server="http://matrix.example.com",
+        ),
+        maximum_fee=TokenAmount(100),
+        iou_timeout=BlockTimeout(100),
+        max_paths=5,
+    )
+
+    with patch("raiden.network.pathfinding.session") as session_mock:
+        # success
+        response = session_mock.get.return_value
+        response.status_code = 200
+        response.content = json.dumps({"user_id": matrix_user_id})
+        assert query_user(pfs_config, UNIT_OUR_ADDRESS) == matrix_user_id
+
+        # malformed response
+        response = session_mock.get.return_value
+        response.status_code = 200
+        response.content = "{wrong"
+        with pytest.raises(ServiceRequestFailed):
+            query_user(pfs_config, UNIT_OUR_ADDRESS)
+
+        # error response
+        response = session_mock.get.return_value
+        response.status_code = 400
+        response.content = json.dumps({"error_code": 123})
+        with pytest.raises(PFSReturnedError) as exc_info:
+            query_user(pfs_config, UNIT_OUR_ADDRESS)
+            assert exc_info.value["error_code"] == 123
