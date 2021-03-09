@@ -5,10 +5,10 @@ from eth_utils import keccak
 
 from raiden.messages.abstract import cached_property
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Any, AddressMetadata, Dict, List
+from raiden.utils.typing import Address, AddressMetadata, Any, Dict, List
 
 
-def primitive_dict_to_nested_lists(dic) -> List[Any]:
+def primitive_dict_to_nested_lists(dic: Dict[Any, Any]) -> List[Any]:
     serialized_dict = list()
     for k, v in sorted(dic.items()):
         if isinstance(v, dict):

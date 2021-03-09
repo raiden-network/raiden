@@ -1,3 +1,5 @@
+import json
+from json import JSONDecodeError
 from random import Random
 from typing import Dict, Iterable
 
@@ -35,6 +37,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendUnlock,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.utils.capabilities import _bool_to_binary, int_bool
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.typing import (
     AdditionalHash,
@@ -61,6 +64,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     PaymentWithFeeAmount,
+    PeerCapabilities,
     ProportionalFeeAmount,
     Secret,
     SecretHash,
@@ -211,6 +215,31 @@ class CallablePolyField(PolyField):
         return self
 
 
+class PeerCapabilitiesField(marshmallow.fields.Field):
+    def _serialize(self, value: PeerCapabilities, attr: Any, obj: Any, **kwargs: Any) -> str:
+        cap_dict: Dict[str, str] = {}
+        for key in cap_dict:
+            cap_dict[key] = _bool_to_binary(cap_dict[key])
+        return json.dumps(cap_dict)
+
+    def _deserialize(self, value: str, attr: Any, data: Any, **kwargs: Any) -> PeerCapabilities:
+        try:
+            cap_dict = json.loads(value)
+            capabilities = {}
+            for key in cap_dict:
+                capability = cap_dict.getlist(key, type=int_bool)
+                # reduce lists with one entry to just their element
+                if len(value) == 1:
+                    capabilities[key] = capability.pop()
+                else:
+                    capabilities[key] = capability
+
+            return PeerCapabilities(capabilities)
+
+        except JSONDecodeError:
+            return PeerCapabilities({})
+
+
 class BaseSchema(marshmallow.Schema):
     # We want to ignore unknown fields
     class Meta:
@@ -299,6 +328,7 @@ class BaseSchema(marshmallow.Schema):
         QueueIdentifier: QueueIdentifierField,
         # Other
         Random: PRNGField,
+        PeerCapabilities: PeerCapabilitiesField,
     }
 
     @post_dump(pass_original=True)
