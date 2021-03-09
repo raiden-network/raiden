@@ -10,6 +10,7 @@ from raiden.network.transport.matrix.client import GMatrixHttpApi
 from raiden.utils.cli import ADDRESS_TYPE
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import Address
 
 
 @click.command()
@@ -25,7 +26,7 @@ from raiden.utils.signer import LocalSigner
 @click.option(
     "--server", help="Matrix server to connect to", default="https://transport01.raiden.network"
 )
-def matrix_api_shell(address, password, server):
+def matrix_api_shell(address: Address, password: str, server: str) -> None:
     am = AccountManager(os.path.expanduser("~/.ethereum/keystore"))
     signer = LocalSigner(am.get_privkey(to_checksum_address(address), password))
     server_name = server.split("//")[1]

@@ -146,12 +146,12 @@ def select_by_number(options: Any, caption: str) -> Any:
         else:
             print(f"[{i}] {option}")
     while value is None:
-        selected = input(f"{caption} ")
+        selected = input(f"{caption} ")  # pylint: disable=gevent-input-forbidden
         try:
             value = list(options)[int(selected)]
         except (IndexError, ValueError):
             print(f"Incorrect selection {selected}")
-    return value
+    return value  # type: ignore
 
 
 @click.command(help=__doc__)
@@ -167,7 +167,7 @@ def select_by_number(options: Any, caption: str) -> Any:
 def main(ctx: Any, folder: os.PathLike, run_number: Optional[int]) -> None:
     scenario = ScenarioItems()
     content: List[os.PathLike] = cast(List[os.PathLike], os.listdir(folder))
-    for fn in sorted(content, reverse=True):
+    for fn in sorted(content, reverse=True):  # type: ignore
         file = os.path.join(folder, fn)
         if os.path.isfile(file) and detect_scenario_player_log(file):
             scenario.scenario_log = file

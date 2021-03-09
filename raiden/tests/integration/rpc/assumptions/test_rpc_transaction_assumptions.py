@@ -1,4 +1,5 @@
 import pytest
+from eth_utils import to_canonical_address
 
 from raiden.constants import BLOCK_ID_LATEST, TRANSACTION_INTRINSIC_GAS
 from raiden.exceptions import InsufficientEth
@@ -15,7 +16,7 @@ from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.smart_contracts import safe_gas_limit
-from raiden.utils.typing import Nonce
+from raiden.utils.typing import BlockHash, Nonce
 
 
 def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
@@ -38,7 +39,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     """ The receipt status field of a transaction that hit an assert or require is 0x0 """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    address = contract_proxy.address
+    address = to_canonical_address(contract_proxy.address)
     assert len(deploy_client.web3.eth.getCode(address)) > 0
 
     # the method always fails, so the gas estimation returns 0 here, using a
@@ -55,7 +56,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
         extra_log_details={},
         estimated_gas=estimated_gas,
         gas_price=gas_price,
-        approximate_block=(block["hash"], block["number"]),
+        approximate_block=(BlockHash(block["hash"]), block["number"]),
     )
     transaction_fail_assert_sent = deploy_client.transact(estimated_transaction_fail_assert)
     transaction_fail_assert_mined = deploy_client.poll_transaction(transaction_fail_assert_sent)
@@ -69,7 +70,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
         extra_log_details={},
         estimated_gas=estimated_gas,
         gas_price=gas_price,
-        approximate_block=(block["hash"], block["number"]),
+        approximate_block=(BlockHash(block["hash"]), block["number"]),
     )
     transaction_fail_require_sent = deploy_client.transact(estimated_transaction_fail_require)
     transaction_fail_require_mined = deploy_client.poll_transaction(transaction_fail_require_sent)

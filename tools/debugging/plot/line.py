@@ -3,8 +3,11 @@ import argparse
 import csv
 import datetime
 import sys
+from typing import Any, List
 
 from matplotlib import dates, pyplot
+from matplotlib.axes import Axes
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--width", default=1000, help="Configures width of the output in pixels.")
@@ -23,11 +26,11 @@ parser.add_argument("line", nargs="+")
 args = parser.parse_args()
 
 
-def parse_datetime(data):
+def parse_datetime(data: str) -> datetime.datetime:
     return datetime.datetime.fromisoformat(data)
 
 
-def configure_axes(axes):
+def configure_axes(axes: Axes) -> None:
     hour_fmt = dates.DateFormatter("%H:%M")
     minutes_fmt = dates.DateFormatter("%M")
 
@@ -45,8 +48,9 @@ if args.header:
 else:
     reader = csv.DictReader(sys.stdin)
 
-lines = [list() for _ in range(len(args.line))]
+lines: List[List[Any]] = [list() for _ in range(len(args.line))]
 
+x_axis: List[Any]
 if args.x:
     x_axis = list()
     for data in reader:
