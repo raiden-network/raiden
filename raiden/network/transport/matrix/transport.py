@@ -51,7 +51,6 @@ from raiden.network.transport.matrix.utils import (
     AddressReachability,
     DisplayNameCache,
     MessageAckTimingKeeper,
-    UserAddressManager,
     UserPresence,
     address_from_userid,
     join_broadcast_room,
@@ -64,7 +63,7 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.network.transport.utils import timeout_exponential_backoff
-from raiden.settings import MatrixTransportConfig
+from raiden.settings import CapabilitiesConfig, MatrixTransportConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
@@ -251,15 +250,7 @@ class _RetryQueue(Runnable):
             receiver=to_checksum_address(self.receiver),
             queue_size=len(self._message_queue),
         )
-        status = self.transport._address_mgr.get_address_reachability(self.receiver)
-        if status is not AddressReachability.REACHABLE:
-            # if partner is not reachable, return
-            self.log.debug(
-                "Partner not reachable. Skipping.",
-                partner=to_checksum_address(self.receiver),
-                status=status,
-            )
-            return
+        # XXX-UAM: reachability check was here
 
         def message_is_in_queue(message_data: _RetryQueue._MessageData) -> bool:
             if message_data.queue_identifier not in self.transport._queueids_to_queues:
@@ -434,13 +425,6 @@ class MatrixTransport(Runnable):
 
         self._invite_queue: List[Tuple[RoomID, dict]] = []
 
-        self._address_mgr: UserAddressManager = UserAddressManager(
-            client=self._client,
-            displayname_cache=self._displayname_cache,
-            address_reachability_changed_callback=self._address_reachability_changed,
-            _log_context={"transport_uuid": str(self._uuid)},
-        )
-
         self._client.add_invite_listener(self._reject_invite)
 
         self._counters: Dict[str, CounterType[Tuple[str, MessageID]]] = {}
@@ -470,7 +454,6 @@ class MatrixTransport(Runnable):
     def start(  # type: ignore
         self,
         raiden_service: "RaidenService",
-        health_check_list: List[Address],
         prev_auth_data: Optional[str],
     ) -> None:
         if not self._stop_event.ready():
@@ -480,8 +463,6 @@ class MatrixTransport(Runnable):
         self._starting = True
         self._raiden_service = raiden_service
         self._web_rtc_manager.node_address = self._raiden_service.address
-
-        self._address_mgr.start()
 
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
@@ -513,7 +494,6 @@ class MatrixTransport(Runnable):
         )
         self._initialize_broadcast_rooms()
         self._initialize_first_sync()
-        self._initialize_health_check(health_check_list)
         self._initialize_sync()
 
         # (re)start any _RetryQueue which was initialized before start
@@ -528,12 +508,9 @@ class MatrixTransport(Runnable):
 
         self.log.debug("Matrix started", config=self._config)
 
-        # Handle any delayed invites in the future
-        self._schedule_new_greenlet(self._health_check_worker)
         self._schedule_new_greenlet(self._set_presence, UserPresence.ONLINE)
 
     def _set_presence(self, state: UserPresence) -> None:
-
         waiting_period = randint(SET_PRESENCE_INTERVAL // 4, SET_PRESENCE_INTERVAL)
         gevent.wait(  # pylint: disable=gevent-disable-wait
             {self._stop_event}, timeout=waiting_period
@@ -607,7 +584,6 @@ class MatrixTransport(Runnable):
         # sync thread might call the address manager after the manager has been
         # stopped.
         self._client.stop()  # stop sync_thread, wait on client's greenlets
-        self._address_mgr.stop()
 
         self.log.debug(
             "Waiting on own greenlets",
@@ -642,68 +618,6 @@ class MatrixTransport(Runnable):
             pass
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
-
-    def get_user_ids_for_address(self, address: Address) -> Set[str]:
-        address_hex = to_normalized_address(address)
-        candidates = self._client.search_user_directory(address_hex)
-        self._displayname_cache.warm_users(candidates)
-        user_ids = {
-            user.user_id for user in candidates if validate_userid_signature(user) == address
-        }
-        return user_ids
-
-    def force_check_address_reachability(self, address: Address) -> AddressReachability:
-        """Force checks an address's reachability bypassing the whitelisting"""
-        user_ids = self.get_user_ids_for_address(address)
-        return self._address_mgr.get_reachability_from_matrix(user_ids)
-
-    def async_start_health_check(self, node_address: Address) -> None:
-        """
-        Start healthcheck (status monitoring) for a peer
-        also starts listening for messages
-        Invites are accepted independently of healthchecking
-        """
-        self._healthcheck_queue.put(node_address)
-
-    def immediate_health_check_for(self, node_address: Address) -> None:
-        """ Start healthcheck (status monitoring) for a peer """
-        is_health_information_available = (
-            self._address_mgr.get_address_reachability(node_address)
-            is not AddressReachability.UNKNOWN
-        )
-
-        if is_health_information_available:
-            self.log.debug(
-                "Healthcheck already enabled", peer_address=to_checksum_address(node_address)
-            )
-            return
-
-        self.log.debug("Healthcheck", peer_address=to_checksum_address(node_address))
-
-        self._address_mgr.add_address(node_address)
-        user_ids = self.get_user_ids_for_address(node_address)
-        self._address_mgr.track_address_presence(node_address, user_ids)
-
-        # Now capabilites are available, we require at least toDevice
-        if not self._capability_usable(Capabilities.TODEVICE, node_address):
-            # We no longer support node-to-node communication via rooms
-            self.log.warning(
-                "Will not be able to communicate with peer, toDevice not supported",
-                peer=node_address,
-            )
-
-    def _health_check_worker(self) -> None:
-        """ Worker to process healthcheck requests. """
-        while True:
-            gevent.wait(  # pylint: disable=gevent-disable-wait
-                {self._healthcheck_queue, self._stop_event}, count=1
-            )
-
-            if self._stop_event.is_set():
-                self.log.debug("Health check worker exiting, stop is set")
-                return
-
-            self.immediate_health_check_for(self._healthcheck_queue.get())
 
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         """Queue messages to be sent.
@@ -928,27 +842,6 @@ class MatrixTransport(Runnable):
         self._client.message_worker.link_value(on_success)
         self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
-    def _initialize_health_check(self, health_check_list: List[Address]) -> None:
-        msg = (
-            "Healthcheck requires the Matrix client to be properly "
-            "authenticated, because this may create the private rooms."
-        )
-        assert self._user_id, msg
-
-        msg = (
-            "Healthcheck must be initialized after the first sync, because "
-            "that fetches the existing rooms from the Matrix server, and "
-            "healthcheck may create rooms."
-        )
-        assert self._client.sync_iteration >= 1, msg
-
-        pool = Pool(size=10)
-        greenlets = set(
-            pool.apply_async(self.immediate_health_check_for, [address])
-            for address in health_check_list
-        )
-        gevent.joinall(greenlets, raise_error=True)
-
     def _extract_addresses(self, room: Room) -> List[Optional[Address]]:
         """
         returns list of address of room members.
@@ -1065,15 +958,7 @@ class MatrixTransport(Runnable):
                 # should not be in any.
                 raise RaidenUnrecoverableError(f"Received message in room {room.canonical_alias}.")
 
-            if not self._address_mgr.is_address_known(peer_address) and is_raiden_message:
-                self.log.debug(
-                    "Ignoring message from non-whitelisted peer",
-                    sender=user,
-                    sender_address=to_checksum_address(peer_address),
-                    room=room,
-                )
-                continue
-
+            # XXX-UAM: Whitelist check was here
             if is_raiden_message:
                 raiden_messages.extend(
                     validate_and_parse_message(message["content"]["body"], peer_address)
@@ -1233,6 +1118,7 @@ class MatrixTransport(Runnable):
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
+        # XXX-UAM: extract partner caps from metadata here
         is_to_device = self._capability_usable(Capabilities.TODEVICE, receiver_address)
 
         communication_medium = (
@@ -1255,15 +1141,8 @@ class MatrixTransport(Runnable):
             return
 
         elif communication_medium is CommunicationMedium.TO_DEVICE:
-            online_userids = {
-                user_id
-                for user_id in self._address_mgr.get_userids_for_address(receiver_address)
-                if self._address_mgr.get_userid_presence(user_id) in USER_PRESENCE_REACHABLE_STATES
-            }
-            if not online_userids:
-                self.log.debug("No online user_ids", online_userids=online_userids)
-                return
-
+            # XXX-UAM: Need user_ids here
+            online_userids = []
             messages = {
                 user_id: {"*": {"msgtype": message_type.value, "body": data}}
                 for user_id in online_userids
@@ -1300,6 +1179,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
+        # XXX-UAM: extract partner caps from metadata here
         is_to_device = self._capability_usable(Capabilities.TODEVICE, partner_address)
 
         if not is_to_device:
@@ -1410,11 +1290,7 @@ class MatrixTransport(Runnable):
         if self._stop_event.is_set():
             return
 
-        if (
-            self._address_mgr.get_address_reachability(partner_address)
-            is not AddressReachability.REACHABLE
-        ):
-            return
+        # XXX-UAM: Reachability check was here
 
         # FIXME: temporary sleep to stretch two signaling processes a bit
         #        with a unique call id for each try this wont be necessary
@@ -1427,11 +1303,13 @@ class MatrixTransport(Runnable):
             suffix in room.canonical_alias for suffix in self._config.broadcast_rooms
         )
 
-    def _capability_usable(self, capability: Capabilities, partner_address: Address) -> bool:
+    def _capability_usable(
+        self, capability: Capabilities, partner_capabilities_config: CapabilitiesConfig
+    ) -> bool:
         """ Checks if a given capability is enabled for the local and the partner node """
 
         own_caps = capconfig_to_dict(self._config.capabilities_config)
-        partner_caps = self._address_mgr.get_address_capabilities(partner_address)
+        partner_caps = capconfig_to_dict(partner_capabilities_config)
 
         key = capability.value
         return bool(
@@ -1447,6 +1325,7 @@ class MatrixTransport(Runnable):
             if retrier:
                 retrier.notify()
 
+            # XXX-UAM: extract partner caps from metadata here
             if self._capability_usable(Capabilities.WEBRTC, address):
                 # if lower address spawn worker to create web rtc channel
                 self._maybe_initialize_web_rtc(address)
