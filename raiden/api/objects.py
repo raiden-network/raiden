@@ -33,3 +33,11 @@ class PartnersPerToken:
     def __init__(self, partner_address: Address, channel: str) -> None:
         self.partner_address = partner_address
         self.channel = channel
+
+
+class Notification:
+    def __init__(self, notification_id: str, summary: str, body: str, urgency: str) -> None:
+        self.notification_id = notification_id
+        self.summary = summary
+        self.body = body
+        self.urgency = urgency
