@@ -317,7 +317,7 @@ ipython-genutils==0.2.0
     # via
     #   -r requirements-dev.txt
     #   traitlets
-ipython==7.20.0
+ipython==7.21.0
     # via -r requirements-dev.txt
 isort==5.7.0
     # via
@@ -790,7 +790,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.16.0
+web3==5.17.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
