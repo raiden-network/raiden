@@ -317,20 +317,16 @@ class RaidenService(Runnable):
             BLOCK_ID_LATEST
         )
         invalid_settle_timeout = (
-            config.settle_timeout < settlement_timeout_min
-            or config.settle_timeout > settlement_timeout_max
+            settlement_timeout_max > config.settle_timeout < settlement_timeout_min
             or config.settle_timeout < config.reveal_timeout * 2
         )
         if invalid_settle_timeout:
+            contract = to_checksum_address(raiden_bundle.token_network_registry.address)
             raise InvalidSettleTimeout(
                 (
-                    "Settlement timeout for Registry contract {} must "
-                    "be in range [{}, {}], is {}"
-                ).format(
-                    to_checksum_address(raiden_bundle.token_network_registry.address),
-                    settlement_timeout_min,
-                    settlement_timeout_max,
-                    config.settle_timeout,
+                    f"Settlement timeout for Registry contract {contract} must "
+                    f"be in range [{settlement_timeout_min}, {settlement_timeout_max}], "
+                    f"is {config.settle_timeout}"
                 )
             )
 
