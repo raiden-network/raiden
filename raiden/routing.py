@@ -42,6 +42,10 @@ def get_best_routes(
     token_network = views.get_token_network_by_address(chain_state, token_network_address)
     assert token_network, "The token network must be validated and exist."
 
+    if pfs_config is None or one_to_n_address is None:
+        log.warning("Pathfinding Service could not be used.")
+        return "Pathfinding Service could not be used.", list(), None
+
     # Always use a direct channel if available:
     # - There are no race conditions and the capacity is guaranteed to be
     #   available.
@@ -67,10 +71,6 @@ def get_best_routes(
                     estimated_fee=FeeAmount(0),
                 )
                 return None, [direct_route], None
-
-    if pfs_config is None or one_to_n_address is None:
-        log.warning("Pathfinding Service could not be used.")
-        return "Pathfinding Service could not be used.", list(), None
 
     # Does any channel have sufficient capacity for the payment?
     channels = [
