@@ -1,7 +1,11 @@
+from typing import Optional
+
 import gevent
 import pytest
+from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.exceptions import TransactionNotFound
+from web3.types import TxReceipt
 
 from raiden.constants import RECEIPT_FAILURE_CODE
 from raiden.exceptions import EthereumNonceTooLow, ReplacementTransactionUnderpriced
@@ -22,7 +26,7 @@ def make_decreasing_gas_price_strategy(gas_price: GasPrice) -> Callable:
     # this is a really hacky way to create decreasing numbers
     def increasing_gas_price_strategy(web3: Web3, _transaction_params: Dict) -> GasPrice:
         old_counter = getattr(web3, "counter", gas_price)
-        web3.counter = old_counter - 1
+        web3.counter = old_counter - 1  # type: ignore
         return old_counter
 
     return increasing_gas_price_strategy
@@ -210,12 +214,13 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     while client.block_number() < target_block_number:
         gevent.sleep(0.5)
 
+    miner_zerogas_receipt: Optional[TxReceipt]
     try:
         miner_zerogas_tx = miner_client.web3.eth.getTransaction(
             zerogas_transaction_sent.transaction_hash
         )
         miner_zerogas_receipt = miner_client.web3.eth.getTransactionReceipt(
-            zerogas_transaction_sent.transaction_hash
+            HexBytes(zerogas_transaction_sent.transaction_hash)
         )
     except TransactionNotFound:
         miner_zerogas_tx = None
@@ -231,9 +236,10 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     )
     assert zerogas_tx is not None, msg
 
+    zerogas_receipt: Optional[TxReceipt]
     try:
         zerogas_receipt = client.web3.eth.getTransactionReceipt(
-            zerogas_transaction_sent.transaction_hash
+            HexBytes(zerogas_transaction_sent.transaction_hash)
         )
     except TransactionNotFound:
         zerogas_receipt = None

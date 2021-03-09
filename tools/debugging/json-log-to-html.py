@@ -445,7 +445,7 @@ def _colorize_cache_key(value: Any, min_luminance: float) -> Tuple[str, float]:
 
 
 @cached(LRUCache(maxsize=2 ** 24))
-def rgb_color_picker(obj, min_luminance: float = None, max_luminance: float = None) -> Color:
+def rgb_color_picker(obj: Any, min_luminance: float = None, max_luminance: float = None) -> Color:
     """Modified version of colour.RGB_color_picker"""
     color_value = (
         int.from_bytes(hashlib.md5(str(obj).encode("utf-8")).digest(), "little") % 0xFFFFFF
@@ -494,7 +494,7 @@ def get_time_display(prev_record: Optional[Record], record: Record) -> Tuple[str
     return time_absolute, time_color, time_display
 
 
-@cached(LRUCache(maxsize=2 ** 24), key=_colorize_cache_key)
+@cached(LRUCache(maxsize=2 ** 24), key=_colorize_cache_key)  # type: ignore
 def colorize_value(value: Any, min_luminance: float) -> Union[str, list, tuple, dict]:
     if isinstance(value, (list, tuple)):
         return type(value)(colorize_value(inner, min_luminance) for inner in value)
@@ -620,14 +620,14 @@ def transform_records(
 
 def render(
     name: str,
-    log_records: Iterable[Record],
+    log_records: Iterable[Optional[Record]],
     known_fields: Counter,
     output: TextIO,
     wrap: bool = False,
     show_time_diff: bool = True,
     truncate_logger: bool = False,
     highlight_records: Optional[Iterable[int]] = (),
-):
+) -> None:
     sorted_known_fields = [name for name, count in known_fields.most_common()]
     highlight_records_set = set(highlight_records) if highlight_records else set()
     prev_record = None

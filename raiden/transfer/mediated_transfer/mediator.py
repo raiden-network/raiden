@@ -268,7 +268,7 @@ def get_amount_without_fees(
         # The node can't cover its mediations fees from the transferred amount.
         return None
 
-    return PaymentWithFeeAmount(int(round(amount_without_fees)))  # type: ignore
+    return PaymentWithFeeAmount(int(round(amount_without_fees)))
 
 
 def sanity_check(

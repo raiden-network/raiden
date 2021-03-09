@@ -12,9 +12,11 @@ The ignored state changes will still be applied, but they will just not be print
 import json
 import re
 from contextlib import closing
+from pathlib import Path
+from typing import NoReturn, TextIO
 
 import click
-from eth_utils import encode_hex, is_address, to_canonical_address
+from eth_utils import encode_hex, is_address, to_canonical_address, to_checksum_address
 
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import (
@@ -26,7 +28,7 @@ from raiden.storage.wal import WriteAheadLog, dispatch
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event, StateChange
 from raiden.transfer.state import NetworkState
-from raiden.utils.formatting import pex, to_checksum_address
+from raiden.utils.formatting import pex
 from raiden.utils.typing import (
     Address,
     Any,
@@ -46,14 +48,14 @@ from raiden.utils.typing import (
 class Translator(dict):
     """ Dictionary class with re substitution capabilities. """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs = {k.lower(): v for k, v in args[0].items()}
         super().__init__(kwargs)
         self._extra_keys: Dict[str, str] = dict()
-        self._regex = None
+        self._regex: Optional[re.Pattern[str]] = None
         self._make_regex()
 
-    def _address_rxp(self, addr):
+    def _address_rxp(self, addr: str) -> str:
         """Create a regex string for addresses, that matches several representations:
         - with(out) '0x' prefix
         - `pex` version
@@ -69,18 +71,18 @@ class Translator(dict):
             rxp = addr
         return rxp
 
-    def _make_regex(self):
+    def _make_regex(self) -> None:
         """ Compile rxp with all keys concatenated. """
         rxp = "|".join(map(self._address_rxp, self.keys()))
         self._regex = re.compile(rxp, re.IGNORECASE)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> NoReturn:
         raise NotImplementedError(f"{self.__class__} must not dynamically modified")
 
-    def __pop__(self, key):
+    def __pop__(self, key: str) -> NoReturn:
         raise NotImplementedError(f"{self.__class__} must not dynamically modified")
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         try:
             return dict.__getitem__(self, key)
         except KeyError as e:
@@ -91,12 +93,13 @@ class Translator(dict):
                 # breakpoint()
                 raise e
 
-    def __call__(self, match):
+    def __call__(self, match: re.Match) -> str:
         """ Lookup for each rxp match. """
         return "[{}]".format(self[match.group(0).lower()])
 
-    def translate(self, text):
+    def translate(self, text: str) -> str:
         """ Translate text. """
+        assert self._regex is not None, "regex not set"
         return self._regex.sub(self, text)
 
 
@@ -147,13 +150,13 @@ def print_events(events: Iterable[Event], translator: Optional[Translator] = Non
         print_attributes(event.__dict__, translator=translator)
 
 
-def print_presence_view(chain_state, translator: Optional[Translator] = None):
+def print_presence_view(chain_state: Any, translator: Optional[Translator] = None) -> None:
     if translator is None:
         trans = lambda s: s
     else:
         trans = translator.translate
 
-    def network_state_to_color(network_state: NetworkState):
+    def network_state_to_color(network_state: NetworkState) -> Optional[str]:
         if network_state == NetworkState.REACHABLE:
             return "green"
         if network_state == NetworkState.UNREACHABLE:
@@ -169,13 +172,13 @@ def print_presence_view(chain_state, translator: Optional[Translator] = None):
 
 
 def get_node_balances(
-    chain_state, token_network_address: TokenNetworkAddress
+    chain_state: Any, token_network_address: TokenNetworkAddress
 ) -> List[Tuple[Address, Balance, Balance]]:
     channels = views.list_all_channelstate(chain_state)
     channels = [
         raiden_channel
         for raiden_channel in channels
-        if raiden_channel.canonical_identifier.token_network_address
+        if raiden_channel.canonical_identifier.token_network_address  # type: ignore
         == to_canonical_address(token_network_address)
     ]
     balances = [
@@ -190,10 +193,10 @@ def get_node_balances(
 
 
 def print_node_balances(
-    chain_state,
+    chain_state: Any,
     token_network_address: TokenNetworkAddress,
     translator: Optional[Translator] = None,
-):
+) -> None:
     if translator is None:
         trans = lambda s: s
     else:
@@ -204,7 +207,7 @@ def print_node_balances(
     click.secho(f"Sum {trans(pex(chain_state.our_address))}: {sum(b[1] for b in balances)}")
 
 
-def print_nl():
+def print_nl() -> None:
     click.echo("-" * click.get_terminal_size()[0], nl=True)
 
 
@@ -219,7 +222,7 @@ def replay_wal(
     )
     assert snapshot is not None, "No snapshot found"
 
-    wal = WriteAheadLog(snapshot.data, storage, node.state_transition)
+    wal = WriteAheadLog(snapshot.data, storage, node.state_transition)  # type: ignore
     state = wal.get_current_state()
 
     all_state_changes = storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
@@ -235,8 +238,8 @@ def replay_wal(
         assert state, msg
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            state,
-            to_canonical_address(token_network_address),
+            state,  # type: ignore
+            to_canonical_address(token_network_address),  # type: ignore
             to_canonical_address(partner_address),
         )
 
@@ -274,7 +277,9 @@ def replay_wal(
     'checksummed) with "[Bob]" and all mentions of "identifier" with "[XXX]. '
     'It also allows you to use "Bob" as parameter value for "-n" and "-p" switches.',
 )
-def main(db_file, token_network_address, partner_address, names_translator):
+def main(
+    db_file: str, token_network_address: str, partner_address: str, names_translator: TextIO
+) -> None:
     translator: Optional[Translator]
 
     if names_translator:
@@ -288,10 +293,10 @@ def main(db_file, token_network_address, partner_address, names_translator):
     assert is_address(token_network_address), "token_network_address must be provided"
     assert is_address(partner_address), "partner_address must be provided"
 
-    with closing(SerializedSQLiteStorage(db_file, JSONSerializer())) as storage:
+    with closing(SerializedSQLiteStorage(Path(db_file), JSONSerializer())) as storage:
         replay_wal(
             storage=storage,
-            token_network_address=to_canonical_address(token_network_address),
+            token_network_address=TokenNetworkAddress(to_canonical_address(token_network_address)),
             partner_address=to_canonical_address(partner_address),
             translator=translator,
         )

@@ -14,7 +14,7 @@ from raiden.tests.utils.transport import (
 pytestmark = pytest.mark.asyncio
 
 
-def test_rtc_partner_close():
+def test_rtc_partner_close() -> None:
 
     web_rtc_manager = WebRTCManager(
         None, ignore_web_rtc_messages, ignore_sdp, ignore_candidates, ignore_close

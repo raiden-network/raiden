@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import gevent
 import structlog
+from eth_typing import ChecksumAddress
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -1394,7 +1395,9 @@ class JSONRPCClient:
         log.debug("Transaction sent", **transaction_sent.to_log_details())
         return transaction_sent
 
-    def new_contract_proxy(self, abi: ABI, contract_address: Address) -> Contract:
+    def new_contract_proxy(
+        self, abi: ABI, contract_address: Union[Address, ChecksumAddress]
+    ) -> Contract:
         return self.web3.eth.contract(abi=abi, address=contract_address)
 
     def deploy_single_contract(
