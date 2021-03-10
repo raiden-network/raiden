@@ -375,7 +375,7 @@ class UserDepositPostSchema(BaseSchema):
     withdraw_amount = IntegerToStringField(default=None, missing=None)
 
 
-class Notification(BaseSchema):
+class NotificationSchema(BaseSchema):
     notification_id = fields.String()
     summary = fields.String()
     body = fields.String()
