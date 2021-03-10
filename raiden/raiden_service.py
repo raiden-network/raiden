@@ -359,6 +359,9 @@ class RaidenService(Runnable):
         self.default_msc_address = monitoring_service_address
         self.routing_mode = routing_mode
         self.config = config
+        self.notifications = defaultdict(
+            lambda x: None
+        )  # notifications are unique (and indexed) by id.
 
         self.signer: Signer = LocalSigner(self.rpc_client.privkey)
         self.address = self.signer.address

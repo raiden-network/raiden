@@ -1,9 +1,11 @@
 import gevent
+from collections import defaultdict
 import structlog
 from eth_utils import is_binary_address
 
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
+from raiden.api.objects import Notification
 from raiden.constants import NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
@@ -189,6 +191,10 @@ class RaidenAPI:  # pragma: no unittest
     @property
     def address(self) -> Address:
         return self.raiden.address
+
+    @property
+    def notifications(self) -> List:
+        return self.raiden.notifications
 
     @property
     def config(self) -> PythonApiConfig:
@@ -1317,6 +1323,14 @@ class RaidenAPI:  # pragma: no unittest
         return user_deposit.withdraw(
             amount=amount, given_block_identifier=confirmed_block_identifier
         )
+
+    def get_new_notifications(self):
+        notifications = self.raiden.notifications
+        self.raiden.notifications = defaultdict(lambda x: None)
+        return notifications.items()
+
+    def add_notification(self, notification: Notification) -> None:
+        self.raiden.notifications[notification["id"]] = notification
 
     def shutdown(self) -> None:
         self.raiden.stop()

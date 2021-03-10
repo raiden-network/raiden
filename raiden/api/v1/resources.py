@@ -276,3 +276,9 @@ class ShutdownResource(BaseResource):
     @if_api_available
     def post(self) -> Response:
         return self.rest_api.shutdown()
+
+
+class NotificationsResource(BaseResource):
+    @if_api_available
+    def get(self) -> Response:
+        return self.rest_api.get_new_notifications()
