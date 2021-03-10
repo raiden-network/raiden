@@ -33,6 +33,7 @@ from raiden.api.v1.encoding import (
     InvalidEndpoint,
     PartnersPerTokenListSchema,
     PaymentSchema,
+    NotificationSchema,
 )
 from raiden.api.v1.resources import (
     AddressResource,
@@ -44,6 +45,7 @@ from raiden.api.v1.resources import (
     ContractsResource,
     MintTokenResource,
     NodeSettingsResource,
+    NotificationsResource,
     PartnersResourceByTokenAddress,
     PaymentEventsResource,
     PaymentResource,
@@ -147,6 +149,7 @@ URLS_V1 = [
     ),
     ("/connections/<hexaddress:token_address>", ConnectionsResource),
     ("/connections", ConnectionsInfoResource),
+    ("/notifications", NotificationsResource),
     ("/payments", PaymentEventsResource, "paymentresource"),
     ("/payments/<hexaddress:token_address>", PaymentEventsResource, "token_paymentresource"),
     (
@@ -456,6 +459,7 @@ class RestAPI:  # pragma: no unittest
         self.sent_success_payment_schema = EventPaymentSentSuccessSchema()
         self.received_success_payment_schema = EventPaymentReceivedSuccessSchema()
         self.failed_payment_schema = EventPaymentSentFailedSchema()
+        self.notification_schema = NotificationSchema()
 
     @property
     def rpc_client(self) -> JSONRPCClient:
@@ -1000,6 +1004,13 @@ class RestAPI:  # pragma: no unittest
             "secret_hash": sha256(result.secret).digest(),
         }
         result = self.payment_schema.dump(payment)
+        return api_response(result=result)
+
+    def get_new_notifications(self) -> Response:
+        log.debug("Requesting new notifications")
+
+        notifications = self.raiden_api.get_new_notifications()
+        result = self.notification_schema.dump(notifications, many=True)
         return api_response(result=result)
 
     def _updated_channel_state_from_addresses(
