@@ -1,4 +1,5 @@
 import pytest
+import os
 
 from raiden.api.rest import APIServer
 from raiden.raiden_service import RaidenService
@@ -12,6 +13,20 @@ from raiden.utils.typing import List
 #       been invoked.
 @pytest.fixture
 def api_server_test_instance(raiden_network: List[RaidenService]) -> APIServer:
+    print("-" * 200)
+    print("testing")
+    print("-" * 200)
+
     api_server = prepare_api_server(raiden_network[0])
 
-    return api_server
+    yield api_server
+
+
+@pytest.fixture
+def client(api_server_test_instance):
+    with api_server_test_instance.test_client() as client:
+        with api_server_test_instance.app_context():
+            api_server_test_instance.init_db()
+        yield client
+
+    os.unlink(api_server_test_instance.config["DATABASE"])
