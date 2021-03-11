@@ -376,7 +376,7 @@ class UserDepositPostSchema(BaseSchema):
 
 
 class NotificationSchema(BaseSchema):
-    notification_id = fields.String()
+    id = fields.String()
     summary = fields.String()
     body = fields.String()
     urgency = fields.String(

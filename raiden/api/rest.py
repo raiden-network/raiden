@@ -31,9 +31,9 @@ from raiden.api.v1.encoding import (
     EventPaymentSentSuccessSchema,
     HexAddressConverter,
     InvalidEndpoint,
+    NotificationSchema,
     PartnersPerTokenListSchema,
     PaymentSchema,
-    NotificationSchema,
 )
 from raiden.api.v1.resources import (
     AddressResource,

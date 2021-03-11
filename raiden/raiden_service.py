@@ -16,6 +16,7 @@ from gevent.event import AsyncResult, Event
 from web3.types import BlockData
 
 from raiden import routing
+from raiden.api.objects import Notification
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
@@ -317,7 +318,8 @@ class RaidenService(Runnable):
             BLOCK_ID_LATEST
         )
         invalid_settle_timeout = (
-            settlement_timeout_max > config.settle_timeout < settlement_timeout_min
+            config.settle_timeout < settlement_timeout_min
+            or config.settle_timeout > settlement_timeout_max
             or config.settle_timeout < config.reveal_timeout * 2
         )
         if invalid_settle_timeout:
@@ -359,9 +361,7 @@ class RaidenService(Runnable):
         self.default_msc_address = monitoring_service_address
         self.routing_mode = routing_mode
         self.config = config
-        self.notifications = defaultdict(
-            lambda x: None
-        )  # notifications are unique (and indexed) by id.
+        self.notifications: Dict = {}  # notifications are unique (and indexed) by id.
 
         self.signer: Signer = LocalSigner(self.rpc_client.privkey)
         self.address = self.signer.address
@@ -533,6 +533,9 @@ class RaidenService(Runnable):
             self.db_lock.release()
 
         log.debug("Raiden Service stopped", node=to_checksum_address(self.address))
+
+    def add_notification(self, notification: Notification) -> None:
+        self.notifications[notification.id] = notification
 
     @property
     def confirmation_blocks(self) -> BlockTimeout:

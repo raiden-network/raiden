@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from raiden.utils.typing import List, TokenAddress
 
 
@@ -35,9 +36,9 @@ class PartnersPerToken:
         self.channel = channel
 
 
+@dataclass
 class Notification:
-    def __init__(self, notification_id: str, summary: str, body: str, urgency: str) -> None:
-        self.notification_id = notification_id
-        self.summary = summary
-        self.body = body
-        self.urgency = urgency
+    id: str
+    summary: str
+    body: str
+    urgency: str
