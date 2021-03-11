@@ -105,6 +105,7 @@ def test_events_loaded_from_storage_should_deserialize(tmp_path):
     participant = factories.make_address()
     event = SendWithdrawRequest(
         recipient=recipient,
+        recipient_metadata=None,
         canonical_identifier=canonical_identifier,
         message_identifier=factories.make_message_identifier(),
         total_withdraw=WithdrawAmount(1),
@@ -130,6 +131,7 @@ def test_restore_queueids_to_queues(chain_state, netting_channel_state):
 
     msg_args = dict(
         recipient=recipient,
+        recipient_metadata=None,
         canonical_identifier=netting_channel_state.canonical_identifier,
         message_identifier=factories.make_message_identifier(),
         total_withdraw=WithdrawAmount(1),

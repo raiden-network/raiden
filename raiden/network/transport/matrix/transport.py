@@ -68,7 +68,11 @@ from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
-from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+    QueueIdentifier,
+    TransportQueueIdentifier,
+)
 from raiden.transfer.state import NetworkState, QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils.capabilities import capconfig_to_dict
@@ -112,7 +116,7 @@ SET_PRESENCE_INTERVAL = 60
 
 @dataclass
 class MessagesQueue:
-    queue_identifier: QueueIdentifier
+    queue_identifier: TransportQueueIdentifier
     messages: List[Message]
 
 

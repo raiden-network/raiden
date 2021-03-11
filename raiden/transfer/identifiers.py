@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from raiden.constants import EMPTY_ADDRESS, UINT256_MAX
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     ChainID,
     ChannelID,
     T_Address,
@@ -48,6 +50,20 @@ class QueueIdentifier:
             "QueueIdentifier("
             f"recipient={to_checksum_address(self.recipient)}, "
             f"canonical_identifier={self.canonical_identifier}"
+            ")"
+        )
+
+
+@dataclass(frozen=True)
+class TransportQueueIdentifier(QueueIdentifier):
+    recipient_metadata: Optional[AddressMetadata]
+
+    def __str__(self) -> str:
+        return (
+            "QueueIdentifier("
+            f"recipient={to_checksum_address(self.recipient)}, "
+            f"canonical_identifier={self.canonical_identifier}, "
+            f"recipient_metadata={self.recipient_metadata}"
             ")"
         )
 

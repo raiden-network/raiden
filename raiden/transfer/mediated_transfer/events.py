@@ -44,7 +44,6 @@ class SendLockedTransfer(SendMessageEvent):
     transfer: LockedTransferUnsignedState
 
     def __post_init__(self) -> None:
-        super().__post_init__()
         typecheck(self.transfer, LockedTransferUnsignedState)
 
     @property
@@ -86,7 +85,6 @@ class SendSecretReveal(SendMessageEvent):
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
-        super().__post_init__()
         object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 

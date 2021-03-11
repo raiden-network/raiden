@@ -181,6 +181,7 @@ def handle_offchain_secretreveal(
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
         recipient = route.node_address
+        recipient_metadata = route.address_metadata
 
         reveal = SendSecretReveal(
             recipient=recipient,
@@ -249,6 +250,7 @@ def handle_unlock(
 
         send_processed = SendProcessed(
             recipient=balance_proof_sender,
+            recipient_metadata=None,
             message_identifier=state_change.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )

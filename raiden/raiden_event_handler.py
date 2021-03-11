@@ -53,7 +53,11 @@ from raiden.transfer.events import (
     SendWithdrawRequest,
     UpdateServicesAddresses,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CanonicalIdentifier,
+    QueueIdentifier,
+    TransportQueueIdentifier,
+)
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
     EventUnlockClaimFailed,
@@ -157,7 +161,7 @@ class RaidenEventHandler(EventHandler):
     def on_raiden_events(
         self, raiden: "RaidenService", chain_state: ChainState, events: List[Event]
     ) -> None:  # pragma: no unittest
-        message_queues: Dict[QueueIdentifier, List[Message]] = defaultdict(list)
+        message_queues: Dict[TransportQueueIdentifier, List[Message]] = defaultdict(list)
 
         for event in events:
             # pylint: disable=too-many-branches
@@ -247,7 +251,7 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
-        message_queues[send_lock_expired.queue_identifier].append(lock_expired_message)
+        message_queues[send_lock_expired.transport_queue_identifier].append(lock_expired_message)
 
     @staticmethod
     def handle_send_lockedtransfer(
@@ -257,7 +261,9 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
-        message_queues[send_locked_transfer.queue_identifier].append(mediated_transfer_message)
+        message_queues[send_locked_transfer.transport_queue_identifier].append(
+            mediated_transfer_message
+        )
 
     @staticmethod
     def handle_send_secretreveal(
@@ -267,7 +273,9 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
-        message_queues[reveal_secret_event.queue_identifier].append(reveal_secret_message)
+        message_queues[reveal_secret_event.transport_queue_identifier].append(
+            reveal_secret_message
+        )
 
     @staticmethod
     def handle_send_balanceproof(
@@ -277,7 +285,7 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
-        message_queues[balance_proof_event.queue_identifier].append(unlock_message)
+        message_queues[balance_proof_event.transport_queue_identifier].append(unlock_message)
 
     @staticmethod
     def handle_send_secretrequest(
@@ -291,7 +299,9 @@ class RaidenEventHandler(EventHandler):
 
         secret_request_message = message_from_sendevent(secret_request_event)
         raiden.sign(secret_request_message)
-        message_queues[secret_request_event.queue_identifier].append(secret_request_message)
+        message_queues[secret_request_event.transport_queue_identifier].append(
+            secret_request_message
+        )
 
     @staticmethod
     def handle_send_refundtransfer(
@@ -301,7 +311,9 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
-        message_queues[refund_transfer_event.queue_identifier].append(refund_transfer_message)
+        message_queues[refund_transfer_event.transport_queue_identifier].append(
+            refund_transfer_message
+        )
 
     @staticmethod
     def handle_send_withdrawrequest(
@@ -311,7 +323,9 @@ class RaidenEventHandler(EventHandler):
     ) -> None:
         withdraw_request_message = message_from_sendevent(withdraw_request_event)
         raiden.sign(withdraw_request_message)
-        message_queues[withdraw_request_event.queue_identifier].append(withdraw_request_message)
+        message_queues[withdraw_request_event.transport_queue_identifier].append(
+            withdraw_request_message
+        )
 
     @staticmethod
     def handle_send_withdraw(
@@ -321,7 +335,7 @@ class RaidenEventHandler(EventHandler):
     ) -> None:
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
-        message_queues[withdraw_event.queue_identifier].append(withdraw_message)
+        message_queues[withdraw_event.transport_queue_identifier].append(withdraw_message)
 
     @staticmethod
     def handle_send_withdrawexpired(
@@ -331,7 +345,9 @@ class RaidenEventHandler(EventHandler):
     ) -> None:
         withdraw_expired_message = message_from_sendevent(withdraw_expired_event)
         raiden.sign(withdraw_expired_message)
-        message_queues[withdraw_expired_event.queue_identifier].append(withdraw_expired_message)
+        message_queues[withdraw_expired_event.transport_queue_identifier].append(
+            withdraw_expired_message
+        )
 
     @staticmethod
     def handle_send_processed(
@@ -341,7 +357,7 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
-        message_queues[processed_event.queue_identifier].append(processed_message)
+        message_queues[processed_event.transport_queue_identifier].append(processed_message)
 
     @staticmethod
     def handle_paymentsentsuccess(

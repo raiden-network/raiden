@@ -1,18 +1,23 @@
 # pylint: disable=too-few-public-methods
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import structlog
 from eth_utils import to_hex
 
 from raiden.constants import EMPTY_BALANCE_HASH, UINT64_MAX, UINT256_MAX
-from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.identifiers import (
+    CanonicalIdentifier,
+    QueueIdentifier,
+    TransportQueueIdentifier,
+)
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
+    AddressMetadata,
     Any,
     BalanceHash,
     BlockExpiration,
@@ -148,15 +153,23 @@ class SendMessageEvent(Event):
     """
 
     recipient: Address
+    recipient_metadata: Optional[AddressMetadata]
     canonical_identifier: CanonicalIdentifier
     message_identifier: MessageID
-    queue_identifier: QueueIdentifier = field(init=False)
 
-    def __post_init__(self) -> None:
-        queue_identifier = QueueIdentifier(
+    @property
+    def queue_identifier(self) -> QueueIdentifier:
+        return QueueIdentifier(
             recipient=self.recipient, canonical_identifier=self.canonical_identifier
         )
-        object.__setattr__(self, "queue_identifier", queue_identifier)
+
+    @property
+    def transport_queue_identifier(self) -> TransportQueueIdentifier:
+        return TransportQueueIdentifier(
+            recipient=self.recipient,
+            canonical_identifier=self.canonical_identifier,
+            recipient_metadata=self.recipient_metadata,
+        )
 
 
 @dataclass(frozen=True)
