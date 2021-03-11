@@ -22,6 +22,8 @@ apipkg==1.5
     # via execnet
 appdirs==1.4.3
     # via black
+appnope==0.1.2
+    # via ipython
 asn1crypto==1.3.0
     # via
     #   -r requirements.txt
@@ -200,6 +202,8 @@ eth-utils==1.10.0
     #   web3
 execnet==1.6.0
     # via pytest-xdist
+faker==6.6.0
+    # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
 filelock==3.0.12
@@ -332,7 +336,7 @@ marshmallow==3.10.0
     #   marshmallow-polyfield
 matrix-client==0.3.2
     # via -r requirements.txt
-matrix-synapse==1.27.0
+matrix-synapse==1.29.0
     # via -r requirements-dev.in
 mccabe==0.6.1
     # via
@@ -501,6 +505,8 @@ pytest==6.2.2
     #   pytest-random
     #   pytest-select
     #   pytest-xdist
+python-dateutil==2.8.1
+    # via faker
 pytz==2019.1
     # via
     #   -r requirements-docs.txt
@@ -584,6 +590,7 @@ six==1.15.0
     #   pynacl
     #   pyopenssl
     #   pyrsistent
+    #   python-dateutil
     #   readme-renderer
     #   responses
     #   sphinxcontrib-httpdomain
@@ -641,6 +648,8 @@ sphinxcontrib-serializinghtml==1.1.4
     #   sphinx
 structlog==21.1.0
     # via -r requirements.txt
+text-unidecode==1.3
+    # via faker
 toml==0.10.2
     # via
     #   -r requirements.txt
