@@ -437,7 +437,7 @@ def test_retry_queue_does_not_resend_removed_messages(
         recipient=Address(factories.HOP1),
         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
-    retry_queue.enqueue(queue_identifier, [message])
+    retry_queue.enqueue(queue_identifier, [(message, None)])
 
     # TODO: Fix the code below, the types are not matching.
     mock_matrix._queueids_to_queues[queue_identifier] = [message]  # type: ignore
@@ -493,7 +493,7 @@ def test_retryqueue_not_idle_with_messages(
         recipient=Address(factories.HOP1),
         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
     )
-    retry_queue.enqueue(queue_identifier, [make_message()])
+    retry_queue.enqueue(queue_identifier, [(make_message(), None)])
 
     # Without the `all_peers_reachable` fixture, the default reachability will be `UNREACHABLE`
     # therefore the message will remain in the internal queue indefinitely.
