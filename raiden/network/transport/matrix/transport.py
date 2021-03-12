@@ -723,7 +723,7 @@ class MatrixTransport(Runnable):
                 )
 
             # These are not protocol messages, but transport specific messages
-            for message in queue.messages:
+            for message, _ in queue.messages:
                 if isinstance(message, (Delivered, Ping, Pong)):
                     raise ValueError(
                         f"Do not use send_async for {message.__class__.__name__} messages"
@@ -741,7 +741,8 @@ class MatrixTransport(Runnable):
                 "Send async",
                 receiver_address=to_checksum_address(receiver_address),
                 messages=[
-                    redact_secret(DictSerializer.serialize(message)) for message in queue.messages
+                    redact_secret(DictSerializer.serialize(message))
+                    for message, _ in queue.messages
                 ],
                 queue_identifier=queue.queue_identifier,
             )
