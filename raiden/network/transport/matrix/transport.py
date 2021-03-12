@@ -79,6 +79,7 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     AddressHex,
+    AddressMetadata,
     Any,
     Callable,
     ChainID,
@@ -112,7 +113,7 @@ SET_PRESENCE_INTERVAL = 60
 @dataclass
 class MessagesQueue:
     queue_identifier: QueueIdentifier
-    messages: List[Message]
+    messages: List[Tuple[Message, Optional[AddressMetadata]]]
 
 
 class _RetryQueue(Runnable):
@@ -126,6 +127,7 @@ class _RetryQueue(Runnable):
         text: str
         # generator that tells if the message should be sent now
         expiration_generator: Iterator[bool]
+        address_metadata: Optional[AddressMetadata]
 
     def __init__(self, transport: "MatrixTransport", receiver: Address) -> None:
         self.transport = transport
@@ -159,7 +161,11 @@ class _RetryQueue(Runnable):
             while now() < _next:  # yield False while next is still in the future
                 yield False
 
-    def enqueue(self, queue_identifier: QueueIdentifier, messages: List[Message]) -> None:
+    def enqueue(
+        self,
+        queue_identifier: QueueIdentifier,
+        messages: List[Tuple[Message, Optional[AddressMetadata]]],
+    ) -> None:
         """ Enqueue a message to be sent, and notify main loop """
         msg = (
             f"queue_identifier.recipient ({to_checksum_address(queue_identifier.recipient)}) "
@@ -175,7 +181,7 @@ class _RetryQueue(Runnable):
             )
 
             encoded_messages = list()
-            for message in messages:
+            for message, address_metadata in messages:
                 already_queued = any(
                     queue_identifier == data.queue_identifier and message == data.message
                     for data in self._message_queue
@@ -195,6 +201,7 @@ class _RetryQueue(Runnable):
                         message=message,
                         text=MessageSerializer.serialize(message),
                         expiration_generator=expiration_generator,
+                        address_metadata=address_metadata,
                     )
                     encoded_messages.append(data)
 
@@ -202,13 +209,15 @@ class _RetryQueue(Runnable):
 
         self.notify()
 
-    def enqueue_unordered(self, message: Message) -> None:
+    def enqueue_unordered(
+        self, message: Message, address_metadata: AddressMetadata = None
+    ) -> None:
         """ Helper to enqueue a message in the unordered queue. """
         self.enqueue(
             queue_identifier=QueueIdentifier(
                 recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
             ),
-            messages=[message],
+            messages=[(message, address_metadata)],
         )
 
     def notify(self) -> None:
