@@ -378,7 +378,7 @@ marshmallow==3.10.0
     #   marshmallow-polyfield
 matrix-client==0.3.2
     # via -r requirements-dev.txt
-matrix-synapse==1.27.0
+matrix-synapse==1.29.0
     # via -r requirements-dev.txt
 mccabe==0.6.1
     # via
