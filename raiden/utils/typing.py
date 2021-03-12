@@ -74,6 +74,12 @@ T_Address = bytes
 
 AddressHex = HexAddress
 
+T_UserID = str
+UserID = NewType("UserID", T_UserID)
+
+T_AddressMetadata = Dict[str, Union[UserID, "PeerCapabilities"]]
+AddressMetadata = NewType("AddressMetadata", T_AddressMetadata)
+
 T_Balance = int
 Balance = NewType("Balance", T_Balance)
 
