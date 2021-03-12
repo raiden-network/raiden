@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from typing import Optional, Tuple
 
 import structlog
 from eth_utils import encode_hex, to_hex
@@ -75,7 +76,15 @@ from raiden.transfer.views import (
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
-from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, Any, Dict, List, Nonce
+from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    TYPE_CHECKING,
+    AddressMetadata,
+    Any,
+    Dict,
+    List,
+    Nonce,
+)
 from raiden_contracts.constants import MessageTypeId
 
 if TYPE_CHECKING:
@@ -157,7 +166,9 @@ class RaidenEventHandler(EventHandler):
     def on_raiden_events(
         self, raiden: "RaidenService", chain_state: ChainState, events: List[Event]
     ) -> None:  # pragma: no unittest
-        message_queues: Dict[QueueIdentifier, List[Message]] = defaultdict(list)
+        message_queues: Dict[
+            QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]
+        ] = defaultdict(list)
 
         event_handler_map: Dict[Any, List] = {
             SendLockExpired: [self.handle_send_lockexpired, [message_queues]],
@@ -210,105 +221,115 @@ class RaidenEventHandler(EventHandler):
     def handle_send_lockexpired(
         raiden: "RaidenService",
         send_lock_expired: SendLockExpired,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
-        message_queues[send_lock_expired.queue_identifier].append(lock_expired_message)
+        message_queues[send_lock_expired.queue_identifier].append((lock_expired_message, None))
 
     @staticmethod
     def handle_send_lockedtransfer(
         raiden: "RaidenService",
         send_locked_transfer: SendLockedTransfer,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
-        message_queues[send_locked_transfer.queue_identifier].append(mediated_transfer_message)
+        message_queues[send_locked_transfer.queue_identifier].append(
+            (mediated_transfer_message, None)
+        )
 
     @staticmethod
     def handle_send_secretreveal(
         raiden: "RaidenService",
         reveal_secret_event: SendSecretReveal,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
-        message_queues[reveal_secret_event.queue_identifier].append(reveal_secret_message)
+        message_queues[reveal_secret_event.queue_identifier].append((reveal_secret_message, None))
 
     @staticmethod
     def handle_send_balanceproof(
         raiden: "RaidenService",
         balance_proof_event: SendUnlock,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
-        message_queues[balance_proof_event.queue_identifier].append(unlock_message)
+        message_queues[balance_proof_event.queue_identifier].append((unlock_message, None))
 
     @staticmethod
     def handle_send_secretrequest(
         raiden: "RaidenService",
         secret_request_event: SendSecretRequest,
         chain_state: ChainState,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         if reveal_secret_with_resolver(raiden, chain_state, secret_request_event):
             return
 
         secret_request_message = message_from_sendevent(secret_request_event)
         raiden.sign(secret_request_message)
-        message_queues[secret_request_event.queue_identifier].append(secret_request_message)
+        message_queues[secret_request_event.queue_identifier].append(
+            (secret_request_message, None)
+        )
 
     @staticmethod
     def handle_send_refundtransfer(
         raiden: "RaidenService",
         refund_transfer_event: SendRefundTransfer,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
-        message_queues[refund_transfer_event.queue_identifier].append(refund_transfer_message)
+        message_queues[refund_transfer_event.queue_identifier].append(
+            (refund_transfer_message, None)
+        )
 
     @staticmethod
     def handle_send_withdrawrequest(
         raiden: "RaidenService",
         withdraw_request_event: SendWithdrawRequest,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:
         withdraw_request_message = message_from_sendevent(withdraw_request_event)
         raiden.sign(withdraw_request_message)
-        message_queues[withdraw_request_event.queue_identifier].append(withdraw_request_message)
+        message_queues[withdraw_request_event.queue_identifier].append(
+            (withdraw_request_message, None)
+        )
 
     @staticmethod
     def handle_send_withdraw(
         raiden: "RaidenService",
         withdraw_event: SendWithdrawConfirmation,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
-        message_queues[withdraw_event.queue_identifier].append(withdraw_message)
+        message_queues[withdraw_event.queue_identifier].append((withdraw_message, None))
 
     @staticmethod
     def handle_send_withdrawexpired(
         raiden: "RaidenService",
         withdraw_expired_event: SendWithdrawExpired,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:
         withdraw_expired_message = message_from_sendevent(withdraw_expired_event)
         raiden.sign(withdraw_expired_message)
-        message_queues[withdraw_expired_event.queue_identifier].append(withdraw_expired_message)
+        message_queues[withdraw_expired_event.queue_identifier].append(
+            (withdraw_expired_message, None)
+        )
 
     @staticmethod
     def handle_send_processed(
         raiden: "RaidenService",
         processed_event: SendProcessed,
-        message_queues: Dict[QueueIdentifier, List[Message]],
+        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
     ) -> None:  # pragma: no unittest
         processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
-        message_queues[processed_event.queue_identifier].append(processed_message)
+        message_queues[processed_event.queue_identifier].append((processed_message, None))
 
     @staticmethod
     def handle_paymentsentsuccess(
