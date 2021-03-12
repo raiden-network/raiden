@@ -80,7 +80,6 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     TYPE_CHECKING,
     AddressMetadata,
-    Any,
     Dict,
     List,
     Nonce,
