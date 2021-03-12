@@ -114,6 +114,7 @@ from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
+    AddressMetadata,
     BlockNumber,
     BlockTimeout,
     InitiatorAddress,
@@ -1348,11 +1349,11 @@ class RaidenService(Runnable):
         all_messages: List[MessagesQueue] = list()
         for queue_identifier, event_queue in events_queues.items():
 
-            queue_messages = list()
+            queue_messages: List[Tuple[Message, Optional[AddressMetadata]]] = list()
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)
-                queue_messages.append(message)
+                queue_messages.append((message, None))
 
             all_messages.append(MessagesQueue(queue_identifier, queue_messages))
 
