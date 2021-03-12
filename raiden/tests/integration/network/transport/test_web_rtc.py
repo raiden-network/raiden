@@ -70,7 +70,7 @@ def test_web_rtc_message_sync(matrix_transports):
         message = Processed(message_identifier=MessageID(i), signature=EMPTY_SIGNATURE)
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
-        transport0.send_async([MessagesQueue(queue_identifier, [message])])
+        transport0.send_async([MessagesQueue(queue_identifier, [(message, None)])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while not len(transport1_messages) == 5:
