@@ -446,8 +446,8 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_channelclose(
         raiden: "RaidenService",
-        channel_close_event: ContractSendChannelClose,
         chain_state: ChainState,
+        channel_close_event: ContractSendChannelClose,
     ) -> None:
         balance_proof = channel_close_event.balance_proof
 
@@ -551,8 +551,8 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_channelunlock(
         raiden: "RaidenService",
-        channel_unlock_event: ContractSendChannelBatchUnlock,
         chain_state: ChainState,
+        channel_unlock_event: ContractSendChannelBatchUnlock,
     ) -> None:
         """Potentially unlock locked tokens after settlement
 
