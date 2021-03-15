@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import json
 import time
 from collections import Counter, defaultdict
@@ -47,17 +48,18 @@ from raiden.network.transport.matrix.client import (
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
-    USER_PRESENCE_REACHABLE_STATES,
     AddressReachability,
     DisplayNameCache,
     MessageAckTimingKeeper,
     UserPresence,
     address_from_userid,
+    is_valid_userid,
     join_broadcast_room,
     login,
     make_client,
     make_message_batches,
     make_room_alias,
+    make_user_id,
     my_place_or_yours,
     validate_and_parse_message,
     validate_userid_signature,
@@ -92,6 +94,8 @@ from raiden.utils.typing import (
     RoomID,
     Set,
     Tuple,
+    UserID,
+    cast,
 )
 
 if TYPE_CHECKING:
@@ -224,6 +228,29 @@ class _RetryQueue(Runnable):
         with self._lock:
             self._notify_event.set()
 
+    def _batch_by_address_metadata(
+        self,
+    ) -> List[Tuple[List[_MessageData], Optional[AddressMetadata]]]:
+        def key_func(message_data: "_RetryQueue._MessageData") -> str:
+            address_metadata = message_data.address_metadata
+            if address_metadata is None:
+                return ""
+            uid = address_metadata.get("user_id", "")
+            return cast(str, uid)
+
+        batched_messages = list()
+        queue_by_user_id = sorted(self._message_queue[:], key=key_func)
+        for user_id, batch in itertools.groupby(queue_by_user_id, key_func):
+            message_data_batch = list(batch)
+            if user_id == "":
+                metadata = None
+            else:
+                # simply use the first metadata in the list, event though
+                # there could be discrepancies along the batch
+                metadata = message_data_batch[0].address_metadata
+            batched_messages.append((message_data_batch, metadata))
+        return batched_messages
+
     def _check_and_send(self) -> None:
         """Check and send all pending/queued messages that are not waiting on retry timeout
 
@@ -263,51 +290,56 @@ class _RetryQueue(Runnable):
             )
 
         message_texts: List[str] = list()
-        for message_data in self._message_queue[:]:
-            # Messages are sent on two conditions:
-            # - Non-retryable (e.g. Delivered)
-            #   - Those are immediately remove from the local queue since they are only sent once
-            # - Retryable
-            #   - Those are retried according to their retry generator as long as they haven't been
-            #     removed from the Raiden queue
-            remove = False
-            if isinstance(message_data.message, (Delivered, Ping, Pong)):
-                # e.g. Delivered, send only once and then clear
-                # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
-                #       later `Processed` message?
-                remove = True
-                message_texts.append(message_data.text)
-            elif not message_is_in_queue(message_data):
-                remove = True
-                self.log.debug(
-                    "Stopping message send retry",
-                    queue=message_data.queue_identifier,
-                    message=message_data.message,
-                    reason="Message was removed from queue or queue was removed",
-                )
-            else:
-                # The message is still eligible for retry, consult the expiration generator if
-                # it should be retried now
-                if next(message_data.expiration_generator):
+        for subqueue, address_metadata in self._batch_by_address_metadata():
+            for message_data in subqueue:
+                # Messages are sent on two conditions:
+                # - Non-retryable (e.g. Delivered)
+                #   - Those are immediately remove from the local queue
+                #     since they are only sent once
+                # - Retryable
+                #   - Those are retried according to their retry generator
+                #     as long as they haven't been
+                #     removed from the Raiden queue
+                remove = False
+                if isinstance(message_data.message, (Delivered, Ping, Pong)):
+                    # e.g. Delivered, send only once and then clear
+                    # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
+                    #       later `Processed` message?
+                    remove = True
                     message_texts.append(message_data.text)
-                    if self.transport._environment is Environment.DEVELOPMENT:
-                        if isinstance(message_data.message, RetrieableMessage):
-                            self.transport._counters["retry"][
-                                (
-                                    message_data.message.__class__.__name__,
-                                    message_data.message.message_identifier,
-                                )
-                            ] += 1
+                elif not message_is_in_queue(message_data):
+                    remove = True
+                    self.log.debug(
+                        "Stopping message send retry",
+                        queue=message_data.queue_identifier,
+                        message=message_data.message,
+                        reason="Message was removed from queue or queue was removed",
+                    )
+                else:
+                    # The message is still eligible for retry, consult the expiration generator if
+                    # it should be retried now
+                    if next(message_data.expiration_generator):
+                        message_texts.append(message_data.text)
+                        if self.transport._environment is Environment.DEVELOPMENT:
+                            if isinstance(message_data.message, RetrieableMessage):
+                                self.transport._counters["retry"][
+                                    (
+                                        message_data.message.__class__.__name__,
+                                        message_data.message.message_identifier,
+                                    )
+                                ] += 1
 
-            if remove:
-                self._message_queue.remove(message_data)
+                if remove:
+                    self._message_queue.remove(message_data)
 
-        if message_texts:
-            self.log.debug(
-                "Send", receiver=to_checksum_address(self.receiver), messages=message_texts
-            )
-            for message_batch in make_message_batches(message_texts):
-                self.transport._send_raw(self.receiver, message_batch)
+            if message_texts:
+                self.log.debug(
+                    "Send", receiver=to_checksum_address(self.receiver), messages=message_texts
+                )
+                for message_batch in make_message_batches(message_texts):
+                    self.transport._send_raw(
+                        self.receiver, message_batch, receiver_metadata=address_metadata
+                    )
 
     def _run(self) -> None:  # type: ignore
         msg = (
@@ -351,6 +383,22 @@ class _RetryQueue(Runnable):
         return f"<{self.__class__.__name__} for {to_normalized_address(self.receiver)}>"
 
 
+@dataclass
+class _ReceivedMessageBase:
+    sender: Address
+
+
+@dataclass
+class ReceivedRaidenMessage(_ReceivedMessageBase):
+    message: Message
+    sender_metadata: Optional[AddressMetadata] = None
+
+
+@dataclass
+class ReceivedCallMessage(_ReceivedMessageBase):
+    message: MatrixMessage
+
+
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"
@@ -365,9 +413,9 @@ class MatrixTransport(Runnable):
         self._raiden_service: Optional["RaidenService"] = None
 
         if config.server == MATRIX_AUTO_SELECT_SERVER:
-            available_servers = config.available_servers
+            our_homeserver_candidates = config.available_servers
         elif urlparse(config.server).scheme in {"http", "https"}:
-            available_servers = [config.server]
+            our_homeserver_candidates = [config.server]
         else:
             raise TransportError(
                 f"Invalid matrix server specified (valid values: "
@@ -385,7 +433,7 @@ class MatrixTransport(Runnable):
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
             self._handle_member_join,
-            available_servers,
+            our_homeserver_candidates,
             http_pool_maxsize=4,
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
@@ -404,6 +452,15 @@ class MatrixTransport(Runnable):
 
         self.server_url = self._client.api.base_url
         self._server_name = urlparse(self.server_url).netloc
+        # FIXME this will not update the servers while Raiden is running,
+        #  thus to-device user-id fallback will only try to send to those home-servers that
+        #  are fetched during config time
+        self._all_server_names = {self._server_name}
+        for server_url in config.available_servers:
+            self._all_server_names.add(urlparse(server_url).netloc)
+        # This shouldn't happen since at least we should know our server
+        msg = "There needs to be at least one matrix server known."
+        assert self._all_server_names, msg
 
         self.greenlets: List[gevent.Greenlet] = list()
 
@@ -447,14 +504,27 @@ class MatrixTransport(Runnable):
 
     @property
     def checksummed_address(self) -> Optional[AddressHex]:
-        if self._raiden_service is not None:
-            return to_checksum_address(self._raiden_service.address)
-        return None
+        assert self._raiden_service is not None, "_raiden_service not set"
+
+        address = self._node_address
+        if address is None:
+            return None
+        return to_checksum_address(self._raiden_service.address)
+
+    @property
+    def _node_address(self) -> Optional[Address]:
+        return self._raiden_service.address if self._raiden_service else None
+
+    @property
+    def user_id(self) -> Optional[str]:
+        address = self._node_address
+        return make_user_id(address, self._server_name) if address is not None else None
 
     def start(  # type: ignore
         self,
         raiden_service: "RaidenService",
         prev_auth_data: Optional[str],
+        health_check_list: Optional[List[Address]] = None,  # pylint: disable=unused-argument
     ) -> None:
         if not self._stop_event.ready():
             raise RuntimeError(f"{self!r} already started")
@@ -464,6 +534,8 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._web_rtc_manager.node_address = self._raiden_service.address
 
+        # XXX-UAM health_check_list was used to whitelist/healthcheck
+        #  addresses after replaying state
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
 
@@ -619,6 +691,14 @@ class MatrixTransport(Runnable):
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
+    def async_start_health_check(self, node_address: Address) -> None:
+        # XXX-UAM implicitly used for whitelisting addresses
+        pass
+
+    def immediate_health_check_for(self, node_address: Address) -> None:
+        # XXX-UAM implicitly used for whitelisting addresses
+        pass
+
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         """Queue messages to be sent.
 
@@ -724,7 +804,7 @@ class MatrixTransport(Runnable):
                     MessageSerializer.serialize(message) for message in messages_for_device_id
                 )
                 for message_batch in make_message_batches(serialized_messages):
-                    self._multicast_raw(data=message_batch, device_id=device_id)
+                    self._multicast_services(data=message_batch, device_id=device_id)
                 for _ in messages_for_device_id:
                     # Every message needs to be marked as done.
                     # Unfortunately there's no way to do that in one call :(
@@ -909,11 +989,11 @@ class MatrixTransport(Runnable):
 
     def _validate_matrix_messages(
         self, room: Optional[Room], messages: List[MatrixMessage]
-    ) -> Tuple[List[Message], List[Tuple[Address, MatrixMessage]]]:
+    ) -> Tuple[List[ReceivedRaidenMessage], List[ReceivedCallMessage]]:
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        raiden_messages: List[Message] = []
-        call_messages: List[Tuple[Address, MatrixMessage]] = []
+        raiden_messages: List[ReceivedRaidenMessage] = list()
+        call_messages: List[ReceivedCallMessage] = list()
 
         for message in messages:
 
@@ -959,20 +1039,34 @@ class MatrixTransport(Runnable):
                 raise RaidenUnrecoverableError(f"Received message in room {room.canonical_alias}.")
 
             # XXX-UAM: Whitelist check was here
-            if is_raiden_message:
-                raiden_messages.extend(
-                    validate_and_parse_message(message["content"]["body"], peer_address)
-                )
-            if is_call_message:
-                call_messages.append((peer_address, message))
 
+            sender_metadata: AddressMetadata = dict(user_id=UserID(sender_id))
+            if is_raiden_message:
+                for parsed_message in validate_and_parse_message(
+                    message["content"]["body"], peer_address
+                ):
+                    raiden_message = ReceivedRaidenMessage(
+                        message=parsed_message,
+                        sender=peer_address,
+                        sender_metadata=sender_metadata,
+                    )
+                    raiden_messages.append(raiden_message)
+            if is_call_message:
+                call_message = ReceivedCallMessage(
+                    message=message,
+                    sender=peer_address,
+                )
+                call_messages.append(call_message)
         return raiden_messages, call_messages
 
-    def _process_messages(self, all_messages: List[Message]) -> None:
+    def _process_raiden_messages(self, all_messages: List[ReceivedRaidenMessage]) -> None:
         assert self._raiden_service is not None, "_process_messages must be called after start"
 
+        incoming_messages: List[Message] = list()
         # Remove this #3254
-        for message in all_messages:
+        for received_message in all_messages:
+            message = received_message.message
+            incoming_messages.append(message)
             if isinstance(message, (Processed, SignedRetrieableMessage)) and message.sender:
                 delivered_message = Delivered(
                     delivered_message_identifier=message.message_identifier,
@@ -980,7 +1074,9 @@ class MatrixTransport(Runnable):
                 )
                 self._raiden_service.sign(delivered_message)
                 retrier = self._get_retrier(message.sender)
-                retrier.enqueue_unordered(delivered_message)
+                retrier.enqueue_unordered(
+                    delivered_message, address_metadata=received_message.sender_metadata
+                )
             if self._environment is Environment.DEVELOPMENT:
                 if isinstance(message, RetrieableMessage):
                     self._counters["dispatch"][
@@ -989,9 +1085,9 @@ class MatrixTransport(Runnable):
                 if isinstance(message, Processed):
                     assert self._message_timing_keeper is not None, MYPY_ANNOTATION
                     self._message_timing_keeper.finalize_message(message)
-        self.log.debug("Incoming messages", messages=all_messages)
+        self.log.debug("Incoming messages", messages=incoming_messages)
 
-        self._raiden_service.on_messages(all_messages)
+        self._raiden_service.on_messages(incoming_messages)
 
     def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
         """ Handle text messages sent to listening rooms """
@@ -1000,26 +1096,31 @@ class MatrixTransport(Runnable):
 
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        raiden_messages: List[Message] = list()
-        call_messages: List[Tuple[Address, MatrixMessage]] = list()
+        raiden_messages: List[ReceivedRaidenMessage] = list()
+        call_messages: List[ReceivedCallMessage] = list()
 
         for room, room_messages in sync_messages:
-            raiden_room_messages, call_room_messages = self._validate_matrix_messages(
-                room, room_messages
-            )
-            raiden_messages.extend(raiden_room_messages)
-            call_messages.extend(call_room_messages)
+            raiden_messages, call_messages = self._validate_matrix_messages(room, room_messages)
+            raiden_messages.extend(raiden_messages)
+            call_messages.extend(call_messages)
 
-        self._process_messages(raiden_messages)
+        self._process_raiden_messages(raiden_messages)
         self._process_call_messages(call_messages)
         return len(raiden_messages) > 0 or len(call_messages) > 0
 
     def _handle_web_rtc_messages(self, message_data: str, partner_address: Address) -> None:
         if not self._stop_event.is_set():
-            messages = validate_and_parse_message(message_data, partner_address)
-            self._process_messages(messages)
+            messages: List[ReceivedRaidenMessage] = list()
+            for msg in validate_and_parse_message(message_data, partner_address):
+                messages.append(
+                    ReceivedRaidenMessage(
+                        message=msg,
+                        sender=partner_address,
+                    )
+                )
+            self._process_raiden_messages(messages)
 
-    def _process_call_messages(self, call_messages: List[Tuple[Address, MatrixMessage]]) -> None:
+    def _process_call_messages(self, call_messages: List[ReceivedCallMessage]) -> None:
         """
         This function handles incoming signalling messages (in matrix called 'call' events).
         In Raiden 'm.room.message' events are used as the communication format.
@@ -1030,7 +1131,9 @@ class MatrixTransport(Runnable):
         """
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        for partner_address, call_message in call_messages:
+        for received_message in call_messages:
+            call_message = received_message.message
+            partner_address = received_message.sender
             try:
                 content = json.loads(call_message["content"]["body"])
                 rtc_message_type = content["type"]
@@ -1082,52 +1185,82 @@ class MatrixTransport(Runnable):
         retrier = self._get_retrier(queue.queue_identifier.recipient)
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
-    def _multicast_raw(
+    def _multicast_services(
         self,
         data: str,
         device_id: str = "*",
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        # Construct the user without the help of the `UserAddressManager`
-        # This will not check for presence of the user-id and will
-        # ONLY send the data to the user-ids of the services on the node's connected homeserver.
-        user_ids = list()
-        for address in self.services_addresses.keys():
-            user_ids.append(f"@{to_normalized_address(address)}:{self._server_name}")
+        user_ids = {make_user_id(addr, self._server_name) for addr in self.services_addresses}
+        return self._send_to_device_raw(user_ids, data, device_id)
+
+    def _send_to_device_raw(
+        self,
+        user_ids: Set[UserID],
+        data: str,
+        device_id: str = "*",
+        message_type: MatrixMessageType = MatrixMessageType.TEXT,
+    ) -> None:
+        # Sends data to multiple users via to-device in a single Matrix API call
+        assert self._raiden_service is not None, "_raiden_service not set"
 
         messages = {
-            user_id: {device_id: {"msgtype": MatrixMessageType.TEXT.value, "body": data}}
+            user_id: {device_id: {"msgtype": message_type.value, "body": data}}
             for user_id in user_ids
         }
 
         self.log.debug(
-            "Multicast (`to-device`)",
+            "Send to-device message",
             device_id=device_id,
             receivers=user_ids,
+            multicast=bool(len(user_ids) > 1),
             data=data.replace("\n", "\\n"),
         )
 
         self._client.api.send_to_device(event_type="m.room.message", messages=messages)
+
+    def _get_possible_user_ids(
+        self, address: Address, address_metadata: AddressMetadata = None
+    ) -> Set[UserID]:
+        """Construct possible user-ids from the address
+
+        This will take the information from the connected matrix homeservers and
+        an optional AddressMetadata dictionary.
+        If the address metadata doesn't further specify what user-id to use for that
+        address, then this method will simply construct all possible user-ids on all
+        known matrix homeservers.
+        """
+        user_ids = set()
+        if address_metadata is not None:
+            user_id = address_metadata.get("user_id")
+            if is_valid_userid(user_id):
+                user_id = cast(UserID, user_id)
+                user_ids.add(user_id)
+        if not user_ids:
+            user_ids = {
+                make_user_id(address, server_name) for server_name in self._all_server_names
+            }
+        return user_ids
 
     def _send_raw(
         self,
         receiver_address: Address,
         data: str,
         message_type: MatrixMessageType = MatrixMessageType.TEXT,
+        receiver_metadata: AddressMetadata = None,
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        # XXX-UAM: extract partner caps from metadata here
-        is_to_device = self._capability_usable(Capabilities.TODEVICE, receiver_address)
-
-        communication_medium = (
-            CommunicationMedium.WEB_RTC
-            if self._web_rtc_manager.has_ready_channel(receiver_address)
-            else CommunicationMedium.TO_DEVICE
-            if is_to_device
-            else CommunicationMedium.ROOM
-        )
+        user_ids: Set[UserID] = set()
+        if self._web_rtc_manager.has_ready_channel(receiver_address):
+            communication_medium = CommunicationMedium.WEB_RTC
+        else:
+            user_ids = self._get_possible_user_ids(receiver_address, receiver_metadata)
+            # Don't check whether the to-device capability is set -
+            # this will only happen for older, incompatible clients that
+            # will simply ignore our communication attempt
+            communication_medium = CommunicationMedium.TO_DEVICE
 
         self.log.debug(
             "Send raw message",
@@ -1137,25 +1270,19 @@ class MatrixTransport(Runnable):
         )
 
         if communication_medium is CommunicationMedium.WEB_RTC:
+            # if we already have a webrtc channel ready, the address-metadata doesn't matter
             self._web_rtc_manager.send_message_for_address(receiver_address, data)
             return
-
-        elif communication_medium is CommunicationMedium.TO_DEVICE:
-            # XXX-UAM: Need user_ids here
-            online_userids = []
-            messages = {
-                user_id: {"*": {"msgtype": message_type.value, "body": data}}
-                for user_id in online_userids
-            }
-
-            self._client.api.send_to_device(event_type="m.room.message", messages=messages)
-            return
         else:
-            self.log.error(
-                "Can't communicate with peer. No supported communication medium available.",
-                peer=receiver_address,
-                peer_communication_medium=communication_medium,
+            msg = "Only to-device messages are supported other than web-rtc"
+            assert communication_medium is CommunicationMedium.TO_DEVICE, msg
+            self._send_to_device_raw(
+                user_ids=user_ids,
+                device_id=DeviceIDs.RAIDEN.value,
+                message_type=message_type,
+                data=data,
             )
+            return
 
     def _maybe_initialize_web_rtc(self, address: Address) -> None:
 
@@ -1180,7 +1307,8 @@ class MatrixTransport(Runnable):
 
         rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
         # XXX-UAM: extract partner caps from metadata here
-        is_to_device = self._capability_usable(Capabilities.TODEVICE, partner_address)
+        # XXX allow for Web-RTC again
+        is_to_device = False
 
         if not is_to_device:
             self.log.warning(
@@ -1326,7 +1454,9 @@ class MatrixTransport(Runnable):
                 retrier.notify()
 
             # XXX-UAM: extract partner caps from metadata here
-            if self._capability_usable(Capabilities.WEBRTC, address):
+            # XXX allow for Web-RTC again
+            allows_web_rtc = False
+            if allows_web_rtc:
                 # if lower address spawn worker to create web rtc channel
                 self._maybe_initialize_web_rtc(address)
 

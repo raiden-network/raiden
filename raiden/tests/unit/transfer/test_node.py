@@ -407,6 +407,7 @@ def test_inplace_delete_message_queue(chain_state):
     chain_state.queueids_to_queues[global_identifier] = [
         SendMessageEvent(
             recipient=sender,
+            recipient_metadata=None,
             canonical_identifier=canonical_identifier,
             message_identifier=message_id,
         )
@@ -420,6 +421,7 @@ def test_inplace_delete_message_queue(chain_state):
     chain_state.queueids_to_queues[queue_identifier] = [
         SendMessageEvent(
             recipient=sender,
+            recipient_metadata=None,
             canonical_identifier=canonical_identifier,
             message_identifier=message_id,
         )

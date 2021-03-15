@@ -410,7 +410,8 @@ def forward_transfer_pair(
     assert payee_channel.settle_timeout >= lock_timeout, "settle_timeout must be >= lock_timeout"
 
     route_states = routes.prune_route_table(
-        route_states=route_state_table, selected_route=route_state
+        route_states=route_state_table,
+        selected_route=route_state,
     )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
     lockedtransfer_event = channel.send_lockedtransfer(
@@ -471,7 +472,7 @@ def backward_transfer_pair(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
         backward_route_state = RouteState(
-            route=[backward_channel.our_state.address],
+            route=[backward_channel.our_state.address], address_to_metadata={}
         )
 
         refund_transfer = channel.send_refundtransfer(
@@ -714,6 +715,7 @@ def events_for_secretreveal(
             payer_transfer = pair.payer_transfer
             revealsecret = SendSecretReveal(
                 recipient=payer_transfer.balance_proof.sender,
+                recipient_metadata=None,
                 message_identifier=message_identifier,
                 secret=secret,
                 canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
@@ -1395,6 +1397,7 @@ def handle_unlock(
 
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
+                        recipient_metadata=None,
                         message_identifier=state_change.message_identifier,
                         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
                     )

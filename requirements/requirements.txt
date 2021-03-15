@@ -24,6 +24,8 @@ bitarray==1.2.1
     # via eth-account
 cachetools==4.2.1
     # via -r requirements.in
+canonicaljson==1.4.0
+    # via -r requirements.in
 certifi==2019.3.9
     # via requests
 cffi==1.12.3
@@ -108,6 +110,8 @@ flask==1.1.2
     #   -r requirements.in
     #   flask-cors
     #   flask-restful
+frozendict==1.2
+    # via canonicaljson
 gevent==21.1.2
     # via -r requirements.in
 graphviz==0.13.2
@@ -137,7 +141,7 @@ lru-dict==1.1.6
     # via web3
 markupsafe==1.1.1
     # via jinja2
-marshmallow-dataclass==8.0.0
+marshmallow-dataclass[union]==8.0.0
     # via -r requirements.in
 marshmallow-enum==1.5.1
     # via -r requirements.in
@@ -215,6 +219,8 @@ semantic-version==2.8.5
     # via
     #   py-solc-x
     #   raiden-contracts
+simplejson==3.17.2
+    # via canonicaljson
 six==1.15.0
     # via
     #   cryptography
@@ -231,6 +237,8 @@ toml==0.10.2
     # via -r requirements.in
 toolz==0.9.0
     # via cytoolz
+typeguard==2.11.1
+    # via marshmallow-dataclass
 typing-extensions==3.7.4.3
     # via -r requirements.in
 typing-inspect==0.4.0

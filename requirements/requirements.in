@@ -1,6 +1,7 @@
 aiortc
 av>=8.0.3
 cachetools
+canonicaljson
 click>=8.0.0a1
 coincurve
 colorama
@@ -14,7 +15,7 @@ Flask-RESTful
 gevent>=1.5a3
 guppy3
 jinja2>=2.11
-marshmallow-dataclass
+marshmallow-dataclass[union]
 marshmallow-polyfield
 marshmallow
 marshmallow_enum
