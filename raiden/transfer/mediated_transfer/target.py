@@ -126,6 +126,7 @@ def handle_inittarget(
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
                 recipient=Address(recipient),
+                recipient_metadata=None,
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
                 amount=PaymentAmount(transfer.lock.amount),
@@ -179,12 +180,12 @@ def handle_offchain_secretreveal(
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
         recipient = route.node_address
-
         reveal = SendSecretReveal(
             recipient=recipient,
+            recipient_metadata=None,
             message_identifier=message_identifier,
-            secret=target_state.secret,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+            secret=target_state.secret,
         )
 
         iteration = TransitionResult(target_state, [reveal])
@@ -247,6 +248,7 @@ def handle_unlock(
 
         send_processed = SendProcessed(
             recipient=balance_proof_sender,
+            recipient_metadata=None,
             message_identifier=state_change.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )

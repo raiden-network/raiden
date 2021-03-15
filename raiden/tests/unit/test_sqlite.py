@@ -292,6 +292,7 @@ def test_get_event_with_balance_proof():
     balance_proof = make_balance_proof_from_counter(counter)
     lock_expired = SendLockExpired(
         recipient=partner_address,
+        recipient_metadata=None,
         message_identifier=MessageID(next(counter)),
         balance_proof=balance_proof,
         secrethash=factories.make_secret_hash(next(counter)),
@@ -299,12 +300,14 @@ def test_get_event_with_balance_proof():
     )
     locked_transfer = SendLockedTransfer(
         recipient=partner_address,
+        recipient_metadata=None,
         message_identifier=MessageID(next(counter)),
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),
     )
     send_balance_proof = SendUnlock(
         recipient=partner_address,
+        recipient_metadata=None,
         message_identifier=MessageID(next(counter)),
         payment_identifier=factories.make_payment_id(),
         token_address=factories.make_token_address(),
@@ -315,6 +318,7 @@ def test_get_event_with_balance_proof():
 
     refund_transfer = SendRefundTransfer(
         recipient=partner_address,
+        recipient_metadata=None,
         message_identifier=MessageID(next(counter)),
         transfer=make_transfer_from_counter(counter),
         canonical_identifier=factories.make_canonical_identifier(),

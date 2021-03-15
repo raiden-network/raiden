@@ -714,6 +714,7 @@ def events_for_secretreveal(
             payer_transfer = pair.payer_transfer
             revealsecret = SendSecretReveal(
                 recipient=payer_transfer.balance_proof.sender,
+                recipient_metadata=None,
                 message_identifier=message_identifier,
                 secret=secret,
                 canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
@@ -1395,6 +1396,7 @@ def handle_unlock(
 
                     send_processed = SendProcessed(
                         recipient=balance_proof_sender,
+                        recipient_metadata=None,
                         message_identifier=state_change.message_identifier,
                         canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
                     )
