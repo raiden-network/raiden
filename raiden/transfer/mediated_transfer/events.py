@@ -25,6 +25,7 @@ def refund_from_sendmediated(
 ) -> "SendRefundTransfer":
     return SendRefundTransfer(
         recipient=send_lockedtransfer_event.recipient,
+        recipient_metadata=None,
         message_identifier=send_lockedtransfer_event.message_identifier,
         transfer=send_lockedtransfer_event.transfer,
         canonical_identifier=send_lockedtransfer_event.queue_identifier.canonical_identifier,
@@ -44,7 +45,6 @@ class SendLockedTransfer(SendMessageEvent):
     transfer: LockedTransferUnsignedState
 
     def __post_init__(self) -> None:
-        super().__post_init__()
         typecheck(self.transfer, LockedTransferUnsignedState)
 
     @property
@@ -86,7 +86,6 @@ class SendSecretReveal(SendMessageEvent):
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
-        super().__post_init__()
         object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 
@@ -116,7 +115,6 @@ class SendUnlock(SendMessageEvent):
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
-        super().__post_init__()
         object.__setattr__(self, "secrethash", sha256_secrethash(self.secret))
 
 

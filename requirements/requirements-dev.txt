@@ -318,7 +318,7 @@ markupsafe==1.1.1
     #   -r requirements-docs.txt
     #   -r requirements.txt
     #   jinja2
-marshmallow-dataclass==8.0.0
+marshmallow-dataclass[union]==8.0.0
     # via -r requirements.txt
 marshmallow-enum==1.5.1
     # via -r requirements.txt
@@ -664,6 +664,10 @@ typed-ast==1.4.0
     # via
     #   black
     #   mypy
+typeguard==2.11.1
+    # via
+    #   -r requirements.txt
+    #   marshmallow-dataclass
 typing-extensions==3.7.4.3
     # via
     #   -r requirements.txt

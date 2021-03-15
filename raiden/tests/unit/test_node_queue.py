@@ -38,6 +38,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     # element
     first_message = SendSecretReveal(
         recipient=recipient,
+        recipient_metadata=None,
         message_identifier=message_identifier,
         secret=secret,
         canonical_identifier=canonical_identifier,
@@ -45,6 +46,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
 
     second_message = SendSecretReveal(
         recipient=recipient,
+        recipient_metadata=None,
         message_identifier=random.randint(0, 2 ** 16),
         secret=secret,
         canonical_identifier=canonical_identifier,
@@ -88,6 +90,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
         total_withdraw=100,
         participant=our_address,
         recipient=recipient1,
+        recipient_metadata=None,
         nonce=1,
         expiration=10,
     )
@@ -147,12 +150,14 @@ def test_delivered_processed_message_cleanup():
 
     first_message = SendSecretReveal(
         recipient=recipient,
+        recipient_metadata=None,
         message_identifier=random.randint(0, 2 ** 16),
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
     second_message = SendSecretReveal(
         recipient=recipient,
+        recipient_metadata=None,
         message_identifier=random.randint(0, 2 ** 16),
         secret=secret,
         canonical_identifier=canonical_identifier,
