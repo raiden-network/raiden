@@ -9,6 +9,7 @@ def test_send_refund_transfer_contains_balance_proof():
     message_identifier = 1
     event = SendRefundTransfer(
         recipient=recipient,
+        recipient_metadata=None,
         message_identifier=message_identifier,
         transfer=transfer,
         canonical_identifier=factories.make_canonical_identifier(),

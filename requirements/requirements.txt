@@ -135,7 +135,7 @@ lru-dict==1.1.6
     # via web3
 markupsafe==1.1.1
     # via jinja2
-marshmallow-dataclass==8.0.0
+marshmallow-dataclass[union]==8.0.0
     # via -r requirements.in
 marshmallow-enum==1.5.1
     # via -r requirements.in
@@ -227,6 +227,8 @@ toml==0.10.2
     # via -r requirements.in
 toolz==0.9.0
     # via cytoolz
+typeguard==2.11.1
+    # via marshmallow-dataclass
 typing-extensions==3.7.4.3
     # via -r requirements.in
 typing-inspect==0.4.0

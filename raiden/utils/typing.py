@@ -77,9 +77,6 @@ AddressHex = HexAddress
 T_UserID = str
 UserID = NewType("UserID", T_UserID)
 
-T_AddressMetadata = Dict[str, Union[UserID, "PeerCapabilities"]]
-AddressMetadata = NewType("AddressMetadata", T_AddressMetadata)
-
 T_Balance = int
 Balance = NewType("Balance", T_Balance)
 
@@ -205,6 +202,8 @@ RoomID = NewType("RoomID", T_RoomID)
 
 T_PeerCapabilities = Dict[str, Union[str, bool]]
 PeerCapabilities = NewType("PeerCapabilities", T_PeerCapabilities)
+
+AddressMetadata = Dict[str, Union[UserID, PeerCapabilities]]
 
 AddressTypes = Union[
     Address,
