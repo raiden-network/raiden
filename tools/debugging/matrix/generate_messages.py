@@ -25,7 +25,7 @@ from raiden.settings import (
 )
 from raiden.tests.utils import factories
 from raiden.utils.signer import Signer
-from raiden.utils.typing import Any, Dict, Iterator, RoomID
+from raiden.utils.typing import Any, Callable, Dict, Iterator, List, RoomID
 
 setup_asyncio_event_loop()
 
@@ -42,7 +42,7 @@ ROOM = "room"
 
 
 def configure_logging(log_path: str) -> None:
-    processors = (
+    processors: List[Callable] = [
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.PositionalArgumentsFormatter(),
@@ -50,7 +50,7 @@ def configure_logging(log_path: str) -> None:
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-    )
+    ]
     structlog.reset_defaults()
     logging.config.dictConfig(
         {
