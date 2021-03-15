@@ -41,14 +41,14 @@ TransferPath = List["RunningNode"]
 INITIATOR = 0
 TARGET = -1
 
-processors = (
+processors: List[Callable] = [
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.stdlib.PositionalArgumentsFormatter(),
     structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f"),
     structlog.processors.StackInfoRenderer(),
     structlog.processors.format_exc_info,
-)
+]
 structlog.reset_defaults()
 logging.config.dictConfig(
     {
@@ -72,7 +72,7 @@ logging.config.dictConfig(
     }
 )
 structlog.configure(
-    processors=processors + (structlog.stdlib.ProcessorFormatter.wrap_for_formatter,),
+    processors=processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
     wrapper_class=structlog.stdlib.BoundLogger,
     logger_factory=structlog.stdlib.LoggerFactory(),
 )
