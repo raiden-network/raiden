@@ -44,7 +44,7 @@ from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.capabilities import serialize_capabilities
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, Signature
+from raiden.utils.typing import Address, ChainID, MessageID, Signature, T_UserID, UserID, typecheck
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
@@ -104,6 +104,14 @@ def address_from_userid(user_id: str) -> Optional[Address]:
     address: Address = to_canonical_address(encoded_address)
 
     return address
+
+
+def is_valid_userid(user_id: Any) -> bool:
+    try:
+        typecheck(user_id, T_UserID)
+    except ValueError:
+        return False
+    return bool(USERID_RE.match(user_id))
 
 
 class DisplayNameCache:
@@ -628,3 +636,7 @@ def make_message_batches(
         size += len(message_text)
     if current_batch:
         yield "\n".join(current_batch)
+
+
+def make_user_id(address: Address, home_server: str) -> UserID:
+    return UserID(f"@{to_normalized_address(address)}:{home_server}")

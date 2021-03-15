@@ -407,7 +407,10 @@ class LockedTransferBase(EnvelopeMessage):
             initiator=transfer.initiator,
             signature=EMPTY_SIGNATURE,
             metadata=Metadata(
-                routes=[RouteMetadata(route=r.route) for r in transfer.route_states]
+                routes=[
+                    RouteMetadata(route=r.route, address_metadata=r.address_to_metadata)
+                    for r in transfer.route_states
+                ]
             ),
         )
 

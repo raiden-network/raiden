@@ -70,7 +70,7 @@ def test_mediated_transfer(
         amount=amount,
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
-        routes=[[app0.address, app1.address, app2.address]],
+        routes=[[app0, app1, app2]],
     )
 
     with block_timeout_for_transfer_by_secrethash(app1, secrethash):

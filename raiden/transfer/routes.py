@@ -40,14 +40,17 @@ def filter_acceptable_routes(
 
 
 def prune_route_table(
-    route_states: List[RouteState], selected_route: RouteState
+    route_states: List[RouteState],
+    selected_route: RouteState,
 ) -> List[RouteState]:
     """Given a selected route, returns a filtered route table that
     contains only routes using the same forward channel and removes our own
     address in the process.
+    Note that address metadata are kept complete for the whole route.
     """
+
     return [
-        RouteState(route=rs.route[1:])
+        RouteState(route=rs.route[1:], address_to_metadata=rs.address_to_metadata)
         for rs in route_states
         if rs.next_hop == selected_route.next_hop
     ]
