@@ -13,6 +13,7 @@
     "metadata": {
         "routes": [
             {
+                "address_metadata": {},
                 "route": [
                     "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
                     "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
@@ -23,7 +24,7 @@
     "nonce": "1",
     "payment_identifier": "1",
     "recipient": "0x7461726765747461726765747461726765747461",
-    "signature": "0x4136eebf7095249ac02c3e6cb3d55eaf0e6ab41a5f8b114b5fb173697be9d6056e18d291798760ed3d72a48c7fdd94fb5fd0400e9bc4e5bfa0cab6513c27f40f1c",
+    "signature": "0x997d411457b6f883d6e38c1c4c991eaae59e1f7cb7e64b251652d6c4dafb15363bc444ea2ece7418225349a28d3844f8d46b039799f2b00b365d2c9ddf9f26cf1b",
     "target": "0x7461726765747461726765747461726765747461",
     "token": "0x746f6b656e746f6b656e746f6b656e746f6b656e",
     "token_network_address": "0x6e6574776f726b6e6574776f726b6e6574776f72",

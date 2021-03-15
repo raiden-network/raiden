@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import structlog
 from eth_utils import to_hex
@@ -13,6 +13,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
+    AddressMetadata,
     Any,
     BalanceHash,
     BlockExpiration,
@@ -85,7 +86,7 @@ class State:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class StateChange:
     """Declare the transition to be applied in a state object.
 
@@ -106,7 +107,7 @@ class StateChange:
     pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Event:
     """Events produced by the execution of a state change.
 
@@ -122,7 +123,8 @@ class Event:
       upper layer will use the events for.
     """
 
-    pass
+    def __post_init__(self) -> None:
+        pass
 
 
 class TransferRole(Enum):
@@ -148,15 +150,15 @@ class SendMessageEvent(Event):
     """
 
     recipient: Address
+    recipient_metadata: Optional[AddressMetadata]
     canonical_identifier: CanonicalIdentifier
     message_identifier: MessageID
-    queue_identifier: QueueIdentifier = field(init=False)
 
-    def __post_init__(self) -> None:
-        queue_identifier = QueueIdentifier(
+    @property
+    def queue_identifier(self) -> QueueIdentifier:
+        return QueueIdentifier(
             recipient=self.recipient, canonical_identifier=self.canonical_identifier
         )
-        object.__setattr__(self, "queue_identifier", queue_identifier)
 
 
 @dataclass(frozen=True)

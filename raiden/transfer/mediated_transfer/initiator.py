@@ -345,7 +345,8 @@ def send_lockedtransfer(
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
         route_states=routes.prune_route_table(
-            route_states=route_states, selected_route=route_state
+            route_states=route_states,
+            selected_route=route_state,
         ),
     )
     return lockedtransfer_event
@@ -398,12 +399,16 @@ def handle_secretrequest(
         #
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         transfer_description = initiator_state.transfer_description
-        recipient = transfer_description.target
+        recipient = Address(transfer_description.target)
+        # TODO: uncomment when recipient metadata are set
+        # recipient_metadata = initiator_state.route.address_metadata.get(recipient, None)
+
         revealsecret = SendSecretReveal(
-            recipient=Address(recipient),
+            recipient=recipient,
+            recipient_metadata=None,
             message_identifier=message_identifier,
-            secret=transfer_description.secret,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+            secret=transfer_description.secret,
         )
 
         initiator_state.transfer_state = "transfer_secret_revealed"

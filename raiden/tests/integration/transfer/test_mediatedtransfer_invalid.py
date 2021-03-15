@@ -117,11 +117,12 @@ def test_receive_lockedtransfer_invalidnonce(
         amount=PaymentAmount(10),
         identifier=payment_identifier,
         timeout=network_wait * number_of_nodes,
-        routes=[[app0.address, app1.address, app2.address]],
+        routes=[[app0, app1, app2]],
     )
 
     repeated_nonce = Nonce(1)
     expiration = reveal_timeout * 2
+    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -140,7 +141,9 @@ def test_receive_lockedtransfer_invalidnonce(
         target=TargetAddress(app2.address),
         initiator=InitiatorAddress(app0.address),
         signature=EMPTY_SIGNATURE,
-        metadata=Metadata(routes=[RouteMetadata(route=[app1.address, app2.address])]),
+        metadata=Metadata(
+            routes=[RouteMetadata(route=[app1.address, app2.address], address_metadata={})]
+        ),
     )
 
     sign_and_inject(mediated_transfer_message, app0.signer, app1)
@@ -175,6 +178,7 @@ def test_receive_lockedtransfer_invalidsender(
     channel0 = get_channelstate(app0, app1, token_network_address)
     lock_amount = LockedAmount(10)
     expiration = reveal_timeout * 2
+    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -195,7 +199,7 @@ def test_receive_lockedtransfer_invalidsender(
         target=TargetAddress(app0.address),
         initiator=InitiatorAddress(other_address),
         signature=EMPTY_SIGNATURE,
-        metadata=Metadata(routes=[RouteMetadata(route=[app0.address])]),
+        metadata=Metadata(routes=[RouteMetadata(route=[app0.address], address_metadata={})]),
     )
 
     sign_and_inject(mediated_transfer_message, LocalSigner(other_key), app0)
@@ -221,6 +225,7 @@ def test_receive_lockedtransfer_invalidrecipient(
     invalid_recipient = make_address()
     lock_amount = LockedAmount(10)
     expiration = reveal_timeout * 2
+    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -241,7 +246,7 @@ def test_receive_lockedtransfer_invalidrecipient(
         target=TargetAddress(app1.address),
         initiator=InitiatorAddress(app0.address),
         signature=EMPTY_SIGNATURE,
-        metadata=Metadata(routes=[RouteMetadata(route=[app1.address])]),
+        metadata=Metadata(routes=[RouteMetadata(route=[app1.address], address_metadata={})]),
     )
 
     sign_and_inject(mediated_transfer_message, app0.signer, app1)
@@ -275,6 +280,7 @@ def test_received_lockedtransfer_closedchannel(
     lock_amount = LockedAmount(10)
     payment_identifier = PaymentID(1)
     expiration = reveal_timeout * 2
+    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -295,7 +301,7 @@ def test_received_lockedtransfer_closedchannel(
         target=TargetAddress(app1.address),
         initiator=InitiatorAddress(app0.address),
         signature=EMPTY_SIGNATURE,
-        metadata=Metadata(routes=[RouteMetadata(route=[app1.address])]),
+        metadata=Metadata(routes=[RouteMetadata(route=[app1.address], address_metadata={})]),
     )
 
     sign_and_inject(mediated_transfer_message, app0.signer, app1)

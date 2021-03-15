@@ -18,11 +18,15 @@ from raiden.tests.utils.factories import (
     make_secret_with_hash,
 )
 from raiden.tests.utils.network import payment_channel_open_and_deposit
-from raiden.tests.utils.transfer import get_channelstate, transfer, watch_for_unlock_failures
+from raiden.tests.utils.transfer import (
+    create_route_state_for_route,
+    get_channelstate,
+    transfer,
+    watch_for_unlock_failures,
+)
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
-from raiden.transfer.state import RouteState
 from raiden.utils.typing import (
     BlockExpiration,
     InitiatorAddress,
@@ -89,7 +93,7 @@ def test_regression_unfiltered_routes(
         token_address=token,
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
-        routes=[[app0.address, app1.address, app2.address, app4.address]],
+        routes=[[app0, app1, app2, app4]],
     )
 
 
@@ -110,13 +114,12 @@ def test_regression_revealsecret_after_secret(
         views.state_from_raiden(app0), token_network_registry_address, token
     )
     assert token_network, "The fixtures must register the token"
-
     payment_status = app0.mediated_transfer_async(
         token_network.address,
         amount=PaymentAmount(1),
         target=TargetAddress(app2.address),
         identifier=identifier,
-        route_states=[RouteState(route=[app0.address, app1.address, app2.address])],
+        route_states=[create_route_state_for_route([app0, app1, app2], token)],
     )
     with watch_for_unlock_failures(*raiden_network):
         assert payment_status.payment_done.wait()
@@ -173,6 +176,7 @@ def test_regression_multiple_revealsecret(
 
     nonce = Nonce(1)
     transferred_amount = TokenAmount(0)
+    # FIXME: Metadata
     mediated_transfer = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -189,7 +193,9 @@ def test_regression_multiple_revealsecret(
         target=TargetAddress(app1.address),
         initiator=InitiatorAddress(app0.address),
         signature=EMPTY_SIGNATURE,
-        metadata=Metadata(routes=[RouteMetadata(route=[app0.address, app1.address])]),
+        metadata=Metadata(
+            routes=[RouteMetadata(route=[app0.address, app1.address], address_metadata={})]
+        ),
     )
     app0.sign(mediated_transfer)
     app1.on_messages([mediated_transfer])
@@ -266,9 +272,9 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         initiator_app=app1,
         target_app=app2,
         token_address=token,
-        amount=deposit,
+        amount=PaymentAmount(deposit),
         identifier=PaymentID(1),
-        routes=[[app1.address, app2.address]],
+        routes=[[app1, app2]],
     )
 
     # Send a transfer that will result in a refund app1->app0
@@ -280,10 +286,7 @@ def test_regression_payment_complete_after_refund_to_the_initiator(
         identifier=PaymentID(2),
         timeout=20,
         expect_unlock_failures=True,
-        routes=[
-            [app0.address, app1.address, app2.address],
-            [app0.address, app3.address, app4.address, app2.address],
-        ],
+        routes=[[app0, app1, app2], [app0, app3, app4, app2]],
     )
 
     assert raiden_state_changes_search_for_item(
