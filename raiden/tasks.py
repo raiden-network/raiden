@@ -11,6 +11,7 @@ from pkg_resources import parse_version
 from web3 import Web3
 from web3.types import BlockData
 
+from raiden.api.objects import Notification
 from raiden.constants import (
     BLOCK_ID_LATEST,
     CHECK_CHAIN_ID_INTERVAL,
@@ -20,6 +21,7 @@ from raiden.constants import (
     LATEST,
     RELEASE_PAGE,
     SECURITY_EXPRESSION,
+    NotificationIDs,
 )
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.user_deposit import UserDeposit
@@ -37,7 +39,7 @@ REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)
 
 
-def _do_check_version(current_version: Tuple[str, ...]) -> bool:
+def _do_check_version(current_version: Tuple[str, ...], raiden: "RaidenService") -> bool:
     content = requests.get(LATEST).json()
     if "tag_name" not in content:
         # probably API rate limit exceeded
@@ -49,24 +51,37 @@ def _do_check_version(current_version: Tuple[str, ...]) -> bool:
     latest_release = parse_version(content["tag_name"])
     security_message = re.search(SECURITY_EXPRESSION, content["body"])
     if security_message:
-        click.secho(security_message.group(0), fg="red")
+        notification = Notification(
+            id=NotificationIDs.VERSION_SECURITY_WARNING.value,
+            summary="Security Warning",
+            body=security_message.group(0),
+            urgency="high",
+        )
+        raiden.add_notification(notification, click_opts={"fg": "red"})
+
         # comparing it to the user's application
     if current_version < latest_release:
-        msg = "You're running version {}. The latest version is {}".format(
-            current_version, latest_release
+        msg = (
+            f"You're running version {current_version}. The latest version is {latest_release}"
+            f"It's time to update! Releases: {RELEASE_PAGE}"
         )
-        click.secho(msg, fg="red")
-        click.secho(f"It's time to update! Releases: {RELEASE_PAGE}", fg="red")
+        notification = Notification(
+            id=NotificationIDs.VERSION_OUTDATED.value,
+            summary="Your version is outdated",
+            body=msg,
+            urgency="normal",
+        )
+        raiden.add_notification(notification, click_opts={"fg": "red"})
         return False
     return True
 
 
-def check_version(current_version: str) -> None:  # pragma: no unittest
+def check_version(current_version: str, raiden: "RaidenService") -> None:  # pragma: no unittest
     """ Check periodically for a new release """
     app_version = parse_version(current_version)
     while True:
         try:
-            _do_check_version(app_version)
+            _do_check_version(app_version, raiden)
         except (requests.exceptions.HTTPError, ValueError) as err:
             click.secho("Error while checking for version", fg="red")
             print(err)
@@ -84,16 +99,23 @@ def check_gas_reserve(raiden: "RaidenService") -> None:  # pragma: no unittest
         estimated_required_balance_eth = Web3.fromWei(estimated_required_balance, "ether")
 
         if not has_enough_balance:
-            log.info("Missing gas reserve", required_wei=estimated_required_balance)
-            click.secho(
-                (
-                    "WARNING\n"
-                    "Your account's balance is below the estimated gas reserve of "
-                    f"{estimated_required_balance_eth} eth. This may lead to a loss of "
-                    "of funds because your account will be unable to perform on-chain "
-                    "transactions. Please add funds to your account as soon as possible."
-                ),
-                fg="red",
+            notification_body = (
+                "WARNING\n"
+                "Your account's balance is below the estimated gas reserve of "
+                f"{estimated_required_balance_eth} eth. This may lead to a loss of "
+                "of funds because your account will be unable to perform on-chain "
+                "transactions. Please add funds to your account as soon as possible."
+            )
+            notification = Notification(
+                id=NotificationIDs.MISSING_GAS_RESERVE.value,
+                summary="Missing gas reserve",
+                body=notification_body,
+                urgency="normal",
+            )
+            raiden.add_notification(
+                notification,
+                log_opts={"required_wei": estimated_required_balance},
+                click_opts={"fg": "red"},
             )
 
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
@@ -107,17 +129,21 @@ def check_rdn_deposits(
         rei_balance = user_deposit_proxy.effective_balance(raiden.address, BLOCK_ID_LATEST)
         rdn_balance = to_rdn(rei_balance)
         if rei_balance < MIN_REI_THRESHOLD:
-            click.secho(
-                (
-                    f"WARNING\n"
-                    f"Your account's RDN balance deposited in the UserDepositContract of "
-                    f"{rdn_balance} is below the minimum threshold {to_rdn(MIN_REI_THRESHOLD)}. "
-                    f"Provided that you have either a monitoring service or a path "
-                    f"finding service activated, your node is not going to be able to "
-                    f"pay those services which may lead to denial of service or loss of funds."
-                ),
-                fg="red",
+            notification_body = (
+                f"WARNING\n"
+                f"Your account's RDN balance deposited in the UserDepositContract of "
+                f"{rdn_balance} is below the minimum threshold {to_rdn(MIN_REI_THRESHOLD)}. "
+                f"Provided that you have either a monitoring service or a path "
+                f"finding service activated, your node is not going to be able to "
+                f"pay those services which may lead to denial of service or loss of funds."
             )
+            notification = Notification(
+                id=NotificationIDs.LOW_RDN.value,
+                summary="RDN balance too low",
+                body=notification_body,
+                urgency="normal",
+            )
+            raiden.add_notification(notification, click_opts={"fg": "red"})
 
         gevent.sleep(CHECK_RDN_MIN_DEPOSIT_INTERVAL)
 

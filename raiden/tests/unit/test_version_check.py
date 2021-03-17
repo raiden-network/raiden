@@ -6,6 +6,9 @@ import requests
 from pkg_resources import parse_version
 
 from raiden.tasks import SECURITY_EXPRESSION, _do_check_version
+from raiden.tests.utils.mocks import MockRaidenService
+
+raiden_service = MockRaidenService()
 
 LATEST_RELEASE_RESPONSE = """{"url":
             "https://api.github.com/repos/raiden-network/raiden/releases/14541434",
@@ -171,7 +174,7 @@ def test_version_check_api_rate_limit_exceeded():
         return Response()
 
     with patch.object(requests, "get", side_effect=fake_request):
-        assert not _do_check_version(version)
+        assert not _do_check_version(version, raiden_service)
 
 
 def test_version_check():
@@ -186,5 +189,5 @@ def test_version_check():
         return Response()
 
     with patch.object(requests, "get", side_effect=fake_request):
-        assert not _do_check_version(version)
-        assert _do_check_version(parse_version("0.19.0"))
+        assert not _do_check_version(version, raiden_service)
+        assert _do_check_version(parse_version("0.19.0"), raiden_service)

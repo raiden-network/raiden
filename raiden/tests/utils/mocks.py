@@ -3,6 +3,9 @@ import random
 from collections import defaultdict
 from unittest.mock import Mock, PropertyMock
 
+import click
+
+from raiden.api.objects import Notification
 from raiden.constants import Environment, RoutingMode
 from raiden.settings import RaidenConfig
 from raiden.storage.serialization import JSONSerializer
@@ -192,6 +195,7 @@ class MockRaidenService:
 
         self.targets_to_identifiers_to_statuses: Dict[Address, dict] = defaultdict(dict)
         self.route_to_feedback_token: dict = {}
+        self.notifications: dict = {}
 
         if state_transition is None:
             state_transition = node.state_transition
@@ -212,6 +216,17 @@ class MockRaidenService:
 
         self.wal = wal
         self.transport = Mock()
+
+    def add_notification(
+        self,
+        notification: Notification,
+        click_opts: Optional[Dict] = None,
+    ) -> None:
+        click_opts = click_opts or {}
+
+        click.secho(notification.body, **click_opts)
+
+        self.notifications[notification.id] = notification
 
     def on_messages(self, messages):
         if self.message_handler:
