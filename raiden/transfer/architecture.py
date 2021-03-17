@@ -123,7 +123,8 @@ class Event:
       upper layer will use the events for.
     """
 
-    pass
+    def __post_init__(self) -> None:
+        pass
 
 
 class TransferRole(Enum):
