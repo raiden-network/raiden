@@ -99,6 +99,13 @@ class ServerListType(Enum):
     ALL_SERVERS = "all_servers"
 
 
+class NotificationIDs(Enum):
+    LOW_RDN = "low_rdn"
+    VERSION_OUTDATED = "version_outdated"
+    MISSING_GAS_RESERVE = "missing_gas_reserve"
+    VERSION_SECURITY_WARNING = "version_security_warning"
+
+
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value
 STATE_PRUNING_AFTER_BLOCKS = 64
