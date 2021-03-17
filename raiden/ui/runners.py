@@ -27,7 +27,9 @@ def run_services(options: Dict[str, Any]) -> None:
 
         gevent_tasks.append(console)
 
-    gevent_tasks.append(spawn_named("check_version", check_version, get_system_spec()["raiden"]))
+    gevent_tasks.append(
+        spawn_named("check_version", check_version, get_system_spec()["raiden"], raiden_service)
+    )
     gevent_tasks.append(spawn_named("check_gas_reserve", check_gas_reserve, raiden_service))
     gevent_tasks.append(
         spawn_named(

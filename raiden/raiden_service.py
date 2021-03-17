@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Dict, List, NamedTuple, Set, Tuple, cast
 from uuid import UUID
 
+import click
 import filelock
 import gevent
 import structlog
@@ -534,7 +535,18 @@ class RaidenService(Runnable):
 
         log.debug("Raiden Service stopped", node=to_checksum_address(self.address))
 
-    def add_notification(self, notification: Notification) -> None:
+    def add_notification(
+        self,
+        notification: Notification,
+        log_opts: Optional[Dict] = None,
+        click_opts: Optional[Dict] = None,
+    ) -> None:
+        log_opts = log_opts or {}
+        click_opts = click_opts or {}
+
+        log.info(notification.summary, **log_opts)
+        click.secho(notification.body, **click_opts)
+
         self.notifications[notification.id] = notification
 
     @property
