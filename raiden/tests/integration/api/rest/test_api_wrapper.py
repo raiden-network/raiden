@@ -43,7 +43,7 @@ def test_api_wrapper(raiden_network, unregistered_custom_token, retry_timeout):
     resp = wrapper.register_token(token=token)
     # The token network address will be needed for a later test
     token_network_address = resp.token_network_address
-    assert app0.rpc_client.web3.eth.getCode(resp.token_network_address)
+    assert app0.rpc_client.web3.eth.get_code(resp.token_network_address)
 
     # Test channel opening
     resp = wrapper.open_channel(partner=address2, token=token, deposit=2)

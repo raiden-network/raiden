@@ -49,8 +49,8 @@ def test_events_can_happen_in_the_deployment_block(web3: Web3, deploy_key: bytes
         deploy_signed_txn = web3.eth.account.sign_transaction(deploy_transaction_data, deploy_key)
         call_signed_txn = web3.eth.account.sign_transaction(call_transaction_data, deploy_key)
 
-        deploy_tx_hash = web3.eth.sendRawTransaction(deploy_signed_txn.rawTransaction)
-        call_tx_hash = web3.eth.sendRawTransaction(call_signed_txn.rawTransaction)
+        deploy_tx_hash = web3.eth.send_raw_transaction(deploy_signed_txn.rawTransaction)
+        call_tx_hash = web3.eth.send_raw_transaction(call_signed_txn.rawTransaction)
 
         while True:
             try:

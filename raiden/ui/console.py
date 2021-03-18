@@ -250,7 +250,7 @@ class ConsoleTools:
             True if the contract got mined, false otherwise
         """
         start_time = time.time()
-        result = self._raiden.rpc_client.web3.eth.getCode(
+        result = self._raiden.rpc_client.web3.eth.get_code(
             to_canonical_address(contract_address_hex)
         )
 
@@ -259,7 +259,7 @@ class ConsoleTools:
             if timeout and start_time + timeout > current_time:
                 return False
 
-            result = self._raiden.rpc_client.web3.eth.getCode(
+            result = self._raiden.rpc_client.web3.eth.get_code(
                 to_canonical_address(contract_address_hex)
             )
             gevent.sleep(0.5)

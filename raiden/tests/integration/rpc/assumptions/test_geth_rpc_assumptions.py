@@ -36,7 +36,7 @@ def test_geth_request_pruned_data_raises_an_exception(
     first_receipt = send_transaction().receipt
     mined_block_number = first_receipt["blockNumber"]
 
-    while mined_block_number + 127 > web3.eth.blockNumber:
+    while mined_block_number + 127 > web3.eth.block_number:
         gevent.sleep(0.5)
 
     # geth keeps the latest 128 blocks before pruning. Unfortunately, this can
@@ -86,7 +86,7 @@ def test_geth_request_block_data_does_not_raise_an_exception(
     first_receipt = send_transaction().receipt
     mined_block_number = first_receipt["blockNumber"]
 
-    while mined_block_number + 127 > web3.eth.blockNumber:
+    while mined_block_number + 127 > web3.eth.block_number:
         gevent.sleep(0.5)
 
     # geth keeps the latest 128 blocks before pruning. Unfortunately, this can
@@ -103,7 +103,7 @@ def test_geth_request_block_data_does_not_raise_an_exception(
     with pytest.raises(ValueError):
         contract_proxy.functions.const().call(block_identifier=pruned_block_number)
 
-    latest_confirmed_block = deploy_client.web3.eth.getBlock(pruned_block_number)
+    latest_confirmed_block = deploy_client.web3.eth.get_block(pruned_block_number)
 
     msg = (
         "getBlock did not return the expected metadata for a pruned block "

@@ -75,7 +75,7 @@ def pytest_addoption(parser):
         "--base-port",
         action="store",
         default=8500,
-        type="int",
+        type=int,
         help="Base port number to use for tests.",
     )
 
