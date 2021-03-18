@@ -133,7 +133,7 @@ class CapabilitiesConfig:
     receive: bool = True
     mediate: bool = True
     delivery: bool = True
-    web_rtc: bool = True
+    web_rtc: bool = False
     to_device: bool = True
 
 
