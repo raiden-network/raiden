@@ -450,8 +450,8 @@ def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
     raiden_service0 = MockRaidenService()
     raiden_service1 = MockRaidenService()
     # start transports to join broadcast rooms as normal users
-    transport0.start(raiden_service0, [], None)
-    transport1.start(raiden_service1, [], None)
+    transport0.start(raiden_service0, None)
+    transport1.start(raiden_service1, None)
     # admin login using raiden.tests.utils.transport.AdminAuthProvider
     admin_client = GMatrixClient(ignore_messages, ignore_member_join, local_matrix_servers[0])
     admin_client.login(admin_credentials["username"], admin_credentials["password"], sync=False)
@@ -491,7 +491,7 @@ def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
         assert event["sender"] != kick_user_id
 
     transport2._client.add_presence_listener(local_presence_listener)
-    transport2.start(raiden_service2, [], None)
+    transport2.start(raiden_service2, None)
 
     transport2.stop()
 

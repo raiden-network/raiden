@@ -587,19 +587,19 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events is not None, msg
 
-        health_check_list = self._get_initial_health_check_list(chain_state)
-        log.debug(
-            "Initializing health checks",
-            neighbour_nodes=[to_checksum_address(address) for address in health_check_list],
-            node=to_checksum_address(self.address),
-        )
+        # XXX-UAM health-check list was passed to transport after a recover,
+        #  to start tracking / whitlisting e.g. initiator / target nodes
+        # health_check_list = self._get_initial_health_check_list(chain_state)
+        # log.debug(
+        #     "Initializing health checks",
+        #     neighbour_nodes=[to_checksum_address(address) for address in health_check_list],
+        #     node=to_checksum_address(self.address),
+        # )
         if self.default_service_registry is not None:
             populate_services_addresses(
                 self.transport, self.default_service_registry, BLOCK_ID_LATEST
             )
-        self.transport.start(
-            raiden_service=self, prev_auth_data=None, health_check_list=health_check_list
-        )
+        self.transport.start(raiden_service=self, prev_auth_data=None)
 
         for neighbour in views.all_neighbour_nodes(chain_state):
             self.async_start_health_check_for(neighbour)
