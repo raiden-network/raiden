@@ -105,7 +105,7 @@ def check_ethereum_chain_id(given_chain_id: ChainID, web3: Web3) -> None:
     If they don't match, exits the program with an error. If they do adds it
     to the configuration and then returns it and whether it is a known network
     """
-    node_chain_id = ChainID(web3.eth.chainId)
+    node_chain_id = ChainID(web3.eth.chain_id)
 
     if node_chain_id != given_chain_id:
         given_name = ID_TO_CHAINNAME.get(given_chain_id)

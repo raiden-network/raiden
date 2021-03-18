@@ -344,6 +344,9 @@ jobs:
       - config-path
 
       - run:
+          name: Install docs requirements
+          command: pip-sync requirements/requirements-docs.txt
+      - run:
           name: Build documentation
           command: make docs
 

@@ -236,7 +236,7 @@ def geth_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
     try:
-        web3.eth.blockNumber
+        web3.eth.block_number
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying geth node does not have the eth rpc interface "
@@ -262,7 +262,7 @@ def parity_assert_rpc_interfaces(web3: Web3) -> None:
         )
 
     try:
-        web3.eth.blockNumber
+        web3.eth.block_number
     except ValueError:
         raise EthNodeInterfaceError(
             "The underlying parity node does not have the eth rpc interface "
@@ -296,7 +296,7 @@ def parity_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
 
 def geth_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
-    return web3.eth.getTransactionCount(address, BLOCK_ID_PENDING)
+    return web3.eth.get_transaction_count(address, BLOCK_ID_PENDING)
 
 
 def discover_next_available_nonce(web3: Web3, eth_node: EthClient, address: Address) -> Nonce:
@@ -361,7 +361,7 @@ def check_address_has_code(
         block_hash = encode_hex(given_block_identifier)
         given_block_identifier = client.web3.eth.getBlock(block_hash)["number"]
 
-    result = client.web3.eth.getCode(address, given_block_identifier)
+    result = client.web3.eth.get_code(address, given_block_identifier)
 
     if not result:
         # The error message is printed to the user from ui/cli.py. Make sure it
@@ -584,8 +584,8 @@ def patched_web3_eth_estimate_gas(
     Current master of web3.py has this implementation already:
     https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
     """
-    if "from" not in transaction and is_checksum_address(self.defaultAccount):
-        transaction = assoc(transaction, "from", self.defaultAccount)
+    if "from" not in transaction and is_checksum_address(self.default_account):
+        transaction = assoc(transaction, "from", self.default_account)
 
     if block_identifier is None:
         params: List[Any] = [transaction]
@@ -609,8 +609,8 @@ def patched_web3_eth_estimate_gas(
 def patched_web3_eth_call(
     self: Any, transaction: Dict[str, Any], block_identifier: BlockIdentifier = None
 ) -> HexBytes:
-    if "from" not in transaction and is_checksum_address(self.defaultAccount):
-        transaction = assoc(transaction, "from", self.defaultAccount)
+    if "from" not in transaction and is_checksum_address(self.default_account):
+        transaction = assoc(transaction, "from", self.default_account)
 
     if block_identifier is None:
         block_identifier = self.defaultBlock
@@ -680,8 +680,8 @@ def patched_contractfunction_estimateGas(
 
     if self.address:
         estimate_gas_transaction.setdefault("to", self.address)
-    if self.web3.eth.defaultAccount is not empty:
-        estimate_gas_transaction.setdefault("from", self.web3.eth.defaultAccount)
+    if self.web3.eth.default_account is not empty:
+        estimate_gas_transaction.setdefault("from", self.web3.eth.default_account)
 
     if "to" not in estimate_gas_transaction:
         if isinstance(self, type):
@@ -1043,7 +1043,7 @@ class JSONRPCClient:
         if eth_node is None or supported is VersionSupport.UNSUPPORTED:
             raise EthNodeInterfaceError(f'Unsupported Ethereum client "{version}"')
         if supported is VersionSupport.WARN:
-            log.warn(f'Unsupported Ethereum client version "{version}"')
+            log.warning(f'Unsupported Ethereum client version "{version}"')
 
         address = privatekey_to_address(privkey)
         available_nonce = discover_next_available_nonce(web3, eth_node, address)
@@ -1055,7 +1055,7 @@ class JSONRPCClient:
         self.default_block_num_confirmations = block_num_confirmations
 
         # Ask for the chain id only once and store it here
-        self.chain_id = ChainID(self.web3.eth.chainId)
+        self.chain_id = ChainID(self.web3.eth.chain_id)
 
         self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()
@@ -1076,7 +1076,7 @@ class JSONRPCClient:
 
     def block_number(self) -> BlockNumber:
         """ Return the most recent block. """
-        return self.web3.eth.blockNumber
+        return self.web3.eth.block_number
 
     def get_block(self, block_identifier: BlockIdentifier) -> BlockData:
         """Given a block number, query the chain to get its corresponding block hash"""
@@ -1085,7 +1085,7 @@ class JSONRPCClient:
     def get_confirmed_blockhash(self) -> BlockHash:
         """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
         confirmed_block_number = BlockNumber(
-            self.web3.eth.blockNumber - self.default_block_num_confirmations
+            self.web3.eth.block_number - self.default_block_num_confirmations
         )
         if confirmed_block_number < 0:
             confirmed_block_number = BlockNumber(0)
@@ -1113,7 +1113,7 @@ class JSONRPCClient:
     # FIXME: shouldn't return `TokenAmount`
     def balance(self, account: Address) -> TokenAmount:
         """ Return the balance of the account of the given address. """
-        return TokenAmount(self.web3.eth.getBalance(account, BLOCK_ID_PENDING))
+        return TokenAmount(self.web3.eth.get_balance(account, BLOCK_ID_PENDING))
 
     def parity_get_pending_transaction_hash_by_nonce(
         self, address: AddressHex, nonce: Nonce
@@ -1328,7 +1328,7 @@ class JSONRPCClient:
                 signed_txn = client.web3.eth.account.sign_transaction(
                     transaction_data, client.privkey
                 )
-                tx_hash = client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+                tx_hash = client.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
                 # Increase the `nonce` only after sending the transaction. This
                 # is necessary because the send itself can fail, e.g. because
@@ -1454,7 +1454,7 @@ class JSONRPCClient:
                 f"compiler bug."
             )
 
-        deployed_code = self.web3.eth.getCode(contract_address)
+        deployed_code = self.web3.eth.get_code(contract_address)
 
         if not deployed_code:
             raise RaidenUnrecoverableError(
@@ -1582,7 +1582,7 @@ class JSONRPCClient:
             return
 
         our_address = to_checksum_address(self.address)
-        balance = self.web3.eth.getBalance(our_address, block_identifier)
+        balance = self.web3.eth.get_balance(our_address, block_identifier)
         required_balance = required_gas * gas_price_for_fast_transaction(self.web3)
         if balance < required_balance:
             msg = f"Failed to execute {transaction_name} due to insufficient ETH"

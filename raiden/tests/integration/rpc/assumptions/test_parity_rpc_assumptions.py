@@ -84,7 +84,7 @@ def test_parity_request_block_data_does_not_raise_an_exception(
     with pytest.raises(ValueError):
         contract_proxy.functions.const().call(block_identifier=pruned_block_number)
 
-    latest_confirmed_block = deploy_client.web3.eth.getBlock(pruned_block_number)
+    latest_confirmed_block = deploy_client.web3.eth.get_block(pruned_block_number)
 
     msg = (
         "getBlock did not return the expected metadata for a pruned block "

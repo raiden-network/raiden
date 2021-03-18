@@ -71,7 +71,7 @@ def test_payment_channel_proxy_basics(
     token_network_proxy = proxy_manager.token_network(
         address=token_network_address, block_identifier=BLOCK_ID_LATEST
     )
-    start_block = web3.eth.blockNumber
+    start_block = web3.eth.block_number
 
     channel_details = token_network_proxy.new_netting_channel(
         partner=partner,
@@ -121,12 +121,12 @@ def test_payment_channel_proxy_basics(
         netting_channel_identifier=channel_proxy_1.channel_identifier,
         contract_manager=contract_manager,
         from_block=start_block,
-        to_block=web3.eth.blockNumber,
+        to_block=web3.eth.block_number,
     )
 
     assert len(channel_events) == 2
 
-    block_before_close = web3.eth.blockNumber
+    block_before_close = web3.eth.block_number
     empty_balance_proof = BalanceProof(
         channel_identifier=channel_proxy_1.channel_identifier,
         token_network_address=token_network_address,
@@ -154,7 +154,7 @@ def test_payment_channel_proxy_basics(
         netting_channel_identifier=channel_proxy_1.channel_identifier,
         contract_manager=contract_manager,
         from_block=start_block,
-        to_block=web3.eth.blockNumber,
+        to_block=web3.eth.block_number,
     )
     assert len(channel_events) == 3
 
@@ -186,7 +186,7 @@ def test_payment_channel_proxy_basics(
         netting_channel_identifier=channel_proxy_1.channel_identifier,
         contract_manager=contract_manager,
         from_block=start_block,
-        to_block=web3.eth.blockNumber,
+        to_block=web3.eth.block_number,
     )
     assert len(channel_events) == 4
 

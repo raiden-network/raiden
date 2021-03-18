@@ -40,10 +40,10 @@ _FAKE_BLOCK_DATA = {
 def patched_web3():
     web3 = Web3(HTTPProvider(URI("http://domain/")))
     monkey_patch_web3(web3=web3, gas_price_strategy=rpc_gas_price_strategy)
-    original_get_block = web3.eth.getBlock
-    web3.eth.getBlock = make_patched_web3_get_block(web3.eth.getBlock)
+    original_get_block = web3.eth.get_block
+    web3.eth.get_block = make_patched_web3_get_block(web3.eth.get_block)
     yield web3
-    web3.eth.getBlock = original_get_block
+    web3.eth.get_block = original_get_block
 
 
 def _make_json_rpc_null_response(
@@ -77,7 +77,7 @@ def test_web3_retries_block_not_found(
         responses.POST, "http://domain/", callback=_make_json_rpc_null_response(succeed_at)
     )
 
-    result = patched_web3.eth.getBlock(BlockNumber(1))
+    result = patched_web3.eth.get_block(BlockNumber(1))
     assert result["number"] == 1
 
 
@@ -87,4 +87,4 @@ def test_web3_reraises_block_not_found_after_retries(patched_web3, requests_resp
     )
 
     with pytest.raises(BlockNotFound):
-        _ = patched_web3.eth.getBlock(1)
+        _ = patched_web3.eth.get_block(1)
