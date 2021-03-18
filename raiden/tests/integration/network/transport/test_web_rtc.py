@@ -27,6 +27,7 @@ class MessageHandler:
         self.bag.update(messages)
 
 
+@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("capabilities", [CapabilitiesConfig(web_rtc=True)])
@@ -45,8 +46,8 @@ def test_web_rtc_message_sync(matrix_transports):
     # set mock function to make sure messages are sent via web rtc
     transport1._web_rtc_manager._handle_message_callback = mock_handle_web_rtc_messages
 
-    transport0.start(raiden_service0, [], None)
-    transport1.start(raiden_service1, [], None)
+    transport0.start(raiden_service0, None)
+    transport1.start(raiden_service1, None)
 
     transport0.immediate_health_check_for(transport1._raiden_service.address)
     transport1.immediate_health_check_for(transport0._raiden_service.address)
