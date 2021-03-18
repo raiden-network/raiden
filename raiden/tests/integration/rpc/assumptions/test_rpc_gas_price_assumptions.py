@@ -44,7 +44,7 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
@@ -76,7 +76,7 @@ def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> Non
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     # Create a new instance of the JSONRPCClient, this will store the current available nonce
     client_invalid_nonce = JSONRPCClient(deploy_client.web3, deploy_client.privkey)
@@ -150,7 +150,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
     )
 
     address = normal_gas_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     estimated_transaction = deploy_client.estimate_gas(zero_gas_proxy, "ret", {})
     assert estimated_transaction, "Gas estimation should not fail here"
@@ -200,7 +200,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
     )
 
     address = normal_gas_proxy.address
-    assert len(client.web3.eth.getCode(address)) > 0
+    assert len(client.web3.eth.get_code(address)) > 0
 
     estimated_transaction = client.estimate_gas(zero_gas_proxy, "ret", {})
     assert estimated_transaction, "Gas estimation should not fail here"
@@ -258,7 +258,7 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 
@@ -293,7 +293,7 @@ def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> No
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     client_invalid_nonce = JSONRPCClient(web3=deploy_client.web3, privkey=deploy_client.privkey)
 

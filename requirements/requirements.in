@@ -12,6 +12,7 @@ Flask-Cors
 Flask-RESTful
 gevent>=1.5a3
 guppy3
+jinja2>=2.11
 marshmallow-dataclass
 marshmallow-polyfield
 marshmallow

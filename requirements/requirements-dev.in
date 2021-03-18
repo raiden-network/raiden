@@ -4,7 +4,9 @@
 
 # split out to allow faster building of docs and to not require python 3.7
 # since they don't support it in RTD yet: https://github.com/rtfd/readthedocs.org/issues/4713
--r requirements-docs.txt
+# FIXME: Temporarily remove docs requirements from dev until releases removes the pin of
+# `semantic-version<2.7`. See: https://github.com/bitprophet/releases/pull/86
+# -r requirements-docs.txt
 
 # Dependencies
 pip-tools~=5.5.0  # this is used by 'deps.py'

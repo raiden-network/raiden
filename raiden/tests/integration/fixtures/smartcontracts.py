@@ -133,7 +133,7 @@ def register_token(
         token_address=TokenAddress(to_canonical_address(token_contract.address)),
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-        given_block_identifier=token_contract.web3.eth.blockNumber,
+        given_block_identifier=token_contract.web3.eth.block_number,
     )
     return token_network_address
 

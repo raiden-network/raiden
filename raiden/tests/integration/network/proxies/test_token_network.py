@@ -760,7 +760,7 @@ def test_query_pruned_state(token_network_proxy, private_keys, web3, contract_ma
         partner=c2_client.address, settle_timeout=10, given_block_identifier=BLOCK_ID_LATEST
     )
     channel_identifier = channel_details.channel_identifier
-    block = c1_client.web3.eth.getBlock(BLOCK_ID_LATEST)
+    block = c1_client.web3.eth.get_block(BLOCK_ID_LATEST)
     block_number = int(block["number"])
     block_hash = bytes(block["hash"])
     channel_id = c1_token_network_proxy.get_channel_identifier(

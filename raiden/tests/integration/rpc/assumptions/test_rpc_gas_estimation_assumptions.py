@@ -12,7 +12,7 @@ def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     msg = "Estimate gas should return None if the transaction hit an assert"
     assert deploy_client.estimate_gas(contract_proxy, "fail_assert", {}) is None, msg

@@ -24,7 +24,7 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     estimated_transaction = deploy_client.estimate_gas(contract_proxy, "ret", {})
     assert estimated_transaction
@@ -40,7 +40,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = to_canonical_address(contract_proxy.address)
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     # the method always fails, so the gas estimation returns 0 here, using a
     # hardcoded a value to circumvent gas estimation.
@@ -83,7 +83,7 @@ def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     # divide the estimate by 2 to run into out-of-gas
     estimated_transaction = deploy_client.estimate_gas(contract_proxy, "loop", {}, 1000)
@@ -124,7 +124,7 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
     """
     web3 = deploy_client.web3
     random_address = make_address()
-    gas_price = web3.eth.gasPrice  # pylint: disable=no-member
+    gas_price = web3.eth.gas_price  # pylint: disable=no-member
     eth_node = deploy_client.eth_node
     next_nonce = discover_next_available_nonce(web3, eth_node, deploy_client.address)
 
@@ -144,7 +144,7 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
         signed_txn = deploy_client.web3.eth.account.sign_transaction(
             transaction, deploy_client.privkey
         )
-        deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+        deploy_client.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         next_nonce = Nonce(next_nonce + 1)
         msg = "The nonce must increment when a new transaction is sent."
@@ -167,7 +167,7 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
         signed_txn = deploy_client.web3.eth.account.sign_transaction(
             transaction, deploy_client.privkey
         )
-        deploy_client.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
+        deploy_client.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         available_nonce = discover_next_available_nonce(web3, eth_node, deploy_client.address)
 

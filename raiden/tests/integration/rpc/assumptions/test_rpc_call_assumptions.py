@@ -12,7 +12,7 @@ def test_call_invalid_selector(deploy_client: JSONRPCClient) -> None:
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     data = decode_hex(get_transaction_data(deploy_client.web3, contract_proxy.abi, "ret", None))
     next_byte = chr(data[0] + 1).encode()
@@ -27,7 +27,7 @@ def test_call_inexisting_address(deploy_client: JSONRPCClient) -> None:
 
     inexisting_address = b"\x01\x02\x03\x04\x05" * 4
 
-    assert len(deploy_client.web3.eth.getCode(inexisting_address)) == 0
+    assert len(deploy_client.web3.eth.get_code(inexisting_address)) == 0
     transaction = {
         "from": deploy_client.address,
         "to": inexisting_address,
@@ -84,7 +84,7 @@ def test_call_throws(deploy_client: JSONRPCClient) -> None:
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
-    assert len(deploy_client.web3.eth.getCode(address)) > 0
+    assert len(deploy_client.web3.eth.get_code(address)) > 0
 
     call = contract_proxy.functions.fail_assert().call
     assert call() == []

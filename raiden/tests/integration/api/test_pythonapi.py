@@ -566,7 +566,7 @@ def test_token_addresses(raiden_network: List[RaidenService], token_addresses):
     last_number = app0.rpc_client.block_number()
 
     for block_number in range(last_number, 0, -1):
-        code = app0.rpc_client.web3.eth.getCode(
+        code = app0.rpc_client.web3.eth.get_code(
             account=Address(token_network_address), block_identifier=block_number
         )
         if code == b"":

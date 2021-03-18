@@ -1,6 +1,6 @@
 import os
 
-from solc import compile_files
+from solcx import compile_files
 from web3.contract import Contract
 from web3.types import TxReceipt
 
@@ -145,7 +145,7 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
             # We need to specify output values here because py-solc by default
             # provides them all and does not know that "clone-bin" does not exist
             # in solidity >= v0.5.0
-            output_values=("abi", "asm", "ast", "bin", "bin-runtime"),
+            output_values=["abi", "asm", "ast", "bin", "bin-runtime"],
             **kwargs,
         )
     finally:

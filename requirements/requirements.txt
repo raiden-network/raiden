@@ -121,12 +121,16 @@ hexbytes==0.2.0
     #   web3
 idna==2.8
     # via requests
+importlib-metadata==3.7.3
+    # via jsonschema
 ipfshttpclient==0.7.0a1
     # via web3
 itsdangerous==1.1.0
     # via flask
-jinja2==2.10.1
-    # via flask
+jinja2==2.11.3
+    # via
+    #   -r requirements.in
+    #   flask
 jsonschema==3.2.0
     # via web3
 lru-dict==1.1.6
@@ -171,9 +175,7 @@ psutil==5.8.0
     # via
     #   -r requirements.in
     #   mirakuru
-py-ecc==1.4.7
-    # via raiden-contracts
-py-solc==3.2.0
+py-solc-x==1.1.0
     # via raiden-contracts
 pycparser==2.19
     # via cffi
@@ -191,7 +193,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts==0.37.1
+raiden-contracts==0.37.3
     # via -r requirements.in
 raiden-webui==1.1.1
     # via -r requirements.in
@@ -200,16 +202,17 @@ requests==2.25.1
     #   -r requirements.in
     #   ipfshttpclient
     #   matrix-client
+    #   py-solc-x
     #   web3
 rlp==2.0.1
     # via
     #   eth-account
     #   eth-rlp
     #   raiden-contracts
-semantic-version==2.6.0
-    # via py-solc
-semver==2.8.1
-    # via raiden-contracts
+semantic-version==2.8.5
+    # via
+    #   py-solc-x
+    #   raiden-contracts
 six==1.15.0
     # via
     #   cryptography
@@ -227,7 +230,11 @@ toml==0.10.2
 toolz==0.9.0
     # via cytoolz
 typing-extensions==3.7.4.3
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   importlib-metadata
+    #   structlog
+    #   web3
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
@@ -244,6 +251,8 @@ websockets==8.1
     # via web3
 werkzeug==1.0.1
     # via flask
+zipp==3.4.1
+    # via importlib-metadata
 zope.event==4.4
     # via gevent
 zope.interface==5.1.0
