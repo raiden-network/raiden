@@ -443,7 +443,7 @@ pickleshare==0.7.5
     # via
     #   -r requirements-dev.txt
     #   ipython
-pillow==7.2.0
+pillow==8.1.1
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
