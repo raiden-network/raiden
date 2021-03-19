@@ -19,15 +19,13 @@ from eth_utils import (
 from eth_utils.toolz import assoc
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
-from requests.exceptions import ReadTimeout
 from web3 import HTTPProvider, Web3
 from web3._utils.contracts import (
     encode_transaction_data,
     find_matching_fn_abi,
     prepare_transaction,
 )
-from web3._utils.empty import empty
-from web3.contract import Contract, ContractFunction
+from web3.contract import Contract
 from web3.eth import Eth
 from web3.exceptions import BlockNotFound, TransactionNotFound
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
@@ -576,36 +574,6 @@ def is_infura(web3: Web3) -> bool:
     )
 
 
-def patched_web3_eth_estimate_gas(
-    self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
-) -> Wei:
-    """Temporary workaround until next web3.py release (5.X.X)
-
-    Current master of web3.py has this implementation already:
-    https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
-    """
-    if "from" not in transaction and is_checksum_address(self.defaultAccount):
-        transaction = assoc(transaction, "from", self.defaultAccount)
-
-    if block_identifier is None:
-        params: List[Any] = [transaction]
-    else:
-        params = [transaction, block_identifier]
-
-    try:
-        result = self.web3.manager.request_blocking(RPCEndpoint("eth_estimateGas"), params)
-    except ValueError as e:
-        if check_value_error(e, CallType.ESTIMATE_GAS):
-            result = None
-        else:
-            # else the error is not denoting estimate gas failure and is something else
-            raise e
-    except ReadTimeout:
-        result = None
-
-    return result
-
-
 def patched_web3_eth_call(
     self: Any, transaction: Dict[str, Any], block_identifier: BlockIdentifier = None
 ) -> HexBytes:
@@ -662,47 +630,6 @@ def estimate_gas_for_function(
             raise e
 
     return gas_estimate
-
-
-def patched_contractfunction_estimateGas(
-    self: Any, transaction: TxParams = None, block_identifier: BlockIdentifier = None
-) -> int:
-    """Temporary workaround until next web3.py release (5.X.X)"""
-    if transaction is None:
-        estimate_gas_transaction: TxParams = {}
-    else:
-        estimate_gas_transaction = transaction
-
-    if "data" in estimate_gas_transaction:
-        raise ValueError("Cannot set data in estimateGas transaction")
-    if "to" in estimate_gas_transaction:
-        raise ValueError("Cannot set to in estimateGas transaction")
-
-    if self.address:
-        estimate_gas_transaction.setdefault("to", self.address)
-    if self.web3.eth.defaultAccount is not empty:
-        estimate_gas_transaction.setdefault("from", self.web3.eth.defaultAccount)
-
-    if "to" not in estimate_gas_transaction:
-        if isinstance(self, type):
-            raise ValueError(
-                "When using `Contract.estimateGas` from a contract factory "
-                "you must provide a `to` address with the transaction"
-            )
-        else:
-            raise ValueError("Please ensure that this contract instance has an address.")
-
-    return estimate_gas_for_function(
-        self.address,
-        self.web3,
-        self.function_identifier,
-        estimate_gas_transaction,
-        self.contract_abi,
-        self.abi,
-        block_identifier,
-        *self.args,
-        **self.kwargs,
-    )
 
 
 def make_sane_poa_middleware(
@@ -785,10 +712,6 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # injected twice. This happens with `eth-tester` setup where a single session
         # scoped web3 instance is used for all clients
         pass
-
-    # Temporary until next web3.py release (5.X.X)
-    ContractFunction.estimateGas = patched_contractfunction_estimateGas  # type: ignore
-    Eth.estimateGas = patched_web3_eth_estimate_gas  # type: ignore
 
     # Patch call() to achieve same behaviour between parity and geth
     # At the moment geth returns '' for reverted/thrown transactions.
