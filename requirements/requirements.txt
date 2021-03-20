@@ -125,7 +125,7 @@ ipfshttpclient==0.7.0a1
     # via web3
 itsdangerous==1.1.0
     # via flask
-jinja2==2.10.1
+jinja2==2.11.3
     # via flask
 jsonschema==3.2.0
     # via web3

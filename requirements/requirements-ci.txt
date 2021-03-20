@@ -333,7 +333,7 @@ jedi==0.17.0
     # via
     #   -r requirements-dev.txt
     #   ipython
-jinja2==2.10.1
+jinja2==2.11.3
     # via
     #   -r requirements-dev.txt
     #   flask

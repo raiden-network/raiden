@@ -297,7 +297,7 @@ itsdangerous==1.1.0
     #   flask
 jedi==0.17.0
     # via ipython
-jinja2==2.10.1
+jinja2==2.11.3
     # via
     #   -r requirements-docs.txt
     #   -r requirements.txt
