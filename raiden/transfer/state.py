@@ -29,6 +29,7 @@ from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -132,6 +133,7 @@ class RouteState(State):
 
     # TODO: Add timestamp
     route: List[Address]
+    address_to_metadata: Dict[Address, AddressMetadata] = field(default_factory=dict)
     swaps: Dict[Address, TokenNetworkAddress] = field(default_factory=dict)
     estimated_fee: FeeAmount = FeeAmount(0)
 

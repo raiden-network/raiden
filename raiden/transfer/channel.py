@@ -1383,12 +1383,11 @@ def create_sendlockedtransfer(
 
     token = channel_state.token_address
     recipient = channel_state.partner_state.address
-    # TODO: uncomment when recipient metadata are set
-    # recipient_metadata = None
-    # for route_state in route_states:
-    #    recipient_metadata = route_state.address_metadata.get(recipient, None)
-    #    if recipient_metadata is not None:
-    #        break
+    recipient_metadata = None
+    for route_state in route_states:
+        recipient_metadata = route_state.address_to_metadata.get(recipient, None)
+        if recipient_metadata is not None:
+            break
     # the new lock is not registered yet
     locked_amount = LockedAmount(get_amount_locked(our_state) + amount)
 
@@ -1414,7 +1413,7 @@ def create_sendlockedtransfer(
 
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,
-        recipient_metadata=None,
+        recipient_metadata=recipient_metadata,
         message_identifier=message_identifier,
         transfer=locked_transfer,
         canonical_identifier=channel_state.canonical_identifier,

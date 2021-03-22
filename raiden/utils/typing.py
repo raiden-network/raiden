@@ -70,12 +70,10 @@ EVMBytecode = NewType("EVMBytecode", T_EVMBytecode)
 
 GasMeasurements = Dict[str, int]
 
+
 T_Address = bytes
 
 AddressHex = HexAddress
-
-T_UserID = str
-UserID = NewType("UserID", T_UserID)
 
 T_Balance = int
 Balance = NewType("Balance", T_Balance)
@@ -202,6 +200,9 @@ RoomID = NewType("RoomID", T_RoomID)
 
 T_PeerCapabilities = Dict[str, Union[str, bool]]
 PeerCapabilities = NewType("PeerCapabilities", T_PeerCapabilities)
+
+T_UserID = str
+UserID = NewType("UserID", T_UserID)
 
 AddressMetadata = Dict[str, Union[UserID, PeerCapabilities]]
 
