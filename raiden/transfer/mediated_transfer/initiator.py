@@ -345,8 +345,7 @@ def send_lockedtransfer(
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
         route_states=routes.prune_route_table(
-            route_states=route_states,
-            selected_route=route_state,
+            route_states=route_states, selected_route=route_state
         ),
     )
     return lockedtransfer_event
