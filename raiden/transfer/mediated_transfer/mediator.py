@@ -410,7 +410,9 @@ def forward_transfer_pair(
     assert payee_channel.settle_timeout >= lock_timeout, "settle_timeout must be >= lock_timeout"
 
     route_states = routes.prune_route_table(
-        route_states=route_state_table, selected_route=route_state
+        route_states=route_state_table,
+        selected_route=route_state,
+        initiator_address=payer_transfer.initiator,
     )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
     lockedtransfer_event = channel.send_lockedtransfer(
@@ -471,7 +473,7 @@ def backward_transfer_pair(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
         backward_route_state = RouteState(
-            route=[backward_channel.our_state.address],
+            route=[backward_channel.our_state.address], address_to_metadata={}
         )
 
         refund_transfer = channel.send_refundtransfer(

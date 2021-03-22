@@ -1220,8 +1220,12 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     }
 
     init_state_change = ActionInitMediator(
+        # FIXME: Metadata
         route_states=[
-            RouteState(route=[our_state.address, attacked_channel.partner_state.address])
+            RouteState(
+                route=[our_state.address, attacked_channel.partner_state.address],
+                address_to_metadata={},
+            )
         ],
         from_hop=from_hop,
         from_transfer=from_transfer,
@@ -1866,15 +1870,17 @@ def test_filter_reachable_routes():
     partner1 = factories.NettingChannelEndStateProperties(address=Address(HOP1))
     partner2 = replace(partner1, address=HOP2)
     channel1 = factories.create(factories.NettingChannelStateProperties(partner_state=partner1))
-
+    # FIXME: Metadata
     possible_routes = [
         RouteState(
             # pylint: disable=E1101
             route=[channel1.our_state.address, partner1.address, target],
+            address_to_metadata={},
         ),
         RouteState(
             # pylint: disable=E1101
             route=[channel1.our_state.address, partner2.address, target],
+            address_to_metadata={},
         ),
     ]
 
