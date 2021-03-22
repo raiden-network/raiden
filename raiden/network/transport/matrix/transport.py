@@ -399,6 +399,10 @@ class ReceivedCallMessage(_ReceivedMessageBase):
     message: MatrixMessage
 
 
+def make_user_id(address: Address, home_server: str) -> str:
+    return f"@{to_normalized_address(address)}:{home_server}"
+
+
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"

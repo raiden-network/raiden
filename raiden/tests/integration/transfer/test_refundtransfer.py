@@ -73,9 +73,9 @@ def test_refund_messages(raiden_chain: List[RaidenService], token_addresses, dep
         initiator_app=app1,
         target_app=app2,
         token_address=token_address,
-        amount=deposit,
+        amount=PaymentAmount(deposit),
         identifier=identifier,
-        routes=[[app1.address, app2.address]],
+        routes=[[app1, app2]],
     )
 
     refund_amount = deposit // 2
@@ -171,7 +171,7 @@ def test_refund_transfer(
             token_address=token_address,
             amount=amount_path,
             identifier=identifier_path,
-            routes=[[app0.address, app1.address, app2.address]],
+            routes=[[app0, app1, app2]],
         )
 
     # drain the channel app1 -> app2
@@ -186,7 +186,7 @@ def test_refund_transfer(
             token_address=token_address,
             amount=amount_drain,
             identifier=identifier_drain,
-            routes=[[app1.address, app2.address]],
+            routes=[[app1, app2]],
         )
         wait_assert(
             assert_synced_channel_state,
@@ -379,7 +379,7 @@ def test_different_view_of_last_bp_during_unlock(
             token_address=token_address,
             amount=amount_path,
             identifier=identifier_path,
-            routes=[[app0.address, app1.address, app2.address]],
+            routes=[[app0, app1, app2]],
         )
 
     # drain the channel app1 -> app2
@@ -392,7 +392,7 @@ def test_different_view_of_last_bp_during_unlock(
             token_address=token_address,
             amount=amount_drain,
             identifier=identifier_drain,
-            routes=[[app1.address, app2.address]],
+            routes=[[app1, app2]],
         )
         wait_assert(
             assert_synced_channel_state,
@@ -595,7 +595,7 @@ def test_refund_transfer_after_2nd_hop(
             amount=amount_path,
             identifier=identifier_path,
             timeout=network_wait * number_of_nodes,
-            routes=[[app0.address, app1.address, app2.address, app3.address]],
+            routes=[[app0, app1, app2, app3]],
         )
 
     # drain the channel app2 -> app3
@@ -609,7 +609,7 @@ def test_refund_transfer_after_2nd_hop(
             amount=amount_drain,
             identifier=identifier_drain,
             timeout=network_wait,
-            routes=[[app2.address, app3.address]],
+            routes=[[app2, app3]],
         )
         wait_assert(
             assert_synced_channel_state,

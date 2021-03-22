@@ -82,6 +82,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    UserID,
     cast,
     typecheck,
 )
@@ -116,10 +117,18 @@ def get_channelstate(
 
 
 def create_route_state_for_route(
-    apps: List[RaidenService], token_address: TokenAddress, fee_estimate: FeeAmount
+    apps: List[RaidenService], token_address: TokenAddress, fee_estimate: FeeAmount = None
 ) -> RouteState:
     assert len(apps) > 1, "Need at least two nodes for a route"
-    route = [app.address for app in apps]
+
+    route = list()
+    # FIXME: Metadata
+    address_metadata = dict()
+    for app in apps:
+        route.append(app.address)
+        user_id = UserID(app.transport.user_id)
+        assert user_id is not None
+        address_metadata[app.address] = {"user_id": user_id}
 
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(apps[0]),
@@ -128,7 +137,13 @@ def create_route_state_for_route(
     )
     assert token_network
 
-    return RouteState(route=route, estimated_fee=fee_estimate)
+    if fee_estimate is not None:
+        return RouteState(
+            route=route, address_to_metadata=address_metadata, estimated_fee=fee_estimate
+        )
+    else:
+        # will use the default for estimated_fee
+        return RouteState(route=route, address_to_metadata=address_metadata)
 
 
 @contextmanager
@@ -164,20 +179,20 @@ def transfer(
     timeout: Optional[float] = None,
     transfer_state: TransferState = TransferState.UNLOCKED,
     expect_unlock_failures: bool = False,
-    routes: List[List[Address]] = None,
+    routes: List[List[RaidenService]] = None,
 ) -> SecretHash:
     """Nice to read shortcut to make successful mediated transfer.
 
     Note:
         Only the initiator and target are synched.
     """
+
     if transfer_state is TransferState.UNLOCKED:
         route_states: Optional[List[RouteState]] = None
         if routes:
-            route_states = []
+            route_states = list()
             for route in routes:
-                route_states.append(RouteState(route=route))
-
+                route_states.append(create_route_state_for_route(route, token_address))
         return _transfer_unlocked(
             initiator_app=initiator_app,
             target_app=target_app,
