@@ -1,7 +1,14 @@
 from typing import Dict, Tuple
 
 from raiden.transfer.state import NettingChannelState, NetworkState, RouteState
-from raiden.utils.typing import Address, ChannelID, List, NodeNetworkStateMap, TokenNetworkAddress
+from raiden.utils.typing import (
+    Address,
+    ChannelID,
+    InitiatorAddress,
+    List,
+    NodeNetworkStateMap,
+    TokenNetworkAddress,
+)
 
 
 def filter_reachable_routes(
