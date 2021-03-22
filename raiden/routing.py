@@ -61,8 +61,11 @@ def get_best_routes(
             )
 
             if is_usable is channel.ChannelUsability.USABLE:
+                # FIXME query address_metadata from direct endpoint on PFS
                 direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)], estimated_fee=FeeAmount(0)
+                    route=[Address(from_address), Address(to_address)],
+                    address_to_metadata={},
+                    estimated_fee=FeeAmount(0),
                 )
                 return None, [direct_route], None
 
@@ -158,11 +161,20 @@ def get_best_routes_pfs(
     paths = []
     for path_object in pfs_routes:
         path = path_object["path"]
+        address_to_metadata = path_object.get("address_metadata", {})
+        if not address_to_metadata:
+            log.warning("PFS didn't return path metadata.")
+        elif set(path) != set(address_to_metadata.keys()):
+            log.warning("PFS returned incorrect path metadata, skipping path.")
+
         estimated_fee = path_object["estimated_fee"]
         canonical_path = [to_canonical_address(node) for node in path]
 
         # get the second entry, as the first one is the node itself
         # also needs to be converted to canonical representation
+        if len(canonical_path) < 2:
+            log.warning("Route is invalid as it has less than 2 addresses")
+            continue
         partner_address = canonical_path[1]
 
         # don't route back
@@ -188,7 +200,13 @@ def get_best_routes_pfs(
             )
             continue
 
-        paths.append(RouteState(route=canonical_path, estimated_fee=estimated_fee))
+        paths.append(
+            RouteState(
+                route=canonical_path,
+                address_to_metadata=address_to_metadata,
+                estimated_fee=estimated_fee,
+            )
+        )
 
     return None, paths, feedback_token
 
@@ -218,6 +236,7 @@ def resolve_routes(
             resolvable.append(
                 RouteState(
                     route=route_metadata.route,
+                    address_to_metadata=route_metadata.address_metadata,
                     # This is only used in the mediator, so fees are set to 0
                     estimated_fee=FeeAmount(0),
                 )
