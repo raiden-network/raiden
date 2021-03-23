@@ -311,7 +311,7 @@ class RaidenEventHandler(EventHandler):
         raiden: "RaidenService",
         withdraw_event: SendWithdrawConfirmation,
         message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
-    ) -> None:  # pragma: no unittest
+    ) -> None:
         withdraw_message = message_from_sendevent(withdraw_event)
         raiden.sign(withdraw_message)
         message_queues[withdraw_event.queue_identifier].append(

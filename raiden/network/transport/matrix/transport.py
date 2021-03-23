@@ -71,7 +71,6 @@ from raiden.transfer.state import QueueIdsToQueues
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
-from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -400,7 +399,6 @@ class ReceivedCallMessage(_ReceivedMessageBase):
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"
-    _healthcheck_queue: NotifyingQueue[Address]
     log = log
 
     def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
@@ -473,7 +471,6 @@ class MatrixTransport(Runnable):
 
         self._stop_event: Event = Event()
         self._stop_event.set()
-        self._healthcheck_queue = NotifyingQueue()
 
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages: bool = True
@@ -527,10 +524,7 @@ class MatrixTransport(Runnable):
         return dict(user_id=own_user_id, capabilities=own_caps)
 
     def start(  # type: ignore
-        self,
-        raiden_service: "RaidenService",
-        prev_auth_data: Optional[str],
-        health_check_list: Optional[List[Address]] = None,  # pylint: disable=unused-argument
+        self, raiden_service: "RaidenService", prev_auth_data: Optional[str]
     ) -> None:
         if not self._stop_event.ready():
             raise RuntimeError(f"{self!r} already started")
