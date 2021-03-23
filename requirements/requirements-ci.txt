@@ -284,12 +284,7 @@ idna==2.8
 importlib-metadata==3.7.3
     # via
     #   -r requirements-dev.txt
-    #   flake8
-    #   flake8-comprehensions
-    #   jsonschema
     #   pluggy
-    #   pyinstaller
-    #   pytest
 incremental==17.5.0
     # via
     #   -r requirements-dev.txt
@@ -340,9 +335,7 @@ lru-dict==1.1.6
     #   -r requirements-dev.txt
     #   web3
 macholib==1.14
-    # via
-    #   -r requirements-ci.in
-    #   pyinstaller
+    # via -r requirements-ci.in
 markupsafe==1.1.1
     # via
     #   -r requirements-dev.txt
@@ -582,7 +575,7 @@ raiden-contracts==0.37.3
     # via -r requirements-dev.txt
 raiden-webui==1.1.1
     # via -r requirements-dev.txt
-readme-renderer==28.0
+readme-renderer==29.0
     # via -r requirements-dev.txt
 regex==2020.6.8
     # via
@@ -689,19 +682,15 @@ twisted[tls]==21.2.0
 typed-ast==1.4.0
     # via
     #   -r requirements-dev.txt
-    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements-dev.txt
     #   black
-    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
-    #   structlog
-    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements-dev.txt
