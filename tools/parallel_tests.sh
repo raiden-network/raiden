@@ -6,8 +6,10 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/_compat.sh
 
 split_command=$(get_coreutils_command split)
+# make sure we're using the correct executable (inside tmux)
+python_exe=$(python -c "import sys; print(sys.executable)")
 
-PARALLELISM=${PARALLELISM:-4}
+PARALLELISM=${PARALLELISM:-$(python -c "import os; print(os.cpu_count())")}
 # Only used with tmux. Useful tmux layout names:
 # 'even-horizontal', 'even-vertical', 'tiled'
 LAYOUT=${LAYOUT:-even-vertical}
@@ -30,7 +32,7 @@ if (type tmux &> /dev/null); then
     if [[ ${LAYOUT} == even-vertical ]]; then
         rows=$(tput lines)
         # 'even-vertical' needs 3 rows per pane + 1 border in-between + 1 bottom bar
-        rows_needed=$(( (3 * "${PARALLELISM}") + ("${PARALLELISM}" - 1) + 1 ))
+        rows_needed=$(( (3 * PARALLELISM) + (PARALLELISM - 1) + 1 ))
         if [[ ${rows_needed} -gt ${rows} ]]; then
             echo "Not enough rows in terminal window, using 'tiled' layout."
             LAYOUT="tiled"
@@ -46,7 +48,7 @@ if (type tmux &> /dev/null); then
             args+=(split-window)
         fi
         logfile=$(basename "${f}")
-        args+=("pytest raiden/tests --select-from-file ${f} -v --color yes --base-port $(( base_port + ( idx * 1000) )) | tee ${logs}/${logfile}; echo 'Ctrl-C to exit'; read")
+        args+=("${python_exe} -m pytest raiden/tests --select-from-file ${f} -v --color yes --base-port $(( base_port + ( idx * 500) )) | tee -a ${logs}/${logfile}; echo 'Ctrl-C to exit'; read")
         args+=(";")
         args+=("select-layout" "${LAYOUT}" ";")
         idx=$(( idx + 1 ))
