@@ -88,7 +88,7 @@ from raiden.utils.typing import (
     TransactionHash,
     typecheck,
 )
-from raiden_contracts.utils.type_aliases import ChainID
+from raiden_contracts.utils.type_aliases import ChainID, T_ChainID
 
 log = structlog.get_logger(__name__)
 
@@ -1004,6 +1004,7 @@ class TransactionSent(ABC):
     gas_price: int
     nonce: Nonce
     transaction_hash: TransactionHash
+    chain_id: ChainID
 
 
 @dataclass
@@ -1017,6 +1018,7 @@ class TransactionMined:
     nonce: Nonce
     transaction_hash: TransactionHash
     receipt: TxReceipt
+    chain_id: ChainID
 
 
 class JSONRPCClient:
@@ -1224,6 +1226,7 @@ class JSONRPCClient:
             gas_price: int
             nonce: Nonce
             transaction_hash: TransactionHash
+            chain_id: ChainID
 
             def __post_init__(self) -> None:
                 self.extra_log_details.setdefault("token", str(uuid4()))
@@ -1234,6 +1237,7 @@ class JSONRPCClient:
                 typecheck(self.gas_price, int)
                 typecheck(self.nonce, T_Nonce)
                 typecheck(self.transaction_hash, T_TransactionHash)
+                typecheck(self.chain_id, T_ChainID)
 
             def to_log_details(self) -> Dict[str, Any]:
                 log_details = self.data.to_log_details()
@@ -1247,6 +1251,7 @@ class JSONRPCClient:
                         "gas_price": self.gas_price,
                         "nonce": self.nonce,
                         "transaction_hash": encode_hex(self.transaction_hash),
+                        "chain_id": self.chain_id,
                     }
                 )
                 return log_details
@@ -1299,6 +1304,7 @@ class JSONRPCClient:
                         "value": slot.data.value,
                         "to": function_call.contract.address,
                         "gasPrice": slot.gas_price,
+                        "chainId": self.chain_id,
                     }
 
                     log.debug(
@@ -1311,6 +1317,7 @@ class JSONRPCClient:
                         "nonce": slot.nonce,
                         "value": slot.data.value,
                         "gasPrice": slot.gas_price,
+                        "chainId": self.chain_id,
                     }
 
                     log.debug("Transaction to transfer ether will be sent", **log_details)
@@ -1321,6 +1328,7 @@ class JSONRPCClient:
                         "nonce": slot.nonce,
                         "value": 0,
                         "gasPrice": slot.gas_price,
+                        "chainId": self.chain_id,
                     }
 
                     log.debug("Transaction to deploy smart contract will be sent", **log_details)
@@ -1391,6 +1399,7 @@ class JSONRPCClient:
             gas_price=slot.gas_price,
             nonce=slot.nonce,
             transaction_hash=TransactionHash(tx_hash),
+            chain_id=self.chain_id,
         )
         log.debug("Transaction sent", **transaction_sent.to_log_details())
         return transaction_sent
@@ -1536,6 +1545,7 @@ class JSONRPCClient:
                         nonce=transaction_sent.nonce,
                         transaction_hash=transaction_sent.transaction_hash,
                         receipt=tx_receipt,
+                        chain_id=transaction_sent.chain_id,
                     )
                     return transaction_mined
 

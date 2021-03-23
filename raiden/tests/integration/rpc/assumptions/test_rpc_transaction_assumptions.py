@@ -140,6 +140,7 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
             "nonce": next_nonce,
             "value": 1,
             "gasPrice": gas_price,
+            "chainId": deploy_client.chain_id,
         }
         signed_txn = deploy_client.web3.eth.account.sign_transaction(
             transaction, deploy_client.privkey
@@ -163,6 +164,7 @@ def test_discover_next_available_nonce(deploy_client: JSONRPCClient) -> None:
             "nonce": skip_nonce,
             "value": 1,
             "gasPrice": gas_price,
+            "chainId": deploy_client.chain_id,
         }
         signed_txn = deploy_client.web3.eth.account.sign_transaction(
             transaction, deploy_client.privkey
