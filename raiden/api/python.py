@@ -952,10 +952,6 @@ class RaidenAPI:  # pragma: no unittest
             chain_state=views.state_from_raiden(self.raiden), node_address=node_address
         )
 
-    def async_start_health_check_for(self, node_address: Address) -> None:
-        """ Returns the currently network status of `node_address`. """
-        self.raiden.async_start_health_check_for(node_address)
-
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> List[TokenAddress]:
         """Returns a list of tokens the node knows about"""
         return views.get_token_identifiers(

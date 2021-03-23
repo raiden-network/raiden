@@ -23,7 +23,6 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain.filters import RaidenContractFilter
-from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.constants import (
     ABSENT_SECRET,
     BLOCK_ID_LATEST,
@@ -478,7 +477,7 @@ class RaidenService(Runnable):
         self.transport.greenlet.link_exception(self.on_error)
         if self.api_server:
             self.api_server.greenlet.link_exception(self.on_error)
-        self._start_transport(chain_state)
+        self._start_transport()
         self._start_alarm_task()
 
         log.debug("Raiden Service started", node=to_checksum_address(self.address))
@@ -576,7 +575,7 @@ class RaidenService(Runnable):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
 
-    def _start_transport(self, chain_state: ChainState) -> None:
+    def _start_transport(self) -> None:
         """Initialize the transport and related facilities.
 
         Note:
@@ -592,22 +591,11 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events is not None, msg
 
-        # XXX-UAM health-check list was passed to transport after a recover,
-        #  to start tracking / whitlisting e.g. initiator / target nodes
-        # health_check_list = self._get_initial_health_check_list(chain_state)
-        # log.debug(
-        #     "Initializing health checks",
-        #     neighbour_nodes=[to_checksum_address(address) for address in health_check_list],
-        #     node=to_checksum_address(self.address),
-        # )
         if self.default_service_registry is not None:
             populate_services_addresses(
                 self.transport, self.default_service_registry, BLOCK_ID_LATEST
             )
         self.transport.start(raiden_service=self, prev_auth_data=None)
-
-        for neighbour in views.all_neighbour_nodes(chain_state):
-            self.async_start_health_check_for(neighbour)
 
     def _make_initial_state(self) -> ChainState:
         # On first run Raiden needs to fetch all events for the payment
@@ -967,9 +955,6 @@ class RaidenService(Runnable):
                 raiden=self, canonical_identifier=canonical_identifier, update_fee_schedule=True
             )
 
-        for state_change in state_changes:
-            after_blockchain_statechange(self, state_change)
-
         log.debug(
             "Raiden events",
             node=to_checksum_address(self.address),
@@ -1068,28 +1053,6 @@ class RaidenService(Runnable):
                 log.error(str(e))
             else:
                 raise
-
-    def async_start_health_check_for(self, node_address: Address) -> None:
-        """Start health checking `node_address`.
-
-        This function is a noop during initialization, because health checking
-        can be started as a side effect of some events (e.g. new channel). For
-        these cases the healthcheck will be started by
-        `_start_transport`.
-        """
-        if self.transport:
-            self.transport.async_start_health_check(node_address)
-
-    def immediate_health_check_for(self, node_address: Address) -> None:
-        """Start health checking `node_address`.
-
-        This function is a noop during initialization, because health checking
-        can be started as a side effect of some events (e.g. new channel). For
-        these cases the healthcheck will be started by
-        `_start_transport`.
-        """
-        if self.transport:
-            self.transport.immediate_health_check_for(node_address)
 
     def _best_effort_synchronize(self, latest_block: BlockData) -> SynchronizationState:
         """Called with the current latest block, tries to synchronize with the
@@ -1486,26 +1449,6 @@ class RaidenService(Runnable):
                     update_fee_schedule=True,
                 )
 
-    def _get_initial_health_check_list(self, chain_state: ChainState) -> List[Address]:
-        """ Fetch direct neighbors and mediated transfer targets on transport """
-        neighbour_addresses: List[Address] = []
-
-        all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
-
-        for neighbour in all_neighbour_nodes:
-            neighbour_addresses.append(neighbour)
-
-        events_queues = views.get_all_messagequeues(chain_state)
-
-        for event_queue in events_queues.values():
-            for event in event_queue:
-                if isinstance(event, SendLockedTransfer):
-                    transfer = event.transfer
-                    if transfer.initiator == InitiatorAddress(self.address):
-                        neighbour_addresses.append(Address(transfer.target))
-
-        return neighbour_addresses
-
     def sign(self, message: Message) -> None:
         """ Sign message inplace. """
         if not isinstance(message, SignedMessage):
@@ -1574,8 +1517,6 @@ class RaidenService(Runnable):
                 f"Attempted to initiate a locked transfer with secrethash {to_hex(secrethash)}."
                 f" That secret is already registered onchain."
             )
-
-        self.async_start_health_check_for(Address(target))
 
         # Checks if there is a payment in flight with the same payment_id and
         # target. If there is such a payment and the details match, instead of
