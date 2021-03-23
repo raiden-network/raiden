@@ -511,7 +511,7 @@ if sys.platform == "darwin":
 
     def pytest_configure(config) -> None:
         if config.option.basetemp is None:
-            config.option.basetemp = f"/tmp/pytest-of-{os.getlogin():.6s}"
+            config.option.basetemp = f"/tmp/pytest-of-{os.getlogin():.6s}-{os.getpid()}"
 
 
 @pytest.fixture(autouse=True)

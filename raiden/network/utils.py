@@ -51,7 +51,7 @@ if sys.platform == "darwin":  # pragma: no cover
                 # SO_REUSEADDR on it's sockets. Most 'server' applications do.
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 try:
-                    sock.bind((LOOPBACK, port_candidate))
+                    sock.bind(("", port_candidate))
                 except OSError as ex:
                     if ex.errno == errno.EADDRINUSE:
                         continue
