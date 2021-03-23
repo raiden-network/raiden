@@ -49,9 +49,6 @@ def test_web_rtc_message_sync(matrix_transports):
     transport0.start(raiden_service0, None)
     transport1.start(raiden_service1, None)
 
-    transport0.immediate_health_check_for(transport1._raiden_service.address)
-    transport1.immediate_health_check_for(transport0._raiden_service.address)
-
     with Timeout(TIMEOUT_WEB_RTC_CONNECTION):
         # wait until web rtc connection is ready
         while not transport0._web_rtc_manager.has_ready_channel(raiden_service1.address):

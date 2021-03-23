@@ -74,7 +74,6 @@ from raiden.transfer.state import QueueIdsToQueues
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
-from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -165,11 +164,7 @@ class _RetryQueue(Runnable):
             while now() < _next:  # yield False while next is still in the future
                 yield False
 
-    def enqueue(
-        self,
-        queue_identifier: QueueIdentifier,
-        messages: List[Tuple[Message, Optional[AddressMetadata]]],
-    ) -> None:
+    def enqueue(self, queue_identifier: QueueIdentifier, messages: List[Message]) -> None:
         """ Enqueue a message to be sent, and notify main loop """
         msg = (
             f"queue_identifier.recipient ({to_checksum_address(queue_identifier.recipient)}) "
@@ -403,7 +398,6 @@ class ReceivedCallMessage(_ReceivedMessageBase):
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"
-    _healthcheck_queue: NotifyingQueue[Address]
     log = log
 
     def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
@@ -476,7 +470,6 @@ class MatrixTransport(Runnable):
 
         self._stop_event: Event = Event()
         self._stop_event.set()
-        self._healthcheck_queue = NotifyingQueue()
 
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages: bool = True
