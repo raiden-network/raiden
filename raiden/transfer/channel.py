@@ -88,6 +88,7 @@ from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
+    AddressMetadata,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -1427,6 +1428,7 @@ def create_unlock(
     secret: Secret,
     lock: HashTimeLockState,
     block_number: BlockNumber,
+    recipient_metadata: AddressMetadata = None,
 ) -> SendUnlockAndPendingLocksState:
     our_state = channel_state.our_state
 
@@ -1476,7 +1478,7 @@ def create_unlock(
 
     unlock_lock = SendUnlock(
         recipient=recipient,
-        recipient_metadata=None,
+        recipient_metadata=recipient_metadata,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,
         token_address=token_address,
@@ -1569,12 +1571,19 @@ def send_unlock(
     secret: Secret,
     secrethash: SecretHash,
     block_number: BlockNumber,
+    recipient_metadata: AddressMetadata = None,
 ) -> SendUnlock:
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock, "caller must ensure the lock exists"
 
     unlock, pending_locks = create_unlock(
-        channel_state, message_identifier, payment_identifier, secret, lock, block_number
+        channel_state,
+        message_identifier,
+        payment_identifier,
+        secret,
+        lock,
+        block_number,
+        recipient_metadata,
     )
 
     channel_state.our_state.balance_proof = unlock.balance_proof
