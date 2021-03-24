@@ -62,6 +62,7 @@ from raiden.transfer.state import (
     RouteState,
     TransactionExecutionStatus,
     UnlockPartialProofState,
+    get_address_metadata,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -1383,11 +1384,8 @@ def create_sendlockedtransfer(
 
     token = channel_state.token_address
     recipient = channel_state.partner_state.address
-    recipient_metadata = None
-    for route_state in route_states:
-        recipient_metadata = route_state.address_to_metadata.get(recipient, None)
-        if recipient_metadata is not None:
-            break
+    recipient_metadata = get_address_metadata(recipient, route_states)
+
     # the new lock is not registered yet
     locked_amount = LockedAmount(get_amount_locked(our_state) + amount)
 
