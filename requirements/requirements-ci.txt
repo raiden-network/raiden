@@ -223,7 +223,7 @@ flake8-comprehensions==3.3.1
     # via -r requirements-dev.txt
 flake8-tuple==0.4.1
     # via -r requirements-dev.txt
-flake8==3.8.4
+flake8==3.9.0
     # via
     #   -r requirements-dev.txt
     #   flake8-bugbear
@@ -475,7 +475,7 @@ pyasn1==0.4.5
     #   matrix-synapse
     #   pyasn1-modules
     #   service-identity
-pycodestyle==2.6.0
+pycodestyle==2.7.0
     # via
     #   -r requirements-dev.txt
     #   flake8
@@ -492,7 +492,7 @@ pyee==7.0.2
     # via
     #   -r requirements-dev.txt
     #   aiortc
-pyflakes==2.2.0
+pyflakes==2.3.1
     # via
     #   -r requirements-dev.txt
     #   flake8
