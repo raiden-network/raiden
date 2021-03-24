@@ -182,13 +182,13 @@ eth-utils==1.10.0
     #   web3
 execnet==1.6.0
     # via pytest-xdist
-faker==6.6.0
+faker==6.6.2
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
 filelock==3.0.12
     # via -r requirements.txt
-flake8-bugbear==20.11.1
+flake8-bugbear==21.3.2
     # via -r requirements-dev.in
 flake8-comprehensions==3.3.1
     # via -r requirements-dev.in
