@@ -36,6 +36,7 @@ from raiden.transfer.state import (
     ChannelState,
     NettingChannelState,
     RouteState,
+    get_address_metadata,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, StateChange
@@ -107,6 +108,8 @@ def events_for_unlock_lock(
     transfer_description = initiator_state.transfer_description
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    recipient_address = channel_state.partner_state.address
+    recipient_metadata = get_address_metadata(recipient_address, [initiator_state.route])
     unlock_lock = channel.send_unlock(
         channel_state=channel_state,
         message_identifier=message_identifier,
@@ -114,6 +117,7 @@ def events_for_unlock_lock(
         secret=secret,
         secrethash=secrethash,
         block_number=block_number,
+        recipient_metadata=recipient_metadata,
     )
 
     payment_sent_success = EventPaymentSentSuccess(
