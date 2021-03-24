@@ -4,7 +4,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
 from random import Random
-from typing import Any, Tuple
 
 import marshmallow
 from eth_utils import to_hex
@@ -30,6 +29,7 @@ from raiden.utils.formatting import lpex, to_checksum_address
 from raiden.utils.typing import (
     Address,
     AddressMetadata,
+    Any,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -60,6 +60,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
     Union,
     WithdrawAmount,
     typecheck,
@@ -567,3 +568,13 @@ class ChainState(State):
             for token_network in token_network_registry.token_network_list
             for channel in token_network.channelidentifiers_to_channels.values()
         }
+
+
+def get_address_metadata(
+    address: Address, route_states: List[RouteState]
+) -> Optional[AddressMetadata]:
+    for route_state in route_states:
+        recipient_metadata = route_state.address_to_metadata.get(address, None)
+        if recipient_metadata is not None:
+            return recipient_metadata
+    return None
