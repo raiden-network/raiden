@@ -38,6 +38,7 @@ from raiden.transfer.state import (
     ChannelState,
     NettingChannelState,
     RouteState,
+    get_address_metadata,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
@@ -773,6 +774,10 @@ def events_for_balanceproof(
             pair.payee_state = "payee_balance_proof"
 
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
+            recipient_address = pair.payee_address
+            recipient_metadata = get_address_metadata(
+                recipient_address, pair.payee_transfer.route_states
+            )
             unlock_lock = channel.send_unlock(
                 channel_state=payee_channel,
                 message_identifier=message_identifier,
@@ -780,6 +785,7 @@ def events_for_balanceproof(
                 secret=secret,
                 secrethash=secrethash,
                 block_number=block_number,
+                recipient_metadata=recipient_metadata,
             )
 
             unlock_success = EventUnlockSuccess(
