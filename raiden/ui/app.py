@@ -81,7 +81,7 @@ from raiden.utils.typing import (
     UserDepositAddress,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, ID_TO_CHAINNAME
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.contract_manager import ContractDevEnvironment, ContractManager
 
 log = structlog.get_logger(__name__)
 
@@ -187,6 +187,7 @@ def setup_raiden_config(
     matrix_server: str,
     chain_id: ChainID,
     environment_type: Environment,
+    development_environment: ContractDevEnvironment,
     unrecoverable_error_should_crash: bool,
     pathfinding_max_paths: int,
     enable_monitoring: bool,
@@ -257,6 +258,7 @@ def setup_raiden_config(
     config = RaidenConfig(
         chain_id=chain_id,
         environment_type=environment_type,
+        development_environment=development_environment,
         reveal_timeout=default_reveal_timeout,
         settle_timeout=default_settle_timeout,
         console=console,
@@ -305,7 +307,7 @@ def run_raiden_service(
 
     address, privatekey = get_account_and_private_key(account_manager, address, password_file)
 
-    contracts = load_deployed_contracts_data(config, chain_id)
+    contracts = load_deployed_contracts_data(config, chain_id, config.development_environment)
 
     rpc_client = JSONRPCClient(
         web3=web3,

@@ -42,6 +42,7 @@ from raiden_contracts.constants import (
     ID_TO_CHAINNAME,
 )
 from raiden_contracts.contract_manager import (
+    ContractDevEnvironment,
     contracts_precompiled_path,
     get_contracts_deployment_info,
 )
@@ -134,7 +135,11 @@ class ServicesBundle:
             )
 
 
-def load_deployed_contracts_data(config: RaidenConfig, chain_id: ChainID) -> Dict[str, Any]:
+def load_deployed_contracts_data(
+    config: RaidenConfig,
+    chain_id: ChainID,
+    development_environment: ContractDevEnvironment = ContractDevEnvironment.DEMO,
+) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits
@@ -149,7 +154,9 @@ def load_deployed_contracts_data(config: RaidenConfig, chain_id: ChainID) -> Dic
 
     if chain_id in ID_TO_CHAINNAME and ID_TO_CHAINNAME[chain_id] != "smoketest":
         deployment_data = get_contracts_deployment_info(
-            chain_id=chain_id, version=contracts_version
+            chain_id=chain_id,
+            version=contracts_version,
+            development_environment=development_environment,
         )
         if not deployment_data:
             return deployed_contracts_data
