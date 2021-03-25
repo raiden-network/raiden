@@ -1,20 +1,12 @@
 from dataclasses import dataclass, field
 
+import canonicaljson
 import rlp
 from eth_utils import keccak
 
 from raiden.messages.abstract import cached_property
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, AddressMetadata, Any, Dict, List
-
-
-def primitive_dict_to_nested_lists(dic: Dict[Any, Any]) -> List[Any]:
-    serialized_dict = list()
-    for k, v in sorted(dic.items()):
-        if isinstance(v, dict):
-            v = primitive_dict_to_nested_lists(v)
-        serialized_dict.append([k, v])
-    return serialized_dict
+from raiden.utils.typing import Address, AddressMetadata, Dict, List
 
 
 @dataclass(frozen=True)
@@ -24,13 +16,16 @@ class RouteMetadata:
 
     @cached_property
     def hash(self) -> bytes:
-        return keccak(self._rlp_serialize())
+        return keccak(self._serialize_canonicaljson())
 
-    def _rlp_serialize(self) -> bytes:
-        return rlp.encode(
-            primitive_dict_to_nested_lists(
-                {"route": self.route, "address_metadata": self.address_metadata}
-            )
+    def _serialize_canonicaljson(self) -> bytes:
+        route = [to_checksum_address(address) for address in self.route]
+        address_metadata = {
+            to_checksum_address(address): metadata
+            for address, metadata in self.address_metadata.items()
+        }
+        return canonicaljson.encode_canonical_json(
+            {"route": route, "address_metadata": address_metadata}
         )
 
     def __repr__(self) -> str:
