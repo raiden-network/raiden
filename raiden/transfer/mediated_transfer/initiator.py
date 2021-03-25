@@ -172,10 +172,13 @@ def handle_block(
     if lock_has_expired and initiator_state.transfer_state != "transfer_expired":
         is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
         if is_channel_open:
+            recipient_address = channel_state.partner_state.address
+            recipient_metadata = get_address_metadata(recipient_address, [initiator_state.route])
             expired_lock_events = channel.send_lock_expired(
                 channel_state=channel_state,
                 locked_lock=locked_lock,
                 pseudo_random_generator=pseudo_random_generator,
+                recipient_metadata=recipient_metadata,
             )
             events.extend(expired_lock_events)
 
@@ -407,9 +410,10 @@ def handle_secretrequest(
         # TODO: uncomment when recipient metadata are set
         # recipient_metadata = initiator_state.route.address_metadata.get(recipient, None)
 
+        recipient_metadata = get_address_metadata(recipient, [initiator_state.route])
         revealsecret = SendSecretReveal(
             recipient=recipient,
-            recipient_metadata=None,
+            recipient_metadata=recipient_metadata,
             message_identifier=message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             secret=transfer_description.secret,

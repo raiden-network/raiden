@@ -1669,6 +1669,7 @@ def create_sendexpiredlock(
     token_network_address: TokenNetworkAddress,
     channel_identifier: ChannelID,
     recipient: Address,
+    recipient_metadata: AddressMetadata = None,
 ) -> Tuple[Optional[SendLockExpired], Optional[PendingLocksState]]:
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
@@ -1702,7 +1703,7 @@ def create_sendexpiredlock(
 
     send_lock_expired = SendLockExpired(
         recipient=recipient,
-        recipient_metadata=None,
+        recipient_metadata=recipient_metadata,
         canonical_identifier=balance_proof.canonical_identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         balance_proof=balance_proof,
@@ -1716,6 +1717,7 @@ def send_lock_expired(
     channel_state: NettingChannelState,
     locked_lock: LockType,
     pseudo_random_generator: random.Random,
+    recipient_metadata: AddressMetadata = None,
 ) -> List[SendLockExpired]:
     msg = "caller must make sure the channel is open"
     assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
@@ -1728,6 +1730,7 @@ def send_lock_expired(
         token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         recipient=channel_state.partner_state.address,
+        recipient_metadata=recipient_metadata,
     )
 
     if send_lock_expired:
@@ -2120,7 +2123,10 @@ def handle_refundtransfer(
 
 
 def handle_receive_lock_expired(
-    channel_state: NettingChannelState, state_change: ReceiveLockExpired, block_number: BlockNumber
+    channel_state: NettingChannelState,
+    state_change: ReceiveLockExpired,
+    block_number: BlockNumber,
+    recipient_metadata: AddressMetadata = None,
 ) -> TransitionResult[NettingChannelState]:
     """Remove expired locks from channel states."""
     is_valid, msg, pending_locks = is_valid_lock_expired(
@@ -2142,7 +2148,7 @@ def handle_receive_lock_expired(
 
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
-            recipient_metadata=None,
+            recipient_metadata=recipient_metadata,
             message_identifier=state_change.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )

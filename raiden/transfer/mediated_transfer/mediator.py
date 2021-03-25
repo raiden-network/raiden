@@ -959,12 +959,16 @@ def events_to_remove_expired_locks(
 
             is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
 
+            payee_address_metadata = get_address_metadata(
+                transfer_pair.payee_address, transfer_pair.payee_transfer.route_states
+            )
             if has_lock_expired and is_channel_open:
                 transfer_pair.payee_state = "payee_expired"
                 expired_lock_events = channel.send_lock_expired(
                     channel_state=channel_state,
                     locked_lock=lock,
                     pseudo_random_generator=pseudo_random_generator,
+                    recipient_metadata=payee_address_metadata,
                 )
                 events.extend(expired_lock_events)
 
@@ -1430,8 +1434,13 @@ def handle_lock_expired(
         if not channel_state:
             return TransitionResult(mediator_state, list())
 
+        recipient_address = channel_state.partner_state.address
+        recipient_metadata = get_address_metadata(recipient_address, mediator_state.routes)
         result = channel.handle_receive_lock_expired(
-            channel_state=channel_state, state_change=state_change, block_number=block_number
+            channel_state=channel_state,
+            state_change=state_change,
+            block_number=block_number,
+            recipient_metadata=recipient_metadata,
         )
         assert result.new_state and isinstance(result.new_state, NettingChannelState), (
             "Handling a receive_lock_expire should never delete the channel task",
@@ -1445,8 +1454,13 @@ def handle_lock_expired(
             mediator_state.waiting_transfer.transfer.balance_proof.channel_identifier
         )
         if waiting_channel:
+            recipient_address = waiting_channel.partner_state.address
+            recipient_metadata = get_address_metadata(recipient_address, mediator_state.routes)
             result = channel.handle_receive_lock_expired(
-                channel_state=waiting_channel, state_change=state_change, block_number=block_number
+                channel_state=waiting_channel,
+                state_change=state_change,
+                block_number=block_number,
+                recipient_metadata=recipient_metadata,
             )
             events.extend(result.events)
 
