@@ -22,6 +22,8 @@ bitarray==1.2.1
     # via eth-account
 cachetools==4.2.0
     # via -r requirements.in
+canonicaljson==1.4.0
+    # via -r requirements.in
 certifi==2019.3.9
     # via requests
 cffi==1.12.3
@@ -106,6 +108,8 @@ flask==1.1.2
     #   -r requirements.in
     #   flask-cors
     #   flask-restful
+frozendict==1.2
+    # via canonicaljson
 gevent==21.1.2
     # via -r requirements.in
 graphviz==0.13.2
@@ -210,6 +214,8 @@ semantic-version==2.6.0
     # via py-solc
 semver==2.8.1
     # via raiden-contracts
+simplejson==3.17.2
+    # via canonicaljson
 six==1.15.0
     # via
     #   cryptography
