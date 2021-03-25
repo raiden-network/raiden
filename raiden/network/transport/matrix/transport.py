@@ -164,7 +164,11 @@ class _RetryQueue(Runnable):
             while now() < _next:  # yield False while next is still in the future
                 yield False
 
-    def enqueue(self, queue_identifier: QueueIdentifier, messages: List[Message]) -> None:
+    def enqueue(
+        self,
+        queue_identifier: QueueIdentifier,
+        messages: List[Tuple[Message, Optional[AddressMetadata]]],
+    ) -> None:
         """ Enqueue a message to be sent, and notify main loop """
         msg = (
             f"queue_identifier.recipient ({to_checksum_address(queue_identifier.recipient)}) "
