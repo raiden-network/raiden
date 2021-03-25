@@ -186,7 +186,7 @@ def handle_offchain_secretreveal(
 
         reveal = SendSecretReveal(
             recipient=recipient,
-            recipient_metadata=None,
+            recipient_metadata=from_hop.address_metadata,
             message_identifier=message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             secret=target_state.secret,
