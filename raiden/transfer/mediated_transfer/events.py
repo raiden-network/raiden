@@ -25,7 +25,7 @@ def refund_from_sendmediated(
 ) -> "SendRefundTransfer":
     return SendRefundTransfer(
         recipient=send_lockedtransfer_event.recipient,
-        recipient_metadata=None,
+        recipient_metadata=send_lockedtransfer_event.recipient_metadata,
         message_identifier=send_lockedtransfer_event.message_identifier,
         transfer=send_lockedtransfer_event.transfer,
         canonical_identifier=send_lockedtransfer_event.queue_identifier.canonical_identifier,
