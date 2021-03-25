@@ -94,7 +94,8 @@ def handle_inittarget(
     """ Handles an ActionInitTarget state change. """
     iteration: TransitionResult[Optional[TargetTransferState]]
     transfer = state_change.transfer
-    route = state_change.from_hop
+    from_hop = state_change.from_hop
+    initiator_address_metadata = state_change.initiator_address_metadata
 
     assert (
         channel_state.identifier == transfer.balance_proof.channel_identifier
@@ -111,7 +112,9 @@ def handle_inittarget(
         # proofs to be handled. This however, must only be done once, which is
         # enforced by the nonce increasing sequentially, which is verified by
         # the handler handle_receive_lockedtransfer.
-        target_state = TargetTransferState(route, transfer)
+        target_state = TargetTransferState(
+            from_hop, transfer, initiator_address_metadata=initiator_address_metadata
+        )
 
         safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number
@@ -126,7 +129,7 @@ def handle_inittarget(
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
                 recipient=Address(recipient),
-                recipient_metadata=None,
+                recipient_metadata=initiator_address_metadata,
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
                 amount=PaymentAmount(transfer.lock.amount),
@@ -175,11 +178,12 @@ def handle_offchain_secretreveal(
             secrethash=state_change.secrethash,
         )
 
-        route = target_state.from_hop
+        from_hop = target_state.from_hop
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
-        recipient = route.node_address
+        recipient = from_hop.node_address
+
         reveal = SendSecretReveal(
             recipient=recipient,
             recipient_metadata=None,
