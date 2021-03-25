@@ -23,7 +23,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferCancelRoute,
 )
-from raiden.transfer.state import NettingChannelState, RouteState
+from raiden.transfer.state import NettingChannelState, RouteState, get_address_metadata
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -356,8 +356,13 @@ def handle_lock_expired(
         return TransitionResult(payment_state, list())
 
     secrethash = initiator_state.transfer.lock.secrethash
+    recipient_address = channel_state.partner_state.address
+    recipient_metadata = get_address_metadata(recipient_address, payment_state.routes)
     result = channel.handle_receive_lock_expired(
-        channel_state=channel_state, state_change=state_change, block_number=block_number
+        channel_state=channel_state,
+        state_change=state_change,
+        block_number=block_number,
+        recipient_metadata=recipient_metadata,
     )
     assert result.new_state, "handle_receive_lock_expired should not delete the task"
 
