@@ -262,6 +262,7 @@ def test_message_identical() -> None:
         #     # pretty print for more readable diffs
         #     json_msg = json.dumps(json.loads(json_msg), indent=4, sort_keys=True)
         #     f.write(json_msg)
+        #     f.write('\n')
 
         with open(filename) as f:
             saved_message_dict = JSONSerializer.deserialize(f.read())
