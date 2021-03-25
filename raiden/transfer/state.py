@@ -123,6 +123,7 @@ class HopState(State):
 
     node_address: Address
     channel_identifier: ChannelID
+    address_metadata: Optional[AddressMetadata] = None
 
     def __post_init__(self) -> None:
         typecheck(self.node_address, T_Address)

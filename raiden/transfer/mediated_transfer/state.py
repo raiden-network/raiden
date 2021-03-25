@@ -14,6 +14,7 @@ from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
+    AddressMetadata,
     BlockTimeout,
     ChannelID,
     Dict,
@@ -240,3 +241,4 @@ class TargetTransferState(State):
     transfer: LockedTransferSignedState
     secret: Optional[Secret] = field(repr=False, default=None)
     state: str = field(default="secret_request")
+    initiator_address_metadata: Optional[AddressMetadata] = None
