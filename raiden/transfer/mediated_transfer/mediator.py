@@ -675,7 +675,7 @@ def events_for_expired_pairs(
 
 
 def events_for_secretreveal(
-    transfers_pair: List[MediationPairState],
+    state: MediatorTransferState,
     secret: Secret,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
@@ -702,6 +702,8 @@ def events_for_secretreveal(
     If the proof doesn't arrive in time and the lock's expiration is at risk, N
     won't lose tokens since it knows the secret can go on-chain at any time.
     """
+
+    transfers_pair: List[MediationPairState] = state.transfers_pair
     events: List[Event] = list()
     for pair in reversed(transfers_pair):
         payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
@@ -714,9 +716,11 @@ def events_for_secretreveal(
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             pair.payer_state = "payer_secret_revealed"
             payer_transfer = pair.payer_transfer
+            recipient_address = pair.payer_address
+            recipient_metadata = get_address_metadata(recipient_address, state.routes)
             revealsecret = SendSecretReveal(
                 recipient=payer_transfer.balance_proof.sender,
-                recipient_metadata=None,
+                recipient_metadata=recipient_metadata,
                 message_identifier=message_identifier,
                 secret=secret,
                 canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
@@ -1009,9 +1013,7 @@ def secret_learned(
         block_hash=block_hash,
     )
 
-    offchain_secret_reveal = events_for_secretreveal(
-        state.transfers_pair, secret, pseudo_random_generator
-    )
+    offchain_secret_reveal = events_for_secretreveal(state, secret, pseudo_random_generator)
 
     balance_proof = events_for_balanceproof(
         channelidentifiers_to_channels,
