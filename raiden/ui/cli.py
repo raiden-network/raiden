@@ -72,6 +72,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION, ChainID
 from raiden_contracts.constants import ID_TO_CHAINNAME
+from raiden_contracts.contract_manager import ContractDevEnvironment
 
 log = structlog.get_logger(__name__)
 ETH_RPC_CONFIG_OPTION = "--eth-rpc-endpoint"
@@ -234,6 +235,15 @@ OPTIONS = [
         type=EnumChoiceType(Environment),
         default=Environment.PRODUCTION.value,
         show_default=True,
+    ),
+    option(
+        "--development-environment",
+        help=(
+            "Choose which set of services and transport servers should be used. "
+            "Change this only when you are developing Raiden itself."
+        ),
+        type=EnumChoiceType(ContractDevEnvironment),
+        default=ContractDevEnvironment.DEMO.value,
     ),
     option(
         "--accept-disclaimer",

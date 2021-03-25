@@ -23,7 +23,7 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
 )
-from raiden_contracts.contract_manager import contracts_precompiled_path
+from raiden_contracts.contract_manager import ContractDevEnvironment, contracts_precompiled_path
 
 CACHE_TTL = 60
 GAS_LIMIT = 10 * 10 ** 6
@@ -206,6 +206,7 @@ class RaidenConfig:
     blockchain: BlockchainConfig = BlockchainConfig()
     mediation_fees: MediationFeeConfig = MediationFeeConfig()
     services: ServiceConfig = ServiceConfig()
+    development_environment: ContractDevEnvironment = ContractDevEnvironment.DEMO
 
     transport_type: str = "matrix"
     transport: MatrixTransportConfig = MatrixTransportConfig(
