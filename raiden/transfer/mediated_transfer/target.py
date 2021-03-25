@@ -306,8 +306,12 @@ def handle_lock_expired(
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[TargetTransferState]]:
     """Remove expired locks from channel states."""
+    recipient_metadata = target_state.from_hop.address_metadata
     result = channel.handle_receive_lock_expired(
-        channel_state=channel_state, state_change=state_change, block_number=block_number
+        channel_state=channel_state,
+        state_change=state_change,
+        block_number=block_number,
+        recipient_metadata=recipient_metadata,
     )
     assert result.new_state, "handle_receive_lock_expired should not delete the task"
 
