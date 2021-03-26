@@ -2105,9 +2105,13 @@ def handle_refundtransfer(
         lock = refund.transfer.lock
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
+        recipient_address = channel_state.partner_state.address
+        recipient_metadata = get_address_metadata(
+            recipient_address, received_transfer.route_states
+        )
         send_processed = SendProcessed(
             recipient=refund.transfer.balance_proof.sender,
-            recipient_metadata=None,
+            recipient_metadata=recipient_metadata,
             message_identifier=refund.transfer.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
