@@ -8,7 +8,6 @@ from raiden.exceptions import UndefinedMediationFee
 from raiden.transfer import channel, routes, secret_registry
 from raiden.transfer.architecture import Event, StateChange, SuccessOrError, TransitionResult
 from raiden.transfer.channel import get_balance
-from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnexpectedSecretReveal,
@@ -1406,15 +1405,6 @@ def handle_unlock(
                         pair.payee_transfer.payment_identifier, pair.payee_transfer.lock.secrethash
                     )
                     events.append(unlock)
-
-                    send_processed = SendProcessed(
-                        recipient=balance_proof_sender,
-                        recipient_metadata=None,
-                        message_identifier=state_change.message_identifier,
-                        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
-                    )
-                    events.append(send_processed)
-
                     pair.payer_state = "payer_balance_proof"
 
     iteration = TransitionResult(mediator_state, events)
