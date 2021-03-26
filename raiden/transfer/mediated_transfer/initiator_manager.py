@@ -276,8 +276,11 @@ def handle_transferreroute(
     )
 
     is_valid_refund = channel.refund_transfer_matches_transfer(refund_transfer, original_transfer)
+
+    recipient_address = channel_state.partner_state.address
+    recipient_metadata = get_address_metadata(recipient_address, payment_state.routes)
     is_valid, channel_events, _ = channel.handle_receive_lockedtransfer(
-        channel_state, refund_transfer
+        channel_state, refund_transfer, recipient_metadata=recipient_metadata
     )
 
     if not is_valid_lock or not is_valid_refund or not is_valid:
