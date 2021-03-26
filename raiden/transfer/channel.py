@@ -1356,6 +1356,7 @@ def create_sendlockedtransfer(
     expiration: BlockExpiration,
     secrethash: SecretHash,
     route_states: List[RouteState],
+    recipient_metadata: AddressMetadata = None,
 ) -> Tuple[SendLockedTransfer, PendingLocksState]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -1384,8 +1385,6 @@ def create_sendlockedtransfer(
     assert transferred_amount + amount <= UINT256_MAX, msg
 
     token = channel_state.token_address
-    recipient = channel_state.partner_state.address
-    recipient_metadata = get_address_metadata(recipient, route_states)
 
     # the new lock is not registered yet
     locked_amount = LockedAmount(get_amount_locked(our_state) + amount)
@@ -1410,6 +1409,12 @@ def create_sendlockedtransfer(
         route_states=route_states,
     )
 
+    recipient = channel_state.partner_state.address
+    if recipient_metadata is None:
+        # if no metadata was provided explicitly, try to find it in the
+        # route states. It should be there if this is a forward LockedTransfer
+        # and not a refund.
+        recipient_metadata = get_address_metadata(recipient, route_states)
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,
         recipient_metadata=recipient_metadata,
@@ -1500,6 +1505,7 @@ def send_lockedtransfer(
     expiration: BlockExpiration,
     secrethash: SecretHash,
     route_states: List[RouteState],
+    recipient_metadata: AddressMetadata = None,
 ) -> SendLockedTransfer:
     send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
         channel_state=channel_state,
@@ -1511,6 +1517,7 @@ def send_lockedtransfer(
         expiration=expiration,
         secrethash=secrethash,
         route_states=route_states,
+        recipient_metadata=recipient_metadata,
     )
 
     transfer = send_locked_transfer_event.transfer
@@ -1533,6 +1540,7 @@ def send_refundtransfer(
     expiration: BlockExpiration,
     secrethash: SecretHash,
     route_state: RouteState,
+    recipient_metadata: AddressMetadata = None,
 ) -> SendRefundTransfer:
     msg = "Refunds are only valid for *known and pending* transfers"
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
@@ -1550,6 +1558,7 @@ def send_refundtransfer(
         expiration=expiration,
         secrethash=secrethash,
         route_states=[route_state],
+        recipient_metadata=recipient_metadata,
     )
 
     mediated_transfer = send_mediated_transfer.transfer
