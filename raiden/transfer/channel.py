@@ -2210,7 +2210,11 @@ def handle_receive_lockedtransfer(
     return is_valid, events, msg
 
 
-def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> EventsOrError:
+def handle_unlock(
+    channel_state: NettingChannelState,
+    unlock: ReceiveUnlock,
+    recipient_metadata: AddressMetadata = None,
+) -> EventsOrError:
     is_valid, msg, unlocked_pending_locks = is_valid_unlock(
         unlock, channel_state, channel_state.partner_state
     )
@@ -2227,7 +2231,7 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
 
         send_processed = SendProcessed(
             recipient=unlock.balance_proof.sender,
-            recipient_metadata=None,
+            recipient_metadata=recipient_metadata,
             message_identifier=unlock.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
