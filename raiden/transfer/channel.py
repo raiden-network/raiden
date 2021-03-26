@@ -2168,7 +2168,9 @@ def handle_receive_lock_expired(
 
 
 def handle_receive_lockedtransfer(
-    channel_state: NettingChannelState, mediated_transfer: LockedTransferSignedState
+    channel_state: NettingChannelState,
+    mediated_transfer: LockedTransferSignedState,
+    recipient_metadata: AddressMetadata = None,
 ) -> EventsOrError:
     """Register the latest known transfer.
 
@@ -2193,7 +2195,7 @@ def handle_receive_lockedtransfer(
 
         send_processed = SendProcessed(
             recipient=mediated_transfer.balance_proof.sender,
-            recipient_metadata=None,
+            recipient_metadata=recipient_metadata,
             message_identifier=mediated_transfer.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )

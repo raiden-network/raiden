@@ -1131,7 +1131,9 @@ def handle_init(
 
     mediator_state = MediatorTransferState(secrethash=from_transfer.lock.secrethash, routes=routes)
 
-    is_valid, events, _ = channel.handle_receive_lockedtransfer(payer_channel, from_transfer)
+    is_valid, events, _ = channel.handle_receive_lockedtransfer(
+        payer_channel, from_transfer, recipient_metadata=from_hop.address_metadata
+    )
     if not is_valid:
         # If the balance proof is not valid, do *not* create a task. Otherwise it's
         # possible for an attacker to send multiple invalid transfers, and increase
