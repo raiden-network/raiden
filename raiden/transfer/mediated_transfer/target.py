@@ -101,7 +101,7 @@ def handle_inittarget(
         channel_state.identifier == transfer.balance_proof.channel_identifier
     ), "channel_id mismatch in handle_inittarget"
     is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
-        channel_state, transfer
+        channel_state, transfer, from_hop.address_metadata
     )
 
     if is_valid:
