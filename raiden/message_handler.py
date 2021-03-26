@@ -3,7 +3,6 @@ from eth_utils import to_hex
 from gevent import joinall
 from gevent.pool import Pool
 
-from raiden import routing
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
@@ -31,7 +30,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import HopState
+from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
@@ -42,7 +41,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import TYPE_CHECKING, Address, List, Set, TargetAddress, Tuple
+from raiden.utils.typing import TYPE_CHECKING, Address, FeeAmount, List, Set, TargetAddress, Tuple
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -296,34 +295,68 @@ class MessageHandler:
         assert message.sender, "Invalid message dispatched, it should be signed"
 
         from_transfer = lockedtransfersigned_from_message(message)
+
+        if not message.metadata.routes:
+            log.warning(
+                f"Ignoring received locked transfer with secrethash {to_hex(secrethash)} "
+                f"since there was no route information present."
+            )
+            return []
+
+        all_addresses_to_metadata = dict()
+        for route in message.metadata.routes:
+            metadata = route.address_metadata
+            if metadata:
+                all_addresses_to_metadata.update(metadata)
+
         from_hop = HopState(
             node_address=message.sender,
             # pylint: disable=E1101
             channel_identifier=from_transfer.balance_proof.channel_identifier,
+            address_metadata=all_addresses_to_metadata.get(message.sender),
         )
+
+        balance_proof = from_transfer.balance_proof
+        sender = from_transfer.balance_proof.sender
+
         if message.target == TargetAddress(raiden.address):
-            raiden.immediate_health_check_for(Address(message.initiator))
             return [
                 ActionInitTarget(
                     from_hop=from_hop,
                     transfer=from_transfer,
-                    balance_proof=from_transfer.balance_proof,
-                    sender=from_transfer.balance_proof.sender,
+                    balance_proof=balance_proof,
+                    sender=sender,
+                    initiator_address_metadata=all_addresses_to_metadata.get(
+                        Address(message.initiator)
+                    ),
                 )
             ]
         else:
-            route_states = routing.resolve_routes(
-                routes=message.metadata.routes,
-                token_network_address=from_transfer.balance_proof.token_network_address,
-                chain_state=views.state_from_raiden(raiden),
-            )
+            route_states = []
+            for route_metadata in message.metadata.routes:
+                if len(route_metadata.route) < 2:
+                    continue
+
+                channel_state = views.get_channelstate_by_token_network_and_partner(
+                    chain_state=views.state_from_raiden(raiden),
+                    token_network_address=from_transfer.balance_proof.token_network_address,
+                    partner_address=route_metadata.route[1],
+                )
+                if channel_state is not None:
+                    route_state = RouteState(
+                        route=route_metadata.route,
+                        # This is only used in the mediator, so fees are set to 0
+                        estimated_fee=FeeAmount(0),
+                        address_to_metadata=route_metadata.address_metadata,
+                    )
+                    route_states.append(route_state)
             return [
                 ActionInitMediator(
                     from_hop=from_hop,
                     route_states=route_states,
                     from_transfer=from_transfer,
-                    balance_proof=from_transfer.balance_proof,
-                    sender=from_transfer.balance_proof.sender,
+                    balance_proof=balance_proof,
+                    sender=sender,
                 )
             ]
 

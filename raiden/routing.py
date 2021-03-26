@@ -4,7 +4,6 @@ import structlog
 from eth_utils import to_canonical_address
 
 from raiden.exceptions import ServiceRequestFailed
-from raiden.messages.metadata import RouteMetadata
 from raiden.network.pathfinding import PFSConfig, query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChainState, ChannelState, RouteState
@@ -209,36 +208,3 @@ def get_best_routes_pfs(
         )
 
     return None, paths, feedback_token
-
-
-def resolve_routes(
-    routes: List[RouteMetadata],
-    token_network_address: TokenNetworkAddress,
-    chain_state: ChainState,
-) -> List[RouteState]:
-    """resolve the forward_channel_id for a given route
-
-    TODO: We don't have ``forward_channel_id``, anymore. Does this function still make sense?
-    """
-
-    resolvable = []
-    for route_metadata in routes:
-        if len(route_metadata.route) < 2:
-            continue
-
-        channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            partner_address=route_metadata.route[1],
-        )
-
-        if channel_state is not None:
-            resolvable.append(
-                RouteState(
-                    route=route_metadata.route,
-                    address_to_metadata=route_metadata.address_metadata,
-                    # This is only used in the mediator, so fees are set to 0
-                    estimated_fee=FeeAmount(0),
-                )
-            )
-    return resolvable
