@@ -413,6 +413,7 @@ def forward_transfer_pair(
         route_states=route_state_table,
         selected_route=route_state,
         initiator_address=payer_transfer.initiator,
+        our_address=payer_channel.our_state.address,
     )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
     lockedtransfer_event = channel.send_lockedtransfer(

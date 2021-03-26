@@ -50,11 +50,12 @@ def prune_route_table(
     route_states: List[RouteState],
     selected_route: RouteState,
     initiator_address: InitiatorAddress,
+    our_address: Address,
 ) -> List[RouteState]:
     """Given a selected route, returns a filtered route table that
     contains only routes using the same forward channel and removes our own
     address in the process.
-    Our address is also removed from the address metadata, if we are not the initiator
+    The previous hop's address is removed from the address metadata, if it was not the initiator
     """
 
     pruned_routes = list()
@@ -64,11 +65,15 @@ def prune_route_table(
             # remove the head address from the route
             route = route_state.route[1:]
 
-            address_metadata = route_state.address_to_metadata.copy()
-            route_head_address = route_state.route[0]
-            if route_head_address != Address(initiator_address):
-                #  the target needs to receive the initiator's metadata,
-                #  so only remove the metadate when this is a hop
-                address_metadata.pop(route_head_address, None)
-            pruned_routes.append(RouteState(route=route, address_to_metadata=address_metadata))
+            include_addresses = {*route, Address(initiator_address), our_address}
+            # prune the address metadata, this will mainly be the previous hop's metadata,
+            # if it is not the initiator
+            pruned_address_metadata = {
+                address: route_state.address_to_metadata[address]
+                for address in route_state.address_to_metadata.keys() & include_addresses
+            }
+
+            pruned_routes.append(
+                RouteState(route=route, address_to_metadata=pruned_address_metadata)
+            )
     return pruned_routes
