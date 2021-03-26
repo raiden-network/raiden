@@ -219,7 +219,7 @@ filelock==3.0.12
     # via -r requirements-dev.txt
 flake8-bugbear==21.3.2
     # via -r requirements-dev.txt
-flake8-comprehensions==3.3.1
+flake8-comprehensions==3.4.0
     # via -r requirements-dev.txt
 flake8-tuple==0.4.1
     # via -r requirements-dev.txt
@@ -284,12 +284,7 @@ idna==2.8
 importlib-metadata==3.7.3
     # via
     #   -r requirements-dev.txt
-    #   flake8
-    #   flake8-comprehensions
-    #   jsonschema
     #   pluggy
-    #   pyinstaller
-    #   pytest
 incremental==17.5.0
     # via
     #   -r requirements-dev.txt
@@ -687,19 +682,15 @@ twisted[tls]==21.2.0
 typed-ast==1.4.0
     # via
     #   -r requirements-dev.txt
-    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements-dev.txt
     #   black
-    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
-    #   structlog
-    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements-dev.txt
