@@ -232,7 +232,8 @@ def handle_unlock(
 ) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles a ReceiveUnlock state change. """
 
-    is_valid, events, _ = channel.handle_unlock(channel_state, state_change)
+    recipient_metadata = target_state.from_hop.address_metadata
+    is_valid, events, _ = channel.handle_unlock(channel_state, state_change, recipient_metadata)
     next_target_state: Optional[TargetTransferState] = target_state
 
     if is_valid:

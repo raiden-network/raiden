@@ -1399,7 +1399,12 @@ def handle_unlock(
             channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
             if channel_state:
-                is_valid, channel_events, _ = channel.handle_unlock(channel_state, state_change)
+                recipient_metadata = get_address_metadata(
+                    balance_proof_sender, mediator_state.routes
+                )
+                is_valid, channel_events, _ = channel.handle_unlock(
+                    channel_state, state_change, recipient_metadata
+                )
                 events.extend(channel_events)
 
                 if is_valid:
