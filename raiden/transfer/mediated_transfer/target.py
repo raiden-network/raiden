@@ -2,7 +2,7 @@ import random
 
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
-from raiden.transfer.events import EventPaymentReceivedSuccess, SendProcessed
+from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
@@ -231,7 +231,6 @@ def handle_unlock(
     channel_state: NettingChannelState,
 ) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles a ReceiveUnlock state change. """
-    balance_proof_sender = state_change.balance_proof.sender
 
     is_valid, events, _ = channel.handle_unlock(channel_state, state_change)
     next_target_state: Optional[TargetTransferState] = target_state
@@ -250,14 +249,7 @@ def handle_unlock(
             transfer.payment_identifier, transfer.lock.secrethash
         )
 
-        send_processed = SendProcessed(
-            recipient=balance_proof_sender,
-            recipient_metadata=None,
-            message_identifier=state_change.message_identifier,
-            canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
-        )
-
-        events.extend([payment_received_success, unlock_success, send_processed])
+        events.extend([payment_received_success, unlock_success])
         next_target_state = None
 
     return TransitionResult(next_target_state, events)
