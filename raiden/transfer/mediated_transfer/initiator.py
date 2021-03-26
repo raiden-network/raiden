@@ -342,6 +342,8 @@ def send_lockedtransfer(
         payment_amount=transfer_description.amount, estimated_fee=route_state.estimated_fee
     )
 
+    recipient_address = channel_state.partner_state.address
+    recipient_metadata = get_address_metadata(recipient_address, route_states)
     lockedtransfer_event = channel.send_lockedtransfer(
         channel_state=channel_state,
         initiator=transfer_description.initiator,
@@ -355,6 +357,7 @@ def send_lockedtransfer(
             route_states=route_states,
             selected_route=route_state,
         ),
+        recipient_metadata=recipient_metadata,
     )
     return lockedtransfer_event
 

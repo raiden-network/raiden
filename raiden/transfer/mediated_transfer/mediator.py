@@ -45,6 +45,7 @@ from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
+    AddressMetadata,
     BlockExpiration,
     BlockHash,
     BlockNumber,
@@ -414,6 +415,9 @@ def forward_transfer_pair(
         selected_route=route_state,
     )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
+
+    recipient_address = payee_channel.partner_state.address
+    recipient_metadata = get_address_metadata(recipient_address, route_state_table)
     lockedtransfer_event = channel.send_lockedtransfer(
         channel_state=payee_channel,
         initiator=payer_transfer.initiator,
@@ -424,6 +428,7 @@ def forward_transfer_pair(
         expiration=payer_transfer.lock.expiration,
         secrethash=payer_transfer.lock.secrethash,
         route_states=route_states,
+        recipient_metadata=recipient_metadata,
     )
     mediated_events: List[Event] = [lockedtransfer_event]
 
@@ -442,6 +447,7 @@ def backward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
+    backward_partner_metadata: AddressMetadata = None,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
     """Sends a transfer backwards, allowing the previous hop to try a new
     route.
@@ -488,6 +494,7 @@ def backward_transfer_pair(
             expiration=lock.expiration,
             secrethash=lock.secrethash,
             route_state=backward_route_state,
+            recipient_metadata=backward_partner_metadata,
         )
 
         transfer_pair = MediationPairState(
@@ -1100,8 +1107,16 @@ def mediate_transfer(
         original_channel = payer_channel
 
     if original_channel:
+        backward_partner_address = original_channel.partner_state.address
+        backward_partner_metadata = get_address_metadata(
+            backward_partner_address, candidate_route_states
+        )
         refund_transfer_pair, refund_events = backward_transfer_pair(
-            original_channel, payer_transfer, pseudo_random_generator, block_number
+            original_channel,
+            payer_transfer,
+            pseudo_random_generator,
+            block_number,
+            backward_partner_metadata=backward_partner_metadata,
         )
         if refund_transfer_pair:
             state.transfers_pair.append(refund_transfer_pair)
