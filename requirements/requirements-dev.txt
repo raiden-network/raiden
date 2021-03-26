@@ -253,7 +253,11 @@ idna==2.8
 importlib-metadata==3.7.3
     # via
     #   -r requirements.txt
+    #   flake8
+    #   flake8-comprehensions
+    #   jsonschema
     #   pluggy
+    #   pytest
 incremental==17.5.0
     # via
     #   treq
@@ -479,7 +483,7 @@ pyyaml==5.1.1
     # via matrix-synapse
 raiden-api-client==1.1.0
     # via -r requirements-dev.in
-raiden-contracts==0.37.3
+raiden-contracts==0.37.4
     # via -r requirements.txt
 raiden-webui==1.1.1
     # via -r requirements.txt
@@ -573,15 +577,19 @@ twisted[tls]==21.2.0
     #   treq
 typed-ast==1.4.0
     # via
+    #   astroid
     #   black
     #   mypy
 typing-extensions==3.7.4.3
     # via
     #   -r requirements.txt
     #   black
+    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
+    #   structlog
+    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements.txt
