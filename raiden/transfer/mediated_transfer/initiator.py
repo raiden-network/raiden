@@ -347,8 +347,6 @@ def send_lockedtransfer(
         route_states=routes.prune_route_table(
             route_states=route_states,
             selected_route=route_state,
-            initiator_address=transfer_description.initiator,
-            our_address=channel_state.our_state.address,
         ),
     )
     return lockedtransfer_event
