@@ -68,9 +68,11 @@ from raiden.transfer.state_change import (
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
+    Any,
     BlockHash,
     BlockNumber,
     ChannelID,
+    Dict,
     List,
     Optional,
     SecretHash,
@@ -135,7 +137,7 @@ def subdispatch_to_all_channels(
 
 
 def subdispatch_by_canonical_id(
-    chain_state: ChainState, canonical_identifier: CanonicalIdentifier, state_change: StateChange
+    chain_state: ChainState, state_change: StateChange, canonical_identifier: CanonicalIdentifier
 ) -> TransitionResult[ChainState]:
     token_network_state = get_token_network_by_address(
         chain_state, canonical_identifier.token_network_address
@@ -661,8 +663,8 @@ def handle_receive_withdraw_request(
 ) -> TransitionResult[ChainState]:
     return subdispatch_by_canonical_id(
         chain_state=chain_state,
-        canonical_identifier=state_change.canonical_identifier,
         state_change=state_change,
+        canonical_identifier=state_change.canonical_identifier,
     )
 
 
@@ -671,8 +673,8 @@ def handle_receive_withdraw_confirmation(
 ) -> TransitionResult[ChainState]:
     iteration = subdispatch_by_canonical_id(
         chain_state=chain_state,
-        canonical_identifier=state_change.canonical_identifier,
         state_change=state_change,
+        canonical_identifier=state_change.canonical_identifier,
     )
     # Clean up any pending SendWithdrawRequest messages
     for queueid in list(chain_state.queueids_to_queues.keys()):
@@ -686,8 +688,8 @@ def handle_receive_withdraw_expired(
 ) -> TransitionResult[ChainState]:
     return subdispatch_by_canonical_id(
         chain_state=chain_state,
-        canonical_identifier=state_change.canonical_identifier,
         state_change=state_change,
+        canonical_identifier=state_change.canonical_identifier,
     )
 
 
@@ -747,109 +749,54 @@ def handle_receive_unlock(
 
 def handle_state_change(
     chain_state: ChainState, state_change: StateChange
-) -> TransitionResult[ChainState]:  # pragma: no cover
+) -> TransitionResult[ChainState]:
 
-    if type(state_change) == Block:
-        assert isinstance(state_change, Block), MYPY_ANNOTATION
-        iteration = handle_block(chain_state, state_change)
-    elif type(state_change) == ActionChannelClose:
-        assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ActionChannelWithdraw:
-        assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
-        iteration = subdispatch_by_canonical_id(
-            chain_state=chain_state,
-            canonical_identifier=state_change.canonical_identifier,
-            state_change=state_change,
-        )
-    elif type(state_change) == ActionChannelSetRevealTimeout:
-        assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
-        iteration = subdispatch_by_canonical_id(
-            chain_state=chain_state,
-            canonical_identifier=state_change.canonical_identifier,
-            state_change=state_change,
-        )
-    elif type(state_change) == ActionChangeNodeNetworkState:
-        assert isinstance(state_change, ActionChangeNodeNetworkState), MYPY_ANNOTATION
-        iteration = handle_action_change_node_network_state(chain_state, state_change)
-    elif type(state_change) == ActionInitInitiator:
-        assert isinstance(state_change, ActionInitInitiator), MYPY_ANNOTATION
-        iteration = handle_action_init_initiator(chain_state, state_change)
-    elif type(state_change) == ActionInitMediator:
-        assert isinstance(state_change, ActionInitMediator), MYPY_ANNOTATION
-        iteration = handle_action_init_mediator(chain_state, state_change)
-    elif type(state_change) == ActionInitTarget:
-        assert isinstance(state_change, ActionInitTarget), MYPY_ANNOTATION
-        iteration = handle_action_init_target(chain_state, state_change)
-    elif type(state_change) == ReceiveTransferCancelRoute:
-        assert isinstance(state_change, ReceiveTransferCancelRoute), MYPY_ANNOTATION
-        iteration = handle_receive_transfer_cancel_route(chain_state, state_change)
-    elif type(state_change) == ActionTransferReroute:
-        assert isinstance(state_change, ActionTransferReroute), MYPY_ANNOTATION
-        iteration = handle_action_transfer_reroute(chain_state, state_change)
-    elif type(state_change) == ContractReceiveNewTokenNetworkRegistry:
-        assert isinstance(state_change, ContractReceiveNewTokenNetworkRegistry), MYPY_ANNOTATION
-        iteration = handle_contract_receive_new_token_network_registry(chain_state, state_change)
-    elif type(state_change) == ContractReceiveNewTokenNetwork:
-        assert isinstance(state_change, ContractReceiveNewTokenNetwork), MYPY_ANNOTATION
-        iteration = handle_contract_receive_new_token_network(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelBatchUnlock:
-        assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelNew:
-        assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelWithdraw:
-        assert isinstance(state_change, ContractReceiveChannelWithdraw), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelClosed:
-        assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
-        iteration = handle_contract_receive_channel_closed(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelDeposit:
-        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveChannelSettled:
-        assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ContractReceiveSecretReveal:
-        assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
-        iteration = handle_contract_receive_secret_reveal(chain_state, state_change)
-    elif type(state_change) == ContractReceiveUpdateTransfer:
-        assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
-        iteration = handle_token_network_action(chain_state, state_change)
-    elif type(state_change) == ReceiveDelivered:
-        assert isinstance(state_change, ReceiveDelivered), MYPY_ANNOTATION
-        iteration = handle_receive_delivered(chain_state, state_change)
-    elif type(state_change) == ReceiveSecretReveal:
-        assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
-        iteration = handle_receive_secret_reveal(chain_state, state_change)
-    elif type(state_change) == ReceiveTransferRefund:
-        assert isinstance(state_change, ReceiveTransferRefund), MYPY_ANNOTATION
-        iteration = handle_receive_transfer_refund(chain_state, state_change)
-    elif type(state_change) == ReceiveSecretRequest:
-        assert isinstance(state_change, ReceiveSecretRequest), MYPY_ANNOTATION
-        iteration = handle_receive_secret_request(chain_state, state_change)
-    elif type(state_change) == ReceiveProcessed:
-        assert isinstance(state_change, ReceiveProcessed), MYPY_ANNOTATION
-        iteration = handle_receive_processed(chain_state, state_change)
-    elif type(state_change) == ReceiveUnlock:
-        assert isinstance(state_change, ReceiveUnlock), MYPY_ANNOTATION
-        iteration = handle_receive_unlock(chain_state, state_change)
-    elif type(state_change) == ReceiveLockExpired:
-        assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
-        iteration = handle_receive_lock_expired(chain_state, state_change)
-    elif type(state_change) == ReceiveWithdrawRequest:
-        assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw_request(chain_state, state_change)
-    elif type(state_change) == ReceiveWithdrawConfirmation:
-        assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw_confirmation(chain_state, state_change)
-    elif type(state_change) == ReceiveWithdrawExpired:
-        assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw_expired(chain_state, state_change)
-    elif type(state_change) == UpdateServicesAddressesStateChange:
-        assert isinstance(state_change, UpdateServicesAddressesStateChange), MYPY_ANNOTATION
-        iteration = handle_update_services_addresses_state_change(chain_state, state_change)
+    canonical_identifier = None
+    if isinstance(state_change, (ActionChannelWithdraw, ActionChannelSetRevealTimeout)):
+        canonical_identifier = state_change.canonical_identifier
+
+    state_change_map: Dict[Any, List] = {
+        Block: [handle_block, []],
+        ActionChannelClose: [handle_token_network_action, []],
+        ActionChannelWithdraw: [subdispatch_by_canonical_id, [canonical_identifier]],
+        ActionChannelSetRevealTimeout: [subdispatch_by_canonical_id, [canonical_identifier]],
+        ActionChangeNodeNetworkState: [handle_action_change_node_network_state, []],
+        ActionInitInitiator: [handle_action_init_initiator, []],
+        ActionInitMediator: [handle_action_init_mediator, []],
+        ActionInitTarget: [handle_action_init_target, []],
+        ReceiveTransferCancelRoute: [handle_receive_transfer_cancel_route, []],
+        ActionTransferReroute: [handle_action_transfer_reroute, []],
+        ContractReceiveNewTokenNetworkRegistry: [
+            handle_contract_receive_new_token_network_registry,
+            [],
+        ],
+        ContractReceiveNewTokenNetwork: [handle_contract_receive_new_token_network, []],
+        ContractReceiveChannelBatchUnlock: [handle_token_network_action, []],
+        ContractReceiveChannelNew: [handle_token_network_action, []],
+        ContractReceiveChannelWithdraw: [handle_token_network_action, []],
+        ContractReceiveChannelClosed: [handle_contract_receive_channel_closed, []],
+        ContractReceiveChannelDeposit: [handle_token_network_action, []],
+        ContractReceiveChannelSettled: [handle_token_network_action, []],
+        ContractReceiveSecretReveal: [handle_contract_receive_secret_reveal, []],
+        ContractReceiveUpdateTransfer: [handle_token_network_action, []],
+        ReceiveDelivered: [handle_receive_delivered, []],
+        ReceiveSecretReveal: [handle_receive_secret_reveal, []],
+        ReceiveTransferRefund: [handle_receive_transfer_refund, []],
+        ReceiveSecretRequest: [handle_receive_secret_request, []],
+        ReceiveProcessed: [handle_receive_processed, []],
+        ReceiveUnlock: [handle_receive_unlock, []],
+        ReceiveLockExpired: [handle_receive_lock_expired, []],
+        ReceiveWithdrawRequest: [handle_receive_withdraw_request, []],
+        ReceiveWithdrawConfirmation: [handle_receive_withdraw_confirmation, []],
+        ReceiveWithdrawExpired: [handle_receive_withdraw_expired, []],
+        UpdateServicesAddressesStateChange: [handle_update_services_addresses_state_change, []],
+    }
+
+    t_state_change = type(state_change)
+
+    if t_state_change in state_change_map:
+        func, args = state_change_map[t_state_change]
+        iteration = func(chain_state, state_change, *args)
     else:
         iteration = TransitionResult(chain_state, [])
 

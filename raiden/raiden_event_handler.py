@@ -75,7 +75,7 @@ from raiden.transfer.views import (
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
-from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, Dict, List, Nonce
+from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, Any, Dict, List, Nonce
 from raiden_contracts.constants import MessageTypeId
 
 if TYPE_CHECKING:
@@ -159,77 +159,44 @@ class RaidenEventHandler(EventHandler):
     ) -> None:  # pragma: no unittest
         message_queues: Dict[QueueIdentifier, List[Message]] = defaultdict(list)
 
+        event_handler_map: Dict[Any, List] = {
+            SendLockExpired: [self.handle_send_lockexpired, [message_queues]],
+            SendLockedTransfer: [self.handle_send_lockedtransfer, [message_queues]],
+            SendSecretReveal: [self.handle_send_secretreveal, [message_queues]],
+            SendUnlock: [self.handle_send_balanceproof, [message_queues]],
+            SendSecretRequest: [self.handle_send_secretrequest, [chain_state, message_queues]],
+            SendRefundTransfer: [self.handle_send_refundtransfer, [message_queues]],
+            SendWithdrawRequest: [self.handle_send_withdrawrequest, [message_queues]],
+            SendWithdrawConfirmation: [self.handle_send_withdraw, [message_queues]],
+            SendWithdrawExpired: [self.handle_send_withdrawexpired, [message_queues]],
+            SendProcessed: [self.handle_send_processed, [message_queues]],
+            EventPaymentSentSuccess: [self.handle_paymentsentsuccess, []],
+            EventPaymentSentFailed: [self.handle_paymentsentfailed, []],
+            EventUnlockFailed: [self.handle_unlockfailed, []],
+            EventInvalidSecretRequest: [self.handle_invalidsecretrequest, []],
+            ContractSendSecretReveal: [self.handle_contract_send_secretreveal, []],
+            ContractSendChannelClose: [self.handle_contract_send_channelclose, [chain_state]],
+            ContractSendChannelUpdateTransfer: [self.handle_contract_send_channelupdate, []],
+            ContractSendChannelBatchUnlock: [
+                self.handle_contract_send_channelunlock,
+                [chain_state],
+            ],
+            ContractSendChannelSettle: [self.handle_contract_send_channelsettle, []],
+            ContractSendChannelWithdraw: [self.handle_contract_send_channelwithdraw, []],
+            UpdateServicesAddresses: [self.handle_update_services_addresses, []],
+        }
+
         for event in events:
-            # pylint: disable=too-many-branches
-            if type(event) == SendLockExpired:
-                assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
-                self.handle_send_lockexpired(raiden, event, message_queues)
-            elif type(event) == SendLockedTransfer:
-                assert isinstance(event, SendLockedTransfer), MYPY_ANNOTATION
-                self.handle_send_lockedtransfer(raiden, event, message_queues)
-            elif type(event) == SendSecretReveal:
-                assert isinstance(event, SendSecretReveal), MYPY_ANNOTATION
-                self.handle_send_secretreveal(raiden, event, message_queues)
-            elif type(event) == SendUnlock:
-                assert isinstance(event, SendUnlock), MYPY_ANNOTATION
-                self.handle_send_balanceproof(raiden, event, message_queues)
-            elif type(event) == SendSecretRequest:
-                assert isinstance(event, SendSecretRequest), MYPY_ANNOTATION
-                self.handle_send_secretrequest(raiden, chain_state, event, message_queues)
-            elif type(event) == SendRefundTransfer:
-                assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
-                self.handle_send_refundtransfer(raiden, event, message_queues)
-            elif type(event) == SendWithdrawRequest:
-                assert isinstance(event, SendWithdrawRequest), MYPY_ANNOTATION
-                self.handle_send_withdrawrequest(raiden, event, message_queues)
-            elif type(event) == SendWithdrawConfirmation:
-                assert isinstance(event, SendWithdrawConfirmation), MYPY_ANNOTATION
-                self.handle_send_withdraw(raiden, event, message_queues)
-            elif type(event) == SendWithdrawExpired:
-                assert isinstance(event, SendWithdrawExpired), MYPY_ANNOTATION
-                self.handle_send_withdrawexpired(raiden, event, message_queues)
-            elif type(event) == SendProcessed:
-                assert isinstance(event, SendProcessed), MYPY_ANNOTATION
-                self.handle_send_processed(raiden, event, message_queues)
-            elif type(event) == EventPaymentSentSuccess:
-                assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
-                self.handle_paymentsentsuccess(raiden, event)
-            elif type(event) == EventPaymentSentFailed:
-                assert isinstance(event, EventPaymentSentFailed), MYPY_ANNOTATION
-                self.handle_paymentsentfailed(raiden, event)
-            elif type(event) == EventUnlockFailed:
-                assert isinstance(event, EventUnlockFailed), MYPY_ANNOTATION
-                self.handle_unlockfailed(raiden, event)
-            elif type(event) == EventInvalidSecretRequest:
-                assert isinstance(event, EventInvalidSecretRequest), MYPY_ANNOTATION
-                self.handle_invalidsecretrequest(raiden, event)
-            elif type(event) == ContractSendSecretReveal:
-                assert isinstance(event, ContractSendSecretReveal), MYPY_ANNOTATION
-                self.handle_contract_send_secretreveal(raiden, event)
-            elif type(event) == ContractSendChannelClose:
-                assert isinstance(event, ContractSendChannelClose), MYPY_ANNOTATION
-                self.handle_contract_send_channelclose(raiden, chain_state, event)
-            elif type(event) == ContractSendChannelUpdateTransfer:
-                assert isinstance(event, ContractSendChannelUpdateTransfer), MYPY_ANNOTATION
-                self.handle_contract_send_channelupdate(raiden, event)
-            elif type(event) == ContractSendChannelBatchUnlock:
-                assert isinstance(event, ContractSendChannelBatchUnlock), MYPY_ANNOTATION
-                self.handle_contract_send_channelunlock(raiden, chain_state, event)
-            elif type(event) == ContractSendChannelSettle:
-                assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
-                self.handle_contract_send_channelsettle(raiden, event)
-            elif type(event) == ContractSendChannelWithdraw:
-                assert isinstance(event, ContractSendChannelWithdraw), MYPY_ANNOTATION
-                self.handle_contract_send_channelwithdraw(raiden, event)
-            elif type(event) == UpdateServicesAddresses:
-                assert isinstance(event, UpdateServicesAddresses), MYPY_ANNOTATION
-                self.handle_update_services_addresses(raiden, event)
-            elif type(event) in UNEVENTFUL_EVENTS:
+            t_event = type(event)
+            if t_event in event_handler_map:
+                method, args = event_handler_map[t_event]
+                method(raiden, event, *args)
+            elif t_event in UNEVENTFUL_EVENTS:
                 pass
             else:
                 log.error(
                     "Unknown event",
-                    event_type=str(type(event)),
+                    event_type=str(t_event),
                     node=to_checksum_address(raiden.address),
                 )
 
@@ -282,8 +249,8 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_send_secretrequest(
         raiden: "RaidenService",
-        chain_state: ChainState,
         secret_request_event: SendSecretRequest,
+        chain_state: ChainState,
         message_queues: Dict[QueueIdentifier, List[Message]],
     ) -> None:  # pragma: no unittest
         if reveal_secret_with_resolver(raiden, chain_state, secret_request_event):
@@ -447,8 +414,8 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_channelclose(
         raiden: "RaidenService",
-        chain_state: ChainState,
         channel_close_event: ContractSendChannelClose,
+        chain_state: ChainState,
     ) -> None:
         balance_proof = channel_close_event.balance_proof
 
@@ -552,8 +519,8 @@ class RaidenEventHandler(EventHandler):
     @staticmethod
     def handle_contract_send_channelunlock(
         raiden: "RaidenService",
-        chain_state: ChainState,
         channel_unlock_event: ContractSendChannelBatchUnlock,
+        chain_state: ChainState,
     ) -> None:
         """Potentially unlock locked tokens after settlement
 
