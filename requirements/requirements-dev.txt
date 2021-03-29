@@ -424,7 +424,7 @@ pyee==7.0.2
     #   aiortc
 pyflakes==2.3.1
     # via flake8
-pygments==2.6.1
+pygments==2.7.4
     # via
     #   ipython
     #   pdbpp
