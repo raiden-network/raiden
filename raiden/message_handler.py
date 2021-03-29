@@ -42,15 +42,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import (
-    MYPY_ANNOTATION,
-    TYPE_CHECKING,
-    Address,
-    List,
-    Set,
-    TargetAddress,
-    Tuple,
-)
+from raiden.utils.typing import TYPE_CHECKING, Address, List, Set, TargetAddress, Tuple
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -71,53 +63,26 @@ class MessageHandler:
 
         pool = Pool()
 
+        handler_map = {
+            SecretRequest: self.handle_message_secretrequest,
+            RevealSecret: self.handle_message_revealsecret,
+            Unlock: self.handle_message_unlock,
+            LockExpired: self.handle_message_lockexpired,
+            RefundTransfer: self.handle_message_refundtransfer,
+            LockedTransfer: self.handle_message_lockedtransfer,
+            WithdrawRequest: self.handle_message_withdrawrequest,
+            WithdrawConfirmation: self.handle_message_withdraw_confirmation,
+            WithdrawExpired: self.handle_message_withdraw_expired,
+            Delivered: self.handle_message_delivered,
+            Processed: self.handle_message_processed,
+        }
+
         for message in unique_messages:
-            if type(message) == SecretRequest:
-                assert isinstance(message, SecretRequest), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_secretrequest, (raiden, message))
-
-            elif type(message) == RevealSecret:
-                assert isinstance(message, RevealSecret), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_revealsecret, (raiden, message))
-
-            elif type(message) == Unlock:
-                assert isinstance(message, Unlock), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_unlock, (raiden, message))
-
-            elif type(message) == LockExpired:
-                assert isinstance(message, LockExpired), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_lockexpired, (raiden, message))
-
-            elif type(message) == RefundTransfer:
-                assert isinstance(message, RefundTransfer), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_refundtransfer, (raiden, message))
-
-            elif type(message) == LockedTransfer:
-                assert isinstance(message, LockedTransfer), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_lockedtransfer, (raiden, message))
-
-            elif type(message) == WithdrawRequest:
-                assert isinstance(message, WithdrawRequest), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_withdrawrequest, (raiden, message))
-
-            elif type(message) == WithdrawConfirmation:
-                assert isinstance(message, WithdrawConfirmation), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_withdraw_confirmation, (raiden, message))
-
-            elif type(message) == WithdrawExpired:
-                assert isinstance(message, WithdrawExpired), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_withdraw_expired, (raiden, message))
-
-            elif type(message) == Delivered:
-                assert isinstance(message, Delivered), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_delivered, (raiden, message))
-
-            elif type(message) == Processed:
-                assert isinstance(message, Processed), MYPY_ANNOTATION
-                pool.apply_async(self.handle_message_processed, (raiden, message))
-
-            else:
+            t_message = type(message)
+            if t_message not in handler_map:
                 log.error(f"Unknown message cmdid {message.cmdid}")
+                continue
+            pool.apply_async(handler_map[t_message], (raiden, message))
 
         all_state_changes: List[StateChange] = list()
         for greenlet in joinall(set(pool), raise_error=True):
