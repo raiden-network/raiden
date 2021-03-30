@@ -200,8 +200,12 @@ def initiator_init(
     )
 
     error_msg = None
-
     if route_states is None:
+        our_address_metadata = raiden.transport.address_metadata
+
+        msg = "Transport is not initialized with raiden-service"
+        assert our_address_metadata is not None, msg
+
         error_msg, route_states, feedback_token = routing.get_best_routes(
             chain_state=views.state_from_raiden(raiden),
             token_network_address=token_network_address,
@@ -212,6 +216,7 @@ def initiator_init(
             previous_address=None,
             pfs_config=raiden.config.pfs_config,
             privkey=raiden.privkey,
+            our_address_metadata=our_address_metadata,
         )
 
         # Only prepare feedback when token is available

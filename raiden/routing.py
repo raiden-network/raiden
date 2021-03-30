@@ -4,12 +4,14 @@ import structlog
 from eth_utils import to_canonical_address
 
 from raiden.exceptions import ServiceRequestFailed
-from raiden.network.pathfinding import PFSConfig, query_paths
+from raiden.messages.metadata import RouteMetadata
+from raiden.network.pathfinding import PFSConfig, query_address_metadata, query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     BlockNumber,
     FeeAmount,
     InitiatorAddress,
@@ -37,6 +39,7 @@ def get_best_routes(
     previous_address: Optional[Address],
     pfs_config: Optional[PFSConfig],
     privkey: PrivateKey,
+    our_address_metadata: AddressMetadata,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
 
     token_network = views.get_token_network_by_address(chain_state, token_network_address)
@@ -64,11 +67,20 @@ def get_best_routes(
             )
 
             if is_usable is channel.ChannelUsability.USABLE:
-                # FIXME query address_metadata from direct endpoint on PFS
+                address_to_address_metadata = {Address(from_address): our_address_metadata}
+                try:
+                    address_metadata = query_address_metadata(pfs_config, to_address)
+                    if address_metadata:
+                        address_to_address_metadata[Address(to_address)] = address_metadata
+                except ServiceRequestFailed as ex:
+                    log.warning(
+                        f"PFS returned an error while trying to fetch user information: \n{ex}"
+                    )
+
                 direct_route = RouteState(
                     route=[Address(from_address), Address(to_address)],
-                    address_to_metadata={},
                     estimated_fee=FeeAmount(0),
+                    address_to_metadata=address_to_address_metadata,
                 )
                 return None, [direct_route], None
 
