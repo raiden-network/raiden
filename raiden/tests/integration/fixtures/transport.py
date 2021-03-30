@@ -12,8 +12,16 @@ from raiden.settings import (
 )
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
+from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import Iterable, Optional, Tuple
+from raiden.utils.typing import (
+    AddressMetadata,
+    Iterable,
+    Optional,
+    PeerCapabilities,
+    Tuple,
+    UserID,
+)
 
 
 @pytest.fixture(scope="session")
@@ -23,11 +31,17 @@ def synapse_config_generator():
 
 
 @pytest.fixture(autouse=True)
-def query_user_mock(local_matrix_servers, monkeypatch):
-    def query_user(_pfs_config, user_address):
-        return f"@0x{user_address.hex()}:{local_matrix_servers[0]}"
+def query_address_metadata_mock(local_matrix_servers, capabilities, monkeypatch):
+    def query_address_metadata(_pfs_config, user_address):
+        server_name = local_matrix_servers[0]
+        return AddressMetadata(
+            dict(
+                user_id=UserID(f"@0x{user_address.hex()}:{server_name}"),
+                capabilities=PeerCapabilities(capconfig_to_dict(capabilities)),
+            )
+        )
 
-    monkeypatch.setattr("raiden.routing.query_user", query_user)
+    monkeypatch.setattr("raiden.routing.query_address_metadata", query_address_metadata)
 
 
 @pytest.fixture
