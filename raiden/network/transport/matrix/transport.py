@@ -91,6 +91,7 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
+    PeerCapabilities,
     RoomID,
     Set,
     Tuple,
@@ -516,9 +517,17 @@ class MatrixTransport(Runnable):
         return self._raiden_service.address if self._raiden_service else None
 
     @property
-    def user_id(self) -> Optional[str]:
+    def user_id(self) -> Optional[UserID]:
         address = self._node_address
         return make_user_id(address, self._server_name) if address is not None else None
+
+    @property
+    def address_metadata(self) -> Optional[AddressMetadata]:
+        own_caps = PeerCapabilities(capconfig_to_dict(self._config.capabilities_config))
+        own_user_id = self.user_id
+        if own_user_id is None:
+            return None
+        return dict(user_id=own_user_id, capabilities=own_caps)
 
     def start(  # type: ignore
         self,
