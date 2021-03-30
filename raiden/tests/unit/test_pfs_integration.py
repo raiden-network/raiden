@@ -25,23 +25,29 @@ from raiden.network.pathfinding import (
     session,
     update_iou,
 )
+from raiden.network.transport.matrix.utils import make_user_id
 from raiden.routing import get_best_routes
+from raiden.settings import CapabilitiesConfig
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
 from raiden.transfer.state import NettingChannelState, NetworkState, TokenNetworkState
 from raiden.utils import typing
+from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     Any,
     BlockNumber,
     BlockTimeout,
     ChainID,
     Dict,
     PaymentAmount,
+    PeerCapabilities,
     TokenAmount,
     TokenNetworkAddress,
+    UserID,
 )
 
 DEFAULT_FEEDBACK_TOKEN = UUID("381e4a005a4d4687ac200fa1acd15c6f")
@@ -50,6 +56,13 @@ DEFAULT_FEEDBACK_TOKEN = UUID("381e4a005a4d4687ac200fa1acd15c6f")
 def assert_checksum_address_in_url(url):
     message = "URL does not contain properly encoded address."
     assert any(is_checksum_address(token) for token in url.split("/")), message
+
+
+def make_address_metadata(address) -> AddressMetadata:
+    return dict(
+        user_id=UserID(make_user_id(address, "homeserver")),
+        capabilities=PeerCapabilities(capconfig_to_dict(CapabilitiesConfig())),
+    )
 
 
 def create_square_network_topology(
@@ -133,6 +146,7 @@ def get_best_routes_with_iou_request_mocked(
     from_address,
     to_address,
     amount,
+    our_address_metadata,
     iou_json_data=None,
 ):
     def iou_side_effect(*args, **kwargs):
@@ -178,6 +192,7 @@ def get_best_routes_with_iou_request_mocked(
             previous_address=None,
             pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
+            our_address_metadata=our_address_metadata,
         )
         assert_checksum_address_in_url(patched.call_args[0][0])
         return best_routes, feedback_token
@@ -229,6 +244,7 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
         )
 
     assert_checksum_address_in_url(patched.call_args[0][0])
@@ -271,6 +287,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
             iou_json_data=dict(last_iou=last_iou.as_json()),
         )
 
@@ -313,6 +330,7 @@ def test_routing_mocked_pfs_request_error(
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -359,6 +377,7 @@ def test_routing_mocked_pfs_bad_http_code(
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -390,6 +409,7 @@ def test_routing_mocked_pfs_invalid_json(
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -421,6 +441,7 @@ def test_routing_mocked_pfs_invalid_json_structure(
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -467,6 +488,7 @@ def test_routing_mocked_pfs_unavailable_peer(
             from_address=our_address,
             to_address=address4,
             amount=50,
+            our_address_metadata=make_address_metadata(our_address),
         )
         # Node with address2 is not reachable, so even if the only route sent by the PFS
         # is over address2, the internal routing does not provide
@@ -661,7 +683,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
     # with the transfer of 50 the direct channel should be returned,
     # so there must be not a route request to the pfs
     with patch("raiden.routing.get_best_routes_pfs") as pfs_route_request, patch(
-        "raiden.routing.query_user"
+        "raiden.routing.query_address_metadata"
     ) as pfs_user_request:
         pfs_route_request.return_value = None, [], "feedback_token"
         _, routes, _ = get_best_routes(
@@ -674,6 +696,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             previous_address=None,
             pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
+            our_address_metadata=make_address_metadata(our_address),
         )
         assert routes[0].next_hop_address == address1
         assert not pfs_route_request.called
@@ -693,6 +716,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             previous_address=None,
             pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
+            our_address_metadata=make_address_metadata(our_address),
         )
 
         assert pfs_request.called
