@@ -37,6 +37,7 @@ from raiden.utils.system import get_system_spec
 from raiden.utils.transfers import to_rdn
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     Any,
     BlockExpiration,
     BlockIdentifier,
@@ -541,14 +542,14 @@ def post_pfs_paths(
         )
 
 
-def query_user(
+def query_address_metadata(
     pfs_config: PFSConfig,
     user_address: Union[Address, TargetAddress],
-) -> str:
+) -> AddressMetadata:
     """ Get the matrix user_id for the given address from the PFS """
     try:
         response = session.get(
-            f"{pfs_config.info.url}/api/v1/user/{to_checksum_address(user_address)}",
+            f"{pfs_config.info.url}/api/v1/address/{to_checksum_address(user_address)}/metadata",
         )
     except RequestException as e:
         raise ServiceRequestFailed(
@@ -567,7 +568,7 @@ def query_user(
     if response.status_code != 200:
         raise PFSReturnedError.from_response(response_json)
 
-    return response_json["user_id"]
+    return response_json
 
 
 def query_paths(
