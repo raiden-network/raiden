@@ -17,13 +17,14 @@ from raiden.network.pathfinding import (
     PFSInfo,
     check_pfs_for_production,
     configure_pfs_or_exit,
-    query_user,
+    query_address_metadata,
     session,
 )
-from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
+from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE, CapabilitiesConfig
 from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_OUR_ADDRESS, make_address
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
+from raiden.utils.capabilities import capconfig_to_dict, capdict_to_config
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     BlockNumber,
@@ -221,20 +222,24 @@ def test_query_user():
         # success
         response = session_mock.get.return_value
         response.status_code = 200
-        response.content = json.dumps({"user_id": matrix_user_id})
-        assert query_user(pfs_config, UNIT_OUR_ADDRESS) == matrix_user_id
+        capabilities = CapabilitiesConfig()
+        metadata_dict = dict(user_id=matrix_user_id, capabilities=capconfig_to_dict(capabilities))
+        response.content = json.dumps(metadata_dict)
+        return_metadata = query_address_metadata(pfs_config, UNIT_OUR_ADDRESS)
+        assert return_metadata.get("user_id") == matrix_user_id
+        assert capdict_to_config(return_metadata["capabilities"]) == capabilities
 
         # malformed response
         response = session_mock.get.return_value
         response.status_code = 200
         response.content = "{wrong"
         with pytest.raises(ServiceRequestFailed):
-            query_user(pfs_config, UNIT_OUR_ADDRESS)
+            query_address_metadata(pfs_config, UNIT_OUR_ADDRESS)
 
         # error response
         response = session_mock.get.return_value
         response.status_code = 400
         response.content = json.dumps({"error_code": 123})
         with pytest.raises(PFSReturnedError) as exc_info:
-            query_user(pfs_config, UNIT_OUR_ADDRESS)
+            query_address_metadata(pfs_config, UNIT_OUR_ADDRESS)
             assert exc_info.value["error_code"] == 123
