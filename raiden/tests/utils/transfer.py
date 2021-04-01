@@ -189,7 +189,7 @@ def transfer(
     """Nice to read shortcut to make successful mediated transfer.
 
     Note:
-        Only the initiator and target are synched.
+        Only the initiator and target are synced.
     """
 
     if transfer_state is TransferState.UNLOCKED:
@@ -319,7 +319,6 @@ def _transfer_expired(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
-        route_states=[create_route_state_for_route([initiator_app, target_app], token_address)],
     )
 
     with Timeout(seconds=timeout):
@@ -365,7 +364,6 @@ def _transfer_secret_not_requested(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
-        route_states=[create_route_state_for_route([initiator_app, target_app], token_address)],
     )
 
     with Timeout(seconds=timeout):
