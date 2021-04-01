@@ -565,7 +565,7 @@ pytz==2019.1
     # via
     #   -r requirements-dev.txt
     #   flask-restful
-pyyaml==5.1.1
+pyyaml==5.4
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
