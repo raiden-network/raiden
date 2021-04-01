@@ -315,6 +315,7 @@ def _transfer_expired(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
+        route_states=[create_route_state_for_route([initiator_app, target_app], token_address)],
     )
 
     with Timeout(seconds=timeout):
@@ -360,6 +361,7 @@ def _transfer_secret_not_requested(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
+        route_states=[create_route_state_for_route([initiator_app, target_app], token_address)],
     )
 
     with Timeout(seconds=timeout):
