@@ -24,6 +24,7 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     block_offset_timeout,
+    create_route_state_for_route,
     get_channelstate,
     transfer,
 )
@@ -505,6 +506,7 @@ def test_channel_withdraw(
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
     )
     wait_for_unlock = bob_app.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
@@ -687,6 +689,7 @@ def test_settled_lock(
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[create_route_state_for_route([app0, app1], token_address)],
     )
 
     secret_available.wait()  # wait for the messages to be exchanged

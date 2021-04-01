@@ -45,10 +45,6 @@ def get_best_routes(
     token_network = views.get_token_network_by_address(chain_state, token_network_address)
     assert token_network, "The token network must be validated and exist."
 
-    if pfs_config is None or one_to_n_address is None:
-        log.warning("Pathfinding Service could not be used.")
-        return "Pathfinding Service could not be used.", list(), None
-
     # Always use a direct channel if available:
     # - There are no race conditions and the capacity is guaranteed to be
     #   available.
@@ -69,7 +65,9 @@ def get_best_routes(
             if is_usable is channel.ChannelUsability.USABLE:
                 address_to_address_metadata = {Address(from_address): our_address_metadata}
                 try:
-                    address_metadata = query_address_metadata(pfs_config, to_address)
+                    address_metadata = None
+                    if pfs_config is not None:
+                        address_metadata = query_address_metadata(pfs_config, to_address)
                     if address_metadata:
                         address_to_address_metadata[Address(to_address)] = address_metadata
                 except ServiceRequestFailed as ex:
@@ -83,6 +81,10 @@ def get_best_routes(
                     address_to_metadata=address_to_address_metadata,
                 )
                 return None, [direct_route], None
+
+    if pfs_config is None or one_to_n_address is None:
+        log.warning("Pathfinding Service could not be used.")
+        return "Pathfinding Service could not be used.", list(), None
 
     # Does any channel have sufficient capacity for the payment?
     channels = [
@@ -98,7 +100,7 @@ def get_best_routes(
         if is_usable is channel.ChannelUsability.USABLE:
             break
     else:
-        return ("You have no suitable channel to initiate this payment.", list(), None)
+        return "You have no suitable channel to initiate this payment.", list(), None
 
     # Make sure that the PFS knows about the last channel we opened
     latest_channel_opened_at = 0
