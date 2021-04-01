@@ -549,6 +549,7 @@ def test_clear_closed_queue(raiden_network: List[RaidenService], token_addresses
         target=TargetAddress(target),
         identifier=payment_identifier,
         secret=secret,
+        route_states=[create_route_state_for_route([app0, app1], token_address)],
     )
 
     app1.transport.stop()

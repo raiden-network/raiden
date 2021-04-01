@@ -16,6 +16,7 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     block_offset_timeout,
+    create_route_state_for_route,
     watch_for_unlock_failures,
 )
 from raiden.transfer import views
@@ -81,6 +82,7 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
             target=TargetAddress(app1.address),
             identifier=identifier,
             secret=secret,
+            route_states=[create_route_state_for_route([app0, app1], token_address)],
         )
 
     app0.stop()
