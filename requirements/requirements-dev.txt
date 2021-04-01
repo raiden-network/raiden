@@ -473,7 +473,7 @@ pytz==2019.1
     # via
     #   -r requirements.txt
     #   flask-restful
-pyyaml==5.1.1
+pyyaml==5.4
     # via matrix-synapse
 raiden-api-client==1.1.0
     # via -r requirements-dev.in
