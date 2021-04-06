@@ -1,7 +1,6 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Union
 
 import structlog
-from werkzeug.urls import url_decode, url_encode
 
 from raiden.constants import Capabilities
 from raiden.settings import CapabilitiesConfig
@@ -13,42 +12,6 @@ def _bool_to_binary(value: Any) -> str:
     if isinstance(value, bool):
         return "1" if value is True else "0"
     return value
-
-
-def _serialize(capdict: Optional[Dict[str, Any]]) -> str:
-    if capdict is None:
-        capdict = {}
-    for key in capdict:
-        capdict[key] = _bool_to_binary(capdict[key])
-    return url_encode(capdict)
-
-
-def serialize_capabilities(capdict: Optional[Dict[str, Any]]) -> str:
-    if not capdict:
-        return "mxc://"
-    return f"mxc://raiden.network/cap?{_serialize(capdict)}"
-
-
-def _strip_capstring(capstring: str) -> str:
-    if capstring.startswith("mxc://"):
-        capstring = capstring[6:]
-    _, _, capstring = capstring.rpartition("/")
-    _, _, capstring = capstring.rpartition("?")
-    return capstring
-
-
-def deserialize_capabilities(capstring: str) -> Dict[str, Any]:
-    capstring = _strip_capstring(capstring)
-    capdict = url_decode(capstring.encode())
-    capabilities: Dict[str, Any] = dict()
-    for key in capdict:
-        value = capdict.getlist(key, type=int_bool)
-        # reduce lists with one entry to just their element
-        if len(value) == 1:
-            capabilities[key] = value.pop()
-        else:
-            capabilities[key] = value
-    return capabilities
 
 
 def int_bool(value: str) -> Union[bool, str]:
