@@ -205,7 +205,9 @@ def test_get_state_change_with_balance_proof():
     mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
 
     action_init_mediator = ActionInitMediator(
-        route_states=[RouteState(route=[factories.make_address(), factories.make_address()])],
+        candidate_route_states=[
+            RouteState(route=[factories.make_address(), factories.make_address()])
+        ],
         from_hop=mediator_from_route,
         from_transfer=mediator_signed_transfer,
         balance_proof=mediator_signed_transfer.balance_proof,
