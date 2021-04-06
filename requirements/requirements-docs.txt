@@ -17,6 +17,7 @@ chardet==3.0.4
 docutils==0.14
     # via
     #   sphinx
+    #   sphinx-rtd-theme
     #   sphinxcontrib-httpexample
 idna==2.8
     # via requests
@@ -49,8 +50,6 @@ six==1.15.0
     #   sphinxcontrib-httpdomain
 snowballstemmer==1.2.1
     # via sphinx
-sphinx-rtd-theme==0.5.1
-    # via -r requirements-docs.in
 sphinx==3.5.3
     # via
     #   -r requirements-docs.in
@@ -59,6 +58,8 @@ sphinx==3.5.3
     #   sphinxcontrib-httpdomain
     #   sphinxcontrib-httpexample
     #   sphinxcontrib-images
+sphinx_rtd_theme==0.5.2
+    # via -r requirements-docs.in
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
 sphinxcontrib-devhelp==1.0.2
