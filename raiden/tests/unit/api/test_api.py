@@ -48,7 +48,6 @@ def test_initiator_task_view():
         secret=secret,
         secrethash=sha256_secrethash(secret),
     )
-    # FIXME: Metadata
     transfer_state = InitiatorTransferState(
         route=RouteState(route=[transfer.initiator, transfer.target], address_to_metadata={}),
         transfer_description=transfer_description,
@@ -87,7 +86,6 @@ def test_mediator_task_view():
         )
     )
     secrethash1 = payee_transfer.lock.secrethash
-    # FIXME: Metadata
     route_state = RouteState(route=[payee_transfer.target], address_to_metadata={})
 
     transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=[route_state])
