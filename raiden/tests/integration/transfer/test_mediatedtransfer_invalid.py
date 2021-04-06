@@ -122,7 +122,6 @@ def test_receive_lockedtransfer_invalidnonce(
 
     repeated_nonce = Nonce(1)
     expiration = reveal_timeout * 2
-    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -178,7 +177,6 @@ def test_receive_lockedtransfer_invalidsender(
     channel0 = get_channelstate(app0, app1, token_network_address)
     lock_amount = LockedAmount(10)
     expiration = reveal_timeout * 2
-    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -225,7 +223,6 @@ def test_receive_lockedtransfer_invalidrecipient(
     invalid_recipient = make_address()
     lock_amount = LockedAmount(10)
     expiration = reveal_timeout * 2
-    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
@@ -280,7 +277,6 @@ def test_received_lockedtransfer_closedchannel(
     lock_amount = LockedAmount(10)
     payment_identifier = PaymentID(1)
     expiration = reveal_timeout * 2
-    # FIXME: Metadata
     mediated_transfer_message = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),
