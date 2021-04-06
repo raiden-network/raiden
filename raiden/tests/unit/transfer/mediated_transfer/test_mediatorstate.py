@@ -855,7 +855,6 @@ def test_mediate_transfer():
 
     iteration = mediator.mediate_transfer(
         state=mediator_state,
-        candidate_route_states=route_states,
         payer_channel=channels[0],
         addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=pseudo_random_generator,
@@ -904,7 +903,6 @@ def test_swap():
 
     iteration = mediator.mediate_transfer(
         state=mediator_state,
-        candidate_route_states=route_states,
         payer_channel=tn1_channels[0],
         addresses_to_channel={
             **tn1_channels.addresses_to_channel(),
@@ -1221,7 +1219,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
 
     init_state_change = ActionInitMediator(
         # FIXME: Metadata
-        route_states=[
+        candidate_route_states=[
             RouteState(
                 route=[our_state.address, attacked_channel.partner_state.address],
                 address_to_metadata={},
@@ -1358,7 +1356,6 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
     iteration = mediator.mediate_transfer(
         mediator_state,
-        channels.get_routes(1),
         channels[0],
         channels.addresses_to_channel(),
         pseudo_random_generator,
@@ -1455,7 +1452,11 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                 canonical_identifier=factories.make_canonical_identifier(channel_identifier=2),
                 transferred_amount=TokenAmount(0),
                 message_identifier=MessageID(index),
-                routes=[[factories.UNIT_OUR_ADDRESS, channels.channels[1].partner_state.address]],
+                route_states=factories.create_route_states_from_routes(
+                    routes=[
+                        [factories.UNIT_OUR_ADDRESS, channels.channels[1].partner_state.address]
+                    ]
+                ),
             ),
             calculate_locksroot=True,
             allow_invalid=True,
@@ -1503,10 +1504,9 @@ def test_mediator_lock_expired_with_new_block():
         LockedTransferSignedStateProperties(initiator=HOP1, expiration=BlockExpiration(30)),
     )
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes(0))
     iteration1 = mediator.mediate_transfer(
         state=mediator_state,
-        candidate_route_states=channels.get_routes(0),
         payer_channel=channels[0],
         addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=pseudo_random_generator,
@@ -1561,10 +1561,9 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         LockedTransferSignedStateProperties(initiator=HOP1, expiration=BlockExpiration(30)),
     )
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes(1))
     iteration1 = mediator.mediate_transfer(
         state=mediator_state,
-        candidate_route_states=channels.get_routes(1),
         payer_channel=channels[0],
         addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=pseudo_random_generator,
@@ -1956,7 +1955,7 @@ def test_resume_waiting_transfer():
         mediator_state=None,
         state_change=ActionInitMediator(
             from_hop=from_hop,
-            route_states=possible_routes,
+            candidate_route_states=possible_routes,
             from_transfer=received_transfer,
             sender=payer_channel.partner_state.address,
             balance_proof=received_transfer.balance_proof,
@@ -2267,9 +2266,11 @@ def test_sanity_check_for_refund_transfer_with_fees():
         properties=LockedTransferSignedStateProperties(
             initiator=InitiatorAddress(UNIT_TRANSFER_SENDER),
             amount=from_transfer_amount,
-            routes=[
-                [factories.UNIT_OUR_ADDRESS, next_hop_address, factories.UNIT_TRANSFER_TARGET]
-            ],
+            route_states=factories.create_route_states_from_routes(
+                routes=[
+                    [factories.UNIT_OUR_ADDRESS, next_hop_address, factories.UNIT_TRANSFER_TARGET]
+                ]
+            ),
         ),
     )
 

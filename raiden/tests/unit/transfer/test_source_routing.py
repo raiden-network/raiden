@@ -271,7 +271,7 @@ def test_initiator_skips_used_routes():
             sender=bob,
             pkey=factories.HOP1_KEY,
             message_identifier=factories.make_message_identifier(),
-            routes=[],
+            route_states=[],
             secret=transfer.secret,
         )
     )
@@ -339,11 +339,13 @@ def test_mediator_skips_used_routes():
     locked_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
             expiration=10,
-            routes=[
-                [factories.UNIT_OUR_ADDRESS, bob, dave, factories.UNIT_TRANSFER_TARGET],
-                [factories.UNIT_OUR_ADDRESS, bob, eric, factories.UNIT_TRANSFER_TARGET],
-                [factories.UNIT_OUR_ADDRESS, charlie, eric, factories.UNIT_TRANSFER_TARGET],
-            ],
+            route_states=factories.create_route_states_from_routes(
+                [
+                    [factories.UNIT_OUR_ADDRESS, bob, dave, factories.UNIT_TRANSFER_TARGET],
+                    [factories.UNIT_OUR_ADDRESS, bob, eric, factories.UNIT_TRANSFER_TARGET],
+                    [factories.UNIT_OUR_ADDRESS, charlie, eric, factories.UNIT_TRANSFER_TARGET],
+                ]
+            ),
             canonical_identifier=channels.channels[0].canonical_identifier,
             pkey=factories.HOP1_KEY,
             sender=factories.HOP1,
