@@ -23,6 +23,7 @@ from eth_utils import (
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
+from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.constants import DeviceIDs
 from raiden.exceptions import (
     InvalidSignature,
@@ -41,7 +42,6 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
-from raiden.utils.capabilities import serialize_capabilities
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID, MessageID, Signature, T_UserID, UserID, typecheck
@@ -59,6 +59,7 @@ ROOM_NAME_PREFIX = "raiden"
 # content we chose a conservative value
 MATRIX_MAX_BATCH_SIZE = 50_000
 JSONResponse = Dict[str, Any]
+capabilities_schema = CapabilitiesSchema()
 
 
 class UserPresence(Enum):
@@ -207,7 +208,11 @@ def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Roo
 
 
 def first_login(
-    client: GMatrixClient, signer: Signer, username: str, cap_str: str, device_id: DeviceIDs
+    client: GMatrixClient,
+    signer: Signer,
+    username: str,
+    capabilities: Dict,
+    device_id: DeviceIDs,
 ) -> User:
     """Login within a server.
 
@@ -296,6 +301,7 @@ def first_login(
         current_capabilities = ""
 
     # Only set the capabilities if necessary.
+    cap_str = capabilities_schema.load(capabilities.get("capabilities", {}))
     if current_capabilities != cap_str:
         user.set_avatar_url(cap_str)
 
@@ -381,10 +387,10 @@ def login(
             )
 
     try:
-        capstr = serialize_capabilities(capabilities)
+        cap: Dict = capabilities_schema.dump(capabilities)
     except ValueError:
         raise Exception("error serializing")
-    return first_login(client, signer, username, capstr, device_id)
+    return first_login(client, signer, username, cap, device_id)
 
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())  # type: ignore # noqa E501
