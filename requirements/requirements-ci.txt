@@ -217,7 +217,7 @@ fancycompleter==0.8
     #   pdbpp
 filelock==3.0.12
     # via -r requirements-dev.txt
-flake8-bugbear==21.3.2
+flake8-bugbear==21.4.3
     # via -r requirements-dev.txt
 flake8-comprehensions==3.4.0
     # via -r requirements-dev.txt
