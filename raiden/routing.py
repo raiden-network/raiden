@@ -4,7 +4,6 @@ import structlog
 from eth_utils import to_canonical_address
 
 from raiden.exceptions import ServiceRequestFailed
-from raiden.messages.metadata import RouteMetadata
 from raiden.network.pathfinding import PFSConfig, query_address_metadata, query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChainState, ChannelState, RouteState
