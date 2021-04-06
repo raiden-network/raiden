@@ -1,5 +1,6 @@
 import binascii
 from typing import Any, Dict
+from urllib.parse import parse_qs
 
 from eth_utils import (
     is_0x_prefixed,
@@ -9,9 +10,19 @@ from eth_utils import (
     to_checksum_address,
     to_hex,
 )
-from marshmallow import Schema, SchemaOpts, fields, post_dump, post_load, pre_load, validate
+from marshmallow import (
+    INCLUDE,
+    Schema,
+    SchemaOpts,
+    fields,
+    post_dump,
+    post_load,
+    pre_load,
+    validate,
+)
 from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
+from werkzeug.urls import url_encode, url_parse
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
 from raiden.constants import (
@@ -27,6 +38,7 @@ from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
 from raiden.transfer.views import get_token_network_by_address
+from raiden.utils.capabilities import _bool_to_binary, int_bool
 from raiden.utils.typing import Address as AddressBytes, AddressHex
 
 
@@ -146,6 +158,27 @@ class SecretHashField(fields.Field):
             raise self.make_error("invalid_size")
 
         return value
+
+
+class CapabilitiesField(fields.Field):
+    @staticmethod
+    def _serialize(value, attr, obj, **kwargs):  # pylint: disable=unused-argument
+        capdict = value or {}
+        for key in capdict:
+            capdict[key] = _bool_to_binary(capdict[key])
+        return f"mxc://raiden.network/cap?{url_encode(capdict)}"
+
+    def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
+        capstring = url_parse(value)
+        capdict = parse_qs(capstring.query)
+        capabilities: Dict[str, Any] = dict()
+        for key, value in capdict.items():
+            # reduce lists with one entry to just their element
+            if len(value) == 1:
+                capabilities[key] = int_bool(value.pop())
+            else:
+                capabilities[key] = value
+        return capabilities
 
 
 class BaseOpts(SchemaOpts):
@@ -382,3 +415,10 @@ class NotificationSchema(BaseSchema):
     urgency = fields.String(
         default=None, missing=None, validate=validate.OneOf(["normal", "low", "critical"])
     )
+
+
+class CapabilitiesSchema(BaseSchema):
+    class Meta:
+        unknown = INCLUDE
+
+    capabilities = CapabilitiesField(missing="mxc://")
