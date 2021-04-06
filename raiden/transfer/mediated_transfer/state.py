@@ -9,6 +9,7 @@ from raiden.transfer.state import (
     HashTimeLockState,
     HopState,
     RouteState,
+    get_address_metadata,
 )
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
@@ -73,6 +74,10 @@ class LockedTransferUnsignedState(LockedTransferState):
         if self.balance_proof.locksroot == LOCKSROOT_OF_NO_LOCKS:
             raise ValueError("balance_proof must not be empty")
 
+    @property
+    def initiator_address_metadata(self) -> Optional[AddressMetadata]:
+        return get_address_metadata(Address(self.initiator), self.route_states)
+
 
 @dataclass
 class LockedTransferSignedState(LockedTransferState):
@@ -81,8 +86,8 @@ class LockedTransferSignedState(LockedTransferState):
     """
 
     message_identifier: MessageID
+    route_states: List[RouteState]
     balance_proof: BalanceProofSignedState = field(repr=False)
-    routes: List[List[Address]]
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)
@@ -95,9 +100,22 @@ class LockedTransferSignedState(LockedTransferState):
             raise ValueError("balance_proof must not be empty")
 
     @property
+    def initiator_address_metadata(self) -> Optional[AddressMetadata]:
+        return get_address_metadata(Address(self.initiator), self.route_states)
+
+    @property
+    def routes(self) -> List[List[Address]]:
+        # TODO legacy property, remove later on if desired
+        return [rs.route for rs in self.route_states]
+
+    @property
     def payer_address(self) -> Address:
         # pylint: disable=E1101
         return self.balance_proof.sender
+
+    @property
+    def payer_address_metadata(self) -> Optional[AddressMetadata]:
+        return get_address_metadata(self.payer_address, self.route_states)
 
 
 @dataclass

@@ -30,7 +30,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferCancelRoute,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import HopState, RouteState
+from raiden.transfer.state import HopState
 from raiden.transfer.state_change import (
     ReceiveDelivered,
     ReceiveProcessed,
@@ -41,7 +41,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import TYPE_CHECKING, Address, FeeAmount, List, Set, TargetAddress, Tuple
+from raiden.utils.typing import TYPE_CHECKING, List, Set, TargetAddress, Tuple
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -303,17 +303,10 @@ class MessageHandler:
             )
             return []
 
-        all_addresses_to_metadata = dict()
-        for route in message.metadata.routes:
-            metadata = route.address_metadata
-            if metadata:
-                all_addresses_to_metadata.update(metadata)
-
         from_hop = HopState(
             node_address=message.sender,
             # pylint: disable=E1101
             channel_identifier=from_transfer.balance_proof.channel_identifier,
-            address_metadata=all_addresses_to_metadata.get(message.sender),
         )
 
         balance_proof = from_transfer.balance_proof
@@ -326,34 +319,24 @@ class MessageHandler:
                     transfer=from_transfer,
                     balance_proof=balance_proof,
                     sender=sender,
-                    initiator_address_metadata=all_addresses_to_metadata.get(
-                        Address(message.initiator)
-                    ),
                 )
             ]
         else:
-            route_states = []
-            for route_metadata in message.metadata.routes:
-                if len(route_metadata.route) < 2:
+            filtered_route_states = list()
+            for route_state in from_transfer.route_states:
+                if len(route_state.route) < 2:
                     continue
-
                 channel_state = views.get_channelstate_by_token_network_and_partner(
                     chain_state=views.state_from_raiden(raiden),
                     token_network_address=from_transfer.balance_proof.token_network_address,
-                    partner_address=route_metadata.route[1],
+                    partner_address=route_state.route[1],
                 )
                 if channel_state is not None:
-                    route_state = RouteState(
-                        route=route_metadata.route,
-                        # This is only used in the mediator, so fees are set to 0
-                        estimated_fee=FeeAmount(0),
-                        address_to_metadata=route_metadata.address_metadata,
-                    )
-                    route_states.append(route_state)
+                    filtered_route_states.append(route_state)
             return [
                 ActionInitMediator(
                     from_hop=from_hop,
-                    route_states=route_states,
+                    candidate_route_states=filtered_route_states,
                     from_transfer=from_transfer,
                     balance_proof=balance_proof,
                     sender=sender,
