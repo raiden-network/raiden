@@ -51,6 +51,7 @@ from raiden.utils.typing import (
     AdditionalHash,
     Address,
     AddressHex,
+    AddressMetadata,
     Any,
     Balance,
     BlockExpiration,
@@ -820,12 +821,15 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         NettingChannelStateProperties(canonical_identifier=balance_proof.canonical_identifier)
     )
 
-    route_state = RouteState(route=[netting_channel_state.partner_state.address, transfer.target])
+    # XXX AddressMetadata
+    route_states = create_route_states_from_routes(
+        routes=[[netting_channel_state.partner_state.address, transfer.target]]
+    )
 
     return LockedTransferUnsignedState(
         balance_proof=balance_proof,
         lock=lock,
-        route_states=[route_state],
+        route_states=route_states,
         **transfer.partial_dict("initiator", "target", "payment_identifier", "token"),
     )
 
@@ -843,17 +847,12 @@ class LockedTransferSignedStateProperties(BalanceProofProperties):
     recipient: TargetAddress = EMPTY
     pkey: bytes = EMPTY
     message_identifier: MessageID = EMPTY
-    routes: List[List[Address]] = EMPTY
+    route_states: List[RouteState] = EMPTY
 
     TARGET_TYPE = LockedTransferSignedState
 
 
-# `route_state` is only present in LockedTransferUnsignedState, therefore we cut it out
-LOCKED_TRANSFER_BASE_DEFAULTS = {
-    k: v
-    for k, v in LockedTransferUnsignedStateProperties.DEFAULTS.__dict__.items()
-    if k not in ["route_states"]
-}
+LOCKED_TRANSFER_BASE_DEFAULTS = LockedTransferUnsignedStateProperties.DEFAULTS.__dict__.copy()
 
 LockedTransferSignedStateProperties.DEFAULTS = LockedTransferSignedStateProperties(
     **LOCKED_TRANSFER_BASE_DEFAULTS,
@@ -882,12 +881,22 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         params["locksroot"] = keccak(lock.as_bytes)
 
     # Dancing with parameters for different LockedState and LockedTransfer classes
-    routes = params.pop("routes")
+    route_states = params.pop("route_states")
     # pylint: disable=E1101
-    if routes == EMPTY:
-        routes = [[transfer.recipient, transfer.target]]
-    params["metadata"] = Metadata(routes=[RouteMetadata(route=route) for route in routes])
+    if route_states == EMPTY:
+        route_states = create_route_states_from_routes(
+            [[Address(transfer.recipient), Address(transfer.target)]]
+        )
 
+    # Those are the routes(-metadata) the LockedTransferSender included in the LT message ...
+    routes = [
+        RouteMetadata(route=route_state.route, address_metadata=route_state.address_to_metadata)
+        for route_state in route_states
+    ]
+
+    params["metadata"] = Metadata(routes=routes)
+
+    # Create the locked-transfer message first in order to generate the balance proof
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
     if properties.locked_amount == EMPTY:
         locked_transfer.locked_amount = transfer.amount
@@ -915,7 +924,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         lock=lock,
         initiator=locked_transfer.initiator,
         target=locked_transfer.target,
-        routes=[rm.route for rm in locked_transfer.metadata.routes],
+        route_states=route_states,
     )
 
 
@@ -944,8 +953,9 @@ def prepare_locked_transfer(properties, defaults):
 
     params["signature"] = EMPTY_SIGNATURE
 
-    params.pop("routes")
+    params.pop("route_states")
     if params["metadata"] == GENERATE:
+        # XXX-METADATA eventually use the popped route_states for metadata generation?
         params["metadata"] = create(MetadataProperties())
 
     return params, LocalSigner(params.pop("pkey")), params.pop("sender")
@@ -983,6 +993,24 @@ def _(properties, defaults=None) -> RefundTransfer:
 SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(
     LockedTransferSignedStateProperties(expiration=UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT)
 )
+
+
+def create_route_states_from_routes(
+    routes: List[List[Address]],
+    address_to_address_metadata: Dict[Address, AddressMetadata] = None,
+    mock_missing_metadata: bool = False,  # pylint: disable=unused-argument
+):
+    route_states = list()
+    for route in routes:
+        address_metadata = dict()
+        if address_to_address_metadata:
+            for address in route:
+                metadata = address_to_address_metadata.get(address)
+                if metadata is not None:
+                    address_metadata[address] = metadata
+        # XXX-METADATA generate metadata for addresses when `mock_missing_metadata` flag is set
+        route_states.append(RouteState(route=route, address_to_metadata=address_metadata))
+    return route_states
 
 
 def make_signed_transfer_for(
@@ -1042,8 +1070,6 @@ def make_signed_transfer_for(
             locked_amount=properties.locked_amount,
             transferred_amount=properties.transferred_amount,
         )
-
-    transfer_properties.__dict__.pop("route_states", None)
 
     transfer = create(
         LockedTransferSignedStateProperties(recipient=recipient, **transfer_properties.__dict__),
@@ -1230,7 +1256,7 @@ def mediator_make_init_action(
 
     return ActionInitMediator(
         from_hop=channels.get_hop(0),
-        route_states=route_states,
+        candidate_route_states=route_states,
         from_transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,
@@ -1452,6 +1478,7 @@ def make_node_availability_map(nodes):
 
 
 def make_route_from_channel(channel: NettingChannelState) -> RouteState:
+    # XXX-METADATA autogenerate metadata if desired
     return RouteState(route=[channel.our_state.address, channel.partner_state.address])
 
 

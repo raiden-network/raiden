@@ -1016,7 +1016,7 @@ class MediatorMixin:
         assert isinstance(target_channel, NettingChannelState)
 
         action = ActionInitMediator(
-            route_states=[factories.make_route_from_channel(target_channel)],
+            candidate_route_states=[factories.make_route_from_channel(target_channel)],
             from_hop=factories.make_hop_to_channel(initiator_channel),
             from_transfer=transfer,
             balance_proof=transfer.balance_proof,

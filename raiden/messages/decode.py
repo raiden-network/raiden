@@ -1,6 +1,6 @@
 from raiden.messages.transfers import EnvelopeMessage, LockedTransferBase
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState, RouteState
 from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
 from raiden.utils.typing import AdditionalHash
 
@@ -28,6 +28,11 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
     balance_proof = balanceproof_from_envelope(message)
 
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
+    route_states = list()
+    for route_metadata in message.metadata.routes:
+        rs = RouteState(route_metadata.route, address_to_metadata=route_metadata.address_metadata)
+        route_states.append(rs)
+
     transfer_state = LockedTransferSignedState(
         message_identifier=message.message_identifier,
         payment_identifier=message.payment_identifier,
@@ -36,7 +41,7 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
         lock=lock,
         initiator=message.initiator,
         target=message.target,
-        routes=[r.route for r in message.metadata.routes],
+        route_states=route_states,
     )
 
     return transfer_state
