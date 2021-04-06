@@ -5,15 +5,11 @@ import responses
 from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, keccak, to_canonical_address
 
+from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_average_http_response_time
 from raiden.settings import CapabilitiesConfig
-from raiden.utils.capabilities import (
-    capconfig_to_dict,
-    capdict_to_config,
-    deserialize_capabilities,
-    serialize_capabilities,
-)
+from raiden.utils.capabilities import capconfig_to_dict, capdict_to_config
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
 
@@ -98,8 +94,10 @@ def test_get_http_rtt_ignore_failing(requests_responses):
 
 
 def test_deserialize_capabilities():
-    capstring = "mxc://raiden.network/cap?foo=1&toad=1&bar=max&form=1&agar=1&nottrue=0&l=one&l=2"
-    parsed = deserialize_capabilities(capstring)
+    capabilities_schema = CapabilitiesSchema()
+    base_url = "mxc://raiden.network/cap"
+    capstring = f"{base_url}?foo=1&toad=1&bar=max&form=1&agar=1&nottrue=0&l=one&l=2"
+    parsed = capabilities_schema.load({"capabilities": capstring})["capabilities"]
     assert parsed.get("foo") is True
     assert parsed.get("toad") is True
     assert parsed.get("bar") == "max"
@@ -108,16 +106,18 @@ def test_deserialize_capabilities():
     assert parsed.get("l") == ["one", "2"]
     assert not parsed.get("nothing")
 
-    assert serialize_capabilities(parsed) == f"{capstring}"
+    assert capabilities_schema.dump({"capabilities": parsed})["capabilities"] == f"{capstring}"
 
     parsed["false"] = False
 
     # Explicit new value changes the serialization format
-    assert serialize_capabilities(parsed) != f"mxc://{capstring}"
+    assert (
+        capabilities_schema.dump({"capabilities": parsed})["capabilities"] != f"mxc://{capstring}"
+    )
 
-    assert deserialize_capabilities("") == dict()
+    assert capabilities_schema.load({"capabilities": ""})["capabilities"] == dict()
 
-    assert serialize_capabilities({}) == "mxc://"
+    assert capabilities_schema.load({})["capabilities"] == "mxc://"
 
 
 def test_capconfig_to_dict():
