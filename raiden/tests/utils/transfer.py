@@ -25,6 +25,7 @@ from raiden.storage.restore import (
 from raiden.storage.wal import SavedState, WriteAheadLog
 from raiden.tests.utils.events import has_unlock_failure, raiden_state_changes_search_for_item
 from raiden.tests.utils.factories import (
+    create_route_states_from_routes,
     make_initiator_address,
     make_message_identifier,
     make_secret_with_hash,
@@ -1036,6 +1037,9 @@ def make_receive_transfer_mediated(
     )
     mediated_transfer_msg.sign(signer)
 
+    route_states = create_route_states_from_routes(
+        [route_metadata.route for route_metadata in transfer_metadata.routes]
+    )
     receive_lockedtransfer = LockedTransferSignedState(
         payment_identifier=payment_identifier,
         token=channel_state.token_address,
@@ -1044,7 +1048,7 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         message_identifier=make_message_identifier(),
         balance_proof=balanceproof_from_envelope(mediated_transfer_msg),
-        routes=[route_metadata.route for route_metadata in transfer_metadata.routes],
+        route_states=route_states,
     )
 
     return receive_lockedtransfer
