@@ -334,7 +334,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
     )
     from_hop = factories.make_hop_from_channel(channel_state)
     init_mediator = ActionInitMediator(
-        route_states=[route_state],
+        candidate_route_states=[route_state],
         from_hop=from_hop,
         from_transfer=mediated_transfer,
         balance_proof=mediated_transfer.balance_proof,

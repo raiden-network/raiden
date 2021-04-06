@@ -95,13 +95,12 @@ def handle_inittarget(
     iteration: TransitionResult[Optional[TargetTransferState]]
     transfer = state_change.transfer
     from_hop = state_change.from_hop
-    initiator_address_metadata = state_change.initiator_address_metadata
 
     assert (
         channel_state.identifier == transfer.balance_proof.channel_identifier
     ), "channel_id mismatch in handle_inittarget"
     is_valid, channel_events, errormsg = channel.handle_receive_lockedtransfer(
-        channel_state, transfer, from_hop.address_metadata
+        channel_state, transfer, transfer.payer_address_metadata
     )
 
     if is_valid:
@@ -112,9 +111,7 @@ def handle_inittarget(
         # proofs to be handled. This however, must only be done once, which is
         # enforced by the nonce increasing sequentially, which is verified by
         # the handler handle_receive_lockedtransfer.
-        target_state = TargetTransferState(
-            from_hop, transfer, initiator_address_metadata=initiator_address_metadata
-        )
+        target_state = TargetTransferState(from_hop, transfer)
 
         safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number
@@ -129,7 +126,7 @@ def handle_inittarget(
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
                 recipient=Address(recipient),
-                recipient_metadata=initiator_address_metadata,
+                recipient_metadata=transfer.initiator_address_metadata,
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
                 amount=PaymentAmount(transfer.lock.amount),
@@ -186,7 +183,7 @@ def handle_offchain_secretreveal(
 
         reveal = SendSecretReveal(
             recipient=recipient,
-            recipient_metadata=from_hop.address_metadata,
+            recipient_metadata=target_state.transfer.payer_address_metadata,
             message_identifier=message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             secret=target_state.secret,
@@ -232,7 +229,7 @@ def handle_unlock(
 ) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles a ReceiveUnlock state change. """
 
-    recipient_metadata = target_state.from_hop.address_metadata
+    recipient_metadata = target_state.transfer.payer_address_metadata
     is_valid, events, _ = channel.handle_unlock(channel_state, state_change, recipient_metadata)
     next_target_state: Optional[TargetTransferState] = target_state
 
@@ -303,7 +300,7 @@ def handle_lock_expired(
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[TargetTransferState]]:
     """Remove expired locks from channel states."""
-    recipient_metadata = target_state.from_hop.address_metadata
+    recipient_metadata = target_state.transfer.payer_address_metadata
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state,
         state_change=state_change,

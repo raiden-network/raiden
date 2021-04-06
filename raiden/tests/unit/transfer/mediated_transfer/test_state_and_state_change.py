@@ -89,7 +89,7 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
         ActionInitMediator(
             from_transfer=wrong_type_transfer,
             from_hop=hop_state,
-            route_states=[route_state],
+            candidate_route_states=[route_state],
             **additional_args,
         )
 
@@ -97,7 +97,7 @@ def test_invalid_instantiation_action_init_mediator_and_target(additional_args):
         ActionInitMediator(
             from_transfer=valid_transfer,
             from_hop=not_a_route_state,
-            route_states=[route_state],
+            candidate_route_states=[route_state],
             **additional_args,
         )
 
