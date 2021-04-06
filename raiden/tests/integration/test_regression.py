@@ -176,7 +176,6 @@ def test_regression_multiple_revealsecret(
 
     nonce = Nonce(1)
     transferred_amount = TokenAmount(0)
-    # FIXME: Metadata
     mediated_transfer = LockedTransfer(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=make_message_identifier(),

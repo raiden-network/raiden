@@ -58,6 +58,7 @@ from raiden.transfer.state import (
     make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
+from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.timeout import BlockTimeout
@@ -78,6 +79,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     PaymentWithFeeAmount,
+    PeerCapabilities,
     SecretHash,
     TargetAddress,
     TokenAddress,
@@ -123,13 +125,15 @@ def create_route_state_for_route(
     assert len(apps) > 1, "Need at least two nodes for a route"
 
     route = list()
-    # FIXME: Metadata
     address_metadata = dict()
     for app in apps:
         route.append(app.address)
         user_id = UserID(app.transport.user_id)
+        capabilities = PeerCapabilities(
+            capconfig_to_dict(app.transport._config.capabilities_config)
+        )
         assert user_id is not None
-        address_metadata[app.address] = {"user_id": user_id}
+        address_metadata[app.address] = {"user_id": user_id, "capabilities": capabilities}
 
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(apps[0]),
