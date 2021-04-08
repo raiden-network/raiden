@@ -286,7 +286,7 @@ OPTIONS = [
             "--gas-price",
             help=(
                 "Set the gas price for ethereum transactions. If not provided "
-                "the normal gas price startegy is used.\n"
+                "the normal gas price strategy is used.\n"
                 "Available options:\n"
                 '"fast" - transactions are usually mined within 60 seconds\n'
                 '"normal" - transactions are usually mined within 5 minutes\n'
