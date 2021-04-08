@@ -257,7 +257,7 @@ will ensure that you to comply with our formatting rules.
 
 It is highly recommended to also use the other [linting tools](requirements-lint.txt),
 in order to automatically determine any and all style violations.
-The customizable part of pylint is at [.pylint.rc](.pylint.rc).
+The customizable part of pylint is at [pylintrc](pylintrc).
 
 All pull requests need to pass
 ```
