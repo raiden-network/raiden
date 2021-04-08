@@ -302,6 +302,7 @@ def first_login(
 
     # Only set the capabilities if necessary.
     cap_str = capabilities_schema.load(capabilities.get("capabilities", {}))
+    cap_str = cap_str["capabilities"]
     if current_capabilities != cap_str:
         user.set_avatar_url(cap_str)
 
