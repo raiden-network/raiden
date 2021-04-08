@@ -72,11 +72,11 @@ def get_all_messagequeues(chain_state: ChainState) -> QueueIdsToQueues:
 
 
 def get_networkstatuses(chain_state: ChainState) -> Dict:
-    return chain_state.nodeaddresses_to_networkstates
+    raise NotImplementedError()
 
 
 def get_node_network_status(chain_state: ChainState, node_address: Address) -> NetworkState:
-    return chain_state.nodeaddresses_to_networkstates.get(node_address, NetworkState.UNKNOWN)
+    raise NotImplementedError()
 
 
 def get_participants_addresses(

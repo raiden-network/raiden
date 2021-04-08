@@ -529,9 +529,6 @@ class ChainState(State):
     identifiers_to_tokennetworkregistries: Dict[
         TokenNetworkRegistryAddress, TokenNetworkRegistryState
     ] = field(repr=False, default_factory=dict)
-    nodeaddresses_to_networkstates: Dict[Address, NetworkState] = field(
-        repr=False, default_factory=dict
-    )
     payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
     pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)

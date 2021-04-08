@@ -69,8 +69,7 @@ from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
-from raiden.transfer.state import NetworkState, QueueIdsToQueues
-from raiden.transfer.state_change import ActionChangeNodeNetworkState
+from raiden.transfer.state import QueueIdsToQueues
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
@@ -1433,7 +1432,6 @@ class MatrixTransport(Runnable):
         self, address: Address, reachability: AddressReachability
     ) -> None:
         if reachability is AddressReachability.REACHABLE:
-            node_reachability = NetworkState.REACHABLE
             # _QueueRetry.notify when partner comes online
             retrier = self._address_to_retrier.get(address)
             if retrier:
@@ -1443,19 +1441,13 @@ class MatrixTransport(Runnable):
                 # if lower address spawn worker to create web rtc channel
                 self._maybe_initialize_web_rtc(address)
 
-        elif reachability is AddressReachability.UNKNOWN:
-            node_reachability = NetworkState.UNKNOWN
         elif reachability is AddressReachability.UNREACHABLE:
-            node_reachability = NetworkState.UNREACHABLE
             if address in self._web_rtc_manager.address_to_rtc_partners:
                 self._web_rtc_manager.close_connection(address)
         else:
             raise TypeError(f'Unexpected reachability state "{reachability}".')
 
         assert self._raiden_service is not None, "_raiden_service not set"
-
-        state_change = ActionChangeNodeNetworkState(address, node_reachability)
-        self._raiden_service.handle_and_track_state_changes([state_change])
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """

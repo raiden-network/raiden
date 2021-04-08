@@ -17,7 +17,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.node import handle_action_init_initiator, state_transition
-from raiden.transfer.state import NetworkState
 from raiden.transfer.views import TransferRole
 from raiden.utils.signer import LocalSigner, recover
 from raiden.utils.typing import BlockNumber, FeeAmount, TokenAmount
@@ -151,10 +150,6 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
         mediating_channel = channel_set.channels[0]
         pnrg = random.Random()
 
-        nodeaddresses_to_networkstates = {
-            mediating_channel.partner_state.address: NetworkState.REACHABLE
-        }
-
         addresses_to_channel = {
             (
                 UNIT_TOKEN_NETWORK_ADDRESS,
@@ -180,7 +175,6 @@ def test_initiator_accounts_for_fees_when_selecting_routes():
             payment_state=None,
             state_change=init_action,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pnrg,
             block_number=BlockNumber(1),
         )
@@ -356,15 +350,11 @@ def test_mediator_skips_used_routes():
         )
     )
     init_action = factories.mediator_make_init_action(channels=channels, transfer=locked_transfer)
-    nodeaddresses_to_networkstates = {
-        channel.partner_state.address: NetworkState.REACHABLE for channel in channels.channels
-    }
 
     transition_result = mediator.handle_init(
         state_change=init_action,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -407,7 +397,6 @@ def test_mediator_skips_used_routes():
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=prng,
         block_number=block_number,
     )
@@ -451,7 +440,6 @@ def test_mediator_skips_used_routes():
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=prng,
         block_number=block_number,
     )

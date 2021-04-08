@@ -42,7 +42,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNetworkState
 from raiden.transfer.state_change import (
-    ActionChangeNodeNetworkState,
     ActionChannelClose,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
@@ -198,7 +197,6 @@ def subdispatch_to_paymenttask(
                     state_change=state_change,
                     channelidentifiers_to_channels=channel_identifier_map,
                     addresses_to_channel=chain_state.addresses_to_channel,
-                    nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
                     pseudo_random_generator=pseudo_random_generator,
                     block_number=block_number,
                 )
@@ -218,7 +216,6 @@ def subdispatch_to_paymenttask(
                     state_change=state_change,
                     channelidentifiers_to_channels=channelids_to_channels,
                     addresses_to_channel=chain_state.addresses_to_channel,
-                    nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
                     pseudo_random_generator=pseudo_random_generator,
                     block_number=block_number,
                     block_hash=block_hash,
@@ -283,7 +280,6 @@ def subdispatch_initiatortask(
         state_change=state_change,
         channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
         addresses_to_channel=chain_state.addresses_to_channel,
-        nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
         pseudo_random_generator=chain_state.pseudo_random_generator,
         block_number=chain_state.block_number,
     )
@@ -331,7 +327,6 @@ def subdispatch_mediatortask(
                 state_change=state_change,
                 channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
                 addresses_to_channel=chain_state.addresses_to_channel,
-                nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=block_number,
                 block_hash=block_hash,
@@ -547,30 +542,6 @@ def handle_receive_delivered(
     return TransitionResult(chain_state, [])
 
 
-def handle_action_change_node_network_state(
-    chain_state: ChainState, state_change: ActionChangeNodeNetworkState
-) -> TransitionResult[ChainState]:
-    events: List[Event] = list()
-
-    node_address = state_change.node_address
-    network_state = state_change.network_state
-    chain_state.nodeaddresses_to_networkstates[node_address] = network_state
-
-    for secrethash, subtask in list(chain_state.payment_mapping.secrethashes_to_task.items()):
-        # This typecheck would not have been needed if token_network_address, a common attribute
-        # for all TransferTasks was part of the TransferTasks superclass.
-        typecheck(subtask, (InitiatorTask, MediatorTask, TargetTask))
-        result = subdispatch_mediatortask(
-            chain_state=chain_state,
-            state_change=state_change,
-            token_network_address=subtask.token_network_address,
-            secrethash=secrethash,
-        )
-        events.extend(result.events)
-
-    return TransitionResult(chain_state, events)
-
-
 def handle_contract_receive_new_token_network_registry(
     chain_state: ChainState, state_change: ContractReceiveNewTokenNetworkRegistry
 ) -> TransitionResult[ChainState]:
@@ -760,7 +731,6 @@ def handle_state_change(
         ActionChannelClose: [handle_token_network_action, []],
         ActionChannelWithdraw: [subdispatch_by_canonical_id, [canonical_identifier]],
         ActionChannelSetRevealTimeout: [subdispatch_by_canonical_id, [canonical_identifier]],
-        ActionChangeNodeNetworkState: [handle_action_change_node_network_state, []],
         ActionInitInitiator: [handle_action_init_initiator, []],
         ActionInitMediator: [handle_action_init_mediator, []],
         ActionInitTarget: [handle_action_init_target, []],
