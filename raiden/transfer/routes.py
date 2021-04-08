@@ -29,12 +29,14 @@ def filter_acceptable_routes(
 ) -> List[RouteState]:
     """ Keeps only routes whose forward_channel is not in the list of blacklisted channels """
 
-    return [
-        route
-        for route in route_states
-        if addresses_to_channel[(token_network_address, route.route[1])].identifier
-        not in blacklisted_channel_ids
-    ]
+    acceptable_routes = list()
+    for route in route_states:
+        channel = addresses_to_channel.get((token_network_address, route.next_hop_address))
+        if channel is None:
+            continue
+        if channel.identifier not in blacklisted_channel_ids:
+            acceptable_routes.append(route)
+    return acceptable_routes
 
 
 def prune_route_table(

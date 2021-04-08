@@ -12,7 +12,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
-    NetworkState,
     TokenNetworkRegistryState,
     TokenNetworkState,
     TransactionChannelDeposit,
@@ -195,17 +194,6 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     @property
     def token_network_address(self) -> TokenNetworkAddress:
         return self.canonical_identifier.token_network_address
-
-
-@dataclass(frozen=True)
-class ActionChangeNodeNetworkState(StateChange):
-    """ The network state of `node_address` changed. """
-
-    node_address: Address
-    network_state: NetworkState
-
-    def __post_init__(self) -> None:
-        typecheck(self.node_address, T_Address)
 
 
 @dataclass(frozen=True)

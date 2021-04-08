@@ -36,7 +36,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import NetworkState, message_identifier_from_prng
+from raiden.transfer.state import message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import BlockExpiration
@@ -66,7 +66,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
@@ -88,7 +87,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
             state_change=block_state_change,
             channelidentifiers_to_channels=channels.channel_map,
             addresses_to_channel=channels.addresses_to_channel(),
-            nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
         )
         new_state = block_iteration.new_state
@@ -103,7 +101,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         state_change=receive_secret,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
@@ -124,7 +121,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         state_change=expired_block_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
     )
 
@@ -175,7 +171,6 @@ def test_regression_send_refund():
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
     )
@@ -225,7 +220,6 @@ def test_regression_send_refund():
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
     )
@@ -250,7 +244,6 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
         block_hash=factories.make_block_hash(),
@@ -272,7 +265,6 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
         block_hash=factories.make_block_hash(),
@@ -333,7 +325,6 @@ def test_regression_mediator_task_no_routes():
         state_change=init_state_change,
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
         block_hash=factories.make_block_hash(),
@@ -374,7 +365,6 @@ def test_regression_mediator_task_no_routes():
         state_change=Block(block_number=expired_block_number, gas_limit=0, block_hash=block_hash),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
         block_hash=block_hash,
@@ -391,7 +381,6 @@ def test_regression_mediator_task_no_routes():
         ),
         channelidentifiers_to_channels=channels.channel_map,
         addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
         block_hash=block_hash,
@@ -427,7 +416,6 @@ def test_regression_mediator_not_update_payer_state_twice():
         state_change=init_state_change,
         channelidentifiers_to_channels=pair.channel_map,
         addresses_to_channel=pair.addresses_to_channel(),
-        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
         block_hash=factories.make_block_hash(),
@@ -449,7 +437,6 @@ def test_regression_mediator_not_update_payer_state_twice():
         state_change=block,
         channelidentifiers_to_channels=pair.channel_map,
         addresses_to_channel=pair.addresses_to_channel(),
-        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
         block_hash=factories.make_block_hash(),
@@ -474,7 +461,6 @@ def test_regression_mediator_not_update_payer_state_twice():
         state_change=receive_secret,
         channelidentifiers_to_channels=pair.channel_map,
         addresses_to_channel=pair.addresses_to_channel(),
-        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=next_block.block_number,
         block_hash=next_block.block_hash,
@@ -497,7 +483,6 @@ def test_regression_mediator_not_update_payer_state_twice():
         state_change=next_block,
         channelidentifiers_to_channels=pair.channel_map,
         addresses_to_channel=pair.addresses_to_channel(),
-        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
         block_hash=factories.make_block_hash(),
@@ -532,7 +517,6 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         ),
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
         block_hash=setup.block_hash,
@@ -553,7 +537,6 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         ),
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
         block_hash=setup.block_hash,
@@ -587,41 +570,8 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         ),
         channelidentifiers_to_channels=setup.channel_map,
         addresses_to_channel=setup.channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
         block_hash=factories.make_block_hash(),
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
-
-
-def test_regression_unavailable_nodes_must_be_properly_filtered():
-    """The list of available routes provided must be filtered based on the
-    network status of the partner node.
-
-    Regression test for: https://github.com/raiden-network/raiden/issues/3567
-    """
-    block_number = 5
-    pseudo_random_generator = random.Random()
-
-    channels = factories.mediator_make_channel_pair()
-    payer_transfer = factories.make_signed_transfer_for(channels[0], LONG_EXPIRATION)
-
-    all_nodes_offline = {
-        channel.partner_state.address: NetworkState.UNREACHABLE for channel in channels.channels
-    }
-
-    initial_iteration = mediator.state_transition(
-        mediator_state=None,
-        state_change=factories.mediator_make_init_action(channels, payer_transfer),
-        channelidentifiers_to_channels=channels.channel_map,
-        addresses_to_channel=channels.addresses_to_channel(),
-        nodeaddresses_to_networkstates=all_nodes_offline,
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
-        block_hash=factories.make_block_hash(),
-    )
-
-    send_transfer = search_for_item(initial_iteration.events, SendLockedTransfer, {})
-    msg = "All available routes are with unavailable nodes, therefore no send should be produced"
-    assert send_transfer is None, msg
