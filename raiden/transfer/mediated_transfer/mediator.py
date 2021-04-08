@@ -37,16 +37,10 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     ChannelState,
     NettingChannelState,
-    NetworkState,
     RouteState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import (
-    ActionChangeNodeNetworkState,
-    Block,
-    ContractReceiveSecretReveal,
-    ReceiveUnlock,
-)
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -59,7 +53,6 @@ from raiden.utils.typing import (
     Dict,
     List,
     LockType,
-    NodeNetworkStateMap,
     Optional,
     PaymentWithFeeAmount,
     Secret,
@@ -1028,7 +1021,6 @@ def mediate_transfer(
     candidate_route_states: List[RouteState],
     payer_channel: NettingChannelState,
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     payer_transfer: LockedTransferSignedState,
     block_number: BlockNumber,
@@ -1044,11 +1036,6 @@ def mediate_transfer(
     assert (
         payer_channel.partner_state.address == payer_transfer.balance_proof.sender
     ), "Transfer must be signed by sender"
-
-    candidate_route_states = routes.filter_reachable_routes(
-        route_states=candidate_route_states,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
-    )
 
     # Makes sure we filter routes that have already been used.
     #
@@ -1116,7 +1103,6 @@ def handle_init(
     state_change: ActionInitMediator,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[MediatorTransferState]]:
@@ -1144,7 +1130,6 @@ def handle_init(
         candidate_route_states=routes,
         payer_channel=payer_channel,
         addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         payer_transfer=from_transfer,
         block_number=block_number,
@@ -1159,7 +1144,6 @@ def handle_block(
     state_change: Block,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[MediatorTransferState]:
     """After Raiden learns about a new block this function must be called to
@@ -1185,7 +1169,6 @@ def handle_block(
                 candidate_route_states=mediator_state.routes,
                 payer_channel=payer_channel,
                 addresses_to_channel=addresses_to_channel,
-                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
                 pseudo_random_generator=pseudo_random_generator,
                 payer_transfer=mediator_state.waiting_transfer.transfer,
                 block_number=state_change.block_number,
@@ -1236,7 +1219,6 @@ def handle_refundtransfer(
     mediator_state_change: ReceiveTransferRefund,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
@@ -1283,7 +1265,6 @@ def handle_refundtransfer(
             candidate_route_states=mediator_state.routes,
             payer_channel=payer_channel,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             payer_transfer=payer_transfer,
             block_number=block_number,
@@ -1463,67 +1444,11 @@ def handle_lock_expired(
     return TransitionResult(mediator_state, events)
 
 
-def handle_node_change_network_state(
-    mediator_state: MediatorTransferState,
-    state_change: ActionChangeNodeNetworkState,
-    addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    pseudo_random_generator: random.Random,
-    block_number: BlockNumber,
-) -> TransitionResult:
-    """If a certain node comes online:
-    1. Check if a channel exists with that node
-    2. Check that this channel is a route, check if the route is valid.
-    3. Check that the transfer was stuck because there was no route available.
-    4. Send the transfer again to this now-available route.
-    """
-    if state_change.network_state != NetworkState.REACHABLE:
-        return TransitionResult(mediator_state, list())
-
-    try:
-        route = next(
-            route
-            for route in mediator_state.routes
-            if route.next_hop_address == state_change.node_address
-        )
-    except StopIteration:
-        return TransitionResult(mediator_state, list())
-
-    if mediator_state.waiting_transfer is None:
-        return TransitionResult(mediator_state, list())
-
-    transfer = mediator_state.waiting_transfer.transfer
-    payer_channel = addresses_to_channel.get(
-        (transfer.balance_proof.token_network_address, transfer.balance_proof.sender)
-    )
-    payee_channel = addresses_to_channel.get(
-        (transfer.balance_proof.token_network_address, route.route[1])  # TODO: change TN for swaps
-    )
-
-    if not payee_channel or not payer_channel:
-        return TransitionResult(mediator_state, list())
-
-    payee_channel_open = channel.get_status(payee_channel) == ChannelState.STATE_OPENED
-    if not payee_channel_open:
-        return TransitionResult(mediator_state, list())
-
-    return mediate_transfer(
-        state=mediator_state,
-        candidate_route_states=mediator_state.routes,
-        payer_channel=payer_channel,
-        addresses_to_channel=addresses_to_channel,
-        nodeaddresses_to_networkstates={state_change.node_address: state_change.network_state},
-        pseudo_random_generator=pseudo_random_generator,
-        payer_transfer=mediator_state.waiting_transfer.transfer,
-        block_number=block_number,
-    )
-
-
 def state_transition(
     mediator_state: Optional[MediatorTransferState],
     state_change: StateChange,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
-    nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     block_hash: BlockHash,
@@ -1545,7 +1470,6 @@ def state_transition(
                 state_change=state_change,
                 channelidentifiers_to_channels=channelidentifiers_to_channels,
                 addresses_to_channel=addresses_to_channel,
-                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
                 pseudo_random_generator=pseudo_random_generator,
                 block_number=block_number,
             )
@@ -1558,7 +1482,6 @@ def state_transition(
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
         )
 
@@ -1571,7 +1494,6 @@ def state_transition(
             mediator_state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             addresses_to_channel=addresses_to_channel,
-            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
@@ -1617,17 +1539,6 @@ def state_transition(
             mediator_state=mediator_state,
             state_change=state_change,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
-            block_number=block_number,
-        )
-    elif type(state_change) == ActionChangeNodeNetworkState:
-        assert isinstance(state_change, ActionChangeNodeNetworkState), MYPY_ANNOTATION
-        msg = "ActionChangeNodeNetworkState should be accompanied by a valid mediator state"
-        assert mediator_state, msg
-        iteration = handle_node_change_network_state(
-            mediator_state=mediator_state,
-            state_change=state_change,
-            addresses_to_channel=addresses_to_channel,
-            pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
 
