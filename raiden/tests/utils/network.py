@@ -398,7 +398,6 @@ def create_apps(
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     local_matrix_url: Optional[ParsedURL],
-    broadcast_rooms: List[str],
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
@@ -438,7 +437,6 @@ def create_apps(
 
         if local_matrix_url is not None:
             config.transport = MatrixTransportConfig(
-                broadcast_rooms=broadcast_rooms,
                 retries_before_backoff=retries_before_backoff,
                 retry_interval_initial=retry_interval_initial,
                 retry_interval_max=retry_interval_max,

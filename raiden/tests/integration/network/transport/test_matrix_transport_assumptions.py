@@ -27,12 +27,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.tests.utils.transport import (
-    get_admin_credentials,
-    ignore_member_join,
-    ignore_messages,
-    new_client,
-)
+from raiden.tests.utils.transport import get_admin_credentials, ignore_messages, new_client
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import Signer
@@ -52,7 +47,7 @@ def must_run_for_at_least(minimum_elapsed_time: float, msg: str) -> Generator:
 
 
 def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
-    client = make_client(ignore_messages, ignore_member_join, [server])
+    client = make_client(ignore_messages, [server])
     signer = factories.make_signer()
 
     login(client, signer, DeviceIDs.RAIDEN)
@@ -312,7 +307,7 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
     public_room = next(iter(server1_client.rooms.values()))
 
     for local_server in local_matrix_servers[1:]:
-        client = new_client(ignore_messages, ignore_member_join, local_server)
+        client = new_client(ignore_messages, local_server)
         assert public_room.room_id not in client.rooms
         client.join_room(public_room.canonical_alias)
         assert public_room.room_id in client.rooms
@@ -453,7 +448,7 @@ def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
     transport0.start(raiden_service0, None)
     transport1.start(raiden_service1, None)
     # admin login using raiden.tests.utils.transport.AdminAuthProvider
-    admin_client = GMatrixClient(ignore_messages, ignore_member_join, local_matrix_servers[0])
+    admin_client = GMatrixClient(ignore_messages, local_matrix_servers[0])
     admin_client.login(admin_credentials["username"], admin_credentials["password"], sync=False)
     room_id = admin_client.join_room(broadcast_room_alias).room_id
 

@@ -77,7 +77,6 @@ def mock_matrix(
     ):  # pylint: disable=unused-argument
         return GMatrixClient(
             handle_messages_callback=handle_messages_callback,
-            handle_member_join_callback=handle_member_join_callback,
             base_url=servers[0],
         )
 
@@ -93,7 +92,6 @@ def mock_matrix(
         return UserPresence.ONLINE
 
     config = MatrixTransportConfig(
-        broadcast_rooms=[],
         retries_before_backoff=retries_before_backoff,
         retry_interval_initial=retry_interval_initial,
         retry_interval_max=retry_interval_max,

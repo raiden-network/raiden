@@ -5,7 +5,7 @@ from eth_typing import BlockNumber
 from eth_utils import denoms, to_hex
 
 import raiden_contracts.constants
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, MATRIX_AUTO_SELECT_SERVER, Environment
+from raiden.constants import MATRIX_AUTO_SELECT_SERVER, Environment
 from raiden.network.pathfinding import PFSConfig
 from raiden.utils.typing import (
     Address,
@@ -142,7 +142,6 @@ class MatrixTransportConfig:
     retries_before_backoff: int
     retry_interval_initial: float
     retry_interval_max: float
-    broadcast_rooms: List[str]
     server: str
     available_servers: List[str]
     sync_timeout: int = DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT
@@ -212,7 +211,6 @@ class RaidenConfig:
     transport: MatrixTransportConfig = MatrixTransportConfig(
         # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
         available_servers=[],
-        broadcast_rooms=[DISCOVERY_DEFAULT_ROOM],
         retries_before_backoff=DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
         retry_interval_initial=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_INITIAL,
         retry_interval_max=DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL_MAX,

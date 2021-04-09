@@ -25,7 +25,7 @@ from synapse.handlers.auth import AuthHandler
 
 from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
-from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
@@ -54,7 +54,6 @@ def get_admin_credentials(server_name):
 
 def new_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-    handle_member_join_callback: Callable[[Room], None],
     server: "ParsedURL",
 ) -> GMatrixClient:
     server_name = server.netloc
@@ -64,16 +63,11 @@ def new_client(
 
     client = GMatrixClient(
         handle_messages_callback=handle_messages_callback,
-        handle_member_join_callback=handle_member_join_callback,
         base_url=server,
     )
     client.login(username, password, sync=False)
 
     return client
-
-
-def ignore_member_join(_room: Room) -> None:
-    return None
 
 
 def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
@@ -101,7 +95,7 @@ def ignore_close(partner_address: Address) -> None:  # pylint: disable=unused-ar
 
 
 def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
-    client = new_client(ignore_messages, ignore_member_join, servers[0])
+    client = new_client(ignore_messages, servers[0])
     admin_power_level = {"users": {client.user_id: 100}}
     for server in servers:
         admin_username = get_admin_credentials(server.netloc)["username"]
@@ -113,7 +107,7 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
     )
 
     for server in servers[1:]:
-        client = new_client(ignore_messages, ignore_member_join, server)
+        client = new_client(ignore_messages, server)
 
         # A user must join the room to create the room in the federated server
         log.debug("canonical alias", alias=room.canonical_alias)
@@ -369,7 +363,6 @@ def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
 @contextmanager
 def matrix_server_starter(
     free_port_generator: Iterable[Port],
-    broadcast_rooms_aliases: Iterable[str],
     *,
     count: int = 1,
     config_generator: SynapseConfigGenerator = None,
@@ -444,12 +437,7 @@ def matrix_server_starter(
             # different, however the library doesn't support it. So here we
             # must poke at the private member and overwrite it.
             executor._timeout = teardown_timeout
-
             servers.append((server_url, executor))
-
-        log.debug("Setting up broadcast rooms", aliases=broadcast_rooms_aliases)
-        for broadcast_room_alias in broadcast_rooms_aliases:
-            setup_broadcast_room([url for url, _ in servers], broadcast_room_alias)
 
         yield servers
 
