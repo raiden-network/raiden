@@ -19,6 +19,7 @@ nodes:
   raiden_version: local
 
   default_options:
+    matrix-server: transport.transport05.raiden.network
     gas-price: fast
     routing-mode: pfs
     # Make sure to only use the "best" path
