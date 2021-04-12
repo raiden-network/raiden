@@ -569,8 +569,9 @@ twisted[tls]==21.2.0
     # via
     #   matrix-synapse
     #   treq
-typed-ast==1.4.0
+typed-ast==1.4.2
     # via
+    #   -r requirements-dev.in
     #   black
     #   mypy
 typing-extensions==3.7.4.3
