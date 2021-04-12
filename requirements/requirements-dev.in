@@ -21,6 +21,7 @@ readme-renderer
 pylint
 mypy
 black==20.8b1
+typed-ast>=1.4.2
 
 # Testing
 pytest
