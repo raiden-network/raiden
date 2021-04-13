@@ -11,7 +11,9 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import (
     Address,
     AddressMetadata,
+    Any,
     BlockNumber,
+    Dict,
     FeeAmount,
     InitiatorAddress,
     List,
@@ -172,57 +174,73 @@ def get_best_routes_pfs(
 
     paths = []
     for path_object in pfs_routes:
-        path = path_object["path"]
-        address_to_metadata = path_object.get("address_metadata", {})
-        if not address_to_metadata:
-            log.warning("PFS didn't return path metadata.")
-        elif set(path) != set(address_to_metadata.keys()):
-            log.warning("PFS returned incorrect path metadata, skipping path.")
-
-        estimated_fee = path_object["estimated_fee"]
-        canonical_path = [to_canonical_address(node) for node in path]
-
-        # get the second entry, as the first one is the node itself
-        # also needs to be converted to canonical representation
-        if len(canonical_path) < 2:
-            log.warning("Route is invalid as it has less than 2 addresses")
-            continue
-        partner_address = canonical_path[1]
-
-        # don't route back
-        if partner_address == previous_address:
-            continue
-
-        channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state=chain_state,
-            token_network_address=token_network_address,
-            partner_address=partner_address,
+        route_state = make_route_state(
+            path_object,
+            previous_address,
+            chain_state,
+            token_network_address,
+            Address(from_address),
         )
-
-        if not channel_state:
-            continue
-
-        # check channel state
-        if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
-            log.info(
-                "Channel is not opened, ignoring",
-                from_address=to_checksum_address(from_address),
-                partner_address=to_checksum_address(partner_address),
-                routing_source="Pathfinding Service",
-            )
-            continue
-
-        canonical_address_metadata = {
-            to_canonical_address(address): metadata
-            for address, metadata in address_to_metadata.items()
-        }
-
-        paths.append(
-            RouteState(
-                route=canonical_path,
-                address_to_metadata=canonical_address_metadata,
-                estimated_fee=estimated_fee,
-            )
-        )
+        if route_state is not None:
+            paths.append(route_state)
 
     return None, paths, feedback_token
+
+
+def make_route_state(
+    path_object: Dict[str, Any],
+    previous_address: Optional[Address],
+    chain_state: ChainState,
+    token_network_address: TokenNetworkAddress,
+    from_address: Address,
+) -> Optional[RouteState]:
+    path = path_object["path"]
+    address_to_metadata = path_object.get("address_metadata", {})
+    if not address_to_metadata:
+        log.warning("PFS didn't return path metadata.")
+    elif set(path) != set(address_to_metadata.keys()):
+        log.warning("PFS returned incorrect path metadata, skipping path.")
+
+    estimated_fee = path_object["estimated_fee"]
+    canonical_path = [to_canonical_address(node) for node in path]
+
+    # get the second entry, as the first one is the node itself
+    # also needs to be converted to canonical representation
+    if len(canonical_path) < 2:
+        log.warning("Route is invalid as it has less than 2 addresses")
+        return None
+    partner_address = canonical_path[1]
+
+    # don't route back
+    if partner_address == previous_address:
+        return None
+
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=chain_state,
+        token_network_address=token_network_address,
+        partner_address=partner_address,
+    )
+
+    if not channel_state:
+        return None
+
+    # check channel state
+    if channel.get_status(channel_state) != ChannelState.STATE_OPENED:
+        log.info(
+            "Channel is not opened, ignoring",
+            from_address=to_checksum_address(from_address),
+            partner_address=to_checksum_address(partner_address),
+            routing_source="Pathfinding Service",
+        )
+        return None
+
+    canonical_address_metadata = {
+        to_canonical_address(address): metadata
+        for address, metadata in address_to_metadata.items()
+    }
+
+    return RouteState(
+        route=canonical_path,
+        address_to_metadata=canonical_address_metadata,
+        estimated_fee=estimated_fee,
+    )
