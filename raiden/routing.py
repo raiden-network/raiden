@@ -212,10 +212,15 @@ def get_best_routes_pfs(
             )
             continue
 
+        canonical_address_metadata = {
+            to_canonical_address(address): metadata
+            for address, metadata in address_to_metadata.items()
+        }
+
         paths.append(
             RouteState(
                 route=canonical_path,
-                address_to_metadata=address_to_metadata,
+                address_to_metadata=canonical_address_metadata,
                 estimated_fee=estimated_fee,
             )
         )
