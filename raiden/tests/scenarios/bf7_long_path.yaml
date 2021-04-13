@@ -5,7 +5,7 @@ settings:
   gas_price: "fast"
   services:
     pfs:
-      url: "https://pfs.transport05.raiden.network"
+      url: {{ pfs_with_fee }}
     udc:
       enable: true
       token:
