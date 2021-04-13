@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import gevent
 import pytest
 import requests
-from eth_utils import is_checksum_address, is_hex, is_hex_address
+from eth_utils import encode_hex, is_checksum_address, is_hex, is_hex_address
 
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
@@ -26,11 +26,16 @@ from raiden.network.pathfinding import (
     update_iou,
 )
 from raiden.network.transport.matrix.utils import make_user_id
-from raiden.routing import get_best_routes
+from raiden.routing import get_best_routes, make_route_state
 from raiden.settings import CapabilitiesConfig
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import mocked_failed_response, mocked_json_response
-from raiden.transfer.state import NettingChannelState, NetworkState, TokenNetworkState
+from raiden.transfer.state import (
+    ChannelState,
+    NettingChannelState,
+    NetworkState,
+    TokenNetworkState,
+)
 from raiden.utils import typing
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
@@ -987,3 +992,27 @@ def test_two_parallel_queries(query_paths_args):
                 # the other. If semaphore in raiden.network.pathfinding is bound to 2,
                 # the test fails
                 assert duration >= 0.4
+
+
+def test_make_route_state_address_to_metadata_serialization_regression():
+    """Test that the address keys in address_to_metadata are deserialized.
+    See: https://github.com/raiden-network/raiden/issues/6943"""
+    addresses = [encode_hex(factories.make_address()) for _ in range(3)]
+
+    test_data = dict(
+        path=addresses, address_metadata={address: {} for address in addresses}, estimated_fee=None
+    )
+    with patch(
+        "raiden.transfer.views.get_channelstate_by_token_network_and_partner"
+    ) as mocked_get_channelstate, patch("raiden.transfer.channel.get_status") as get_status:
+        get_status.return_value = ChannelState.STATE_OPENED
+        mocked_get_channelstate.return_value = 1
+        route_state = make_route_state(
+            path_object=test_data,
+            previous_address=None,
+            chain_state=None,
+            token_network_address=factories.make_address(),
+            from_address=factories.make_address(),
+        )
+        assert all(isinstance(x, bytes) for x in route_state.address_to_metadata.keys())
+        assert all(encode_hex(x) for x in route_state.address_to_metadata.keys())
