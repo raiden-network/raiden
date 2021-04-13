@@ -17,7 +17,6 @@ from raiden.storage.serialization.schemas import SchemaCache
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import Any, Dict
 
-
 MESSAGE_NAME_TO_QUALIFIED_NAME = {
     "AuthenticatedMessage": "raiden.messages.abstract.AuthenticatedMessage",
     "Delivered": "raiden.messages.synchronization.Delivered",
@@ -80,7 +79,7 @@ class DictSerializer(SerializationBase):
             try:
                 schema = SchemaCache.get_or_create_schema(obj.__class__)
                 data = schema.dump(obj)
-            except (TypeError, ValidationError, ValueError) as ex:
+            except (AttributeError, TypeError, ValidationError, ValueError) as ex:
                 raise SerializationError(f"Can't serialize: {data}") from ex
         elif not isinstance(obj, Mapping):
             raise SerializationError(f"Can only serialize dataclasses or dict-like objects: {obj}")
