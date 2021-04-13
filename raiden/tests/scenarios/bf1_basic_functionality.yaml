@@ -20,7 +20,6 @@ nodes:
   raiden_version: local
 
   default_options:
-    matrix-server: transport.transport05.raiden.network
     gas-price: fast
     routing-mode: pfs
     pathfinding-max-paths: 5
@@ -34,6 +33,17 @@ nodes:
       - 0
     default-settle-timeout: "{{ settlement_timeout_min }}"
     default-reveal-timeout: 20
+  node_options:
+    0:
+      matrix-server: "{{ matrix_servers[0] }}"
+    1:
+      matrix-server: "{{ matrix_servers[1] }}"
+    2:
+      matrix-server: "{{ matrix_servers[2] }}"
+    3:
+      matrix-server: "{{ matrix_servers[3] }}"
+    4:
+      matrix-server: "{{ matrix_servers[0] }}"
 
 scenario:
   serial:

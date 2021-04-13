@@ -21,7 +21,6 @@ nodes:
   raiden_version: local
 
   default_options:
-    matrix-server: transport.transport05.raiden.network
     gas-price: fast
     enable-monitoring: true
     proportional-fee:

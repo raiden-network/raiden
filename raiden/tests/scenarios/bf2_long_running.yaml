@@ -20,7 +20,6 @@ nodes:
   raiden_version: local
   enable-monitoring: false
   default_options:
-    matrix-server: transport.transport05.raiden.network
     gas-price: fast
     default-settle-timeout: {{ settlement_timeout_min }}
     default-reveal-timeout: 20
