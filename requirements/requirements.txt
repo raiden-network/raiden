@@ -183,8 +183,10 @@ pycryptodome==3.8.2
     #   eth-keyfile
 pyee==7.0.2
     # via aiortc
-pylibsrtp==0.6.6
-    # via aiortc
+pylibsrtp==0.6.8
+    # via
+    #   -r requirements.in
+    #   aiortc
 pyrsistent==0.15.7
     # via jsonschema
 pysha3==1.0.2
