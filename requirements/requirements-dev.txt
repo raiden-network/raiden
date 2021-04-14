@@ -427,7 +427,7 @@ pygments==2.7.4
     #   ipython
     #   pdbpp
     #   readme-renderer
-pylibsrtp==0.6.6
+pylibsrtp==0.6.8
     # via
     #   -r requirements.txt
     #   aiortc

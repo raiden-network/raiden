@@ -506,7 +506,7 @@ pyinstaller-hooks-contrib==2020.7
     # via pyinstaller
 pyinstaller==4.2
     # via -r requirements-ci.in
-pylibsrtp==0.6.6
+pylibsrtp==0.6.8
     # via
     #   -r requirements-dev.txt
     #   aiortc
