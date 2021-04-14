@@ -76,14 +76,7 @@ from raiden.transfer.views import (
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_signed_balance_proof, pack_withdraw
-from raiden.utils.typing import (
-    MYPY_ANNOTATION,
-    TYPE_CHECKING,
-    AddressMetadata,
-    Dict,
-    List,
-    Nonce,
-)
+from raiden.utils.typing import MYPY_ANNOTATION, TYPE_CHECKING, AddressMetadata, Dict, List, Nonce
 from raiden_contracts.constants import MessageTypeId
 
 if TYPE_CHECKING:
