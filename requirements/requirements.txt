@@ -14,8 +14,10 @@ asn1crypto==1.3.0
     # via coincurve
 attrs==19.3.0
     # via jsonschema
-av==8.0.2
-    # via aiortc
+av==8.0.3
+    # via
+    #   -r requirements.in
+    #   aiortc
 base58==2.0.0
     # via multiaddr
 bitarray==1.2.1

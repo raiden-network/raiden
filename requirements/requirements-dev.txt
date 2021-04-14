@@ -40,7 +40,7 @@ attrs==19.3.0
     #   twisted
 automat==20.2.0
     # via twisted
-av==8.0.2
+av==8.0.3
     # via
     #   -r requirements.txt
     #   aiortc
