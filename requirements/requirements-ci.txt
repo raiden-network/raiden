@@ -54,7 +54,7 @@ automat==20.2.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-av==8.0.2
+av==8.0.3
     # via
     #   -r requirements-dev.txt
     #   aiortc
