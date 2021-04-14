@@ -67,7 +67,7 @@ def get_private_key(keystore_file: str, password: str) -> str:
 )
 def main(keystore_file: str, password: str, host: str, room_id: str, other_user_id: str) -> None:
     private_key = get_private_key(keystore_file, password)
-    client = GMatrixClient(lambda x: False, lambda x: None, host)
+    client = GMatrixClient(lambda x: False, host)
 
     user = login(
         client=client,

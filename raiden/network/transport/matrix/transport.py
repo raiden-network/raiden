@@ -720,9 +720,6 @@ class MatrixTransport(Runnable):
                 )
 
             # These are not protocol messages, but transport specific messages
-            from pprint import pprint
-
-            pprint(queue)
             for message, _ in queue.messages:
                 if isinstance(message, (Delivered, Ping, Pong)):
                     raise ValueError(

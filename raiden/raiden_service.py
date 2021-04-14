@@ -1081,7 +1081,7 @@ class RaidenService(Runnable):
             self.transport.async_start_health_check(node_address)
 
     def immediate_health_check_for(self, node_address: Address) -> None:
-        """Start health checking `node_address`.test_matrix_message_sync
+        """Start health checking `node_address`.
 
         This function is a noop during initialization, because health checking
         can be started as a side effect of some events (e.g. new channel). For

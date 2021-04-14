@@ -27,9 +27,7 @@ ROOM_ALIAS = "#room_name:server1"
 def main() -> None:
     host = sys.argv[1]
 
-    client = GMatrixClient(
-        lambda x: False, lambda x: None, host, user_id=USER_ID, token=ACCESS_TOKEN
-    )
+    client = GMatrixClient(lambda x: False, host, user_id=USER_ID, token=ACCESS_TOKEN)
     client.join_room(ROOM_ALIAS)
 
     current_presence: Optional[str] = "offline"
