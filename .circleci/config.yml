@@ -734,7 +734,7 @@ workflows:
       - prepare-python-linux:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
           requires:
             - prepare-system-linux
 
@@ -746,21 +746,21 @@ workflows:
       - lint:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
           requires:
             - prepare-python-linux
 
       - build-docs:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
           requires:
             - prepare-python-linux
 
       - smoketest:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
               transport-layer: ["matrix"]
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
@@ -771,7 +771,7 @@ workflows:
           matrix:
             alias: test
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
             - lint
@@ -780,7 +780,7 @@ workflows:
           matrix:
             alias: test-fuzz
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
@@ -902,7 +902,7 @@ workflows:
       - prepare-python-linux:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
           requires:
           - prepare-system-linux
 
@@ -914,21 +914,21 @@ workflows:
       - lint:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
           requires:
           - prepare-python-linux
 
       - build-docs:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
           requires:
             - prepare-python-linux
 
       - smoketest:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
               transport-layer: ["matrix"]
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
@@ -939,7 +939,7 @@ workflows:
           matrix:
             alias: test
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
             - lint
@@ -948,7 +948,7 @@ workflows:
           matrix:
             alias: test-fuzz
             parameters:
-              py-version: ["3.7", "3.8"]
+              py-version: ["3.7", "3.8", "3.9"]
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
