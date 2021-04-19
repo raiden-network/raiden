@@ -504,7 +504,7 @@ pygments==2.7.4
     #   readme-renderer
 pyinstaller-hooks-contrib==2020.7
     # via pyinstaller
-pyinstaller==4.2
+pyinstaller==4.3
     # via -r requirements-ci.in
 pylibsrtp==0.6.8
     # via
