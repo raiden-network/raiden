@@ -57,13 +57,15 @@ from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
+from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
-from raiden.utils.typing import Address, Dict, List
+from raiden.utils.typing import Address, Dict, List, MessageID
 from raiden.waiting import wait_for_network_state
+from raiden_contracts.utils.type_aliases import ChainID
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 
@@ -147,14 +149,16 @@ def ping_pong_message_success(transport0, transport1):
 
     msg_id = random.randint(1e5, 9e5)
 
-    ping_message = Processed(message_identifier=msg_id, signature=EMPTY_SIGNATURE)
-    pong_message = Delivered(delivered_message_identifier=msg_id, signature=EMPTY_SIGNATURE)
+    ping_message = Processed(message_identifier=MessageID(msg_id), signature=EMPTY_SIGNATURE)
+    pong_message = Delivered(
+        delivered_message_identifier=MessageID(msg_id), signature=EMPTY_SIGNATURE
+    )
 
     transport0_raiden_queues[queueid1].append(ping_message)
 
     transport0._raiden_service.sign(ping_message)
     transport1._raiden_service.sign(pong_message)
-    transport0.send_async([MessagesQueue(queueid1, [ping_message])])
+    transport0.send_async([MessagesQueue(queueid1, [(ping_message, transport1.address_metadata)])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE, exception=False):
         all_messages_received = False
@@ -171,7 +175,7 @@ def ping_pong_message_success(transport0, transport1):
 
     transport0._raiden_service.sign(pong_message)
     transport1._raiden_service.sign(ping_message)
-    transport1.send_async([MessagesQueue(queueid0, [ping_message])])
+    transport1.send_async([MessagesQueue(queueid0, [(ping_message, transport0.address_metadata)])])
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE, exception=False):
         all_messages_received = False
@@ -232,7 +236,6 @@ def wait_for_peer_reachable(transport: MatrixTransport, target_address: Address,
     )
 
 
-@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
 def test_matrix_message_sync(matrix_transports):
@@ -253,10 +256,6 @@ def test_matrix_message_sync(matrix_transports):
     transport0.start(raiden_service0, None)
     transport1.start(raiden_service1, None)
 
-    # XXX-UAM here was the health check before
-    # transport0.immediate_health_check_for(transport1._raiden_service.address)
-    # transport1.immediate_health_check_for(transport0._raiden_service.address)
-
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,
         canonical_identifier=factories.UNIT_CANONICAL_ID,
@@ -266,10 +265,12 @@ def test_matrix_message_sync(matrix_transports):
     raiden0_queues[queue_identifier] = []
 
     for i in range(5):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Processed(message_identifier=MessageID(i), signature=EMPTY_SIGNATURE)
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
-        transport0.send_async([MessagesQueue(queue_identifier, [message])])
+        transport0.send_async(
+            [MessagesQueue(queue_identifier, [(message, transport1.address_metadata)])]
+        )
 
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while not len(transport0_messages) == 5:
@@ -291,19 +292,17 @@ def test_matrix_message_sync(matrix_transports):
 
     transport1.stop()
 
-    wait_for_peer_unreachable(transport0, transport1._raiden_service.address)
-
     # Send more messages while the other end is offline
     for i in range(10, 15):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Processed(message_identifier=MessageID(i), signature=EMPTY_SIGNATURE)
         raiden0_queues[queue_identifier].append(message)
         transport0._raiden_service.sign(message)
-        transport0.send_async([MessagesQueue(queue_identifier, [message])])
+        transport0.send_async(
+            [MessagesQueue(queue_identifier, [(message, transport1.address_metadata)])]
+        )
 
     # Should fetch the 5 messages sent while transport1 was offline
     transport1.start(transport1._raiden_service, None)
-    # XXX-UAM here was the health check before
-    # transport1.immediate_health_check_for(transport0._raiden_service.address)
 
     with gevent.Timeout(TIMEOUT_MESSAGE_RECEIVE):
         while len(transport1_messages) != 10:
@@ -321,62 +320,22 @@ def test_matrix_message_sync(matrix_transports):
         assert any(m.delivered_message_identifier == i for m in transport0_messages)
 
 
-@expect_failure
-@pytest.mark.skip(reason="Test is still using presence / health check")
-@pytest.mark.parametrize("number_of_nodes", [2])
-@pytest.mark.parametrize("channels_per_node", [1])
-@pytest.mark.parametrize("number_of_tokens", [1])
-def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
-    raiden_chain: List[RaidenService], token_addresses, request
-):
-    """Proxies exceptions must be forwarded by the transport."""
-    if request.config.option.usepdb:
-        pytest.skip("test fails with pdb")
-    app0, app1 = raiden_chain
-    token_address = token_addresses[0]
-
-    channel_state = views.get_channelstate_for(
-        chain_state=views.state_from_raiden(app0),
-        token_network_registry_address=app0.default_registry.address,
-        token_address=token_address,
-        partner_address=app1.address,
-    )
-    burn_eth(app0.rpc_client)
-
-    def make_tx(*args, **kwargs):  # pylint: disable=unused-argument
-        close_channel = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
-        app0.handle_and_track_state_changes([close_channel])
-
-    app0.transport._client.add_presence_listener(make_tx)
-
-    exception = ValueError("Exception was not raised from the transport")
-    with pytest.raises(InsufficientEth), gevent.Timeout(10, exception=exception):
-        # Change presence in peer app to trigger callback in app0
-        app1.transport._client.set_presence_state(UserPresence.UNAVAILABLE.value)
-        app0.greenlet.get()
-
-
-@pytest.mark.skip(reason="Test is still using presence / health check")
 def test_matrix_message_retry(
     local_matrix_servers,
     retry_interval_initial,
     retry_interval_max,
     retries_before_backoff,
-    broadcast_rooms,
 ):
     """Test the retry mechanism implemented into the matrix client.
-    The test creates a transport and sends a message. Given that the
-    receiver was online, the initial message is sent but the receiver
-    doesn't respond in time and goes offline. The retrier should then
+    The test creates a transport and sends a message. The receiver
+    doesn't respond in time. The retrier should then
     wait for the `retry_interval` duration to pass and send the message
-    again but this won't work because the receiver is offline. Once
-    the receiver comes back again, the message should be sent again.
+    again.
     """
     partner_address = factories.make_address()
 
     transport = MatrixTransport(
         config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms,
             retries_before_backoff=retries_before_backoff,
             retry_interval_initial=retry_interval_initial,
             retry_interval_max=retry_interval_max,
@@ -391,12 +350,6 @@ def test_matrix_message_retry(
     transport.start(raiden_service, None)
     transport.log = MagicMock()
 
-    # Receiver is online
-    # XXX-UAM uam was accessed here
-    # transport._address_mgr._address_to_reachabilitystate[partner_address] = ReachabilityState(
-    #     AddressReachability.REACHABLE, datetime.now()
-    # )
-
     queueid = QueueIdentifier(
         recipient=partner_address, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
     )
@@ -406,36 +359,13 @@ def test_matrix_message_retry(
     assert bool(retry_queue), "retry_queue not running"
 
     # Send the initial message
-    message = Processed(message_identifier=0, signature=EMPTY_SIGNATURE)
+    message = Processed(message_identifier=MessageID(0), signature=EMPTY_SIGNATURE)
     transport._raiden_service.sign(message)
     chain_state.queueids_to_queues[queueid] = [message]
     retry_queue.enqueue_unordered(message)
 
     gevent.idle()
     assert transport._send_raw.call_count == 1
-
-    # Receiver goes offline
-    # XXX-UAM uam was accessed here
-    # transport._address_mgr._address_to_reachabilitystate[partner_address] = ReachabilityState(
-    #     AddressReachability.UNREACHABLE, datetime.now()
-    # )
-
-    with gevent.Timeout(retry_interval_initial + 2):
-        wait_assert(
-            transport.log.debug.assert_called_with,
-            "Partner not reachable. Skipping.",
-            partner=to_checksum_address(partner_address),
-            status=AddressReachability.UNREACHABLE,
-        )
-
-    # Retrier did not call send_raw given that the receiver is still offline
-    assert transport._send_raw.call_count == 1
-
-    # Receiver comes back online
-    # XXX-UAM uam was accessed here
-    # transport._address_mgr._address_to_reachabilitystate[partner_address] = ReachabilityState(
-    #     AddressReachability.REACHABLE, datetime.now()
-    # )
 
     # Retrier should send the message again
     with gevent.Timeout(retry_interval_initial + 2):
@@ -522,44 +452,6 @@ def test_matrix_transport_handles_metadata(matrix_transports):
     transport2.stop()
 
 
-def test_join_invalid_discovery(
-    local_matrix_servers,
-    retry_interval_initial,
-    retry_interval_max,
-    retries_before_backoff,
-    broadcast_rooms,
-):
-    """join_broadcast_room tries to join on all servers on available_servers config
-
-    If any of the servers isn't reachable by synapse, it'll return a 500 response, which needs
-    to be handled, and if no discovery room is found on any of the available_servers, one in
-    our current server should be created
-    """
-    transport = MatrixTransport(
-        config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms,
-            retries_before_backoff=retries_before_backoff,
-            retry_interval_initial=retry_interval_initial,
-            retry_interval_max=retry_interval_max,
-            server=local_matrix_servers[0],
-            available_servers=["http://invalid.server"],
-        ),
-        environment=Environment.DEVELOPMENT,
-    )
-    transport._client.api.retry_timeout = 0
-    transport._send_raw = MagicMock()
-    raiden_service = MockRaidenService(None)
-
-    transport.start(raiden_service, None)
-    transport.log = MagicMock()
-    discovery_room_name = make_room_alias(transport.chain_id, "discovery")
-    assert isinstance(transport.broadcast_rooms.get(discovery_room_name), Room)
-
-    transport.stop()
-    transport.greenlet.get()
-
-
-@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [3])
 def test_matrix_cross_server_with_load_balance(matrix_transports):
@@ -580,52 +472,12 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
     transport1.start(raiden_service1, "")
     transport2.start(raiden_service2, "")
 
-    # XXX-UAM here was the health check before
-    # transport0.immediate_health_check_for(raiden_service1.address)
-    # transport0.immediate_health_check_for(raiden_service2.address)
-    #
-    # transport1.immediate_health_check_for(raiden_service0.address)
-    # transport1.immediate_health_check_for(raiden_service2.address)
-
-    # transport2.immediate_health_check_for(raiden_service0.address)
-    # transport2.immediate_health_check_for(raiden_service1.address)
-
     assert ping_pong_message_success(transport0, transport1)
     assert ping_pong_message_success(transport0, transport2)
     assert ping_pong_message_success(transport1, transport0)
     assert ping_pong_message_success(transport1, transport2)
     assert ping_pong_message_success(transport2, transport0)
     assert ping_pong_message_success(transport2, transport1)
-
-
-def test_matrix_discovery_room_offline_server(
-    local_matrix_servers,
-    retries_before_backoff,
-    retry_interval_initial,
-    retry_interval_max,
-    broadcast_rooms,
-):
-
-    transport = MatrixTransport(
-        config=MatrixTransportConfig(
-            broadcast_rooms=broadcast_rooms,
-            retries_before_backoff=retries_before_backoff,
-            retry_interval_initial=retry_interval_initial,
-            retry_interval_max=retry_interval_max,
-            server=local_matrix_servers[0],
-            available_servers=[local_matrix_servers[0], "https://localhost:1"],
-        ),
-        environment=Environment.DEVELOPMENT,
-    )
-    transport.start(MockRaidenService(None), "")
-
-    discovery_room_name = make_room_alias(transport.chain_id, "discovery")
-    with gevent.Timeout(1):
-        while not isinstance(transport.broadcast_rooms.get(discovery_room_name), Room):
-            gevent.sleep(0.1)
-
-    transport.stop()
-    transport.greenlet.get()
 
 
 @pytest.mark.parametrize("device_id", (DeviceIDs.PFS, DeviceIDs.MS))
@@ -640,7 +492,7 @@ def test_matrix_broadcast(matrix_transports, services, device_id):
 
     sent_messages = list()
     for i in range(5):
-        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
+        message = Processed(message_identifier=MessageID(i), signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)
         sent_messages.append(message)
         transport.broadcast(message, device_id=device_id)
@@ -673,7 +525,7 @@ def test_monitoring_broadcast_messages(
 
     raiden_service = MockRaidenService(None)
     raiden_service.config = RaidenConfig(
-        chain_id=1234,
+        chain_id=ChainID(1234),
         environment_type=environment_type,
         services=ServiceConfig(monitoring_enabled=True),
     )
@@ -860,7 +712,6 @@ def test_pfs_broadcast_messages(
     assert isinstance(messages[1], PFSFeeUpdate)
 
 
-@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [3])
 @pytest.mark.parametrize(
@@ -884,38 +735,15 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     transport0.start(raiden_service0, "")
     transport1.start(raiden_service1, "")
 
-    # XXX-UAM here was the health check before
-    # transport0.immediate_health_check_for(raiden_service1.address)
-    # transport1.immediate_health_check_for(raiden_service0.address)
-
     assert ping_pong_message_success(transport0, transport1)
 
     transport0.stop()
-
-    wait_for_peer_unreachable(transport1, raiden_service0.address)
-    assert not is_reachable(transport1, raiden_service0.address)
-
     transport2.start(raiden_service0, "")
-    # XXX-UAM here was the health check before
-    # transport2.immediate_health_check_for(raiden_service1.address)
 
     assert ping_pong_message_success(transport2, transport1)
 
     transport2.stop()
-
-    wait_for_peer_unreachable(transport1, raiden_service0.address)
-    assert not is_reachable(transport1, raiden_service0.address)
-
     transport0.start(raiden_service0, "")
-
-    # XXX-UAM here was the health check before
-    # transport0.immediate_health_check_for(raiden_service1.address)
-
-    with Timeout(TIMEOUT_MESSAGE_RECEIVE):
-        while not is_reachable(transport1, raiden_service0.address):
-            gevent.sleep(0.1)
-
-    assert is_reachable(transport1, raiden_service0.address)
 
     assert ping_pong_message_success(transport0, transport1)
 
