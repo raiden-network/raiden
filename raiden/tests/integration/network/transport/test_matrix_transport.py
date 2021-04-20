@@ -17,22 +17,16 @@ from raiden.constants import (
     Environment,
     RoutingMode,
 )
-from raiden.exceptions import InsufficientEth
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
-from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.transport import (
     MatrixTransport,
     MessagesQueue,
     _RetryQueue,
     populate_services_addresses,
 )
-from raiden.network.transport.matrix.utils import (
-    AddressReachability,
-    UserPresence,
-    make_room_alias,
-)
+from raiden.network.transport.matrix.utils import AddressReachability, make_room_alias
 from raiden.raiden_service import RaidenService
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import (
@@ -45,8 +39,7 @@ from raiden.settings import (
 )
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
-from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.detect_failure import expect_failure, raise_on_failure
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
     HOP1,
     CanonicalIdentifierProperties,
@@ -55,13 +48,9 @@ from raiden.tests.utils.factories import (
 )
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
-from raiden.tests.utils.transfer import wait_assert
 from raiden.transfer import views
-from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
 from raiden.transfer.state import NetworkState
-from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import Address, Dict, List, MessageID
 from raiden.waiting import wait_for_network_state
