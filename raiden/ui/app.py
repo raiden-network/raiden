@@ -16,7 +16,6 @@ from raiden.constants import (
     CHAIN_TO_MIN_REVEAL_TIMEOUT,
     DOC_URL,
     GENESIS_BLOCK_NUMBER,
-    MATRIX_AUTO_SELECT_SERVER,
     RAIDEN_DB_VERSION,
     Environment,
     EthereumForks,
@@ -369,10 +368,9 @@ def run_raiden_service(
     else:
         deployed_addresses = load_deployment_addresses_from_contracts(contracts=contracts)
 
-    # Load the available matrix servers when no matrix server is given
-    # The list is used in a PFS check
-    if config.transport.server == MATRIX_AUTO_SELECT_SERVER:
-        fetch_available_matrix_servers(config.transport, config.environment_type)
+    # Always fetch all available matrix servers. It's necessary to know the complete list in order
+    # to be able to construct user-ids on other homeservers
+    fetch_available_matrix_servers(config.transport, config.environment_type)
 
     raiden_bundle = raiden_bundle_from_contracts_deployment(
         proxy_manager=proxy_manager,
