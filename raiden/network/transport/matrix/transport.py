@@ -414,9 +414,10 @@ class MatrixTransport(Runnable):
         self._raiden_service: Optional["RaidenService"] = None
 
         if config.server == MATRIX_AUTO_SELECT_SERVER:
-            our_homeserver_candidates = config.available_servers
+            homeserver_candidates = config.available_servers
         elif urlparse(config.server).scheme in {"http", "https"}:
-            our_homeserver_candidates = [config.server]
+            # When an explicit server is given we don't need to do the RTT check on all others
+            homeserver_candidates = [config.server]
         else:
             raise TransportError(
                 f"Invalid matrix server specified (valid values: "
@@ -434,7 +435,7 @@ class MatrixTransport(Runnable):
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
             self._handle_member_join,
-            our_homeserver_candidates,
+            homeserver_candidates,
             http_pool_maxsize=4,
             http_retry_timeout=40,
             http_retry_delay=_http_retry_delay,
