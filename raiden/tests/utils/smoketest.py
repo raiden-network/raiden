@@ -23,7 +23,6 @@ from web3.contract import Contract
 from raiden.accounts import AccountManager
 from raiden.constants import (
     BLOCK_ID_LATEST,
-    DISCOVERY_DEFAULT_ROOM,
     EMPTY_ADDRESS,
     GENESIS_BLOCK_NUMBER,
     SECONDS_PER_DAY,
@@ -34,7 +33,6 @@ from raiden.constants import (
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient, make_sane_poa_middleware
-from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, RAIDEN_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE, DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
@@ -310,13 +308,14 @@ def setup_testchain(
 def setup_matrix_for_smoketest(
     print_step: StepPrinter,
     free_port_generator: Iterable[Port],
-    broadcast_rooms_aliases: Iterable[str],
 ) -> Iterator[List[Tuple["ParsedURL", HTTPExecutor]]]:
     from raiden.tests.utils.transport import matrix_server_starter
 
     print_step("Starting Matrix transport")
 
-    with matrix_server_starter(free_port_generator, broadcast_rooms_aliases) as ctx:
+    with matrix_server_starter(
+        free_port_generator,
+    ) as ctx:
         yield ctx
 
 
@@ -527,9 +526,6 @@ def setup_smoketest(
     matrix_manager = setup_matrix_for_smoketest(
         print_step=print_step,
         free_port_generator=free_port_generator,
-        broadcast_rooms_aliases=[
-            make_room_alias(CHAINNAME_TO_ID["smoketest"], DISCOVERY_DEFAULT_ROOM),
-        ],
     )
 
     # Do not redirect the stdout on a debug session, otherwise the REPL

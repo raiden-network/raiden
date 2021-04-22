@@ -263,7 +263,6 @@ class GMatrixClient(MatrixClient):
     def __init__(
         self,
         handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-        handle_member_join_callback: Callable[[Room], None],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -280,7 +279,6 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
-        self._handle_member_join_callback = handle_member_join_callback
         self.response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]] = NotifyingQueue()
         self.stop_event = Event()
 
@@ -808,7 +806,6 @@ class GMatrixClient(MatrixClient):
 
                 room = self.rooms[room_id]
                 room.prev_batch = sync_room["timeline"]["prev_batch"]
-                room_members_count = len(room._members)
 
                 for event in sync_room["state"]["events"]:
                     event["room_id"] = room_id
@@ -817,9 +814,6 @@ class GMatrixClient(MatrixClient):
                     event["room_id"] = room_id
                     room._put_event(event)
 
-                # number of members changed. Verify validity of room
-                if room_members_count != len(room._members):
-                    self._handle_member_join_callback(room)
                 all_messages.append(
                     (
                         room,

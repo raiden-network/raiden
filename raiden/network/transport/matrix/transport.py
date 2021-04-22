@@ -17,7 +17,6 @@ from aiortc import RTCSessionDescription
 from eth_utils import is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import Semaphore
-from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError
 from web3.types import BlockIdentifier
@@ -54,11 +53,9 @@ from raiden.network.transport.matrix.utils import (
     UserPresence,
     address_from_userid,
     is_valid_userid,
-    join_broadcast_room,
     login,
     make_client,
     make_message_batches,
-    make_room_alias,
     make_user_id,
     my_place_or_yours,
     validate_and_parse_message,
@@ -434,7 +431,6 @@ class MatrixTransport(Runnable):
         version = pkg_resources.require(raiden.__name__)[0].version
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
-            self._handle_member_join,
             homeserver_candidates,
             http_pool_maxsize=4,
             http_retry_timeout=40,
@@ -469,7 +465,6 @@ class MatrixTransport(Runnable):
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
         self._displayname_cache = DisplayNameCache()
 
-        self.broadcast_rooms: Dict[str, Room] = dict()
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
@@ -574,7 +569,6 @@ class MatrixTransport(Runnable):
             node=to_checksum_address(self._raiden_service.address),
             transport_uuid=str(self._uuid),
         )
-        self._initialize_broadcast_rooms()
         self._initialize_first_sync()
         self._initialize_sync()
 
@@ -856,9 +850,7 @@ class MatrixTransport(Runnable):
 
         # Call sync to fetch the inventory rooms and new invites, the sync
         # limit prevents fetching the messages.
-        filter_id = self._client.create_sync_filter(
-            not_rooms=self.broadcast_rooms.values(), limit=0
-        )
+        filter_id = self._client.create_sync_filter(limit=0)
         prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
@@ -873,29 +865,6 @@ class MatrixTransport(Runnable):
             # Leave any that are still lingering.
             room.leave()
 
-    def _initialize_broadcast_rooms(self) -> None:
-        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
-        assert self._user_id, msg
-
-        pool = Pool(size=10)
-
-        def _join_broadcast_room(transport: MatrixTransport, room_name: str) -> None:
-            broadcast_room_alias = f"#{room_name}:{transport._server_name}"
-            transport.log.debug(
-                "Joining broadcast room", broadcast_room_alias=broadcast_room_alias
-            )
-            transport.broadcast_rooms[room_name] = join_broadcast_room(
-                client=transport._client, broadcast_room_alias=broadcast_room_alias
-            )
-
-        for suffix in self._config.broadcast_rooms:
-            alias_prefix = make_room_alias(self.chain_id, suffix)
-
-            if alias_prefix not in self.broadcast_rooms:
-                pool.apply_async(_join_broadcast_room, args=(self, alias_prefix))
-
-        pool.join(raise_error=True)
-
     def _initialize_sync(self) -> None:
         msg = "_initialize_sync requires the GMatrixClient to be properly authenticated."
         assert self._user_id, msg
@@ -903,18 +872,6 @@ class MatrixTransport(Runnable):
         msg = "The sync thread must not be started twice"
         assert self._client.sync_worker is None, msg
         assert self._client.message_worker is None, msg
-
-        msg = (
-            "The node must have joined the broadcast rooms before starting the "
-            "sync thread, since that is necessary to properly generate the "
-            "filters."
-        )
-        assert self.broadcast_rooms, msg
-
-        broadcast_filter_id = self._client.create_sync_filter(
-            not_rooms=self.broadcast_rooms.values()
-        )
-        self._client.set_sync_filter_id(broadcast_filter_id)
 
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
@@ -989,14 +946,6 @@ class MatrixTransport(Runnable):
             content={"membership": "leave"},
         )
 
-    def _handle_member_join(self, room: Room) -> None:
-        if self._is_broadcast_room(room):
-            raise AssertionError(
-                f"Broadcast room events should be filtered in syncs: {room.canonical_alias}."
-                f"Joined Broadcast Rooms: {list(self.broadcast_rooms.keys())}"
-                f"Should be joined to: {self._config.broadcast_rooms}"
-            )
-
     def _validate_matrix_messages(
         self, room: Optional[Room], messages: List[MatrixMessage]
     ) -> Tuple[List[ReceivedRaidenMessage], List[ReceivedCallMessage]]:
@@ -1038,12 +987,7 @@ class MatrixTransport(Runnable):
                 )
                 continue
 
-            if room and self._is_broadcast_room(room):
-                # This must not happen. Nodes must not listen on broadcast rooms.
-                raise RaidenUnrecoverableError(
-                    f"Received message in broadcast room {room.canonical_alias}"
-                )
-            elif room:
+            if room:
                 # We no longer accept node-to-node communication messages in private rooms and
                 # should not be in any.
                 raise RaidenUnrecoverableError(f"Received message in room {room.canonical_alias}.")
@@ -1434,12 +1378,6 @@ class MatrixTransport(Runnable):
         #        with a unique call id for each try this wont be necessary
         gevent.sleep(3)
         self._maybe_initialize_web_rtc(partner_address)
-
-    def _is_broadcast_room(self, room: Room) -> bool:
-        has_alias = room.canonical_alias is not None
-        return has_alias and any(
-            suffix in room.canonical_alias for suffix in self._config.broadcast_rooms
-        )
 
     def _capability_usable(
         self, capability: Capabilities, partner_capabilities_config: CapabilitiesConfig

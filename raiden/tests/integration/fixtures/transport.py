@@ -2,9 +2,8 @@ from typing import List
 
 import pytest
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, Environment
+from raiden.constants import Environment
 from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.settings import (
     DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
     CapabilitiesConfig,
@@ -61,20 +60,13 @@ def local_matrix_servers_with_executor(
     matrix_server_count,
     synapse_config_generator,
     port_generator,
-    broadcast_rooms,
-    chain_id,
 ) -> Iterable[List[Tuple[ParsedURL, HTTPExecutor]]]:
     if transport_protocol is not TransportProtocol.MATRIX:
         yield []
         return
 
-    broadcast_rooms_aliases = [
-        make_room_alias(chain_id, room_name) for room_name in broadcast_rooms
-    ]
-
     starter = matrix_server_starter(
         free_port_generator=port_generator,
-        broadcast_rooms_aliases=broadcast_rooms_aliases,
         count=matrix_server_count,
         config_generator=synapse_config_generator,
         log_context=request.node.name,
@@ -91,18 +83,12 @@ def local_matrix_servers(
 
 
 @pytest.fixture
-def broadcast_rooms() -> List[str]:
-    return [DISCOVERY_DEFAULT_ROOM]
-
-
-@pytest.fixture
 def matrix_transports(
     local_matrix_servers: List[ParsedURL],
     retries_before_backoff: int,
     retry_interval_initial: float,
     retry_interval_max: float,
     number_of_transports: int,
-    broadcast_rooms: List[str],
     matrix_sync_timeout: int,
     capabilities: CapabilitiesConfig,
     environment_type: Environment,
@@ -115,7 +101,6 @@ def matrix_transports(
         transports.append(
             MatrixTransport(
                 config=MatrixTransportConfig(
-                    broadcast_rooms=broadcast_rooms.copy(),
                     retries_before_backoff=retries_before_backoff,
                     retry_interval_initial=retry_interval_initial,
                     retry_interval_max=retry_interval_max,
