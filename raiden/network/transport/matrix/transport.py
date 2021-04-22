@@ -453,6 +453,7 @@ class MatrixTransport(Runnable):
         # FIXME this will not update the servers while Raiden is running,
         #  thus to-device user-id fallback will only try to send to those home-servers that
         #  are fetched during config time
+        #  this fixme is about servers joining the federation during runtime of a raiden node
         self._all_server_names = {self._server_name}
         for server_url in config.available_servers:
             self._all_server_names.add(urlparse(server_url).netloc)
