@@ -489,7 +489,6 @@ def sort_servers_closest(
 
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-    handle_member_join_callback: Callable[[Room], None],
     servers: List[str],
     *args: Any,
     **kwargs: Any,
@@ -514,7 +513,6 @@ def make_client(
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(
             handle_messages_callback,
-            handle_member_join_callback,
             server_url,
             *args,
             **kwargs,
