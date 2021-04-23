@@ -13,6 +13,7 @@ from eth_typing import HexStr
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import Semaphore
+from gevent.pool import Pool
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
@@ -298,7 +299,7 @@ class GMatrixClient(MatrixClient):
 
         # Monotonically increasing id to ensure that presence updates are processed in order.
         self._presence_update_ids: Iterator[int] = itertools.count()
-        self._worker_pool = gevent.pool.Pool(size=20)
+        self._worker_pool = Pool(size=20)
         # Gets incremented every time a sync loop is completed. This is useful since the sync token
         # can remain constant over multiple loops (if no events occur).
         self.sync_progress = SyncProgress(self.response_queue)
