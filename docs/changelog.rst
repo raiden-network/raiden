@@ -2,6 +2,13 @@
 Changelog
 =========
 
+* :release:`2.0.0-a0 <2021-04-26>`
+* :feature:`-` This is an alpha release. Don't run it on mainnet!
+* :feature:`6851` Raiden does not use matrix rooms anymore. This greatly reduces the load on the matrix servers and increases the reliability of the transport layer.
+* :feature:`6898` Add support for geth 1.10.
+* :feature:`6947` Add support for python 3.9.
+* :feature:`6821` API endpoint for UserDeposit contract deposits/withdraws
+* :bug:`6763 major` Ensure that pending messages are sent before Raiden is stopped
 * :feature:`6563` Faster syncing with the blockchain.
 * :feature:`-` Update WebUI to version 1.1.1 https://github.com/raiden-network/webui/releases/tag/v1.1.1. Introduces a new "Quick Connect" that is simpler and more transparent.
 * :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
@@ -13,7 +20,7 @@ Changelog
 * :feature:`6646` add [Matrix toDevice](https://matrix.org/docs/spec/client_server/r0.6.0#id70) message support in transport layer
 * :feature:`6608` Compatibility with Synapse >= 1.12 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
 * :feature:`6482` Add support for client capabilities. Raiden clients can now negotiate supported features via their matrix profile.
-* :bug:`6444` Fix a race condition when processing blockchain events.
+* :bug:`6444 major` Fix a race condition when processing blockchain events.
 
 * :release:`1.1.1 <2020-07-20>`
 * :feature:`-` Update WebUI to version 1.0.2 https://github.com/raiden-network/webui/releases/tag/v1.0.2
