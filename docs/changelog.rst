@@ -4,13 +4,13 @@ Changelog
 
 * :release:`2.0.0-a0 <2021-04-26>`
 * :feature:`-` This is an alpha release. Don't run it on mainnet!
-* :feature:`6851` Raiden does not use matrix rooms anymore. This greatly reduces the load on the matrix servers and increases the reliability of the transport layer.
-* :feature:`6898` Add support for geth 1.10.
-* :feature:`6947` Add support for python 3.9.
+* :feature:`6851` Raiden does not use Matrix rooms anymore. This greatly reduces the load on the matrix servers and increases the reliability of the transport layer.
+* :feature:`6898` Add support for Geth 1.10.
+* :feature:`6947` Add support for Python 3.9.
 * :feature:`6821` API endpoint for UserDeposit contract deposits/withdraws
 * :bug:`6763 major` Ensure that pending messages are sent before Raiden is stopped
 * :feature:`6563` Faster syncing with the blockchain.
-* :feature:`-` Update WebUI to version 1.1.1 https://github.com/raiden-network/webui/releases/tag/v1.1.1. Introduces a new "Quick Connect" that is simpler and more transparent.
+* :feature:`-` Update WebUI to `version 1.1.1 <https://github.com/raiden-network/webui/releases/tag/v1.1.1>`_. Which introduces a new "Quick Connect" that is simpler and more transparent than the old "join token network" feature.
 * :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
 * :feature:`6582` Add ``/settings`` endpoint with information about the used pathfinding service.
 * :feature:`6657` Support for recent geth versions.
