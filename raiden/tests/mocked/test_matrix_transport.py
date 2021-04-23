@@ -73,7 +73,7 @@ def mock_matrix(
     from raiden.network.transport.matrix.utils import UserPresence
 
     def make_client_monkey(
-        handle_messages_callback, handle_member_join_callback, servers, *args, **kwargs
+        handle_messages_callback, servers, *args, **kwargs
     ):  # pylint: disable=unused-argument
         return GMatrixClient(
             handle_messages_callback=handle_messages_callback,

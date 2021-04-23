@@ -21,7 +21,6 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelWithdraw
-from raiden.transfer.state import NetworkState
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
@@ -68,8 +67,6 @@ def test_recovery_happy_case(
 
     app0.stop()
 
-    waiting.wait_for_network_state(app1, app0.address, NetworkState.UNREACHABLE, network_wait)
-
     restart_node(app0)
 
     assert_synced_channel_state(
@@ -78,10 +75,6 @@ def test_recovery_happy_case(
     assert_synced_channel_state(
         token_network_address, app1, deposit - spent_amount, [], app2, deposit + spent_amount, []
     )
-
-    # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(app0, app1.address, network_wait)
-    waiting.wait_for_healthy(app1, app0.address, network_wait)
 
     transfer_and_assert_path(
         path=raiden_network[::-1],
@@ -202,12 +195,11 @@ def test_recovery_unhappy_case(
 
 
 @raise_on_failure
-@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("deposit", [10])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_recovery_blockchain_events(
-    raiden_network: List[RaidenService], restart_node, token_addresses, network_wait
+    raiden_network: List[RaidenService], restart_node, token_addresses
 ):
     """Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
@@ -256,9 +248,6 @@ def test_recovery_blockchain_events(
     wal = app0_restart.wal
     assert wal
 
-    # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(app0_restart, app1.address, network_wait)
-    waiting.wait_for_healthy(app1, app0_restart.address, network_wait)
     restarted_state_changes = wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})
 

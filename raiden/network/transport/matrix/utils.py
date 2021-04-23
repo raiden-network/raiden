@@ -25,18 +25,12 @@ from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.constants import DeviceIDs
-from raiden.exceptions import (
-    InvalidSignature,
-    RaidenUnrecoverableError,
-    SerializationError,
-    TransportError,
-)
+from raiden.exceptions import InvalidSignature, SerializationError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedMessage
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixSyncMessages,
-    Room,
     User,
     node_address_from_userid,
 )
@@ -182,29 +176,6 @@ class MessageAckTimingKeeper:
         if not self._durations:
             return []
         return sorted(self._durations)
-
-
-def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
-    """Join the public broadcast through the alias `broadcast_room_alias`.
-
-    When a new Matrix instance is deployed the broadcast room _must_ be created
-    and aliased, Raiden will not use a server that does not have the discovery
-    room properly set. Requiring the setup of the broadcast alias as part of
-    the server setup fixes a serious race condition where multiple discovery
-    rooms are created, which would break the presence checking.
-    See: https://github.com/raiden-network/raiden-transport/issues/46
-    """
-    try:
-        room = client.join_room(broadcast_room_alias)
-        del client.rooms[room.room_id]
-        return room
-    except MatrixRequestError:
-        raise RaidenUnrecoverableError(
-            f"Could not join broadcast room {broadcast_room_alias}. "
-            f"Make sure the Matrix server you're trying to connect to uses the recommended server "
-            f"setup, esp. the server-side broadcast room creation. "
-            f"See https://github.com/raiden-network/raiden-transport."
-        )
 
 
 def first_login(

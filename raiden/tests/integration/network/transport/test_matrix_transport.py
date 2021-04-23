@@ -1,6 +1,4 @@
 import random  # pylint: skip-file  XXX-UAM remove after tests are updated
-from functools import partial
-from typing import Any
 from unittest.mock import MagicMock, Mock
 
 import gevent
@@ -9,14 +7,7 @@ from eth_utils import to_normalized_address
 from gevent import Timeout
 
 import raiden
-from raiden.constants import (
-    BLOCK_ID_LATEST,
-    DISCOVERY_DEFAULT_ROOM,
-    EMPTY_SIGNATURE,
-    DeviceIDs,
-    Environment,
-    RoutingMode,
-)
+from raiden.constants import BLOCK_ID_LATEST, EMPTY_SIGNATURE, DeviceIDs, Environment, RoutingMode
 from raiden.messages.monitoring_service import RequestMonitoring
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
@@ -26,8 +17,7 @@ from raiden.network.transport.matrix.transport import (
     _RetryQueue,
     populate_services_addresses,
 )
-from raiden.network.transport.matrix.utils import AddressReachability, make_room_alias
-from raiden.raiden_service import RaidenService
+from raiden.network.transport.matrix.utils import AddressReachability
 from raiden.services import send_pfs_update, update_monitoring_service_from_balance_proof
 from raiden.settings import (
     MIN_MONITORING_AMOUNT_DAI,
@@ -39,7 +29,6 @@ from raiden.settings import (
 )
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
-from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
     HOP1,
     CanonicalIdentifierProperties,
@@ -50,10 +39,8 @@ from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
-from raiden.transfer.state import NetworkState
 from raiden.utils.keys import privatekey_to_address
-from raiden.utils.typing import Address, Dict, List, MessageID
-from raiden.waiting import wait_for_network_state
+from raiden.utils.typing import Address, MessageID
 from raiden_contracts.utils.type_aliases import ChainID
 
 HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
@@ -737,7 +724,6 @@ def test_matrix_user_roaming(matrix_transports, roaming_peer):
     assert ping_pong_message_success(transport0, transport1)
 
 
-@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
 @pytest.mark.parametrize(
@@ -771,29 +757,17 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs0_0.start(raiden_service0, "")
     transport_rs1_0.start(raiden_service1, "")
 
-    # XXX-UAM here was the health check before
-    # transport_rs0_0.immediate_health_check_for(raiden_service1.address)
-    # transport_rs1_0.immediate_health_check_for(raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_0, transport_rs1_0)
 
     # Node two switches to second server
     transport_rs1_0.stop()
-    wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
-
     transport_rs1_1.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_0, transport_rs1_1)
 
     # Node two switches to third server
     transport_rs1_1.stop()
-    wait_for_peer_unreachable(transport_rs0_0, raiden_service1.address)
-
     transport_rs1_2.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_2.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_0, transport_rs1_2)
     # Node one switches to second server, Node two back to first
@@ -803,29 +777,17 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs0_1.start(raiden_service0, "")
     transport_rs1_0.start(raiden_service1, "")
 
-    # XXX-UAM here was the health check before
-    # transport_rs0_1.immediate_health_check_for(raiden_service1.address)
-    # transport_rs1_0.immediate_health_check_for(raiden_service0.address)
-
     assert ping_pong_message_success(transport_rs0_1, transport_rs1_0)
 
     # Node two joins on second server again
     transport_rs1_0.stop()
-    wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
-
     transport_rs1_1.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_1, transport_rs1_1)
 
     # Node two switches to third server
     transport_rs1_1.stop()
-    wait_for_peer_unreachable(transport_rs0_1, raiden_service1.address)
-
     transport_rs1_2.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_2.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_1, transport_rs1_2)
 
@@ -834,250 +796,21 @@ def test_matrix_multi_user_roaming(matrix_transports, roaming_peer):
     transport_rs1_2.stop()
 
     transport_rs0_2.start(raiden_service0, "")
-    # XXX-UAM here was the health check before
-    # transport_rs0_2.immediate_health_check_for(raiden_service1.address)
     transport_rs1_0.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_0.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_0)
 
     # Node two switches to second server
     transport_rs1_0.stop()
-    wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
-
     transport_rs1_1.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_1.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_1)
 
     # Node two joins on third server
     transport_rs1_1.stop()
-    wait_for_peer_unreachable(transport_rs0_2, raiden_service1.address)
-
     transport_rs1_2.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport_rs1_2.immediate_health_check_for(raiden_service0.address)
 
     assert ping_pong_message_success(transport_rs0_2, transport_rs1_2)
-
-
-@pytest.mark.skip(reason="Test is still using presence / health check")
-@pytest.mark.parametrize("matrix_server_count", [2])
-@pytest.mark.parametrize("number_of_transports", [2])
-def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
-    transport0, transport1 = matrix_transports
-    received_messages0 = set()
-    received_messages1 = set()
-
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
-
-    raiden_service0 = MockRaidenService(message_handler0)
-    raiden_service1 = MockRaidenService(message_handler1)
-
-    transport0.start(raiden_service0, "")
-    transport1.start(raiden_service1, "")
-    # XXX-UAM here was the health check before
-    # transport0.immediate_health_check_for(raiden_service1.address)
-    # transport1.immediate_health_check_for(raiden_service0.address)
-
-    assert ping_pong_message_success(transport0, transport1)
-
-
-@pytest.mark.parametrize("number_of_transports", [3])
-@pytest.mark.parametrize("matrix_server_count", [1])
-@pytest.mark.parametrize("matrix_sync_timeout", [5_000])  # Shorten sync timeout to prevent timeout
-def test_transport_does_not_receive_broadcast_rooms_updates(matrix_transports):
-    """Ensure that matrix server-side filters take effect on sync for broadcast room content.
-
-    Although broadcasting messages in rooms is not supported by raiden anymore,
-    we need this test to make sure that the sync filters for filtering out messages
-    in the discovery room work.
-
-    The test sets up 3 transports where:
-    Transport0 sends a message to the discovery broadcast room.
-    Transport1 has an active sync filter ID that filters out broadcast room messages.
-    Transport2 has NO active sync filter so it receives everything.
-
-    The test should wait for Transport0 to send a message and then
-    verify that Transport2 has received the message while Transport1
-    did not.
-    """
-    raiden_service0 = MockRaidenService(None)
-    raiden_service1 = MockRaidenService(None)
-    raiden_service2 = MockRaidenService(None)
-
-    transport0, transport1, transport2 = matrix_transports
-
-    received_sync_events: Dict[str, List[Dict[str, Any]]] = {"t1": [], "t2": []}
-
-    def _handle_responses(
-        name: str, responses: List[Dict[str, Any]], first_sync: bool = False
-    ):  # pylint: disable=unused-argument
-        for response in responses:
-            joined_rooms = response.get("rooms", {}).get("join", {})
-            for joined_room in joined_rooms.values():
-                timeline_events = joined_room.get("timeline").get("events", [])
-                message_events = [
-                    event for event in timeline_events if event["type"] == "m.room.message"
-                ]
-                received_sync_events[name].extend(message_events)
-
-    # Replace the transport's handle_response method
-    # Should be able to detect if sync delivered a message
-    transport1._client._handle_responses = partial(_handle_responses, "t1")
-    transport2._client._handle_responses = partial(_handle_responses, "t2")
-
-    transport0.start(raiden_service0, None)
-    transport1.start(raiden_service1, None)
-    transport2.start(raiden_service2, None)
-
-    discovery_room_alias = make_room_alias(transport0.chain_id, DISCOVERY_DEFAULT_ROOM)
-    discovery_broadcast_room_t0 = transport0.broadcast_rooms[discovery_room_alias]
-
-    # Get the sync helper to control flow of asynchronous syncs
-    sync_progress1 = transport1._client.sync_progress
-    sync_progress2 = transport2._client.sync_progress
-
-    # Reset transport2 sync filter identifier so that
-    # we can receive broadcast messages
-    assert transport2._client._sync_filter_id is not None
-    transport2._client._sync_filter_id = None
-
-    # get the last sync tokens to control the processed state later
-    last_synced_token1 = sync_progress1.last_synced
-    # for T2 we need to make sure that the current sync used the filter reset -> wait()
-    last_synced_token2 = sync_progress2.synced_event.wait()[0]
-    # Send another message to the broadcast room, if transport1 listens on the room it will
-    # throw an exception
-    message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
-    message_text = MessageSerializer.serialize(message)
-    discovery_broadcast_room_t0.send_text(message_text)
-
-    # wait for the current tokens to be processed + 1 additional sync
-    # this must be done because the message should be in the sync after the stored token
-    sync_progress1.wait_for_processed(last_synced_token1, 1)
-    sync_progress2.wait_for_processed(last_synced_token2, 1)
-
-    # Transport2 should have received the message
-    assert received_sync_events["t2"]
-    event_body = received_sync_events["t2"][0]["content"]["body"]
-    assert message_text == event_body
-
-    # Transport1 used the filter so nothing was received
-    assert not received_sync_events["t1"]
-
-
-@raise_on_failure
-@pytest.mark.skip(reason="Test is still using presence / health check")
-@pytest.mark.parametrize("matrix_server_count", [3])
-@pytest.mark.parametrize("number_of_nodes", [3])
-def test_transport_presence_updates(
-    raiden_network: List[RaidenService], restart_node, retry_timeout
-):
-    """
-    Create transports and test that matrix delivers presence updates
-    in the presence of filters which ignore all event updates
-    from matrix for broadcast rooms except for the presence events.
-    """
-
-    app0, app1, app2 = raiden_network
-
-    # XXX-UAM here was the health check before
-    # app0.transport.immediate_health_check_for(app1.address)
-    # app0.transport.immediate_health_check_for(app2.address)
-    #
-    # app1.transport.immediate_health_check_for(app0.address)
-    # app1.transport.immediate_health_check_for(app2.address)
-    #
-    # app2.transport.immediate_health_check_for(app0.address)
-    # app2.transport.immediate_health_check_for(app1.address)
-
-    wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app0, app2.address, NetworkState.REACHABLE, retry_timeout)
-
-    wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app1, app2.address, NetworkState.REACHABLE, retry_timeout)
-
-    wait_for_network_state(app2, app0.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app2, app1.address, NetworkState.REACHABLE, retry_timeout)
-
-    # Stop app0
-    app0.stop()
-    wait_for_network_state(app1, app0.address, NetworkState.UNREACHABLE, retry_timeout)
-    wait_for_network_state(app2, app0.address, NetworkState.UNREACHABLE, retry_timeout)
-
-    # Restart app0
-    restart_node(app0)
-    # XXX-UAM here was the health check before
-    # app0.transport.immediate_health_check_for(app1.address)
-    # app0.transport.immediate_health_check_for(app2.address)
-    wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app2, app0.address, NetworkState.REACHABLE, retry_timeout)
-
-    # Stop app1
-    app1.stop()
-    wait_for_network_state(app0, app1.address, NetworkState.UNREACHABLE, retry_timeout)
-    wait_for_network_state(app2, app1.address, NetworkState.UNREACHABLE, retry_timeout)
-
-    # Restart app1
-    restart_node(app1)
-    # XXX-UAM here was the health check before
-    # app1.transport.immediate_health_check_for(app0.address)
-    # app1.transport.immediate_health_check_for(app2.address)
-    wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app2, app1.address, NetworkState.REACHABLE, retry_timeout)
-
-    # Stop app2
-    app2.stop()
-    wait_for_network_state(app0, app2.address, NetworkState.UNREACHABLE, retry_timeout)
-    wait_for_network_state(app1, app2.address, NetworkState.UNREACHABLE, retry_timeout)
-
-    # Restart app0
-    app2.start()
-    # XXX-UAM here was the health check before
-    # app2.transport.immediate_health_check_for(app0.address)
-    # app2.transport.immediate_health_check_for(app1.address)
-    wait_for_network_state(app0, app2.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app1, app2.address, NetworkState.REACHABLE, retry_timeout)
-
-
-@raise_on_failure
-@pytest.mark.skip(reason="Test is still using presence / health check")
-@pytest.mark.parametrize("matrix_server_count", [1])
-@pytest.mark.parametrize("number_of_nodes", [2])
-@pytest.mark.parametrize("adhoc_capability", [True])
-def test_transport_capabilities(raiden_network: List[RaidenService], capabilities, retry_timeout):
-    """
-    Test that raiden matrix users have the `avatar_url` set in a format understood
-    by the capabilities parser.
-    """
-    app0, app1 = raiden_network
-
-    # XXX-UAM here was the health check before
-    # app0.transport.immediate_health_check_for(app1.address)
-    # app1.transport.immediate_health_check_for(app0.address)
-
-    wait_for_network_state(app0, app1.address, NetworkState.REACHABLE, retry_timeout)
-    wait_for_network_state(app1, app0.address, NetworkState.REACHABLE, retry_timeout)
-
-    # expected_capabilities = capconfig_to_dict(capabilities)
-
-    # XXX-UAM: get_user_ids_for_address was called here
-    # app1_user_ids = app0.transport.get_user_ids_for_address(app1.address)
-    # assert len(app1_user_ids) == 1, "app1 should have exactly one user_id"
-    # app1_user = app0.transport._client.get_user(app1_user_ids.pop())
-    # app1_avatar_url = app1_user.get_avatar_url()
-    # assert len(app1_avatar_url), "avatar_url not set for app1"
-    # app1_capabilities = deserialize_capabilities(app1_avatar_url)
-    # assert "adhoc_capability" in app1_capabilities, "capabilities could not be parsed correctly"
-
-    # XXX-UAM uam was accessed here
-    # collected_capabilities = app0.transport._address_mgr.get_address_capabilities(app1.address)
-    # msg = "capabilities were not collected in transport client"
-    # assert collected_capabilities == PeerCapabilities(expected_capabilities), msg
 
 
 def test_populate_services_addresses(

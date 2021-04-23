@@ -1,6 +1,6 @@
 import time
 from http import HTTPStatus
-from itertools import combinations, count
+from itertools import count
 from typing import Sequence
 
 import gevent
@@ -10,7 +10,6 @@ import structlog
 from eth_utils import to_canonical_address
 from flask import url_for
 
-from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.constants import RoutingMode
@@ -118,7 +117,7 @@ def restart_app(app: RaidenService, restart_node: RestartNode) -> RaidenService:
 
 
 def restart_network(
-    raiden_network: List[RaidenService], restart_node: RestartNode, retry_timeout: float
+    raiden_network: List[RaidenService], restart_node: RestartNode
 ) -> List[RaidenService]:
     for app in raiden_network:
         app.stop()
@@ -129,10 +128,6 @@ def restart_network(
 
     new_network = [greenlet.get() for greenlet in wait_network]
 
-    # The tests assume the nodes are available to transfer
-    for app0, app1 in combinations(new_network, 2):
-        waiting.wait_for_healthy(app0, app1.address, retry_timeout)
-
     return new_network
 
 
@@ -141,13 +136,12 @@ def restart_network_and_apiservers(
     restart_node: RestartNode,
     api_servers: List[APIServer],
     port_generator: Iterator[Port],
-    retry_timeout: float,
 ) -> Tuple[List[RaidenService], List[APIServer]]:
     """Stop an app and start it back"""
     for rest_api in api_servers:
         rest_api.stop()
 
-    new_network = restart_network(raiden_network, restart_node, retry_timeout)
+    new_network = restart_network(raiden_network, restart_node)
     new_servers = start_apiserver_for_network(new_network, port_generator)
 
     return (new_network, new_servers)
@@ -370,7 +364,6 @@ def test_stress(
     raiden_network: List[RaidenService],
     restart_node: RestartNode,
     deposit: TokenAmount,
-    retry_timeout: float,
     token_addresses: List[TokenAddress],
     port_generator: Iterator[Port],
 ) -> None:
@@ -392,7 +385,7 @@ def test_stress(
             stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network, restart_node, rest_apis, port_generator, retry_timeout
+            raiden_network, restart_node, rest_apis, port_generator
         )
 
         assert_channels(raiden_network, token_network_address, deposit)
@@ -401,7 +394,7 @@ def test_stress(
             stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network, restart_node, rest_apis, port_generator, retry_timeout
+            raiden_network, restart_node, rest_apis, port_generator
         )
 
         assert_channels(raiden_network, token_network_address, deposit)
@@ -412,7 +405,7 @@ def test_stress(
             )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network, restart_node, rest_apis, port_generator, retry_timeout
+            raiden_network, restart_node, rest_apis, port_generator
         )
 
-    restart_network(raiden_network, restart_node, retry_timeout)
+    restart_network(raiden_network, restart_node)

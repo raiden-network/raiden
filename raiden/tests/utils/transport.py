@@ -94,43 +94,6 @@ def ignore_close(partner_address: Address) -> None:  # pylint: disable=unused-ar
     pass
 
 
-def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
-    client = new_client(ignore_messages, servers[0])
-    admin_power_level = {"users": {client.user_id: 100}}
-    for server in servers:
-        admin_username = get_admin_credentials(server.netloc)["username"]
-        admin_user_id = f"@{admin_username}:{servers[0].netloc}"
-        admin_power_level["users"][admin_user_id] = 50
-
-    room = client.create_room(
-        alias=broadcast_room_name, is_public=True, power_level_content_override=admin_power_level
-    )
-
-    for server in servers[1:]:
-        client = new_client(ignore_messages, server)
-
-        # A user must join the room to create the room in the federated server
-        log.debug("canonical alias", alias=room.canonical_alias)
-        room = client.join_room(room.canonical_alias)
-
-        server_name = server.netloc
-        alias = f"#{broadcast_room_name}:{server_name}"
-
-        msg = "Setting up the room alias must not fail, otherwise the test can not run."
-        assert room.add_room_alias(alias), msg
-
-        all_aliases = client.api.get_aliases(room.room_id).get("aliases", [])
-
-        msg = "The new alias must be added, otherwise the Raiden node won't be able to find it."
-        assert alias in all_aliases, msg
-
-        msg = (
-            "Leaving the room failed. This is done otherwise there would be "
-            "a ghost user in the broadcast room"
-        )
-        assert room.leave() is None, msg
-
-
 class ParsedURL(str):
     """A string subclass that allows direct access to the split components of a URL"""
 
