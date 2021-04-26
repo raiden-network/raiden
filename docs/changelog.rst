@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 1.2.1 https://github.com/raiden-network/webui/releases/tag/v1.2.1. Adds a dialog for interacting with the UserDeposit contract (UDC).
+
 * :feature:`6563` Faster syncing with the blockchain.
 * :feature:`-` Update WebUI to version 1.1.1 https://github.com/raiden-network/webui/releases/tag/v1.1.1. Introduces a new "Quick Connect" that is simpler and more transparent.
 * :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
