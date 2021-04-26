@@ -74,7 +74,7 @@ bitarray==1.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-black==20.8b1
+black==21.4b0
     # via -r requirements-dev.txt
 bleach==3.3.0
     # via
@@ -687,7 +687,6 @@ twisted[tls]==21.2.0
 typed-ast==1.4.2
     # via
     #   -r requirements-dev.txt
-    #   black
     #   mypy
 typeguard==2.11.1
     # via
@@ -696,7 +695,6 @@ typeguard==2.11.1
 typing-extensions==3.7.4.3
     # via
     #   -r requirements-dev.txt
-    #   black
     #   matrix-synapse
     #   mypy
     #   signedjson
