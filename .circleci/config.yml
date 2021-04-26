@@ -867,7 +867,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-digitalocean:
-          context: "Raiden Context"
+          context: "raiden-py"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
