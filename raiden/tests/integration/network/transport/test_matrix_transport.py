@@ -353,10 +353,10 @@ def test_matrix_message_retry(
 
 
 @pytest.mark.parametrize("matrix_server_count", [3])
-@pytest.mark.parametrize("number_of_transports", [3])
+@pytest.mark.parametrize("number_of_transports", [2])
 def test_matrix_transport_handles_metadata(matrix_transports):
 
-    transport0, transport1, transport2 = matrix_transports
+    transport0, transport1 = matrix_transports
 
     transport0_messages = set()
     transport1_messages = set()
@@ -366,13 +366,11 @@ def test_matrix_transport_handles_metadata(matrix_transports):
 
     raiden_service0 = MockRaidenService(transport0_message_handler)
     raiden_service1 = MockRaidenService(transport1_message_handler)
-    raiden_service2 = MockRaidenService()
 
     raiden_service1.handle_and_track_state_changes = MagicMock()
 
     transport0.start(raiden_service0, None)
     transport1.start(raiden_service1, None)
-    transport2.start(raiden_service2, None)
 
     queue_identifier = QueueIdentifier(
         recipient=transport1._raiden_service.address,
@@ -383,13 +381,10 @@ def test_matrix_transport_handles_metadata(matrix_transports):
     raiden0_queues[queue_identifier] = []
 
     correct_metadata = {"user_id": transport1.user_id}
-    # This is the wrong user for the chosen address (address is implicit by the queue_identifier)
-    incorrect_metadata = {"user_id": transport2.user_id}
-    # invalid metadata, will lead to the fallback user-id generation
     invalid_metadata = {"user_id": "invalid"}
     no_metadata = None
 
-    all_metadata = (correct_metadata, incorrect_metadata, invalid_metadata, no_metadata)
+    all_metadata = (correct_metadata, invalid_metadata, no_metadata)
     num_sends = 2
     message_id = 0
 
@@ -397,6 +392,7 @@ def test_matrix_transport_handles_metadata(matrix_transports):
         for metadata in all_metadata:
             message = Processed(message_identifier=message_id, signature=EMPTY_SIGNATURE)
             raiden0_queues[queue_identifier].append(message)
+
             transport0._raiden_service.sign(message)
             message_queues = [MessagesQueue(queue_identifier, [(message, metadata)])]
             transport0.send_async(message_queues)
@@ -404,9 +400,11 @@ def test_matrix_transport_handles_metadata(matrix_transports):
 
     num_expected_messages = 3 * num_sends
     with Timeout(TIMEOUT_MESSAGE_RECEIVE):
+        # Delivered messages
         while len(transport0_messages) < num_expected_messages:
             gevent.sleep(0.1)
 
+        # Processed messages
         while len(transport1_messages) < num_expected_messages:
             gevent.sleep(0.1)
 
@@ -416,16 +414,15 @@ def test_matrix_transport_handles_metadata(matrix_transports):
     #  the calls to-device should be reduced per user-id because of batching
 
     # transport1 receives the `Processed` messages sent by transport0
-    for i in range(num_expected_messages):
-        assert any(m.message_identifier == i for m in transport1_messages)
+    ids = [m.message_identifier for m in transport1_messages]
+    # transport0 receives the `Delivered` messages sent by transport1
+    delivered_ids = [m.delivered_message_identifier for m in transport0_messages]
 
-    # transport0 answers with a `Delivered` for each `Processed`
-    for i in range(num_expected_messages):
-        assert any(m.delivered_message_identifier == i for m in transport0_messages)
+    assert sorted(ids) == sorted(delivered_ids)
+    assert sorted(ids) == list(range(num_expected_messages))
 
     transport0.stop()
     transport1.stop()
-    transport2.stop()
 
 
 @pytest.mark.parametrize("matrix_server_count", [2])
