@@ -875,7 +875,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-github-release:
-          context: "Raiden Context"
+          context: "raiden-general-2021"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
