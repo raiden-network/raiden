@@ -707,19 +707,19 @@ jobs:
       - conditional-skip
       - config-path
       - run:
-          name: "install twine"
+          name: "Install Twine"
           command: pip install twine
 
       - run:
-          name: "create packages"
+          name: "Create Packages"
           command: |
             echo $(python setup.py --version)
             python setup.py sdist
             python setup.py bdist_wheel
       - run:
-          name: "upload to pypi"
+          name: "Upload to PyPI"
           command: |
-            twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*.{tar.gz,whl}
+            twine upload -u __token__ -p $PYPI_API_TOKEN_RAIDEN dist/*.{tar.gz,whl}
 
 workflows:
   raiden-default:
@@ -883,7 +883,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-pypi:
-          context: "Raiden Context"
+          context: "raiden-py"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
