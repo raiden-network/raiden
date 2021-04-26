@@ -576,7 +576,7 @@ twisted[tls]==21.2.0
     # via
     #   matrix-synapse
     #   treq
-typed-ast==1.4.2
+typed-ast==1.4.3
     # via
     #   -r requirements-dev.in
     #   mypy
