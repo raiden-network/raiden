@@ -208,7 +208,7 @@ class TraceSampler:
 
 
 class SignalSampler:
-    """ Signal based sampler. """
+    """Signal based sampler."""
 
     def __init__(
         self,

@@ -32,7 +32,7 @@ class Ping(SignedMessage):
 
 @dataclass(repr=False, eq=False)
 class Pong(SignedMessage):
-    """ Response to a Ping message. """
+    """Response to a Ping message."""
 
     cmdid: ClassVar[CmdId] = CmdId.PONG
 

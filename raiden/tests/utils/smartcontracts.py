@@ -154,7 +154,7 @@ def compile_files_cwd(*args: Any, **kwargs: Any) -> Dict[str, Any]:
 
 
 def compile_test_smart_contract(name: str) -> Tuple[Dict[str, Any], str]:
-    """ Compiles the smart contract `name`. """
+    """Compiles the smart contract `name`."""
     contract_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "smart_contracts", f"{name}.sol")
     )
@@ -178,7 +178,7 @@ def deploy_rpc_test_contract(
 
 
 def get_list_of_block_numbers(item):
-    """ Creates a list of block numbers of the given list/single event"""
+    """Creates a list of block numbers of the given list/single event"""
     if isinstance(item, list):
         return [element["blockNumber"] for element in item]
 

@@ -752,7 +752,7 @@ def valid_response_json():
 
 
 def test_query_paths_with_second_try(query_paths_args, valid_response_json):
-    """ IOU rejection errors that are expected to result in an unaltered second attempt """
+    """IOU rejection errors that are expected to result in an unaltered second attempt"""
     for try_again in (PFSError.BAD_IOU, PFSError.MISSING_IOU, PFSError.USE_THIS_IOU):
         response = [dict(error_code=try_again.value)] * 2
         assert_failed_pfs_request(
@@ -767,7 +767,7 @@ def test_query_paths_with_second_try(query_paths_args, valid_response_json):
 
 
 def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
-    """ Errors that will result in reattempting with a new iou """
+    """Errors that will result in reattempting with a new iou"""
     for scrap_iou in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
         response = [dict(error_code=scrap_iou.value)] * 2
         assert_failed_pfs_request(
@@ -789,7 +789,7 @@ def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
 
 
 def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
-    " No retries after unrecoverable errors. "
+    "No retries after unrecoverable errors."
     for unrecoverable in (
         PFSError.INVALID_REQUEST,
         PFSError.INVALID_SIGNATURE,
@@ -809,7 +809,7 @@ def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
 
 
 def test_insufficient_payment(query_paths_args, valid_response_json):
-    """ When the PFS complains about insufficient fees, the client must update it's fee info """
+    """When the PFS complains about insufficient fees, the client must update it's fee info"""
     insufficient_response = dict(error_code=PFSError.INSUFFICIENT_SERVICE_PAYMENT.value)
 
     # PFS fails to return info
@@ -846,7 +846,7 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
 
 
 def test_query_paths_with_multiple_errors(query_paths_args):
-    " Max. number of attempts is not exceeded also if there is a new recoverable issue. "
+    "Max. number of attempts is not exceeded also if there is a new recoverable issue."
     different_recoverable_errors = [
         dict(error_code=PFSError.BAD_IOU.value),
         dict(error_code=PFSError.IOU_ALREADY_CLAIMED.value),
@@ -857,7 +857,7 @@ def test_query_paths_with_multiple_errors(query_paths_args):
 
 
 def test_post_pfs_feedback(query_paths_args):
-    """ Test POST feedback to PFS """
+    """Test POST feedback to PFS"""
 
     feedback_token = uuid4()
     token_network_address = factories.make_token_network_address()
@@ -913,7 +913,7 @@ def test_post_pfs_feedback(query_paths_args):
 
 
 def test_no_iou_when_pfs_price_0(query_paths_args):
-    """ Test that no IOU is sent when PFS is for free """
+    """Test that no IOU is sent when PFS is for free"""
     query_paths_args["pfs_config"] = PFSConfig(
         info=PFSInfo(
             url="abc",
@@ -964,7 +964,7 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
 
 
 def test_two_parallel_queries(query_paths_args):
-    """ Test that only one IOU is being processed at a time. """
+    """Test that only one IOU is being processed at a time."""
 
     # We mock one query to last at least 0.2s
     def mocked_json_response_with_sleep(**kwargs):  # pylint: disable=unused-argument

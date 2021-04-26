@@ -121,10 +121,10 @@ class MessagesQueue:
 
 
 class _RetryQueue(Runnable):
-    """ A helper Runnable to send batched messages to receiver through transport """
+    """A helper Runnable to send batched messages to receiver through transport"""
 
     class _MessageData(NamedTuple):
-        """ Small helper data structure for message queue """
+        """Small helper data structure for message queue"""
 
         queue_identifier: QueueIdentifier
         message: Message
@@ -170,7 +170,7 @@ class _RetryQueue(Runnable):
         queue_identifier: QueueIdentifier,
         messages: List[Tuple[Message, Optional[AddressMetadata]]],
     ) -> None:
-        """ Enqueue a message to be sent, and notify main loop """
+        """Enqueue a message to be sent, and notify main loop"""
         msg = (
             f"queue_identifier.recipient ({to_checksum_address(queue_identifier.recipient)}) "
             f" must match self.receiver ({to_checksum_address(self.receiver)})."
@@ -216,7 +216,7 @@ class _RetryQueue(Runnable):
     def enqueue_unordered(
         self, message: Message, address_metadata: AddressMetadata = None
     ) -> None:
-        """ Helper to enqueue a message in the unordered queue. """
+        """Helper to enqueue a message in the unordered queue."""
         self.enqueue(
             queue_identifier=QueueIdentifier(
                 recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
@@ -225,7 +225,7 @@ class _RetryQueue(Runnable):
         )
 
     def notify(self) -> None:
-        """ Notify main loop to check if anything needs to be sent """
+        """Notify main loop to check if anything needs to be sent"""
         with self._lock:
             self._notify_event.set()
 
@@ -603,7 +603,7 @@ class MatrixTransport(Runnable):
         self._client.set_presence_state(state.value)
 
     def _run(self) -> None:  # type: ignore
-        """ Runnable main method, perform wait on long-running subtasks """
+        """Runnable main method, perform wait on long-running subtasks"""
         # dispatch auth data on first scheduling after start
         assert self._raiden_service is not None, "_raiden_service not set"
         self.greenlet.name = f"MatrixTransport._run node:{self.checksummed_address}"
@@ -1100,7 +1100,7 @@ class MatrixTransport(Runnable):
         self._raiden_service.on_messages(incoming_messages)
 
     def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
-        """ Handle text messages sent to listening rooms """
+        """Handle text messages sent to listening rooms"""
         if self._stop_event.ready():
             return False
 
@@ -1179,7 +1179,7 @@ class MatrixTransport(Runnable):
                 continue
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
-        """ Construct and return a _RetryQueue for receiver """
+        """Construct and return a _RetryQueue for receiver"""
         retrier = self._address_to_retrier.get(receiver)
         # The RetryQueue may have exited due to being idle
         if retrier is None or retrier.greenlet.ready():
@@ -1444,7 +1444,7 @@ class MatrixTransport(Runnable):
     def _capability_usable(
         self, capability: Capabilities, partner_capabilities_config: CapabilitiesConfig
     ) -> bool:
-        """ Checks if a given capability is enabled for the local and the partner node """
+        """Checks if a given capability is enabled for the local and the partner node"""
 
         own_caps = capconfig_to_dict(self._config.capabilities_config)
         partner_caps = capconfig_to_dict(partner_capabilities_config)
@@ -1479,7 +1479,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
     def _sign(self, data: bytes) -> bytes:
-        """ Use eth_sign compatible hasher to sign matrix data """
+        """Use eth_sign compatible hasher to sign matrix data"""
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 

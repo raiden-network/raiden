@@ -163,14 +163,14 @@ class SendMessageEvent(Event):
 
 @dataclass(frozen=True)
 class AuthenticatedSenderStateChange(StateChange):
-    """ Marker used for state changes for which the sender has been verified. """
+    """Marker used for state changes for which the sender has been verified."""
 
     sender: Address
 
 
 @dataclass(frozen=True)
 class ContractSendEvent(Event):
-    """ Marker used for events which represent on-chain transactions. """
+    """Marker used for events which represent on-chain transactions."""
 
     triggered_by_block_hash: BlockHash
 
@@ -189,7 +189,7 @@ class ContractSendExpirableEvent(ContractSendEvent):
 
 @dataclass(frozen=True)
 class ContractReceiveStateChange(StateChange):
-    """ Marker used for state changes which represent on-chain logs. """
+    """Marker used for state changes which represent on-chain logs."""
 
     transaction_hash: TransactionHash
     block_number: BlockNumber
@@ -228,7 +228,7 @@ class TransitionResult(Generic[T]):  # pylint: disable=unsubscriptable-object
 
 @dataclass
 class BalanceProofUnsignedState(State):
-    """ Balance proof from the local node without the signature. """
+    """Balance proof from the local node without the signature."""
 
     nonce: Nonce
     transferred_amount: TokenAmount

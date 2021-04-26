@@ -156,7 +156,7 @@ def payment_channel_open_and_deposit(
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
 ) -> None:
-    """ Open a new channel with app0 and app1 as participants """
+    """Open a new channel with app0 and app1 as participants"""
     assert token_address
 
     block_identifier: BlockIdentifier
@@ -406,7 +406,7 @@ def create_apps(
     port_generator: Iterator[Port],
     capabilities_config: CapabilitiesConfig,
 ) -> List[RaidenService]:
-    """ Create the apps."""
+    """Create the apps."""
     # pylint: disable=too-many-locals
     apps = []
     for idx, proxy_manager in enumerate(blockchain_services):
@@ -657,7 +657,7 @@ def wait_for_channels(
     deposit: TokenAmount,
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
 ) -> None:
-    """ Wait until all channels are usable from both directions. """
+    """Wait until all channels are usable from both directions."""
     # XXX this is used a lot in the api / regression tests,
     # this seems to fail around 80! tests
 

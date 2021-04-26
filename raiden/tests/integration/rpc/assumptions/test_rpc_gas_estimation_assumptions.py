@@ -8,7 +8,7 @@ SSTORE_COST = 20000
 
 
 def test_estimate_gas_fail(deploy_client: JSONRPCClient) -> None:
-    """ A JSON RPC estimate gas call for a throwing transaction returns None"""
+    """A JSON RPC estimate gas call for a throwing transaction returns None"""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address

@@ -24,7 +24,7 @@ def balanceproof_from_envelope(envelope_message: EnvelopeMessage) -> BalanceProo
 
 
 def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTransferSignedState:
-    """ Create LockedTransferSignedState from a LockedTransfer message. """
+    """Create LockedTransferSignedState from a LockedTransfer message."""
     balance_proof = balanceproof_from_envelope(message)
 
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)

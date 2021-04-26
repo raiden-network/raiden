@@ -80,7 +80,7 @@ class Runnable:
     def _schedule_new_greenlet(
         self, func: Callable, *args: Any, in_seconds_from_now: int = None, **kwargs: Any
     ) -> Greenlet:
-        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
+        """Spawn a sub-task and ensures an error on it crashes self/main greenlet"""
 
         def on_success(greenlet: Greenlet) -> None:
             if greenlet in self.greenlets:

@@ -835,7 +835,7 @@ def test_cancel_transfer():
 
 
 def test_cancelpayment():
-    """ A payment can be cancelled as long as the secret has not been revealed. """
+    """A payment can be cancelled as long as the secret has not been revealed."""
     setup = setup_initiator_tests(amount=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT)
     assert isinstance(setup.current_state, InitiatorPaymentState)
 

@@ -138,7 +138,7 @@ def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -
 
 
 class ParsedURL(str):
-    """ A string subclass that allows direct access to the split components of a URL """
+    """A string subclass that allows direct access to the split components of a URL"""
 
     def __new__(cls, *args, **kwargs):
         new = str.__new__(cls, *args, **kwargs)  # type: ignore

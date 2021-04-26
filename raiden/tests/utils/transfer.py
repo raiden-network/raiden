@@ -94,7 +94,7 @@ ZERO_FEE = FeeAmount(0)
 
 
 class TransferState(Enum):
-    """ Represents the target state of a transfer. """
+    """Represents the target state of a transfer."""
 
     UNLOCKED = "unlocked"
     EXPIRED = "expired"
@@ -877,7 +877,7 @@ def assert_succeeding_transfer_invariants(
     balance1: Balance,
     pending_locks1: List[HashTimeLockState],
 ) -> None:
-    """ Channels are in synced states and no unlock failures have occurred. """
+    """Channels are in synced states and no unlock failures have occurred."""
     assert not has_unlock_failure(app0)
     assert not has_unlock_failure(app1)
 
@@ -905,7 +905,7 @@ def wait_assert(func: Callable, *args, **kwargs) -> None:
 
 
 def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) -> None:
-    """ Assert that `mirror` has a correct `partner_state` to represent `original`."""
+    """Assert that `mirror` has a correct `partner_state` to represent `original`."""
     original_locked_amount = channel.get_amount_locked(original.our_state)
     mirror_locked_amount = channel.get_amount_locked(mirror.partner_state)
     assert original_locked_amount == mirror_locked_amount
@@ -926,7 +926,7 @@ def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) ->
 def assert_locked(
     from_channel: NettingChannelState, pending_locks: List[HashTimeLockState]
 ) -> None:
-    """ Assert the locks created from `from_channel`. """
+    """Assert the locks created from `from_channel`."""
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
         locks = PendingLocksState([lock.encoded for lock in pending_locks])
@@ -944,7 +944,7 @@ def assert_locked(
 def assert_balance(
     from_channel: NettingChannelState, balance: Balance, locked: LockedAmount
 ) -> None:
-    """ Assert the from_channel overall token values. """
+    """Assert the from_channel overall token values."""
     assert balance >= 0
     assert locked >= 0
 

@@ -49,7 +49,7 @@ from raiden.utils.typing import (
 
 @dataclass(frozen=True)
 class BalanceProofStateChange(AuthenticatedSenderStateChange):
-    """ Marker used for state changes which contain a balance proof. """
+    """Marker used for state changes which contain a balance proof."""
 
     balance_proof: BalanceProofSignedState
 
@@ -84,7 +84,7 @@ class ActionCancelPayment(StateChange):
 
 @dataclass(frozen=True)
 class ActionChannelClose(StateChange):
-    """ User is closing an existing channel. """
+    """User is closing an existing channel."""
 
     canonical_identifier: CanonicalIdentifier
 
@@ -103,7 +103,7 @@ class ActionChannelClose(StateChange):
 
 @dataclass(frozen=True)
 class ActionChannelWithdraw(StateChange):
-    """ Withdraw funds from channel. """
+    """Withdraw funds from channel."""
 
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
@@ -115,7 +115,7 @@ class ActionChannelWithdraw(StateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelNew(ContractReceiveStateChange):
-    """ A new channel was created and this node IS a participant. """
+    """A new channel was created and this node IS a participant."""
 
     channel_state: NettingChannelState
 
@@ -130,7 +130,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelClosed(ContractReceiveStateChange):
-    """ A channel to which this node IS a participant was closed. """
+    """A channel to which this node IS a participant was closed."""
 
     transaction_from: Address
     canonical_identifier: CanonicalIdentifier
@@ -146,7 +146,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelDeposit(ContractReceiveStateChange):
-    """ A channel to which this node IS a participant had a deposit. """
+    """A channel to which this node IS a participant had a deposit."""
 
     canonical_identifier: CanonicalIdentifier
     deposit_transaction: TransactionChannelDeposit
@@ -163,7 +163,7 @@ class ContractReceiveChannelDeposit(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelWithdraw(ContractReceiveStateChange):
-    """ A channel to which this node IS a participant had a withdraw. """
+    """A channel to which this node IS a participant had a withdraw."""
 
     canonical_identifier: CanonicalIdentifier
     participant: Address
@@ -181,7 +181,7 @@ class ContractReceiveChannelWithdraw(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveChannelSettled(ContractReceiveStateChange):
-    """ A channel to which this node IS a participant was settled. """
+    """A channel to which this node IS a participant was settled."""
 
     canonical_identifier: CanonicalIdentifier
     our_onchain_locksroot: Locksroot
@@ -198,7 +198,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ActionChannelSetRevealTimeout(StateChange):
-    """ Change the reveal timeout value of a given channel. """
+    """Change the reveal timeout value of a given channel."""
 
     canonical_identifier: CanonicalIdentifier
     reveal_timeout: BlockTimeout
@@ -227,7 +227,7 @@ class ContractReceiveNewTokenNetworkRegistry(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
-    """ A new token was registered with the token network registry. """
+    """A new token was registered with the token network registry."""
 
     token_network_registry_address: TokenNetworkRegistryAddress
     token_network: TokenNetworkState
@@ -239,7 +239,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveSecretReveal(ContractReceiveStateChange):
-    """ A new secret was registered with the SecretRegistry contract. """
+    """A new secret was registered with the SecretRegistry contract."""
 
     secret_registry_address: SecretRegistryAddress
     secrethash: SecretHash
@@ -283,7 +283,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
 
 @dataclass(frozen=True)
 class ContractReceiveRouteNew(ContractReceiveStateChange):
-    """ New channel was created and this node is NOT a participant. """
+    """New channel was created and this node is NOT a participant."""
 
     canonical_identifier: CanonicalIdentifier
     participant1: Address
@@ -345,7 +345,7 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
-    """ A Withdraw message received. """
+    """A Withdraw message received."""
 
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
@@ -366,7 +366,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
-    """ A Withdraw message was received. """
+    """A Withdraw message was received."""
 
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
@@ -387,7 +387,7 @@ class ReceiveWithdrawConfirmation(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
-    """ A WithdrawExpired message was received. """
+    """A WithdrawExpired message was received."""
 
     message_identifier: MessageID
     canonical_identifier: CanonicalIdentifier
@@ -407,7 +407,7 @@ class ReceiveWithdrawExpired(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class UpdateServicesAddressesStateChange(StateChange):
-    """ A `RegisteredService` contract event was received. """
+    """A `RegisteredService` contract event was received."""
 
     service: Address
     valid_till: int

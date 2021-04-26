@@ -28,7 +28,7 @@ from raiden.utils.typing import (
 # useful work, ie. there must /not/ be an event for requesting new data.
 @dataclass(frozen=True)
 class ActionInitInitiator(StateChange):
-    """ Initial state of a new mediated transfer. """
+    """Initial state of a new mediated transfer."""
 
     transfer: TransferDescriptionWithSecretState
     routes: List[RouteState]
@@ -98,14 +98,14 @@ class ActionTransferReroute(BalanceProofStateChange):
 
 @dataclass(frozen=True)
 class ReceiveTransferCancelRoute(BalanceProofStateChange):
-    """ A mediator sends us a refund due to a failed route """
+    """A mediator sends us a refund due to a failed route"""
 
     transfer: LockedTransferSignedState
 
 
 @dataclass(frozen=True)
 class ReceiveLockExpired(BalanceProofStateChange):
-    """ A LockExpired message received. """
+    """A LockExpired message received."""
 
     secrethash: SecretHash
     message_identifier: MessageID
@@ -113,7 +113,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
 
 @dataclass(frozen=True)
 class ReceiveSecretRequest(AuthenticatedSenderStateChange):
-    """ A SecretRequest message received. """
+    """A SecretRequest message received."""
 
     payment_identifier: PaymentID
     amount: PaymentAmount
@@ -124,7 +124,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
-    """ A SecretReveal message received. """
+    """A SecretReveal message received."""
 
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
@@ -135,7 +135,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
 
 @dataclass(frozen=True)
 class ReceiveTransferRefund(BalanceProofStateChange):
-    """ A RefundTransfer message received. """
+    """A RefundTransfer message received."""
 
     transfer: LockedTransferSignedState
 

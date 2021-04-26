@@ -815,7 +815,7 @@ KNOWN_OPTIONS = {param.name.replace("_", "-") for param in run.params}.union(FLA
 @option("--short", is_flag=True, help="Only display Raiden version")
 @click.pass_context
 def version(ctx: Context, short: bool) -> None:
-    """Print version information and exit. """
+    """Print version information and exit."""
     click.echo(get_version(short=short))
     ctx.exit(0)
 
@@ -844,7 +844,7 @@ def smoketest(
 def _smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
-    """ Test, that the raiden installation is sane. """
+    """Test, that the raiden installation is sane."""
     from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest, step_printer
 
     raiden_stdout = StringIO()

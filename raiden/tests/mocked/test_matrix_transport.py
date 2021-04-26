@@ -467,7 +467,7 @@ def test_retry_queue_does_not_resend_removed_messages(
 
 @pytest.mark.parametrize("retry_interval_initial", [0.05])
 def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_initial: float):
-    """ Ensure ``RetryQueue``s exit if they are idle for too long. """
+    """Ensure ``RetryQueue``s exit if they are idle for too long."""
     retry_queue = mock_matrix._get_retrier(Address(factories.HOP1))
     idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
 
@@ -490,7 +490,7 @@ def test_retryqueue_idle_terminate(mock_matrix: MatrixTransport, retry_interval_
 def test_retryqueue_not_idle_with_messages(
     mock_matrix: MatrixTransport, retry_interval_initial: float
 ) -> None:
-    """ Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue. """
+    """Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue."""
     retry_queue = mock_matrix._get_retrier(Address(factories.HOP1))
     idle_after = RETRY_QUEUE_IDLE_AFTER * retry_interval_initial
 

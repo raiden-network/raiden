@@ -46,7 +46,7 @@ from raiden.utils.typing import (
 
 
 class Translator(dict):
-    """ Dictionary class with re substitution capabilities. """
+    """Dictionary class with re substitution capabilities."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs = {k.lower(): v for k, v in args[0].items()}
@@ -72,7 +72,7 @@ class Translator(dict):
         return rxp
 
     def _make_regex(self) -> None:
-        """ Compile rxp with all keys concatenated. """
+        """Compile rxp with all keys concatenated."""
         rxp = "|".join(map(self._address_rxp, self.keys()))
         self._regex = re.compile(rxp, re.IGNORECASE)
 
@@ -94,11 +94,11 @@ class Translator(dict):
                 raise e
 
     def __call__(self, match: re.Match) -> str:
-        """ Lookup for each rxp match. """
+        """Lookup for each rxp match."""
         return "[{}]".format(self[match.group(0).lower()])
 
     def translate(self, text: str) -> str:
-        """ Translate text. """
+        """Translate text."""
         assert self._regex is not None, "regex not set"
         return self._regex.sub(self, text)
 

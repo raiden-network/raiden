@@ -40,7 +40,7 @@ class SendLockExpired(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendLockedTransfer(SendMessageEvent):
-    """ A locked transfer that must be sent to `recipient`. """
+    """A locked transfer that must be sent to `recipient`."""
 
     transfer: LockedTransferUnsignedState
 
@@ -147,7 +147,7 @@ class SendRefundTransfer(SendMessageEvent):
 
 @dataclass(frozen=True)
 class EventUnlockSuccess(Event):
-    """ Event emitted when a lock unlock succeded. """
+    """Event emitted when a lock unlock succeded."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -155,7 +155,7 @@ class EventUnlockSuccess(Event):
 
 @dataclass(frozen=True)
 class EventUnlockFailed(Event):
-    """ Event emitted when a lock unlock failed. """
+    """Event emitted when a lock unlock failed."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -164,7 +164,7 @@ class EventUnlockFailed(Event):
 
 @dataclass(frozen=True)
 class EventUnlockClaimSuccess(Event):
-    """ Event emitted when a lock claim succeded. """
+    """Event emitted when a lock claim succeded."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -172,7 +172,7 @@ class EventUnlockClaimSuccess(Event):
 
 @dataclass(frozen=True)
 class EventUnlockClaimFailed(Event):
-    """ Event emitted when a lock claim failed. """
+    """Event emitted when a lock claim failed."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -181,7 +181,7 @@ class EventUnlockClaimFailed(Event):
 
 @dataclass(frozen=True)
 class EventUnexpectedSecretReveal(Event):
-    """ Event emitted when an unexpected secret reveal message is received. """
+    """Event emitted when an unexpected secret reveal message is received."""
 
     secrethash: SecretHash
     reason: str

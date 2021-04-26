@@ -201,7 +201,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class SecretRequest(SignedRetrieableMessage):
-    """ Requests the secret/preimage which unlocks a lock. """
+    """Requests the secret/preimage which unlocks a lock."""
 
     cmdid: ClassVar[CmdId] = CmdId.SECRETREQUEST
 

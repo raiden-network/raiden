@@ -428,7 +428,7 @@ def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Opt
 def is_balance_proof_safe_for_onchain_operations(
     balance_proof: BalanceProofSignedState,
 ) -> bool:
-    """ Check if the balance proof would overflow onchain. """
+    """Check if the balance proof would overflow onchain."""
     total_amount = balance_proof.transferred_amount + balance_proof.locked_amount
     return total_amount <= UINT256_MAX
 

@@ -106,7 +106,7 @@ def logs_blocks_sanity_check(from_block: BlockIdentifier, to_block: BlockIdentif
 
 
 def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCClient") -> None:
-    """ Raise an exception if the transaction consumed all the gas. """
+    """Raise an exception if the transaction consumed all the gas."""
 
     if was_transaction_successfully_mined(transaction):
         return
@@ -216,7 +216,7 @@ def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCC
 
 
 def was_transaction_successfully_mined(transaction: "TransactionMined") -> bool:
-    """ `True` if the transaction was successfully mined, `False` otherwise. """
+    """`True` if the transaction was successfully mined, `False` otherwise."""
     if "status" not in transaction.receipt:
         # This should never happen. Raiden checks ethereum client for compatibility at startup
         raise AssertionError(
@@ -708,7 +708,7 @@ def patched_contractfunction_estimateGas(
 def make_sane_poa_middleware(
     make_request: Callable[[RPCEndpoint, Any], Any], web3: Web3  # pylint: disable=unused-argument
 ) -> Callable[[RPCEndpoint, Any], RPCResponse]:
-    """ Simpler geth_poa_middleware that doesn't break with ``null`` responses. """
+    """Simpler geth_poa_middleware that doesn't break with ``null`` responses."""
 
     def middleware(method: RPCEndpoint, params: Any) -> RPCResponse:
         response = make_request(method, params)
@@ -1022,7 +1022,7 @@ class TransactionMined:
 
 
 class JSONRPCClient:
-    """ Ethereum JSON RPC client. """
+    """Ethereum JSON RPC client."""
 
     def __init__(
         self,
@@ -1077,7 +1077,7 @@ class JSONRPCClient:
         )
 
     def block_number(self) -> BlockNumber:
-        """ Return the most recent block. """
+        """Return the most recent block."""
         return self.web3.eth.block_number
 
     def get_block(self, block_identifier: BlockIdentifier) -> BlockData:
@@ -1085,7 +1085,7 @@ class JSONRPCClient:
         return self.web3.eth.getBlock(block_identifier)
 
     def get_confirmed_blockhash(self) -> BlockHash:
-        """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
+        """Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash"""
         confirmed_block_number = BlockNumber(
             self.web3.eth.block_number - self.default_block_num_confirmations
         )
@@ -1114,7 +1114,7 @@ class JSONRPCClient:
 
     # FIXME: shouldn't return `TokenAmount`
     def balance(self, account: Address) -> TokenAmount:
-        """ Return the balance of the account of the given address. """
+        """Return the balance of the account of the given address."""
         return TokenAmount(self.web3.eth.get_balance(account, BLOCK_ID_PENDING))
 
     def parity_get_pending_transaction_hash_by_nonce(
@@ -1558,7 +1558,7 @@ class JSONRPCClient:
         from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
         to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[LogReceipt]:
-        """ Get events for the given query. """
+        """Get events for the given query."""
         logs_blocks_sanity_check(from_block, to_block)
         return self.web3.eth.getLogs(
             FilterParams(

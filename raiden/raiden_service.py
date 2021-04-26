@@ -299,7 +299,7 @@ class SynchronizationState(Enum):
 
 
 class RaidenService(Runnable):
-    """ A Raiden node. """
+    """A Raiden node."""
 
     def __init__(
         self,
@@ -450,7 +450,7 @@ class RaidenService(Runnable):
         self.state_change_qty = 0
 
     def start(self) -> None:
-        """ Start the node synchronously. Raises directly if anything went wrong on startup """
+        """Start the node synchronously. Raises directly if anything went wrong on startup"""
         assert self.stop_event.ready(), f"Node already started. node:{self!r}"
         self.stop_event.clear()
         self.greenlets = list()
@@ -487,7 +487,7 @@ class RaidenService(Runnable):
         self._set_rest_api_service_available()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
-        """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
+        """Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs"""
         self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
         try:
             self.stop_event.wait()
@@ -500,7 +500,7 @@ class RaidenService(Runnable):
             raise
 
     def stop(self) -> None:
-        """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
+        """Stop the node gracefully. Raise if any stop-time error occurred on any subtask"""
         if self.stop_event.ready():  # not started
             return
 
@@ -564,7 +564,7 @@ class RaidenService(Runnable):
         return self.rpc_client.privkey
 
     def add_pending_greenlet(self, greenlet: Greenlet) -> None:
-        """ Ensures an error on the passed greenlet crashes self/main greenlet. """
+        """Ensures an error on the passed greenlet crashes self/main greenlet."""
 
         def remove(_: Any) -> None:
             self.greenlets.remove(greenlet)
@@ -1487,7 +1487,7 @@ class RaidenService(Runnable):
                 )
 
     def _get_initial_health_check_list(self, chain_state: ChainState) -> List[Address]:
-        """ Fetch direct neighbors and mediated transfer targets on transport """
+        """Fetch direct neighbors and mediated transfer targets on transport"""
         neighbour_addresses: List[Address] = []
 
         all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
@@ -1507,7 +1507,7 @@ class RaidenService(Runnable):
         return neighbour_addresses
 
     def sign(self, message: Message) -> None:
-        """ Sign message inplace. """
+        """Sign message inplace."""
         if not isinstance(message, SignedMessage):
             raise ValueError("{} is not signable.".format(repr(message)))
 

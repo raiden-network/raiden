@@ -836,7 +836,7 @@ class RaidenEventHandler(EventHandler):
 
 
 class PFSFeedbackEventHandler(RaidenEventHandler):
-    """ A event handler that sends feedback to the PFS. """
+    """A event handler that sends feedback to the PFS."""
 
     def __init__(self, wrapped_handler: EventHandler) -> None:
         self.wrapped = wrapped_handler

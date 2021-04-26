@@ -66,7 +66,7 @@ def _copy_call(call):
 
 
 def ensure_call(curr, call):
-    """ Returns an existing entry of call or create a new one. """
+    """Returns an existing entry of call or create a new one."""
     id_ = call["runtime_id"]
 
     if id_ not in curr.children:
@@ -144,7 +144,7 @@ def calculate_metrics(info):
 
 
 class GlobalState(dict):
-    """ This class is responsable to store the state of a profiling session """
+    """This class is responsable to store the state of a profiling session"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -175,7 +175,7 @@ class ThreadState:
 
     @property
     def total_accumulated(self):
-        """ Returns the top most stack that has a wall time measurement """
+        """Returns the top most stack that has a wall time measurement"""
 
         accumulated, top_depth = 0.0, None
         for depth, node in self.depthorder():
@@ -228,7 +228,7 @@ class ThreadState:
             info["sleep_start_time"].append(None)
 
     def depthorder(self):
-        """ Returns a generator that does stack traversal stepping in the depth order. """
+        """Returns a generator that does stack traversal stepping in the depth order."""
         iterators = [
             (1, self.root.children[key])
             for key in self.root.children  # the root node doesnt have data
@@ -249,7 +249,7 @@ class ThreadState:
                 iterators.extend(children)
 
     def traverse(self):
-        """ Returns a generator that does stack travesal using order of appearance (inorder). """
+        """Returns a generator that does stack travesal using order of appearance (inorder)."""
         iterators = [(1, self.root.children[key]) for key in self.root.children]
 
         while iterators:

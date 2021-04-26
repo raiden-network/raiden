@@ -24,7 +24,7 @@ def eth_sign_sha3(data: bytes) -> bytes:
 def recover(
     data: bytes, signature: Signature, hasher: Callable[[bytes], bytes] = eth_sign_sha3
 ) -> Address:
-    """ eth_recover address from data hash and signature """
+    """eth_recover address from data hash and signature"""
     _hash = hasher(data)
 
     # ecdsa_recover accepts only standard [0,1] v's so we add support also for [27,28] here
@@ -41,14 +41,14 @@ def recover(
 
 
 class Signer(ABC):
-    """ ABC for Signer interface """
+    """ABC for Signer interface"""
 
     # attribute or cached property which represents the address of the account of this Signer
     address: Address
 
     @abstractmethod
     def sign(self, data: bytes, v: int = 27) -> Signature:
-        """ Sign data hash (as of EIP191) with this Signer's account """
+        """Sign data hash (as of EIP191) with this Signer's account"""
         pass
 
     # TODO: signTransaction (replace privkey on JSONRPCClient)
@@ -73,7 +73,7 @@ class Signer(ABC):
 
 
 class LocalSigner(Signer):
-    """ Concrete Signer implementation using a local private key """
+    """Concrete Signer implementation using a local private key"""
 
     private_key: keys.PrivateKey
 
@@ -82,7 +82,7 @@ class LocalSigner(Signer):
         self.address = self.private_key.public_key.to_canonical_address()
 
     def sign(self, data: bytes, v: int = 27) -> Signature:
-        """ Sign data hash with local private key """
+        """Sign data hash with local private key"""
         assert v in (0, 27), "Raiden is only signing messages with v in (0, 27)"
         _hash = eth_sign_sha3(data)
         signature = self.private_key.sign_msg_hash(message_hash=_hash)

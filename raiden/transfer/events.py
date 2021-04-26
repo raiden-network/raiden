@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class SendWithdrawRequest(SendMessageEvent):
-    """ Event used by node to request a withdraw from channel partner."""
+    """Event used by node to request a withdraw from channel partner."""
 
     total_withdraw: WithdrawAmount
     participant: Address
@@ -60,7 +60,7 @@ class SendWithdrawRequest(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendWithdrawConfirmation(SendMessageEvent):
-    """ Event used by node to confirm a withdraw for a channel's partner."""
+    """Event used by node to confirm a withdraw for a channel's partner."""
 
     total_withdraw: WithdrawAmount
     participant: Address
@@ -78,7 +78,7 @@ class SendWithdrawConfirmation(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendWithdrawExpired(SendMessageEvent):
-    """ Event used by node to expire a withdraw request."""
+    """Event used by node to expire a withdraw request."""
 
     total_withdraw: WithdrawAmount
     participant: Address
@@ -96,7 +96,7 @@ class SendWithdrawExpired(SendMessageEvent):
 
 @dataclass(frozen=True)
 class ContractSendChannelWithdraw(ContractSendEvent):
-    """ Event emitted if node wants to withdraw from current channel balance. """
+    """Event emitted if node wants to withdraw from current channel balance."""
 
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
@@ -142,7 +142,7 @@ class ContractSendChannelClose(ContractSendEvent):
 
 @dataclass(frozen=True)
 class ContractSendChannelSettle(ContractSendEvent):
-    """ Event emitted if the netting channel must be settled. """
+    """Event emitted if the netting channel must be settled."""
 
     canonical_identifier: CanonicalIdentifier
 
@@ -157,7 +157,7 @@ class ContractSendChannelSettle(ContractSendEvent):
 
 @dataclass(frozen=True)
 class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
-    """ Event emitted if the netting channel balance proof must be updated. """
+    """Event emitted if the netting channel balance proof must be updated."""
 
     balance_proof: BalanceProofSignedState
 
@@ -201,7 +201,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
 @dataclass(repr=False, frozen=True)
 class ContractSendSecretReveal(ContractSendExpirableEvent):
-    """ Event emitted when the lock must be claimed on-chain. """
+    """Event emitted when the lock must be claimed on-chain."""
 
     secret: Secret = field(repr=False)
 
@@ -336,7 +336,7 @@ class EventPaymentReceivedSuccess(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedTransferRefund(Event):
-    """ Event emitted when an invalid refund transfer is received. """
+    """Event emitted when an invalid refund transfer is received."""
 
     payment_identifier: PaymentID
     reason: str
@@ -344,7 +344,7 @@ class EventInvalidReceivedTransferRefund(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedLockExpired(Event):
-    """ Event emitted when an invalid lock expired message is received. """
+    """Event emitted when an invalid lock expired message is received."""
 
     secrethash: SecretHash
     reason: str
@@ -360,7 +360,7 @@ class EventInvalidReceivedLockExpired(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedLockedTransfer(Event):
-    """ Event emitted when an invalid locked transfer is received. """
+    """Event emitted when an invalid locked transfer is received."""
 
     payment_identifier: PaymentID
     reason: str
@@ -368,7 +368,7 @@ class EventInvalidReceivedLockedTransfer(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedUnlock(Event):
-    """ Event emitted when an invalid unlock message is received. """
+    """Event emitted when an invalid unlock message is received."""
 
     secrethash: SecretHash
     reason: str
@@ -384,7 +384,7 @@ class EventInvalidReceivedUnlock(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedWithdrawRequest(Event):
-    """ Event emitted when an invalid withdraw request is received. """
+    """Event emitted when an invalid withdraw request is received."""
 
     attempted_withdraw: WithdrawAmount
     reason: str
@@ -392,7 +392,7 @@ class EventInvalidReceivedWithdrawRequest(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedWithdraw(Event):
-    """ Event emitted when an invalid withdraw confirmation is received. """
+    """Event emitted when an invalid withdraw confirmation is received."""
 
     attempted_withdraw: WithdrawAmount
     reason: str
@@ -400,7 +400,7 @@ class EventInvalidReceivedWithdraw(Event):
 
 @dataclass(frozen=True)
 class EventInvalidReceivedWithdrawExpired(Event):
-    """ Event emitted when an invalid withdraw expired event is received. """
+    """Event emitted when an invalid withdraw expired event is received."""
 
     attempted_withdraw: WithdrawAmount
     reason: str
@@ -408,7 +408,7 @@ class EventInvalidReceivedWithdrawExpired(Event):
 
 @dataclass(frozen=True)
 class EventInvalidActionWithdraw(Event):
-    """ Event emitted when an invalid withdraw is initiated. """
+    """Event emitted when an invalid withdraw is initiated."""
 
     attempted_withdraw: WithdrawAmount
     reason: str
@@ -416,7 +416,7 @@ class EventInvalidActionWithdraw(Event):
 
 @dataclass(frozen=True)
 class EventInvalidActionSetRevealTimeout(Event):
-    """ Event emitted when an invalid withdraw is initiated. """
+    """Event emitted when an invalid withdraw is initiated."""
 
     reveal_timeout: BlockTimeout
     reason: str
@@ -429,7 +429,7 @@ class SendProcessed(SendMessageEvent):
 
 @dataclass(frozen=True)
 class EventInvalidSecretRequest(Event):
-    """ Event emitted when an invalid SecretRequest is received. """
+    """Event emitted when an invalid SecretRequest is received."""
 
     payment_identifier: PaymentID
     intended_amount: PaymentAmount

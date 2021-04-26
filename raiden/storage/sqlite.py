@@ -348,7 +348,7 @@ class SQLiteStorage:
         self.maybe_commit()
 
     def log_run(self) -> None:
-        """ Log timestamp and raiden version to help with debugging """
+        """Log timestamp and raiden version to help with debugging"""
         version = get_system_spec()["raiden"]
         cursor = self.conn.cursor()
         cursor.execute("INSERT INTO runs(raiden_version) VALUES (?)", [version])
@@ -498,7 +498,7 @@ class SQLiteStorage:
     def get_latest_event_by_data_field(
         self, query: FilteredDBQuery
     ) -> Optional[EventEncodedRecord]:
-        """ Return the latest event filtered query."""
+        """Return the latest event filtered query."""
         cursor = self.conn.cursor()
 
         query_str, args = _query_to_string(query)
@@ -558,7 +558,7 @@ class SQLiteStorage:
     def get_latest_state_change_by_data_field(
         self, query: FilteredDBQuery
     ) -> Optional[StateChangeEncodedRecord]:
-        """ Return all state changes filtered by a named field and value."""
+        """Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
         query_str, args = _query_to_string(query)
@@ -966,7 +966,7 @@ class SerializedSQLiteStorage:
     def get_snapshot_before_state_change(
         self, state_change_identifier: StateChangeID
     ) -> Optional[SnapshotRecord]:
-        """ Get snapshots earlier than state_change with provided ID. """
+        """Get snapshots earlier than state_change with provided ID."""
         result: Optional[SnapshotRecord]
 
         row = self.database.get_snapshot_before_state_change(state_change_identifier)
@@ -986,7 +986,7 @@ class SerializedSQLiteStorage:
         return result
 
     def get_latest_event_by_data_field(self, query: FilteredDBQuery) -> Optional[EventRecord]:
-        """ Return all state changes filtered by a named field and value."""
+        """Return all state changes filtered by a named field and value."""
         encoded_event = self.database.get_latest_event_by_data_field(query)
 
         event = None
@@ -1002,7 +1002,7 @@ class SerializedSQLiteStorage:
     def get_latest_state_change_by_data_field(
         self, query: FilteredDBQuery
     ) -> Optional[StateChangeRecord]:
-        """ Return all state changes filtered by a named field and value."""
+        """Return all state changes filtered by a named field and value."""
 
         encoded_state_change = self.database.get_latest_state_change_by_data_field(query)
 

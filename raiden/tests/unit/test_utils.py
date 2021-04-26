@@ -64,7 +64,7 @@ def test_recover_exception(signature, nested_exception):
 
 
 def test_get_http_rtt_happy(requests_responses):
-    """ Ensure get_http_rtt returns the average RTT over the number of samples. """
+    """Ensure get_http_rtt returns the average RTT over the number of samples."""
     delay = iter([0.05, 0.05, 0.2])
 
     def response(_):
@@ -78,7 +78,7 @@ def test_get_http_rtt_happy(requests_responses):
 
 
 def test_get_http_rtt_ignore_failing(requests_responses):
-    """ Ensure get_http_rtt ignores failing servers. """
+    """Ensure get_http_rtt ignores failing servers."""
 
     # RequestException (e.g. DNS not resolvable, server not reachable)
     requests_responses.add(responses.GET, "http://url1", body=requests.RequestException())

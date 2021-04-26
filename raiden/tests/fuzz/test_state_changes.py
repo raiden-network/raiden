@@ -160,7 +160,7 @@ class Client:
     transfer_order: TransferOrder = field(default_factory=TransferOrder)
 
     def assert_monotonicity_invariants(self):
-        """ Assert all monotonicity properties stated in Raiden specification """
+        """Assert all monotonicity properties stated in Raiden specification"""
         for (
             address,
             netting_channel,
@@ -195,7 +195,7 @@ class Client:
             self.partner_previous_unclaimed[address] = partner_unclaimed
 
     def assert_channel_state_invariants(self):
-        """ Assert all channel state invariants given in the Raiden specification """
+        """Assert all channel state invariants given in the Raiden specification"""
         for netting_channel in self.address_to_channel.values():  # pylint: disable=no-member
             our_state = netting_channel.our_state
             partner_state = netting_channel.partner_state

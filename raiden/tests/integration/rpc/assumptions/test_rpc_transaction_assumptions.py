@@ -20,7 +20,7 @@ from raiden.utils.typing import BlockHash, Nonce
 
 
 def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
-    """ The receipt status field of a transaction that did not throw is 0x1 """
+    """The receipt status field of a transaction that did not throw is 0x1"""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
@@ -36,7 +36,7 @@ def test_transact_opcode(deploy_client: JSONRPCClient) -> None:
 
 
 def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
-    """ The receipt status field of a transaction that hit an assert or require is 0x0 """
+    """The receipt status field of a transaction that hit an assert or require is 0x0"""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = to_canonical_address(contract_proxy.address)
@@ -79,7 +79,7 @@ def test_transact_throws_opcode(deploy_client: JSONRPCClient) -> None:
 
 
 def test_transact_opcode_oog(deploy_client: JSONRPCClient) -> None:
-    """ The receipt status field of a transaction that did NOT throw is 0x0. """
+    """The receipt status field of a transaction that did NOT throw is 0x0."""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address

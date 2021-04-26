@@ -21,7 +21,7 @@ pytestmark = pytest.mark.usefixtures("skip_if_not_geth")
 def test_geth_request_pruned_data_raises_an_exception(
     deploy_client: JSONRPCClient, web3: Web3
 ) -> None:
-    """ Interacting with an old block identifier with a pruning client throws. """
+    """Interacting with an old block identifier with a pruning client throws."""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcWithStorageTest")
     iterations = 1
 

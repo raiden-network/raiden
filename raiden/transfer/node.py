@@ -430,7 +430,7 @@ def inplace_delete_message_queue(
     state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
     queueid: QueueIdentifier,
 ) -> None:
-    """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
+    """Filter messages from queue, if the queue becomes empty, cleanup the queue itself."""
     queue = chain_state.queueids_to_queues.get(queueid)
     if not queue:
         if queueid in chain_state.queueids_to_queues:
@@ -449,7 +449,7 @@ def inplace_delete_message(
     message_queue: List[SendMessageEvent],
     state_change: Union[ReceiveDelivered, ReceiveProcessed, ReceiveWithdrawConfirmation],
 ) -> None:
-    """ Check if the message exists in queue with ID `queueid` and exclude if found."""
+    """Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
         # A withdraw request is only confirmed by a withdraw confirmation.
         # This is done because Processed is not an indicator that the partner has
@@ -536,7 +536,7 @@ def handle_contract_receive_channel_closed(
 def handle_receive_delivered(
     chain_state: ChainState, state_change: ReceiveDelivered
 ) -> TransitionResult[ChainState]:
-    """ Check if the "Delivered" message exists in the global queue and delete if found."""
+    """Check if the "Delivered" message exists in the global queue and delete if found."""
     queueid = QueueIdentifier(state_change.sender, CANONICAL_IDENTIFIER_UNORDERED_QUEUE)
     inplace_delete_message_queue(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])

@@ -33,7 +33,7 @@ class TraceProfiler:
         self.timer = Timer(self._trace, interval=MINUTE * 5)
 
     def _trace(self, signum: int, frame: FrameType) -> None:  # pylint: disable=unused-argument
-        """ Signal handler used to take snapshots of the running process. """
+        """Signal handler used to take snapshots of the running process."""
 
         # the last pending signal after trace_stop
         if not self.profiling:
