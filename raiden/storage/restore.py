@@ -35,7 +35,7 @@ def channel_state_until_state_change(
     canonical_identifier: CanonicalIdentifier,
     state_change_identifier: StateChangeID,
 ) -> NettingChannelState:  # pragma: no unittest
-    """ Go through WAL state changes until a certain balance hash is found. """
+    """Go through WAL state changes until a certain balance hash is found."""
     assert raiden.wal, "Raiden has not been started yet"
 
     chain_state = restore_state(

@@ -546,7 +546,7 @@ def query_address_metadata(
     pfs_config: PFSConfig,
     user_address: Union[Address, TargetAddress],
 ) -> AddressMetadata:
-    """ Get the matrix user_id for the given address from the PFS """
+    """Get the matrix user_id for the given address from the PFS"""
     try:
         response = session.get(
             f"{pfs_config.info.url}/api/v1/address/{to_checksum_address(user_address)}/metadata",

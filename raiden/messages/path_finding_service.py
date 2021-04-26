@@ -16,7 +16,7 @@ from raiden.utils.typing import Address, BlockTimeout, Nonce, TokenAmount
 
 @dataclass(repr=False, eq=False)
 class PFSCapacityUpdate(SignedMessage):
-    """ Message to inform a pathfinding service about a capacity change. """
+    """Message to inform a pathfinding service about a capacity change."""
 
     canonical_identifier: CanonicalIdentifier
     updating_participant: Address

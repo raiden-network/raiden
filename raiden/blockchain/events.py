@@ -130,7 +130,7 @@ def get_all_netting_channel_events(
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
     to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> List[Dict]:  # pragma: no unittest
-    """ Helper to get all events of a NettingChannelContract. """
+    """Helper to get all events of a NettingChannelContract."""
 
     filter_args = get_filter_args_for_all_events_from_channel(
         token_network_address=token_network_address,

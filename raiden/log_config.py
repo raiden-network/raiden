@@ -61,7 +61,7 @@ def _match_list(module_rule: Tuple[List[str], str], logger_name: str) -> Tuple[i
 
 
 class LogFilter:
-    """ Utility for filtering log records on module level rules """
+    """Utility for filtering log records on module level rules"""
 
     def __init__(self, config: Dict[str, str], default_level: str):
         """Initializes a new `LogFilter`
@@ -90,7 +90,7 @@ class LogFilter:
         return best_match_level
 
     def should_log(self, logger_name: str, level: str) -> bool:
-        """ Returns if a message for the logger should be logged. """
+        """Returns if a message for the logger should be logged."""
         if (logger_name, level) not in self._should_log:
             log_level_per_rule = self._get_log_level(logger_name)
             log_level_per_rule_numeric = getattr(logging, log_level_per_rule.upper(), 10)

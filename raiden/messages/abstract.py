@@ -42,7 +42,7 @@ class Message:
 
 @dataclass(repr=False, eq=False)
 class AuthenticatedMessage(Message):
-    """ Messages which the sender can be verified. """
+    """Messages which the sender can be verified."""
 
     def sender(self) -> Optional[Address]:
         raise NotImplementedError("Property needs to be implemented in subclass.")
@@ -75,7 +75,7 @@ class SignedMessage(AuthenticatedMessage):
         raise NotImplementedError
 
     def sign(self, signer: Signer) -> None:
-        """ Sign message using signer. """
+        """Sign message using signer."""
         message_data = self._data_to_sign()
         self.signature = signer.sign(data=message_data)
 
@@ -97,13 +97,13 @@ class SignedMessage(AuthenticatedMessage):
 
 @dataclass(repr=False, eq=False)
 class RetrieableMessage(Message):
-    """ Message, that supports a retry-queue. """
+    """Message, that supports a retry-queue."""
 
     message_identifier: MessageID
 
 
 @dataclass(repr=False, eq=False)
 class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
-    """ Mixin of SignedMessage and RetrieableMessage. """
+    """Mixin of SignedMessage and RetrieableMessage."""
 
     pass

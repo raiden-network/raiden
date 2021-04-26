@@ -319,7 +319,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> List[NettingChannelState]:
-        """ Close all channels and wait for settlement. """
+        """Close all channels and wait for settlement."""
         if not is_binary_address(registry_address):
             raise InvalidBinaryAddress("registry_address must be a valid address in binary")
         if not is_binary_address(token_address):
@@ -947,13 +947,13 @@ class RaidenAPI:  # pragma: no unittest
         return result
 
     def get_node_network_state(self, node_address: Address) -> NetworkState:
-        """ Returns the currently network status of `node_address`. """
+        """Returns the currently network status of `node_address`."""
         return views.get_node_network_status(
             chain_state=views.state_from_raiden(self.raiden), node_address=node_address
         )
 
     def async_start_health_check_for(self, node_address: Address) -> None:
-        """ Returns the currently network status of `node_address`. """
+        """Returns the currently network status of `node_address`."""
         self.raiden.async_start_health_check_for(node_address)
 
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> List[TokenAddress]:
@@ -984,7 +984,7 @@ class RaidenAPI:  # pragma: no unittest
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
     ) -> "PaymentStatus":
-        """ Do a transfer with `target` with the given `amount` of `token_address`. """
+        """Do a transfer with `target` with the given `amount` of `token_address`."""
         # pylint: disable=too-many-arguments
 
         payment_status = self.transfer_async(

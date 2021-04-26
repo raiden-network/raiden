@@ -49,7 +49,7 @@ def api_error(errors: Any, status_code: HTTPStatus) -> Response:
 
 
 def if_api_available(method: Callable) -> Callable:
-    """ Decorator for resource methods which only work if the API is fully available. """
+    """Decorator for resource methods which only work if the API is fully available."""
 
     def decorated(self, *args, **kwargs):  # type: ignore
         if not self.rest_api.available:

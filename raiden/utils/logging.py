@@ -2,7 +2,7 @@ from raiden.utils.typing import Dict
 
 
 def redact_secret(data: Dict) -> Dict:
-    """ Modify `data` in-place and replace keys named `secret`. """
+    """Modify `data` in-place and replace keys named `secret`."""
     if not isinstance(data, dict):
         raise ValueError("data must be a dict.")
 

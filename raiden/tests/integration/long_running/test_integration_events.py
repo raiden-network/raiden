@@ -411,7 +411,7 @@ def test_secret_revealed_on_chain(
     token_addresses,
     retry_interval_initial,
 ):
-    """ A node must reveal the secret on-chain if it's known and the channel is closed. """
+    """A node must reveal the secret on-chain if it's known and the channel is closed."""
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -515,7 +515,7 @@ def test_secret_revealed_on_chain(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_clear_closed_queue(raiden_network: List[RaidenService], token_addresses, network_wait):
-    """ Closing a channel clears the respective message queue. """
+    """Closing a channel clears the respective message queue."""
     app0, app1 = raiden_network
 
     hold_event_handler = app1.raiden_event_handler

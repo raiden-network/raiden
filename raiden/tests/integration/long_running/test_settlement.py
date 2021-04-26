@@ -479,7 +479,7 @@ def test_channel_withdraw(
     deposit: TokenAmount,
     retry_timeout: float,
 ) -> None:
-    """ Withdraw funds after a mediated transfer."""
+    """Withdraw funds after a mediated transfer."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
@@ -548,7 +548,7 @@ def test_channel_withdraw_expired(
     deposit: TokenAmount,
     retry_timeout: float,
 ) -> None:
-    """ Tests withdraw expiration. """
+    """Tests withdraw expiration."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(

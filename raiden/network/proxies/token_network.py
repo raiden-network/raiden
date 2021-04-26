@@ -188,15 +188,15 @@ class TokenNetwork:
         self.opening_channels_count = 0
 
     def chain_id(self) -> ChainID:
-        """ Return the token of this manager. """
+        """Return the token of this manager."""
         return self._chain_id
 
     def token_address(self) -> TokenAddress:
-        """ Return the token of this manager. """
+        """Return the token of this manager."""
         return self._token_address
 
     def channel_participant_deposit_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
-        """ Return the deposit limit of a channel participant. """
+        """Return the deposit limit of a channel participant."""
         return TokenAmount(
             self.proxy.functions.channel_participant_deposit_limit().call(
                 block_identifier=block_identifier
@@ -204,7 +204,7 @@ class TokenNetwork:
         )
 
     def token_network_deposit_limit(self, block_identifier: BlockIdentifier) -> TokenAmount:
-        """ Return the token of this manager. """
+        """Return the token of this manager."""
         return TokenAmount(
             self.proxy.functions.token_network_deposit_limit().call(
                 block_identifier=block_identifier
@@ -416,7 +416,7 @@ class TokenNetwork:
     def get_channel_identifier_or_none(
         self, participant1: Address, participant2: Address, block_identifier: BlockIdentifier
     ) -> Optional[ChannelID]:
-        """ Returns the channel identifier if an open channel exists, else None. """
+        """Returns the channel identifier if an open channel exists, else None."""
         try:
             return self.get_channel_identifier(
                 participant1=participant1,
@@ -433,7 +433,7 @@ class TokenNetwork:
         partner: Address,
         block_identifier: BlockIdentifier,
     ) -> ParticipantDetails:
-        """ Returns a dictionary with the channel participant information. """
+        """Returns a dictionary with the channel participant information."""
         raise_if_invalid_address_pair(detail_for, partner)
 
         data = self.proxy.functions.getChannelParticipantInfo(
@@ -578,11 +578,11 @@ class TokenNetwork:
         )
 
     def settlement_timeout_min(self) -> int:
-        """ Returns the minimal settlement timeout for the token network. """
+        """Returns the minimal settlement timeout for the token network."""
         return self.proxy.functions.settlement_timeout_min().call()
 
     def settlement_timeout_max(self) -> int:
-        """ Returns the maximal settlement timeout for the token network. """
+        """Returns the maximal settlement timeout for the token network."""
         return self.proxy.functions.settlement_timeout_max().call()
 
     def channel_is_opened(
@@ -592,7 +592,7 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
-        """ Returns true if the channel is in an open state, false otherwise. """
+        """Returns true if the channel is in an open state, false otherwise."""
         try:
             channel_data = self._detail_channel(
                 participant1=participant1,
@@ -611,7 +611,7 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
-        """ Returns true if the channel is in a closed state, false otherwise. """
+        """Returns true if the channel is in a closed state, false otherwise."""
         try:
             channel_data = self._detail_channel(
                 participant1=participant1,
@@ -630,7 +630,7 @@ class TokenNetwork:
         block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
     ) -> bool:
-        """ Returns true if the channel is in a settled state, false otherwise. """
+        """Returns true if the channel is in a settled state, false otherwise."""
         try:
             channel_data = self._detail_channel(
                 participant1=participant1,

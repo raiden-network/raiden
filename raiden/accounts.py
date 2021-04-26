@@ -16,17 +16,17 @@ log = structlog.get_logger(__name__)
 
 
 class InvalidAccountFile(Exception):
-    """ Thrown when a file is not a valid keystore account file """
+    """Thrown when a file is not a valid keystore account file"""
 
     pass
 
 
 class KeystoreFileNotFound(RaidenError):
-    """ A keystore file for a user provided account could not be found. """
+    """A keystore file for a user provided account could not be found."""
 
 
 class KeystoreAuthenticationError(RaidenError):
-    """ The provided password could not authenticated the ethereum keystore. """
+    """The provided password could not authenticated the ethereum keystore."""
 
 
 def _find_datadir() -> Optional[str]:  # pragma: no cover
@@ -131,7 +131,7 @@ class AccountManager:
 
 
 class Account:
-    """Represents an account.  """
+    """Represents an account."""
 
     def __init__(self, keystore: Dict, password: str = None, path: str = None):
         """

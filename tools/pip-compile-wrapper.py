@@ -209,7 +209,7 @@ def _get_requirement_packages(
 
 
 def _get_sources_for_packages(package_names: Set[str], where: TargetType) -> Dict[str, Set[str]]:
-    """ Return source and / or target files concerned by packages """
+    """Return source and / or target files concerned by packages"""
     package_to_source = [
         (package_name, source_name)
         for source_name in SOURCE_PATHS.keys()

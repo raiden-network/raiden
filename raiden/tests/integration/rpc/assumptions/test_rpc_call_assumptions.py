@@ -23,7 +23,7 @@ def test_call_invalid_selector(deploy_client: JSONRPCClient) -> None:
 
 
 def test_call_inexisting_address(deploy_client: JSONRPCClient) -> None:
-    """ A JSON RPC call to an inexisting address returns the empty string. """
+    """A JSON RPC call to an inexisting address returns the empty string."""
 
     inexisting_address = b"\x01\x02\x03\x04\x05" * 4
 
@@ -69,7 +69,7 @@ def test_call_which_returns_a_string_before_smart_contract_deployed(
 
 
 def test_call_works_with_blockhash(deploy_client: JSONRPCClient) -> None:
-    """ A JSON RPC call works with a block number or blockhash. """
+    """A JSON RPC call works with a block number or blockhash."""
     contract_proxy, receipt = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     deploy_blockhash = receipt["blockHash"]
@@ -80,7 +80,7 @@ def test_call_works_with_blockhash(deploy_client: JSONRPCClient) -> None:
 
 
 def test_call_throws(deploy_client: JSONRPCClient) -> None:
-    """ A JSON RPC call to a function that throws/gets reverted returns the empty string. """
+    """A JSON RPC call to a function that throws/gets reverted returns the empty string."""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address

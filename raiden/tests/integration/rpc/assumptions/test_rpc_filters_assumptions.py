@@ -5,7 +5,7 @@ from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract, get_list
 
 
 def test_filter_start_block_inclusive(deploy_client: JSONRPCClient) -> None:
-    """ A filter includes events from the block given in from_block """
+    """A filter includes events from the block given in from_block"""
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     # call the create event function twice and wait for confirmation each time

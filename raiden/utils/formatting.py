@@ -82,7 +82,7 @@ def to_hex_address(address: AddressTypes) -> AddressHex:
 
 
 def format_block_id(block_id: BlockIdentifier) -> str:
-    """ Formats a block identifier to a string. """
+    """Formats a block identifier to a string."""
     # Got a block hash
     if isinstance(block_id, T_BlockHash):
         return encode_hex(block_id)

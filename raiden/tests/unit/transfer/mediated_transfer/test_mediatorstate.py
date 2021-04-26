@@ -115,7 +115,7 @@ def make_route_from_channelstate(channel_state):
 
 
 def test_is_lock_valid():
-    """ A hash time lock is valid up to the expiration block. """
+    """A hash time lock is valid up to the expiration block."""
     expiration = BlockExpiration(10)
     assert mediator.is_lock_valid(expiration, BlockNumber(5)) is True
     assert (
@@ -166,7 +166,7 @@ def test_is_safe_to_wait():
 
 
 def test_is_channel_usable_for_mediation():
-    """ Check rules that determine if a channel can be used for transfers """
+    """Check rules that determine if a channel can be used for transfers"""
     reveal_timeout = BlockTimeout(30)
     timeout_blocks = BlockTimeout(reveal_timeout + 10)
     amount = UNIT_TRANSFER_AMOUNT
@@ -305,7 +305,7 @@ def test_set_payee():
 
 
 def test_events_for_expired_pairs():
-    """ The transfer pair must switch to expired at the right block. """
+    """The transfer pair must switch to expired at the right block."""
     setup = factories.make_transfers_pair(2)
     pair = setup.transfers_pair[0]
 
@@ -431,7 +431,7 @@ def test_events_for_secretreveal():
 
 
 def test_events_for_secretreveal_secret_unknown():
-    """ When the secret is not known there is nothing to do. """
+    """When the secret is not known there is nothing to do."""
     pseudo_random_generator = random.Random()
 
     setup = factories.make_transfers_pair(3)
@@ -593,7 +593,7 @@ def test_events_for_balanceproof_middle_secret():
 
 
 def test_events_for_balanceproof_secret_unknown():
-    """ Nothing to do if the secret is not known. """
+    """Nothing to do if the secret is not known."""
     pseudo_random_generator = random.Random()
     setup = factories.make_transfers_pair(3, block_number=1)
 
@@ -610,7 +610,7 @@ def test_events_for_balanceproof_secret_unknown():
 
 
 def test_events_for_balanceproof_lock_expired():
-    """ The balance proof should not be sent if the lock has expired. """
+    """The balance proof should not be sent if the lock has expired."""
     pseudo_random_generator = random.Random()
     setup = factories.make_transfers_pair(4, block_number=1)
     last_pair = setup.transfers_pair[-1]
@@ -683,7 +683,7 @@ def test_events_for_onchain_secretreveal():
 
 
 def test_events_for_onchain_secretreveal_once():
-    """ Secret must be registered on-chain only once. """
+    """Secret must be registered on-chain only once."""
     setup = factories.make_transfers_pair(4, block_number=1)
     pair = setup.transfers_pair[0]
     channel_state = mediator.get_payer_channel(setup.channel_map, pair)

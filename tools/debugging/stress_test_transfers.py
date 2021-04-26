@@ -203,7 +203,7 @@ def wait_for_status_ready(base_url: str, retry_timeout: int) -> None:
 def wait_for_reachable(
     transfers: List[TransferPath], token_address: str, retry_timeout: int
 ) -> None:
-    """ Wait until the nodes used for the transfers can see each other. """
+    """Wait until the nodes used for the transfers can see each other."""
 
     # Deduplicate the URLs for the channels which need reachability testing
     channels_not_reachable = set()

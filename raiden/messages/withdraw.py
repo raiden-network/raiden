@@ -23,7 +23,7 @@ from raiden_contracts.constants import MessageTypeId
 
 @dataclass(repr=False, eq=False)
 class WithdrawRequest(SignedRetrieableMessage):
-    """ Requests a signed on-chain withdraw confirmation from partner. """
+    """Requests a signed on-chain withdraw confirmation from partner."""
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_REQUEST
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
@@ -64,7 +64,7 @@ class WithdrawRequest(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class WithdrawConfirmation(SignedRetrieableMessage):
-    """ Confirms withdraw to partner with a signature """
+    """Confirms withdraw to partner with a signature"""
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_CONFIRMATION
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW
@@ -105,7 +105,7 @@ class WithdrawConfirmation(SignedRetrieableMessage):
 
 @dataclass(eq=False)
 class WithdrawExpired(SignedRetrieableMessage):
-    """ Notifies about withdraw expiration/cancellation from partner. """
+    """Notifies about withdraw expiration/cancellation from partner."""
 
     cmdid: ClassVar[CmdId] = CmdId.WITHDRAW_EXPIRED
     message_type: ClassVar[int] = MessageTypeId.WITHDRAW

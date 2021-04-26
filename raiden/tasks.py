@@ -77,7 +77,7 @@ def _do_check_version(current_version: Tuple[str, ...], raiden: "RaidenService")
 
 
 def check_version(current_version: str, raiden: "RaidenService") -> None:  # pragma: no unittest
-    """ Check periodically for a new release """
+    """Check periodically for a new release"""
     app_version = parse_version(current_version)
     while True:
         try:
@@ -91,7 +91,7 @@ def check_version(current_version: str, raiden: "RaidenService") -> None:  # pra
 
 
 def check_gas_reserve(raiden: "RaidenService") -> None:  # pragma: no unittest
-    """ Check periodically for gas reserve in the account """
+    """Check periodically for gas reserve in the account"""
     while True:
         has_enough_balance, estimated_required_balance = gas_reserve.has_enough_gas_reserve(
             raiden, channels_to_open=1
@@ -124,7 +124,7 @@ def check_gas_reserve(raiden: "RaidenService") -> None:  # pragma: no unittest
 def check_rdn_deposits(
     raiden: "RaidenService", user_deposit_proxy: UserDeposit
 ) -> None:  # pragma: no unittest
-    """ Check periodically for RDN deposits in the user-deposits contract """
+    """Check periodically for RDN deposits in the user-deposits contract"""
     while True:
         rei_balance = user_deposit_proxy.effective_balance(raiden.address, BLOCK_ID_LATEST)
         rdn_balance = to_rdn(rei_balance)
@@ -149,7 +149,7 @@ def check_rdn_deposits(
 
 
 def check_chain_id(chain_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
-    """ Check periodically if the underlying ethereum client's network id has changed"""
+    """Check periodically if the underlying ethereum client's network id has changed"""
     while True:
         current_id = web3.eth.chain_id
         if chain_id != current_id:
@@ -163,7 +163,7 @@ def check_chain_id(chain_id: ChainID, web3: Web3) -> None:  # pragma: no unittes
 
 
 class AlarmTask(Runnable):
-    """ Task to notify when a block is mined. """
+    """Task to notify when a block is mined."""
 
     def __init__(self, proxy_manager: ProxyManager, sleep_time: float) -> None:
         super().__init__()

@@ -19,12 +19,12 @@ class NotifyingQueue(Event, Generic[T]):
             self.set()
 
     def put(self, item: T) -> None:
-        """ Add new item to the queue. """
+        """Add new item to the queue."""
         self.queue.put(item)
         self.set()
 
     def get(self, block: bool = True, timeout: float = None) -> T:
-        """ Removes and returns an item from the queue. """
+        """Removes and returns an item from the queue."""
         value = self.queue.get(block, timeout)
         if self.queue.empty():
             self.clear()
@@ -37,7 +37,7 @@ class NotifyingQueue(Event, Generic[T]):
         return len(self.queue)
 
     def copy(self) -> List[T]:
-        """ Copies the current queue items. """
+        """Copies the current queue items."""
         copy = self.queue.copy()
 
         result = list()

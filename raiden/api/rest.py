@@ -187,14 +187,14 @@ def endpoint_not_found(e: Any) -> Response:
 
 
 def hexbytes_to_str(map_: Dict) -> None:
-    """ Converts values that are of type `HexBytes` to strings. """
+    """Converts values that are of type `HexBytes` to strings."""
     for k, v in map_.items():
         if isinstance(v, HexBytes):
             map_[k] = encode_hex(v)
 
 
 def encode_byte_values(map_: Dict) -> None:
-    """ Converts values that are of type `bytes` to strings. """
+    """Converts values that are of type `bytes` to strings."""
     for k, v in map_.items():
         if isinstance(v, bytes):
             map_[k] = encode_hex(v)
@@ -429,7 +429,7 @@ class APIServer(Runnable):  # pragma: no unittest
         )
 
     def unhandled_exception(self, exception: Exception) -> Response:
-        """ Flask.errorhandler when an exception wasn't correctly handled """
+        """Flask.errorhandler when an exception wasn't correctly handled"""
         log.critical(
             "Unhandled exception when processing endpoint request",
             exc_info=True,

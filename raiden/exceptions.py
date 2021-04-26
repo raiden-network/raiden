@@ -141,11 +141,11 @@ class DepositMismatch(RaidenRecoverableError):
 
 
 class InvalidChannelID(RaidenError):
-    """ Raised when the user provided value is not a channel id. """
+    """Raised when the user provided value is not a channel id."""
 
 
 class WithdrawMismatch(RaidenRecoverableError):
-    """ Raised when the requested withdraw is larger than actual channel balance. """
+    """Raised when the requested withdraw is larger than actual channel balance."""
 
 
 class InvalidChecksummedAddress(RaidenError):
@@ -168,11 +168,11 @@ class InvalidBinaryAddress(RaidenValidationError):
 
 
 class InvalidSecret(RaidenError):
-    """ Raised when the user provided value is not a valid secret. """
+    """Raised when the user provided value is not a valid secret."""
 
 
 class InvalidSecretHash(RaidenError):
-    """ Raised when the user provided value is not a valid secrethash. """
+    """Raised when the user provided value is not a valid secrethash."""
 
 
 class InvalidAmount(RaidenError):
@@ -206,27 +206,27 @@ class SamePeerAddress(RaidenError):
 
 
 class UnknownTokenAddress(RaidenError):
-    """ Raised when the token address in unknown. """
+    """Raised when the token address in unknown."""
 
 
 class TokenNotRegistered(RaidenError):
-    """ Raised if there is no token network for token used when opening a channel  """
+    """Raised if there is no token network for token used when opening a channel"""
 
 
 class AlreadyRegisteredTokenAddress(RaidenError):
-    """ Raised when the token address in already registered with the given network. """
+    """Raised when the token address in already registered with the given network."""
 
 
 class InvalidToken(RaidenError):
-    """ Raised if the token does not follow the ERC20 standard. """
+    """Raised if the token does not follow the ERC20 standard."""
 
 
 class MaxTokenNetworkNumberReached(RaidenError):
-    """ Raised if the maximum amount of token networks has been registered. """
+    """Raised if the maximum amount of token networks has been registered."""
 
 
 class InvalidTokenAddress(RaidenError):
-    """ Raised if the token address is invalid. """
+    """Raised if the token address is invalid."""
 
 
 class InvalidTokenNetworkDepositLimit(RaidenError):
@@ -242,7 +242,7 @@ class InvalidChannelParticipantDepositLimit(RaidenError):
 
 
 class EthNodeInterfaceError(RaidenError):
-    """ Raised when the underlying ETH node does not support an rpc interface"""
+    """Raised when the underlying ETH node does not support an rpc interface"""
 
 
 class AddressWithoutCode(RaidenError):
@@ -285,7 +285,7 @@ class InvalidNumberInput(RaidenError):
 
 
 class TransportError(RaidenError):
-    """ Raised when a transport encounters an unexpected error """
+    """Raised when a transport encounters an unexpected error"""
 
 
 class ReplacementTransactionUnderpriced(RaidenError):
@@ -328,11 +328,11 @@ class BrokenPreconditionError(RaidenError):
 
 
 class ServiceRequestFailed(RaidenError):
-    """ Raised when a request to one of the raiden services fails. """
+    """Raised when a request to one of the raiden services fails."""
 
 
 class PFSReturnedError(ServiceRequestFailed):
-    """ The PFS responded with a json message containing an error """
+    """The PFS responded with a json message containing an error"""
 
     def __init__(self, message: str, error_code: int, error_details: Dict[str, Any]) -> None:
         args: List[Any] = [f"{message} (PFS error code: {error_code})"]
@@ -360,7 +360,7 @@ class PFSReturnedError(ServiceRequestFailed):
 
 
 class ServiceRequestIOURejected(PFSReturnedError):
-    """ Raised when a service request fails due to a problem with the iou. """
+    """Raised when a service request fails due to a problem with the iou."""
 
 
 class UndefinedMediationFee(RaidenError):
@@ -377,19 +377,19 @@ class TokenNetworkDeprecated(RaidenError):
 
 
 class MintFailed(RaidenError):
-    """ Raised when an attempt to mint a testnet token failed. """
+    """Raised when an attempt to mint a testnet token failed."""
 
 
 class SerializationError(RaidenError):
-    """ Invalid data are to be (de-)serialized. """
+    """Invalid data are to be (de-)serialized."""
 
 
 class MatrixSyncMaxTimeoutReached(RaidenRecoverableError):
-    """ Raised if processing the matrix response takes longer than the poll timeout. """
+    """Raised if processing the matrix response takes longer than the poll timeout."""
 
 
 class ConfigurationError(RaidenError):
-    """ Raised when there is something wrong with the provided Raiden Configuration/arguments """
+    """Raised when there is something wrong with the provided Raiden Configuration/arguments"""
 
 
 class UserDepositNotConfigured(RaidenRecoverableError):

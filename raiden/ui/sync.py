@@ -15,7 +15,7 @@ from raiden_contracts.utils.type_aliases import ChainID
 
 
 def blockcypher_query_with_retries(sleep: float, retries: int = 3) -> Optional[BlockNumber]:
-    """ Queries blockcypher for latest mainnet block number """
+    """Queries blockcypher for latest mainnet block number"""
 
     def make_request() -> BlockNumber:
         response = requests.get(

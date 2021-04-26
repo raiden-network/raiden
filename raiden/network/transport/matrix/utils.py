@@ -396,7 +396,7 @@ def login(
 
 @cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())  # type: ignore # noqa E501
 def validate_userid_signature(user: User) -> Optional[Address]:
-    """ Validate a userId format and signature on displayName, and return its address"""
+    """Validate a userId format and signature on displayName, and return its address"""
     # display_name should be an address in the USERID_RE format
     match = USERID_RE.match(user.user_id)
     if not match:
@@ -625,7 +625,7 @@ def my_place_or_yours(our_address: Address, partner_address: Address) -> Address
 def make_message_batches(
     message_texts: Iterable[str], _max_batch_size: int = MATRIX_MAX_BATCH_SIZE
 ) -> Generator[str, None, None]:
-    """ Group messages into newline separated batches not exceeding ``_max_batch_size``. """
+    """Group messages into newline separated batches not exceeding ``_max_batch_size``."""
     current_batch: List[str] = []
     size = 0
     for message_text in message_texts:

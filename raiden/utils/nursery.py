@@ -156,7 +156,7 @@ class Janitor:
                 # `throw` does not raise the exception if the greenlet has
                 # finished, which is exactly the semantics needed here.
                 def stop_greenlet_from_hub(result: AsyncResult) -> None:
-                    """ Stop the greenlet if the nursery is stopped. """
+                    """Stop the greenlet if the nursery is stopped."""
                     try:
                         result.get()
                     except BaseException as e:
@@ -165,7 +165,7 @@ class Janitor:
                         greenlet.throw(GreenletExit())
 
                 def propagate_error(g: Greenlet) -> None:
-                    """ If the greenlet fails, stop the nursery. """
+                    """If the greenlet fails, stop the nursery."""
                     janitor._stop.set_exception(g.exception)
 
                 greenlet.link_exception(propagate_error)

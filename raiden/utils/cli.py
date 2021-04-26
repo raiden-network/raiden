@@ -352,7 +352,7 @@ class EnumChoiceType(Choice):
 
 
 class GasPriceChoiceType(click.Choice):
-    """ Returns a GasPriceStrategy for the choice """
+    """Returns a GasPriceStrategy for the choice"""
 
     def convert(self, value, param, ctx):  # pylint: disable=inconsistent-return-statements
         if isinstance(value, str) and value.isnumeric():

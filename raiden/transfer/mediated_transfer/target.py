@@ -91,7 +91,7 @@ def handle_inittarget(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[TargetTransferState]]:
-    """ Handles an ActionInitTarget state change. """
+    """Handles an ActionInitTarget state change."""
     iteration: TransitionResult[Optional[TargetTransferState]]
     transfer = state_change.transfer
     from_hop = state_change.from_hop
@@ -160,7 +160,7 @@ def handle_offchain_secretreveal(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[TargetTransferState]:
-    """ Validates and handles a ReceiveSecretReveal state change. """
+    """Validates and handles a ReceiveSecretReveal state change."""
     valid_secret = is_valid_secret_reveal(
         state_change=state_change, transfer_secrethash=target_state.transfer.lock.secrethash
     )
@@ -203,7 +203,7 @@ def handle_onchain_secretreveal(
     state_change: ContractReceiveSecretReveal,
     channel_state: NettingChannelState,
 ) -> TransitionResult[TargetTransferState]:
-    """ Validates and handles a ContractReceiveSecretReveal state change. """
+    """Validates and handles a ContractReceiveSecretReveal state change."""
     valid_secret = is_valid_secret_reveal(
         state_change=state_change, transfer_secrethash=target_state.transfer.lock.secrethash
     )
@@ -227,7 +227,7 @@ def handle_unlock(
     state_change: ReceiveUnlock,
     channel_state: NettingChannelState,
 ) -> TransitionResult[Optional[TargetTransferState]]:
-    """ Handles a ReceiveUnlock state change. """
+    """Handles a ReceiveUnlock state change."""
 
     recipient_metadata = target_state.transfer.payer_address_metadata
     is_valid, events, _ = channel.handle_unlock(channel_state, state_change, recipient_metadata)
@@ -329,7 +329,7 @@ def state_transition(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[Optional[TargetTransferState]]:
-    """ State machine for the target node of a mediated transfer. """
+    """State machine for the target node of a mediated transfer."""
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     iteration = TransitionResult(target_state, list())

@@ -7,7 +7,7 @@ from raiden.utils.typing import Address, ChannelID, List, NodeNetworkStateMap, T
 def filter_reachable_routes(
     route_states: List[RouteState], nodeaddresses_to_networkstates: NodeNetworkStateMap
 ) -> List[RouteState]:
-    """ This function makes sure we use reachable routes only. """
+    """This function makes sure we use reachable routes only."""
 
     return [
         route
@@ -27,7 +27,7 @@ def filter_acceptable_routes(
     addresses_to_channel: Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState],
     token_network_address: TokenNetworkAddress,
 ) -> List[RouteState]:
-    """ Keeps only routes whose forward_channel is not in the list of blacklisted channels """
+    """Keeps only routes whose forward_channel is not in the list of blacklisted channels"""
 
     acceptable_routes = list()
     for route in route_states:

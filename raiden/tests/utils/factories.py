@@ -325,7 +325,7 @@ def make_privkey_address(
 
 
 def make_privkeys_ordered(count: int, reverse: bool = False) -> List[bytes]:
-    """ Return ``count`` private keys ordered by their respective address """
+    """Return ``count`` private keys ordered by their respective address"""
     key_address_pairs = [make_privkey_address() for _ in range(count)]
     return [key for key, _ in sorted(key_address_pairs, key=itemgetter(1), reverse=reverse)]
 
@@ -439,7 +439,7 @@ def _(properties, defaults=None):
 def make_canonical_identifier(
     chain_identifier=EMPTY, token_network_address=EMPTY, channel_identifier=EMPTY
 ) -> CanonicalIdentifier:
-    """ Alias of the CanonicalIdentifier create function """
+    """Alias of the CanonicalIdentifier create function"""
     return create(
         CanonicalIdentifierProperties(
             chain_identifier=chain_identifier,
@@ -626,7 +626,7 @@ class BalanceProofProperties(Properties):
 
     @property
     def balance_proof(self) -> "BalanceProofProperties":
-        """ Convenience method to extract balance proof properties from the child classes. """
+        """Convenience method to extract balance proof properties from the child classes."""
         return self.extract(BalanceProofProperties)
 
 
@@ -1158,7 +1158,7 @@ class ChannelSet:
     def get_route(
         self, channel_index: int, estimated_fee: FeeAmount = FeeAmount(0)  # noqa: B008
     ) -> RouteState:
-        """ Creates an *outbound* RouteState, based on channel our/partner addresses. """
+        """Creates an *outbound* RouteState, based on channel our/partner addresses."""
 
         channel = self.channels[channel_index]
         route = [channel.our_state.address, channel.partner_state.address]

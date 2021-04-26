@@ -167,7 +167,7 @@ class UserDeposit:
         one_to_n_address: OneToNAddress,
         given_block_identifier: BlockIdentifier,
     ) -> TransactionHash:
-        """ Initialize the UserDeposit contract with MS and OneToN addresses """
+        """Initialize the UserDeposit contract with MS and OneToN addresses"""
         check_address_has_code_handle_pruned_block(
             client=self.client,
             address=Address(monitoring_service_address),
@@ -287,7 +287,7 @@ class UserDeposit:
             return transaction_mined.transaction_hash
 
     def effective_balance(self, address: Address, block_identifier: BlockIdentifier) -> Balance:
-        """ The user's balance with planned withdrawals deducted. """
+        """The user's balance with planned withdrawals deducted."""
         balance = self.proxy.functions.effectiveBalance(address).call(
             block_identifier=block_identifier
         )
@@ -303,7 +303,7 @@ class UserDeposit:
         total_deposit: TokenAmount,
         given_block_identifier: BlockIdentifier,
     ) -> TransactionHash:
-        """ Increase the total deposit of the beneficiary's account to `total_deposit`. """
+        """Increase the total deposit of the beneficiary's account to `total_deposit`."""
 
         token_address = self.token_address(given_block_identifier)
         token = self.proxy_manager.token(
@@ -426,7 +426,7 @@ class UserDeposit:
     def withdraw(
         self, amount: TokenAmount, given_block_identifier: BlockIdentifier
     ) -> TransactionHash:
-        """ Withdraw tokens from UDC, requires a mature withdraw plan"""
+        """Withdraw tokens from UDC, requires a mature withdraw plan"""
 
         token_address = self.token_address(given_block_identifier)
         token = self.proxy_manager.token(
@@ -690,7 +690,7 @@ class UserDeposit:
     def _plan_withdraw_preconditions(
         self, amount_to_plan_withdraw: TokenAmount, given_block_identifier: BlockIdentifier
     ) -> None:
-        """ Check if a WithdrawPlan for the given amount can be created. """
+        """Check if a WithdrawPlan for the given amount can be created."""
         if amount_to_plan_withdraw <= 0:
             raise BrokenPreconditionError("Planned withdraw amount must be greater than zero.")
 
