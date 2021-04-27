@@ -47,7 +47,7 @@ JOBS_ARG=
 ifdef CIRCLECI
 JOBS_ARG=--jobs=8
 endif
-LINT_PATHS = raiden/ tools/ setup.py
+LINT_PATHS = raiden/ tools/ setup.py conftest.py
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' $(LINT_PATHS)
 
 lint: ISORT_CHECK_PARAMS := --diff --check-only

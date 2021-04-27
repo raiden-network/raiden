@@ -29,7 +29,7 @@ repos:
       - id: check-vcs-permalinks
       - id: check-yaml
       - id: debug-statements
-        exclude: '^(raiden/ui/cli.py)|(raiden/tests/conftest.py)$'
+        exclude: '^(raiden/ui/cli.py)|(conftest.py)$'
       - id: detect-private-key
       - id: end-of-file-fixer
         exclude: .bumpversion_client.cfg
