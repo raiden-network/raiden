@@ -29,7 +29,7 @@ RELEASE_PAGE = "https://github.com/raiden-network/raiden/releases"
 DOC_URL = "https://docs.raiden.network/raiden-api-1"
 SECURITY_EXPRESSION = r"\[CRITICAL UPDATE.*?\]"
 
-RAIDEN_DB_VERSION = RaidenDBVersion(26)
+RAIDEN_DB_VERSION = RaidenDBVersion(27)
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = RaidenProtocolVersion(1)
 
