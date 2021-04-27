@@ -201,7 +201,7 @@ pytz==2019.1
     # via flask-restful
 raiden-contracts==0.37.5
     # via -r requirements.in
-raiden-webui==1.1.1
+raiden-webui==1.2.1
     # via -r requirements.in
 requests==2.25.1
     # via
