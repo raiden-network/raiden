@@ -52,7 +52,7 @@ ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_module
 
 lint: ISORT_CHECK_PARAMS := --diff --check-only
 lint: BLACK_CHECK_PARAMS := --check --diff
-lint: format flake8 mypy pylint shellcheck
+lint: format flake8 mypy pylint shellcheck check-pre-commit
 
 mypy:
 	mypy raiden tools
@@ -81,6 +81,9 @@ else
 	find tools/ .circleci/ -name "*.sh" -print0 | xargs -0 shellcheck -x
 	shellcheck requirements/deps
 endif
+
+check-pre-commit:
+	python tools/pre-commit/pre-commit-check-versions.py
 
 format: isort black
 
@@ -143,4 +146,4 @@ check-venv:
 
 # Ensure pip-tools is installed
 check-pip-tools: check-venv
-	@command -v pip-compile > /dev/null 2>&1 || (echo "pip-tools is required. Installing." && python3 -m pip install pip-tools)
+	@command -v pip-compile > /dev/null 2>&1 || (echo "pip-tools is required. Installing." && python3 -m pip install $(shell grep pip-tools== requirements/requirements-dev.txt))
