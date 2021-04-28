@@ -286,8 +286,8 @@ class _RetryQueue(Runnable):
                 for send_event in self.transport._queueids_to_queues[message_data.queue_identifier]
             )
 
-        message_texts: List[str] = list()
         for subqueue, address_metadata in self._batch_by_address_metadata():
+            message_texts: List[str] = list()
             for message_data in subqueue:
                 # Messages are sent on two conditions:
                 # - Non-retryable (e.g. Delivered)
