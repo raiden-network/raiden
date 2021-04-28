@@ -38,7 +38,17 @@ from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, Signature, T_UserID, UserID, typecheck
+from raiden.utils.typing import (
+    Address,
+    AddressMetadata,
+    ChainID,
+    MessageID,
+    Signature,
+    T_UserID,
+    UserID,
+    cast,
+    typecheck,
+)
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
@@ -101,12 +111,32 @@ def address_from_userid(user_id: str) -> Optional[Address]:
     return address
 
 
-def is_valid_userid(user_id: Any) -> bool:
+def is_valid_userid_for_address(user_id: Any, address: Address) -> bool:
     try:
         typecheck(user_id, T_UserID)
     except ValueError:
         return False
-    return bool(USERID_RE.match(user_id))
+    user_id_address = address_from_userid(user_id)
+    if not user_id_address:
+        return False
+    return address == user_id_address
+
+
+def get_user_id_from_metadata(
+    address: Address, address_metadata: AddressMetadata = None
+) -> Optional[UserID]:
+    """Get user-id from the address-metadata, if it is valid and present.
+
+    This will take the information from an optional AddressMetadata dictionary.
+    If the address_metadata is present and the user-id within that metadata is
+    valid and present for the specified address, the user-id will get returned.
+    """
+    if address_metadata is not None:
+        user_id = address_metadata.get("user_id")
+        if is_valid_userid_for_address(user_id, address):
+            user_id = cast(UserID, user_id)
+            return user_id
+    return None
 
 
 class DisplayNameCache:

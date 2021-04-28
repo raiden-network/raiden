@@ -52,7 +52,7 @@ from raiden.network.transport.matrix.utils import (
     MessageAckTimingKeeper,
     UserPresence,
     address_from_userid,
-    is_valid_userid,
+    get_user_id_from_metadata,
     login,
     make_client,
     make_message_batches,
@@ -1159,29 +1159,6 @@ class MatrixTransport(Runnable):
 
         self._client.api.send_to_device(event_type="m.room.message", messages=messages)
 
-    def _get_possible_user_ids(
-        self, address: Address, address_metadata: AddressMetadata = None
-    ) -> Set[UserID]:
-        """Construct possible user-ids from the address
-
-        This will take the information from the connected matrix homeservers and
-        an optional AddressMetadata dictionary.
-        If the address metadata doesn't further specify what user-id to use for that
-        address, then this method will simply construct all possible user-ids on all
-        known matrix homeservers.
-        """
-        user_ids = set()
-        if address_metadata is not None:
-            user_id = address_metadata.get("user_id")
-            if is_valid_userid(user_id):
-                user_id = cast(UserID, user_id)
-                user_ids.add(user_id)
-        if not user_ids:
-            user_ids = {
-                make_user_id(address, server_name) for server_name in self._all_server_names
-            }
-        return user_ids
-
     def _send_raw(
         self,
         receiver_address: Address,
@@ -1195,11 +1172,21 @@ class MatrixTransport(Runnable):
         if self._web_rtc_manager.has_ready_channel(receiver_address):
             communication_medium = CommunicationMedium.WEB_RTC
         else:
-            user_ids = self._get_possible_user_ids(receiver_address, receiver_metadata)
+            user_id = get_user_id_from_metadata(receiver_address, receiver_metadata)
             # Don't check whether the to-device capability is set -
             # this will only happen for older, incompatible clients that
             # will simply ignore our communication attempt
             communication_medium = CommunicationMedium.TO_DEVICE
+            if user_id is None:
+                self.log.debug(
+                    "Cannot send raw message without address metadata.",
+                    receiver=to_checksum_address(receiver_address),
+                    send_medium=communication_medium.value,
+                    data=data.replace("\n", "\\n"),
+                )
+                return
+            else:
+                user_ids.add(user_id)
 
         self.log.debug(
             "Send raw message",
