@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List  # pylint: skip-file  # XXX-UAM remove after tests are fixed
 
 import gevent
@@ -7,9 +8,8 @@ from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
-from raiden.constants import EMPTY_SIGNATURE, Environment, MatrixMessageType
+from raiden.constants import Environment, MatrixMessageType
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.messages.abstract import Message
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
@@ -21,12 +21,22 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_message_identifier, make_signer
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
+from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.utils.formatting import to_hex_address
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Address, AddressMetadata, BlockExpiration, PaymentAmount, PaymentID
+from raiden.utils.typing import (
+    Address,
+    AddressMetadata,
+    Any,
+    BlockExpiration,
+    Optional,
+    PaymentAmount,
+    PaymentID,
+    UserID,
+)
 
-USERID0 = "@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse"
-USERID1 = f"@{to_hex_address(factories.HOP1)}:Wonderland"  # pylint: disable=no-member
+USERID0 = UserID("@0x1234567890123456789012345678901234567890:RestaurantAtTheEndOfTheUniverse")
+USERID1 = UserID(f"@{to_hex_address(factories.HOP1)}:Wonderland")  # pylint: disable=no-member
 
 
 @pytest.fixture()
@@ -327,15 +337,29 @@ def record_sent_messages(mock_matrix):
     del mock_matrix.sent_messages
 
 
-def make_message(sign: bool = True) -> Message:
-    message = SecretRequest(
+def make_message_event(
+    recipient: Address,
+    address_metadata: Any = None,
+    canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
+):
+    return SendSecretRequest(
+        recipient=recipient,
+        recipient_metadata=address_metadata,
+        canonical_identifier=canonical_identifier,
         message_identifier=make_message_identifier(),
         payment_identifier=PaymentID(1),
-        secrethash=factories.UNIT_SECRETHASH,
         amount=PaymentAmount(1),
         expiration=BlockExpiration(10),
-        signature=EMPTY_SIGNATURE,
+        secrethash=factories.UNIT_SECRETHASH,
     )
+
+
+def make_message(sign: bool = True, message_event: Optional[SendSecretRequest] = None):
+    if message_event is None:
+        # recipient etc. doesn't matter, since this will not be considered
+        # on converting to a message
+        message_event = make_message_event(Address(factories.HOP1))
+    message = SecretRequest.from_event(message_event)
     if sign:
         message.sign(LocalSigner(factories.HOP1_KEY))
     return message
@@ -413,6 +437,125 @@ def test_message_in_p2p_room_raises(  # pylint: disable=unused-argument
         mock_matrix._handle_sync_messages([(room, [event])])
 
 
+def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
+    """
+    Make sure that the retry-queues batchess messages by the attached
+    AddressMetadata, and pass the message-data to the _send_raw method per batch.
+    """
+
+    original_send_raw = mock_matrix._send_raw
+    sent_messages_by_callcount = defaultdict(list)
+    sent_messages = list()
+    send_raw_call_count = 0
+
+    def send_raw(
+        receiver_address: Address,
+        data: str,
+        message_type: MatrixMessageType = MatrixMessageType.TEXT,
+        receiver_metadata: AddressMetadata = None,
+    ) -> None:
+        nonlocal send_raw_call_count
+        send_raw_call_count += 1
+        for message in data.split("\n"):
+            sent_messages.append(message)
+            sent_messages_by_callcount[send_raw_call_count].append((message, receiver_metadata))
+
+    mock_matrix._send_raw = send_raw  # type: ignore
+
+    # Pretend the Transport greenlet is running
+    mock_matrix.greenlet = True
+
+    receiver_address = Address(factories.HOP1)
+
+    # This is intentionally not using ``MatrixTransport._get_retrier()`` since we don't want the
+    # greenlet to run but instead manually call its `_check_and_send()` method.
+    retry_queue = _RetryQueue(transport=mock_matrix, receiver=receiver_address)
+
+    # enqueue first message with no address metadata
+    address_metadata1 = None
+    message_event1 = make_message_event(receiver_address, address_metadata=address_metadata1)
+    message1 = make_message(message_event=message_event1)
+    serialized_message1 = MessageSerializer.serialize(message1)
+    retry_queue.enqueue(message_event1.queue_identifier, [(message1, address_metadata1)])
+
+    # enqueue second message with no address metadata
+    # dict, but no "user_id" key - this will end up in the same batch as address_metadata=None
+    address_metadata2: AddressMetadata = {"no_user_id": UserID("@nothing:here")}
+
+    message_event2 = make_message_event(receiver_address, address_metadata=address_metadata2)
+    message2 = make_message(message_event=message_event2)
+    serialized_message2 = MessageSerializer.serialize(message2)
+    retry_queue.enqueue(message_event2.queue_identifier, [(message2, address_metadata2)])
+
+    # enqueue third message with correct address metadata
+    correct_address_metadata: AddressMetadata = {"user_id": USERID1}
+    message_event3 = make_message_event(
+        receiver_address, address_metadata=correct_address_metadata
+    )
+    message3 = make_message(message_event=message_event3)
+    serialized_message3 = MessageSerializer.serialize(message3)
+    retry_queue.enqueue(message_event3.queue_identifier, [(message3, correct_address_metadata)])
+
+    # enqueue another message with correct address metadata
+    message_event4 = make_message_event(
+        receiver_address, address_metadata=correct_address_metadata
+    )
+    message4 = make_message(message_event=message_event4)
+    serialized_message4 = MessageSerializer.serialize(message4)
+    retry_queue.enqueue(message_event4.queue_identifier, [(message4, correct_address_metadata)])
+
+    # enqueue second message with no address metadata
+    # has key user-id, but is not a "valid" user-id. This should still get passed to the
+    # send raw
+    address_metadata5: AddressMetadata = {"user_id": UserID("invalid")}
+    message_event5 = make_message_event(receiver_address, address_metadata=address_metadata5)
+    message5 = make_message(message_event=message_event5)
+    serialized_message5 = MessageSerializer.serialize(message5)
+    retry_queue.enqueue(message_event5.queue_identifier, [(message5, address_metadata5)])
+
+    # Pretend the Transport greenlet is running
+    mock_matrix.greenlet = True
+
+    mock_matrix._queueids_to_queues[message_event1.queue_identifier] = [
+        message_event1,
+        message_event2,
+        message_event3,
+        message_event4,
+        message_event5,
+    ]
+
+    # This will call the batching
+    with retry_queue._lock:
+        retry_queue._check_and_send()
+
+    assert len(sent_messages) == 5
+    # only 3 batches expected by "user_id" in AddressMetadata
+    # so transport._send_raw should also only be called 3 times
+    assert send_raw_call_count == 3
+
+    # for the first batch, _send_raw will be called with address_metadata=None, because for
+    # message2, the address-metadata dict didn't include a "user_id" key
+    batch1 = [(serialized_message1, None), (serialized_message2, None)]
+    batch2 = [
+        (serialized_message3, correct_address_metadata),
+        (serialized_message4, correct_address_metadata),
+    ]
+    batch3 = [(serialized_message5, address_metadata5)]
+
+    for sent_batch in sent_messages_by_callcount.values():
+        matches = False
+        for batch in [batch1, batch2, batch3]:
+            if all(elem in sent_batch for elem in batch):  # type: ignore
+                matches = True
+                break
+        msg = f"Sent batch not expected: {sent_batch}"
+        assert matches is True, msg
+
+    mock_matrix._queueids_to_queues[message_event1.queue_identifier].clear()
+
+    mock_matrix._send_raw = original_send_raw  # type: ignore
+
+
 @pytest.mark.parametrize("retry_interval_initial", [0.01])
 @pytest.mark.usefixtures("record_sent_messages", "all_peers_reachable")
 def test_retry_queue_does_not_resend_removed_messages(
@@ -434,16 +577,13 @@ def test_retry_queue_does_not_resend_removed_messages(
     # greenlet to run but instead manually call its `_check_and_send()` method.
     retry_queue = _RetryQueue(transport=mock_matrix, receiver=Address(factories.HOP1))
 
-    message = make_message()
+    message_event = make_message_event(recipient=Address(factories.HOP1))
+    message = make_message(message_event=message_event)
     serialized_message = MessageSerializer.serialize(message)
-    queue_identifier = QueueIdentifier(
-        recipient=Address(factories.HOP1),
-        canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
-    )
-    retry_queue.enqueue(queue_identifier, [(message, None)])
 
-    # TODO: Fix the code below, the types are not matching.
-    mock_matrix._queueids_to_queues[queue_identifier] = [message]  # type: ignore
+    retry_queue.enqueue(message_event.queue_identifier, [(message, None)])
+
+    mock_matrix._queueids_to_queues[message_event.queue_identifier] = [message_event]
 
     with retry_queue._lock:
         retry_queue._check_and_send()
@@ -451,7 +591,7 @@ def test_retry_queue_does_not_resend_removed_messages(
     assert len(mock_matrix.sent_messages) == 1  # type: ignore
     assert (factories.HOP1, serialized_message) in mock_matrix.sent_messages  # type: ignore
 
-    mock_matrix._queueids_to_queues[queue_identifier].clear()
+    mock_matrix._queueids_to_queues[message_event.queue_identifier].clear()
 
     # Make sure the retry interval has elapsed
     gevent.sleep(retry_interval_initial * 5)
