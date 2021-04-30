@@ -74,7 +74,7 @@ bitarray==1.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-black==21.4b0
+black==21.4b2
     # via -r requirements-dev.txt
 bleach==3.3.0
     # via
@@ -406,7 +406,7 @@ parso==0.7.0
     # via
     #   -r requirements-dev.txt
     #   jedi
-pathspec==0.8.0
+pathspec==0.8.1
     # via
     #   -r requirements-dev.txt
     #   black
