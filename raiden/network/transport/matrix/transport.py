@@ -225,9 +225,19 @@ class _RetryQueue(Runnable):
         with self._lock:
             self._notify_event.set()
 
-    def _batch_by_address_metadata(
+    def _batch_by_user_id(
         self,
     ) -> List[Tuple[List[_MessageData], Optional[AddressMetadata]]]:
+        """
+        This method will batch the message data in the retry-queue by the UserID
+        that might be attached to the message-data by additional AddressMetadata.
+
+        The method will return batches of message-data, batched by the value of the "user_id"
+        key in the message data's address-metadata.
+        If there is no address-metadata present, or if the address-metadata does not have a
+        "user_id" key, this message-data will be batched to the `None` batch.
+        """
+
         def key_func(message_data: "_RetryQueue._MessageData") -> str:
             address_metadata = message_data.address_metadata
             if address_metadata is None:
@@ -286,7 +296,7 @@ class _RetryQueue(Runnable):
                 for send_event in self.transport._queueids_to_queues[message_data.queue_identifier]
             )
 
-        for subqueue, address_metadata in self._batch_by_address_metadata():
+        for subqueue, address_metadata in self._batch_by_user_id():
             message_texts: List[str] = list()
             for message_data in subqueue:
                 # Messages are sent on two conditions:
