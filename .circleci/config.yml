@@ -396,11 +396,13 @@ jobs:
       - run:
           name: Checkout Scenario Player
           command: |
+            cd ~
             git clone https://github.com/raiden-network/scenario-player.git
       - run:
           name: Install dependencies
           command: |
-            pip install git+https://github.com/raiden-network/scenario-player.git
+            cd ~
+            pip install ~/scenario-player
             pip install -Ue ~/raiden
       - run:
           name: Set Locale
@@ -413,12 +415,12 @@ jobs:
       - run:
           name: Run Unit Tests
           command: |
-            cd scenario-player
-            pytest .
+            cd ~/scenario-player
+            pytest --rootdir . tests
       - run:
           name: Run Smoketest
           command: |
-            cd scenario-player
+            cd ~/scenario-player
             scenario_player smoketest
 
   test:
