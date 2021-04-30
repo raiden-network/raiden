@@ -1335,7 +1335,7 @@ class RaidenService(Runnable):
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)
-                queue_messages.append((message, None))
+                queue_messages.append((message, event.recipient_metadata))
 
             all_messages.append(MessagesQueue(queue_identifier, queue_messages))
 
