@@ -64,7 +64,7 @@ bleach==3.3.0
     #   readme-renderer
 bump2version==1.0.1
     # via -r requirements-dev.in
-cachetools==4.2.1
+cachetools==4.2.2
     # via -r requirements.txt
 canonicaljson==1.4.0
     # via
