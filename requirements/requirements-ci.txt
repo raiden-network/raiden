@@ -692,7 +692,7 @@ typeguard==2.11.1
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
-typing-extensions==3.7.4.3
+typing-extensions==3.10.0.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
