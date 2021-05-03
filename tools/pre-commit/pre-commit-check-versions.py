@@ -26,10 +26,11 @@ class ToolConfig:
 
 
 class Tool(Enum):
-    ISORT = ToolConfig(name="isort", url="git://github.com/pre-commit/mirrors-isort")
     BLACK = ToolConfig(name="black", url="https://github.com/python/black")
+    FLAKE8 = ToolConfig(name="flake8", url="https://gitlab.com/PyCQA/flake8")
+    ISORT = ToolConfig(name="isort", url="git://github.com/pre-commit/mirrors-isort")
     MYPY = ToolConfig(name="mypy", url="https://github.com/pre-commit/mirrors-mypy")
-    PYLINT = ToolConfig(name="pylint", url="https://github.com/pre-commit/mirrors-pylint")
+    PYLINT = ToolConfig(name="pylint", url="https://github.com/PyCQA/pylint")
 
 
 @dataclass
@@ -117,10 +118,10 @@ def check_pre_commit_tool_versions(
             )
         for additional_dep in tool_version.additional_deps:
             specifiers = list(additional_dep.specifier)
-            if len(specifiers) > 1 or specifiers[0].operator != "==":
+            if len(specifiers) != 1 or specifiers[0].operator != "==":
                 errors.append(
                     f"Can only process a single strict equality constraint for "
-                    f"'additional_dependencies' (in '{tool.name}', '{additional_dep}')"
+                    f"'additional_dependencies' (in '{tool.name}' -> '{additional_dep}')"
                 )
                 continue
             additional_dep_requirement = requirements.get(additional_dep.name)

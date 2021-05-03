@@ -15,7 +15,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.2.2
+    rev: v3.4.0
     hooks:
       - id: check-added-large-files
       - id: check-ast
@@ -26,6 +26,7 @@ repos:
       - id: check-json
       - id: check-merge-conflict
       - id: check-symlinks
+      - id: check-toml
       - id: check-vcs-permalinks
       - id: check-yaml
       - id: debug-statements
@@ -35,20 +36,19 @@ repos:
         exclude: .bumpversion_client.cfg
       - id: fix-encoding-pragma
         args: ['--remove']
-      - id: flake8
-        args: ["--config=setup.cfg"]
-        additional_dependencies: ["flake8-bugbear==18.8.0", "flake8-tuple", "readme-renderer",]
       - id: mixed-line-ending
       - id: no-commit-to-branch
         args: ['--branch', 'master', '--branch', 'develop']
       - id: trailing-whitespace
 
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.4.1
+    rev: v1.8.0
     hooks:
       - id: python-no-eval
       - id: python-no-log-warn
       - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
 
   - repo: git://github.com/pre-commit/mirrors-isort
     rev: v5.8.0
@@ -61,6 +61,16 @@ repos:
     hooks:
       - id: black
 
+  - repo: https://gitlab.com/PyCQA/flake8
+    rev: 3.9.1
+    hooks:
+      - id: flake8
+        args: ["--config=setup.cfg"]
+        additional_dependencies:
+          - "flake8-bugbear==21.4.3"
+          - "flake8-tuple==0.4.1"
+          - "readme-renderer==29.0"
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.812
     hooks:
@@ -68,7 +78,7 @@ repos:
         entry: tools/pre-commit/pre-commit-wrapper.py mypy
         additional_dependencies: ["pip-tools==6.1.0"]
 
-  - repo: https://github.com/pre-commit/mirrors-pylint
+  - repo: https://github.com/PyCQA/pylint
     rev: v2.8.2
     hooks:
       - id: pylint
