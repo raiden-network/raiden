@@ -75,6 +75,7 @@ Contents
   :caption: Other
 
   other/safe-usage
+  other/slow-network-test
   other/known-issues
   config_file
   glossary
