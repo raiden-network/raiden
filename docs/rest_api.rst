@@ -80,7 +80,7 @@ In any way, we consider :http:statuscode:`500` errors as bugs in the Raiden clie
 .. _api_endpoints:
 
 Resources
-***********
+*********
 
 All objects that are sent and received from the Raiden API are JSON encoded.
 The following outlines each of the Raiden API endpoints.
@@ -88,7 +88,7 @@ The following outlines each of the Raiden API endpoints.
 .. _api_address:
 
 Address
-========
+=======
 
 .. http:get:: /api/(version)/address
 
@@ -115,7 +115,7 @@ Address
 
 
 Version
-========
+=======
 
 .. http:get:: /api/(version)/version
 
@@ -206,8 +206,41 @@ Settings
       }
 
 
+Contracts
+=========
+
+.. http:get:: /api/(version)/contracts
+
+   By querying the contracts endpoint you can check which on-chain smart contracts are used.
+   Returns the addresses of the smart contracts in use.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/contracts HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "contracts_version": "0.37.1",
+         "monitoring_service_address": "0x20e8e5181000e60799A523a2023d630868f378Fd",
+         "one_to_n_address": "0xA514Da2418576CeC4070C82996f30532dDa99706",
+         "secret_registry_address": "0x9fC80eb1939d8147aB90BAC01AD585f3a71BeE7e",
+         "service_registry_address": "0x3bc9C8d34f5714327095358668fD436D7c457C6C",
+         "token_network_registry_address": "0x5a5CF4A63022F61F1506D1A2398490c2e8dfbb98",
+         "user_deposit_address": "0x0794F09913AA8C77C8c5bdd1Ec4Bb51759Ee0cC5"
+      }
+
+
 Tokens
-=======
+======
 
 The tokens endpoints are used for registering new tokens and querying information about already registered tokens.
 
@@ -1069,6 +1102,75 @@ The pending transfers endpoints let you query information about transfers that h
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjsonarr string role: One of "initiator", "mediator" and "target"
+
+
+Notifications
+=============
+
+.. http:get:: /api/(version)/notifications
+
+   Raiden can inform the user about conditions that may require an action by the user or their attention.
+   These are the types of notifications that currently can be returned, listed by ``id``:
+
+   * ``low_rdn``: RDN tokens deposited in the UDC are below a threshold.
+   * ``version_outdated``: Running an outdated version of Raiden.
+   * ``missing_gas_reserve``: ETH balance is below a threshold and you may not be able to perform on-chain transactions.
+   * ``version_security_warning``: There is an important security update.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/notifications HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      [
+         {
+            "body": "WARNING\nYour account's RDN balance deposited in the UserDepositContract of 0.0 is below the minimum threshold 5.5. Provided that you have either a monitoring service or a path finding service activated, your node is not going to be able to pay those services which may lead to denial of service or loss of funds.",
+            "id": "low_rdn",
+            "summary": "RDN balance too low",
+            "urgency": "normal"
+         },
+         {
+            "body": "You're running version 1.1.1.dev630+g43ae6e32b. The latest version is 1.2.0It's time to update! Releases: https://github.com/raiden-network/raiden/releases",
+            "id": "version_outdated",
+            "summary": "Your version is outdated",
+            "urgency": "normal"
+         }
+      ]
+
+
+Shutdown
+========
+
+.. http:post:: /api/(version)/shutdown
+
+   You can call the shutdown endpoint to stop a running Rainde node.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/shutdown HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "status": "shutdown"
+      }
 
 
 Testing
