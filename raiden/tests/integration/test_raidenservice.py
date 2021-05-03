@@ -103,6 +103,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         amount=amount,
         identifier=payment_id,
         timeout=network_wait * number_of_nodes,
+        routes=[[app1, app0]],
     )
 
     app0.stop()

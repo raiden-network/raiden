@@ -67,6 +67,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
+        routes=[[app0, app1]],
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
@@ -154,6 +155,7 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
         amount=PaymentAmount(1),
         identifier=PaymentID(1),
         timeout=network_wait * number_of_nodes,
+        routes=[[app0, app1]],
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
