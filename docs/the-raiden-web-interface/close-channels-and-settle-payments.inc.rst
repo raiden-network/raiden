@@ -3,7 +3,7 @@ Settle Payments and Close Channels
 
 You have a couple of ways for getting your tokens back on-chain:
 
--  Withdraw tokens from an open
+-  Withdraw tokens from an open channel
 -  Close a channel
 -  Leave a token network
 
