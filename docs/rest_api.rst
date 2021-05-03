@@ -6,8 +6,11 @@ Raiden's API Documentation
 
 Introduction
 *************
-Raiden has a Restful API with URL endpoints corresponding to user-facing interaction allowed by a Raiden node. The endpoints accept and return JSON encoded objects. The api url path always contains the api version in order to differentiate queries to
-different API versions. All queries start with: ``/api/<version>/``
+The Raiden API is organized around REST and has resource-oriented URL endpoints that accept and return JSON-encoded responses. 
+The Raiden API uses standard HTTP response codes and verbs.
+The Raiden RESTful API endpoints correspond to the interactions allowed by a Raiden node. 
+The URL path always contains the API version as an integer. 
+All endpoints start with ``/api/<version>/``
 
 
 
@@ -27,6 +30,7 @@ Channel Object
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
        "balance": "25000000",
        "total_deposit": "35000000",
+       "total_withdraw": "15000000",
        "state": "opened",
        "settle_timeout": "500",
        "reveal_timeout": "50"
@@ -36,37 +40,34 @@ Channel Object
 
 A channel object consists of a
 
-- ``channel_identifier`` should be an ``integer`` containing the identifier of the
+- ``channel_identifier`` should be a string containing the identifier of the
   channel.
 
-- ``partner_address`` should be a ``string`` containing the EIP55-encoded address of the
+- ``partner_address`` should be a string containing the EIP55-encoded address of the
   partner with whom we have opened a channel.
 
-- ``token_address`` should be a ``string`` containing the EIP55-encoded address of the
+- ``token_address`` should be a string containing the EIP55-encoded address of the
   token we are trading in the channel.
 
-- ``token_network_address`` should be a ``string`` containing the EIP55-encoded address of the
+- ``token_network_address`` should be a string containing the EIP55-encoded address of the
   token network the channel is part of.
 
-- ``balance`` should be an integer of the amount of the ``token_address`` token we have available for payments.
+- ``balance`` should be a string of the amount of the ``token_address`` token we have available for payments.
 
-- ``total_deposit`` should be an integer of the amount of the ``token_address`` token we have deposited into the contract for this channel.
+- ``total_deposit`` should be a string of the amount of the ``token_address`` token we have deposited into the contract for this channel.
 
-- ``state`` should be the current state of the channel represented by a string.
-  Possible value are:
-  - ``'opened'``: The channel is open and tokens are tradeable
-  - ``'closed'``: The channel has been closed by a participant
-  - ``'settled'``: The channel has been closed by a participant and also settled.
+- ``total_withdraw`` should be a string of the amount of the ``token_address`` token we have withdrawn from the channel on-chain.
 
-- ``'settle_timeout'``: The number of blocks that are required to be mined from the time that ``close()`` is called until the channel can be settled with a call to ``settle()``.
+- ``state`` should be the current state of the channel represented by a string. Possible values are:
 
-- ``'reveal_timeout'``: The maximum number of blocks allowed between the setting of a hashlock and the revealing of the related secret.
+   - ``"opened"``: The channel is open and tokens are tradeable
+   - ``"closed"``: The channel has been closed by a participant
+   - ``"settled"``: The channel has been closed by a participant and also settled.
 
-Event Object
-==============
+- ``settle_timeout``: The number of blocks that are required to be mined from the time that ``close()`` is called until the channel can be settled with a call to ``settle()``.
 
-Channel events are encoded as json objects with the event arguments as attributes
-of the dictionary, with one difference. The ``event_type`` and the ``block_number`` are also added for all events to easily distinguish between events.
+- ``reveal_timeout``: The maximum number of blocks allowed between the setting of a hashlock and the revealing of the related secret.
+
 
 Errors
 ======
@@ -78,19 +79,21 @@ In any way, we consider :http:statuscode:`500` errors as bugs in the Raiden clie
 
 .. _api_endpoints:
 
-Endpoints
+Resources
 ***********
 
-Following are the available API endpoints with which you can interact with Raiden.
-
-Querying Information About Your Raiden Node
-===============================================
+All objects that are sent and received from the Raiden API are JSON encoded.
+The following outlines each of the Raiden API endpoints.
 
 .. _api_address:
 
+Address
+========
+
 .. http:get:: /api/(version)/address
 
-   Query your address. When raiden starts, you choose an ethereum address which will also be your raiden address.
+   Queries the Ethereum address you choose when starting Raiden. 
+   A Raiden node is up and running correctly if the response returns that same address.
 
    **Example Request**:
 
@@ -110,9 +113,13 @@ Querying Information About Your Raiden Node
           "our_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226"
       }
 
+
+Version
+========
+
 .. http:get:: /api/(version)/version
 
-   Query the version of the Raiden instance
+   You can query the version endpoint to see which version of Raiden you're currently running.
 
    **Example Request**:
 
@@ -132,11 +139,53 @@ Querying Information About Your Raiden Node
           "version": "0.100.5a1.dev157+geb2af878d"
       }
 
+
+Status
+======
+
+.. http:get:: /api/(version)/status
+
+   Query the node status. Possible answers are:
+
+   - ``"ready"``: The node is listening on its API endpoints.
+
+   - ``"syncing"``: The node is still in the initial sync. Number of blocks to sync will also be given.
+
+   - ``"unavailable"``: The node is unavailable for some other reason.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/status HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "status": "syncing",
+         "blocks_to_sync": "130452"
+      }
+
+   :statuscode 200: Successful query
+   :statuscode 500: Internal Raiden error
+
+
 .. _api_settings:
+
+Settings
+========
 
 .. http:get:: /api/(version)/settings
 
-   Queries the settings of your Raiden node. At the moment only the URL of the pathfinding service is returned. The endpoint will provide more settings in the future.
+   Queries the settings of your Raiden node. 
+   At the moment only the URL of the pathfinding service is returned. 
+   The endpoint will provide more settings in the future.
 
    **Example Request**:
 
@@ -156,10 +205,111 @@ Querying Information About Your Raiden Node
           "pathfinding_service_address": "https://pfs.transport04.raiden.network"
       }
 
-Deploying
-=========
+
+Tokens
+=======
+
+The tokens endpoints are used for registering new tokens and querying information about already registered tokens.
+
 .. note::
-   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons in order to minimise possible loss of funds in the case of bugs. The one token that will be registered is `W-ETH <https://weth.io/>`_.
+   For the Alderaan release two tokens are registered, DAI and WETH.
+
+**Information about Tokens**
+
+.. _api_tokens:
+
+.. http:get:: /api/(version)/tokens
+
+   Returns a list of addresses of all registered tokens.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/tokens HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      [
+            "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+            "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
+      ]
+
+   :statuscode 200: Successful query
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+.. http:get:: /api/(version)/tokens/(token_address)
+
+   Returns the address of the corresponding token network for the given token, if the token is registered.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/tokens/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
+
+   :statuscode 200: Successful query
+   :statuscode 404: No token network found for the provided token address
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+.. http:get:: /api/(version)/tokens/(token_address)/partners
+
+   Returns a list of all partner nodes with unsettled channels for a specific token.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/tokens/0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6/partners HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      [
+         {
+               "partner_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+               "channel": "/api/<version>/channels/0x61C808D82A3Ac53231750daDc13c777b59310bD9/0x2a65aca4d5fc5b5c859090a6c34d164135398226"
+         }
+      ]
+
+   :statuscode 200: Successful query
+   :statuscode 302: If the user accesses the channel link endpoint
+   :statuscode 404:
+      - The token does not exist
+      - The token address is not a valid EIP55-encoded Ethereum address
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+   :resjsonarr address partner_address: The partner we have a channel with
+   :resjsonarr link channel: A link to the channel resource
+   
+
+**Register a Token**
+
+.. warning::
+   For the Alderaan release it is not be possible to register more than two tokens, due to security reasons in order to minimise possible loss of funds in the case of bugs. 
+   The two token that are registered are DAI and WETH.
 
 .. http:put:: /api/(version)/tokens/(token_address)
 
@@ -184,7 +334,7 @@ Deploying
       }
 
    :statuscode 201: A token network for the token has been successfully created.
-   :statuscode 402: Insufficient ETH to pay for the gas of the register on-chain transaction
+   :statuscode 402: Insufficient ETH to pay for the gas of the register on-chain transaction.
    :statuscode 403: Maximum of allowed token networks reached. No new token networks can be registered.
    :statuscode 404: The given token address is invalid.
    :statuscode 409:
@@ -194,8 +344,21 @@ Deploying
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjson address token_network_address: The deployed token networks address.
 
-Querying Information About Channels and Tokens
-==============================================
+
+Channels
+========
+
+The channels endpoints allow you to open channels with other Raiden nodes as well as closing channels, querying them for information and making deposits or withdrawals.
+
+.. warning::
+   The maximum deposits per token and node for the Alderaan release are:
+
+   **DAI**: The deposit limit is 1000 worth of DAI per channel participant making the maximum amount of DAI 2000 per channel.
+   
+   **WETH**: The deposit limit is 4.683 worth of WETH per channel participant making the maximum amount of WETH 9.366 per channel.
+
+
+**Information about Channels**
 
 .. http:get:: /api/(version)/channels
 
@@ -268,7 +431,7 @@ Querying Information About Channels and Tokens
       ]
 
    :statuscode 200: Successful query
-   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
+   :statuscode 404: The given token address is not a valid EIP55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
@@ -276,7 +439,8 @@ Querying Information About Channels and Tokens
 
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
 
-   Query information about one of your channels. The channel is specified by the address of the token and the partner's address.
+   Query information about one of your channels. 
+   The channel is specified by the address of a token and the address of the partner node which the channel is opened with.
 
    **Example Request**:
 
@@ -307,50 +471,139 @@ Querying Information About Channels and Tokens
 
    :statuscode 200: Successful query
    :statuscode 404:
-    - The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses, or
+    - The given token and / or partner addresses are not valid EIP55-encoded Ethereum addresses, or
     - The channel does not exist
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
-.. _api_tokens:
 
-.. http:get:: /api/(version)/tokens
+.. _api_open_channel:
 
-   Returns a list of addresses of all registered tokens.
+**Create a Channel**
+
+.. http:put:: /api/(version)/channels
+
+   The request will open a channel and return the newly created channel object.
 
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/v1/tokens HTTP/1.1
+      PUT /api/v1/channels HTTP/1.1
       Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "total_deposit": "35000000",
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
+      }
+
+   :reqjson address partner_address: Address of the partner node with whom we're opening the channel.
+   :reqjson address token_address: Address of the token to be used in the channel.
+   :reqjson string total_deposit: Amount of tokens to be deposited into the channel.
+   :reqjson string settle_timeout: The number of blocks after which a channel can be settled.
+   :reqjson string reveal_timeout: The number of blocks that are allowed between setting a hashlock and the revealing of the related secret.
+
 
    **Example Response**:
 
    .. sourcecode:: http
 
-      HTTP/1.1 200 OK
+      HTTP/1.1 201 CREATED
       Content-Type: application/json
 
-      [
-          "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
-      ]
+      {
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "channel_identifier": "20",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "0",
+          "state": "opened",
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
+      }
 
-   :statuscode 200: Successful query
+   :statuscode 201: Channel created successfully
+   :statuscode 400: Provided JSON is in some way malformed
+   :statuscode 402: Insufficient ETH to pay for the gas of the channel open on-chain transaction
+   :statuscode 409: Invalid input, e. g. too low a settle timeout
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
-.. http:get:: /api/(version)/tokens/(token_address)
 
-   Returns the address of the corresponding token network for the given token, if the token is registered.
+**Modify a Channel**
 
-   **Example Request**:
+.. http:patch:: /api/(version)/channels/(token_address)/(partner_address)
+
+   This request is used to close a channel, to increase the deposit in it, to withdraw tokens from it or to update its reveal timeout.
+   The channel is specified by the address of a token and the address of the partner node which the channel is opened with.
+
+   .. _api_close_channel:
+
+   **Close Channel Example Request**:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/v1/tokens/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "state": "closed"
+      }
+
+   :reqjson string state: Can only be set to ``"closed"``
+
+   .. _api_increase_deposit:
+
+   **Increase Deposit Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "total_deposit": "100"
+      }
+
+   :reqjson string total_deposit: The increased total deposit
+
+   .. _api_withdraw:
+
+   **Withdraw Tokens Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "total_withdraw": "100"
+      }
+
+   :reqjson string total_withdraw: The increased total withdraw
+
+   **Update Reveal Timeout Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "reveal_timeout": "50"
+      }
+
+   :reqjson string reveal_timeout: The new reveal timeout value
 
    **Example Response**:
 
@@ -359,22 +612,69 @@ Querying Information About Channels and Tokens
       HTTP/1.1 200 OK
       Content-Type: application/json
 
-      "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
+      {
+          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+          "channel_identifier": "20",
+          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "balance": "25000000",
+          "total_deposit": "35000000",
+          "total_withdraw": "5000000",
+          "state": "closed",
+          "settle_timeout": "500",
+          "reveal_timeout": "50"
+      }
 
-   :statuscode 200: Successful query
-   :statuscode 404: No token network found for the provided token address
+   :statuscode 200: Success
+   :statuscode 400:
+    - The provided JSON is in some way malformed, or
+    - there is nothing to do since none of ``state``, ``total_deposit`` or ``total_withdraw`` have been given, or
+    - the value of ``state`` is not a valid channel state.
+   :statuscode 402: Insufficient balance to do a deposit, or insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: The given token and / or partner addresses are not valid EIP55-encoded Ethereum addresses
+   :statuscode 409:
+    - Provided channel does not exist or
+    - ``state``, ``total_deposit`` and ``total_withdraw`` have been attempted to update in the same request or
+    - attempt to deposit token amount lower than on-chain balance of the channel or
+    - attempt to deposit more tokens than the testing limit
+   :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
-.. http:get:: /api/(version)/tokens/(token_address)/partners
 
-   Returns a list of all partners with whom you have non-settled channels for a certain token.
+.. _Payments:
+
+Payments
+========
+
+The payment endpoint is used for transferring tokens to another node. 
+You can send the desired amount of tokens by providing the address of the token and the address of the receiving node.
+Besides you can query all payments that you sent or received.
+
+
+**Query the Payment History**
+
+.. _api_list_payments:
+
+.. http:get:: /api/(version)/payments/(token_address)/(partner_address)
+
+   When querying the payment history the response will include:
+
+   * "EventPaymentSentSuccess" for successful payments
+   * "EventPaymentSentFailed" for failed payments
+   * "EventPaymentReceivedSuccess" for received payments
+
+   ``token_address`` and ``partner_address`` are optional and will filter the list of events accordingly.
 
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/v1/tokens/0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6/partners HTTP/1.1
+      GET /api/v1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
       Host: localhost:5001
+   
+   :query int limit: Limits the payment history result to the specified amount 
+   :query int offset: Offsets the payment history result by the specified amount
+
 
    **Example Response**:
 
@@ -385,20 +685,326 @@ Querying Information About Channels and Tokens
 
       [
          {
-             "partner_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
-             "channel": "/api/<version>/channels/0x61C808D82A3Ac53231750daDc13c777b59310bD9/0x2a65aca4d5fc5b5c859090a6c34d164135398226"
+            "event": "EventPaymentSentSuccess",
+            "amount": "20",
+            "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
+            "identifier": "3",
+            "log_time": "2018-10-30T07:10:13.122",
+            "token_address": "0x62083c80353Df771426D209eF578619EE68D5C7A"
+         },
+         {
+            "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
+            "event": "EventPaymentSentFailed",
+            "log_time": "2018-10-30T07:04:22.293",
+            "reason": "there is no route available",
+            "token_address": "0x62083c80353Df771426D209eF578619EE68D5C7A"
+         },
+         {
+            "event": "EventPaymentReceivedSuccess",
+            "amount": "5",
+            "initiator": "0x82641569b2062B545431cF6D7F0A418582865ba7",
+            "identifier": "1",
+            "log_time": "2018-10-30T07:03:52.193",
+            "token_address": "0x62083c80353Df771426D209eF578619EE68D5C7A"
          }
       ]
 
-   :statuscode 200: Successful query
-   :statuscode 302: If the user accesses the channel link endpoint
-   :statuscode 404:
-    - The token does not exist
-    - The token address is not a valid eip55-encoded Ethereum address
+   :statuscode 200: For successful query
+   :statuscode 404: The given token and / or partner addresses are not valid EIP55-encoded Ethereum addresses
+   :statuscode 409: If the given block number or token_address arguments are invalid
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-   :resjsonarr address partner_address: The partner we have a channel with
-   :resjsonarr link channel: A link to the channel resource
+   :resjsonarr string event: One of "EventPaymentSentSuccess", "EventPaymentSentFailed" and "EventPaymentReceivedSuccess".
+   :resjsonarr string amount: Token amount of the payment.
+   :resjsonarr string target: Address of the node which received the payment.
+   :resjsonarr string initiator: Address of the node which initiated the payment.
+   :resjsonarr string identifier: Identifier of the payment.
+   :resjsonarr string log_time: Time when the payment event was written to the write-ahead log. The format of ``log_time`` is ISO8601 with milliseconds.
+   :resjsonarr string token_address: Address of token that was transferred.
+   :resjsonarr string reason: Gives an explanation why a payment failed.
+
+
+**Initiate a Payment**
+
+.. _api_init_payment:
+
+.. http:post:: /api/(version)/payments/(token_address)/(target_address)
+
+   The request will only return once the payment either succeeds or fails.
+
+   .. note::
+      A payment can fail due to:
+
+      * The secret for opening the hashlock not being revealed in time and the lock expires
+      * The target node being offline
+      * The channels leading to the target node not having enough ``settle_timeout`` and ``reveal_timeout``
+      * The funds not being enough
+
+   
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "amount": "200",
+          "identifier": "42"
+      }
+
+   :reqjson string amount: Amount to be sent to the target
+   :reqjson string identifier: Identifier of the payment (optional)
+   :reqjson string lock_timeout: lock timeout, in blocks, to be used with the payment. Default is 2 * channel's reveal_timeout, Value must be greater than channel's reveal_timeout (optional)
+
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+          "initiator_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+          "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+          "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
+          "amount": "200",
+          "identifier": "42",
+          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
+          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
+      }
+
+   :statuscode 200: Successful payment
+   :statuscode 400: The provided json is in some way malformed
+   :statuscode 402: The payment can't start due to insufficient balance
+   :statuscode 404: The given token and / or target addresses are not valid EIP55-encoded Ethereum addresses
+   :statuscode 409: The address or the amount is invalid, or there is no path to the target, or the identifier is already in use for a different payment.
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+   .. note::
+      This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
+      However, this does not necessarily mean that querying the balance from the target node, immediately after
+      the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
+  
+
+
+User Deposit
+============
+
+For paying the :doc:`Raiden Services <raiden_services>` it is necessary to have RDN (Raiden Network Tokens) in the User Deposit Contract (UDC). 
+This endpoint can be used to deposit to and withdraw from the UDC.
+
+
+**Deposit**
+
+.. http:post:: /api/(version)/user_deposit
+
+   Deposit RDN tokens to the UDC.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/user_deposit HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "total_deposit": "200000"
+      }
+
+   :reqjson string total_deposit: The total deposit token amount. Should be the sum of the current value and the desired deposit.
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "transaction_hash": "0xc5988c93c07cf1579e73d39ee2a3d6e948d959d11015465a77817e5239165170"
+      }
+
+   :statuscode 200: Deposit was successful
+   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 402: Insufficient balance to do a deposit or insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: No UDC is configured on the Raiden node
+   :statuscode 409: The provided ``total_deposit`` is not higher than the previous ``total_deposit`` or attempted to deposit more RDN than the UDC limit would allow
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+
+**Plan a withdraw**
+
+.. http:post:: /api/(version)/user_deposit
+
+   Before RDN can be withdrawn from the UDC the withdraw must be planned.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/user_deposit HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "planned_withdraw_amount": "1500"
+      }
+
+   :reqjson string planned_withdraw_amount: The amount of tokens for which a withdrawal should get planned.
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "planned_withdraw_block_number": 4269933,
+         "transaction_hash": "0xec6a0d010d740df20ca8b3b6456e9deaab8abf3787cb676ee244bef7d28aa4fc"
+      }
+
+   :statuscode 200: Withdraw plan was successful
+   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 402: Insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: No UDC is configured on the Raiden node
+   :statuscode 409: The provided ``planned_withdraw_amount`` is higher than the balance in the UDC or not greater than zero
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+**Withdraw**
+
+.. http:post:: /api/(version)/user_deposit
+
+   Withdraw RDN from the UDC. Can only be done 100 blocks after the withdraw was planned.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      POST /api/v1/user_deposit HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+      {
+          "withdraw_amount": "1500"
+      }
+
+   :reqjson string withdraw_amount: The amount of tokens which should get withdrawn.
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "transaction_hash": "0xfc7edd195c6cc0c9391d84dd83b7aa9dbfffbcfc107e5c33a5ab912c0d92416c"
+      }
+
+   :statuscode 200: Withdraw was successful
+   :statuscode 400: The provided JSON is in some way malformed
+   :statuscode 402: Insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: No UDC is configured on the Raiden node
+   :statuscode 409: The provided ``withdraw_amount`` is higher than the planned amount or not greater than zero or the withdraw is too early
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+
+Connections
+===========
+
+The connections endpoints allow you to query details about all joined token networks as well as leave a token network by closing and settling all open channels.
+
+**Details of All Joined Token Networks**
+
+.. http:get:: /api/(version)/connections
+
+   The request will return a JSON object where each key is a token address for which you have open channels.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/connections HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      {
+         "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
+               "sum_deposits": "67",
+               "channels": "3"
+         },
+         "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
+               "sum_deposits": "31",
+               "channels": "1"
+         }
+      }
+
+   :statuscode 200: For a successful query
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+   :resjsonarr string sum_deposits: Sum of deposits in all currently open channels
+   :resjsonarr string channels: Number of channels currently open for the specific token
+
+
+.. _api_leave_tn:
+
+**Leave a Token Network**
+
+.. http:delete:: /api/(version)/connections/(token_address)
+
+   The request might take some time because it will only return once all blockchain calls for closing and settling a channel have been completed.
+
+   The response is a list with the addresses of all closed channels.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      DELETE /api/v1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+      Host: localhost:5001
+      Content-Type: application/json
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      [
+         "0x41BCBC2fD72a731bcc136Cf6F7442e9C19e9f313",
+         "0x5A5f458F6c1a034930E45dC9a64B99d7def06D7E",
+         "0x8942c06FaA74cEBFf7d55B79F9989AdfC85C6b85"
+      ]
+
+   :statuscode 200: Successfully leaving a token network
+   :statuscode 404: The given token address is not a valid EIP55-encoded Ethereum address
+   :statuscode 500: Internal Raiden node error
+   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
+
+   .. note::
+      Currently, the API calls are blocking. This means that in the case of long running calls like leave a token network, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
+      
+
+Pending Transfers
+=================
+
+The pending transfers endpoints let you query information about transfers that have not been completed yet.
 
 .. http:get:: /api/(version)/pending_transfers
 
@@ -415,7 +1021,7 @@ Querying Information About Channels and Tokens
 
 .. http:get:: /api/(version)/pending_transfers/(token_address)
 
-   Like above, but limited to pending transfers of the specified token.
+   Limits the response to pending transfers of the specified token.
 
    **Example Request**:
 
@@ -428,7 +1034,7 @@ Querying Information About Channels and Tokens
 
 .. http:get:: /api/(version)/pending_transfers/(token_address)/(partner_address)
 
-   Like above, but limited to the specified channel.
+   Limits the response to pending transfers of the specified token and channel.
 
    **Example Request**:
 
@@ -465,562 +1071,17 @@ Querying Information About Channels and Tokens
    :resjsonarr string role: One of "initiator", "mediator" and "target"
 
 
+Testing
+=======
 
+You can mint tokens for testing purposes by making a request to the ``_testing`` endpoint. 
+This is only possible on testnets.
 
-Channel Management
-==================
-
-.. _api_open_channel:
-
-.. http:put:: /api/(version)/channels
-
-   Opens (i. e. creates) a channel.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      PUT /api/v1/channels HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "total_deposit": "35000000",
-          "settle_timeout": "500",
-          "reveal_timeout": "50"
-      }
-
-   :reqjson address partner_address: The partner we want to open a channel with.
-   :reqjson address token_address: The token we want to be used in the channel.
-   :reqjson int total_deposit: Total amount of tokens to be deposited to the channel
-   :reqjson int settle_timeout: The amount of blocks that the settle timeout should have.
-   :reqjson int reveal_timeout: The amount of blocks that the reveal timeout should have.
-
-   The request's payload is a channel object; since it is a new channel, its ``channel_address``
-   and ``status`` fields will be ignored and can be omitted.
-
-   The request to the endpoint will later return the fully created channel object.
-
-   .. note::
-      For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
-
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 201 CREATED
-      Content-Type: application/json
-
-      {
-          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": "20",
-          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": "25000000",
-          "total_deposit": "35000000",
-          "total_withdraw": "0",
-          "state": "opened",
-          "settle_timeout": "500",
-          "reveal_timeout": "50"
-      }
-
-   :statuscode 201: Channel created successfully
-   :statuscode 400: Provided JSON is in some way malformed
-   :statuscode 402: Insufficient ETH to pay for the gas of the channel open on-chain transaction
-   :statuscode 409: Invalid input, e. g. too low a settle timeout
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-.. _api_close_channel:
-
-.. http:patch:: /api/(version)/channels/(token_address)/(partner_address)
-
-   This request is used to close a channel or to increase the deposit in it.
-
-   **Example Request (close channel)**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "state": "closed"
-      }
-
-.. _api_increase_deposit:
-
-   **Example Request (increase deposit)**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "total_deposit": "100"
-      }
-
-.. _api_withdraw:
-
-   **Example Request (withdraw tokens)**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "total_withdraw": "100"
-      }
-
-   **Example Request (update channel reveal timeout)**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "reveal_timeout": "50"
-      }
-
-   :reqjson string state: Desired new state; the only valid choice is ``"closed"``
-   :reqjson int total_deposit: The increased total deposit
-   :reqjson int total_withdraw: The increased total withdraw
-   :reqjson int reveal_timeout: The new reveal timeout value
-
-   .. note::
-      For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_.
-      This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH.
-      This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-          "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
-          "channel_identifier": "20",
-          "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-          "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "balance": "25000000",
-          "total_deposit": "35000000",
-          "total_withdraw": "5000000",
-          "state": "closed",
-          "settle_timeout": "500",
-          "reveal_timeout": "50"
-      }
-
-   :statuscode 200: Success
-   :statuscode 400:
-    - The provided JSON is in some way malformed, or
-    - there is nothing to do since none of ``state``, ``total_deposit`` or ``total_withdraw`` have been given, or
-    - the value of ``state`` is not a valid channel state.
-   :statuscode 402: Insufficient balance to do a deposit, or insufficient ETH to pay for the gas of the on-chain transaction
-   :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
-   :statuscode 409:
-    - Provided channel does not exist or
-    - ``state``, ``total_deposit`` and ``total_withdraw`` have been attempted to update in the same request or
-    - attempt to deposit token amount lower than on-chain balance of the channel
-    - attempt to deposit more tokens than the testing limit
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-Connection Management
-=====================
-
-.. http:get:: /api/(version)/connections
-
-   Query details of all joined token networks.
-
-   The request will return a JSON object where each key is a token address for which you have open channels.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      GET /api/v1/connections HTTP/1.1
-      Host: localhost:5001
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-          "0x2a65Aca4D5fC5B5C859090a6c34d164135398226": {
-              "sum_deposits": "67",
-              "channels": "3"
-          },
-          "0x0f114A1E9Db192502E7856309cc899952b3db1ED": {
-              "sum_deposits": "31",
-              "channels": "1"
-          }
-      }
-
-   :statuscode 200: For a successful query
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-   :resjsonarr int sum_deposits: Sum of deposits of all currently open channels
-   :resjsonarr int channels: Number of channels currently open for that token
-
-.. _api_leave_tn:
-
-.. http:delete:: /api/(version)/connections/(token_address)
-
-   Leave a token network. The request will only return once all blockchain calls for closing/settling a channel have completed.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      DELETE /api/v1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      [
-          "0x41BCBC2fD72a731bcc136Cf6F7442e9C19e9f313",
-          "0x5A5f458F6c1a034930E45dC9a64B99d7def06D7E",
-          "0x8942c06FaA74cEBFf7d55B79F9989AdfC85C6b85"
-      ]
-
-   The response is a list with the addresses of all closed channels.
-
-   :statuscode 200: For successfully leaving a token network
-   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-   .. note::
-      Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
-
-.. _Payments:
-
-Payments
-========
-
-.. _api_init_payment:
-
-.. http:post:: /api/(version)/payments/(token_address)/(target_address)
-
-   Initiate a payment.
-
-   The request will only return once the payment either succeeded or failed. A payment can fail due to the expiration of a lock, the target being offline, channels on the path to the target not having enough ``settle_timeout`` and ``reveal_timeout`` in order to allow the payment to be propagated safely, not enough funds etc.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      POST /api/v1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "amount": "200",
-          "identifier": "42"
-      }
-
-   :reqjson int amount: Amount to be sent to the target
-   :reqjson int identifier: Identifier of the payment (optional)
-   :reqjson int lock_timeout: lock timeout, in blocks, to be used with the payment. Default is 2 * channel's reveal_timeout, Value must be greater than channel's reveal_timeout (optional)
-
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-          "initiator_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
-          "target_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-          "token_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
-          "amount": "200",
-          "identifier": "42",
-          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
-          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
-      }
-
-   :statuscode 200: Successful payment
-   :statuscode 400: If the provided json is in some way malformed
-   :statuscode 402: If the payment can't start due to insufficient balance
-   :statuscode 404: The given token and / or target addresses are not valid eip55-encoded Ethereum addresses
-   :statuscode 409: If the address or the amount is invalid or if there is no path to the target, or if the identifier is already in use for a different payment.
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-   .. note::
-      This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
-      However, this does not necessarily mean that querying the balance from the target node, immediately after
-      the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
-
-   To use Raiden for an atomic swap (see :doc:`Token Swaps <token_swaps>`), the endpoint could be called to initiate a payment while providing values for ``secret`` and ``secret_hash``.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      POST /api/v1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "amount": "200",
-          "identifier": "42",
-          "secret": "0x4c7b2eae8bbed5bde529fda2dcb092fddee3cc89c89c8d4c747ec4e570b05f66",
-          "secret_hash": "0x1f67db95d7bf4c8269f69d55831e627005a23bfc199744b7ab9abcb1c12353bd"
-      }
-
-   :reqjson int amount: Amount to be sent to the target
-   :reqjson int identifier: Identifier of the payment (optional)
-   :reqjson string secret: The secret to be used for the payment
-   :reqjson string secret_hash: The secret hash (should be equal to SHA256 of the secret)
-
-
-Querying Events
-===============
-
-Events are kept by the node. A normal user should only care about the events exposed for payments. Those events show if a payment failed or if it was successful.
-
-For ``raiden_events`` you can provide a ``limit`` and an ``offset`` number which would define the limit of results to return and the offset from which to return results respectively.
-
-``raiden_events`` contain a timestamp field, ``log_time``, indicating when they were written to the write-ahead log.
-The format of ``log_time`` is ISO8601 with milliseconds.
-
-.. _api_list_payments:
-
-.. http:get:: /api/(version)/payments/(token_address)/(target_address)
-
-     Query the payment history. This includes successful (EventPaymentSentSuccess) and failed (EventPaymentSentFailed) sent payments as well as received payments (EventPaymentReceivedSuccess).
-     ``token_address`` and ``target_address`` are optional and will filter the list of events accordingly.
-
-    **Example Request**:
-
-    .. http:example:: curl wget httpie python-requests
-
-       GET /api/v1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
-       Host: localhost:5001
-
-    **Example Response**:
-
-    .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      [
-          {
-              "event": "EventPaymentReceivedSuccess",
-              "amount": "5",
-              "initiator": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": "1",
-              "log_time": "2018-10-30T07:03:52.193",
-	      "token_address" : "0x5a2d2b9b015b46b8eaff7bffdc5db0051db7439b"
-          },
-          {
-              "event": "EventPaymentSentSuccess",
-              "amount": "35",
-              "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": "2",
-              "log_time": "2018-10-30T07:04:22.293",
-	      "token_address" : "0x5a2d2b9b015b46b8eaff7bffdc5db0051db7439b"
-          },
-          {
-              "event": "EventPaymentSentSuccess",
-              "amount": "20",
-              "target": "0x82641569b2062B545431cF6D7F0A418582865ba7",
-              "identifier": "3",
-              "log_time": "2018-10-30T07:10:13.122",
-	      "token_address" : "0x5a2d2b9b015b46b8eaff7bffdc5db0051db7439b"
-          }
-      ]
-
-  :statuscode 200: For successful query
-  :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
-  :statuscode 409: If the given block number or token_address arguments are invalid
-  :statuscode 500: Internal Raiden node error
-  :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-
-Querying node state
-===================
-
-.. http:get:: /api/(version)/status
-
-   Query the node status. Possible answers are:
-
-   - ``"ready"``: The node is listening on its API endpoints
-
-   - ``"syncing"``: The node is still in the initial sync. Number of blocks to sync will also be given.
-
-   - ``"unavailable"``: The node is unavailable for some other reason
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      GET /api/v1/status HTTP/1.1
-      Host: localhost:5001
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-         "status": "syncing",
-         "blocks_to_sync": "130452"
-      }
-
-   :statuscode 200: Successful query
-   :statuscode 500: Internal Raiden error
-
-
-User Deposit for services
-===================
-
-For paying the :doc:`Raiden Services <raiden_services>` it is necessary to have RDN (Raiden Network Tokens) in the User Deposit Contract (UDC). 
-This endpoint can be used to deposit to and withdraw from the UDC.
-
-
-.. http:post:: /api/(version)/user_deposit
-
-   **Deposit**
-
-   Deposit RDN tokens to the UDC.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      POST /api/v1/user_deposit HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "total_deposit": "200000"
-      }
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-         "transaction_hash": "0xc5988c93c07cf1579e73d39ee2a3d6e948d959d11015465a77817e5239165170"
-      }
-
-   :statuscode 200: Deposit was successful
-   :statuscode 400: The provided JSON is in some way malformed
-   :statuscode 402: Insufficient balance to do a deposit or insufficient ETH to pay for the gas of the on-chain transaction
-   :statuscode 404: No UDC is configured on the Raiden node
-   :statuscode 409: The provided ``total_deposit`` is not higher than the previous ``total_deposit`` or attempted to deposit more RDN than the UDC limit would allow
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-   **Plan a withdraw**
-
-   Before RDN can be withdrawn from the UDC the withdraw must be planned.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      POST /api/v1/user_deposit HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "planned_withdraw_amount": "1500"
-      }
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-         "planned_withdraw_block_number": 4269933,
-         "transaction_hash": "0xec6a0d010d740df20ca8b3b6456e9deaab8abf3787cb676ee244bef7d28aa4fc"
-      }
-
-   :statuscode 200: Withdraw plan was successful
-   :statuscode 400: The provided JSON is in some way malformed
-   :statuscode 402: Insufficient ETH to pay for the gas of the on-chain transaction
-   :statuscode 404: No UDC is configured on the Raiden node
-   :statuscode 409: The provided ``planned_withdraw_amount`` is higher than the balance in the UDC or not greater than zero
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-   **Withdraw**
-
-   Withdraw RDN from the UDC. Can only be done after 100 blocks after the withdraw was planned.
-
-   **Example Request**:
-
-   .. http:example:: curl wget httpie python-requests
-
-      POST /api/v1/user_deposit HTTP/1.1
-      Host: localhost:5001
-      Content-Type: application/json
-
-      {
-          "withdraw_amount": "1500"
-      }
-
-   **Example Response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Content-Type: application/json
-
-      {
-         "transaction_hash": "0xfc7edd195c6cc0c9391d84dd83b7aa9dbfffbcfc107e5c33a5ab912c0d92416c"
-      }
-
-   :statuscode 200: Withdraw was successful
-   :statuscode 400: The provided JSON is in some way malformed
-   :statuscode 402: Insufficient ETH to pay for the gas of the on-chain transaction
-   :statuscode 404: No UDC is configured on the Raiden node
-   :statuscode 409: The provided ``withdraw_amount`` is higher than the planned amount or not greater than zero or the withdraw is too early
-   :statuscode 500: Internal Raiden node error
-   :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
-
-
-API endpoints for testing
-=========================
+**Mint Tokens**
 
 .. http:post:: /api/(version)/_testing/tokens/(token_address)/mint
 
-   Mint tokens. This requires the token at ``token_address`` to implement a minting method with one of
+   This requires the token at ``token_address`` to implement a minting method with one of
    the common interfaces:
 
    - ``mint(address,uint256)``
@@ -1029,7 +1090,7 @@ API endpoints for testing
 
    - ``increaseSupply(uint256,address)``
 
-   Depending on the token, it may also be necessary to have minter privilege.
+   Depending on the token, it may also be necessary to have minter privileges.
 
    **Example Request**:
 
@@ -1045,7 +1106,7 @@ API endpoints for testing
       }
 
    :reqjson address to: The address to assign the minted tokens to.
-   :reqjson int value: The amount of tokens to be minted.
+   :reqjson string value: The amount of tokens to be minted.
 
    **Example Response**:
 
