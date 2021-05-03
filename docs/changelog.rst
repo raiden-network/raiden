@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :feature:`-` Update WebUI to version 1.2.1 https://github.com/raiden-network/webui/releases/tag/v1.2.1. Adds a dialog for interacting with the UserDeposit contract (UDC).
+* :feature:`6838` Add ``/notifcations`` endpoint for showing notifications and warnings to the user.
 
 * :feature:`6563` Faster syncing with the blockchain.
 * :feature:`-` Update WebUI to version 1.1.1 https://github.com/raiden-network/webui/releases/tag/v1.1.1. Introduces a new "Quick Connect" that is simpler and more transparent.
