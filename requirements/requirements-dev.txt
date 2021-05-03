@@ -183,7 +183,7 @@ eth-utils==1.10.0
     #   web3
 execnet==1.6.0
     # via pytest-xdist
-faker==8.1.1
+faker==8.1.2
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
@@ -584,7 +584,7 @@ typeguard==2.11.1
     # via
     #   -r requirements.txt
     #   marshmallow-dataclass
-typing-extensions==3.7.4.3
+typing-extensions==3.10.0.0
     # via
     #   -r requirements.txt
     #   matrix-synapse
