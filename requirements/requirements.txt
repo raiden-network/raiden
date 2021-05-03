@@ -22,7 +22,7 @@ base58==2.0.0
     # via multiaddr
 bitarray==1.2.1
     # via eth-account
-cachetools==4.2.1
+cachetools==4.2.2
     # via -r requirements.in
 canonicaljson==1.4.0
     # via -r requirements.in
