@@ -56,7 +56,7 @@ def check_if_nightly(version):
 
 # Add customized stylesheet
 def setup(app):
-    app.add_stylesheet("css/custom.css")
+    app.add_css_file("css/custom.css")
 
 
 # -- General configuration ------------------------------------------------
