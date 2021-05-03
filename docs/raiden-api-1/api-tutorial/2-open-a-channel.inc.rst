@@ -104,7 +104,7 @@ inside the token network.
 
 You're now ready to start making payments.
 
-.. include:: 3-make-a-payment.rst
+.. include:: 3-make-a-payment.inc.rst
 
 .. note:: Opening a channel with a partner node is not dependent on whether the partner node holds tokens or not. It will work either way. 
 
