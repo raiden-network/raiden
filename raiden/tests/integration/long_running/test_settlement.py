@@ -247,6 +247,7 @@ def test_lock_expiry(
         target=target,
         identifier=identifier,
         secret=transfer_1_secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
     )
     transfer1_received.wait()
 
@@ -297,6 +298,7 @@ def test_lock_expiry(
         target=target,
         identifier=identifier,
         secret=transfer_2_secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
     )
     transfer2_received.wait()
 
@@ -360,6 +362,7 @@ def test_batch_unlock(
         target=TargetAddress(bob_address),
         identifier=PaymentID(identifier),
         secret=secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
     )
 
     secret_request_event.get()  # wait for the messages to be exchanged
@@ -587,6 +590,7 @@ def test_channel_withdraw_expired(
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
     )
     wait_for_unlock = bob_app.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
@@ -706,6 +710,7 @@ def test_settled_lock(
         token_address=token_address,
         amount=amount,
         identifier=PaymentID(2),
+        routes=[[app0, app1]],
     )
 
     # The channel state has to be recovered before the settlement, otherwise
@@ -785,6 +790,7 @@ def test_automatic_secret_registration(
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[create_route_state_for_route([app0, app1], token_address)],
     )
 
     # Wait for app1 to receive the locked transfer.
@@ -834,10 +840,10 @@ def test_start_end_attack(
     The intention is to make the hub transfer the token but for him to be
     unable to require the token A1."""
 
-    token = token_addresses[0]
+    token_address = token_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_network_address = views.get_token_network_address_by_token_address(
-        views.state_from_raiden(app0), app0.default_registry.address, token
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
     )
     assert token_network_address
 
@@ -859,6 +865,7 @@ def test_start_end_attack(
         target=target,
         identifier=identifier,
         secret=secret,
+        route_states=[create_route_state_for_route([app0, app1], token_address)],
     )
 
     attack_channel = get_channelstate(app2, app1, token_network_address)
@@ -890,15 +897,15 @@ def test_start_end_attack(
     # the attacker settles the contract
     app2.rpc_client.wait_until_block(target_block_number=app2.rpc_client.block_number() + 1)
 
-    attack_channel.netting_channel.settle(token, attack_contract)
+    attack_channel.netting_channel.settle(token_address, attack_contract)
 
     # at this point the attacker has the "stolen" funds
-    attack_contract = app2.proxy_manager.token_hashchannel[token][attack_contract]
+    attack_contract = app2.proxy_manager.token_hashchannel[token_address][attack_contract]
     assert attack_contract.participants[app2.address]["netted"] == deposit + amount
     assert attack_contract.participants[app1.address]["netted"] == deposit - amount
 
     # and the hub's channel A1-H doesn't
-    hub_contract = app1.proxy_manager.token_hashchannel[token][hub_contract]
+    hub_contract = app1.proxy_manager.token_hashchannel[token_address][hub_contract]
     assert hub_contract.participants[app0.address]["netted"] == deposit
     assert hub_contract.participants[app1.address]["netted"] == deposit
 
@@ -911,7 +918,7 @@ def test_start_end_attack(
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
     # the hub has acquired its token
-    hub_contract = app1.proxy_manager.token_hashchannel[token][hub_contract]
+    hub_contract = app1.proxy_manager.token_hashchannel[token_address][hub_contract]
     assert hub_contract.participants[app0.address]["netted"] == deposit + amount
     assert hub_contract.participants[app1.address]["netted"] == deposit - amount
 
@@ -941,6 +948,7 @@ def test_automatic_dispute(
         token_address=token_address,
         amount=amount0_1,
         identifier=PaymentID(1),
+        routes=[[app0, app1]],
     )
 
     amount1_1 = PaymentAmount(50)
@@ -950,6 +958,7 @@ def test_automatic_dispute(
         token_address=token_address,
         amount=amount1_1,
         identifier=PaymentID(2),
+        routes=[[app1, app0]],
     )
 
     amount0_2 = PaymentAmount(60)
@@ -959,6 +968,7 @@ def test_automatic_dispute(
         token_address=token_address,
         amount=amount0_2,
         identifier=PaymentID(3),
+        routes=[[app0, app1]],
     )
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to
@@ -1061,6 +1071,7 @@ def test_batch_unlock_after_restart(
         target=TargetAddress(bob_app.address),
         identifier=identifier,
         secret=alice_transfer_secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
     )
 
     bob_app.mediated_transfer_async(
@@ -1069,6 +1080,7 @@ def test_batch_unlock_after_restart(
         target=TargetAddress(alice_app.address),
         identifier=PaymentID(identifier + 1),
         secret=bob_transfer_secret,
+        route_states=[create_route_state_for_route([bob_app, alice_app], token_address)],
     )
 
     alice_transfer_hold.wait(timeout=timeout)
@@ -1181,6 +1193,7 @@ def test_handle_insufficient_eth(
             token_address=token,
             amount=PaymentAmount(1),
             identifier=PaymentID(1),
+            routes=[[app0, app1]],
         )
 
     app1.stop()

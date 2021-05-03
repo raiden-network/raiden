@@ -207,6 +207,7 @@ def test_payment_statuses_are_restored(
             target=target_address,
             identifier=PaymentID(identifier),
             secret=secret,
+            route_states=[create_route_state_for_route([app0, app1], token_address)],
         )
         assert payment_status.payment_identifier == identifier
 
