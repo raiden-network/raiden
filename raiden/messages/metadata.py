@@ -1,18 +1,40 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import canonicaljson
 import rlp
 from eth_utils import keccak
 
 from raiden.messages.abstract import cached_property
+from raiden.network.transport.matrix.utils import validate_user_id_signature
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, AddressMetadata, Dict, List
+from raiden.utils.typing import Address, AddressMetadata, Dict, List, Optional
 
 
-@dataclass(frozen=True)
 class RouteMetadata:
     route: List[Address]
-    address_metadata: Dict[Address, AddressMetadata] = field(default_factory=dict)
+    address_metadata: Dict[Address, AddressMetadata]
+
+    def __init__(
+        self,
+        route: List[Address],
+        address_metadata: Optional[Dict[Address, AddressMetadata]] = None,
+    ) -> None:
+        self.address_metadata = address_metadata or {}
+        self.route = route
+        self._validate_address_metadata()
+
+    def _validate_address_metadata(self) -> None:
+        for address, metadata in list(self.address_metadata.items()):
+            user_id = metadata.get("user_id")
+            displayname = metadata.get("displayname")
+
+            if user_id is None or displayname is None:
+                del self.address_metadata[address]  # we can't verify this user's identity
+                continue
+
+            verified_address = validate_user_id_signature(user_id, displayname)  # type: ignore
+            if verified_address != address:
+                del self.address_metadata[address]
 
     @cached_property
     def hash(self) -> bytes:

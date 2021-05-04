@@ -1,4 +1,7 @@
 import random
+from urllib.parse import urlparse
+
+from eth_utils import encode_hex, to_normalized_address
 
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import LockedTransfer, RefundTransfer
@@ -77,6 +80,30 @@ def test_metadata_hashing():
     inverted_route_hash = metadata_with_inverted_route.hash
 
     assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
+
+
+def test_route_metadata_displayname_validation():
+    properties = factories.RouteMetadataProperties()
+    one_metadata = factories.create(properties)
+    route = one_metadata.route
+    signer = factories.make_signer()
+    server_name = urlparse("https://ownserver.com").netloc
+    user_id = f"@{to_normalized_address(signer.address)}:{server_name}"
+    displayname = encode_hex(signer.sign(user_id.encode()))
+
+    bad_metadata = RouteMetadata(
+        route=route,
+        address_metadata={signer.address: {"user_id": user_id, "displayname": "fake"}},
+    )
+    good_metadata = RouteMetadata(
+        route=route,
+        address_metadata={signer.address: {"user_id": user_id, "displayname": displayname}},
+    )
+
+    assert bad_metadata.address_metadata == {}
+    assert good_metadata.address_metadata == {
+        signer.address: {"user_id": user_id, "displayname": displayname}
+    }
 
 
 def test_locked_transfer_with_metadata():
