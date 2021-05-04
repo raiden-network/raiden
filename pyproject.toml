@@ -23,10 +23,8 @@ norecursedirs = [
     "node_modules",
 ]
 # Ignore warnings:
-# - grequests monkeypatch
 # - urllib3 unverified TLS connection
 filterwarnings = [
-    "ignore::gevent.monkey.MonkeyPatchWarning",
     "ignore::urllib3.exceptions.InsecureRequestWarning",
 ]
 markers = [
