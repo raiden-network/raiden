@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-from operator import attrgetter, itemgetter
+from operator import itemgetter
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 
@@ -365,19 +365,21 @@ def login(
     return first_login(client, signer, username, cap, device_id)
 
 
-@cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())  # type: ignore # noqa E501
 def validate_userid_signature(user: User) -> Optional[Address]:
     """Validate a userId format and signature on displayName, and return its address"""
+    return validate_user_id_signature(user.user_id, user.displayname)
+
+
+@cached(cache=LRUCache(128), lock=Semaphore())  # noqa E501
+def validate_user_id_signature(user_id: UserID, displayname: Optional[str]) -> Optional[Address]:
     # display_name should be an address in the USERID_RE format
-    match = USERID_RE.match(user.user_id)
+    match = USERID_RE.match(user_id)
     if not match:
-        log.warning("Invalid user id", user=user.user_id)
+        log.warning("Invalid user id", user=user_id)
         return None
 
-    displayname = user.displayname
-
     if displayname is None:
-        log.warning("Displayname not set", user=user.user_id)
+        log.warning("Displayname not set", user=user_id)
         return None
 
     encoded_address = match.group(1)
@@ -387,11 +389,11 @@ def validate_userid_signature(user: User) -> Optional[Address]:
         if DISPLAY_NAME_HEX_RE.match(displayname):
             signature_bytes = decode_hex(displayname)
         else:
-            log.warning("Displayname invalid format", user=user.user_id, displayname=displayname)
+            log.warning("Displayname invalid format", user=user_id, displayname=displayname)
             return None
-        recovered = recover(data=user.user_id.encode(), signature=Signature(signature_bytes))
+        recovered = recover(data=user_id.encode(), signature=Signature(signature_bytes))
         if not (address and recovered and recovered == address):
-            log.warning("Unexpected signer of displayname", user=user.user_id)
+            log.warning("Unexpected signer of displayname", user=user_id)
             return None
     except (
         DecodeError,
