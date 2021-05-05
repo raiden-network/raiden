@@ -6,7 +6,11 @@ from raiden.constants import BLOCK_ID_LATEST
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.transfer import block_offset_timeout, watch_for_unlock_failures
+from raiden.tests.utils.transfer import (
+    block_offset_timeout,
+    patch_transfer_routes,
+    watch_for_unlock_failures,
+)
 from raiden.utils.typing import List, PaymentAmount, PaymentID, TargetAddress
 
 
@@ -37,24 +41,25 @@ def test_close_regression(raiden_network: List[RaidenService], deposit, token_ad
     secret, secrethash = factories.make_secret_with_hash()
     timeout = block_offset_timeout(app1, "Transfer timed out.")
     with watch_for_unlock_failures(*raiden_network), timeout:
-        assert api1.transfer_and_wait(
-            registry_address=registry_address,
-            token_address=token_address,
-            amount=amount,
-            target=TargetAddress(api2.address),
-            identifier=identifier,
-            secret=secret,
-        )
-        timeout.exception_to_throw = ValueError(
-            "Waiting for transfer received success in the WAL timed out."
-        )
-        result = waiting.wait_for_received_transfer_result(
-            raiden=app1,
-            payment_identifier=identifier,
-            amount=amount,
-            retry_timeout=app1.alarm.sleep_time,
-            secrethash=secrethash,
-        )
+        with patch_transfer_routes([[app0, app1]], token_address=token_address):
+            assert api1.transfer_and_wait(
+                registry_address=registry_address,
+                token_address=token_address,
+                amount=amount,
+                target=TargetAddress(api2.address),
+                identifier=identifier,
+                secret=secret,
+            )
+            timeout.exception_to_throw = ValueError(
+                "Waiting for transfer received success in the WAL timed out."
+            )
+            result = waiting.wait_for_received_transfer_result(
+                raiden=app1,
+                payment_identifier=identifier,
+                amount=amount,
+                retry_timeout=app1.alarm.sleep_time,
+                secrethash=secrethash,
+            )
 
     msg = f"Unexpected transfer result: {str(result)}"
     assert result == waiting.TransferWaitResult.UNLOCKED, msg

@@ -1,4 +1,6 @@
 """ Utilities to make and assert transfers. """
+import functools
+import itertools
 from contextlib import contextmanager, nullcontext
 from enum import Enum
 
@@ -141,6 +143,29 @@ def create_route_state_for_route(
     else:
         # will use the default for estimated_fee
         return RouteState(route=route, address_to_metadata=address_metadata)
+
+
+@contextmanager
+def patch_transfer_routes(routes: List[List[RaidenService]], token_address: TokenAddress):
+    """
+    Context manager to set specific routes for transfers.
+    This circumvents the lack of a PFS in the tests making a transfer fail.
+    """
+
+    apps = set(itertools.chain.from_iterable(routes))
+
+    for app in apps:
+        app.__mediated_transfer_async = app.mediated_transfer_async
+        route_states = [create_route_state_for_route(route, token_address) for route in routes]
+        app.mediated_transfer_async = functools.partial(
+            app.__mediated_transfer_async, route_states=route_states
+        )
+
+    yield
+
+    for app in apps:
+        app.mediated_transfer_async = app.__mediated_transfer_async
+        del app.__mediated_transfer_async
 
 
 @contextmanager
