@@ -27,10 +27,10 @@ In order to use the Raiden Wizard and Raiden you'll need:
 -  An `Infura <https://infura.io>`__ ID
 
 
-.. include:: get-metamask.rst
-.. include:: infura-quick-start.rst
-.. include:: download-and-run-the-raiden-wizard.rst
-.. include:: known-issues.rst
+.. include:: get-metamask.inc.rst
+.. include:: infura-quick-start.inc.rst
+.. include:: download-and-run-the-raiden-wizard.inc.rst
+.. include:: known-issues.inc.rst
 
 
 Need help?

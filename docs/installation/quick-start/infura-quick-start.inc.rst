@@ -1,3 +1,5 @@
+.. _infura_tutorial:
+
 Get an Infura ID
 ################
 

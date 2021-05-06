@@ -1,5 +1,7 @@
-Overview
-########
+Raiden Web Interface Tutorial
+#############################
+
+The Raiden web interface (WebUI) helps you to interact with your Raiden node and aims to inspire to create own applications that utilize the Raiden REST API endpoints.
 
 Run the Raiden web application
 ==============================

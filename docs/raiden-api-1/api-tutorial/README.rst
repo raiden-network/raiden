@@ -1,6 +1,8 @@
 API Tutorial
 ############
 
+This tutorial will show you how to use Raiden via the API by walking you through a few API calls. 
+The steps are similar to the WebUI tutorial, but directly use the API endpoints.
 We will outline the steps necessary for participating in a token
 network. To see all available endpoints visit the
 :ref:`resources <api_endpoints>` part of the documentation.
@@ -23,11 +25,8 @@ This gives us an opportunity to introduce the
 Your Raiden node is up and running if the response returns the same
 address as the Ethereum address used for starting Raiden.
 
-Overview
-========
-
 You're now ready to start interacting with the different endpoints and
-learn how they can be used to:
+learn how they can be used.
 
 .. include:: 1-join-a-token-network.inc.rst
 

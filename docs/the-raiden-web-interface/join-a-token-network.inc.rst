@@ -3,6 +3,7 @@
 Join a Token Network
 ====================
 
+To make payments in Raiden you first need to join the network by opening channels for the token you want to make payments with.
 You can join a token network by either:
 
 -  :ref:`Quick Connect <webui_quick_connect>`
@@ -16,7 +17,7 @@ You can join a token network by either:
    supply of tokens.
 
    These token contracts are like a registry where different amounts of the
-   total supply is mapped to different owners. {% endhint %}
+   total supply is mapped to different owners.
 
 .. note::
 
