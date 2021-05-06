@@ -1,3 +1,5 @@
+.. _mainnet_tutorial_deposit_udc:
+
 Deposit Tokens to the UDC
 =========================
 

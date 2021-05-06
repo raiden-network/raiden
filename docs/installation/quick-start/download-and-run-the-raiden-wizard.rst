@@ -1,8 +1,8 @@
 Download and run the Raiden Wizard
-==================================
+##################################
 
 Download the Raiden Wizard
---------------------------
+==========================
 
 `Download <https://github.com/raiden-network/raiden-wizard/releases/latest>`__
 the Raiden Wizard for:
@@ -11,7 +11,7 @@ the Raiden Wizard for:
 -  Linux
 
 Run the Raiden Wizard
----------------------
+=====================
 
 .. warning::
 
