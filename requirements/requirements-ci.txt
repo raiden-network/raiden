@@ -302,7 +302,7 @@ ipython-genutils==0.2.0
     # via
     #   -r requirements-dev.txt
     #   traitlets
-ipython==7.22.0
+ipython==7.23.1
     # via -r requirements-dev.txt
 isort==5.8.0
     # via
@@ -352,6 +352,10 @@ marshmallow==3.11.1
     #   marshmallow-dataclass
     #   marshmallow-enum
     #   marshmallow-polyfield
+matplotlib-inline==0.1.2
+    # via
+    #   -r requirements-dev.txt
+    #   ipython
 matrix-client==0.3.2
     # via -r requirements-dev.txt
 matrix-synapse==1.29.0
@@ -675,6 +679,7 @@ traitlets==4.3.2
     # via
     #   -r requirements-dev.txt
     #   ipython
+    #   matplotlib-inline
 treq==21.1.0
     # via
     #   -r requirements-dev.txt
