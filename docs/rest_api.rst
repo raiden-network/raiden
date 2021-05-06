@@ -40,25 +40,25 @@ Channel Object
 
 A channel object consists of a
 
-- ``channel_identifier`` should be a string containing the identifier of the
+- ``channel_identifier``: string containing the identifier of the
   channel.
 
-- ``partner_address`` should be a string containing the EIP55-encoded address of the
+- ``partner_address``: string containing the EIP55-encoded address of the
   partner with whom we have opened a channel.
 
-- ``token_address`` should be a string containing the EIP55-encoded address of the
+- ``token_address``: string containing the EIP55-encoded address of the
   token we are trading in the channel.
 
-- ``token_network_address`` should be a string containing the EIP55-encoded address of the
+- ``token_network_address``: string containing the EIP55-encoded address of the
   token network the channel is part of.
 
-- ``balance`` should be a string of the amount of the ``token_address`` token we have available for payments.
+- ``balance``: string of the amount of the ``token_address`` token we have available for payments.
 
-- ``total_deposit`` should be a string of the amount of the ``token_address`` token we have deposited into the contract for this channel.
+- ``total_deposit``: string of the amount of the ``token_address`` token we have deposited into the contract for this channel.
 
-- ``total_withdraw`` should be a string of the amount of the ``token_address`` token we have withdrawn from the channel on-chain.
+- ``total_withdraw``: string of the amount of the ``token_address`` token we have withdrawn from the channel on-chain.
 
-- ``state`` should be the current state of the channel represented by a string. Possible values are:
+- ``state``: current state of the channel represented by a string. Possible values are:
 
    - ``"opened"``: The channel is open and tokens are tradeable
    - ``"closed"``: The channel has been closed by a participant
