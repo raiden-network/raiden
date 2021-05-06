@@ -464,7 +464,7 @@ pytest-select==0.1.2
     # via -r requirements-dev.in
 pytest-xdist==2.2.1
     # via -r requirements-dev.in
-pytest==6.2.3
+pytest==6.2.4
     # via
     #   -r requirements-dev.in
     #   pytest-forked
