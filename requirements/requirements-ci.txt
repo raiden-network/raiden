@@ -132,10 +132,11 @@ crc32c==2.2
     # via
     #   -r requirements-dev.txt
     #   aiortc
-cryptography==3.3.2
+cryptography==3.4.7
     # via
     #   -r requirements-dev.txt
     #   aiortc
+    #   matrix-synapse
     #   pyopenssl
     #   service-identity
 cytoolz==0.10.1
@@ -358,7 +359,7 @@ matplotlib-inline==0.1.2
     #   ipython
 matrix-client==0.3.2
     # via -r requirements-dev.txt
-matrix-synapse==1.29.0
+matrix-synapse==1.33.0
     # via -r requirements-dev.txt
 mccabe==0.6.1
     # via
@@ -635,7 +636,6 @@ six==1.15.0
     #   automat
     #   bcrypt
     #   bleach
-    #   cryptography
     #   flake8-tuple
     #   flask-cors
     #   flask-restful
