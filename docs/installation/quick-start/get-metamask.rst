@@ -1,8 +1,8 @@
 Get MetaMask
-============
+############
 
 Install MetaMask
-----------------
+================
 
 MetaMask is an in-browser Ethereum wallet. It allows us to send and sign
 transactions on the Ethereum blockchain.
@@ -15,7 +15,7 @@ To install MetaMask:
    right corner of your browser.
 
 Create an Ethereum account
---------------------------
+==========================
 
 With the newly installed MetaMask extension click the icon in your
 browser. This will open up MetaMask with a setup guide for creating a
