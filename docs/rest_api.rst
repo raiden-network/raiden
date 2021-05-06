@@ -823,6 +823,7 @@ Besides you can query all payments that you sent or received.
       the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
   
 
+.. _api_user_deposit:
 
 User Deposit
 ============

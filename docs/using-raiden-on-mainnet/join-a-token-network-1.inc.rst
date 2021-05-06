@@ -1,6 +1,8 @@
 Open a Channel
 ==============
 
+Opening a channel and depositing tokens in it allows you to transfer these tokens 
+to your channel partner - and indirectly to other nodes connected to you partner.
 To open a channel, a PUT request is made to the
 :ref:`channels endpoint <api_open_channel>` that includes a JSON object containing:
 
@@ -20,10 +22,6 @@ To open a channel, a PUT request is made to the
    http://localhost:5001/api/v1/channels \
    -H 'Content-Type: application/json' \
    --data-raw '{"partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9", "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "total_deposit": "1337", "settle_timeout": "500"}'
-
-.. note::
-
-    Raiden utilizes a RESTful API where all URL paths starts with ``/api/`` followed by a version number. The current API version is ``1`` and therefore all requests begins with ``/api/v1/``.
 
 
 This will create a new channel and a successful request will return you
