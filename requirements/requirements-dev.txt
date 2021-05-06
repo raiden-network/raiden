@@ -464,7 +464,7 @@ pytest-select==0.1.2
     # via -r requirements-dev.in
 pytest-xdist==2.2.1
     # via -r requirements-dev.in
-pytest==6.2.3
+pytest==6.2.4
     # via
     #   -r requirements-dev.in
     #   pytest-forked
@@ -610,7 +610,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.18.0
+web3==5.19.0
     # via
     #   -r requirements.txt
     #   raiden-contracts
