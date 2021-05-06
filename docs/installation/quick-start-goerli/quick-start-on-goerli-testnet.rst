@@ -1,7 +1,7 @@
 .. _quickstart_goerli:
 
 Quick Start on Görli Testnet
-============================
+############################
 
 You might want to try out Raiden on a testnet before using it on mainnet
 or might need a development environment. For this reasons we provide a
@@ -10,17 +10,17 @@ set up on this environment is to use the Raiden Wizard for Görli. This
 page will guide you through the process.
 
 Prerequisites 
---------------
+=============
 
 In order to use the Raiden Wizard and Raiden you'll need:
 
 -  A computer running **Linux** or **macOS**.
 -  An Infura ID. Click
-   :doc:`here <../installation/quick-start/infura-quick-start>` to get
+   :ref:`here <infura_tutorial>` to get
    one.
 
 Download the Wizard
--------------------
+===================
 
 Click on your operating system to download the Wizard:
 
@@ -28,7 +28,7 @@ Click on your operating system to download the Wizard:
 -  `Linux <https://github.com/raiden-network/raiden-wizard/releases/download/v1.1.0/raiden_wizard_goerli_linux-1.1.0.tar.gz>`__
 
 Run the Wizard
---------------
+==============
 
 1. Extract and run the ``raiden_wizard`` program.
 2. Your web browser should open a new window with the Raiden Wizard. If
@@ -54,7 +54,7 @@ The Raiden Wizard will do the following for you:
 
 
 Next steps
-----------
+==========
 
 After the completion of the Wizard you will get redirected to the web
 interface of your Raiden node. See :ref:`this
@@ -68,7 +68,7 @@ tokens to it. The payment should show up on the hub's
 `webpage <https://hub.raiden.network>`__.
 
 Restart your Raiden node
-------------------------
+========================
 
 After you have shut down your Raiden node, the Raiden Wizard can be used
 as a launcher for your node. When you start the Wizard, it will

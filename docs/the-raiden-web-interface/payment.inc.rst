@@ -3,6 +3,7 @@
 Make a Payment
 ==============
 
+Payment channels allow for Raiden transfers to be made without the need to involve the actual blockchain.
 If you have one or more channels open you can start making payments. If
 you used :ref:`Quick Connect <webui_quick_connect>` three
 channels were automatically opened with three nodes.

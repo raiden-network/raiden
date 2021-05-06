@@ -26,6 +26,14 @@ It will help you to install Raiden and to acquire all necessary tokens for runni
 
   installation/quick-start/README
 
+If you want to try out Raiden with test tokens on a testnet before running it on mainnet, 
+you can use the Görli Wizard for installing Raiden and receiving tokens:
+
+.. toctree::
+  :maxdepth: 1
+
+  installation/quick-start-goerli/quick-start-on-goerli-testnet
+
 .. _installation_github:
 
 Installation from GitHub
