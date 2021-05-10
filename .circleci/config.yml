@@ -38,6 +38,7 @@ templates:
       type: string
 
   default-environment: &default-environment
+    BENCHMARK_HOST: 'circleci'
     GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.10.1-c2d2f4ed.tar.gz'
     GETH_MD5_LINUX: '5e18a027f9919ed9ba08abd15c169f61'
     GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.10.1-c2d2f4ed.tar.gz'
@@ -490,6 +491,30 @@ jobs:
       - store_artifacts:
           path: /tmp/artifacts
 
+  benchmark:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
+    executor:
+      name: docker
+      py-version: << parameters.py-version >>
+
+    environment:
+      RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
+      RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
+      RAIDEN_TESTS_LOGSDIR: /tmp/tests/logs
+
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: Run benchmarks
+          command: |
+            python -m gevent.monkey --module pytest raiden/tests/benchmark/ -v --codespeed-url https://speed.metrics.brainbot.com
+
   finalize:
     parameters:
       py-version:
@@ -782,6 +807,15 @@ workflows:
           requires:
             - lint-<< matrix.py-version >>
 
+      - benchmark:
+          context: "raiden-general-2021"
+          requires:
+            - lint
+          filters:
+            branches:
+              only:
+                - develop
+
       - scenario-player-integration-test:
           name: scenario-player-integration-test
           py-version: "3.7"
@@ -950,6 +984,15 @@ workflows:
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-<< matrix.py-version >>
+
+      - benchmark:
+          context: "raiden-general-2021"
+          requires:
+            - lint
+          filters:
+            branches:
+              only:
+                - develop
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
