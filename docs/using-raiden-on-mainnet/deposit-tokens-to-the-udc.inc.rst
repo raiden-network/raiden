@@ -3,7 +3,7 @@
 Deposit Tokens to the UDC
 =========================
 
-To do mediated transfers we need to have RDN (Raiden Network Tokens) in the UDC (User Deposit Contract) for paying the monitoring and pathfinding services.
+To do :ref:`mediated transfers <mainnet_tutorial_mediated_payments>` we need to have RDN (Raiden Network Tokens) in the UDC (User Deposit Contract) for paying the monitoring and pathfinding services.
 This section will describe how to add Raiden Network Tokens to the UDC by making a call to the :ref:`User Deposit endpoint <api_user_deposit>` of the Raiden API.
 The following POST request will deposit 100 RDN tokens to the UDC:
 

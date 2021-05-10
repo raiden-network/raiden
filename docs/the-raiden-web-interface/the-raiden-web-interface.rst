@@ -3,6 +3,8 @@ Raiden Web Interface Tutorial
 
 The Raiden web interface (WebUI) helps you to interact with your Raiden node and aims to inspire to create own applications that utilize the Raiden REST API endpoints.
 
+.. image:: webui.gif
+
 Run the Raiden web application
 ==============================
 
@@ -13,6 +15,8 @@ The easiest way to do so is by using the :doc:`quick start guide <../installatio
 on** `http://localhost:5001 <http://localhost:5001/>`__\ **.**
 
 .. include:: screens.inc.rst
+
+.. include:: user-deposit.inc.rst
 
 .. include:: join-a-token-network.inc.rst
 

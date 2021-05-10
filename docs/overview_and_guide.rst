@@ -248,9 +248,10 @@ Select the desired Ethereum account when prompted, and type in the account's pas
 ****************************************
 
 To pay the :doc:`services <raiden_services>`, you have to lock some of your Raiden tokens in the ``UserDeposit`` contract.
-To deposit, you can either use the Raiden API or manually call the smart contracts:
+To deposit, you can use the Raiden API, the Raiden Web Interface or manually call the smart contracts:
 
 - :ref:`Deposit using the Raiden API <mainnet_tutorial_deposit_udc>`
+- :ref:`Deposit from the Raiden Web Interface <webui_udc>`
 - :ref:`Deposit by manually calling the contracts <manual_udc_deposit>`
 
 
