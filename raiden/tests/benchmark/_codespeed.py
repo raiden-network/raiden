@@ -1,12 +1,20 @@
 import json
-import socket
-import urllib.error
-import urllib.parse
-import urllib.request
+import os
+
+import requests
+
+
+try:
+    _CODESPEED_USER = os.environ["CODESPEED_USER"]
+
+    _CODESPEED_PASSWORD = os.environ["CODESPEED_PASSWORD"]
+
+    _BENCHMARK_HOST = os.environ["BENCHMARK_HOST"]
+except KeyError:
+    print("Codespeed environment variables not available, posting results would fail.")
 
 
 def post_result(codespeed_url, commit_id, branch, bench_name, value):
-    hostname = socket.gethostname()
     data = [
         {
             "commitid": commit_id,
@@ -14,17 +22,12 @@ def post_result(codespeed_url, commit_id, branch, bench_name, value):
             "branch": branch,
             "executable": "raiden",
             "benchmark": bench_name,
-            "environment": hostname,
+            "environment": _BENCHMARK_HOST,
             "result_value": value,
         }
     ]
 
     data_ = {"json": json.dumps(data)}
-    request_data = urllib.parse.urlencode(data_).encode("utf-8")
     url = codespeed_url + "/result/add/json/"
-    try:
-        with urllib.request.urlopen(url, request_data):
-            pass
-    except urllib.error.HTTPError as e:
-        print(str(e))
-        print(e.read())
+    resp = requests.post(url, data=data_, auth=(_CODESPEED_USER, _CODESPEED_PASSWORD))
+    resp.raise_for_status()
