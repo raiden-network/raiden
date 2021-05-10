@@ -102,9 +102,7 @@ As you can tell by the response object a channel identifier has been
 generated. This means that there now is a channel with that identifier
 inside the token network.
 
-You're now ready to start making payments.
-
-.. include:: 3-make-a-payment.inc.rst
+You're now ready to start :ref:`making payments <api_tut_make_payment>`.
 
 .. note:: Opening a channel with a partner node is not dependent on whether the partner node holds tokens or not. It will work either way. 
 

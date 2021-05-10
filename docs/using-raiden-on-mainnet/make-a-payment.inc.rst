@@ -36,6 +36,8 @@ You might want to open a direct channel if you know you'll be making
 frequent payments to a specific peer. Each payment will then go straight
 to that peer via the open channel. This is called a direct payment.
 
+.. _mainnet_tutorial_mediated_payments:
+
 Mediated payments
 -----------------
 

@@ -13,11 +13,17 @@ The **top bar** displays:
    activity happens. If you are using any testnet you'll also find a
    button which redirects you to the respectiva faucet for acquiring
    ETH.
-2. The **address** of your Raiden node (you can display the address as a
+2. Your **UDC balance**. This is the amount of RDN tokens you have deposited
+   in the User Deposit Contract. A deposit is needed for paying the 
+   :doc:`Raiden Services <../raiden_services>`. When clicking the button next
+   to the balance you will see a :ref:`dialog <webui_udc>` for performing 
+   deposits and withdrawals.
+3. Your **on-chain token balance** of the currently selected token.
+4. The **address** of your Raiden node (you can display the address as a
    QR code).
-3. A **search** field which filters all items on the page based on
+5. A **search** field which filters all items on the page based on
    search term.
-4. The **notification** button.
+6. The **notification** button.
 
 Home
 ----
@@ -91,7 +97,7 @@ balance. By clicking the three dots you can:
 
 .. note::
 
-    **What is a channel?**
+   **What is a channel?**
 
    A payment channel enables tokens to be exchanged back and forth between
    parties without involving the actual blockchain. A payment channel in
