@@ -209,12 +209,12 @@ def transfer(
         Only the initiator and target are synced.
     """
 
+    route_states: Optional[List[RouteState]] = None
+    if routes:
+        route_states = list()
+        for route in routes:
+            route_states.append(create_route_state_for_route(route, token_address))
     if transfer_state is TransferState.UNLOCKED:
-        route_states: Optional[List[RouteState]] = None
-        if routes:
-            route_states = list()
-            for route in routes:
-                route_states.append(create_route_state_for_route(route, token_address))
         return _transfer_unlocked(
             initiator_app=initiator_app,
             target_app=target_app,
@@ -242,6 +242,7 @@ def transfer(
             amount=amount,
             identifier=identifier,
             timeout=timeout,
+            route_states=route_states,
         )
     else:
         raise RuntimeError("Type of transfer not implemented.")
@@ -356,6 +357,7 @@ def _transfer_secret_not_requested(
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: Optional[float] = None,
+    route_states: List[RouteState] = None,
 ) -> SecretHash:
     if timeout is None:
         timeout = 10
@@ -381,6 +383,7 @@ def _transfer_secret_not_requested(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
+        route_states=route_states,
     )
 
     with Timeout(seconds=timeout):
