@@ -316,7 +316,6 @@ def test_refund_transfer(
         {"message_identifier": receive_lock_expired.message_identifier},
         retry_timeout,
     )
-
     # make sure app1 queue has cleared the SendLockExpired
     chain_state1 = views.state_from_raiden(app1)
     queues1 = views.get_all_messagequeues(chain_state=chain_state1)
