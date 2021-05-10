@@ -7,8 +7,11 @@ import pytest
 from gevent.event import AsyncResult
 
 from raiden.constants import Environment, RoutingMode
+from raiden.network.pathfinding import PFSInfo
 from raiden.raiden_service import RaidenService
 from raiden.settings import CapabilitiesConfig
+from raiden.tests.utils import factories
+from raiden.tests.utils.mocks import PFSMock
 from raiden.tests.utils.network import (
     CHAIN,
     BlockchainServices,
@@ -23,6 +26,7 @@ from raiden.tests.utils.network import (
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.tests.utils.transport import ParsedURL
+from raiden.utils.formatting import to_canonical_address
 from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
@@ -199,6 +203,48 @@ def capabilities(adhoc_capability) -> CapabilitiesConfig:
     if adhoc_capability:
         config.adhoc_capability = adhoc_capability  # type: ignore
     return config
+
+
+@pytest.fixture
+def pfs_mock(
+    monkeypatch,
+    local_matrix_servers,
+    chain_id,
+    token_network_registry_address,
+    user_deposit_address,
+):
+
+    pfs_info = PFSInfo(
+        url="http://mock_pfs",
+        chain_id=chain_id,
+        token_network_registry_address=TokenNetworkRegistryAddress(
+            to_canonical_address(token_network_registry_address or factories.make_address())
+        ),
+        user_deposit_address=to_canonical_address(
+            user_deposit_address or factories.make_address()
+        ),
+        payment_address=to_canonical_address(factories.make_address()),
+        confirmed_block_number=BlockNumber(0),
+        message="",
+        operator="",
+        version="",
+        price=TokenAmount(0),
+        matrix_server=local_matrix_servers[0],
+    )
+
+    pfs_mock = PFSMock(pfs_info)
+
+    # NOTE: pfs_mock.add_apps() has to be called in the test in order to make the monkeypatched
+    # methods useful
+
+    # Patch the relevant functions in Raiden with the ones of the Mock:
+    # Methods used by initiator
+    monkeypatch.setattr("raiden.routing.query_address_metadata", pfs_mock.query_address_metadata)
+    monkeypatch.setattr("raiden.routing.get_best_routes_pfs", pfs_mock.get_best_routes_pfs)
+    # PFS info endpoint
+    monkeypatch.setattr("raiden.network.pathfinding", pfs_mock.get_pfs_info)
+
+    return pfs_mock
 
 
 @pytest.fixture

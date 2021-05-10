@@ -399,13 +399,18 @@ def test_query_partners_by_token(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_timestamp_format(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ) -> None:
     _, app1 = raiden_network
     amount = 200
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     payment_url = api_url_for(
         api_server_test_instance,
@@ -542,12 +547,16 @@ def test_get_connections_info(
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("number_of_tokens", [2])
 def test_payment_events_endpoints(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     app0, app1, app2 = raiden_network
 
     token_address0 = token_addresses[0]
     token_address1 = token_addresses[1]
+    pfs_mock.add_apps(raiden_network)
 
     app0_server = api_server_test_instance
     app1_server = prepare_api_server(app1)
@@ -557,6 +566,7 @@ def test_payment_events_endpoints(
     identifier1 = PaymentID(10)
     amount1 = PaymentAmount(10)
     secret1, secrethash1 = factories.make_secret_with_hash()
+
     request = grequests.post(
         api_url_for(
             app0_server,
@@ -583,7 +593,7 @@ def test_payment_events_endpoints(
     )
     request.send()
 
-    # Payment 3: app0 is sending some tokens of token0 to app2
+    # Payment 3: app0 is sending some tokens of token0 to app1
     identifier3 = PaymentID(30)
     amount3 = PaymentAmount(17)
     secret3, secrethash3 = factories.make_secret_with_hash()
@@ -897,13 +907,18 @@ def test_payment_events_endpoints(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_channel_events_raiden(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     request = grequests.post(
         api_url_for(

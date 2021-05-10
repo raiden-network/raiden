@@ -656,11 +656,6 @@ def wait_for_channels(
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
 ) -> None:
     """Wait until all channels are usable from both directions."""
-    # XXX this is used a lot in the api / regression tests,
-    # this seems to fail around 80! tests
-
-    # This is because it calls wait for healthy internally.
-    # Maybe it's ok to just remove that
 
     for app0, app1 in app_channels:
         for token_address in token_addresses:
