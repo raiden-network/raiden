@@ -355,7 +355,7 @@ def test_events_for_refund():
     assert is_valid, msg
 
     transfer_pair, refund_events = mediator.backward_transfer_pair(
-        refund_channel, received_transfer, pseudo_random_generator, block_number
+        refund_channel, received_transfer, received_transfer, pseudo_random_generator, block_number
     )
 
     assert search_for_item(
@@ -2202,6 +2202,7 @@ def test_backward_transfer_pair_with_fees_deducted():
     transfer_pair, refund_events = mediator.backward_transfer_pair(
         backward_channel=refund_channel,
         payer_transfer=received_transfer,
+        original_transfer=received_transfer,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
     )
