@@ -7,7 +7,6 @@ from raiden_api_client.exceptions import InvalidInput
 from raiden import waiting
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.transfer import patch_transfer_routes
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import BlockNumber
 
@@ -16,8 +15,10 @@ from raiden.utils.typing import BlockNumber
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
-def test_api_wrapper(raiden_network, unregistered_custom_token, retry_timeout):
+def test_api_wrapper(raiden_network, unregistered_custom_token, retry_timeout, pfs_mock):
     app0, app1 = raiden_network
+    pfs_mock.add_apps(raiden_network)
+
     address1 = to_checksum_address(app0.address)
     address2 = to_checksum_address(app1.address)
 
@@ -55,9 +56,8 @@ def test_api_wrapper(raiden_network, unregistered_custom_token, retry_timeout):
     assert resp.total_deposit == "4"
 
     # Test transfer
-    with patch_transfer_routes([[app0, app1]], token_address=unregistered_custom_token):
-        resp = wrapper.transfer(partner=address2, token=token, amount=1)
-        assert resp.amount == "1"
+    resp = wrapper.transfer(partner=address2, token=token, amount=1)
+    assert resp.amount == "1"
 
     # Test channel query
     resp = wrapper.get_channels()

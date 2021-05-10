@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import random
 from collections import defaultdict
@@ -7,28 +8,40 @@ import click
 
 from raiden.api.objects import Notification
 from raiden.constants import Environment, RoutingMode
+from raiden.exceptions import PFSReturnedError
+from raiden.network.pathfinding import PFSConfig, PFSInfo
+from raiden.raiden_service import RaidenService
 from raiden.settings import RaidenConfig
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.transfer import node
+from raiden.tests.utils.transfer import create_route_state_for_route
+from raiden.transfer import node, views
 from raiden.transfer.state import ChainState, NettingChannelState
+from raiden.transfer.state_change import Block
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     BlockIdentifier,
     BlockNumber,
+    BlockTimeout,
     ChannelID,
     Dict,
+    List,
     Optional,
+    TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkRegistryAddress,
+    Tuple,
 )
 from raiden_contracts.utils.type_aliases import ChainID
+
+RoutesDict = Dict[TokenAddress, Dict[Tuple[Address, Address], List[List[RaidenService]]]]
 
 
 class MockJSONRPCClient:
@@ -309,3 +322,101 @@ class MockEth:
 class MockWeb3:
     def __init__(self, chain_id):
         self.eth = MockEth(chain_id=chain_id)
+
+
+class PFSMock:
+
+    PFSCONFIG_MAXIMUM_FEE = TokenAmount(100)
+    PFSCONFIG_IOU_TIMEOUT = BlockTimeout(5)
+    PFSCONFIG_MAX_PATHS = 5
+
+    def __init__(self, pfs_info: PFSInfo):
+        self.pfs_info: PFSInfo = pfs_info
+        self.address_to_address_metadata: Dict[Address, AddressMetadata] = dict()
+        self.routes: RoutesDict = defaultdict(lambda: defaultdict(list))
+
+    def get_pfs_info(self, url: str) -> PFSInfo:  # pylint: disable=unused-argument
+        return self.pfs_info
+
+    def on_new_block(self, block: Block):
+        self.update_info(confirmed_block_number=block.block_number)
+
+    def update_info(self, confirmed_block_number=None, price=None, matrix_server=None):
+        pfs_info_dict = dataclasses.asdict(self.pfs_info)
+        update_dict = dict(
+            confirmed_block_number=confirmed_block_number, price=price, matrix_server=matrix_server
+        )
+        update_dict = {k: v for k, v in update_dict.items() if v is not None}
+        pfs_info_dict.update(update_dict)
+        self.pfs_info = PFSInfo(**pfs_info_dict)
+
+    def query_address_metadata(self, pfs_config, user_address):  # pylint: disable=unused-argument
+        metadata = self.address_to_address_metadata.get(user_address)
+        if not metadata:
+            raise PFSReturnedError(message="Address not found", error_code=404, error_details={})
+        else:
+            return metadata
+
+    @staticmethod
+    def _get_app_address_metadata(app):
+        address = app.address
+        return address, app.transport.address_metadata
+
+    def add_apps(self, apps: List[RaidenService], add_pfs_config=True):
+        for app in apps:
+            address, metadata = self._get_app_address_metadata(app)
+            if not all((metadata.get("user_id"), address)):
+                raise AssertionError("Cant add app to PFSMock")
+
+            self.address_to_address_metadata[address] = metadata
+
+            # Add a default config to the node
+            if add_pfs_config is True:
+                app.config.pfs_config = PFSConfig(
+                    info=self.pfs_info,
+                    iou_timeout=self.PFSCONFIG_IOU_TIMEOUT,
+                    max_paths=self.PFSCONFIG_MAX_PATHS,
+                    maximum_fee=self.PFSCONFIG_MAXIMUM_FEE,
+                )
+
+    def set_route(self, token_address: TokenAddress, route: List[RaidenService]):
+        # Automatically observes from/to address from the route.
+        # This will not run any graph-like algorithms (include all possible paths along the route)
+        # and will only include the route from the start-app to the target-app
+        if len(route) > 1:
+            from_address = route[0].address
+            to_address = route[-1].address
+            self.routes[token_address][(from_address, to_address)].append(route)
+
+    def reset_routes(self, token_address: TokenAddress = None):
+        if token_address is None:
+            self.routes.clear()
+        else:
+            self.routes[token_address].clear()
+
+    def get_best_routes_pfs(  # pylint: disable=unused-argument
+        self,
+        chain_state,
+        token_network_address,
+        one_to_n_address,
+        from_address,
+        to_address,
+        amount,
+        previous_address,
+        pfs_config,
+        privkey,
+        pfs_wait_for_block,
+    ):
+        # simply get all routes from from_address to to_address as memorized in the self.routes
+        # datastructure, not regarding funds etc
+        token_network = views.get_token_network_by_address(chain_state, token_network_address)
+        if token_network is None:
+            return "No route found", [], None
+
+        token_address = token_network.token_address
+        routes_apps = self.routes[token_address][(from_address, to_address)]
+        if not routes_apps:
+            return "No route found", [], None
+
+        paths = [create_route_state_for_route(route, token_address) for route in routes_apps]
+        return None, paths, None

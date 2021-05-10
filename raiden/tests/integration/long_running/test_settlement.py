@@ -481,9 +481,13 @@ def test_channel_withdraw(
     token_addresses: List[TokenAddress],
     deposit: TokenAmount,
     retry_timeout: float,
+    pfs_mock,
 ) -> None:
     """Withdraw funds after a mediated transfer."""
     alice_app, bob_app = raiden_network
+
+    pfs_mock.add_apps(raiden_network)
+
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(alice_app),
@@ -550,9 +554,12 @@ def test_channel_withdraw_expired(
     token_addresses: List[TokenAddress],
     deposit: TokenAmount,
     retry_timeout: float,
+    pfs_mock,
 ) -> None:
     """Tests withdraw expiration."""
     alice_app, bob_app = raiden_network
+    pfs_mock.add_apps(raiden_network)
+
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(alice_app),

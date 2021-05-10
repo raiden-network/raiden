@@ -343,7 +343,9 @@ def test_api_channel_open_and_deposit_race(
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_channel_open_close_and_settle(
-    api_server_test_instance: APIServer, token_addresses, reveal_timeout
+    api_server_test_instance: APIServer,
+    token_addresses,
+    reveal_timeout,
 ):
     # let's create a new channel
     partner_address = "0x61C808D82A3Ac53231750daDc13c777b59310bD9"
