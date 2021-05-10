@@ -19,6 +19,8 @@ that token network.
 
 If the address is not in the list you'll have to register the token before you can open a channel.
 
+.. _api_tut_register_token:
+
 Register a new token
 --------------------
 

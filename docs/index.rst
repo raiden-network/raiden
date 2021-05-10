@@ -60,7 +60,7 @@ Contents
   getting_started
   rest_api
   raiden_services
-  private_net_tutorial
+  custom_setups
 
 .. toctree::
   :maxdepth: 2

@@ -239,6 +239,8 @@ Contracts
       }
 
 
+.. _api_tokens:
+
 Tokens
 ======
 
@@ -248,8 +250,6 @@ The tokens endpoints are used for registering new tokens and querying informatio
    For the Alderaan release two tokens are registered, DAI and WETH.
 
 **Information about Tokens**
-
-.. _api_tokens:
 
 .. http:get:: /api/(version)/tokens
 
