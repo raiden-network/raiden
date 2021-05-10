@@ -19,6 +19,7 @@ from raiden.transfer.state import (
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     Address,
+    AddressMetadata,
     BlockExpiration,
     BlockGasLimit,
     BlockHash,
@@ -29,6 +30,7 @@ from raiden.utils.typing import (
     Locksroot,
     MessageID,
     Nonce,
+    Optional,
     PaymentID,
     Secret,
     SecretHash,
@@ -107,6 +109,7 @@ class ActionChannelWithdraw(StateChange):
 
     canonical_identifier: CanonicalIdentifier
     total_withdraw: WithdrawAmount
+    recipient_metadata: Optional[AddressMetadata] = None
 
     @property
     def channel_identifier(self) -> ChannelID:
@@ -354,6 +357,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     expiration: BlockExpiration
     signature: Signature
     participant: Address
+    sender_metadata: Optional[AddressMetadata] = None
 
     @property
     def channel_identifier(self) -> ChannelID:

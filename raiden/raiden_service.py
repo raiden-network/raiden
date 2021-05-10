@@ -1571,10 +1571,16 @@ class RaidenService(Runnable):
         return payment_status
 
     def withdraw(
-        self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount
+        self,
+        canonical_identifier: CanonicalIdentifier,
+        total_withdraw: WithdrawAmount,
+        recipient_metadata: AddressMetadata = None,
     ) -> None:
+
         init_withdraw = ActionChannelWithdraw(
-            canonical_identifier=canonical_identifier, total_withdraw=total_withdraw
+            canonical_identifier=canonical_identifier,
+            total_withdraw=total_withdraw,
+            recipient_metadata=recipient_metadata,
         )
 
         self.handle_and_track_state_changes([init_withdraw])

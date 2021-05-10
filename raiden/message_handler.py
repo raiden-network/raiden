@@ -16,6 +16,7 @@ from raiden.messages.transfers import (
     Unlock,
 )
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
+from raiden.network.pathfinding import query_address_metadata
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -41,7 +42,15 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import TYPE_CHECKING, List, Set, TargetAddress, Tuple
+from raiden.utils.typing import (
+    TYPE_CHECKING,
+    AddressMetadata,
+    List,
+    Optional,
+    Set,
+    TargetAddress,
+    Tuple,
+)
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -113,6 +122,13 @@ class MessageHandler:
         raiden: "RaidenService", message: WithdrawRequest  # pylint: disable=unused-argument
     ) -> List[StateChange]:
         assert message.sender, "message must be signed"
+
+        sender_metadata: Optional[AddressMetadata] = None
+        if raiden.config.pfs_config is not None:
+            # HACK querying the PFS for the address-metadata directly after receiving a message
+            #   should be optimized / factored out at a later point!
+            sender_metadata = query_address_metadata(raiden.config.pfs_config, message.sender)
+
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=message.chain_id,
@@ -126,6 +142,7 @@ class MessageHandler:
             nonce=message.nonce,
             expiration=message.expiration,
             signature=message.signature,
+            sender_metadata=sender_metadata,
         )
         return [withdraw_request]
 
