@@ -691,9 +691,14 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize("deposit", [1000])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_channel_withdraw(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
+    pfs_mock.add_apps(raiden_network)
+
     token_address = token_addresses[0]
     partner_address = app1.address
 

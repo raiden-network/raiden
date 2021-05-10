@@ -7,6 +7,7 @@ from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
 from raiden.constants import NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
+    ConfigurationError,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -29,6 +30,7 @@ from raiden.exceptions import (
     UserDepositNotConfigured,
     WithdrawMismatch,
 )
+from raiden.network.pathfinding import query_address_metadata
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, PythonApiConfig
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel, views
@@ -587,8 +589,18 @@ class RaidenAPI:  # pragma: no unittest
                 )
             )
 
+        pfs_config = self.raiden.config.pfs_config
+        recipient_address = channel_state.partner_state.address
+        if pfs_config is None:
+            raise ConfigurationError("Can't query metadata without PFS config")
+
+        recipient_metadata = query_address_metadata(
+            pfs_config=pfs_config, user_address=recipient_address
+        )
         self.raiden.withdraw(
-            canonical_identifier=channel_state.canonical_identifier, total_withdraw=total_withdraw
+            canonical_identifier=channel_state.canonical_identifier,
+            total_withdraw=total_withdraw,
+            recipient_metadata=recipient_metadata,
         )
 
         waiting.wait_for_withdraw_complete(

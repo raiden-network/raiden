@@ -241,6 +241,14 @@ def pfs_mock(
     # Methods used by initiator
     monkeypatch.setattr("raiden.routing.query_address_metadata", pfs_mock.query_address_metadata)
     monkeypatch.setattr("raiden.routing.get_best_routes_pfs", pfs_mock.get_best_routes_pfs)
+    # Method used by WithdrawRequest message handler
+    monkeypatch.setattr(
+        "raiden.message_handler.query_address_metadata", pfs_mock.query_address_metadata
+    )
+    # Method used by Withdraw in the API
+    monkeypatch.setattr(
+        "raiden.api.python.query_address_metadata", pfs_mock.query_address_metadata
+    )
     # PFS info endpoint
     monkeypatch.setattr("raiden.network.pathfinding", pfs_mock.get_pfs_info)
 

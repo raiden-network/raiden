@@ -529,9 +529,12 @@ def test_channel_withdraw(
     total_withdraw = WithdrawAmount(deposit + alice_to_bob_amount)
 
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
+
+    alice_metadata = pfs_mock.query_address_metadata(bob_app.config.pfs_config, alice_app.address)
     bob_app.withdraw(
         canonical_identifier=bob_alice_channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
+        recipient_metadata=alice_metadata,
     )
 
     waiting.wait_for_withdraw_complete(
@@ -612,9 +615,11 @@ def test_channel_withdraw_expired(
 
     bob_alice_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
 
+    alice_metadata = pfs_mock.query_address_metadata(bob_app.config.pfs_config, alice_app.address)
     bob_app.withdraw(
         canonical_identifier=bob_alice_channel_state.canonical_identifier,
         total_withdraw=total_withdraw,
+        recipient_metadata=alice_metadata,
     )
 
     with block_offset_timeout(bob_app):

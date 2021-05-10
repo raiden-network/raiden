@@ -262,6 +262,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
     network_wait,
     number_of_nodes,
     retry_timeout,
+    pfs_mock,
 ):
     """A test case related to https://github.com/raiden-network/raiden/issues/4639
     where a node sends a withdraw transaction, is stopped before the transaction is completed.
@@ -272,6 +273,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
     the on-chain transaction fails.
     """
     app0, app1 = raiden_network
+    pfs_mock.add_apps(raiden_network)
     token_address = token_addresses[0]
 
     # Prevent the withdraw transaction from being sent on-chain. This
@@ -287,8 +289,11 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
     )
     assert channel_state, "Channel does not exist"
 
+    app1_metadata = pfs_mock.query_address_metadata(app0.config.pfs_config, app1.address)
     app0.withdraw(
-        canonical_identifier=channel_state.canonical_identifier, total_withdraw=WithdrawAmount(1)
+        canonical_identifier=channel_state.canonical_identifier,
+        total_withdraw=WithdrawAmount(1),
+        recipient_metadata=app1_metadata,
     )
 
     timeout = network_wait * number_of_nodes

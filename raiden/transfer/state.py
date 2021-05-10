@@ -280,6 +280,7 @@ class ExpiredWithdrawState:
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
+    recipient_metadata: Optional[AddressMetadata] = None
 
 
 @dataclass
@@ -287,6 +288,7 @@ class PendingWithdrawState:
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
+    recipient_metadata: Optional[AddressMetadata] = None
 
 
 @dataclass
