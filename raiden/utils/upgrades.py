@@ -167,7 +167,7 @@ class UpgradeManager:
                 f"older."
             )
 
-        if RAIDEN_DB_VERSION >= 27 and file_version <= 26:
+        if RAIDEN_DB_VERSION >= 27 and file_version <= 26 and file_version > 1:
             msg = (
                 f"Your Raiden database is version {file_version} and there is no compatible "
                 f"migration to version {RAIDEN_DB_VERSION} available.\n"
