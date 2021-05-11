@@ -2202,7 +2202,7 @@ def test_backward_transfer_pair_with_fees_deducted():
     transfer_pair, refund_events = mediator.backward_transfer_pair(
         backward_channel=refund_channel,
         payer_transfer=received_transfer,
-        original_transfer=received_transfer,
+        initial_payer_transfer=received_transfer,
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
     )
