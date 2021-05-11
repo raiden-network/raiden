@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import sys
 from contextlib import closing
 from glob import escape, glob
 from pathlib import Path
@@ -104,7 +105,7 @@ def delete_dbs_with_failed_migrations(valid_db_names: List[Path]) -> None:
 
 
 class UpgradeManager:
-    """Run migrations when a database upgrade is necesary.
+    """Run migrations when a database upgrade is necessary.
 
     Skip the upgrade if either:
 
@@ -165,6 +166,18 @@ class UpgradeManager:
                 f"because the transfers done with the new client are not understandable by the "
                 f"older."
             )
+
+        if RAIDEN_DB_VERSION >= 27 and file_version <= 26:
+            msg = (
+                f"Your Raiden database is version {file_version} and there is no compatible "
+                f"migration to version {RAIDEN_DB_VERSION} available.\n"
+                "You need to either start a new Raiden node with a different account, or "
+                "close and settle all channels, and start over with a fresh database.\n\n"
+                "If you are on **mainnet** and affected by this, please create an issue at "
+                "https://github.com/raiden-network/raiden/issues/new?title=Mainnet%20Migration"
+            )
+            log.warning(msg)
+            sys.exit(msg)
 
         self._upgrade(
             target_file=self._current_db_filename,
