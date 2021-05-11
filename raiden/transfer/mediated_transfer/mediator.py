@@ -444,7 +444,7 @@ def forward_transfer_pair(
 def backward_transfer_pair(
     backward_channel: NettingChannelState,
     payer_transfer: LockedTransferSignedState,
-    original_transfer: LockedTransferSignedState,
+    initial_payer_transfer: LockedTransferSignedState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
@@ -460,7 +460,7 @@ def backward_transfer_pair(
             to this node.
         payer_transfer: The *latest* payer transfer which is backing the
             mediation.
-        original_transfer: The *initial* transfer for the corresponding payment that
+        initial_payer_transfer: The *initial* transfer for the corresponding payment that
             caused our node to try to forward-mediate that payment.
             It is the same as `payer_transfer` when our node has no valid forward-path to the
             target on the first forward-mediation attempt.
@@ -497,7 +497,7 @@ def backward_transfer_pair(
             expiration=lock.expiration,
             secrethash=lock.secrethash,
             route_state=backward_route_state,
-            recipient_metadata=original_transfer.payer_address_metadata,
+            recipient_metadata=initial_payer_transfer.payer_address_metadata,
         )
 
         transfer_pair = MediationPairState(
@@ -941,64 +941,63 @@ def events_to_remove_expired_locks(
     """
     events: List[Event] = list()
 
-    if mediator_state.transfers_pair:
+    if not mediator_state.transfers_pair:
+        return events
 
-        # This is the initial transfer we received for this payment. Here all the relevant
-        # route and address-metadata is present
-        original_transfer: LockedTransferSignedState = mediator_state.transfers_pair[
-            0
-        ].payer_transfer
-        for transfer_pair in mediator_state.transfers_pair:
-            balance_proof = transfer_pair.payee_transfer.balance_proof
-            channel_identifier = balance_proof.channel_identifier
-            channel_state = channelidentifiers_to_channels.get(channel_identifier)
-            if not channel_state:
-                continue
+    # This is the initial transfer we received for this payment. Here all the relevant
+    # route and address-metadata is present
+    initial_payer_transfer: LockedTransferSignedState = mediator_state.transfers_pair[
+        0
+    ].payer_transfer
+    for transfer_pair in mediator_state.transfers_pair:
+        balance_proof = transfer_pair.payee_transfer.balance_proof
+        channel_identifier = balance_proof.channel_identifier
+        channel_state = channelidentifiers_to_channels.get(channel_identifier)
+        if not channel_state:
+            continue
 
-            secrethash = mediator_state.secrethash
-            lock: Union[None, LockType] = None
-            if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
-                assert (
-                    secrethash not in channel_state.our_state.secrethashes_to_unlockedlocks
-                ), "Locks for secrethash are already unlocked"
-                lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
-            elif secrethash in channel_state.our_state.secrethashes_to_unlockedlocks:
-                lock = channel_state.our_state.secrethashes_to_unlockedlocks.get(secrethash)
-            if lock:
-                lock_expiration_threshold = channel.get_sender_expiration_threshold(
-                    lock.expiration
+        secrethash = mediator_state.secrethash
+        lock: Union[None, LockType] = None
+        if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
+            assert (
+                secrethash not in channel_state.our_state.secrethashes_to_unlockedlocks
+            ), "Locks for secrethash are already unlocked"
+            lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
+        elif secrethash in channel_state.our_state.secrethashes_to_unlockedlocks:
+            lock = channel_state.our_state.secrethashes_to_unlockedlocks.get(secrethash)
+        if lock:
+            lock_expiration_threshold = channel.get_sender_expiration_threshold(lock.expiration)
+            has_lock_expired = channel.is_lock_expired(
+                end_state=channel_state.our_state,
+                lock=lock,
+                block_number=block_number,
+                lock_expiration_threshold=lock_expiration_threshold,
+            )
+
+            is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
+
+            # The initial_payer_transfer is the initial transfer we received from a previous hop,
+            # so there we have all metadata that was passed on to other nodes already
+            # present
+            payee_address_metadata = get_address_metadata(
+                transfer_pair.payee_address, initial_payer_transfer.route_states
+            )
+            if has_lock_expired and is_channel_open:
+                transfer_pair.payee_state = "payee_expired"
+                expired_lock_events = channel.send_lock_expired(
+                    channel_state=channel_state,
+                    locked_lock=lock,
+                    pseudo_random_generator=pseudo_random_generator,
+                    recipient_metadata=payee_address_metadata,
                 )
-                has_lock_expired = channel.is_lock_expired(
-                    end_state=channel_state.our_state,
-                    lock=lock,
-                    block_number=block_number,
-                    lock_expiration_threshold=lock_expiration_threshold,
+                events.extend(expired_lock_events)
+
+                unlock_failed = EventUnlockFailed(
+                    transfer_pair.payee_transfer.payment_identifier,
+                    transfer_pair.payee_transfer.lock.secrethash,
+                    "lock expired",
                 )
-
-                is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
-
-                # The original_transfer is the initial transfer we received from a previous hop,
-                # so there we have all metadata that was passed on to other nodes already
-                # present
-                payee_address_metadata = get_address_metadata(
-                    transfer_pair.payee_address, original_transfer.route_states
-                )
-                if has_lock_expired and is_channel_open:
-                    transfer_pair.payee_state = "payee_expired"
-                    expired_lock_events = channel.send_lock_expired(
-                        channel_state=channel_state,
-                        locked_lock=lock,
-                        pseudo_random_generator=pseudo_random_generator,
-                        recipient_metadata=payee_address_metadata,
-                    )
-                    events.extend(expired_lock_events)
-
-                    unlock_failed = EventUnlockFailed(
-                        transfer_pair.payee_transfer.payment_identifier,
-                        transfer_pair.payee_transfer.lock.secrethash,
-                        "lock expired",
-                    )
-                    events.append(unlock_failed)
+                events.append(unlock_failed)
 
     return events
 
@@ -1108,23 +1107,23 @@ def mediate_transfer(
 
     # Could not mediate, try to refund
     if state.transfers_pair:
-        original_pair = state.transfers_pair[0]
-        original_transfer = original_pair.payer_transfer
-        original_channel = addresses_to_channel.get(
+        initial_transfer_pair = state.transfers_pair[0]
+        initial_payer_transfer = initial_transfer_pair.payer_transfer
+        initial_channel = addresses_to_channel.get(
             (
-                original_pair.payer_transfer.balance_proof.token_network_address,
-                original_pair.payer_transfer.payer_address,
+                initial_transfer_pair.payer_transfer.balance_proof.token_network_address,
+                initial_transfer_pair.payer_transfer.payer_address,
             )
         )
     else:
-        original_channel = payer_channel
-        original_transfer = payer_transfer
+        initial_channel = payer_channel
+        initial_payer_transfer = payer_transfer
 
-    if original_channel:
+    if initial_channel:
         refund_transfer_pair, refund_events = backward_transfer_pair(
-            original_channel,
+            initial_channel,
             payer_transfer,
-            original_transfer,
+            initial_payer_transfer,
             pseudo_random_generator,
             block_number,
         )
