@@ -24,3 +24,27 @@ Known Issues
    processing transactions, which are assumed to be valid only after a
    confirmation period of 5 blocks. This results in 15 blocks wait time
    for opening a channel (three on-chain transactions).
+
+
+**Database Upgrades**
+---------------------
+
+The database layout can change between versions. For **patch** and **minor**
+change releases, Raiden will do automatic upgrades in the background, as soon as
+you start the client with the new version. Your old database will always be kept
+as a backup.
+
+However, for **major** change releases, this may not always be possible. If the
+client tells you, that the database migration was not possible, you are left with
+two options:
+
+- to recover all allocated funds, you should run the previous version of Raiden and
+  **close** and **settle** all channels. Afterwards you can move your old database directory
+  out of the way and join the network again with the same Ethereum keystore file.
+
+- if there are no funds worth recovering, you can also simply start over with a new
+  Ethereum keystore file and
+  `start over <https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#firing-it-up>`__.
+  This should be true for all usage on testnet and in cases where your channel balances
+  are very low on mainnet. Don't hesitate to
+  `ask for help <https://gitter.im/raiden-network/raiden>`__!

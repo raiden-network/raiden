@@ -173,8 +173,12 @@ class UpgradeManager:
                 f"migration to version {RAIDEN_DB_VERSION} available.\n"
                 "You need to either start a new Raiden node with a different account, or "
                 "close and settle all channels, and start over with a fresh database.\n\n"
+                "More information on this topic at "
+                "https://raiden-network.readthedocs.io/en/latest/other/known-issues.html"
+                "#database-upgrades\n\n"
                 "If you are on **mainnet** and affected by this, please create an issue at "
-                "https://github.com/raiden-network/raiden/issues/new?title=Mainnet%20Migration"
+                "https://github.com/raiden-network/raiden/issues/new?title=Mainnet%20Migration%20"
+                f"{file_version}%20{RAIDEN_DB_VERSION}"
             )
             log.warning(msg)
             sys.exit(msg)
