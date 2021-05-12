@@ -1335,6 +1335,13 @@ class RaidenService(Runnable):
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)
+                # FIXME: this will load the recipient's metadata from the persisted
+                #  state. If the recipient roamed during the offline time of our node,
+                #  the message will never reach the recipient,
+                #  especially since we don't have a WebRTC connection with the recipient at
+                #  startup.
+                #  Depending on the time our node is offline, roaming of the recipient
+                #  can become more likely.
                 queue_messages.append((message, event.recipient_metadata))
 
             all_messages.append(MessagesQueue(queue_identifier, queue_messages))

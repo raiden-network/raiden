@@ -439,7 +439,7 @@ def test_message_in_p2p_room_raises(  # pylint: disable=unused-argument
 
 def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
     """
-    Make sure that the retry-queues batchess messages by the attached
+    Make sure that the retry-queues batches messages by the attached
     AddressMetadata, and pass the message-data to the _send_raw method per batch.
     """
 
@@ -478,8 +478,8 @@ def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
     serialized_message1 = MessageSerializer.serialize(message1)
     retry_queue.enqueue(message_event1.queue_identifier, [(message1, address_metadata1)])
 
-    # enqueue second message with no address metadata
-    # dict, but no "user_id" key - this will end up in the same batch as address_metadata=None
+    # enqueue second message with address metadata dict,
+    # but no "user_id" key - this will end up in the same batch as address_metadata=None
     address_metadata2: AddressMetadata = {"no_user_id": UserID("@nothing:here")}
 
     message_event2 = make_message_event(receiver_address, address_metadata=address_metadata2)
@@ -504,8 +504,8 @@ def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
     serialized_message4 = MessageSerializer.serialize(message4)
     retry_queue.enqueue(message_event4.queue_identifier, [(message4, correct_address_metadata)])
 
-    # enqueue second message with no address metadata
-    # has key user-id, but is not a "valid" user-id. This should still get passed to the
+    # enqueue a message with address metadata dict,
+    # that has key `user_id`, but is not a "valid" user-id. This should still get passed to the
     # send raw
     address_metadata5: AddressMetadata = {"user_id": UserID("invalid")}
     message_event5 = make_message_event(receiver_address, address_metadata=address_metadata5)
