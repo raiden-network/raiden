@@ -417,11 +417,6 @@ jobs:
           command: |
             cd ~/scenario-player
             pytest --rootdir . tests
-      - run:
-          name: Run Smoketest
-          command: |
-            cd ~/scenario-player
-            scenario_player smoketest
 
   test:
     parameters:
