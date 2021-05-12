@@ -83,7 +83,7 @@ bleach==3.3.0
     #   readme-renderer
 bump2version==1.0.1
     # via -r requirements-dev.txt
-cachetools==4.2.1
+cachetools==4.2.2
     # via -r requirements-dev.txt
 canonicaljson==1.4.0
     # via
@@ -462,7 +462,7 @@ py-solc-x==1.1.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
-py-spy==0.3.5
+py-spy==0.3.6
     # via -r requirements-dev.txt
 py==1.10.0
     # via
