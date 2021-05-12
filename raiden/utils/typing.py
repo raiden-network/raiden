@@ -204,7 +204,7 @@ PeerCapabilities = NewType("PeerCapabilities", T_PeerCapabilities)
 T_UserID = str
 UserID = NewType("UserID", T_UserID)
 
-AddressMetadata = Dict[str, Union[UserID, PeerCapabilities]]
+AddressMetadata = Dict[str, Union[UserID, str]]
 
 AddressTypes = Union[
     Address,

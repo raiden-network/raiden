@@ -14,7 +14,7 @@ import gevent
 import pkg_resources
 import structlog
 from aiortc import RTCSessionDescription
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import encode_hex, is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
@@ -52,6 +52,7 @@ from raiden.network.transport.matrix.utils import (
     MessageAckTimingKeeper,
     UserPresence,
     address_from_userid,
+    capabilities_schema,
     get_user_id_from_metadata,
     login,
     make_client,
@@ -87,7 +88,6 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
-    PeerCapabilities,
     RoomID,
     Set,
     Tuple,
@@ -243,7 +243,7 @@ class _RetryQueue(Runnable):
             if address_metadata is None:
                 return ""
             uid = address_metadata.get("user_id", "")
-            return cast(str, uid)
+            return uid
 
         batched_messages = list()
         queue_by_user_id = sorted(self._message_queue[:], key=key_func)
@@ -526,12 +526,20 @@ class MatrixTransport(Runnable):
         return make_user_id(address, self._server_name) if address is not None else None
 
     @property
+    def displayname(self) -> str:
+        if self._raiden_service is None:
+            return ""
+        signature_bytes = self._raiden_service.signer.sign(str(self.user_id).encode())
+        return encode_hex(signature_bytes)
+
+    @property
     def address_metadata(self) -> Optional[AddressMetadata]:
-        own_caps = PeerCapabilities(capconfig_to_dict(self._config.capabilities_config))
+        cap_dict = capconfig_to_dict(self._config.capabilities_config)
+        own_caps = capabilities_schema.dump({"capabilities": cap_dict})["capabilities"]
         own_user_id = self.user_id
         if own_user_id is None:
             return None
-        return dict(user_id=own_user_id, capabilities=own_caps)
+        return dict(user_id=own_user_id, capabilities=own_caps, displayname=self.displayname)
 
     def start(  # type: ignore
         self, raiden_service: "RaidenService", prev_auth_data: Optional[str]
