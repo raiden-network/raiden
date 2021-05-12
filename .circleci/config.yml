@@ -744,14 +744,14 @@ workflows:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-            - prepare-python-linux
+            - prepare-python-linux-<< matrix.py-version >>
 
       - build-docs:
           matrix:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-            - prepare-python-linux
+            - prepare-python-linux-<< matrix.py-version >>
 
       - smoketest:
           matrix:
@@ -761,7 +761,7 @@ workflows:
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -770,7 +770,7 @@ workflows:
               py-version: ["3.7", "3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -780,7 +780,7 @@ workflows:
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
@@ -912,14 +912,14 @@ workflows:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-          - prepare-python-linux
+          - prepare-python-linux-<< matrix.py-version >>
 
       - build-docs:
           matrix:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-            - prepare-python-linux
+            - prepare-python-linux-<< matrix.py-version >>
 
       - smoketest:
           matrix:
@@ -929,7 +929,7 @@ workflows:
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -938,7 +938,7 @@ workflows:
               py-version: ["3.7", "3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -948,7 +948,7 @@ workflows:
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
