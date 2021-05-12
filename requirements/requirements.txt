@@ -36,7 +36,7 @@ cffi==1.12.3
     #   pylibsrtp
 chardet==3.0.4
     # via requests
-click==8.0.0a1
+click==8.0.0
     # via
     #   -r requirements.in
     #   flask
@@ -239,10 +239,10 @@ toolz==0.9.0
     # via cytoolz
 typeguard==2.11.1
     # via marshmallow-dataclass
+typing-extensions==3.10.0.0
+    # via -r requirements.in
 typing-inspect==0.4.0
     # via marshmallow-dataclass
-typing_extensions==3.10.0.0
-    # via -r requirements.in
 ulid-py==1.1.0
     # via -r requirements.in
 urllib3==1.25.8
