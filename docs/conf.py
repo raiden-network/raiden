@@ -100,7 +100,7 @@ master_doc = "index"
 project = "Raiden Network"
 author = "Raiden Project"
 
-version_string = "1.2.0"
+version_string = "2.0.0a1"
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
@@ -137,7 +137,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['**/*.inc.rst']
+exclude_patterns = ["**/*.inc.rst"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
