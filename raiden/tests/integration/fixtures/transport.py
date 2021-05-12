@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 
+from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.constants import Environment
 from raiden.network.transport import MatrixTransport
 from raiden.settings import (
@@ -13,14 +14,7 @@ from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import (
-    AddressMetadata,
-    Iterable,
-    Optional,
-    PeerCapabilities,
-    Tuple,
-    UserID,
-)
+from raiden.utils.typing import AddressMetadata, Iterable, Optional, Tuple, UserID
 
 
 @pytest.fixture(scope="session")
@@ -36,7 +30,8 @@ def query_address_metadata_mock(local_matrix_servers, capabilities, monkeypatch)
         return AddressMetadata(
             dict(
                 user_id=UserID(f"@0x{user_address.hex()}:{server_name}"),
-                capabilities=PeerCapabilities(capconfig_to_dict(capabilities)),
+                capabilities=CapabilitiesSchema().dump(capconfig_to_dict(capabilities)),
+                displayname="",  # FIXME: how to add correct displayname here?
             )
         )
 

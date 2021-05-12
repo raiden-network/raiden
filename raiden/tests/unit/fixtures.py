@@ -12,8 +12,13 @@ from raiden.utils.typing import BlockNumber, TokenAmount
 
 
 @pytest.fixture
-def our_address():
-    return factories.make_address()
+def our_signer():
+    return factories.make_signer()
+
+
+@pytest.fixture
+def our_address(our_signer):
+    return our_signer.address
 
 
 @pytest.fixture
