@@ -125,7 +125,7 @@ class MessageHandler:
 
         sender_metadata: Optional[AddressMetadata] = None
         if raiden.config.pfs_config is not None:
-            # HACK querying the PFS for the address-metadata directly after receiving a message
+            # FIXME querying the PFS for the address-metadata directly after receiving a message
             #   should be optimized / factored out at a later point!
             sender_metadata = query_address_metadata(raiden.config.pfs_config, message.sender)
 
