@@ -92,7 +92,6 @@ from raiden.utils.typing import (
     Set,
     Tuple,
     UserID,
-    cast,
 )
 
 if TYPE_CHECKING:
