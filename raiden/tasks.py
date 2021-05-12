@@ -151,7 +151,13 @@ def check_rdn_deposits(
 def check_chain_id(chain_id: ChainID, web3: Web3) -> None:  # pragma: no unittest
     """Check periodically if the underlying ethereum client's network id has changed"""
     while True:
-        current_id = web3.eth.chain_id
+        try:
+            current_id = web3.eth.chain_id
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError(
+                "Could not reach ethereum RPC. "
+                "Please check that your ethereum node is running and accessible."
+            )
         if chain_id != current_id:
             raise RuntimeError(
                 f"Raiden was running on network with id {chain_id} and it detected "
