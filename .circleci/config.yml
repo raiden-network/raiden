@@ -811,6 +811,7 @@ workflows:
           requires:
             - scenario-player-integration-test
             - test-integration
+            - build-docs
 
   deploy-release:
     jobs:
@@ -979,6 +980,7 @@ workflows:
           requires:
           - scenario-player-integration-test
           - test-integration
+          - build-docs
 
       - build-binary-linux:
           name: build-binary-linux-x86
