@@ -516,17 +516,10 @@ jobs:
             python -m gevent.monkey --module pytest raiden/tests/benchmark/ -v --codespeed-url https://speed.metrics.brainbot.com
 
   finalize:
-    parameters:
-      py-version:
-        <<: *py-version-template
     executor:
       name: docker
       py-version: "3.7"
     steps:
-      - attach-and-link:
-          py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           command: "true"
 
