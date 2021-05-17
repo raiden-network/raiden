@@ -183,7 +183,7 @@ def handle_block(
             events.extend(expired_lock_events)
 
         if initiator_state.received_secret_request:
-            reason = "bad secret request message from target"
+            reason = "lock expired, despite receiving secret request"
         else:
             reason = "lock expired"
 
