@@ -36,9 +36,7 @@ def pytest_collection_modifyitems(items):
 _TIMES = {}
 
 
-_COMMIT_ID = (
-    subprocess.check_output(shlex.split("git describe --tags --abbrev=8")).decode().strip()
-)
+_COMMIT_ID = subprocess.check_output(shlex.split("git rev-parse HEAD")).decode().strip()
 
 
 # "git branch --show-current" would be simpler, but CI git version is too old for that.
