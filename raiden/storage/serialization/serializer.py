@@ -97,6 +97,7 @@ class DictSerializer(SerializationBase):
             raise SerializationError(f"Can't deserialize non dict-like objects: {data}")
         if "_type" in data:
             try:
+                # XXX here the marshmallow-dataclass is infered
                 klass = _import_type(data["_type"])
                 schema = SchemaCache.get_or_create_schema(klass)
                 return schema.load(deepcopy(data))

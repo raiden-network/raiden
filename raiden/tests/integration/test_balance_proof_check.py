@@ -148,6 +148,7 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
     assert token_network_address
     channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
+    breakpoint()
     transfer(
         initiator_app=app0,
         target_app=app1,

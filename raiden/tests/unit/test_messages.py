@@ -317,3 +317,14 @@ def test_refund_transfer_invalid_values(invalid_values):
     for invalid_value in invalid_values:
         with pytest.raises(ValueError):
             factories.create(factories.RefundTransferProperties(**invalid_value))
+
+
+def test_extra_metadata():
+    breakpoint()
+    # create metadata from deserialized message with the extra data
+    metadata = factories.create(factories.MetadataProperties())
+    # modify the route
+    # Serialize the message again, but including the extra metadata that was not understood
+    # -->> creation of the LockedTransfer class should be changed
+    breakpoint()
+    transfer = factories.create(factories.LockedTransferProperties(metadata=metadata))

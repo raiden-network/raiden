@@ -272,6 +272,19 @@ def test_message_identical() -> None:
         assert message_dict == saved_message_dict
 
 
+def test_locked_transfer_arbitrary_metadata():
+    filename = os.path.join(
+        os.path.dirname(__file__), "serialized_messages", "LockedTransferExtraMetadata.json"
+    )
+    with open(filename) as f:
+        content = f.read()
+        deserialized_message = MessageSerializer.deserialize(content)
+
+    # The assert output is more readable when we used dicts than with plain JSON
+    message_dict = JSONSerializer.deserialize(MessageSerializer.serialize(deserialized_message))
+    assert message_dict == JSONSerializer.deserialize(content)
+
+
 def test_hashing():
     """All messages must be hashable for de-duplication to work."""
     for message in messages:

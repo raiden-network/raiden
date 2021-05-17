@@ -406,11 +406,13 @@ class LockedTransferBase(EnvelopeMessage):
             target=transfer.target,
             initiator=transfer.initiator,
             signature=EMPTY_SIGNATURE,
+            # FIXME: here we must make sure that the `_unknown_data` is preserved, too
             metadata=Metadata(
                 routes=[
                     RouteMetadata(route=r.route, address_metadata=r.address_to_metadata)
                     for r in transfer.route_states
-                ]
+                ],
+                _unknown_data=None,
             ),
         )
 

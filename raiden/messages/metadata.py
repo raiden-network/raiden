@@ -1,9 +1,11 @@
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 import canonicaljson
 import rlp
 from eth_utils import keccak
+from marshmallow import EXCLUDE, fields, post_dump, post_load
 
 from raiden.messages.abstract import cached_property
 from raiden.utils.formatting import to_checksum_address
@@ -52,13 +54,47 @@ class RouteMetadata:
         return f"RouteMetadata: {' -> '.join([to_checksum_address(a) for a in self.route])}"
 
 
+METADATA_EXTRA = fields.Dict(keys=fields.String, values=fields.Raw())
+
+
 @dataclass(frozen=True)
 class Metadata:
     routes: List[RouteMetadata]
+    # The field `_unknown_data` is used to preserve additional metadata
+    # fields, that are not in this clients schema, through serialization / deserialization.
+    _unknown_data: Optional[Dict[str, List[str]]] = field(
+        metadata=dict(marshmallow_field=METADATA_EXTRA, required=False)
+    )
+
+    class Meta:
+        unknown = EXCLUDE
 
     @cached_property
     def hash(self) -> bytes:
         return keccak(rlp.encode([r.hash for r in self.routes]))
+
+    @post_load(pass_original=True)
+    def post_loading(
+        self,
+        data: Dict[str, Any],
+        original_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        new_extra_data = {
+            k: v
+            for k, v in original_data.items()
+            if k not in self.declared_fields  # type: ignore # pylint: disable=no-member
+        }
+        if new_extra_data:
+            data["_unknown_data"] = new_extra_data
+        return data
+
+    @post_dump
+    def post_dump_impl(  # pylint: disable=no-self-use
+        self,
+        data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        data.update(data.pop("_unknown_data", {}))
+        return data
 
     def __repr__(self) -> str:
         return f"Metadata: routes: {[repr(route) for route in self.routes]}"

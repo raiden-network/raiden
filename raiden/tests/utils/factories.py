@@ -529,6 +529,7 @@ RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
 @dataclass(frozen=True)
 class MetadataProperties(Properties):
     routes: List[RouteMetadata] = EMPTY
+    _unknown_data: Dict[str, Any] = EMPTY
     TARGET_TYPE = Metadata
 
 
