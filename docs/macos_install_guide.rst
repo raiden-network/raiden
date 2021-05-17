@@ -59,7 +59,7 @@ The following instructions will guide you from a clean installation of macOS to 
     $ make install-dev
 
 Now you have a working source installation of Raiden.
-To actually use it you also need the solidity compiler solc_ and an `Ethereum client`_.
+To actually use it you also need the Solidity compiler solc_ and an `Ethereum client`_.
 Both can be installed as follows::
 
     $ brew tap ethereum/ethereum

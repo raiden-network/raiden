@@ -138,7 +138,7 @@ Linux
 Additional dependencies for development installations
 -----------------------------------------------------
 
-- You need to make sure that your system has ``solc``, the ethereum solidity compiler installed. Refer to `its documentation`_ for the installation steps.
+- You need to make sure that your system has ``solc``, the Ethereum Solidity compiler installed. Refer to `its documentation`_ for the installation steps.
 - You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
 
 
@@ -292,7 +292,7 @@ The default setting for the pathfinding options is to use a pathfinding service 
 A monitoring service watches a client's open channels while it is offline, and represents the client in case of settlement.
 Like the pathfinding service, it is paid in RDN tokens. If you want to use a monitoring service, use the option
 ``--enable-monitoring`` and Raiden will automatically pick one from its service registry.
-By default the Monitoring Services are disabled. 
+By default the monitoring services are disabled. 
 Enabling monitoring of channels will require a default reward value of 5 RDN for successfully monitoring your channel.
 
 3. Logging configuration
