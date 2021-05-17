@@ -46,7 +46,7 @@ You can read more about ERC20 tokens in `this GitHub repo <https://github.com/Op
 
 .. image:: remix_gist_import.png
 
-1. Start of by getting the Solidity code for an ERC20 token from `this GitHub gist <https://gist.github.com/eorituz/a779c0277f2fc5c935e2b2f62e49da49>`_.
+1. Start off by getting the Solidity code for an ERC20 token from `this GitHub gist <https://gist.github.com/eorituz/a779c0277f2fc5c935e2b2f62e49da49>`_.
 2. Enter the URL for the `Remix Ethereum IDE <https://remix.ethereum.org/>`_ in your browser.
 3. Under **"Environments"** click **"Solidity"**.
 4. Under **"File"** choose to import from **"Gist"**.
@@ -99,7 +99,7 @@ Navigate to **"DEPLOY & RUN TRANSACTIONS"** in the left hand side menu.
 6. Confirm the transaction from MetaMask when prompted.
 
 In the Remix Ethereum IDE terminal you should now see an output similar to the picture below. 
-Congratulations, you have now successfully deployed a token to ethereum!
+Congratulations, you have now successfully deployed a token to Ethereum!
 
 .. image:: remix_deploy3.png
 
