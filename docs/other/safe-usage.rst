@@ -15,7 +15,7 @@ Safe Usage
 
 -  **Ethereum node in sync and running reliably:** Ensure that layer 1
    works reliably. This means that you have to have an Ethereum node,
-   either geth or parity, that is synced and working reliably. If there
+   either Geth or OpenEthereum, that is synced and working reliably. If there
    are any problems or bugs on the client then Raiden can not work
    reliably.
 -  **Ethereum client always online:** Make sure that your Ethereum

@@ -118,8 +118,8 @@ Dependencies
 ************
 You will need a local or remote Ethereum node to connect Raiden to.
 
-- Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ to install the go-ethereum client.
-- Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ to install the parity client.
+- Check `this link <https://geth.ethereum.org/docs/install-and-build/installing-geth>`_ to install the Geth client.
+- Download and install OpenEthereum `from here <https://github.com/openethereum/openethereum/releases/latest>`_.
 - Or sign up at a service like `Infura <https://infura.io>`__ to set up a remote node.
 
 Now you are ready :ref:`to get started <running_raiden>`.
@@ -164,7 +164,7 @@ After you have done that you can proceed to install the dependencies::
 
     make install-dev
 
-You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
+You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both OpenEthereum and Geth.
 
 .. _virtualenv: https://docs.python.org/3/library/venv.html
 
@@ -185,7 +185,7 @@ Run it
 ======
 
 To fire up Raiden you need at least
- 1. a synced **Ethereum Node** - using geth, parity or infura
+ 1. a synced **Ethereum Node** - using Geth, OpenEthereum or Infura
  2. an **Ethereum keystore file** - whereas the address holds ETH, RDN, and the ERC20 token you want to transfer
  3. If you want to use :doc:`Raiden services <raiden_services>` that charge a fee, a deposit of RDN tokens to pay the services with.
 
@@ -196,7 +196,7 @@ We will provide you with the necessary cli arguments step by step. Full example 
 1. and 2. The synced Ethereum Node & Keystore
 *********************************************
 
-Using geth
+Using Geth
 ~~~~~~~~~~
 
 Run the Ethereum client and let it sync::
@@ -214,22 +214,22 @@ Then launch Raiden with the default testnet keystore path::
 
     raiden --keystore-path  ~/.ethereum/testnet/keystore
 
-Using parity
-~~~~~~~~~~~~
+Using OpenEthereum
+~~~~~~~~~~~~~~~~~~
 
 Run the client and let it sync::
 
-    parity --no-warp --jsonrpc-apis=web3,eth,net,parity
+    openethereum --no-warp --jsonrpc-apis=web3,eth,net,parity
 
 .. note::
     When you want to use a testnet add the ``--chain ropsten`` or ``--chain kovan`` flags or set the network id with ``--network-id`` directly.
 
-.. attention:: Parity sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have Parity fully synced with the ``--no-warp`` option.
+.. attention:: OpenEthereum sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have OpenEthereum fully synced with the ``--no-warp`` option.
 
-After syncing the chain, an existing Ethereum account can be used or a new one can be generated using ``parity-ethkey``.
+After syncing the chain, an existing Ethereum account can be used or a new one can be generated using `ethkey <https://github.com/openethereum/openethereum/tree/main/crates/accounts/ethkey>`_.
 After account creation, launch Raiden with the path of your keystore supplied::
 
-    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test
+    raiden --keystore-path ~/.local/share/openethereum/keys/ethereum
 
 .. _using_rpc-endpoint:
 
