@@ -35,7 +35,7 @@ from raiden.utils.signer import recover
 from raiden.utils.typing import MessageID
 
 
-def test_login_for_the_first_time_must_set_the_display_name():
+def test_login_for_the_first_time_must_set_display_name_and_avatar_url():
     ownserver = "https://ownserver.com"
     api = Mock()
     api.base_url = ownserver
@@ -59,7 +59,12 @@ def test_login_for_the_first_time_must_set_the_display_name():
 
     signer = make_signer()
 
-    user = login(client=client, signer=signer, device_id=DeviceIDs.RAIDEN)
+    user = login(
+        client=client, signer=signer, device_id=DeviceIDs.RAIDEN, capabilities={"test": 1}
+    )
+
+    # avatar_url must have been set
+    user.set_avatar_url.assert_called_once_with("mxc://raiden.network/cap?test=1")
 
     # client.user_id will be set by login
     assert client.user_id.startswith(f"@{to_normalized_address(signer.address)}")
