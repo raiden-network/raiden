@@ -1,5 +1,5 @@
-How is Raiden tested.
-#####################
+How is Raiden tested
+####################
 
 Raiden tests are split into these categories. The following categories are
 ordered from the faster and easier to debug to the slower and harder to debug:
