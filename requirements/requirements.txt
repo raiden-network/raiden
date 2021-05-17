@@ -221,7 +221,7 @@ semantic-version==2.8.5
     #   raiden-contracts
 simplejson==3.17.2
     # via canonicaljson
-six==1.15.0
+six==1.16.0
     # via
     #   flask-cors
     #   flask-restful

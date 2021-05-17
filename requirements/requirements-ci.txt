@@ -629,7 +629,7 @@ simplejson==3.17.2
     # via
     #   -r requirements-dev.txt
     #   canonicaljson
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements-dev.txt
     #   attrdict
