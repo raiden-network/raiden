@@ -302,8 +302,7 @@ def first_login(
         current_capabilities = ""
 
     # Only set the capabilities if necessary.
-    cap_str = capabilities_schema.load(capabilities.get("capabilities", {}))
-    cap_str = cap_str["capabilities"]
+    cap_str = capabilities.get("capabilities", "mxc://")
     if current_capabilities != cap_str:
         user.set_avatar_url(cap_str)
 
@@ -312,6 +311,7 @@ def first_login(
         node=to_checksum_address(username),
         homeserver=server_name,
         server_url=server_url,
+        capabilities=capabilities,
     )
     return user
 
@@ -389,7 +389,7 @@ def login(
             )
 
     try:
-        cap: Dict = capabilities_schema.dump(capabilities)
+        cap: Dict = capabilities_schema.dump({"capabilities": capabilities})
     except ValueError:
         raise Exception("error serializing")
     return first_login(client, signer, username, cap, device_id)
