@@ -43,7 +43,7 @@ requests==2.25.1
     #   sphinxcontrib-images
 semantic-version==2.6.0
     # via releases
-six==1.15.0
+six==1.16.0
     # via
     #   astunparse
     #   packaging

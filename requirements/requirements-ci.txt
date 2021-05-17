@@ -467,7 +467,7 @@ py-solc-x==1.1.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
-py-spy==0.3.5
+py-spy==0.3.7
     # via -r requirements-dev.txt
 py==1.10.0
     # via
@@ -629,7 +629,7 @@ simplejson==3.17.2
     # via
     #   -r requirements-dev.txt
     #   canonicaljson
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements-dev.txt
     #   attrdict
