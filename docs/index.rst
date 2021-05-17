@@ -1,48 +1,44 @@
 Raiden Network |capitalized_version| Documentation
 **************************************************
 
-
-This is the documentation for the |version| version of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
+.. note::
+  This is the documentation for the |version| version of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
 
 What is the Raiden Network?
 ---------------------------
-The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token. The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
-
-How to get started
-------------------
-
-Whether you've just heard of Raiden for the first time or you're here looking for something specific here's a short list of relevant resources and links.
+The Raiden Network is an off-chain scaling solution, enabling fast, low-fee and scalable token transfers. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token.
 
 New to Raiden?
-~~~~~~~~~~~~~~
-If you're new to Raiden and just want to install and try it out, you can either:
+--------------
 
-    * Use the `Raiden Wizard <https://docs.raiden.network/quick-start/>`_ for quickly installing and running a Raiden node.
-    * :doc:`Read about different options for installing and firing up <overview_and_guide>` a Raiden client.
-    * Check out the `WebUI tutorial <https://docs.raiden.network/the-raiden-web-interface/the-raiden-web-interface>`_ to quickly get started doing payments.
+If you’re new to Raiden and just want to install it and try it out, go to the :doc:`Quick Start <installation/quick-start/README>`.
+Afterwards you can do token transfers using the :doc:`Raiden WebUI <the-raiden-web-interface/the-raiden-web-interface>`.
+
+For a more advanced usage, read about the different options for :doc:`installing and firing up <overview_and_guide>` a Raiden client.
 
 Developing on Raiden?
-~~~~~~~~~~~~~~~~~~~~~
-If you're looking for documentation relevant for building on top of Raiden:
+---------------------
+If you want to use Raiden for your project the following links have relevant documentation:
 
-    * Read the thorough guide to `get started with the Raiden API <https://docs.raiden.network/raiden-api-1/api-tutorial>`_.
-    * Checkout the complete :doc:`API documentation <rest_api>`.
-    * Read the document :doc:`How is Raiden Tested <testing>`.
+* Check out the `examples on the developer portal <https://developer.raiden.network/#Examples>`_
+* Read a detailed guide on how to :doc:`get started using the Raiden API <raiden-api-1/api-tutorial/README>`
+* Read the complete :doc:`documentation of the Raiden API <rest_api>`
 
 Contributing to Raiden?
-~~~~~~~~~~~~~~~~~~~~~~~
-If you're looking for a more in depth understanding of Raiden and are interested in contributing:
+-----------------------
+If you are looking to get an in-depth understanding of Raiden or if you're interested in contributing to Raiden, a good start is to:
 
-    * Take a look at the :doc:`onboarding guide <onboarding>`.
-    * Check out the code in our `Github repository <https://github.com/raiden-network/raiden>`_.
-    * Read the `Raiden specification <https://raiden-network-specification.readthedocs.io/en/latest/index.html>`_.
+* Read the :doc:`on-boarding guide <onboarding>`
+* Read the `Raiden specification <https://raiden-network-specification.readthedocs.io/en/latest/index.html>`_.
+* Take a look at the `source code <https://github.com/raiden-network/raiden>`_
+* Read the "tech deep dive" series on our `blog <https://medium.com/raiden-network>`_
 
 Need help?
-~~~~~~~~~~
-If you run in to any kind of problems or you discover bugs:
+----------
+If you run into problems or discover bugs, you can:
 
-    * Ask for help or project related questions in the `Raiden gitter <https://gitter.im/raiden-network/raiden>`_.
-    * Create a `Github issue <https://github.com/raiden-network/raiden/issues/new/choose>`_ if you discover a bug or have a feature request.
+* Ask for help in the `Raiden gitter chat <https://gitter.im/raiden-network/raiden>`_
+* Create a `Github issue <https://github.com/raiden-network/raiden/issues/new/choose>`_ for either a bug report or feature request
 
 Disclaimer
 ----------
@@ -50,7 +46,7 @@ Please note, that even though we do our best to ensure the quality and accuracy 
 The wording and concepts regarding financial terminology (e.g. “payments”, “checks”, “currency”, “transfer” [of value]) are exclusively used in an exemplary way to describe technological principles and do not necessarily conform to the real world or legal equivalents of these terms and concepts.
 
 Contents
-********
+--------
 
 .. toctree::
   :maxdepth: 2
@@ -68,6 +64,7 @@ Contents
 
   onboarding
   proxies
+  testing
   changelog
 
 .. toctree::
