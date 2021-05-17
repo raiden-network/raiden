@@ -1,6 +1,9 @@
 Known Issues
 ============
 
+Below you find a non-exhaustive list of known issues, which you should be aware of while using the current version of the software. 
+Most of these issues are not Raiden specific, but rather apply to all blockchain applications.
+
 -  **Compromised user system:** If the system of the user is compromised
    and accessed by an attacker or if a malicious application is running,
    then the write-ahead logging (WAL) could be accessed and valuable
