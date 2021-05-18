@@ -30,7 +30,9 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
     route_states = list()
     for route_metadata in message.metadata.routes:
-        rs = RouteState(route_metadata.route, address_to_metadata=route_metadata.address_metadata)
+        rs = RouteState(
+            route_metadata.route, address_to_metadata=route_metadata.address_metadata or {}
+        )
         route_states.append(rs)
 
     transfer_state = LockedTransferSignedState(

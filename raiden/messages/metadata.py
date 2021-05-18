@@ -12,7 +12,7 @@ from raiden.utils.typing import Address, AddressMetadata, Dict, List, Optional
 
 class RouteMetadata:
     route: List[Address]
-    address_metadata: Dict[Address, AddressMetadata]
+    address_metadata: Optional[Dict[Address, AddressMetadata]]
 
     def __init__(
         self,
@@ -24,6 +24,9 @@ class RouteMetadata:
         self._validate_address_metadata()
 
     def _validate_address_metadata(self) -> None:
+        if self.address_metadata is None:
+            return
+
         for address, metadata in list(self.address_metadata.items()):
             user_id = metadata.get("user_id")
             displayname = metadata.get("displayname")
@@ -42,10 +45,13 @@ class RouteMetadata:
 
     def _serialize_canonicaljson(self) -> bytes:
         route = [to_checksum_address(address) for address in self.route]
-        address_metadata = {
-            to_checksum_address(address): metadata
-            for address, metadata in self.address_metadata.items()
-        }
+        if self.address_metadata is None:
+            address_metadata = None
+        else:
+            address_metadata = {
+                to_checksum_address(address): metadata
+                for address, metadata in self.address_metadata.items()
+            }
         return canonicaljson.encode_canonical_json(
             {"route": route, "address_metadata": address_metadata}
         )
