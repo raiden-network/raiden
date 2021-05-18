@@ -244,7 +244,7 @@ hyperlink==21.0.0
     # via
     #   treq
     #   twisted
-hypothesis==6.10.1
+hypothesis==6.13.0
     # via -r requirements-dev.in
 idna==2.8
     # via
@@ -526,7 +526,7 @@ simplejson==3.17.2
     # via
     #   -r requirements.txt
     #   canonicaljson
-six==1.15.0
+six==1.16.0
     # via
     #   -r requirements-dev.in
     #   -r requirements.txt
