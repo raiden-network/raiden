@@ -65,6 +65,8 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
+from raiden.utils.validation import validate_address_metadata
+
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
@@ -137,6 +139,22 @@ class RouteState(State):
     address_to_metadata: Dict[Address, AddressMetadata] = field(default_factory=dict)
     swaps: Dict[Address, TokenNetworkAddress] = field(default_factory=dict)
     estimated_fee: FeeAmount = FeeAmount(0)
+
+    def __post_init__(self) -> None:
+        """Validate address_to_metadata.
+
+        Currently any validation error will cause a :class:``ValueError`` to be raised.
+        This needs to be caught in higher layers.
+
+        In the future a more granular validation may be introduced.
+        """
+        validation_errors = validate_address_metadata(self)
+        if validation_errors:
+            addresses_with_errors = ", ".join(
+                f"{to_checksum_address(address)}: {errors}"
+                for address, errors in validation_errors.items()
+            )
+            raise ValueError(f"Could not validate metadata {addresses_with_errors}.")
 
     @property
     def next_hop_address(self) -> Address:

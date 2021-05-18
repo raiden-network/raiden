@@ -697,6 +697,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_signer, one_to_n_addr
         "raiden.routing.query_address_metadata"
     ) as pfs_user_request:
         pfs_route_request.return_value = None, [], "feedback_token"
+        pfs_user_request.return_value = None
         _, routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,

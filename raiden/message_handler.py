@@ -240,6 +240,9 @@ class MessageHandler:
         raiden: "RaidenService", message: RefundTransfer
     ) -> List[StateChange]:
         chain_state = views.state_from_raiden(raiden)
+        # XXX: Not sure about this one. What should we do if the LockedTransfer has no
+        #      route_states due to validation?
+        # AFAIK the routes in the received transfer aren't relevant for the refund anyway.
         from_transfer = lockedtransfersigned_from_message(message=message)
 
         role = views.get_transfer_role(

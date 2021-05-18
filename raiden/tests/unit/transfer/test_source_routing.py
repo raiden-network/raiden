@@ -8,7 +8,7 @@ from raiden.messages.transfers import LockedTransfer, RefundTransfer
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.factories import UNIT_TOKEN_NETWORK_ADDRESS, UNIT_TRANSFER_AMOUNT
+from raiden.tests.utils.factories import HOP1_KEY, UNIT_TOKEN_NETWORK_ADDRESS, UNIT_TRANSFER_AMOUNT
 from raiden.transfer import views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
@@ -86,7 +86,7 @@ def test_route_metadata_displayname_validation():
     properties = factories.RouteMetadataProperties()
     one_metadata = factories.create(properties)
     route = one_metadata.route
-    signer = factories.make_signer()
+    signer = LocalSigner(HOP1_KEY)
     server_name = urlparse("https://ownserver.com").netloc
     user_id = f"@{to_normalized_address(signer.address)}:{server_name}"
     displayname = encode_hex(signer.sign(user_id.encode()))

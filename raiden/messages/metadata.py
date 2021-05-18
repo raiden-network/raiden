@@ -5,9 +5,9 @@ import rlp
 from eth_utils import keccak
 
 from raiden.messages.abstract import cached_property
-from raiden.network.transport.matrix.utils import validate_user_id_signature
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, AddressMetadata, Dict, List, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, Address, AddressMetadata, Dict, List, Optional
+from raiden.utils.validation import validate_address_metadata
 
 
 class RouteMetadata:
@@ -19,25 +19,16 @@ class RouteMetadata:
         route: List[Address],
         address_metadata: Optional[Dict[Address, AddressMetadata]] = None,
     ) -> None:
+
         self.address_metadata = address_metadata or {}
         self.route = route
         self._validate_address_metadata()
 
     def _validate_address_metadata(self) -> None:
-        if self.address_metadata is None:
-            return
-
-        for address, metadata in list(self.address_metadata.items()):
-            user_id = metadata.get("user_id")
-            displayname = metadata.get("displayname")
-
-            if user_id is None or displayname is None:
-                del self.address_metadata[address]  # we can't verify this user's identity
-                continue
-
-            verified_address = validate_user_id_signature(user_id, displayname)  # type: ignore
-            if verified_address != address:
-                del self.address_metadata[address]
+        assert self.address_metadata is not None, MYPY_ANNOTATION
+        validation_errors = validate_address_metadata(self)
+        for address in validation_errors:
+            del self.address_metadata[address]
 
     @cached_property
     def hash(self) -> bytes:
