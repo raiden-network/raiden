@@ -1,8 +1,12 @@
+from structlog import get_logger
+
 from raiden.messages.transfers import EnvelopeMessage, LockedTransferBase
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState, RouteState
 from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
 from raiden.utils.typing import AdditionalHash
+
+log = get_logger(__name__)
 
 
 def balanceproof_from_envelope(envelope_message: EnvelopeMessage) -> BalanceProofSignedState:
@@ -30,10 +34,13 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
     route_states = list()
     for route_metadata in message.metadata.routes:
-        rs = RouteState(
-            route_metadata.route, address_to_metadata=route_metadata.address_metadata or {}
-        )
-        route_states.append(rs)
+        try:
+            rs = RouteState(
+                route_metadata.route, address_to_metadata=route_metadata.address_metadata or {}
+            )
+            route_states.append(rs)
+        except ValueError as ex:
+            log.warning("Invalid metadata in received route", route=route_metadata, error=str(ex))
 
     transfer_state = LockedTransferSignedState(
         message_identifier=message.message_identifier,

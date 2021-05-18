@@ -47,6 +47,10 @@ def prune_route_table(
     contains only routes using the same forward channel and removes our own
     address in the process.
     Note that address metadata are kept complete for the whole route.
+
+    Also note that we don't need to handle ``ValueError``s here since the new
+    ``RouteState``s are built from existing ones, which means the metadata have
+    already been validated.
     """
 
     return [

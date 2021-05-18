@@ -72,20 +72,24 @@ def get_best_routes(
                     if address_metadata:
                         address_to_address_metadata[Address(to_address)] = address_metadata
                 except ServiceRequestFailed as ex:
-                    log.warning(
-                        f"PFS returned an error while trying to fetch user information: \n{ex}"
-                    )
+                    msg = f"PFS returned an error while trying to fetch user information: \n{ex}"
+                    log.warning(msg)
+                    return msg, [], None
 
-                direct_route = RouteState(
-                    route=[Address(from_address), Address(to_address)],
-                    estimated_fee=FeeAmount(0),
-                    address_to_metadata=address_to_address_metadata,
-                )
-                return None, [direct_route], None
+                try:
+                    direct_route = RouteState(
+                        route=[Address(from_address), Address(to_address)],
+                        estimated_fee=FeeAmount(0),
+                        address_to_metadata=address_to_address_metadata,
+                    )
+                    return None, [direct_route], None
+                except ValueError as ex:
+                    return str(ex), [], None
 
     if pfs_config is None or one_to_n_address is None:
-        log.warning("Pathfinding Service could not be used.")
-        return "Pathfinding Service could not be used.", list(), None
+        msg = "Pathfinding Service could not be used."
+        log.warning(msg)
+        return msg, list(), None
 
     # Does any channel have sufficient capacity for the payment?
     channels = [
@@ -239,8 +243,12 @@ def make_route_state(
         for address, metadata in address_to_metadata.items()
     }
 
-    return RouteState(
-        route=canonical_path,
-        address_to_metadata=canonical_address_metadata,
-        estimated_fee=estimated_fee,
-    )
+    try:
+        return RouteState(
+            route=canonical_path,
+            address_to_metadata=canonical_address_metadata,
+            estimated_fee=estimated_fee,
+        )
+    except ValueError as ex:
+        log.warning("Invalid metadata in route", error=str(ex))
+        return None
