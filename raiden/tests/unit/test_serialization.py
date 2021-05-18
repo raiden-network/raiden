@@ -276,3 +276,38 @@ def test_hashing():
     """All messages must be hashable for de-duplication to work."""
     for message in messages:
         assert hash(message), "hashing failed"
+
+
+def test_deserialize_without_metadata():
+    """address_metadata is optional in LockedTransfer messages
+
+    Regression test for https://github.com/raiden-network/raiden/issues/7052
+    """
+    m = {
+        "type": "LockedTransfer",
+        "message_identifier": "1621260201713",
+        "chain_id": "4321",
+        "token_network_address": "0x32626F60da0aF910293EcdeC2123932db4138A81",
+        "channel_identifier": "2",
+        "nonce": "1",
+        "transferred_amount": "0",
+        "locked_amount": "100",
+        "locksroot": "0x70f5bc325544293c71c6dbd0b47ce3acc0c8dc1dc2459c2606d9e6a264ff8a42",
+        "payment_identifier": "1621260201680",
+        "token": "0x0c7309dF25335dDf05ca0853Fc95Df49421DaF02",
+        "recipient": "0x517aAD51D0e9BbeF3c64803F86b3B9136641D9ec",
+        "lock": {
+            "amount": "100",
+            "expiration": "335",
+            "secrethash": "0xec19a77fb42be8b7c4ca467f83aa577007da49bd18fe80c7abb8ca10d9b02d46",
+        },
+        "target": "0x517aAD51D0e9BbeF3c64803F86b3B9136641D9ec",
+        "initiator": "0x14791697260E4c9A71f18484C9f997B308e59325",
+        "metadata": {"routes": [{"route": ["0x517aAD51D0e9BbeF3c64803F86b3B9136641D9ec"]}]},
+        "signature": (
+            "0x536ab67c1a7d5243d92edb1f59e3bb64335526a31622110bf9d80f16c26abd464c4"
+            "9b0cf736dc48481aa1b54f1d340acca93caf4540cc3333e725db507f4769d1b"
+        ),
+    }
+
+    MessageSerializer.deserialize(json.dumps(m))
