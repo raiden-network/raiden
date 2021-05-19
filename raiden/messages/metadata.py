@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 
 import canonicaljson
@@ -20,7 +21,7 @@ class RouteMetadata:
         address_metadata: Optional[Dict[Address, AddressMetadata]] = None,
     ) -> None:
 
-        self.address_metadata = address_metadata or {}
+        self.address_metadata = deepcopy(address_metadata) or {}
         self.route = route
         self._validate_address_metadata()
 
