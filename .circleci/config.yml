@@ -578,6 +578,11 @@ jobs:
             source .circleci/get_archive_tag.sh
             make bundle-docker
             echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-${RELEASE_TYPE}-linux-<<parameters.architecture>>.txt
+      - run:
+          name: Test if Binary can be launched
+          command: |
+            tar -C /tmp -xf dist/archive/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz
+            /tmp/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>> --help
       - persist_to_workspace:
           root: "~"
           paths:
@@ -610,6 +615,10 @@ jobs:
             pyinstaller --noconfirm --clean raiden.spec
             zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64
             echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-${RELEASE_TYPE}-macOS-x86_64.txt
+      - run:
+          name: Test if Binary can be launched
+          command: |
+            dist/raiden-${ARCHIVE_TAG}-macOS-x86_64 --help
       - persist_to_workspace:
           root: "~"
           paths:
