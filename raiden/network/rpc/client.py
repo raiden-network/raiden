@@ -1155,7 +1155,7 @@ class JSONRPCClient:
             eth_node=self.eth_node,
             extra_log_details=extra_log_details,
         )
-        return pending.estimate_gas(self.get_checking_block())
+        return pending.estimate_gas(BLOCK_ID_PENDING)
 
     def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
         """Allocates an unique `nonce` and send the transaction to the blockchain.
@@ -1598,18 +1598,6 @@ class JSONRPCClient:
             msg = f"Failed to execute {transaction_name} due to insufficient ETH"
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
             raise InsufficientEth(msg)
-
-    def get_checking_block(self) -> BlockIdentifier:
-        """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
-        In parity doing any call() with the 'pending' block no longer falls back
-        to the latest if no pending block is found but throws a mistaken error.
-        Until that bug is fixed we need to enforce special behaviour for parity
-        and use the latest block for checking.
-        """
-        checking_block: BlockIdentifier = BLOCK_ID_PENDING
-        if self.eth_node is EthClient.PARITY:
-            checking_block = BLOCK_ID_LATEST
-        return checking_block
 
     def wait_until_block(
         self, target_block_number: BlockNumber, retry_timeout: float = 0.5

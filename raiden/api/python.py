@@ -4,7 +4,7 @@ from eth_utils import is_binary_address
 
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
+from raiden.constants import BLOCK_ID_PENDING, NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ConfigurationError,
@@ -352,14 +352,14 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_network_address: TokenNetworkAddress,
         partner_address: Address,
-        block_identifier: Optional[BlockIdentifier] = None,
+        block_identifier: BlockIdentifier = BLOCK_ID_PENDING,
     ) -> bool:
         proxy_manager = self.raiden.proxy_manager
         proxy = proxy_manager.address_to_token_network[token_network_address]
         channel_identifier = proxy.get_channel_identifier_or_none(
             participant1=self.raiden.address,
             participant2=partner_address,
-            block_identifier=block_identifier or proxy_manager.client.get_checking_block(),
+            block_identifier=block_identifier,
         )
 
         return channel_identifier is not None
