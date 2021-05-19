@@ -7,7 +7,7 @@ from gevent.event import AsyncResult
 from gevent.threading import Lock
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.constants import BLOCK_ID_LATEST, EMPTY_ADDRESS, UINT256_MAX
+from raiden.constants import BLOCK_ID_LATEST, BLOCK_ID_PENDING, EMPTY_ADDRESS, UINT256_MAX
 from raiden.exceptions import BrokenPreconditionError, RaidenRecoverableError
 from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import raise_on_call_returned_empty
@@ -476,7 +476,7 @@ class UserDeposit:
             # precondition checks but must still set the amount_to_deposit to a
             # reasonable value.
             previous_total_deposit = self.get_total_deposit(
-                address=beneficiary, block_identifier=self.client.get_checking_block()
+                address=beneficiary, block_identifier=BLOCK_ID_PENDING
             )
             amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
         except BadFunctionCallOutput:
