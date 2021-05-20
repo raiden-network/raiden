@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch
 
 import pytest
-from click.core import ParameterSource  # type: ignore
+from click.core import ParameterSource
 from click.testing import CliRunner
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 

@@ -1,7 +1,7 @@
 from typing import Any, Dict, Tuple
 from unittest import mock
 
-from click.core import ParameterSource  # type: ignore
+from click.core import ParameterSource
 
 from raiden.ui import cli
 

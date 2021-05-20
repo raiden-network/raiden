@@ -22,7 +22,7 @@ def prompt_account(account_manager: AccountManager) -> AddressHex:
     print("")
 
     while True:
-        idx = click.prompt("Select one of them by index to continue", type=int)
+        idx = click.prompt("Select one of them by index to continue", type=int)  # type: ignore
 
         if 0 <= idx < len(addresses):
             return addresses[idx]
