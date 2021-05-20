@@ -225,6 +225,7 @@ commands:
             if [[ ${OS_NAME} == "MACOS" ]]; then
               export PATH=${PYENV_ROOT}/bin:${PATH}
               eval "$(pyenv init -)"
+              eval "$(pyenv init --path)"
               pyenv local $PYENV_PYTHON_VERSION
               echo "Detected MacOS: Using pyenv Python at $(pyenv which python<< parameters.py-version >>)"
             fi
