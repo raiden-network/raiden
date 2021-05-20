@@ -33,13 +33,13 @@ class RouteMetadata:
 
     @cached_property
     def hash(self) -> bytes:
-        return keccak(self._serialize_canonicaljson())
+        return keccak(self._serialize_canonical())
 
-    def _serialize_canonicaljson(self) -> bytes:
-        route = [to_checksum_address(address) for address in self.route]
+    def _serialize_canonical(self) -> bytes:
         if not self.address_metadata:
-            return canonicaljson.encode_canonical_json({"route": route})
+            return rlp.encode(self.route)
 
+        route = [to_checksum_address(address) for address in self.route]
         address_metadata = {
             to_checksum_address(address): metadata
             for address, metadata in self.address_metadata.items()
