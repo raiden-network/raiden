@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import pytest
+from eth_utils import to_checksum_address
 
 from raiden.exceptions import SerializationError
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
@@ -283,7 +284,7 @@ def test_deserialize_without_metadata():
 
     Regression test for https://github.com/raiden-network/raiden/issues/7052
     """
-    m = {
+    raw_message = {
         "type": "LockedTransfer",
         "message_identifier": "1621260201713",
         "chain_id": "4321",
@@ -310,4 +311,5 @@ def test_deserialize_without_metadata():
         ),
     }
 
-    MessageSerializer.deserialize(json.dumps(m))
+    msg = MessageSerializer.deserialize(json.dumps(raw_message))
+    assert to_checksum_address(msg.sender) == "0x14791697260E4c9A71f18484C9f997B308e59325"
