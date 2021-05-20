@@ -37,13 +37,13 @@ class RouteMetadata:
 
     def _serialize_canonicaljson(self) -> bytes:
         route = [to_checksum_address(address) for address in self.route]
-        if self.address_metadata is None:
-            address_metadata = None
-        else:
-            address_metadata = {
-                to_checksum_address(address): metadata
-                for address, metadata in self.address_metadata.items()
-            }
+        if not self.address_metadata:
+            return canonicaljson.encode_canonical_json({"route": route})
+
+        address_metadata = {
+            to_checksum_address(address): metadata
+            for address, metadata in self.address_metadata.items()
+        }
         return canonicaljson.encode_canonical_json(
             {"route": route, "address_metadata": address_metadata}
         )
