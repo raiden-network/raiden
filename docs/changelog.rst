@@ -2,10 +2,10 @@
 Changelog
 =========
 
+* :feature:`-` Fix building of binary bundles which was broken for a while.
 * :feature:`6986` Increment DB version - this will make this release incompatible with previous releases. Please refer to `the known issues section in the docs <https://raiden-network.readthedocs.io/en/latest/other/known-issues.html#database-upgrades>`_ for details.
 * :feature:`-` Update WebUI to `version 1.2.1 <https://github.com/raiden-network/webui/releases/tag/v1.2.1>`_. Adds a dialog for interacting with the UserDeposit contract (UDC).
 * :feature:`6838` Add ``/notifcations`` endpoint for showing notifications and warnings to the user.
-
 * :feature:`6563` Faster syncing with the blockchain.
 * :feature:`-` Update WebUI to `version 1.1.1 <https://github.com/raiden-network/webui/releases/tag/v1.1.1>`_. Introduces a new "Quick Connect" that is simpler and more transparent.
 * :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
