@@ -107,7 +107,7 @@ chardet==3.0.4
     # via
     #   -r requirements-dev.txt
     #   requests
-click==8.0.0a1
+click==8.0.1
     # via
     #   -r requirements-dev.txt
     #   black
