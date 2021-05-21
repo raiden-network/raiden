@@ -579,11 +579,6 @@ def is_infura(web3: Web3) -> bool:
 def patched_web3_eth_estimate_gas(
     self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
 ) -> Wei:
-    """Temporary workaround until next web3.py release (5.X.X)
-
-    Current master of web3.py has this implementation already:
-    https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
-    """
     if "from" not in transaction and is_checksum_address(self.default_account):
         transaction = assoc(transaction, "from", self.default_account)
 
@@ -667,7 +662,6 @@ def estimate_gas_for_function(
 def patched_contractfunction_estimateGas(
     self: Any, transaction: TxParams = None, block_identifier: BlockIdentifier = None
 ) -> int:
-    """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
         estimate_gas_transaction: TxParams = {}
     else:
@@ -786,7 +780,8 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # scoped web3 instance is used for all clients
         pass
 
-    # Temporary until next web3.py release (5.X.X)
+    # We need these so that we can check for exceptions that are expected.
+    # See the docstring of check_value_error for details.
     ContractFunction.estimateGas = patched_contractfunction_estimateGas  # type: ignore
     Eth.estimateGas = patched_web3_eth_estimate_gas  # type: ignore
 
