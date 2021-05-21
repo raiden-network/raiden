@@ -389,7 +389,7 @@ def run_test_check_json_rpc_parity():
         "Parity//v2.5.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0"
     )
     assert client is EthClient.PARITY
-    assert {g1, g2, g3, g8} == {VersionSupport.SUPPORTED}
+    assert {g1, g2, g3, g8} == {VersionSupport.UNSUPPORTED}
     assert {g4, g5, g6} == {VersionSupport.WARN}
     assert v1 == "1.7.6"
     assert v2 == "1.7.7"
