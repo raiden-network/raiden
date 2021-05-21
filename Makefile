@@ -136,6 +136,7 @@ bundle-docker:
 	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux-$(ARCHITECTURE_TAG).tar.gz dist/archive/raiden-$(ARCHIVE_TAG)-linux-$(ARCHITECTURE_TAG).tar.gz
 	docker rm builder
 
+bundle: ONEFILE ?= $(ONEFILE)
 bundle:
 	pyinstaller --noconfirm --clean raiden.spec
 

@@ -4,20 +4,12 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-aioice==0.7.5
-    # via aiortc
-aiortc==1.2.0
-    # via -r requirements.in
 aniso8601==7.0.0
     # via flask-restful
 asn1crypto==1.3.0
     # via coincurve
 attrs==19.3.0
     # via jsonschema
-av==8.0.3
-    # via
-    #   -r requirements.in
-    #   aiortc
 base58==2.0.0
     # via multiaddr
 bitarray==1.2.1
@@ -30,9 +22,7 @@ certifi==2019.3.9
     # via requests
 cffi==1.12.3
     # via
-    #   aiortc
     #   coincurve
-    #   cryptography
     #   pylibsrtp
 chardet==3.0.4
     # via requests
@@ -47,16 +37,10 @@ coincurve==15.0.0
     #   raiden-contracts
 colorama==0.4.4
     # via -r requirements.in
-crc32c==2.2
-    # via aiortc
-cryptography==3.4.7
-    # via aiortc
 cytoolz==0.10.1
     # via
     #   eth-keyfile
     #   eth-utils
-dnspython==2.1.0
-    # via aioice
 eth-abi==2.1.0
     # via
     #   eth-account
@@ -127,6 +111,8 @@ hexbytes==0.2.0
     #   web3
 idna==2.8
     # via requests
+importlib-metadata==4.0.1
+    # via jsonschema
 ipfshttpclient==0.7.0a1
     # via web3
 itsdangerous==1.1.0
@@ -166,9 +152,7 @@ mypy-extensions==0.4.3
 netaddr==0.7.19
     # via multiaddr
 netifaces==0.10.9
-    # via
-    #   -r requirements.in
-    #   aioice
+    # via -r requirements.in
 objgraph==3.5.0
     # via -r requirements.in
 parsimonious==0.8.1
@@ -187,12 +171,8 @@ pycryptodome==3.8.2
     # via
     #   eth-hash
     #   eth-keyfile
-pyee==7.0.2
-    # via aiortc
 pylibsrtp==0.6.8
-    # via
-    #   -r requirements.in
-    #   aiortc
+    # via -r requirements.in
 pyrsistent==0.15.7
     # via jsonschema
 pysha3==1.0.2
@@ -239,7 +219,11 @@ toolz==0.9.0
 typeguard==2.11.1
     # via marshmallow-dataclass
 typing-extensions==3.10.0.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   importlib-metadata
+    #   structlog
+    #   web3
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
@@ -256,6 +240,8 @@ websockets==8.1
     # via web3
 werkzeug==1.0.1
     # via flask
+zipp==3.4.1
+    # via importlib-metadata
 zope.event==4.4
     # via gevent
 zope.interface==5.1.0
