@@ -80,11 +80,10 @@ def Entrypoint(
     for binary_to_remove in [
         (name, path, typecode)
         for name, path, typecode in analysis.binaries
-        if any(name.startswith(blocklist_item) for blocklist_item in BINARIES_PREFIX_BLOCKLIST)
-    ]:
+        if any(name.startswith(blocklist_item) for blocklist_item in BINARIES_PREFIX_BLOCKLIST)]:
         analysis.binaries.remove(binary_to_remove)
         analysis.binaries.filenames.remove(unique_name(binary_to_remove))
-
+        
     return analysis
 
 
@@ -152,7 +151,7 @@ else:
         a.scripts,
         exclude_binaries=True,
         name=executable_name,
-        debug=True,
+        debug="all",
         strip=False,
         upx=False,
         console=True,

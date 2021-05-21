@@ -128,7 +128,7 @@ def _run_pip_compile(
         "--verbose" if verbose else "--quiet",
         *dry_run_cmd,
         *pre_cmd,
-        "--no-index",
+        "--no-emit-index-url",
         *upgrade_packages_cmd,
         *upgrade_all_cmd,
         "--output-file",
