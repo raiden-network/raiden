@@ -38,24 +38,26 @@ def test_can_create_refund_transfer_messages():
     assert len(refund_transfer.metadata.routes) == 1
 
 
-def test_route_metadata_hashing():
+def test_route_metadata_canonical():
     properties = factories.RouteMetadataProperties()
     one_route_metadata = factories.create(properties)
     assert isinstance(one_route_metadata, RouteMetadata)
-    one_hash = one_route_metadata.hash
+    one_canonical = one_route_metadata._canonical_dict()
 
     another_route_metadata = factories.create(properties)
-    another_hash = another_route_metadata.hash
+    another_canonical = another_route_metadata._canonical_dict()
 
-    assert one_hash == another_hash, "route metadata with same routes do not match"
+    assert one_canonical == another_canonical, "route metadata with same routes do not match"
 
     inverted_route_metadata = factories.create(
         factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
     )
 
-    inverted_route_hash = inverted_route_metadata.hash
+    inverted_route_canonical = inverted_route_metadata._canonical_dict()
 
-    assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
+    assert (
+        one_canonical != inverted_route_canonical
+    ), "route metadata with inverted routes still match"
 
 
 def test_metadata_hashing():
