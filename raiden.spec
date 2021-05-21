@@ -4,6 +4,7 @@ from __future__ import print_function
 import pdb
 import platform
 import sys
+from PyInstaller.building.datastruct import unique_name
 
 from raiden.utils.system import get_system_spec
 
@@ -16,15 +17,7 @@ ONEFILE = int(os.environ.get("ONEFILE", True))
 
 # Hack: This is a list of prefixes to be removed from the `binaries`.
 #       We do this to prevent including unnecessary libraries (pyav audio / video dependencies)
-BINARIES_PREFIX_BLOCKLIST = [
-    "libav",
-    "libaom",
-    "libswscale",
-    "libswrescale",
-    "libvorbis",
-    "libx264",
-    "libx265",
-]
+BINARIES_PREFIX_BLOCKLIST = []
 
 
 def Entrypoint(
@@ -80,16 +73,17 @@ def Entrypoint(
         excludes=excludes,
         runtime_hooks=runtime_hooks,
         datas=datas,
-    )
+        )
     # `Analysis.binaries` behaves set-like and matches on the first tuple item (`name`).
     # Since library names include the version we first build a list of the concrete names
-    # by prefix matching and then subtract that via the set-like behaviour.
-    binaries_to_remove = [
-        (name, None, None)
-        for name, *_ in analysis.binaries
-        if any(name.startswith(blocklist_item) for blocklist_item in BINARIES_PREFIX_BLOCKLIST)
-    ]
-    # analysis.binaries -= binaries_to_remove
+    # by prefix matching and then remove it from the list.
+    for binary_to_remove in [
+        (name, path, typecode)
+        for name, path, typecode in analysis.binaries
+        if any(name.startswith(blocklist_item) for blocklist_item in BINARIES_PREFIX_BLOCKLIST)]:
+        analysis.binaries.remove(binary_to_remove)
+        analysis.binaries.filenames.remove(unique_name(binary_to_remove))
+        
     return analysis
 
 
