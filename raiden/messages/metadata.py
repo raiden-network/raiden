@@ -2,7 +2,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 import canonicaljson
-import rlp
 from eth_utils import keccak
 
 from raiden.messages.abstract import cached_property
@@ -31,22 +30,22 @@ class RouteMetadata:
         for address in validation_errors:
             del self.address_metadata[address]
 
-    @cached_property
-    def hash(self) -> bytes:
-        return keccak(self._serialize_canonicaljson())
+    def _canonical_dict(self) -> dict:
+        """Return a dict that can be dumped as json
 
-    def _serialize_canonicaljson(self) -> bytes:
+        Used to build signatures.
+        """
         route = [to_checksum_address(address) for address in self.route]
-        if self.address_metadata is None:
-            address_metadata = None
-        else:
-            address_metadata = {
-                to_checksum_address(address): metadata
-                for address, metadata in self.address_metadata.items()
-            }
-        return canonicaljson.encode_canonical_json(
-            {"route": route, "address_metadata": address_metadata}
-        )
+        if not self.address_metadata:
+            # We add a default value of {} when validating. Normalize this to
+            # no key when signing.
+            return {"route": route}
+
+        address_metadata = {
+            to_checksum_address(address): metadata
+            for address, metadata in self.address_metadata.items()
+        }
+        return {"route": route, "address_metadata": address_metadata}
 
     def __repr__(self) -> str:
         return f"RouteMetadata: {' -> '.join([to_checksum_address(a) for a in self.route])}"
@@ -58,7 +57,12 @@ class Metadata:
 
     @cached_property
     def hash(self) -> bytes:
-        return keccak(rlp.encode([r.hash for r in self.routes]))
+        return keccak(self._serialize_canonical())
 
     def __repr__(self) -> str:
         return f"Metadata: routes: {[repr(route) for route in self.routes]}"
+
+    def _serialize_canonical(self) -> bytes:
+        return canonicaljson.encode_canonical_json(
+            {"routes": [route._canonical_dict() for route in self.routes]}
+        )
