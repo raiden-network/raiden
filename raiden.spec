@@ -76,7 +76,7 @@ def Entrypoint(
         )
     # `Analysis.binaries` behaves set-like and matches on the first tuple item (`name`).
     # Since library names include the version we first build a list of the concrete names
-    # by prefix matching and then subtract that via the set-like behaviour.
+    # by prefix matching and then remove it from the list.
     for binary_to_remove in [
         (name, path, typecode)
         for name, path, typecode in analysis.binaries
