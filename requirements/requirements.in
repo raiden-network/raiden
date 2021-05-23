@@ -1,5 +1,5 @@
-#aiortc
-#av>=8.0.3
+aiortc
+av>=8.0.3
 cachetools
 canonicaljson
 click>=8.0.0a1

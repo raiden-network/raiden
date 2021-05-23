@@ -15,6 +15,7 @@ from typing import Any, Callable, DefaultDict, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
+from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
 from requests.packages import urllib3
@@ -25,7 +26,7 @@ from synapse.handlers.auth import AuthHandler
 from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
 from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
-from raiden.network.transport.matrix.transport import HAVE_RTC, MatrixTransport, MessagesQueue
+from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
@@ -33,11 +34,6 @@ from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
 from raiden.utils.typing import Address, Iterable, Optional, Port, Union
 from raiden_contracts.utils.type_aliases import Signature
-
-if HAVE_RTC:
-    from aiortc import RTCSessionDescription
-else:
-    from raiden.network.transport.matrix.transport import RTCSessionDescription
 
 log = get_logger(__name__)
 
