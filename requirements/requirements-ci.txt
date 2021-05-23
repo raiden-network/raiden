@@ -8,6 +8,8 @@ aioice==0.7.5
     # via
     #   -r requirements-dev.txt
     #   aiortc
+aiortc-pyav-stub==0.1.1
+    # via -r requirements-dev.txt
 aiortc==1.2.0
     # via -r requirements-dev.txt
 altgraph==0.16.1
@@ -282,10 +284,17 @@ idna==2.8
     #   matrix-synapse
     #   requests
     #   twisted
-importlib-metadata==3.7.3
+importlib-metadata==4.0.1
     # via
     #   -r requirements-dev.txt
+    #   click
+    #   flake8
+    #   flake8-comprehensions
+    #   jsonschema
+    #   pep517
     #   pluggy
+    #   pyinstaller
+    #   pytest
 incremental==17.5.0
     # via
     #   -r requirements-dev.txt
@@ -336,7 +345,9 @@ lru-dict==1.1.6
     #   -r requirements-dev.txt
     #   web3
 macholib==1.14
-    # via -r requirements-ci.in
+    # via
+    #   -r requirements-ci.in
+    #   pyinstaller
 markupsafe==1.1.1
     # via
     #   -r requirements-dev.txt
@@ -692,6 +703,8 @@ twisted[tls]==21.2.0
 typed-ast==1.4.3
     # via
     #   -r requirements-dev.txt
+    #   astroid
+    #   black
     #   mypy
 typeguard==2.11.1
     # via
@@ -700,9 +713,13 @@ typeguard==2.11.1
 typing-extensions==3.10.0.0
     # via
     #   -r requirements-dev.txt
+    #   black
+    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
+    #   structlog
+    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements-dev.txt
@@ -754,6 +771,7 @@ zipp==3.4.1
     # via
     #   -r requirements-dev.txt
     #   importlib-metadata
+    #   pep517
 zope.event==4.4
     # via
     #   -r requirements-dev.txt

@@ -6,6 +6,14 @@ monkey.patch_all(subprocess=False, thread=False)
 
 # isort:split
 
+import aiortc_pyav_stub
+
+# Install the av replacement stub to make sure we catch possible version
+# upgrade breakages
+aiortc_pyav_stub.install_as_av()
+
+# isort: split
+
 import pytest
 
 # Execute these before the raiden imports because rewrites can't work after the

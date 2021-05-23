@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import gevent
-import pkg_resources
 import structlog
 from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, is_binary_address, to_normalized_address
@@ -21,7 +20,6 @@ from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError
 from web3.types import BlockIdentifier
 
-import raiden
 from raiden.constants import (
     EMPTY_SIGNATURE,
     MATRIX_AUTO_SELECT_SERVER,
@@ -73,6 +71,7 @@ from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
+from raiden.utils.system import get_system_spec
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
@@ -435,7 +434,7 @@ class MatrixTransport(Runnable):
                 self._config.retry_interval_max,
             )
 
-        version = pkg_resources.require(raiden.__name__)[0].version
+        version = get_system_spec()["raiden"]
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
             homeserver_candidates,
