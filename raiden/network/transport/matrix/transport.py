@@ -13,6 +13,7 @@ from uuid import uuid4
 import gevent
 import pkg_resources
 import structlog
+from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import Semaphore
@@ -43,6 +44,7 @@ from raiden.network.transport.matrix.client import (
     MatrixSyncMessages,
     Room,
 )
+from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     AddressReachability,
@@ -91,21 +93,6 @@ from raiden.utils.typing import (
     Tuple,
     UserID,
 )
-
-HAVE_RTC = False
-try:
-    from aiortc import RTCSessionDescription
-    from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
-
-    HAVE_RTC = True
-except ImportError:
-
-    class WebRTCManager:
-        pass
-
-    class RTCSessionDescription:
-        pass
-
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -459,16 +446,14 @@ class MatrixTransport(Runnable):
             user_agent=f"Raiden {version}",
         )
 
-        self._web_rtc_manager: Optional[WebRTCManager] = None
-        if HAVE_RTC:
-            # web RTC
-            self._web_rtc_manager = WebRTCManager(
-                node_address=None,
-                _handle_message_callback=self._handle_web_rtc_messages,
-                _handle_sdp_callback=self._handle_sdp_callback,
-                _handle_candidates_callback=self._handle_candidates_callback,
-                _close_connection_callback=self._handle_closed_connection,
-            )
+        # web RTC
+        self._web_rtc_manager = WebRTCManager(
+            node_address=None,
+            _handle_message_callback=self._handle_web_rtc_messages,
+            _handle_sdp_callback=self._handle_sdp_callback,
+            _handle_candidates_callback=self._handle_candidates_callback,
+            _close_connection_callback=self._handle_closed_connection,
+        )
 
         self.server_url = self._client.api.base_url
         self._server_name = urlparse(self.server_url).netloc
@@ -564,8 +549,7 @@ class MatrixTransport(Runnable):
         self._stop_event.clear()
         self._starting = True
         self._raiden_service = raiden_service
-        if HAVE_RTC:
-            self._web_rtc_manager.node_address = self._raiden_service.address
+        self._web_rtc_manager.node_address = self._raiden_service.address
 
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
@@ -654,19 +638,18 @@ class MatrixTransport(Runnable):
         self._broadcast_event.set()
 
         if self._raiden_service:
-            if HAVE_RTC:
-                self._web_rtc_manager.stop()
-                for (
-                    partner_address,
-                    rtc_partner,
-                ) in self._web_rtc_manager.address_to_rtc_partners.items():
-                    hang_up_message = {
-                        "type": RTCMessageType.HANGUP.value,
-                        "call_id": rtc_partner.call_id,
-                    }
-                    self._send_raw(
-                        partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE
-                    )
+            self._web_rtc_manager.stop()
+            for (
+                partner_address,
+                rtc_partner,
+            ) in self._web_rtc_manager.address_to_rtc_partners.items():
+                hang_up_message = {
+                    "type": RTCMessageType.HANGUP.value,
+                    "call_id": rtc_partner.call_id,
+                }
+                self._send_raw(
+                    partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE
+                )
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -1104,9 +1087,6 @@ class MatrixTransport(Runnable):
         """
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        if not HAVE_RTC:
-            return
-
         for received_message in call_messages:
             call_message = received_message.message
             partner_address = received_message.sender
@@ -1206,7 +1186,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
         user_ids: Set[UserID] = set()
-        if HAVE_RTC and self._web_rtc_manager.has_ready_channel(receiver_address):
+        if self._web_rtc_manager.has_ready_channel(receiver_address):
             communication_medium = CommunicationMedium.WEB_RTC
         else:
             user_id = get_user_id_from_metadata(receiver_address, receiver_metadata)
@@ -1253,9 +1233,6 @@ class MatrixTransport(Runnable):
             return
 
         assert self._raiden_service is not None, "_raiden_service not set"
-
-        if not HAVE_RTC:
-            return
 
         self._web_rtc_manager.get_rtc_partner(address).sync_events.aio_allow_init.set()
         lower_address = my_place_or_yours(self._raiden_service.address, address)
@@ -1340,9 +1317,6 @@ class MatrixTransport(Runnable):
         """
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        if not HAVE_RTC:
-            return
-
         if self._stop_event.ready():
             return
 
@@ -1424,7 +1398,7 @@ class MatrixTransport(Runnable):
                 self._maybe_initialize_web_rtc(address)
 
         elif reachability is AddressReachability.UNREACHABLE:
-            if HAVE_RTC and address in self._web_rtc_manager.address_to_rtc_partners:
+            if address in self._web_rtc_manager.address_to_rtc_partners:
                 self._web_rtc_manager.close_connection(address)
         else:
             raise TypeError(f'Unexpected reachability state "{reachability}".')
