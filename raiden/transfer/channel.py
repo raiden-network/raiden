@@ -32,9 +32,7 @@ from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, Ca
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendUnlock,
-    refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import (
     FeeScheduleState,
@@ -1528,49 +1526,6 @@ def send_lockedtransfer(
     channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
     return send_locked_transfer_event
-
-
-def send_refundtransfer(
-    channel_state: NettingChannelState,
-    initiator: InitiatorAddress,
-    target: TargetAddress,
-    amount: PaymentWithFeeAmount,
-    message_identifier: MessageID,
-    payment_identifier: PaymentID,
-    expiration: BlockExpiration,
-    secrethash: SecretHash,
-    route_state: RouteState,
-    recipient_metadata: AddressMetadata = None,
-) -> SendRefundTransfer:
-    msg = "Refunds are only valid for *known and pending* transfers"
-    assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
-
-    msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
-
-    send_mediated_transfer, pending_locks = create_sendlockedtransfer(
-        channel_state=channel_state,
-        initiator=initiator,
-        target=target,
-        amount=amount,
-        message_identifier=message_identifier,
-        payment_identifier=payment_identifier,
-        expiration=expiration,
-        secrethash=secrethash,
-        route_states=[route_state],
-        recipient_metadata=recipient_metadata,
-    )
-
-    mediated_transfer = send_mediated_transfer.transfer
-    lock = mediated_transfer.lock
-
-    channel_state.our_state.balance_proof = mediated_transfer.balance_proof
-    channel_state.our_state.nonce = mediated_transfer.balance_proof.nonce
-    channel_state.our_state.pending_locks = pending_locks
-    channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
-
-    refund_transfer = refund_from_sendmediated(send_mediated_transfer)
-    return refund_transfer
 
 
 def send_unlock(

@@ -3,7 +3,6 @@ from raiden.messages.synchronization import Processed
 from raiden.messages.transfers import (
     LockedTransfer,
     LockExpired,
-    RefundTransfer,
     RevealSecret,
     SecretRequest,
     Unlock,
@@ -19,7 +18,6 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
@@ -40,9 +38,6 @@ def message_from_sendevent(send_event: SendMessageEvent) -> Message:
     elif type(send_event) == SendSecretRequest:
         assert isinstance(send_event, SendSecretRequest), MYPY_ANNOTATION
         return SecretRequest.from_event(send_event)
-    elif type(send_event) == SendRefundTransfer:
-        assert isinstance(send_event, SendRefundTransfer), MYPY_ANNOTATION
-        return RefundTransfer.from_event(send_event)
     elif type(send_event) == SendLockExpired:
         assert isinstance(send_event, SendLockExpired), MYPY_ANNOTATION
         return LockExpired.from_event(send_event)
