@@ -63,7 +63,6 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockSuccess,
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
@@ -177,7 +176,6 @@ class RaidenEventHandler(EventHandler):
             SendSecretReveal: [self.handle_send_secretreveal, [message_queues]],
             SendUnlock: [self.handle_send_balanceproof, [message_queues]],
             SendSecretRequest: [self.handle_send_secretrequest, [chain_state, message_queues]],
-            SendRefundTransfer: [self.handle_send_refundtransfer, [message_queues]],
             SendWithdrawRequest: [self.handle_send_withdrawrequest, [message_queues]],
             SendWithdrawConfirmation: [self.handle_send_withdraw, [message_queues]],
             SendWithdrawExpired: [self.handle_send_withdrawexpired, [message_queues]],
@@ -280,18 +278,6 @@ class RaidenEventHandler(EventHandler):
         raiden.sign(secret_request_message)
         message_queues[secret_request_event.queue_identifier].append(
             (secret_request_message, secret_request_event.recipient_metadata)
-        )
-
-    @staticmethod
-    def handle_send_refundtransfer(
-        raiden: "RaidenService",
-        refund_transfer_event: SendRefundTransfer,
-        message_queues: Dict[QueueIdentifier, List[Tuple[Message, Optional[AddressMetadata]]]],
-    ) -> None:
-        refund_transfer_message = message_from_sendevent(refund_transfer_event)
-        raiden.sign(refund_transfer_message)
-        message_queues[refund_transfer_event.queue_identifier].append(
-            (refund_transfer_message, refund_transfer_event.recipient_metadata)
         )
 
     @staticmethod

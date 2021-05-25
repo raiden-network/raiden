@@ -20,18 +20,6 @@ from raiden.utils.typing import (
 )
 
 
-def refund_from_sendmediated(
-    send_lockedtransfer_event: "SendLockedTransfer",
-) -> "SendRefundTransfer":
-    return SendRefundTransfer(
-        recipient=send_lockedtransfer_event.recipient,
-        recipient_metadata=send_lockedtransfer_event.recipient_metadata,
-        message_identifier=send_lockedtransfer_event.message_identifier,
-        transfer=send_lockedtransfer_event.transfer,
-        canonical_identifier=send_lockedtransfer_event.queue_identifier.canonical_identifier,
-    )
-
-
 @dataclass(frozen=True)
 class SendLockExpired(SendMessageEvent):
     balance_proof: BalanceProofUnsignedState
@@ -128,21 +116,6 @@ class SendSecretRequest(SendMessageEvent):
     amount: PaymentAmount
     expiration: BlockExpiration
     secrethash: SecretHash
-
-
-@dataclass(frozen=True)
-class SendRefundTransfer(SendMessageEvent):
-    """Event used to cleanly backtrack the current node in the route.
-    This message will pay back the same amount of token from the recipient to
-    the sender, allowing the sender to try a different route without the risk
-    of losing token.
-    """
-
-    transfer: LockedTransferUnsignedState
-
-    @property
-    def balance_proof(self) -> BalanceProofUnsignedState:
-        return self.transfer.balance_proof
 
 
 @dataclass(frozen=True)

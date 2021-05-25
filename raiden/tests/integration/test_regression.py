@@ -8,10 +8,7 @@ from raiden.messages.transfers import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.raiden_service import RaidenService
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import (
-    raiden_events_search_for_item,
-    raiden_state_changes_search_for_item,
-)
+from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
     make_message_identifier,
@@ -25,8 +22,7 @@ from raiden.tests.utils.transfer import (
     watch_for_unlock_failures,
 )
 from raiden.transfer import views
-from raiden.transfer.mediated_transfer.events import EventRouteFailed, SendSecretReveal
-from raiden.transfer.mediated_transfer.state_change import ReceiveTransferCancelRoute
+from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.utils.typing import (
     BlockExpiration,
     InitiatorAddress,
@@ -243,52 +239,3 @@ def test_regression_register_secret_once(secret_registry_address, proxy_manager)
     previous_nonce = proxy_manager.client._available_nonce
     secret_registry.register_secret_batch(secrets=[secret])
     assert previous_nonce == proxy_manager.client._available_nonce
-
-
-@raise_on_failure
-@pytest.mark.parametrize("number_of_nodes", [5])
-@pytest.mark.parametrize("channels_per_node", [0])
-def test_regression_payment_complete_after_refund_to_the_initiator(
-    raiden_network: List[RaidenService], token_addresses, settle_timeout, deposit
-):
-    """Regression test for issue #3915"""
-    app0, app1, app2, app3, app4 = raiden_network
-    token = token_addresses[0]
-    registry_address = app0.default_registry.address
-
-    # Topology:
-    #
-    #  0 -> 1 -> 2
-    #  |         ^
-    #  v         |
-    #  3 ------> 4
-
-    app_channels = [(app0, app1), (app1, app2), (app0, app3), (app3, app4), (app4, app2)]
-    open_and_wait_for_channels(app_channels, registry_address, token, deposit, settle_timeout)
-
-    # Use all deposit from app1->app2 to force a refund
-    transfer(
-        initiator_app=app1,
-        target_app=app2,
-        token_address=token,
-        amount=PaymentAmount(deposit),
-        identifier=PaymentID(1),
-        routes=[[app1, app2]],
-    )
-
-    # Send a transfer that will result in a refund app1->app0
-    transfer(
-        initiator_app=app0,
-        target_app=app2,
-        token_address=token,
-        amount=PaymentAmount(50),
-        identifier=PaymentID(2),
-        timeout=20,
-        expect_unlock_failures=True,
-        routes=[[app0, app1, app2], [app0, app3, app4, app2]],
-    )
-
-    assert raiden_state_changes_search_for_item(
-        raiden=app0, item_type=ReceiveTransferCancelRoute, attributes={}
-    )
-    assert raiden_events_search_for_item(raiden=app0, item_type=EventRouteFailed, attributes={})

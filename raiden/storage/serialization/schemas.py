@@ -29,7 +29,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
@@ -277,7 +276,6 @@ class BaseSchema(marshmallow.Schema):
                 SendSecretReveal,
                 SendUnlock,
                 SendSecretRequest,
-                SendRefundTransfer,
                 SendWithdrawRequest,
                 SendWithdrawConfirmation,
                 SendWithdrawExpired,

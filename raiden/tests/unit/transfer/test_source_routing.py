@@ -13,7 +13,7 @@ from raiden.transfer import views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator_manager, mediator
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import (
     ActionTransferReroute,
     ReceiveTransferCancelRoute,
@@ -479,7 +479,3 @@ def test_mediator_skips_used_routes():
     events = transition_result.events
     assert mediator_state is not None
     assert events
-
-    # no other routes available, so refund HOP1
-    assert isinstance(events[-1], SendRefundTransfer)
-    assert events[-1].recipient == factories.HOP1

@@ -16,7 +16,6 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockFailed,
     EventUnlockSuccess,
     SendLockedTransfer,
-    SendRefundTransfer,
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState, Interpolate
@@ -439,76 +438,6 @@ def forward_transfer_pair(
     )
 
     return transfer_pair, mediated_events
-
-
-def backward_transfer_pair(
-    backward_channel: NettingChannelState,
-    payer_transfer: LockedTransferSignedState,
-    initial_payer_transfer: LockedTransferSignedState,
-    pseudo_random_generator: random.Random,
-    block_number: BlockNumber,
-) -> Tuple[Optional[MediationPairState], List[Event]]:
-    """Sends a transfer backwards, allowing the previous hop to try a new
-    route.
-
-    When all the routes available for this node failed, send a transfer
-    backwards with the same amount and secrethash, allowing the previous hop to
-    do a retry.
-
-    Args:
-        backward_channel: The original channel which sent the mediated transfer
-            to this node.
-        payer_transfer: The *latest* payer transfer which is backing the
-            mediation.
-        initial_payer_transfer: The *initial* transfer for the corresponding payment that
-            caused our node to try to forward-mediate that payment.
-            It is the same as `payer_transfer` when our node has no valid forward-path to the
-            target on the first forward-mediation attempt.
-        block_number: The current block number.
-
-    Returns:
-        The mediator pair and the corresponding refund event.
-    """
-    transfer_pair = None
-    events: List[Event] = list()
-
-    lock = payer_transfer.lock
-    lock_timeout = BlockTimeout(lock.expiration - block_number)
-
-    # Ensure the refund transfer's lock has a safe expiration, otherwise don't
-    # do anything and wait for the received lock to expire.
-    if channel.is_channel_usable_for_mediation(backward_channel, lock.amount, lock_timeout):
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-
-        backward_route_state = RouteState(
-            route=[backward_channel.our_state.address], address_to_metadata={}
-        )
-
-        refund_transfer = channel.send_refundtransfer(
-            channel_state=backward_channel,
-            initiator=payer_transfer.initiator,
-            target=payer_transfer.target,
-            # `amount` should be `get_lock_amount_after_fees(...)`, but fees
-            # for refunds are currently not defined, so we assume fee=0 to keep
-            # it simple, for now.
-            amount=lock.amount,
-            message_identifier=message_identifier,
-            payment_identifier=payer_transfer.payment_identifier,
-            expiration=lock.expiration,
-            secrethash=lock.secrethash,
-            route_state=backward_route_state,
-            recipient_metadata=initial_payer_transfer.payer_address_metadata,
-        )
-
-        transfer_pair = MediationPairState(
-            payer_transfer=payer_transfer,
-            payee_address=backward_channel.partner_state.address,
-            payee_transfer=refund_transfer.transfer,
-        )
-
-        events.append(refund_transfer)
-
-    return transfer_pair, events
 
 
 def set_offchain_secret(
@@ -1105,33 +1034,7 @@ def mediate_transfer(
             state.transfers_pair.append(mediation_transfer_pair)
             return TransitionResult(state, mediation_events)
 
-    # Could not mediate, try to refund
-    if state.transfers_pair:
-        initial_transfer_pair = state.transfers_pair[0]
-        initial_payer_transfer = initial_transfer_pair.payer_transfer
-        initial_channel = addresses_to_channel.get(
-            (
-                initial_transfer_pair.payer_transfer.balance_proof.token_network_address,
-                initial_transfer_pair.payer_transfer.payer_address,
-            )
-        )
-    else:
-        initial_channel = payer_channel
-        initial_payer_transfer = payer_transfer
-
-    if initial_channel:
-        refund_transfer_pair, refund_events = backward_transfer_pair(
-            initial_channel,
-            payer_transfer,
-            initial_payer_transfer,
-            pseudo_random_generator,
-            block_number,
-        )
-        if refund_transfer_pair:
-            state.transfers_pair.append(refund_transfer_pair)
-            return TransitionResult(state, refund_events)
-
-    # Neither mediation nor refund possible, wait for an opportunity to do either
+    # Could not mediate, wait for a later time to do so
     state.waiting_transfer = WaitingTransferState(payer_transfer)
     return TransitionResult(state, [])
 
@@ -1215,7 +1118,7 @@ def handle_block(
             mediator_state = mediation_attempt.new_state
             mediate_events = mediation_attempt.events
             success_filter = lambda event: (
-                isinstance(event, (SendLockedTransfer, SendRefundTransfer))
+                isinstance(event, SendLockedTransfer)
                 and event.transfer.lock.secrethash == secrethash
             )
 
@@ -1328,6 +1231,11 @@ def handle_offchain_secretreveal(
         state_change=mediator_state_change, transfer_secrethash=mediator_state.secrethash
     )
     is_secret_unknown = mediator_state.secret is None
+
+    if not mediator_state.transfers_pair:
+        # This will not happen during normal operation, but attackers might
+        # send weird messages.
+        return TransitionResult(mediator_state, list())
 
     # a SecretReveal should be rejected if the payer transfer
     # has expired. To check for this, we use the last

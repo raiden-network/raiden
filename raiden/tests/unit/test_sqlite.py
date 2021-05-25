@@ -26,7 +26,6 @@ from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendUnlock,
 )
 from raiden.transfer.mediated_transfer.state_change import (
@@ -318,19 +317,10 @@ def test_get_event_with_balance_proof():
         canonical_identifier=factories.make_canonical_identifier(),
     )
 
-    refund_transfer = SendRefundTransfer(
-        recipient=partner_address,
-        recipient_metadata=None,
-        message_identifier=MessageID(next(counter)),
-        transfer=make_transfer_from_counter(counter),
-        canonical_identifier=factories.make_canonical_identifier(),
-    )
-
     events_balanceproofs = [
         (lock_expired, lock_expired.balance_proof),
         (locked_transfer, locked_transfer.balance_proof),
         (send_balance_proof, send_balance_proof.balance_proof),
-        (refund_transfer, refund_transfer.transfer.balance_proof),
     ]
 
     state_change = Block(BlockNumber(1), BlockGasLimit(1), factories.make_block_hash())

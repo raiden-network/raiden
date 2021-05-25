@@ -1,8 +1,6 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
-from eth_utils import keccak
-
 from raiden.messages.decode import balanceproof_from_envelope
 from raiden.messages.encode import message_from_sendevent
 from raiden.tests.utils import factories
@@ -12,11 +10,7 @@ from raiden.tests.utils.factories import (
     HOP2_KEY,
     UNIT_SECRET,
     UNIT_SECRETHASH,
-    UNIT_TOKEN_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
-    UNIT_TRANSFER_IDENTIFIER,
-    UNIT_TRANSFER_INITIATOR,
-    UNIT_TRANSFER_TARGET,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
     make_channel_set,
@@ -27,14 +21,12 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
 )
 from raiden.transfer.mediated_transfer.state import MediatorTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ReceiveLockExpired,
     ReceiveSecretReveal,
-    ReceiveTransferRefund,
 )
 from raiden.transfer.state import message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
@@ -123,111 +115,6 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=pseudo_random_generator,
     )
-
-
-def test_regression_send_refund():
-    """Regression test for discarded refund transfer.
-
-    The handle_refundtransfer used to discard events from the channel state
-    machine, which led to the state being updated but the message to the
-    partner was never sent.
-
-    Also, for issue: https://github.com/raiden-network/raiden/issues/3170
-    It was noticed that when receiving the same refund transfer twice, the mediator
-    would detect an invalid refund and clear the mediator state. So the test also
-    checks that mediator rejects the duplicate transfer and keeps the mediator
-    state unchanged.
-    """
-    pseudo_random_generator = random.Random()
-    setup = factories.make_transfers_pair(3)
-
-    mediator_state = MediatorTransferState(secrethash=UNIT_SECRETHASH, routes=[])
-    mediator_state.transfers_pair = setup.transfers_pair
-
-    last_pair = setup.transfers_pair[-1]
-    canonical_identifier = last_pair.payee_transfer.balance_proof.canonical_identifier
-    lock_expiration = last_pair.payee_transfer.lock.expiration
-
-    received_transfer = factories.create(
-        factories.LockedTransferSignedStateProperties(
-            expiration=lock_expiration,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            canonical_identifier=canonical_identifier,
-            sender=setup.channels.partner_address(2),
-            pkey=setup.channels.partner_privatekeys[2],
-            message_identifier=factories.make_message_identifier(),
-        )
-    )
-
-    # All three channels have been used
-    refund_state_change = ReceiveTransferRefund(
-        transfer=received_transfer,
-        balance_proof=received_transfer.balance_proof,
-        sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
-    )
-
-    iteration = mediator.handle_refundtransfer(
-        mediator_state=mediator_state,
-        mediator_state_change=refund_state_change,
-        channelidentifiers_to_channels=setup.channel_map,
-        addresses_to_channel=setup.channels.addresses_to_channel(),
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=setup.block_number,
-    )
-
-    first_pair = setup.transfers_pair[0]
-    first_payer_transfer = first_pair.payer_transfer
-    payer_channel = mediator.get_payer_channel(setup.channel_map, first_pair)
-    lock = channel.get_lock(end_state=payer_channel.partner_state, secrethash=UNIT_SECRETHASH)
-    token_network_address = first_payer_transfer.balance_proof.token_network_address
-    assert search_for_item(
-        iteration.events,
-        SendRefundTransfer,
-        {
-            "recipient": setup.channels.partner_address(0),
-            "queue_identifier": {
-                "recipient": setup.channels.partner_address(0),
-                "canonical_identifier": {
-                    "chain_identifier": first_payer_transfer.balance_proof.chain_id,
-                    "token_network_address": token_network_address,
-                    "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
-                },
-            },
-            "transfer": {
-                "payment_identifier": UNIT_TRANSFER_IDENTIFIER,
-                "token": UNIT_TOKEN_ADDRESS,
-                "balance_proof": {
-                    "transferred_amount": 0,
-                    "locked_amount": UNIT_TRANSFER_AMOUNT,
-                    "locksroot": keccak(lock.encoded),
-                    "token_network_address": token_network_address,
-                    "channel_identifier": first_payer_transfer.balance_proof.channel_identifier,
-                    "chain_id": first_payer_transfer.balance_proof.chain_id,
-                },
-                "lock": {
-                    "amount": lock.amount,
-                    "expiration": lock.expiration,
-                    "secrethash": lock.secrethash,
-                },
-                "initiator": UNIT_TRANSFER_INITIATOR,
-                "target": UNIT_TRANSFER_TARGET,
-            },
-        },
-    )
-
-    duplicate_iteration = mediator.handle_refundtransfer(
-        mediator_state=iteration.new_state,
-        mediator_state_change=refund_state_change,
-        channelidentifiers_to_channels=setup.channel_map,
-        addresses_to_channel=setup.channels.addresses_to_channel(),
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=setup.block_number,
-    )
-
-    assert search_for_item(duplicate_iteration.events, SendRefundTransfer, {}) is None
-
-    assert duplicate_iteration.new_state is not None
-    assert duplicate_iteration.new_state == iteration.new_state
 
 
 def test_regression_mediator_send_lock_expired_with_new_block():
@@ -334,7 +221,6 @@ def test_regression_mediator_task_no_routes():
     assert init_iteration.new_state is not None, msg
     assert init_iteration.new_state.waiting_transfer.transfer == payer_transfer
     assert search_for_item(init_iteration.events, SendLockedTransfer, {}) is None
-    assert search_for_item(init_iteration.events, SendRefundTransfer, {}) is None
 
     secrethash = UNIT_SECRETHASH
     lock = channels[0].partner_state.secrethashes_to_lockedlocks[secrethash]
