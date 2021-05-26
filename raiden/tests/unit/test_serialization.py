@@ -277,17 +277,37 @@ def test_message_identical() -> None:
         assert message_dict == saved_message_dict
 
 
-def test_locked_transfer_arbitrary_metadata():
-    filename = os.path.join(
-        os.path.dirname(__file__), "serialized_messages", "LockedTransferExtraMetadata.json"
+def test_locked_transfer_unknown_metadata():
+    signer = LocalSigner(bytes(range(32)))
+    unknown_data = {
+        "arbitrary_data": {"new_key": "you didn't expect this, didn't you?"},
+        # also check that an additional "unknown_data" does not cause an overwrite of
+        # the "unknown_data" field on the dataclass used for temporary storage of the raw data
+        "unknown_data": {"test": "123"},
+    }
+
+    metadata_properties = factories.MetadataProperties(unknown_data=unknown_data)
+    locked_transfer = factories.create(
+        factories.LockedTransferProperties(metadata=factories.create(metadata_properties))
     )
-    with open(filename) as f:
-        content = f.read()
-        deserialized_message = MessageSerializer.deserialize(content)
+    locked_transfer.sign(signer)
+
+    json_msg = MessageSerializer.serialize(locked_transfer)
+    deserialized_message = MessageSerializer.deserialize(json_msg)
+    assert deserialized_message.sender == signer.address
 
     # The assert output is more readable when we used dicts than with plain JSON
     message_dict = JSONSerializer.deserialize(MessageSerializer.serialize(deserialized_message))
-    assert message_dict == JSONSerializer.deserialize(content)
+
+    # Explicitly check for the unknown data
+    metadata_dict = message_dict["metadata"]
+    for key, value in unknown_data.items():
+        deserialized_value = metadata_dict.get(key)
+        assert deserialized_value == value
+
+    assert message_dict == JSONSerializer.deserialize(json_msg)
+
+
 def test_metadata_backwards_compatibility():
     data = """
     {

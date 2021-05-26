@@ -1,3 +1,4 @@
+import functools
 from typing import List, cast
 from unittest.mock import patch
 
@@ -12,7 +13,7 @@ from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
@@ -26,7 +27,7 @@ from raiden.tests.utils.transfer import (
     transfer_and_assert_path,
     wait_assert,
 )
-from raiden.transfer import views
+from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
@@ -95,6 +96,76 @@ def test_mediated_transfer(
             deposit + amount,
             [],
         )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [3])
+def test_mediated_transfer_unknown_metadata(
+    raiden_network: List[RaidenService],
+    number_of_nodes,
+    deposit,
+    token_addresses,
+    network_wait,
+):
+    app0, app1, app2 = raiden_network
+
+    token_address = token_addresses[0]
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
+    )
+
+    amount = PaymentAmount(10)
+
+    unknown_metadata = {"extra_data": {"some": "data", "foo": 42}}
+    patched_send_lockedtransfer = functools.partial(
+        channel.send_lockedtransfer, additional_metadata=unknown_metadata
+    )
+    # Patch the (initiator's) send_lockedtransfer, so we don't have to create
+    # a cascade of modified message dataclasses just to inject some extra metadata
+    # This is ok for the other nodes, since this code path is only used by the initiator
+    with patch(
+        "raiden.transfer.mediated_transfer.initiator.channel.send_lockedtransfer"
+    ) as send_lockedtransfer:
+        send_lockedtransfer.side_effect = patched_send_lockedtransfer
+
+        secrethash = transfer(
+            initiator_app=app0,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount,
+            identifier=PaymentID(1),
+            timeout=network_wait * number_of_nodes,
+            routes=[[app0, app1, app2]],
+        )
+
+        with block_timeout_for_transfer_by_secrethash(app1, secrethash):
+            wait_assert(
+                assert_succeeding_transfer_invariants,
+                token_network_address,
+                app0,
+                deposit - amount,
+                [],
+                app1,
+                deposit + amount,
+                [],
+            )
+        with block_timeout_for_transfer_by_secrethash(app1, secrethash):
+            wait_assert(
+                assert_succeeding_transfer_invariants,
+                token_network_address,
+                app1,
+                deposit - amount,
+                [],
+                app2,
+                deposit + amount,
+                [],
+            )
+
+        init_target = raiden_state_changes_search_for_item(app2, ActionInitTarget, {})
+        assert init_target.transfer.unknown_metadata == unknown_metadata
 
 
 @raise_on_failure

@@ -51,6 +51,7 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
         initiator=message.initiator,
         target=message.target,
         route_states=route_states,
+        unknown_metadata=message.metadata.unknown_data,
     )
 
     return transfer_state

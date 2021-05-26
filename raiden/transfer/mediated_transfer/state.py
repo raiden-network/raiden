@@ -14,8 +14,10 @@ from raiden.transfer.state import (
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
     TYPE_CHECKING,
+    AdditionalMetadata,
     Address,
     AddressMetadata,
+    Any,
     BlockTimeout,
     ChannelID,
     Dict,
@@ -62,6 +64,7 @@ class LockedTransferUnsignedState(LockedTransferState):
 
     balance_proof: BalanceProofUnsignedState
     route_states: List[RouteState] = field(default_factory=list)
+    unknown_metadata: Optional[AdditionalMetadata] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -88,6 +91,7 @@ class LockedTransferSignedState(LockedTransferState):
     message_identifier: MessageID
     route_states: List[RouteState]
     balance_proof: BalanceProofSignedState = field(repr=False)
+    unknown_metadata: Optional[AdditionalMetadata] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)

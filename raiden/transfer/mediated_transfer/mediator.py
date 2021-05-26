@@ -428,6 +428,7 @@ def forward_transfer_pair(
         secrethash=payer_transfer.lock.secrethash,
         route_states=route_states,
         recipient_metadata=recipient_metadata,
+        additional_metadata=payer_transfer.unknown_metadata,
     )
     mediated_events: List[Event] = [lockedtransfer_event]
 
@@ -498,6 +499,7 @@ def backward_transfer_pair(
             secrethash=lock.secrethash,
             route_state=backward_route_state,
             recipient_metadata=initial_payer_transfer.payer_address_metadata,
+            additional_metadata=initial_payer_transfer.unknown_metadata,
         )
 
         transfer_pair = MediationPairState(

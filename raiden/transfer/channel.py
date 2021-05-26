@@ -87,6 +87,7 @@ from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
+    AdditionalMetadata,
     Address,
     AddressMetadata,
     Balance,
@@ -1357,6 +1358,7 @@ def create_sendlockedtransfer(
     secrethash: SecretHash,
     route_states: List[RouteState],
     recipient_metadata: AddressMetadata = None,
+    additional_metadata: AdditionalMetadata = None,
 ) -> Tuple[SendLockedTransfer, PendingLocksState]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -1407,6 +1409,7 @@ def create_sendlockedtransfer(
         initiator=initiator,
         target=target,
         route_states=route_states,
+        unknown_metadata=additional_metadata,
     )
 
     recipient = channel_state.partner_state.address
@@ -1506,6 +1509,7 @@ def send_lockedtransfer(
     secrethash: SecretHash,
     route_states: List[RouteState],
     recipient_metadata: AddressMetadata = None,
+    additional_metadata: AdditionalMetadata = None,
 ) -> SendLockedTransfer:
     send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
         channel_state=channel_state,
@@ -1518,6 +1522,7 @@ def send_lockedtransfer(
         secrethash=secrethash,
         route_states=route_states,
         recipient_metadata=recipient_metadata,
+        additional_metadata=additional_metadata,
     )
 
     transfer = send_locked_transfer_event.transfer
@@ -1541,6 +1546,7 @@ def send_refundtransfer(
     secrethash: SecretHash,
     route_state: RouteState,
     recipient_metadata: AddressMetadata = None,
+    additional_metadata: AdditionalMetadata = None,
 ) -> SendRefundTransfer:
     msg = "Refunds are only valid for *known and pending* transfers"
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
@@ -1559,6 +1565,7 @@ def send_refundtransfer(
         secrethash=secrethash,
         route_states=[route_state],
         recipient_metadata=recipient_metadata,
+        additional_metadata=additional_metadata,
     )
 
     mediated_transfer = send_mediated_transfer.transfer
