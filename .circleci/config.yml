@@ -637,7 +637,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "46:b3:a5:c3:d8:21:63:cd:de:6d:07:5d:0c:5d:ba:73"
+            - "a1:33:d7:62:77:54:79:76:32:4a:d3:5e:89:70:ce:31"
       - attach-and-link:
           py-version: << parameters.py-version >>
       - conditional-skip
