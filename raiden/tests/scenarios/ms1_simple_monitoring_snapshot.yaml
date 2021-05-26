@@ -1,7 +1,7 @@
 version: 2
 
 settings:
-  gas_price: "{{ gas_price }}"
+  gas_price: {{ gas_price }}
   # Adapt to chain used
   services:
     pfs:
