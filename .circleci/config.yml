@@ -714,8 +714,7 @@ jobs:
                 command: |
                   rm dist/archive/*.txt
                   echo "TAG: ${CIRCLE_TAG}"
-                  CI_RAIDEN_VERSION=${CIRCLE_TAG}
-                  ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${CI_RAIDEN_VERSION} dist/archive/
+                  ghr -t ${GITHUB_TOKEN_RELEASES} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${CIRCLE_TAG} dist/archive/
 
   deploy-pypi:
     parameters:
