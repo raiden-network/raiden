@@ -4,7 +4,7 @@ set -ex
 # shellcheck disable=SC2154
 if [[ -n ${CIRCLE_TAG} ]]; then
     export ARCHIVE_TAG=${CIRCLE_TAG}
-    if [[ ${CIRCLE_TAG} = "*-rc*" ]]; then
+    if [[ ${CIRCLE_TAG} =~ .*(a|b|rc).* ]]; then
         export RELEASE_TYPE="RC"
     else
         export RELEASE_TYPE="RELEASE"
