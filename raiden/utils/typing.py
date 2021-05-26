@@ -205,6 +205,7 @@ T_UserID = str
 UserID = NewType("UserID", T_UserID)
 
 AddressMetadata = Dict[str, Union[UserID, str]]
+AdditionalMetadata = Dict[str, Any]
 
 AddressTypes = Union[
     Address,

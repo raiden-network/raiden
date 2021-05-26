@@ -49,6 +49,7 @@ from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     AdditionalHash,
+    AdditionalMetadata,
     Address,
     AddressHex,
     AddressMetadata,
@@ -529,11 +530,13 @@ RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
 @dataclass(frozen=True)
 class MetadataProperties(Properties):
     routes: List[RouteMetadata] = EMPTY
-    _unknown_data: Dict[str, Any] = EMPTY
+    unknown_data: Optional[AdditionalMetadata] = EMPTY
     TARGET_TYPE = Metadata
 
 
-MetadataProperties.DEFAULTS = MetadataProperties(routes=[RouteMetadata(route=[HOP1, HOP2])])
+MetadataProperties.DEFAULTS = MetadataProperties(
+    routes=[RouteMetadata(route=[HOP1, HOP2])], unknown_data=None
+)
 
 
 @dataclass(frozen=True)
@@ -895,7 +898,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         for route_state in route_states
     ]
 
-    params["metadata"] = Metadata(routes=routes)
+    params["metadata"] = Metadata(routes=routes, unknown_data=None)
 
     # Create the locked-transfer message first in order to generate the balance proof
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)

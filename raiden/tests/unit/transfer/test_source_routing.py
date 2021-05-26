@@ -140,7 +140,9 @@ def test_changing_route_metadata_will_invalidate_lock_transfer_signature():
         factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
     )
 
-    new_metadata = factories.create(factories.Metadata(routes=[new_route_metadata]))
+    new_metadata = factories.create(
+        factories.Metadata(routes=[new_route_metadata], unknown_data=None)
+    )
 
     assert ADDRESS == recover(
         one_locked_transfer._data_to_sign(), one_locked_transfer.signature
