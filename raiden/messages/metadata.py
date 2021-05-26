@@ -8,23 +8,22 @@ from eth_utils import keccak
 from marshmallow import EXCLUDE, fields, post_dump, post_load
 
 from raiden.messages.abstract import cached_property
+from raiden.storage.serialization.serializer import keccak_canonicaljson
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import MYPY_ANNOTATION, Address, AddressMetadata, Dict, List, Optional
 from raiden.utils.validation import validate_address_metadata
 
 
+@dataclass
 class RouteMetadata:
     route: List[Address]
-    address_metadata: Optional[Dict[Address, AddressMetadata]]
+    address_metadata: Optional[Dict[Address, AddressMetadata]] = None
 
-    def __init__(
+    def __post_init__(
         self,
-        route: List[Address],
-        address_metadata: Optional[Dict[Address, AddressMetadata]] = None,
     ) -> None:
-
-        self.address_metadata = deepcopy(address_metadata) or {}
-        self.route = route
+        # don't use the original object, since this would result in mutated state
+        self.address_metadata = deepcopy(self.address_metadata) or {}
         self._validate_address_metadata()
 
     def _validate_address_metadata(self) -> None:
@@ -35,20 +34,7 @@ class RouteMetadata:
 
     @cached_property
     def hash(self) -> bytes:
-        return keccak(self._serialize_canonicaljson())
-
-    def _serialize_canonicaljson(self) -> bytes:
-        route = [to_checksum_address(address) for address in self.route]
-        if self.address_metadata is None:
-            address_metadata = None
-        else:
-            address_metadata = {
-                to_checksum_address(address): metadata
-                for address, metadata in self.address_metadata.items()
-            }
-        return canonicaljson.encode_canonical_json(
-            {"route": route, "address_metadata": address_metadata}
-        )
+        return keccak_canonicaljson(self)
 
     def __repr__(self) -> str:
         return f"RouteMetadata: {' -> '.join([to_checksum_address(a) for a in self.route])}"
@@ -71,7 +57,7 @@ class Metadata:
 
     @cached_property
     def hash(self) -> bytes:
-        return keccak(rlp.encode([r.hash for r in self.routes]))
+        return keccak_canonicaljson(self)
 
     @post_load(pass_original=True)
     def post_loading(

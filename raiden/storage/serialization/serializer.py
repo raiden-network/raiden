@@ -10,6 +10,8 @@ from dataclasses import is_dataclass
 from json import JSONDecodeError
 from typing import List, Mapping
 
+import canonicaljson
+from eth_hash.auto import keccak
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
@@ -136,6 +138,15 @@ def remove_type_inplace(data: Any) -> None:
     if isinstance(data, List):
         for item in data:
             remove_type_inplace(item)
+
+
+def keccak_canonicaljson(obj: Any) -> bytes:
+    data = DictSerializer.serialize(obj)
+    # don't hash the "type" fields at any level
+    data.pop("_type")
+    remove_type_inplace(data)
+
+    return keccak(canonicaljson.encode_canonical_json(data))
 
 
 class MessageSerializer(SerializationBase):

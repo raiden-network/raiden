@@ -1,22 +1,27 @@
 import json
 import os
 import random
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, field
 from datetime import datetime
 
 import pytest
+from marshmallow_dataclass import class_schema
 
 from raiden.exceptions import SerializationError
+from raiden.messages.metadata import Metadata
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
 from raiden.storage.serialization import JSONSerializer
+from raiden.storage.serialization.schemas import BaseSchema
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import Address, List
 
 # Required for test_message_identical. It would be better to have a set of
 # messages that don't depend on randomness for that test. But right now, we
@@ -283,6 +288,51 @@ def test_locked_transfer_arbitrary_metadata():
     # The assert output is more readable when we used dicts than with plain JSON
     message_dict = JSONSerializer.deserialize(MessageSerializer.serialize(deserialized_message))
     assert message_dict == JSONSerializer.deserialize(content)
+def test_metadata_backwards_compatibility():
+    data = """
+    {
+        "some_addresses":
+                [
+                    "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
+                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
+                ],
+        "both_unknown": "0x94622cc2a5b64a58c25a129d48a2beec4b65b779",
+        "routes": [
+            {
+                "address_metadata": {},
+                "route": [
+                    "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
+                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
+                ]
+            }
+        ]
+    }
+    """
+    m = json.loads(data)
+
+    @dataclass(frozen=True)
+    class NewMetadata(Metadata):
+        # Needs a default because of dataclass inheritance insanity
+        some_addresses: List[Address] = field(default_factory=list)
+
+    schema_new = class_schema(NewMetadata, base_schema=BaseSchema)()
+    schema = class_schema(Metadata, base_schema=BaseSchema)()
+
+    deserialized_message_new = schema_new.load(deepcopy(m))
+    deserialized_message = schema.load(deepcopy(m))
+
+    # Assert that the correct fields are existent on the different deserialized messages
+    assert deserialized_message.unknown_data.get("some_addresses")
+    assert deserialized_message.unknown_data.get("both_unknown")
+
+    assert not deserialized_message_new.unknown_data.get("some_addresses")
+    assert deserialized_message_new.some_addresses
+    assert deserialized_message_new.unknown_data.get("both_unknown")
+
+    # A node should be able to verify the signature, regardless of wether
+    # he knows about the extra data - therefore the hash in the sending node (using "NewMetadata")
+    # and the receiving node (using "Metadata") should be identical
+    assert deserialized_message_new.hash == deserialized_message.hash
 
 
 def test_hashing():
