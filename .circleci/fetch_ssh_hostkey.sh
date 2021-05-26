@@ -7,6 +7,9 @@ FINGERPRINT="$2"
 
 PUBKEY=$(mktemp)
 
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
 ssh-keyscan -H "${HOST}" > "${PUBKEY}" 2>/dev/null
 
 if [[ $(ssh-keygen -l -f "${PUBKEY}" | cut -d ' ' -f 2) != "${FINGERPRINT}" ]]; then
