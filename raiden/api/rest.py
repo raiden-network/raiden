@@ -88,6 +88,7 @@ from raiden.exceptions import (
     PaymentConflict,
     RaidenRecoverableError,
     SamePeerAddress,
+    ServiceRequestFailed,
     TokenNetworkDeprecated,
     TokenNotRegistered,
     UnexpectedChannelState,
@@ -1127,7 +1128,7 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_withdraw,
             )
-        except (NonexistingChannel, UnknownTokenAddress) as e:
+        except (NonexistingChannel, UnknownTokenAddress, ServiceRequestFailed) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
         except (InsufficientFunds, WithdrawMismatch) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
