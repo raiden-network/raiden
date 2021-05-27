@@ -14,6 +14,7 @@ from raiden.transfer.architecture import (
     TransferTask,
 )
 from raiden.transfer.events import (
+    ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
@@ -291,6 +292,7 @@ class BaseSchema(marshmallow.Schema):
                 ContractSendChannelClose,
                 ContractSendChannelSettle,
                 ContractSendChannelUpdateTransfer,
+                ContractSendChannelBatchUnlock,
                 ContractSendSecretReveal,
             ],
             allow_none=False,
