@@ -757,6 +757,36 @@ def test_api_channel_withdraw(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("deposit", [1000])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_channel_withdraw_with_offline_partner(
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
+):
+    app0, app1 = raiden_network
+    pfs_mock.add_apps([app0])
+
+    token_address = token_addresses[0]
+    partner_address = app1.address
+
+    # Withdraw when the partner node is offline
+    request = grequests.patch(
+        api_url_for(
+            api_server_test_instance,
+            "channelsresourcebytokenandpartneraddress",
+            token_address=token_address,
+            partner_address=partner_address,
+        ),
+        json=dict(total_withdraw="500"),
+    )
+    response = request.send().response
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("deposit", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_channel_set_reveal_timeout(
