@@ -1,0 +1,261 @@
+version: 2
+
+settings:
+  gas_price: {{ gas_price }}
+  services:
+    pfs:
+      url: "{{ pfs_with_fee }}"
+    udc:
+      enable: true
+      token:
+        deposit: true
+        balance_per_node: "{{ ms_reward_with_margin + 200 * 2 * pfs_fee}}"
+
+token:
+  address: "{{ transfer_token }}"
+  balance_fund: 10_000_000_000_000_000_000
+
+nodes:
+  count: 5
+  raiden_version: local
+  reuse_accounts: true
+  restore_snapshot: true
+
+  default_options:
+    gas-price: fast
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-max-fee: "{{ pfs_fee }}"
+    enable-monitoring: true
+    proportional-fee:
+      - "{{ transfer_token }}"
+      - 0
+    proportional-imbalance-fee:
+      - "{{ transfer_token }}"
+      - 0
+    default-settle-timeout: "{{ settlement_timeout_min }}"
+    default-reveal-timeout: 20
+  node_options:
+    0:
+      matrix-server: "{{ matrix_servers[0] }}"
+    1:
+      matrix-server: "{{ matrix_servers[1] }}"
+    2:
+      matrix-server: "{{ matrix_servers[2] }}"
+    3:
+      matrix-server: "{{ matrix_servers[3] }}"
+    4:
+      matrix-server: "{{ matrix_servers[0] }}"
+
+scenario:
+  serial:
+    tasks:
+      - snapshot:
+          tasks:
+            - parallel:
+                name: "Open channels"
+                tasks:
+                  - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+                  - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+                  - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+                  # Setup alternative (best) path
+                  - open_channel: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+                  - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - parallel:
+          name: "Assert after channel openings"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make transfer in the direction with no deposit (should fail) - No path available"
+          tasks:
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30, expected_http_status: 409}
+      - parallel:
+          name: "Deposit in the other directions"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            # Setup alternative (best) path
+            - deposit: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - deposit: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - parallel:
+          name: "Assert after deposits"
+          tasks:
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "Enable MSs between node 4 and 3 (will be used later in the scenario)"
+          tasks:
+            - store_channel_info: {from: 4, to: 3, key: "MS Test Channel 3-4"}
+      - serial:
+          name: "Make 10 transfers from 3 to 0"
+          repeat: 10
+          tasks:
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 10 payments from 3 to 0"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 0, balance_sum: 2_010_000_000_000_000_000}
+            - assert_sum: {from: 3, balance_sum: 1_990_000_000_000_000_000}
+      - serial:
+          name: "Make 10 transfers from 1 to 4"
+          repeat: 10
+          tasks:
+            - transfer: {from: 1, to: 4, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 10 payments from 1 to 4"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 1, balance_sum: 1_990_000_000_000_000_000}
+            - assert_sum: {from: 4, balance_sum: 2_010_000_000_000_000_000}
+      - serial:
+          name: "Check that IOUs exist after the payments"
+          tasks:
+            # Add a wait until all ious are processed correctly
+            - wait: {{ wait_short }}
+            - assert_pfs_history: {source: 3, target: 0, request_count: 10}
+            - assert_pfs_iou: {source: 3, amount: "{{ 10 * pfs_fee }}" }
+            - assert_pfs_history: {source: 1, target: 4, request_count: 10}
+            - assert_pfs_iou: {source: 1, amount: "{{ 10 * pfs_fee }}" }
+            # Make sure that a mediating node has not used the PFS
+            - assert_pfs_iou: {source: 2, iou_exists: false}
+      - serial:
+          name: "Withdraw 10% of the deposit of node 2"
+          tasks:
+            - withdraw: {from: 2, to: 3, total_withdraw: 100_000_000_000_000_000, expected_http_status: 200}
+      - parallel:
+          name: "Assert after withdraw"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, total_withdraw: 100_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make payments from 2 to 4 after withdraw"
+          repeat: 10
+          tasks:
+            - transfer: {from: 2, to: 4, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 10 payments from 2 to 4"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 2, balance_sum: 1_890_000_000_000_000_000}
+            - assert_sum: {from: 4, balance_sum: 2_020_000_000_000_000_000}
+      - serial:
+          name: "Make payments from 0 to 2 after withdraw"
+          repeat: 5
+          tasks:
+            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 5 payments from 0 to 2"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 2, balance_sum: 1_895_000_000_000_000_000}
+            - assert_sum: {from: 0, balance_sum: 2_005_000_000_000_000_000}
+      - parallel:
+          name: "2 deposits back the 10% it withdrew"
+          tasks:
+            - deposit: {from: 2, to: 3, total_deposit: 1_100_000_000_000_000_000}
+      - serial:
+          name: "Assert after deposit from 2 to 3"
+          tasks:
+            - wait: {{ wait_short }}
+            - assert: {from: 2, to: 3, total_deposit: 1_100_000_000_000_000_000, total_withdraw: 100_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "1 deposits extra 10% in the channel with 0"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1_100_000_000_000_000_000}
+      - serial:
+          name: "Assert after deposit from 1 to 0"
+          tasks:
+            - wait: {{ wait_short }}
+            - assert: {from: 1, to: 0, total_deposit: 1_100_000_000_000_000_000, state: "opened"}
+      - serial:
+          name: "Make 100 payments from 0 to 3"
+          repeat: 100
+          tasks:
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 100 payments from 0 to 3"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 0, balance_sum: 1_905_000_000_000_000_000}
+            - assert_sum: {from: 3, balance_sum: 2_090_000_000_000_000_000}
+      - serial:
+          name: "Stop node 0 and wait 100s, then start it again"
+          tasks:
+            - stop_node: 0
+            - wait: {{ wait_short }}
+            - start_node: 0
+            - wait: {{ wait_short }}
+      - serial:
+          name: "Make 10 payments from 0 to 3 after restart"
+          repeat: 10
+          tasks:
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 10 payments from 0 to 3"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 0, balance_sum: 1_895_000_000_000_000_000}
+            - assert_sum: {from: 3, balance_sum: 2_100_000_000_000_000_000}
+      - serial:
+          name: "Make 100 payments from 3 to 0"
+          repeat: 100
+          tasks:
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+      - serial:
+          name: "Assert after 100 payments from 3 to 0"
+          tasks:
+            - wait: {{ wait_long }}
+            - assert_sum: {from: 0, balance_sum: 1_995_000_000_000_000_000}
+            - assert_sum: {from: 3, balance_sum: 2_000_000_000_000_000_000}
+      - serial:
+          name: "Close channel between 0 and 4"
+          tasks:
+            - close_channel: {from: 0, to: 4}
+      - serial:
+          name: "Assert after closing channel between 0 and 4"
+          tasks:
+            - wait: {{ wait_short }}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelClosed"
+                num_events: 1
+                event_args: {closing_participant: 0}
+            - assert: {from: 0, to: 4, state: "closed"}
+            # Make sure that channel between 0 and 4 is also settled
+            - wait_blocks: "{{ settlement_timeout_min }}"
+      - serial:
+          name: "Close channel between 3 and 4 while 4 is offline"
+          tasks:
+            - stop_node: 4
+            - close_channel: {from: 3, to: 4}
+            ## Wait for channel to be closed
+            - wait_blocks: 1
+            - assert: {from: 3, to: 4, state: "closed"}
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelClosed"
+                num_events: 1
+                event_args: {closing_participant: 3}
+
+            ## The MS reacts within the settle_timeout
+            - wait_blocks: "{{ settlement_timeout_min }}"
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "NonClosingBalanceProofUpdated"
+                num_events: 1
+                event_args: {closing_participant: 3}
+
+            ## Monitored channel must be settled before the monitoring service can claim its reward.
+            ## To make sure the transactions gets mined in time, 5 additional blocks are added
+            ## Monitoring Service only reacts for the second closing because node4 settled to first
+            ## channel itself
+            - wait_blocks: 5
+            - assert_ms_claim: {channel_info_key: "MS Test Channel 3-4"}
