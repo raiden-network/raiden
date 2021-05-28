@@ -198,7 +198,7 @@ flake8-comprehensions==3.5.0
     # via -r requirements-dev.in
 flake8-tuple==0.4.1
     # via -r requirements-dev.in
-flake8==3.9.1
+flake8==3.9.2
     # via
     #   -r requirements-dev.in
     #   flake8-bugbear
