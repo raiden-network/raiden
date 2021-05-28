@@ -107,7 +107,7 @@ flask-cors==3.0.10
     # via -r requirements.in
 flask-restful==0.3.9
     # via -r requirements.in
-flask==1.1.2
+flask==2.0.1
     # via
     #   -r requirements.in
     #   flask-cors
@@ -131,9 +131,9 @@ idna==2.8
     # via requests
 ipfshttpclient==0.7.0a1
     # via web3
-itsdangerous==1.1.0
+itsdangerous==2.0.1
     # via flask
-jinja2==2.11.3
+jinja2==3.0.1
     # via
     #   -r requirements.in
     #   flask
@@ -141,7 +141,7 @@ jsonschema==3.2.0
     # via web3
 lru-dict==1.1.6
     # via web3
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via jinja2
 marshmallow-dataclass[union]==8.0.0
     # via -r requirements.in
@@ -256,7 +256,7 @@ web3==5.19.0
     #   raiden-contracts
 websockets==8.1
     # via web3
-werkzeug==1.0.1
+werkzeug==2.0.1
     # via flask
 zope.event==4.4
     # via gevent
