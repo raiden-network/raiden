@@ -782,7 +782,7 @@ def test_api_channel_withdraw_with_offline_partner(
         json=dict(total_withdraw="500"),
     )
     response = request.send().response
-    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
 @raise_on_failure
