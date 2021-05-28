@@ -1128,9 +1128,9 @@ class RestAPI:  # pragma: no unittest
                 channel_state.partner_state.address,
                 total_withdraw,
             )
-        except (NonexistingChannel, UnknownTokenAddress, ServiceRequestFailed) as e:
+        except (NonexistingChannel, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
-        except (InsufficientFunds, WithdrawMismatch) as e:
+        except (InsufficientFunds, WithdrawMismatch, ServiceRequestFailed) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         # TODO handle InsufficientEth here
 
