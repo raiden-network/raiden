@@ -4,6 +4,7 @@ from gevent import joinall
 from gevent.pool import Pool
 
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
+from raiden.exceptions import ServiceRequestFailed
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
 from raiden.messages.synchronization import Delivered, Processed
@@ -127,7 +128,12 @@ class MessageHandler:
         if raiden.config.pfs_config is not None:
             # FIXME querying the PFS for the address-metadata directly after receiving a message
             #   should be optimized / factored out at a later point!
-            sender_metadata = query_address_metadata(raiden.config.pfs_config, message.sender)
+            try:
+                sender_metadata = query_address_metadata(raiden.config.pfs_config, message.sender)
+            except ServiceRequestFailed as ex:
+                msg = f"PFS returned an error while trying to fetch user information: \n{ex}"
+                log.warning(msg)
+                sender_metadata = None
 
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(
