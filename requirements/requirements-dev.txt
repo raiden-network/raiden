@@ -186,7 +186,7 @@ eth-utils==1.10.0
     #   web3
 execnet==1.6.0
     # via pytest-xdist
-faker==8.1.4
+faker==8.4.0
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
@@ -194,7 +194,7 @@ filelock==3.0.12
     # via -r requirements.txt
 flake8-bugbear==21.4.3
     # via -r requirements-dev.in
-flake8-comprehensions==3.4.0
+flake8-comprehensions==3.5.0
     # via -r requirements-dev.in
 flake8-tuple==0.4.1
     # via -r requirements-dev.in
@@ -258,13 +258,7 @@ idna==2.8
 importlib-metadata==4.0.1
     # via
     #   -r requirements.txt
-    #   click
-    #   flake8
-    #   flake8-comprehensions
-    #   jsonschema
-    #   pep517
     #   pluggy
-    #   pytest
 incremental==17.5.0
     # via
     #   treq
@@ -593,8 +587,6 @@ twisted[tls]==21.2.0
 typed-ast==1.4.3
     # via
     #   -r requirements-dev.in
-    #   astroid
-    #   black
     #   mypy
 typeguard==2.11.1
     # via
@@ -603,13 +595,9 @@ typeguard==2.11.1
 typing-extensions==3.10.0.0
     # via
     #   -r requirements.txt
-    #   black
-    #   importlib-metadata
     #   matrix-synapse
     #   mypy
     #   signedjson
-    #   structlog
-    #   web3
 typing-inspect==0.4.0
     # via
     #   -r requirements.txt
@@ -652,7 +640,6 @@ zipp==3.4.1
     # via
     #   -r requirements.txt
     #   importlib-metadata
-    #   pep517
 zope.event==4.4
     # via
     #   -r requirements.txt
