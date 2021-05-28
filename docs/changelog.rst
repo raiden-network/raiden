@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`6673` Remove refund transfers. Refunds were intended as a way to quickly unlock funds in case a transfer can't be completed without having to wait for the lock to expire. Unfortunately they were never very good at achieving this goal and added a lot of complications to the codebase. Therefore they got removed. See the linked issue for more details.
 * :feature:`-` Fix building of binary bundles which was broken for a while.
 * :feature:`6986` Increment DB version - this will make this release incompatible with previous releases. Please refer to `the known issues section in the docs <https://raiden-network.readthedocs.io/en/latest/other/known-issues.html#database-upgrades>`_ for details.
 * :feature:`-` Update WebUI to `version 1.2.1 <https://github.com/raiden-network/webui/releases/tag/v1.2.1>`_. Adds a dialog for interacting with the UserDeposit contract (UDC).
