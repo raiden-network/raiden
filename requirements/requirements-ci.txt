@@ -236,7 +236,7 @@ flaky==3.7.0
     # via -r requirements-dev.txt
 flask-cors==3.0.10
     # via -r requirements-dev.txt
-flask-restful==0.3.8
+flask-restful==0.3.9
     # via -r requirements-dev.txt
 flask==1.1.2
     # via
