@@ -118,18 +118,19 @@ Figure out the value ``CONTRACTS_VERSION``
 .. code:: bash
 
  (env) $ cd raiden
- (env) $ grep 'CONTRACTS_VERSION = ' -r ../env/lib/python3.7/site-packages/raiden_contracts ../env/lib/python3.7/site-packages/raiden_contracts/constants.py:CONTRACTS_VERSION = "0.25.0"
+ (env) $ grep 'CONTRACTS_VERSION = ' -r ../env/lib/python3.7/site-packages/raiden_contracts
+ ../env/lib/python3.7/site-packages/raiden_contracts/constants.py:CONTRACTS_VERSION = "0.37.0"
 
 Copy the shown version somewhere.
 
 Define constants
 ================
 
-The contract version will be used quite often, so let bash remember it ("0.25.1" is `broken <https://github.com/raiden-network/raiden-contracts/issues/1312>`_, so change the ``raiden`` version when you see "0.25.1").
+The contract version will be used quite often, so let bash remember it.
 
 .. code:: bash
 
- (env) $ export VERSION="0.25.0"
+ (env) $ export VERSION="0.37.0"
 
 You will need your private key for the account you created.
 
