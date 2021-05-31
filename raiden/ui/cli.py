@@ -179,7 +179,7 @@ OPTIONS = [
     option(
         "--keystore-path",
         help=(
-            "If you have a non-standard path for the ethereum keystore directory"
+            "If you have a non-standard path for the Ethereum keystore directory"
             " provide it using this argument."
         ),
         default=None,
@@ -189,7 +189,7 @@ OPTIONS = [
     option(
         "--address",
         help=(
-            "The ethereum address you would like raiden to use and for which "
+            "The Ethereum address you would like raiden to use and for which "
             "a keystore file exists in your local system."
         ),
         default=None,
@@ -278,7 +278,7 @@ OPTIONS = [
         "Ethereum Node Options",
         option(
             "--sync-check/--no-sync-check",
-            help="Checks if the ethereum node is synchronized against etherscan.",
+            help="Checks if the Ethereum node is synchronized against etherscan.",
             default=True,
             show_default=True,
         ),
@@ -297,7 +297,7 @@ OPTIONS = [
         option(
             ETH_RPC_CONFIG_OPTION,
             help=(
-                '"host:port" address of ethereum JSON-RPC server.\n'
+                '"host:port" address of Ethereum JSON-RPC server.\n'
                 "Also accepts a protocol prefix (http:// or https://) with optional port"
             ),
             default="http://127.0.0.1:8545",  # geth default jsonrpc port
