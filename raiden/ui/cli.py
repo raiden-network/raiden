@@ -285,16 +285,14 @@ OPTIONS = [
         option(
             "--gas-price",
             help=(
-                "Set the gas price for ethereum transactions. If not provided "
-                "the normal gas price strategy is used.\n"
+                "Set the gas price for Ethereum transactions.\n"
                 "Available options:\n"
                 '"fast" - transactions are usually mined within 60 seconds\n'
                 '"normal" - transactions are usually mined within 5 minutes\n'
-                "<GAS_PRICE> - use given gas price\n"
             ),
             type=GasPriceChoiceType(["normal", "fast"]),
             default="fast",
-            show_default=True,
+            show_default="fast",
         ),
         option(
             ETH_RPC_CONFIG_OPTION,
