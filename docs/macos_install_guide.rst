@@ -59,11 +59,10 @@ The following instructions will guide you from a clean installation of macOS to 
     $ make install-dev
 
 Now you have a working source installation of Raiden.
-To actually use it you also need the Solidity compiler solc_ and an `Ethereum client`_.
-Both can be installed as follows::
+To actually use it you also need an `Ethereum client`_, which can be installed as follows::
 
     $ brew tap ethereum/ethereum
-    $ brew install solidity ethereum
+    $ brew install ethereum
 
 The installation should now be complete. To ensure your setup is working correctly you can use the
 :code:`smoketest` command::
@@ -76,5 +75,4 @@ The installation should now be complete. To ensure your setup is working correct
 .. _Homebrew: http://brew.sh
 .. _pip: https://pip.pypa.io/en/stable/
 .. _virtualenv: https://virtualenv.pypa.io
-.. _solc: https://github.com/ethereum/solidity
 .. _Ethereum client: https://github.com/ethereum/go-ethereum/
