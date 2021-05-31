@@ -51,12 +51,12 @@ connected to its network and you'll have to open a channel with another
 Raiden node.
 
 .. note::
-   
+
    Payment channels between parties are opened in token networks.
 
 .. warning::
 
    Registering a new token is currently only relevant on the testnets. The
-   tokens allowed on the mainnet for the Alderaan release are DAI and W-ETH. At
+   tokens allowed on the mainnet for the Bespin release are DAI and W-ETH. At
    some point in future, you will be able to register new token networks for
-   the Ethereum mainnet, too. 
+   the Ethereum mainnet, too.
