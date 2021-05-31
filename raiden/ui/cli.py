@@ -151,7 +151,7 @@ OPTIONS = [
     ),
     option(
         "--datadir",
-        help="Directory for storing raiden data.",
+        help="Directory for storing Raiden data.",
         default="~/.raiden",
         type=ExpandablePath(
             exists=False,
@@ -189,7 +189,7 @@ OPTIONS = [
     option(
         "--address",
         help=(
-            "The Ethereum address you would like raiden to use and for which "
+            "The Ethereum address you would like Raiden to use and for which "
             "a keystore file exists in your local system."
         ),
         default=None,
@@ -324,7 +324,7 @@ OPTIONS = [
                 f"URL to the Raiden path finding service to request paths from.\n "
                 f"Example: https://pfs-ropsten.services-dev.raiden.network\n "
                 f"Can also be given the '{MATRIX_AUTO_SELECT_SERVER}' value "
-                f"so that raiden chooses a PFS randomly from the service "
+                f"so that Raiden chooses a PFS randomly from the service "
                 f"registry contract."
             ),
             default=MATRIX_AUTO_SELECT_SERVER,
@@ -544,7 +544,7 @@ OPTIONS = [
 if find_spec("IPython"):
     OPTIONS.append(
         option(
-            "--console/--no-console", help="Start the interactive raiden console", default=False
+            "--console/--no-console", help="Start the interactive Raiden console", default=False
         )
     )
 else:
@@ -841,7 +841,7 @@ def smoketest(
 def _smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
-    """Test, that the raiden installation is sane."""
+    """Test, that the Raiden installation is sane."""
     from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest, step_printer
 
     raiden_stdout = StringIO()
