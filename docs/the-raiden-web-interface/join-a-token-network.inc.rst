@@ -60,7 +60,7 @@ You are now ready to :ref:`make your first payment <webui_payment>`!
 Registering a new token
 -----------------------
 
-.. warning:: Registering a new token is only relevant on the testnets. The tokens allowed on mainnet for the Alderaan release are DAI and W-ETH.
+.. warning:: Registering a new token is only relevant on the testnets. The tokens allowed on mainnet for the Bespin release are DAI and W-ETH.
 
 
 If you want to join the network for a token and that token is not

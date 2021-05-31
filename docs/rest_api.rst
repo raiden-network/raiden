@@ -6,10 +6,10 @@ Raiden's API Documentation
 
 Introduction
 *************
-The Raiden API is organized around REST and has resource-oriented URL endpoints that accept and return JSON-encoded responses. 
+The Raiden API is organized around REST and has resource-oriented URL endpoints that accept and return JSON-encoded responses.
 The Raiden API uses standard HTTP response codes and verbs.
-The Raiden RESTful API endpoints correspond to the interactions allowed by a Raiden node. 
-The URL path always contains the API version as an integer. 
+The Raiden RESTful API endpoints correspond to the interactions allowed by a Raiden node.
+The URL path always contains the API version as an integer.
 All endpoints start with ``/api/<version>/``
 
 
@@ -92,7 +92,7 @@ Address
 
 .. http:get:: /api/(version)/address
 
-   Queries the Ethereum address you choose when starting Raiden. 
+   Queries the Ethereum address you choose when starting Raiden.
    A Raiden node is up and running correctly if the response returns that same address.
 
    **Example Request**:
@@ -183,8 +183,8 @@ Settings
 
 .. http:get:: /api/(version)/settings
 
-   Queries the settings of your Raiden node. 
-   At the moment only the URL of the pathfinding service is returned. 
+   Queries the settings of your Raiden node.
+   At the moment only the URL of the pathfinding service is returned.
    The endpoint will provide more settings in the future.
 
    **Example Request**:
@@ -247,7 +247,7 @@ Tokens
 The tokens endpoints are used for registering new tokens and querying information about already registered tokens.
 
 .. note::
-   For the Alderaan release two tokens are registered, DAI and WETH.
+   For the Bespin release two tokens are registered, DAI and WETH.
 
 **Information about Tokens**
 
@@ -336,12 +336,12 @@ The tokens endpoints are used for registering new tokens and querying informatio
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
    :resjsonarr address partner_address: The partner we have a channel with
    :resjsonarr link channel: A link to the channel resource
-   
+
 
 **Register a Token**
 
 .. warning::
-   For the Alderaan release it is not be possible to register more than two tokens, due to security reasons in order to minimise possible loss of funds in the case of bugs. 
+   For the Bespin release it is not be possible to register more than two tokens, due to security reasons in order to minimise possible loss of funds in the case of bugs.
    The two token that are registered are DAI and WETH.
 
 .. http:put:: /api/(version)/tokens/(token_address)
@@ -384,10 +384,10 @@ Channels
 The channels endpoints allow you to open channels with other Raiden nodes as well as closing channels, querying them for information and making deposits or withdrawals.
 
 .. warning::
-   The maximum deposits per token and node for the Alderaan release are:
+   The maximum deposits per token and node for the Bespin release are:
 
    **DAI**: The deposit limit is 1000 worth of DAI per channel participant making the maximum amount of DAI 2000 per channel.
-   
+
    **WETH**: The deposit limit is 4.683 worth of WETH per channel participant making the maximum amount of WETH 9.366 per channel.
 
 
@@ -472,7 +472,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
 
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
 
-   Query information about one of your channels. 
+   Query information about one of your channels.
    The channel is specified by the address of a token and the address of the partner node which the channel is opened with.
 
    **Example Request**:
@@ -679,7 +679,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
 Payments
 ========
 
-The payment endpoint is used for transferring tokens to another node. 
+The payment endpoint is used for transferring tokens to another node.
 You can send the desired amount of tokens by providing the address of the token and the address of the receiving node.
 Besides you can query all payments that you sent or received.
 
@@ -704,8 +704,8 @@ Besides you can query all payments that you sent or received.
 
       GET /api/v1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
       Host: localhost:5001
-   
-   :query int limit: Limits the payment history result to the specified amount 
+
+   :query int limit: Limits the payment history result to the specified amount
    :query int offset: Offsets the payment history result by the specified amount
 
 
@@ -773,7 +773,7 @@ Besides you can query all payments that you sent or received.
       * The channels leading to the target node not having enough ``settle_timeout`` and ``reveal_timeout``
       * The funds not being enough
 
-   
+
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
@@ -821,14 +821,14 @@ Besides you can query all payments that you sent or received.
       This endpoint will return as soon the initiator has unlocked the payment(i.e Unlock message is sent).
       However, this does not necessarily mean that querying the balance from the target node, immediately after
       the initiator returns, will return the new balance amount due to the fact that the target might not have received or processed the unlock.
-  
+
 
 .. _api_user_deposit:
 
 User Deposit
 ============
 
-For paying the :doc:`Raiden Services <raiden_services>` it is necessary to have RDN (Raiden Network Tokens) in the User Deposit Contract (UDC). 
+For paying the :doc:`Raiden Services <raiden_services>` it is necessary to have RDN (Raiden Network Tokens) in the User Deposit Contract (UDC).
 This endpoint can be used to deposit to and withdraw from the UDC.
 
 
@@ -1033,7 +1033,7 @@ The connections endpoints allow you to query details about all joined token netw
 
    .. note::
       Currently, the API calls are blocking. This means that in the case of long running calls like leave a token network, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
-      
+
 
 Pending Transfers
 =================
@@ -1177,7 +1177,7 @@ Shutdown
 Testing
 =======
 
-You can mint tokens for testing purposes by making a request to the ``_testing`` endpoint. 
+You can mint tokens for testing purposes by making a request to the ``_testing`` endpoint.
 This is only possible on testnets.
 
 **Mint Tokens**

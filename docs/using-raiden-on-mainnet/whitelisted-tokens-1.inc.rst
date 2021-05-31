@@ -1,12 +1,17 @@
 Get Whitelisted Tokens
 ======================
 
-The Raiden Alderaan release is a bug bounty release which puts a certain
+The Raiden Bespin release puts a certain
 limit on the amount of tokens that can be deposited into a channel. This
 is to minimize potential loss of funds in case of bugs.
 
 -  The global limit per token network is approximately **$1000000**.
 -  The limit per channel side is approximately **$1000**.
+
+.. note::
+
+   These dollar values of these limits are calculated at contract deployment
+   time and vary with the exchange rates of the underlying tokens.
 
 W-ETH
 -----
