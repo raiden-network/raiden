@@ -606,7 +606,7 @@ unpaddedbase64==1.1.0
     # via
     #   matrix-synapse
     #   signedjson
-urllib3==1.25.8
+urllib3==1.26.5
     # via
     #   -r requirements.txt
     #   requests
