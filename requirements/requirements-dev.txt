@@ -440,7 +440,7 @@ pylibsrtp==0.6.8
     # via
     #   -r requirements.txt
     #   aiortc
-pylint==2.8.2
+pylint==2.8.3
     # via -r requirements-dev.in
 pymacaroons==0.13.0
     # via matrix-synapse
