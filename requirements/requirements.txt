@@ -246,7 +246,7 @@ typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
     # via -r requirements.in
-urllib3==1.25.8
+urllib3==1.26.5
     # via requests
 varint==1.0.2
     # via multiaddr
