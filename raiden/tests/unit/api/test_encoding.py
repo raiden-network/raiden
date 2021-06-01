@@ -2,6 +2,7 @@ import datetime
 
 import pytest
 from marshmallow.fields import DateTime
+from werkzeug.routing import Map
 
 from raiden.api.v1.encoding import AddressField, BaseSchema, HexAddressConverter
 from raiden.utils.typing import Address
@@ -26,7 +27,7 @@ def test_timestamp_field():
 
 
 def test_hex_converter():
-    converter = HexAddressConverter(map=None)
+    converter = HexAddressConverter(map=Map())
 
     # invalid hex data
     with pytest.raises(Exception):
