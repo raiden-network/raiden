@@ -27,7 +27,7 @@ from raiden.storage.restore import (
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
-from raiden.transfer.architecture import Event
+from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -61,13 +61,14 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
+    RequestMetadata,
     SendLockedTransfer,
     SendLockExpired,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
 )
-from raiden.transfer.state import ChainState, NettingChannelEndState
+from raiden.transfer.state import ChainState, NettingChannelEndState, fetch_address_metadata
 from raiden.transfer.views import (
     get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
@@ -194,6 +195,7 @@ class RaidenEventHandler(EventHandler):
             ContractSendChannelSettle: [self.handle_contract_send_channelsettle, []],
             ContractSendChannelWithdraw: [self.handle_contract_send_channelwithdraw, []],
             UpdateServicesAddresses: [self.handle_update_services_addresses, []],
+            RequestMetadata: [self.handle_missing_metadata_events, [chain_state]],
         }
 
         for event in events:
@@ -215,6 +217,22 @@ class RaidenEventHandler(EventHandler):
             for queue_identifier, messages in message_queues.items()
         ]
         raiden.transport.send_async(all_messages)
+
+    @staticmethod
+    def handle_missing_metadata_events(
+        raiden: "RaidenService", event: RequestMetadata, chain_state: ChainState
+    ) -> None:
+        new_events: List[Event] = []
+        for wrapped_event in event.dependant_events:
+            metadata = fetch_address_metadata(wrapped_event.recipient)
+            new_event = SendMessageEvent(
+                recipient=wrapped_event.recipient,
+                recipient_metadata=metadata,
+                canonical_identifier=wrapped_event.canonical_identifier,
+                message_identifier=wrapped_event.message_identifier,
+            )
+            new_events.append(new_event)
+        raiden.async_handle_events(chain_state, new_events)
 
     @staticmethod
     def handle_send_lockexpired(

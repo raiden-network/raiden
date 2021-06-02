@@ -92,13 +92,11 @@ def get_participants_addresses(
         chain_state, token_network_registry_address, token_address
     )
 
+    addresses = set()
     if token_network is not None:
-        addresses = set()
         for channel_state in token_network.channelidentifiers_to_channels.values():
             addresses.add(channel_state.partner_state.address)
             addresses.add(channel_state.our_state.address)
-    else:
-        addresses = set()
 
     return addresses
 
