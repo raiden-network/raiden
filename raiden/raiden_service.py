@@ -46,8 +46,11 @@ from raiden.exceptions import (
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.messages.encode import message_from_sendevent
+from raiden.network.pathfinding import PFSConfig
 from raiden.network.proxies.proxy_manager import ProxyManager
+from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.transport import populate_services_addresses
@@ -65,6 +68,7 @@ from raiden.transfer.architecture import (
     BalanceProofSignedState,
     ContractSendEvent,
     Event as RaidenEvent,
+    SendMessageEvent,
     StateChange,
 )
 from raiden.transfer.channel import get_capacity
@@ -77,6 +81,7 @@ from raiden.transfer.events import (
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
+    RequestMetadata,
     SendLockedTransfer,
     SendSecretRequest,
     SendUnlock,
@@ -119,6 +124,8 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     InitiatorAddress,
+    MonitoringServiceAddress,
+    OneToNAddress,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -301,6 +308,8 @@ class SynchronizationState(Enum):
 class RaidenService(Runnable):
     """A Raiden node."""
 
+    __pfs_config: Optional[PFSConfig] = None
+
     def __init__(
         self,
         rpc_client: JSONRPCClient,
@@ -356,23 +365,23 @@ class RaidenService(Runnable):
             service_registry = services_bundle.service_registry
             user_deposit = services_bundle.user_deposit
 
-        self.rpc_client = rpc_client
-        self.proxy_manager = proxy_manager
-        self.default_registry = raiden_bundle.token_network_registry
+        self.rpc_client: JSONRPCClient = rpc_client
+        self.proxy_manager: ProxyManager = proxy_manager
+        self.default_registry: TokenNetworkRegistry = raiden_bundle.token_network_registry
         self.query_start_block = query_start_block
         self.default_services_bundle = services_bundle
-        self.default_one_to_n_address = one_to_n_address
-        self.default_secret_registry = raiden_bundle.secret_registry
+        self.default_one_to_n_address: Optional[OneToNAddress] = one_to_n_address
+        self.default_secret_registry: SecretRegistry = raiden_bundle.secret_registry
         self.default_service_registry = service_registry
-        self.default_user_deposit = user_deposit
-        self.default_msc_address = monitoring_service_address
-        self.routing_mode = routing_mode
-        self.config = config
+        self.default_user_deposit: Optional[UserDeposit] = user_deposit
+        self.default_msc_address: Optional[MonitoringServiceAddress] = monitoring_service_address
+        self.routing_mode: RoutingMode = routing_mode
+        self.config: RaidenConfig = config
         self.notifications: Dict = {}  # notifications are unique (and indexed) by id.
 
         self.signer: Signer = LocalSigner(self.rpc_client.privkey)
-        self.address = self.signer.address
-        self.transport = transport
+        self.address: Address = self.signer.address
+        self.transport: MatrixTransport = transport
 
         self.alarm = AlarmTask(
             proxy_manager=proxy_manager, sleep_time=self.config.blockchain.query_interval
@@ -395,7 +404,7 @@ class RaidenService(Runnable):
         self.last_log_time = time.monotonic()
         self.last_log_block = BlockNumber(0)
 
-        self.contract_manager = ContractManager(config.contracts_path)
+        self.contract_manager: ContractManager = ContractManager(config.contracts_path)
         self.wal: Optional[WriteAheadLog] = None
         self.db_lock: Optional[filelock.UnixFileLock] = None
 
@@ -448,6 +457,12 @@ class RaidenService(Runnable):
         # Counters used for state snapshotting
         self.state_change_qty_snapshot = 0
         self.state_change_qty = 0
+
+        RaidenService.__pfs_config = getattr(config, "pfs_config", None)
+
+    @staticmethod
+    def pfs_config() -> Optional[PFSConfig]:
+        return RaidenService.__pfs_config
 
     def start(self) -> None:
         """Start the node synchronously. Raises directly if anything went wrong on startup"""
@@ -990,6 +1005,18 @@ class RaidenService(Runnable):
             self.wal.snapshot(self.state_change_qty)
             self.state_change_qty_snapshot = self.state_change_qty
 
+    def _wrap_send_message_event(self, event: SendMessageEvent) -> Event:
+        return RequestMetadata([event]) if not event.recipient_metadata else event
+
+    def wrap_events(self, events: List[RaidenEvent]) -> List[RaidenEvent]:
+        event_wrappers: Dict[Any, Any] = defaultdict(lambda: lambda x: x)
+        event_wrappers.update({SendMessageEvent: self._wrap_send_message_event})
+        parsed_events = []
+        for event in events:
+            wrapper_method = event_wrappers[type(event)]
+            parsed_events.append(wrapper_method(event))
+        return parsed_events
+
     def async_handle_events(
         self, chain_state: ChainState, raiden_events: List[RaidenEvent]
     ) -> List[Greenlet]:
@@ -1012,6 +1039,8 @@ class RaidenService(Runnable):
         """
         typecheck(chain_state, ChainState)
 
+        parsed_events = self.wrap_events(raiden_events)
+
         fast_events = list()
         greenlets: List[Greenlet] = list()
 
@@ -1029,9 +1058,10 @@ class RaidenService(Runnable):
             EventPaymentSentSuccess,
             SendSecretRequest,
             ContractSendEvent,
+            RequestMetadata,
         )
 
-        for event in raiden_events:
+        for event in parsed_events:
             if isinstance(event, blocking_events):
                 greenlets.append(
                     spawn_named(

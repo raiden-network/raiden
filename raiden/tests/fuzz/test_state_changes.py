@@ -29,6 +29,7 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
+    RequestMetadata,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
@@ -685,7 +686,7 @@ class TargetMixin:
 
         result = node.state_transition(target_client.chain_state, action)
 
-        assert event_types_match(result.events, SendProcessed, SendSecretRequest)
+        assert event_types_match(result.events, RequestMetadata, SendSecretRequest)
 
         self.transfer_order.answered.append(self.transfer_order.initiated.pop(0))
 

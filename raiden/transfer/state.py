@@ -67,7 +67,6 @@ from raiden.utils.typing import (
 )
 from raiden.utils.validation import MetadataValidation
 
-
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
 
@@ -596,8 +595,23 @@ class ChainState(State):
 def get_address_metadata(
     address: Address, route_states: List[RouteState]
 ) -> Optional[AddressMetadata]:
+
     for route_state in route_states:
         recipient_metadata = route_state.address_to_metadata.get(address, None)
         if recipient_metadata is not None:
             return recipient_metadata
     return None
+
+
+def fetch_address_metadata(
+    address: Address, route_states: Optional[List[RouteState]] = None
+) -> AddressMetadata:
+    from raiden.network.pathfinding import query_address_metadata
+    from raiden.raiden_service import RaidenService
+
+    metadata = get_address_metadata(address, route_states) if route_states else {}
+    metadata = metadata or {}
+    pfs_config = RaidenService.pfs_config()
+    if not metadata and pfs_config is not None:
+        metadata = query_address_metadata(pfs_config, address)
+    return metadata

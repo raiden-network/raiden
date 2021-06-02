@@ -35,10 +35,7 @@ if sys.platform == "darwin":  # pragma: no cover
     def _unused_ports(initial_port: Optional[int]) -> Iterator[Port]:
         socket_kind: SocketKind = SocketKind.SOCK_STREAM
 
-        if not initial_port:
-            next_port = repeat(0)
-        else:
-            next_port = count(start=initial_port)
+        next_port = count(start=initial_port) if initial_port else repeat(0)
 
         for port_candidate in next_port:
             # Don't inline the variable until
