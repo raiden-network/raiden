@@ -1048,7 +1048,7 @@ workflows:
             - prepare-python-macos-3.7
 
       - deploy-digitalocean:
-          context: "Raiden Context"
+          context: "raiden-py"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
