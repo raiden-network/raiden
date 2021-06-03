@@ -521,7 +521,7 @@ requests==2.25.1
     #   responses
     #   treq
     #   web3
-responses==0.10.15
+responses==0.13.3
     # via -r requirements-dev.in
 rlp==2.0.1
     # via
@@ -648,6 +648,7 @@ urllib3==1.26.5
     # via
     #   -r requirements.txt
     #   requests
+    #   responses
 varint==1.0.2
     # via
     #   -r requirements.txt
