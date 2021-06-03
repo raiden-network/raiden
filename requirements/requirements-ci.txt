@@ -349,7 +349,7 @@ marshmallow-enum==1.5.1
     # via -r requirements-dev.txt
 marshmallow-polyfield==5.10
     # via -r requirements-dev.txt
-marshmallow==3.11.1
+marshmallow==3.12.1
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
