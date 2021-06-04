@@ -5,6 +5,7 @@ import gevent
 import pytest
 from eth_utils import encode_hex
 from gevent import Timeout
+from gevent.event import Event
 from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
@@ -647,3 +648,55 @@ def test_retryqueue_not_idle_with_messages(
     retry_queue_2 = mock_matrix._get_retrier(Address(factories.HOP1))
     # The first queue has never become idle, therefore the same object must be returned
     assert retry_queue is retry_queue_2
+
+
+def test_retryqueue_enqueue_not_blocking(
+    mock_matrix: MatrixTransport, retry_interval_initial: float, monkeypatch
+) -> None:
+    """Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue."""
+    # Pretend the Transport greenlet is running
+    mock_matrix.greenlet = True
+
+    lock = Event()
+    call_count = 0
+
+    def send_raw_blocking(
+        receiver_address: Address,
+        data: str,
+        message_type: MatrixMessageType = MatrixMessageType.TEXT,
+        receiver_metadata: AddressMetadata = None,
+    ):
+        nonlocal call_count
+        call_count += 1
+        lock.wait()
+
+    monkeypatch.setattr(mock_matrix, "_send_raw", send_raw_blocking)
+
+    retry_queue = mock_matrix._get_retrier(Address(factories.HOP1))
+
+    message_event = make_message_event(recipient=Address(factories.HOP1))
+    message = make_message(message_event=message_event)
+    mock_matrix._queueids_to_queues[message_event.queue_identifier] = [message_event]
+    retry_queue.enqueue(message_event.queue_identifier, [(message, None)])
+
+    gevent.sleep(0.01)
+
+    assert call_count == 1
+    assert len(retry_queue._message_queue) == 1
+
+    message_event = make_message_event(recipient=Address(factories.HOP1))
+    message = make_message(message_event=message_event)
+    # The timeout is to ensure that send_async immediately gives back control to the event loop
+    with gevent.Timeout(0, False):
+        try:
+            mock_matrix._queueids_to_queues[message_event.queue_identifier] = [message_event]
+            retry_queue.enqueue(message_event.queue_identifier, [(message, None)])
+        except gevent.Timeout:
+            raise AssertionError("send_async is blocking")
+
+    # release the lock and switch context
+    lock.set()
+    gevent.sleep(0.01)
+
+    assert call_count == 2
+    assert len(retry_queue._message_queue) == 1
