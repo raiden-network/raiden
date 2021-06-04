@@ -15,7 +15,6 @@ import structlog
 from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, is_binary_address, to_normalized_address
 from gevent.event import Event
-from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError
 from web3.types import BlockIdentifier
@@ -114,6 +113,14 @@ class MessagesQueue:
     messages: List[Tuple[Message, Optional[AddressMetadata]]]
 
 
+def metadata_key_func(message_data: "_RetryQueue._MessageData") -> str:
+    address_metadata = message_data.address_metadata
+    if address_metadata is None:
+        return ""
+    uid = address_metadata.get("user_id", "")
+    return uid
+
+
 class _RetryQueue(Runnable):
     """A helper Runnable to send batched messages to receiver through transport"""
 
@@ -132,7 +139,6 @@ class _RetryQueue(Runnable):
         self.receiver = receiver
         self._message_queue: List[_RetryQueue._MessageData] = list()
         self._notify_event = gevent.event.Event()
-        self._lock = Semaphore()
         self._idle_since: int = 0  # Counter of idle iterations
         super().__init__()
         self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
@@ -171,40 +177,38 @@ class _RetryQueue(Runnable):
         )
         assert queue_identifier.recipient == self.receiver, msg
 
-        with self._lock:
-            timeout_generator = timeout_exponential_backoff(
-                self.transport._config.retries_before_backoff,
-                self.transport._config.retry_interval_initial,
-                self.transport._config.retry_interval_max,
+        timeout_generator = timeout_exponential_backoff(
+            self.transport._config.retries_before_backoff,
+            self.transport._config.retry_interval_initial,
+            self.transport._config.retry_interval_max,
+        )
+
+        encoded_messages = list()
+        for message, address_metadata in messages:
+            already_queued = any(
+                queue_identifier == data.queue_identifier and message == data.message
+                for data in self._message_queue
             )
 
-            encoded_messages = list()
-            for message, address_metadata in messages:
-                already_queued = any(
-                    queue_identifier == data.queue_identifier and message == data.message
-                    for data in self._message_queue
+            if already_queued:
+                self.log.warning(
+                    "Message already in queue - ignoring",
+                    receiver=to_checksum_address(self.receiver),
+                    queue=queue_identifier,
+                    message=redact_secret(DictSerializer.serialize(message)),
                 )
+            else:
+                expiration_generator = self._expiration_generator(timeout_generator)
+                data = _RetryQueue._MessageData(
+                    queue_identifier=queue_identifier,
+                    message=message,
+                    text=MessageSerializer.serialize(message),
+                    expiration_generator=expiration_generator,
+                    address_metadata=address_metadata,
+                )
+                encoded_messages.append(data)
 
-                if already_queued:
-                    self.log.warning(
-                        "Message already in queue - ignoring",
-                        receiver=to_checksum_address(self.receiver),
-                        queue=queue_identifier,
-                        message=redact_secret(DictSerializer.serialize(message)),
-                    )
-                else:
-                    expiration_generator = self._expiration_generator(timeout_generator)
-                    data = _RetryQueue._MessageData(
-                        queue_identifier=queue_identifier,
-                        message=message,
-                        text=MessageSerializer.serialize(message),
-                        expiration_generator=expiration_generator,
-                        address_metadata=address_metadata,
-                    )
-                    encoded_messages.append(data)
-
-            self._message_queue.extend(encoded_messages)
-
+        self._message_queue.extend(encoded_messages)
         self.notify()
 
     def enqueue_unordered(
@@ -220,41 +224,7 @@ class _RetryQueue(Runnable):
 
     def notify(self) -> None:
         """Notify main loop to check if anything needs to be sent"""
-        with self._lock:
-            self._notify_event.set()
-
-    def _batch_by_user_id(
-        self,
-    ) -> List[Tuple[List[_MessageData], Optional[AddressMetadata]]]:
-        """
-        This method will batch the message data in the retry-queue by the UserID
-        that might be attached to the message-data by additional AddressMetadata.
-
-        The method will return batches of message-data, batched by the value of the "user_id"
-        key in the message data's address-metadata.
-        If there is no address-metadata present, or if the address-metadata does not have a
-        "user_id" key, this message-data will be batched to the `None` batch.
-        """
-
-        def key_func(message_data: "_RetryQueue._MessageData") -> str:
-            address_metadata = message_data.address_metadata
-            if address_metadata is None:
-                return ""
-            uid = address_metadata.get("user_id", "")
-            return uid
-
-        batched_messages = list()
-        queue_by_user_id = sorted(self._message_queue[:], key=key_func)
-        for user_id, batch in itertools.groupby(queue_by_user_id, key_func):
-            message_data_batch = list(batch)
-            if user_id == "":
-                metadata = None
-            else:
-                # simply use the first metadata in the list, event though
-                # there could be discrepancies along the batch
-                metadata = message_data_batch[0].address_metadata
-            batched_messages.append((message_data_batch, metadata))
-        return batched_messages
+        self._notify_event.set()
 
     def _check_and_send(self) -> None:
         """Check and send all pending/queued messages that are not waiting on retry timeout
@@ -268,8 +238,6 @@ class _RetryQueue(Runnable):
         if self.transport._stop_event.ready():
             self.log.warning("Can't retry", reason="Transport stopped")
             return
-
-        assert self._lock.locked(), "RetryQueue lock must be held while messages are being sent"
 
         # On startup protocol messages must be sent only after the monitoring
         # services are updated. For more details refer to the method
@@ -294,9 +262,19 @@ class _RetryQueue(Runnable):
                 for send_event in self.transport._queueids_to_queues[message_data.queue_identifier]
             )
 
-        for subqueue, address_metadata in self._batch_by_user_id():
+        # batch by user_id, so that we can potentially combine data for send-to-device calls
+        queue_by_user_id = sorted(self._message_queue[:], key=metadata_key_func)
+        for user_id, batch in itertools.groupby(queue_by_user_id, metadata_key_func):
+            message_data_batch = list(batch)
+            if user_id == "":
+                address_metadata = None
+            else:
+                # simply use the first metadata in the list, event though
+                # there could be discrepancies along the batch
+                address_metadata = message_data_batch[0].address_metadata
+
             message_texts: List[str] = list()
-            for message_data in subqueue:
+            for message_data in message_data_batch:
                 # Messages are sent on two conditions:
                 # - Non-retryable (e.g. Delivered)
                 #   - Those are immediately remove from the local queue
@@ -333,7 +311,6 @@ class _RetryQueue(Runnable):
                                         message_data.message.message_identifier,
                                     )
                                 ] += 1
-
                 if remove:
                     self._message_queue.remove(message_data)
 
@@ -360,14 +337,12 @@ class _RetryQueue(Runnable):
         )
         # run while transport parent is running
         while not self.transport._stop_event.ready():
-            # once entered the critical section, block any other enqueue or notify attempt
-            with self._lock:
-                self._notify_event.clear()
-                if self._message_queue:
-                    self._idle_since = 0
-                    self._check_and_send()
-                else:
-                    self._idle_since += 1
+            self._notify_event.clear()
+            if self._message_queue:
+                self._idle_since = 0
+                self._check_and_send()
+            else:
+                self._idle_since += 1
 
             if self.is_idle:
                 # There have been no messages to process for a while. Exit.

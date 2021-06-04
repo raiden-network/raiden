@@ -16,7 +16,6 @@ from raiden.network.transport.matrix.utils import (
     make_client,
     make_room_alias,
 )
-
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.transport import ignore_messages, new_client

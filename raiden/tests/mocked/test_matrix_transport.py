@@ -524,9 +524,7 @@ def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
         message_event5,
     ]
 
-    # This will call the batching
-    with retry_queue._lock:
-        retry_queue._check_and_send()
+    retry_queue._check_and_send()
 
     assert len(sent_messages) == 5
     # only 3 batches expected by "user_id" in AddressMetadata
@@ -585,8 +583,7 @@ def test_retry_queue_does_not_resend_removed_messages(
 
     mock_matrix._queueids_to_queues[message_event.queue_identifier] = [message_event]
 
-    with retry_queue._lock:
-        retry_queue._check_and_send()
+    retry_queue._check_and_send()
 
     assert len(mock_matrix.sent_messages) == 1  # type: ignore
     assert (factories.HOP1, serialized_message) in mock_matrix.sent_messages  # type: ignore
@@ -596,9 +593,8 @@ def test_retry_queue_does_not_resend_removed_messages(
     # Make sure the retry interval has elapsed
     gevent.sleep(retry_interval_initial * 5)
 
-    with retry_queue._lock:
-        # The message has been removed from the raiden queue and should therefore not be sent again
-        retry_queue._check_and_send()
+    # The message has been removed from the raiden queue and should therefore not be sent again
+    retry_queue._check_and_send()
 
     assert len(mock_matrix.sent_messages) == 1  # type: ignore
 
