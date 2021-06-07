@@ -65,7 +65,7 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
-from raiden.utils.validation import validate_address_metadata
+from raiden.utils.validation import MetadataValidation
 
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
@@ -131,7 +131,7 @@ class HopState(State):
 
 
 @dataclass
-class RouteState(State):
+class RouteState(State, MetadataValidation):
     """A possible route for a payment to a given target."""
 
     # TODO: Add timestamp
@@ -148,13 +148,16 @@ class RouteState(State):
 
         In the future a more granular validation may be introduced.
         """
-        validation_errors = validate_address_metadata(self)
+        validation_errors = self.validate_address_metadata()
         if validation_errors:
             addresses_with_errors = ", ".join(
                 f"{to_checksum_address(address)}: {errors}"
                 for address, errors in validation_errors.items()
             )
             raise ValueError(f"Could not validate metadata {addresses_with_errors}.")
+
+    def get_metadata(self) -> Optional[Dict[Address, AddressMetadata]]:
+        return self.address_to_metadata
 
     @property
     def next_hop_address(self) -> Address:

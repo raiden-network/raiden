@@ -7,10 +7,10 @@ from eth_utils import keccak
 from raiden.messages.abstract import cached_property
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import MYPY_ANNOTATION, Address, AddressMetadata, Dict, List, Optional
-from raiden.utils.validation import validate_address_metadata
+from raiden.utils.validation import MetadataValidation
 
 
-class RouteMetadata:
+class RouteMetadata(MetadataValidation):
     route: List[Address]
     address_metadata: Optional[Dict[Address, AddressMetadata]]
 
@@ -26,7 +26,7 @@ class RouteMetadata:
 
     def _validate_address_metadata(self) -> None:
         assert self.address_metadata is not None, MYPY_ANNOTATION
-        validation_errors = validate_address_metadata(self)
+        validation_errors = self.validate_address_metadata()
         for address in validation_errors:
             del self.address_metadata[address]
 
@@ -46,6 +46,9 @@ class RouteMetadata:
             for address, metadata in self.address_metadata.items()
         }
         return {"route": route, "address_metadata": address_metadata}
+
+    def get_metadata(self) -> Optional[Dict[Address, AddressMetadata]]:
+        return self.address_metadata
 
     def __repr__(self) -> str:
         return f"RouteMetadata: {' -> '.join([to_checksum_address(a) for a in self.route])}"
