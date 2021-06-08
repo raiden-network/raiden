@@ -10,6 +10,7 @@ from raiden.utils.typing import MYPY_ANNOTATION, Address, AddressMetadata, Dict,
 from raiden.utils.validation import MetadataValidation
 
 
+@dataclass
 class RouteMetadata(MetadataValidation):
     route: List[Address]
     address_metadata: Optional[Dict[Address, AddressMetadata]]
