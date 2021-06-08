@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Flag, auto
 from typing import Dict, List, Optional
 
@@ -14,6 +15,7 @@ class MetadataValidationError(Flag):
     INVALID_SIGNATURE = auto()
 
 
+@dataclass
 class MetadataValidation:
     route: List[Address]
 

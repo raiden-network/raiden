@@ -131,7 +131,7 @@ class HopState(State):
 
 
 @dataclass
-class RouteState(State, MetadataValidation):
+class RouteState(MetadataValidation, State):
     """A possible route for a payment to a given target."""
 
     # TODO: Add timestamp
