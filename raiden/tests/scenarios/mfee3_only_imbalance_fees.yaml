@@ -66,8 +66,8 @@ scenario:
             # -2000 TKN fees are calculated, but the actual value is closer to zero because
             # 1. Due to the negative fee less tokens are transferred, resulting in a smaller negative fee
             # 2. A fee margin is applied
-            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 519_149_961_200_077_600, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0, balance: 480_850_038_799_922_400, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 519_149_961_200_077_600, allow_balance_error: 5, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 480_850_038_799_922_400, allow_balance_error: 5, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 499_150_001_199_997_600, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 0, balance: 500_849_998_800_002_400, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 499_150_001_199_997_600, allow_balance_error: 5, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 0, balance: 500_849_998_800_002_400, allow_balance_error: 5, state: "opened"}

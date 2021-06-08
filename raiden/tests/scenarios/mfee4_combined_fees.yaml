@@ -75,11 +75,11 @@ scenario:
             # Total fees: 40e15 + 200 + 10e15 = 50e15
             # Margin: 50e15 * 3% + 500e15 * 0.05% = 1.5e15 + 0.25e15 = 1.525e15
             # Amount sent by initiator: 500e15 + 50e15 + 1.525e15 = 551e15
-            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 456_496_933_858_494_449, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_543_503_066_141_505_551, state: "opened"}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 456_496_933_858_494_449, allow_balance_error: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_543_503_066_141_505_551, allow_balance_error: 10, state: "opened"}
 
-            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 478_587_602_916_613_423, state: "opened"}
-            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_521_412_397_083_386_577, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 478_587_602_916_613_423, allow_balance_error: 10, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_521_412_397_083_386_577, allow_balance_error: 10, state: "opened"}
 
-            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 498_743_132_371_418_303, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_501_256_867_628_581_697, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 498_743_132_371_418_303, allow_balance_error: 10, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_501_256_867_628_581_697, allow_balance_error: 10, state: "opened"}
