@@ -1,11 +1,14 @@
 Settle Payments and Close Channels
 ==================================
 
+To get your tokens back on-chain you need to either withdraw them from a channel or close and settle the channel.
 You have a couple of ways for getting your tokens back on-chain:
 
--  Withdraw tokens from an open
--  Close a channel
--  Leave a token network
+-  :ref:`Withdraw tokens from an open channel <webui_withdraw_tokens>`
+-  :ref:`Close a channel <webui_close_channel>`
+-  :ref:`Leave a token network <webui_leave_network>`
+
+.. _webui_withdraw_tokens:
 
 Withdraw tokens
 ---------------
@@ -45,6 +48,7 @@ participants.
    channel is settled once the settle timeout period is over. The tokens can
    then be used on-chain. 
 
+.. _webui_leave_network:
 
 Leave a token network
 ---------------------

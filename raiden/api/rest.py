@@ -3,6 +3,7 @@ import logging
 import socket
 from hashlib import sha256
 from http import HTTPStatus
+from typing import Type
 
 import gevent
 import gevent.pool
@@ -88,6 +89,7 @@ from raiden.exceptions import (
     PaymentConflict,
     RaidenRecoverableError,
     SamePeerAddress,
+    ServiceRequestFailed,
     TokenNetworkDeprecated,
     TokenNotRegistered,
     UnexpectedChannelState,
@@ -187,14 +189,14 @@ def endpoint_not_found(e: Any) -> Response:
 
 
 def hexbytes_to_str(map_: Dict) -> None:
-    """ Converts values that are of type `HexBytes` to strings. """
+    """Converts values that are of type `HexBytes` to strings."""
     for k, v in map_.items():
         if isinstance(v, HexBytes):
             map_[k] = encode_hex(v)
 
 
 def encode_byte_values(map_: Dict) -> None:
-    """ Converts values that are of type `bytes` to strings. """
+    """Converts values that are of type `bytes` to strings."""
     for k, v in map_.items():
         if isinstance(v, bytes):
             map_[k] = encode_hex(v)
@@ -226,10 +228,9 @@ def restapi_setup_urls(flask_api_context: Api, rest_api: "RestAPI", urls: List) 
 
 
 def restapi_setup_type_converters(
-    flask_app: Flask, names_to_converters: Dict[str, BaseConverter]
+    flask_app: Flask, names_to_converters: Dict[str, Type[BaseConverter]]
 ) -> None:
-    for key, value in names_to_converters.items():
-        flask_app.url_map.converters[key] = value
+    flask_app.url_map.converters.update(names_to_converters)
 
 
 class APIServer(Runnable):  # pragma: no unittest
@@ -273,7 +274,7 @@ class APIServer(Runnable):  # pragma: no unittest
         flask_api_context = Api(blueprint, prefix=self._api_prefix)
 
         restapi_setup_type_converters(
-            flask_app, {"hexaddress": cast(BaseConverter, HexAddressConverter)}
+            flask_app, {"hexaddress": cast(Type[BaseConverter], HexAddressConverter)}
         )
 
         restapi_setup_urls(flask_api_context, rest_api, URLS_V1)
@@ -292,7 +293,11 @@ class APIServer(Runnable):  # pragma: no unittest
 
         self.flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
         self.flask_app.register_error_handler(Exception, self.unhandled_exception)
-        self.flask_app.before_request(self._check_shutdown_before_handle_request)
+
+        # FIXME: There's a type annotation bug on flask, fixed on this commit:
+        # https://github.com/pallets/flask/commit/a960236117442bec67f89c30dfa014e05483da5a
+        # Remove type ignore on the next flask release this commit is included
+        self.flask_app.before_request(self._check_shutdown_before_handle_request)  # type: ignore
 
         # needed so flask_restful propagates the exception to our error handler above
         # or else, it'll replace it with a E500 response
@@ -305,8 +310,10 @@ class APIServer(Runnable):  # pragma: no unittest
                 )
 
     def _check_shutdown_before_handle_request(self) -> Optional[Response]:
-        # We don't want to handle requests when shutting down
-        # When the `before_request` hook returns a value, the request will not be processed further
+        """
+        We don't want to handle requests when shutting down
+        When the `before_request` hook returns a value, the request will not be processed further
+        """
         if self.stop_event.is_set():
             return api_error("Raiden API is shutting down", HTTPStatus.SERVICE_UNAVAILABLE)
 
@@ -429,7 +436,7 @@ class APIServer(Runnable):  # pragma: no unittest
         )
 
     def unhandled_exception(self, exception: Exception) -> Response:
-        """ Flask.errorhandler when an exception wasn't correctly handled """
+        """Flask.errorhandler when an exception wasn't correctly handled"""
         log.critical(
             "Unhandled exception when processing endpoint request",
             exc_info=True,
@@ -1129,7 +1136,7 @@ class RestAPI:  # pragma: no unittest
             )
         except (NonexistingChannel, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.BAD_REQUEST)
-        except (InsufficientFunds, WithdrawMismatch) as e:
+        except (InsufficientFunds, WithdrawMismatch, ServiceRequestFailed) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         # TODO handle InsufficientEth here
 

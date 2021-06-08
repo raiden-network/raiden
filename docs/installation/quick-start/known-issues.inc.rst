@@ -1,16 +1,16 @@
 Handle Limitations
-==================
+##################
 
 Internal Server Error
----------------------
+=====================
 
 The Raiden Wizard will display an **Internal Server Error** if an
-invalid project ID is provided. To solve this you have to `manually
+invalid project ID is provided. To solve this you have to :ref:`manually
 delete the configuration
-file <Delete configuration files>`__ that got created.
+file <wizard_delete_config>` that got created.
 
 Stop Raiden from running
-------------------------
+========================
 
 The Wizard does not provide a way of shutting down the Raiden node. You
 have to cancel the process to stop Raiden.
@@ -20,6 +20,8 @@ Raiden.
 
 **Linux:** Use any Linux process manager for stopping
 Raiden.
+
+.. _wizard_delete_config:
 
 Delete configuration files
 --------------------------

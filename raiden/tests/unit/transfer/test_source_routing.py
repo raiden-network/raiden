@@ -1,16 +1,19 @@
 import random
+from urllib.parse import urlparse
+
+from eth_utils import encode_hex, to_normalized_address
 
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.messages.transfers import LockedTransfer, RefundTransfer
 from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.factories import UNIT_TOKEN_NETWORK_ADDRESS, UNIT_TRANSFER_AMOUNT
+from raiden.tests.utils.factories import HOP1_KEY, UNIT_TOKEN_NETWORK_ADDRESS, UNIT_TRANSFER_AMOUNT
 from raiden.transfer import views
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator_manager, mediator
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import (
     ActionTransferReroute,
     ReceiveTransferCancelRoute,
@@ -35,24 +38,26 @@ def test_can_create_refund_transfer_messages():
     assert len(refund_transfer.metadata.routes) == 1
 
 
-def test_route_metadata_hashing():
+def test_route_metadata_canonical():
     properties = factories.RouteMetadataProperties()
     one_route_metadata = factories.create(properties)
     assert isinstance(one_route_metadata, RouteMetadata)
-    one_hash = one_route_metadata.hash
+    one_canonical = one_route_metadata._canonical_dict()
 
     another_route_metadata = factories.create(properties)
-    another_hash = another_route_metadata.hash
+    another_canonical = another_route_metadata._canonical_dict()
 
-    assert one_hash == another_hash, "route metadata with same routes do not match"
+    assert one_canonical == another_canonical, "route metadata with same routes do not match"
 
     inverted_route_metadata = factories.create(
         factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
     )
 
-    inverted_route_hash = inverted_route_metadata.hash
+    inverted_route_canonical = inverted_route_metadata._canonical_dict()
 
-    assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
+    assert (
+        one_canonical != inverted_route_canonical
+    ), "route metadata with inverted routes still match"
 
 
 def test_metadata_hashing():
@@ -77,6 +82,30 @@ def test_metadata_hashing():
     inverted_route_hash = metadata_with_inverted_route.hash
 
     assert one_hash != inverted_route_hash, "route metadata with inverted routes still match"
+
+
+def test_route_metadata_displayname_validation():
+    properties = factories.RouteMetadataProperties()
+    one_metadata = factories.create(properties)
+    route = one_metadata.route
+    signer = LocalSigner(HOP1_KEY)
+    server_name = urlparse("https://ownserver.com").netloc
+    user_id = f"@{to_normalized_address(signer.address)}:{server_name}"
+    displayname = encode_hex(signer.sign(user_id.encode()))
+
+    bad_metadata = RouteMetadata(
+        route=route,
+        address_metadata={signer.address: {"user_id": user_id, "displayname": "fake"}},
+    )
+    good_metadata = RouteMetadata(
+        route=route,
+        address_metadata={signer.address: {"user_id": user_id, "displayname": displayname}},
+    )
+
+    assert bad_metadata.address_metadata == {}
+    assert good_metadata.address_metadata == {
+        signer.address: {"user_id": user_id, "displayname": displayname}
+    }
 
 
 def test_locked_transfer_with_metadata():
@@ -450,7 +479,3 @@ def test_mediator_skips_used_routes():
     events = transition_result.events
     assert mediator_state is not None
     assert events
-
-    # no other routes available, so refund HOP1
-    assert isinstance(events[-1], SendRefundTransfer)
-    assert events[-1].recipient == factories.HOP1

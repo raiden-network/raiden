@@ -2,7 +2,7 @@ version: 2
 
 settings:
   # Gas price to use, either `fast`, `medium` or an integer (in gwei)
-  gas_price: "fast"
+  gas_price: {{ gas_price }}
   services:
     pfs:
       url: {{ pfs_with_fee }}

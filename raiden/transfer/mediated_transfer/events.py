@@ -20,18 +20,6 @@ from raiden.utils.typing import (
 )
 
 
-def refund_from_sendmediated(
-    send_lockedtransfer_event: "SendLockedTransfer",
-) -> "SendRefundTransfer":
-    return SendRefundTransfer(
-        recipient=send_lockedtransfer_event.recipient,
-        recipient_metadata=send_lockedtransfer_event.recipient_metadata,
-        message_identifier=send_lockedtransfer_event.message_identifier,
-        transfer=send_lockedtransfer_event.transfer,
-        canonical_identifier=send_lockedtransfer_event.queue_identifier.canonical_identifier,
-    )
-
-
 @dataclass(frozen=True)
 class SendLockExpired(SendMessageEvent):
     balance_proof: BalanceProofUnsignedState
@@ -40,7 +28,7 @@ class SendLockExpired(SendMessageEvent):
 
 @dataclass(frozen=True)
 class SendLockedTransfer(SendMessageEvent):
-    """ A locked transfer that must be sent to `recipient`. """
+    """A locked transfer that must be sent to `recipient`."""
 
     transfer: LockedTransferUnsignedState
 
@@ -131,23 +119,8 @@ class SendSecretRequest(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class SendRefundTransfer(SendMessageEvent):
-    """Event used to cleanly backtrack the current node in the route.
-    This message will pay back the same amount of token from the recipient to
-    the sender, allowing the sender to try a different route without the risk
-    of losing token.
-    """
-
-    transfer: LockedTransferUnsignedState
-
-    @property
-    def balance_proof(self) -> BalanceProofUnsignedState:
-        return self.transfer.balance_proof
-
-
-@dataclass(frozen=True)
 class EventUnlockSuccess(Event):
-    """ Event emitted when a lock unlock succeded. """
+    """Event emitted when a lock unlock succeded."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -155,7 +128,7 @@ class EventUnlockSuccess(Event):
 
 @dataclass(frozen=True)
 class EventUnlockFailed(Event):
-    """ Event emitted when a lock unlock failed. """
+    """Event emitted when a lock unlock failed."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -164,7 +137,7 @@ class EventUnlockFailed(Event):
 
 @dataclass(frozen=True)
 class EventUnlockClaimSuccess(Event):
-    """ Event emitted when a lock claim succeded. """
+    """Event emitted when a lock claim succeded."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -172,7 +145,7 @@ class EventUnlockClaimSuccess(Event):
 
 @dataclass(frozen=True)
 class EventUnlockClaimFailed(Event):
-    """ Event emitted when a lock claim failed. """
+    """Event emitted when a lock claim failed."""
 
     identifier: PaymentID
     secrethash: SecretHash
@@ -181,7 +154,7 @@ class EventUnlockClaimFailed(Event):
 
 @dataclass(frozen=True)
 class EventUnexpectedSecretReveal(Event):
-    """ Event emitted when an unexpected secret reveal message is received. """
+    """Event emitted when an unexpected secret reveal message is received."""
 
     secrethash: SecretHash
     reason: str

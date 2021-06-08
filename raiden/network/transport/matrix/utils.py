@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
-from operator import attrgetter, itemgetter
+from operator import itemgetter
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Sequence, Set
 from urllib.parse import urlparse
 
@@ -25,18 +25,12 @@ from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.constants import DeviceIDs
-from raiden.exceptions import (
-    InvalidSignature,
-    RaidenUnrecoverableError,
-    SerializationError,
-    TransportError,
-)
+from raiden.exceptions import InvalidSignature, SerializationError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedMessage
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixSyncMessages,
-    Room,
     User,
     node_address_from_userid,
 )
@@ -44,7 +38,17 @@ from raiden.network.utils import get_average_http_response_time
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.utils.gevent import spawn_named
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address, ChainID, MessageID, Signature, T_UserID, UserID, typecheck
+from raiden.utils.typing import (
+    Address,
+    AddressMetadata,
+    ChainID,
+    MessageID,
+    Signature,
+    T_UserID,
+    UserID,
+    cast,
+    typecheck,
+)
 from raiden_contracts.constants import ID_TO_CHAINNAME
 
 log = structlog.get_logger(__name__)
@@ -107,12 +111,32 @@ def address_from_userid(user_id: str) -> Optional[Address]:
     return address
 
 
-def is_valid_userid(user_id: Any) -> bool:
+def is_valid_userid_for_address(user_id: Any, address: Address) -> bool:
     try:
         typecheck(user_id, T_UserID)
     except ValueError:
         return False
-    return bool(USERID_RE.match(user_id))
+    user_id_address = address_from_userid(user_id)
+    if not user_id_address:
+        return False
+    return address == user_id_address
+
+
+def get_user_id_from_metadata(
+    address: Address, address_metadata: AddressMetadata = None
+) -> Optional[UserID]:
+    """Get user-id from the address-metadata, if it is valid and present.
+
+    This will take the information from an optional AddressMetadata dictionary.
+    If the address_metadata is present and the user-id within that metadata is
+    valid and present for the specified address, the user-id will get returned.
+    """
+    if address_metadata is not None:
+        user_id = address_metadata.get("user_id")
+        if is_valid_userid_for_address(user_id, address):
+            user_id = cast(UserID, user_id)
+            return user_id
+    return None
 
 
 class DisplayNameCache:
@@ -182,29 +206,6 @@ class MessageAckTimingKeeper:
         if not self._durations:
             return []
         return sorted(self._durations)
-
-
-def join_broadcast_room(client: GMatrixClient, broadcast_room_alias: str) -> Room:
-    """Join the public broadcast through the alias `broadcast_room_alias`.
-
-    When a new Matrix instance is deployed the broadcast room _must_ be created
-    and aliased, Raiden will not use a server that does not have the discovery
-    room properly set. Requiring the setup of the broadcast alias as part of
-    the server setup fixes a serious race condition where multiple discovery
-    rooms are created, which would break the presence checking.
-    See: https://github.com/raiden-network/raiden-transport/issues/46
-    """
-    try:
-        room = client.join_room(broadcast_room_alias)
-        del client.rooms[room.room_id]
-        return room
-    except MatrixRequestError:
-        raise RaidenUnrecoverableError(
-            f"Could not join broadcast room {broadcast_room_alias}. "
-            f"Make sure the Matrix server you're trying to connect to uses the recommended server "
-            f"setup, esp. the server-side broadcast room creation. "
-            f"See https://github.com/raiden-network/raiden-transport."
-        )
 
 
 def first_login(
@@ -301,8 +302,7 @@ def first_login(
         current_capabilities = ""
 
     # Only set the capabilities if necessary.
-    cap_str = capabilities_schema.load(capabilities.get("capabilities", {}))
-    cap_str = cap_str["capabilities"]
+    cap_str = capabilities.get("capabilities", "mxc://")
     if current_capabilities != cap_str:
         user.set_avatar_url(cap_str)
 
@@ -311,6 +311,7 @@ def first_login(
         node=to_checksum_address(username),
         homeserver=server_name,
         server_url=server_url,
+        capabilities=capabilities,
     )
     return user
 
@@ -388,25 +389,27 @@ def login(
             )
 
     try:
-        cap: Dict = capabilities_schema.dump(capabilities)
+        cap: Dict = capabilities_schema.dump({"capabilities": capabilities})
     except ValueError:
         raise Exception("error serializing")
     return first_login(client, signer, username, cap, device_id)
 
 
-@cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())  # type: ignore # noqa E501
 def validate_userid_signature(user: User) -> Optional[Address]:
-    """ Validate a userId format and signature on displayName, and return its address"""
+    """Validate a userId format and signature on displayName, and return its address"""
+    return validate_user_id_signature(user.user_id, user.displayname)
+
+
+@cached(cache=LRUCache(128), lock=Semaphore())  # noqa E501
+def validate_user_id_signature(user_id: UserID, displayname: Optional[str]) -> Optional[Address]:
     # display_name should be an address in the USERID_RE format
-    match = USERID_RE.match(user.user_id)
+    match = USERID_RE.match(user_id)
     if not match:
-        log.warning("Invalid user id", user=user.user_id)
+        log.warning("Invalid user id", user=user_id)
         return None
 
-    displayname = user.displayname
-
     if displayname is None:
-        log.warning("Displayname not set", user=user.user_id)
+        log.warning("Displayname not set", user=user_id)
         return None
 
     encoded_address = match.group(1)
@@ -416,11 +419,11 @@ def validate_userid_signature(user: User) -> Optional[Address]:
         if DISPLAY_NAME_HEX_RE.match(displayname):
             signature_bytes = decode_hex(displayname)
         else:
-            log.warning("Displayname invalid format", user=user.user_id, displayname=displayname)
+            log.warning("Displayname invalid format", user=user_id, displayname=displayname)
             return None
-        recovered = recover(data=user.user_id.encode(), signature=Signature(signature_bytes))
+        recovered = recover(data=user_id.encode(), signature=Signature(signature_bytes))
         if not (address and recovered and recovered == address):
-            log.warning("Unexpected signer of displayname", user=user.user_id)
+            log.warning("Unexpected signer of displayname", user=user_id)
             return None
     except (
         DecodeError,
@@ -489,7 +492,6 @@ def sort_servers_closest(
 
 def make_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-    handle_member_join_callback: Callable[[Room], None],
     servers: List[str],
     *args: Any,
     **kwargs: Any,
@@ -514,7 +516,6 @@ def make_client(
     for server_url, rtt in sorted_servers.items():
         client = GMatrixClient(
             handle_messages_callback,
-            handle_member_join_callback,
             server_url,
             *args,
             **kwargs,
@@ -625,7 +626,7 @@ def my_place_or_yours(our_address: Address, partner_address: Address) -> Address
 def make_message_batches(
     message_texts: Iterable[str], _max_batch_size: int = MATRIX_MAX_BATCH_SIZE
 ) -> Generator[str, None, None]:
-    """ Group messages into newline separated batches not exceeding ``_max_batch_size``. """
+    """Group messages into newline separated batches not exceeding ``_max_batch_size``."""
     current_batch: List[str] = []
     size = 0
     for message_text in message_texts:

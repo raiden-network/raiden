@@ -3,6 +3,7 @@
 Navigate the WebUI
 ==================
 
+To get you familiarized with the Raiden WebUI we have put together a short introduction to the most important screens of the application.
 You will find the navigation menu on the right and on the top is a bar
 which contains general information.
 
@@ -12,11 +13,17 @@ The **top bar** displays:
    activity happens. If you are using any testnet you'll also find a
    button which redirects you to the respectiva faucet for acquiring
    ETH.
-2. The **address** of your Raiden node (you can display the address as a
+2. Your **UDC balance**. This is the amount of RDN tokens you have deposited
+   in the User Deposit Contract. A deposit is needed for paying the 
+   :doc:`Raiden Services <../raiden_services>`. When clicking the button next
+   to the balance you will see a :ref:`dialog <webui_udc>` for performing 
+   deposits and withdrawals.
+3. Your **on-chain token balance** of the currently selected token.
+4. The **address** of your Raiden node (you can display the address as a
    QR code).
-3. A **search** field which filters all items on the page based on
+5. A **search** field which filters all items on the page based on
    search term.
-4. The **notification** button.
+6. The **notification** button.
 
 Home
 ----
@@ -26,9 +33,11 @@ the same things on Home screen as on each subpage we won't cover the
 Home screen in detail here but rather focus on the navigation menu
 options.
 
--  Transfers
--  Contacts
--  Channels
+-  :ref:`Transfers <webui_transfers>`
+-  :ref:`Contacts <webui_contacts>`
+-  :ref:`Channels <webui_channels>`
+
+.. _webui_transfers:
 
 Transfers
 ---------
@@ -51,6 +60,8 @@ The history is filtered by the selected token network.
 
 .. note:: If you have selected a network when using a testnet you can use the **"Add new network"** button for registering new token networks.
 
+.. _webui_contacts:
+
 Contacts
 --------
 
@@ -65,6 +76,8 @@ Clicking on a contact also gives you the options to make payments, edit
 or delete the chosen contact.
 
 .. note:: Contacts can be imported and exported by using the button on the top right.
+
+.. _webui_channels:
 
 Channels
 --------
@@ -84,7 +97,7 @@ balance. By clicking the three dots you can:
 
 .. note::
 
-    **What is a channel?**
+   **What is a channel?**
 
    A payment channel enables tokens to be exchanged back and forth between
    parties without involving the actual blockchain. A payment channel in

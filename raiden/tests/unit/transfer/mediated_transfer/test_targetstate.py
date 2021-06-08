@@ -176,7 +176,7 @@ def test_events_for_onchain_secretreveal():
 
 
 def test_handle_inittarget():
-    """ Init transfer must send a secret request if the expiration is valid. """
+    """Init transfer must send a secret request if the expiration is valid."""
     block_number = 1
     pseudo_random_generator = random.Random()
 
@@ -216,7 +216,7 @@ def test_handle_inittarget():
 
 
 def test_handle_inittarget_bad_expiration():
-    """ Init transfer must do nothing if the expiration is bad. """
+    """Init transfer must do nothing if the expiration is bad."""
     block_number = 1
     pseudo_random_generator = random.Random()
 
@@ -394,7 +394,7 @@ def test_handle_onchain_secretreveal():
 
 
 def test_handle_block():
-    """ Increase the block number. """
+    """Increase the block number."""
     setup = make_target_state()
 
     new_block = Block(
@@ -416,7 +416,7 @@ def test_handle_block():
 
 
 def test_handle_block_equal_block_number():
-    """ Nothing changes. """
+    """Nothing changes."""
     setup = make_target_state()
 
     new_block = Block(block_number=1, gas_limit=1, block_hash=factories.make_transaction_hash())
@@ -434,7 +434,7 @@ def test_handle_block_equal_block_number():
 
 
 def test_handle_block_lower_block_number():
-    """ Nothing changes. """
+    """Nothing changes."""
     setup = make_target_state(block_number=10)
 
     new_block = Block(
@@ -454,7 +454,7 @@ def test_handle_block_lower_block_number():
 
 
 def test_state_transition():
-    """ Happy case testing. """
+    """Happy case testing."""
     lock_amount = 7
     block_number = 1
     initiator = factories.make_address()

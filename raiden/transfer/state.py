@@ -65,6 +65,8 @@ from raiden.utils.typing import (
     WithdrawAmount,
     typecheck,
 )
+from raiden.utils.validation import validate_address_metadata
+
 
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
@@ -119,7 +121,7 @@ class PaymentMappingState(State):
 
 @dataclass
 class HopState(State):
-    """ Information about the next hop. """
+    """Information about the next hop."""
 
     node_address: Address
     channel_identifier: ChannelID
@@ -130,13 +132,29 @@ class HopState(State):
 
 @dataclass
 class RouteState(State):
-    """ A possible route for a payment to a given target. """
+    """A possible route for a payment to a given target."""
 
     # TODO: Add timestamp
     route: List[Address]
     address_to_metadata: Dict[Address, AddressMetadata] = field(default_factory=dict)
     swaps: Dict[Address, TokenNetworkAddress] = field(default_factory=dict)
     estimated_fee: FeeAmount = FeeAmount(0)
+
+    def __post_init__(self) -> None:
+        """Validate address_to_metadata.
+
+        Currently any validation error will cause a :class:``ValueError`` to be raised.
+        This needs to be caught in higher layers.
+
+        In the future a more granular validation may be introduced.
+        """
+        validation_errors = validate_address_metadata(self)
+        if validation_errors:
+            addresses_with_errors = ", ".join(
+                f"{to_checksum_address(address)}: {errors}"
+                for address, errors in validation_errors.items()
+            )
+            raise ValueError(f"Could not validate metadata {addresses_with_errors}.")
 
     @property
     def next_hop_address(self) -> Address:
@@ -163,7 +181,7 @@ class RouteState(State):
 
 @dataclass
 class HashTimeLockState(State):
-    """ Represents a hash time lock. """
+    """Represents a hash time lock."""
 
     amount: PaymentWithFeeAmount
     expiration: BlockExpiration
@@ -183,7 +201,7 @@ class HashTimeLockState(State):
 
 @dataclass
 class UnlockPartialProofState(State):
-    """ Stores the lock along with its unlocking secret. """
+    """Stores the lock along with its unlocking secret."""
 
     lock: HashTimeLockState
     secret: Secret = field(repr=False)
@@ -204,7 +222,7 @@ class UnlockPartialProofState(State):
 
 @dataclass
 class TransactionExecutionStatus(State):
-    """ Represents the status of a transaction. """
+    """Represents the status of a transaction."""
 
     SUCCESS = "success"
     FAILURE = "failure"
@@ -236,7 +254,7 @@ class TransactionExecutionStatus(State):
 
 @dataclass
 class SuccessfulTransactionState(State):
-    """ Represents the status of a transaction. """
+    """Represents the status of a transaction."""
 
     finished_block_number: BlockNumber
     started_block_number: Optional[BlockNumber] = None
@@ -280,6 +298,7 @@ class ExpiredWithdrawState:
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
+    recipient_metadata: Optional[AddressMetadata] = None
 
 
 @dataclass
@@ -287,11 +306,12 @@ class PendingWithdrawState:
     total_withdraw: WithdrawAmount
     expiration: BlockExpiration
     nonce: Nonce
+    recipient_metadata: Optional[AddressMetadata] = None
 
 
 @dataclass
 class NettingChannelEndState(State):
-    """ The state of one of the nodes in a two party netting channel. """
+    """The state of one of the nodes in a two party netting channel."""
 
     address: Address
     contract_balance: Balance
@@ -352,7 +372,7 @@ class NettingChannelEndState(State):
 
 @dataclass
 class NettingChannelState(State):
-    """ The state of a netting channel. """
+    """The state of a netting channel."""
 
     canonical_identifier: CanonicalIdentifier
     token_address: TokenAddress = field(repr=False)
@@ -444,7 +464,7 @@ class NettingChannelState(State):
 
 @dataclass
 class TokenNetworkState(State):
-    """ Corresponds to a token network smart contract. """
+    """Corresponds to a token network smart contract."""
 
     address: TokenNetworkAddress
     token_address: TokenAddress
@@ -466,7 +486,7 @@ class TokenNetworkState(State):
 
 @dataclass(init=False)
 class TokenNetworkRegistryState(State):
-    """ Corresponds to a registry smart contract. """
+    """Corresponds to a registry smart contract."""
 
     class Meta:
         unknown = marshmallow.EXCLUDE
@@ -561,7 +581,7 @@ class ChainState(State):
     def addresses_to_channel(
         self,
     ) -> Dict[Tuple[TokenNetworkAddress, Address], NettingChannelState]:
-        """ Find the channel for a partner by his address and token network """
+        """Find the channel for a partner by his address and token network"""
         return {
             (token_network.address, channel.partner_state.address): channel
             for token_network_registry in self.identifiers_to_tokennetworkregistries.values()

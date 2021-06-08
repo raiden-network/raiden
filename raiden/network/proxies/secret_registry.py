@@ -7,6 +7,7 @@ from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
 from raiden.constants import (
+    BLOCK_ID_PENDING,
     GAS_REQUIRED_PER_SECRET_IN_BATCH,
     GAS_REQUIRED_REGISTER_SECRET_BATCH_BASE,
 )
@@ -274,7 +275,7 @@ class SecretRegistry:
                 transaction_name="registerSecretBatch",
                 transaction_executed=True,
                 required_gas=GAS_REQUIRED_PER_SECRET_IN_BATCH * len(secrets_to_register),
-                block_identifier=self.client.get_checking_block(),
+                block_identifier=BLOCK_ID_PENDING,
             )
             error = "Call to registerSecretBatch couldn't be done"
 

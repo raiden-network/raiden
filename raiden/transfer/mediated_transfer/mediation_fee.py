@@ -89,7 +89,7 @@ def _collect_x_values(
 def _cap_fees(
     x_list: List[Fraction], y_list: List[Fraction]
 ) -> Tuple[List[Fraction], List[Fraction]]:
-    """ Insert extra points for intersections with x-axis, see `test_fee_capping` """
+    """Insert extra points for intersections with x-axis, see `test_fee_capping`"""
     x_list = copy(x_list)
     y_list = copy(y_list)
 
@@ -208,7 +208,7 @@ class FeeScheduleState(State):
         amount_with_fees: PaymentWithFeeAmount,
         cap_fees: bool,
     ) -> Interpolate:
-        """ Returns a function which calculates total_mediation_fee(amount_without_fees) """
+        """Returns a function which calculates total_mediation_fee(amount_without_fees)"""
         return _mediation_fee_func(
             schedule_in=schedule_in,
             schedule_out=schedule_out,
@@ -230,7 +230,7 @@ class FeeScheduleState(State):
         amount_without_fees: PaymentWithFeeAmount,
         cap_fees: bool,
     ) -> Interpolate:
-        """ Returns a function which calculates total_mediation_fee(amount_with_fees) """
+        """Returns a function which calculates total_mediation_fee(amount_with_fees)"""
         return _mediation_fee_func(
             schedule_in=schedule_in,
             schedule_out=schedule_out,
@@ -244,7 +244,7 @@ class FeeScheduleState(State):
 
 
 def linspace(start: TokenAmount, stop: TokenAmount, num: int) -> List[TokenAmount]:
-    """ Returns a list of num numbers from start to stop (inclusive). """
+    """Returns a list of num numbers from start to stop (inclusive)."""
     assert num > 1, "Must generate at least one step"
     assert start <= stop, "start must be smaller than stop"
 

@@ -1,7 +1,10 @@
+.. _wizard_overview:
+
 Overview
 ########
 
-In this tutorial we will walk through the steps to:
+This quick start section will help you install Raiden and run a Raiden node on the Ethereum mainnet using the Raiden Wizard.
+We will walk through the steps to:
 
 -  `Get MetaMask`_
 -  `Get an Infura ID`_
@@ -11,11 +14,6 @@ In this tutorial we will walk through the steps to:
 
     If you want to try out Raiden on a testnet before running it on mainnet,
     the :ref:`Quick start on Görli page <quickstart_goerli>` will help you.
-
-.. include:: get-metamask.rst
-.. include:: infura-quick-start.rst
-.. include:: download-and-run-the-raiden-wizard.rst
-.. include:: known-issues.rst
 
 
 Prerequisites
@@ -27,6 +25,13 @@ In order to use the Raiden Wizard and Raiden you'll need:
 -  `MetaMask <https://metamask.io>`__ and an account with at least
    ``0.13`` ETH
 -  An `Infura <https://infura.io>`__ ID
+
+
+.. include:: get-metamask.inc.rst
+.. include:: infura-quick-start.inc.rst
+.. include:: download-and-run-the-raiden-wizard.inc.rst
+.. include:: known-issues.inc.rst
+
 
 Need help?
 ##########

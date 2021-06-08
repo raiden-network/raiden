@@ -47,7 +47,7 @@ def get_filter_args_for_specific_event_from_channel(
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
     to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> FilterParams:
-    """ Return the filter params for a specific event of a given channel. """
+    """Return the filter params for a specific event of a given channel."""
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
 
     # Here the topics for a specific event are created
@@ -72,7 +72,7 @@ def get_filter_args_for_all_events_from_channel(
     from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
     to_block: BlockIdentifier = BLOCK_ID_LATEST,
 ) -> FilterParams:
-    """ Return the filter params for all events of a given channel. """
+    """Return the filter params for all events of a given channel."""
 
     event_filter_params = get_filter_args_for_specific_event_from_channel(
         token_network_address=token_network_address,
@@ -145,7 +145,7 @@ class RaidenContractFilter:
         to_block: BlockNumber,
         node_address: Address,
     ) -> List[FilterParams]:
-        """ Return a filter dict than can be used with web3's ``getLogs`` """
+        """Return a filter dict than can be used with web3's ``getLogs``"""
         tn_event_topics = get_topics_of_events(
             contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK)
         )
@@ -250,7 +250,7 @@ class RaidenContractFilter:
         return cast(List[FilterParams], filters)
 
     def abi_of_contract_address(self, contract_manager: ContractManager) -> Dict[Address, ABI]:
-        """ This class knows which ABI is behind each filtered contract address """
+        """This class knows which ABI is behind each filtered contract address"""
         tnr_abi = contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY)
         tn_abi = contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK)
         secret_registry_abi = contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY)
@@ -266,7 +266,7 @@ class RaidenContractFilter:
         return abis
 
     def union(self, other: "RaidenContractFilter") -> "RaidenContractFilter":
-        """ Return a new RaidenContractFilter with all elements from both input filters """
+        """Return a new RaidenContractFilter with all elements from both input filters"""
         # We must not have two different non-None secret registries. Choose the non-None one.
         non_none_secret_registries = {
             self.secret_registry_address,

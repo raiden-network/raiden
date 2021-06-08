@@ -1,5 +1,7 @@
+.. _infura_tutorial:
+
 Get an Infura ID
-================
+################
 
 .. note::
    **Why do I need Infura?**

@@ -25,7 +25,7 @@ from synapse.handlers.auth import AuthHandler
 
 from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
-from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
@@ -54,7 +54,6 @@ def get_admin_credentials(server_name):
 
 def new_client(
     handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-    handle_member_join_callback: Callable[[Room], None],
     server: "ParsedURL",
 ) -> GMatrixClient:
     server_name = server.netloc
@@ -64,16 +63,11 @@ def new_client(
 
     client = GMatrixClient(
         handle_messages_callback=handle_messages_callback,
-        handle_member_join_callback=handle_member_join_callback,
         base_url=server,
     )
     client.login(username, password, sync=False)
 
     return client
-
-
-def ignore_member_join(_room: Room) -> None:
-    return None
 
 
 def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
@@ -100,45 +94,8 @@ def ignore_close(partner_address: Address) -> None:  # pylint: disable=unused-ar
     pass
 
 
-def setup_broadcast_room(servers: List["ParsedURL"], broadcast_room_name: str) -> None:
-    client = new_client(ignore_messages, ignore_member_join, servers[0])
-    admin_power_level = {"users": {client.user_id: 100}}
-    for server in servers:
-        admin_username = get_admin_credentials(server.netloc)["username"]
-        admin_user_id = f"@{admin_username}:{servers[0].netloc}"
-        admin_power_level["users"][admin_user_id] = 50
-
-    room = client.create_room(
-        alias=broadcast_room_name, is_public=True, power_level_content_override=admin_power_level
-    )
-
-    for server in servers[1:]:
-        client = new_client(ignore_messages, ignore_member_join, server)
-
-        # A user must join the room to create the room in the federated server
-        log.debug("canonical alias", alias=room.canonical_alias)
-        room = client.join_room(room.canonical_alias)
-
-        server_name = server.netloc
-        alias = f"#{broadcast_room_name}:{server_name}"
-
-        msg = "Setting up the room alias must not fail, otherwise the test can not run."
-        assert room.add_room_alias(alias), msg
-
-        all_aliases = client.api.get_aliases(room.room_id).get("aliases", [])
-
-        msg = "The new alias must be added, otherwise the Raiden node won't be able to find it."
-        assert alias in all_aliases, msg
-
-        msg = (
-            "Leaving the room failed. This is done otherwise there would be "
-            "a ghost user in the broadcast room"
-        )
-        assert room.leave() is None, msg
-
-
 class ParsedURL(str):
-    """ A string subclass that allows direct access to the split components of a URL """
+    """A string subclass that allows direct access to the split components of a URL"""
 
     def __new__(cls, *args, **kwargs):
         new = str.__new__(cls, *args, **kwargs)  # type: ignore
@@ -369,7 +326,6 @@ def generate_synapse_config() -> Iterator[SynapseConfigGenerator]:
 @contextmanager
 def matrix_server_starter(
     free_port_generator: Iterable[Port],
-    broadcast_rooms_aliases: Iterable[str],
     *,
     count: int = 1,
     config_generator: SynapseConfigGenerator = None,
@@ -444,12 +400,7 @@ def matrix_server_starter(
             # different, however the library doesn't support it. So here we
             # must poke at the private member and overwrite it.
             executor._timeout = teardown_timeout
-
             servers.append((server_url, executor))
-
-        log.debug("Setting up broadcast rooms", aliases=broadcast_rooms_aliases)
-        for broadcast_room_alias in broadcast_rooms_aliases:
-            setup_broadcast_room([url for url, _ in servers], broadcast_room_alias)
 
         yield servers
 

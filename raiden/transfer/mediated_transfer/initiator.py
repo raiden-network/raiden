@@ -102,7 +102,7 @@ def events_for_unlock_lock(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> List[Event]:
-    """ Unlocks the lock offchain, and emits the events for the successful payment. """
+    """Unlocks the lock offchain, and emits the events for the successful payment."""
     # next hop learned the secret, unlock the token locally and send the
     # lock claim message to next hop
     transfer_description = initiator_state.transfer_description
@@ -183,7 +183,7 @@ def handle_block(
             events.extend(expired_lock_events)
 
         if initiator_state.received_secret_request:
-            reason = "bad secret request message from target"
+            reason = "lock expired, despite receiving secret request"
         else:
             reason = "lock expired"
 
@@ -326,7 +326,7 @@ def send_lockedtransfer(
     route_state: RouteState,
     route_states: List[RouteState],
 ) -> SendLockedTransfer:
-    """ Create a mediated transfer using channel. """
+    """Create a mediated transfer using channel."""
     assert (
         channel_state.token_network_address == transfer_description.token_network_address
     ), "token_network_address mismatch"

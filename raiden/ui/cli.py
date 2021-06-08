@@ -151,7 +151,7 @@ OPTIONS = [
     ),
     option(
         "--datadir",
-        help="Directory for storing raiden data.",
+        help="Directory for storing Raiden data.",
         default="~/.raiden",
         type=ExpandablePath(
             exists=False,
@@ -179,7 +179,7 @@ OPTIONS = [
     option(
         "--keystore-path",
         help=(
-            "If you have a non-standard path for the ethereum keystore directory"
+            "If you have a non-standard path for the Ethereum keystore directory"
             " provide it using this argument."
         ),
         default=None,
@@ -189,7 +189,7 @@ OPTIONS = [
     option(
         "--address",
         help=(
-            "The ethereum address you would like raiden to use and for which "
+            "The Ethereum address you would like Raiden to use and for which "
             "a keystore file exists in your local system."
         ),
         default=None,
@@ -278,28 +278,26 @@ OPTIONS = [
         "Ethereum Node Options",
         option(
             "--sync-check/--no-sync-check",
-            help="Checks if the ethereum node is synchronized against etherscan.",
+            help="Checks if the Ethereum node is synchronized against etherscan.",
             default=True,
             show_default=True,
         ),
         option(
             "--gas-price",
             help=(
-                "Set the gas price for ethereum transactions. If not provided "
-                "the normal gas price strategy is used.\n"
+                "Set the gas price for Ethereum transactions.\n"
                 "Available options:\n"
                 '"fast" - transactions are usually mined within 60 seconds\n'
                 '"normal" - transactions are usually mined within 5 minutes\n'
-                "<GAS_PRICE> - use given gas price\n"
             ),
             type=GasPriceChoiceType(["normal", "fast"]),
             default="fast",
-            show_default=True,
+            show_default="fast",
         ),
         option(
             ETH_RPC_CONFIG_OPTION,
             help=(
-                '"host:port" address of ethereum JSON-RPC server.\n'
+                '"host:port" address of Ethereum JSON-RPC server.\n'
                 "Also accepts a protocol prefix (http:// or https://) with optional port"
             ),
             default="http://127.0.0.1:8545",  # geth default jsonrpc port
@@ -326,7 +324,7 @@ OPTIONS = [
                 f"URL to the Raiden path finding service to request paths from.\n "
                 f"Example: https://pfs-ropsten.services-dev.raiden.network\n "
                 f"Can also be given the '{MATRIX_AUTO_SELECT_SERVER}' value "
-                f"so that raiden chooses a PFS randomly from the service "
+                f"so that Raiden chooses a PFS randomly from the service "
                 f"registry contract."
             ),
             default=MATRIX_AUTO_SELECT_SERVER,
@@ -546,7 +544,7 @@ OPTIONS = [
 if find_spec("IPython"):
     OPTIONS.append(
         option(
-            "--console/--no-console", help="Start the interactive raiden console", default=False
+            "--console/--no-console", help="Start the interactive Raiden console", default=False
         )
     )
 else:
@@ -594,10 +592,9 @@ def _run(ctx: Context, **kwargs: Any) -> None:
         )
 
         if kwargs["config_file"] is not None:
-            source = ctx.get_parameter_source("config_file")  # type: ignore
-            log.debug(
-                "Using config file", config_file=kwargs["config_file"], set_by=source.name.title()
-            )
+            source = ctx.get_parameter_source("config_file")
+            set_by = source.name.title() if source else None
+            log.debug("Using config file", config_file=kwargs["config_file"], set_by=set_by)
 
         enable_gevent_monitoring_signal()
 
@@ -815,7 +812,7 @@ KNOWN_OPTIONS = {param.name.replace("_", "-") for param in run.params}.union(FLA
 @option("--short", is_flag=True, help="Only display Raiden version")
 @click.pass_context
 def version(ctx: Context, short: bool) -> None:
-    """Print version information and exit. """
+    """Print version information and exit."""
     click.echo(get_version(short=short))
     ctx.exit(0)
 
@@ -844,7 +841,7 @@ def smoketest(
 def _smoketest(
     ctx: Context, debug: bool, eth_client: EthClient, report_path: Optional[str]
 ) -> None:  # pragma: no cover
-    """ Test, that the raiden installation is sane. """
+    """Test, that the Raiden installation is sane."""
     from raiden.tests.utils.smoketest import run_smoketest, setup_smoketest, step_printer
 
     raiden_stdout = StringIO()

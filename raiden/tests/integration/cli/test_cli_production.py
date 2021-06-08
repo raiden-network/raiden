@@ -17,9 +17,6 @@ pytestmark = [
         "cli_tests_contracts_version", [RAIDEN_CONTRACT_VERSION], scope="module"
     ),
     pytest.mark.parametrize("environment_type", [EXPECTED_DEFAULT_ENVIRONMENT], scope="module"),
-    # This is a bit awkward, the default `chain_id` for the `raiden_testchain` and
-    # `local_matrix_servers` fixtures don't align. Therefore we force it to "smoketest" here.
-    pytest.mark.parametrize("chain_id", ["smoketest"]),
 ]
 
 

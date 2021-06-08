@@ -1,7 +1,7 @@
 version: 2
 
 settings:
-  gas_price: "fast"
+  gas_price: {{ gas_price }}
   services:
     pfs:
       url: "{{ pfs_with_fee }}"

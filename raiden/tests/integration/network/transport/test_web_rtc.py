@@ -27,7 +27,7 @@ class MessageHandler:
         self.bag.update(messages)
 
 
-@pytest.mark.skip(reason="Test is still using presence / health check")
+@pytest.mark.skip(reason="web RTC is disabled")
 @pytest.mark.parametrize("matrix_server_count", [1])
 @pytest.mark.parametrize("number_of_transports", [2])
 @pytest.mark.parametrize("capabilities", [CapabilitiesConfig(web_rtc=True)])
@@ -48,9 +48,6 @@ def test_web_rtc_message_sync(matrix_transports):
 
     transport0.start(raiden_service0, None)
     transport1.start(raiden_service1, None)
-
-    transport0.immediate_health_check_for(transport1._raiden_service.address)
-    transport1.immediate_health_check_for(transport0._raiden_service.address)
 
     with Timeout(TIMEOUT_WEB_RTC_CONNECTION):
         # wait until web rtc connection is ready

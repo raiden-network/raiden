@@ -26,10 +26,10 @@ from raiden.utils.typing import (
 
 LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
 RELEASE_PAGE = "https://github.com/raiden-network/raiden/releases"
-DOC_URL = "https://docs.raiden.network/raiden-api-1"
+DOC_URL = "https://raiden-network.readthedocs.io/en/latest/rest_api.html"
 SECURITY_EXPRESSION = r"\[CRITICAL UPDATE.*?\]"
 
-RAIDEN_DB_VERSION = RaidenDBVersion(26)
+RAIDEN_DB_VERSION = RaidenDBVersion(27)
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = RaidenProtocolVersion(1)
 
@@ -213,11 +213,11 @@ ETH_GET_LOGS_THRESHOLD_FAST = ETH_GET_LOGS_TIMEOUT // 4
 ETH_GET_LOGS_THRESHOLD_SLOW = ETH_GET_LOGS_TIMEOUT // 2
 
 # Keep in sync with .circleci/config.yaml
-HIGHEST_SUPPORTED_GETH_VERSION = "1.9.21"
+HIGHEST_SUPPORTED_GETH_VERSION = "1.10.3"
 LOWEST_SUPPORTED_GETH_VERSION = "1.9.7"
 # this is the last stable version as of this comment
 HIGHEST_SUPPORTED_PARITY_VERSION = "3.1.0"
-LOWEST_SUPPORTED_PARITY_VERSION = "1.7.6"
+LOWEST_SUPPORTED_PARITY_VERSION = "2.7.0"
 
 WEB3_BLOCK_NOT_FOUND_RETRY_COUNT = 3
 

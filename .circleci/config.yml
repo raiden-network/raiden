@@ -38,6 +38,7 @@ templates:
       type: string
 
   default-environment: &default-environment
+    BENCHMARK_HOST: 'circleci'
     GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.10.1-c2d2f4ed.tar.gz'
     GETH_MD5_LINUX: '5e18a027f9919ed9ba08abd15c169f61'
     GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.10.1-c2d2f4ed.tar.gz'
@@ -143,7 +144,7 @@ commands:
             echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v8-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v9-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -158,7 +159,7 @@ commands:
             .circleci/fetch_geth_parity_solc.sh
             ln -sfn ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v8-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v9-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-LINUX"
             - "~/.local-MACOS"
@@ -197,7 +198,7 @@ commands:
           py-version: << parameters.py-version >>
       - restore_cache:
           keys:
-          - system-deps-pyenv-v4-{{ arch }}-<< parameters.py-version >>
+          - system-deps-pyenv-v5-{{ arch }}-<< parameters.py-version >>
       - run:
           name: Installing Python on MacOS
           command: |
@@ -209,21 +210,22 @@ commands:
               env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYENV_PYTHON_VERSION -sv
             fi
       - save_cache:
-          key: system-deps-pyenv-v4-{{ arch }}-<< parameters.py-version >>
+          key: system-deps-pyenv-v5-{{ arch }}-<< parameters.py-version >>
           paths:
           - "~/.local-MACOS/.pyenv"
       - restore_cache:
-          key: pip-cache-{{ arch }}-<< parameters.py-version >>
+          key: pip-cache-v2-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - python-deps-v7-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-          - python-deps-v7-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v8-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v8-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
           command: |
             if [[ ${OS_NAME} == "MACOS" ]]; then
               export PATH=${PYENV_ROOT}/bin:${PATH}
               eval "$(pyenv init -)"
+              eval "$(pyenv init --path)"
               pyenv local $PYENV_PYTHON_VERSION
               echo "Detected MacOS: Using pyenv Python at $(pyenv which python<< parameters.py-version >>)"
             fi
@@ -244,12 +246,12 @@ commands:
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
       - save_cache:
-          key: python-deps-v7-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          key: python-deps-v8-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
           - "~/venv-<< parameters.py-version >>-LINUX"
           - "~/venv-<< parameters.py-version >>-MACOS"
       - save_cache:
-          key: pip-cache-{{ arch }}-<< parameters.py-version >>
+          key: pip-cache-v2-{{ arch }}-<< parameters.py-version >>
           paths:
           - "~/.cache/pip"
       - persist_to_workspace:
@@ -396,11 +398,13 @@ jobs:
       - run:
           name: Checkout Scenario Player
           command: |
+            cd ~
             git clone https://github.com/raiden-network/scenario-player.git
       - run:
           name: Install dependencies
           command: |
-            pip install git+https://github.com/raiden-network/scenario-player.git
+            cd ~
+            pip install ~/scenario-player
             pip install -Ue ~/raiden
       - run:
           name: Set Locale
@@ -413,13 +417,8 @@ jobs:
       - run:
           name: Run Unit Tests
           command: |
-            cd scenario-player
-            pytest .
-      - run:
-          name: Run Smoketest
-          command: |
-            cd scenario-player
-            scenario_player smoketest
+            cd ~/scenario-player
+            pytest --rootdir . tests
 
   test:
     parameters:
@@ -450,11 +449,10 @@ jobs:
       - conditional-skip
       - config-path
       - restore_cache:
-          key: ethash-{{ checksum "~/.local/bin/geth" }}
+          key: ethash-v2-{{ checksum "~/.local/bin/geth" }}
       - restore_cache:
           keys:
-            - synapse-keys-v1
-            - synapse-keys-
+            - synapse-keys-v2
       - run:
           name: Select tests
           command: .circleci/select_tests.sh "raiden/tests/<< parameters.test-type >>" "<< parameters.blockchain-type >>" << parameters.additional-args >>
@@ -465,12 +463,12 @@ jobs:
             .circleci/run_tests.sh "test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>" "<< parameters.blockchain-type >>" "<< parameters.test-type >>" << parameters.additional-args >>
 
       - save_cache:
-          key: ethash-{{ checksum "~/.local/bin/geth" }}
+          key: ethash-v2-{{ checksum "~/.local/bin/geth" }}
           paths:
           - "~/.ethash"
 
       - save_cache:
-          key: synapse-keys-v1
+          key: synapse-keys-v2
           paths:
             - "~/.cache/synapse"
 
@@ -494,18 +492,35 @@ jobs:
       - store_artifacts:
           path: /tmp/artifacts
 
-  finalize:
+  benchmark:
     parameters:
       py-version:
         <<: *py-version-template
+
     executor:
       name: docker
-      py-version: "3.7"
+      py-version: << parameters.py-version >>
+
+    environment:
+      RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
+      RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
+      RAIDEN_TESTS_LOGSDIR: /tmp/tests/logs
+
     steps:
       - attach-and-link:
           py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
+      - run:
+          name: Run benchmarks
+          command: |
+            python -m gevent.monkey --module pytest raiden/tests/benchmark/ -v --codespeed-url https://speed.metrics.brainbot.com
+
+  finalize:
+    executor:
+      name: docker
+      py-version: "3.7"
+    steps:
       - run:
           command: "true"
 
@@ -564,6 +579,11 @@ jobs:
             source .circleci/get_archive_tag.sh
             make bundle-docker
             echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-${RELEASE_TYPE}-linux-<<parameters.architecture>>.txt
+      - run:
+          name: Test if Binary can be launched
+          command: |
+            tar -C /tmp -xf dist/archive/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz
+            /tmp/raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>> --help
       - persist_to_workspace:
           root: "~"
           paths:
@@ -596,6 +616,10 @@ jobs:
             pyinstaller --noconfirm --clean raiden.spec
             zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64
             echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-${RELEASE_TYPE}-macOS-x86_64.txt
+      - run:
+          name: Test if Binary can be launched
+          command: |
+            dist/raiden-${ARCHIVE_TAG}-macOS-x86_64 --help
       - persist_to_workspace:
           root: "~"
           paths:
@@ -613,7 +637,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "46:b3:a5:c3:d8:21:63:cd:de:6d:07:5d:0c:5d:ba:73"
+            - "a1:33:d7:62:77:54:79:76:32:4a:d3:5e:89:70:ce:31"
       - attach-and-link:
           py-version: << parameters.py-version >>
       - conditional-skip
@@ -690,8 +714,7 @@ jobs:
                 command: |
                   rm dist/archive/*.txt
                   echo "TAG: ${CIRCLE_TAG}"
-                  CI_RAIDEN_VERSION=${CIRCLE_TAG}
-                  ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${CI_RAIDEN_VERSION} dist/archive/
+                  ghr -t ${GITHUB_TOKEN_RELEASES} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${CIRCLE_TAG} dist/archive/
 
   deploy-pypi:
     parameters:
@@ -708,19 +731,19 @@ jobs:
       - conditional-skip
       - config-path
       - run:
-          name: "install twine"
+          name: "Install Twine"
           command: pip install twine
 
       - run:
-          name: "create packages"
+          name: "Create Packages"
           command: |
             echo $(python setup.py --version)
             python setup.py sdist
             python setup.py bdist_wheel
       - run:
-          name: "upload to pypi"
+          name: "Upload to PyPI"
           command: |
-            twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*.{tar.gz,whl}
+            twine upload -u __token__ -p $PYPI_API_TOKEN_RAIDEN dist/*.{tar.gz,whl}
 
 workflows:
   raiden-default:
@@ -748,14 +771,14 @@ workflows:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-            - prepare-python-linux
+            - prepare-python-linux-<< matrix.py-version >>
 
       - build-docs:
           matrix:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-            - prepare-python-linux
+            - prepare-python-linux-<< matrix.py-version >>
 
       - smoketest:
           matrix:
@@ -765,7 +788,7 @@ workflows:
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -774,7 +797,7 @@ workflows:
               py-version: ["3.7", "3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -784,7 +807,16 @@ workflows:
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
+            - lint-<< matrix.py-version >>
+
+      - benchmark:
+          context: "raiden-general-2021"
+          requires:
             - lint
+          filters:
+            branches:
+              only:
+                - develop
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
@@ -815,6 +847,7 @@ workflows:
           requires:
             - scenario-player-integration-test
             - test-integration
+            - build-docs
 
   deploy-release:
     jobs:
@@ -868,7 +901,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-digitalocean:
-          context: "Raiden Context"
+          context: "raiden-py"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
@@ -876,7 +909,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-github-release:
-          context: "Raiden Context"
+          context: "raiden-general-2021"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
@@ -884,7 +917,7 @@ workflows:
             <<: *only-tagged-version-filter
 
       - deploy-pypi:
-          context: "Raiden Context"
+          context: "raiden-py"
           requires:
             - build-binary-linux-x86
             - build-binary-macos
@@ -916,14 +949,14 @@ workflows:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-          - prepare-python-linux
+          - prepare-python-linux-<< matrix.py-version >>
 
       - build-docs:
           matrix:
             parameters:
               py-version: ["3.7", "3.8", "3.9"]
           requires:
-            - prepare-python-linux
+            - prepare-python-linux-<< matrix.py-version >>
 
       - smoketest:
           matrix:
@@ -933,7 +966,7 @@ workflows:
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -942,7 +975,7 @@ workflows:
               py-version: ["3.7", "3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
-            - lint
+            - lint-<< matrix.py-version >>
 
       - test:
           matrix:
@@ -952,7 +985,16 @@ workflows:
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
+            - lint-<< matrix.py-version >>
+
+      - benchmark:
+          context: "raiden-general-2021"
+          requires:
             - lint
+          filters:
+            branches:
+              only:
+                - develop
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
@@ -983,6 +1025,7 @@ workflows:
           requires:
           - scenario-player-integration-test
           - test-integration
+          - build-docs
 
       - build-binary-linux:
           name: build-binary-linux-x86
@@ -1005,7 +1048,7 @@ workflows:
             - prepare-python-macos-3.7
 
       - deploy-digitalocean:
-          context: "Raiden Context"
+          context: "raiden-py"
           requires:
             - build-binary-linux-x86
             - build-binary-macos

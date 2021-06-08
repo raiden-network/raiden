@@ -29,13 +29,13 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.tests.utils.factories import make_secret, make_signature, make_signer
-from raiden.tests.utils.transport import ignore_member_join, ignore_messages
+from raiden.tests.utils.transport import ignore_messages
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.signer import recover
 from raiden.utils.typing import MessageID
 
 
-def test_login_for_the_first_time_must_set_the_display_name():
+def test_login_for_the_first_time_must_set_display_name_and_avatar_url():
     ownserver = "https://ownserver.com"
     api = Mock()
     api.base_url = ownserver
@@ -59,7 +59,12 @@ def test_login_for_the_first_time_must_set_the_display_name():
 
     signer = make_signer()
 
-    user = login(client=client, signer=signer, device_id=DeviceIDs.RAIDEN)
+    user = login(
+        client=client, signer=signer, device_id=DeviceIDs.RAIDEN, capabilities={"test": 1}
+    )
+
+    # avatar_url must have been set
+    user.set_avatar_url.assert_called_once_with("mxc://raiden.network/cap?test=1")
 
     # client.user_id will be set by login
     assert client.user_id.startswith(f"@{to_normalized_address(signer.address)}")
@@ -183,13 +188,11 @@ def test_sort_servers_closest(requests_responses):
 def test_make_client(monkeypatch):
     # invalid server url (ftp not supported)
     with pytest.raises(TransportError):
-        make_client(
-            ignore_messages, ignore_member_join, ["ftp://server1.com", "http://server2.com"]
-        )
+        make_client(ignore_messages, ["ftp://server1.com", "http://server2.com"])
 
     # no valid server url
     with pytest.raises(TransportError):
-        make_client(ignore_messages, ignore_member_join, [])
+        make_client(ignore_messages, [])
 
     # valid but unreachable servers
     with pytest.raises(TransportError), monkeypatch.context() as m:
@@ -206,7 +209,6 @@ def test_make_client(monkeypatch):
 
         make_client(
             ignore_messages,
-            ignore_member_join,
             [f"http://server{i}.xyz" for i in range(3)],
         )
 
@@ -217,7 +219,7 @@ def test_make_client(monkeypatch):
         m.setattr(raiden.network.transport.matrix.client.GMatrixHttpApi, "_send", mock_send)
 
         url = "https://server1.xyz"
-        client = make_client(ignore_messages, ignore_member_join, [url])
+        client = make_client(ignore_messages, [url])
         assert isinstance(client, raiden.network.transport.matrix.client.GMatrixClient)
         assert client.api.base_url == url
 

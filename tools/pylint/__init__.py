@@ -18,7 +18,7 @@ def find_parent(node: NodeNG, scope_type: T_NODE) -> Optional[T_NODE]:
 
 
 def ignore_tests(func: Callable) -> Callable:
-    """ Decorator that ignores nodes below the raiden.tests module. """
+    """Decorator that ignores nodes below the raiden.tests module."""
 
     @wraps(func)
     def decorator(self, node: NodeNG) -> Any:

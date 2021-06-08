@@ -34,7 +34,7 @@ def web3(
     logs_storage,
     blockchain_type,
 ):
-    """ Starts a private chain with accounts funded. """
+    """Starts a private chain with accounts funded."""
     # include the deploy key in the list of funded accounts
     keys_to_fund = sorted(set(private_keys + [deploy_key]))
 

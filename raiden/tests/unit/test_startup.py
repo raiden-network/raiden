@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from eth_utils import to_canonical_address
@@ -9,6 +9,7 @@ from raiden.exceptions import RaidenError
 from raiden.network import pathfinding
 from raiden.network.pathfinding import PFSInfo
 from raiden.settings import RaidenConfig, ServiceConfig
+from raiden.tasks import check_chain_id
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.mocks import MockProxyManager, MockWeb3
 from raiden.ui.checks import check_ethereum_chain_id
@@ -62,6 +63,13 @@ def test_check_chain_id_raises_with_mismatching_ids():
 
     with pytest.raises(RaidenError):
         check_ethereum_chain_id(ChainID(61), MockWeb3(68))
+
+
+def test_check_chain_id_raises_with_connection_error():
+    mock_web3 = MockWeb3(61)
+    mock_web3.eth.chain_id = MagicMock(side_effect=ConnectionError)
+    with pytest.raises(RuntimeError):
+        check_chain_id(ChainID(61), mock_web3)
 
 
 @pytest.mark.parametrize("netid", [1, 3, 4, 5, 627])

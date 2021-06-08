@@ -65,7 +65,7 @@ def cancel_other_transfers(payment_state: InitiatorPaymentState) -> None:
 
 
 def can_cancel(initiator: InitiatorTransferState) -> bool:
-    """ A transfer is only cancellable until the secret is revealed. """
+    """A transfer is only cancellable until the secret is revealed."""
     return initiator.transfer_state != "transfer_secret_revealed"
 
 
@@ -206,7 +206,7 @@ def handle_cancelpayment(
     payment_state: InitiatorPaymentState,
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
 ) -> TransitionResult[InitiatorPaymentState]:
-    """ Cancel the payment and all related transfers. """
+    """Cancel the payment and all related transfers."""
     # Cannot cancel a transfer after the secret is revealed
     events = list()
     for initiator_state in payment_state.initiator_transfers.values():

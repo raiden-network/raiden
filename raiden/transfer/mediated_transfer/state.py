@@ -147,7 +147,7 @@ class WaitingTransferState(State):
 
 @dataclass
 class InitiatorTransferState(State):
-    """ State of a transfer for the initiator node. """
+    """State of a transfer for the initiator node."""
 
     route: RouteState
     transfer_description: TransferDescriptionWithSecretState = field(repr=False)
@@ -247,7 +247,7 @@ class MediatorTransferState(State):
 
 @dataclass
 class TargetTransferState(State):
-    """ State of a transfer for the target node. """
+    """State of a transfer for the target node."""
 
     EXPIRED = "expired"
     OFFCHAIN_SECRET_REVEAL = "reveal_secret"

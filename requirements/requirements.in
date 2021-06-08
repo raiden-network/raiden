@@ -1,4 +1,5 @@
 aiortc
+aiortc-pyav-stub>=0.1.1
 av>=8.0.3
 cachetools
 canonicaljson

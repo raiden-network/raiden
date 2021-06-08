@@ -14,6 +14,7 @@ from raiden.transfer.architecture import (
     TransferTask,
 )
 from raiden.transfer.events import (
+    ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
@@ -29,7 +30,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
@@ -91,7 +91,7 @@ class OptionalIntegerToStringField(marshmallow.fields.Integer):
 
 
 class BytesField(marshmallow.fields.Field):
-    """ Used for `bytes` in the dataclass, serialize to hex encoding"""
+    """Used for `bytes` in the dataclass, serialize to hex encoding"""
 
     def _serialize(
         self, value: Optional[bytes], attr: Any, obj: Any, **kwargs: Any
@@ -112,7 +112,7 @@ class BytesField(marshmallow.fields.Field):
 
 
 class AddressField(marshmallow.fields.Field):
-    """ Converts addresses from bytes to hex and vice versa """
+    """Converts addresses from bytes to hex and vice versa"""
 
     def _serialize(self, value: Address, attr: Any, obj: Any, **kwargs: Any) -> str:
         return to_hex_address(value)
@@ -125,7 +125,7 @@ class AddressField(marshmallow.fields.Field):
 
 
 class QueueIdentifierField(marshmallow.fields.Field):
-    """ Converts QueueIdentifier objects to a tuple """
+    """Converts QueueIdentifier objects to a tuple"""
 
     @staticmethod
     def _canonical_id_from_string(string: str) -> CanonicalIdentifier:
@@ -167,7 +167,7 @@ class QueueIdentifierField(marshmallow.fields.Field):
 
 
 class PRNGField(marshmallow.fields.Field):
-    """ Serialization for instances of random.Random. """
+    """Serialization for instances of random.Random."""
 
     @staticmethod
     def pseudo_random_generator_from_json(data: Any) -> Random:
@@ -277,7 +277,6 @@ class BaseSchema(marshmallow.Schema):
                 SendSecretReveal,
                 SendUnlock,
                 SendSecretRequest,
-                SendRefundTransfer,
                 SendWithdrawRequest,
                 SendWithdrawConfirmation,
                 SendWithdrawExpired,
@@ -291,6 +290,7 @@ class BaseSchema(marshmallow.Schema):
                 ContractSendChannelClose,
                 ContractSendChannelSettle,
                 ContractSendChannelUpdateTransfer,
+                ContractSendChannelBatchUnlock,
                 ContractSendSecretReveal,
             ],
             allow_none=False,

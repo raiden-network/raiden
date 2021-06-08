@@ -232,7 +232,7 @@ The reasoning behind the choice of Matrix as a transport layer for Raiden is nic
 
 In this section we are going to only look over the main points in the code which are the entries to the transport layer. For more information please check out the matrix transport `spec <https://raiden-network-specification.readthedocs.io/en/latest/transport.html>`_.
 
-In Matrix each user has a userid in the form of ``@<userId>:<homeserver_uri>``. ``userId`` is the lowercased ethereum address of the node, possibly followed by a 4-bytes hex-encoded random suffix, separated from the address by a dot. The ``homeserver_uri`` is the URI of the matrix homeserver at which the user registers.
+In Matrix each user has a userid in the form of ``@<userId>:<homeserver_uri>``. ``userId`` is the lowercased Ethereum address of the node, possibly followed by a 4-bytes hex-encoded random suffix, separated from the address by a dot. The ``homeserver_uri`` is the URI of the matrix homeserver at which the user registers.
 
 Each pair of nodes have a private room for communication. Once a message is added to any of these rooms, they are processed in batch by `MatrixTransport._handle_sync_messages`, after decoding and validation these messages are forwarded to `RaidenService.on_messages` and processed by the node.
 
@@ -275,7 +275,7 @@ So, for a specific queue message, e.g. a ``LockedTransfer`` in a specific channe
 Blockchain Communication
 ************************
 
-We communicate with the blockchain through the `JSONRPCClient <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/rpc/client.py#L246>`_ class. That class is a wrapper of ``web3.py`` for all blockchain JSON RPC calls and also checks that the underlying ethereum client is compatible with Raiden. Checks things such as that all required interfaces are enabled and that the version is high enough (Byzantium enabled).
+We communicate with the blockchain through the `JSONRPCClient <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/rpc/client.py#L246>`_ class. That class is a wrapper of ``web3.py`` for all blockchain JSON RPC calls and also checks that the underlying Ethereum client is compatible with Raiden. Checks things such as that all required interfaces are enabled and that the version is high enough (Byzantium enabled).
 
 We communicate with each smart contract through the notion of a smart contract `proxy <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/network/rpc/smartcontract_proxy.py#L59>`_. Each proxy is a essentially a class exposing the functionality of a specific contract using the ``JSONRPCClient``.
 

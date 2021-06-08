@@ -36,11 +36,11 @@ class PaymentChannel:
         self.contract_manager = contract_manager
 
     def token_address(self) -> TokenAddress:
-        """ Returns the address of the token for the channel. """
+        """Returns the address of the token for the channel."""
         return self.token_network.token_address()
 
     def detail(self, block_identifier: BlockIdentifier) -> ChannelDetails:
-        """ Returns the channel details. """
+        """Returns the channel details."""
         return self.token_network.detail(
             participant1=self.participant1,
             participant2=self.participant2,
@@ -49,7 +49,7 @@ class PaymentChannel:
         )
 
     def settle_timeout(self) -> BlockTimeout:
-        """ Returns the channels settle_timeout. """
+        """Returns the channels settle_timeout."""
 
         # There is no way to get the settle timeout after the channel has been closed as
         # we're saving gas. Therefore get the ChannelOpened event and get the timeout there.
@@ -70,7 +70,7 @@ class PaymentChannel:
         return event["args"]["settle_timeout"]
 
     def opened(self, block_identifier: BlockIdentifier) -> bool:
-        """ Returns if the channel is opened. """
+        """Returns if the channel is opened."""
         return self.token_network.channel_is_opened(
             participant1=self.participant1,
             participant2=self.participant2,
@@ -79,7 +79,7 @@ class PaymentChannel:
         )
 
     def closed(self, block_identifier: BlockIdentifier) -> bool:
-        """ Returns if the channel is closed. """
+        """Returns if the channel is closed."""
         return self.token_network.channel_is_closed(
             participant1=self.participant1,
             participant2=self.participant2,
@@ -88,7 +88,7 @@ class PaymentChannel:
         )
 
     def settled(self, block_identifier: BlockIdentifier) -> bool:
-        """ Returns if the channel is settled. """
+        """Returns if the channel is settled."""
         return self.token_network.channel_is_settled(
             participant1=self.participant1,
             participant2=self.participant2,
@@ -97,7 +97,7 @@ class PaymentChannel:
         )
 
     def can_transfer(self, block_identifier: BlockIdentifier) -> bool:
-        """ Returns True if the channel is opened and the node has deposit in it. """
+        """Returns True if the channel is opened and the node has deposit in it."""
         return self.token_network.can_transfer(
             participant1=self.participant1,
             participant2=self.participant2,
@@ -143,7 +143,7 @@ class PaymentChannel:
         closing_signature: Signature,
         block_identifier: BlockIdentifier,
     ) -> None:
-        """ Closes the channel using the provided balance proof, and our closing signature. """
+        """Closes the channel using the provided balance proof, and our closing signature."""
         self.token_network.close(
             channel_identifier=self.channel_identifier,
             partner=self.participant2,
@@ -164,7 +164,7 @@ class PaymentChannel:
         signature: Signature,
         block_identifier: BlockIdentifier,
     ) -> None:
-        """ Updates the channel using the provided balance proof. """
+        """Updates the channel using the provided balance proof."""
         self.token_network.update_transfer(
             channel_identifier=self.channel_identifier,
             partner=self.participant2,
@@ -201,7 +201,7 @@ class PaymentChannel:
         partner_locksroot: Locksroot,
         block_identifier: BlockIdentifier,
     ) -> TransactionHash:
-        """ Settles the channel. """
+        """Settles the channel."""
         return self.token_network.settle(
             channel_identifier=self.channel_identifier,
             transferred_amount=transferred_amount,

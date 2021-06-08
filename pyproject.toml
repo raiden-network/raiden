@@ -1,6 +1,6 @@
 [tool.black]
 line-length = 99
-target-version = ['py37']
+target-version = ['py37', 'py38', 'py39']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -12,3 +12,23 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pytest.ini_options]
+testpaths = [
+    "raiden/tests",
+]
+timeout_limit_for_setup_and_call = 240
+timeout_limit_teardown = 15
+norecursedirs = [
+    "node_modules",
+]
+# Ignore warnings:
+# - urllib3 unverified TLS connection
+filterwarnings = [
+    "ignore::urllib3.exceptions.InsecureRequestWarning",
+]
+markers = [
+    "timeout",
+    "asyncio: tests that require an asyncio eventloop",
+]
+junit_family = "xunit1"

@@ -12,8 +12,13 @@ from raiden.utils.typing import BlockNumber, TokenAmount
 
 
 @pytest.fixture
-def our_address():
-    return factories.make_address()
+def our_signer():
+    return factories.make_signer()
+
+
+@pytest.fixture
+def our_address(our_signer):
+    return our_signer.address
 
 
 @pytest.fixture
@@ -113,6 +118,6 @@ def netting_channel_state(chain_state, token_network_state, token_network_regist
 
 @pytest.fixture
 def requests_responses() -> responses.RequestsMock:
-    """ Uses ``responses`` to provide easy requests tests. """
+    """Uses ``responses`` to provide easy requests tests."""
     with responses.RequestsMock() as mock_responses:
         yield mock_responses

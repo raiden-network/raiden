@@ -548,13 +548,13 @@ class TokenNetworkRegistry:
         )
 
     def settlement_timeout_min(self, block_identifier: BlockIdentifier) -> int:
-        """ Returns the minimal settlement timeout for the token network registry. """
+        """Returns the minimal settlement timeout for the token network registry."""
         return self.proxy.functions.settlement_timeout_min().call(
             block_identifier=block_identifier
         )
 
     def settlement_timeout_max(self, block_identifier: BlockIdentifier) -> int:
-        """ Returns the maximal settlement timeout for the token network registry. """
+        """Returns the maximal settlement timeout for the token network registry."""
         return self.proxy.functions.settlement_timeout_max().call(
             block_identifier=block_identifier
         )

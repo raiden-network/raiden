@@ -4,6 +4,7 @@ from gevent import joinall
 from gevent.pool import Pool
 
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
+from raiden.exceptions import ServiceRequestFailed
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
 from raiden.messages.synchronization import Delivered, Processed
@@ -16,6 +17,7 @@ from raiden.messages.transfers import (
     Unlock,
 )
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
+from raiden.network.pathfinding import query_address_metadata
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -41,7 +43,15 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
-from raiden.utils.typing import TYPE_CHECKING, List, Set, TargetAddress, Tuple
+from raiden.utils.typing import (
+    TYPE_CHECKING,
+    AddressMetadata,
+    List,
+    Optional,
+    Set,
+    TargetAddress,
+    Tuple,
+)
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -113,6 +123,18 @@ class MessageHandler:
         raiden: "RaidenService", message: WithdrawRequest  # pylint: disable=unused-argument
     ) -> List[StateChange]:
         assert message.sender, "message must be signed"
+
+        sender_metadata: Optional[AddressMetadata] = None
+        if raiden.config.pfs_config is not None:
+            # FIXME querying the PFS for the address-metadata directly after receiving a message
+            #   should be optimized / factored out at a later point!
+            try:
+                sender_metadata = query_address_metadata(raiden.config.pfs_config, message.sender)
+            except ServiceRequestFailed as ex:
+                msg = f"PFS returned an error while trying to fetch user information: \n{ex}"
+                log.warning(msg)
+                sender_metadata = None
+
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=message.chain_id,
@@ -126,6 +148,7 @@ class MessageHandler:
             nonce=message.nonce,
             expiration=message.expiration,
             signature=message.signature,
+            sender_metadata=sender_metadata,
         )
         return [withdraw_request]
 
@@ -223,6 +246,9 @@ class MessageHandler:
         raiden: "RaidenService", message: RefundTransfer
     ) -> List[StateChange]:
         chain_state = views.state_from_raiden(raiden)
+        # XXX: Not sure about this one. What should we do if the LockedTransfer has no
+        #      route_states due to validation?
+        # AFAIK the routes in the received transfer aren't relevant for the refund anyway.
         from_transfer = lockedtransfersigned_from_message(message=message)
 
         role = views.get_transfer_role(

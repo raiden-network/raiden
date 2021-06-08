@@ -74,7 +74,7 @@ class CustomException(Exception):
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_payload_with_invalid_addresses(api_server_test_instance: APIServer):
-    """ Addresses require leading 0x in the payload. """
+    """Addresses require leading 0x in the payload."""
     invalid_address = "61c808d82a3ac53231750dadc13c777b59310bd9"
     channel_data_obj = {
         "partner_address": invalid_address,
@@ -107,7 +107,7 @@ def test_payload_with_invalid_addresses(api_server_test_instance: APIServer):
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_crash_on_unhandled_exception(api_server_test_instance: APIServer) -> None:
-    """ Crash when an unhandled exception happens on APIServer. """
+    """Crash when an unhandled exception happens on APIServer."""
 
     # as we should not have unhandled exceptions in our endpoints, create one to test
     @api_server_test_instance.flask_app.route("/error_endpoint", methods=["GET"])
@@ -126,7 +126,7 @@ def test_crash_on_unhandled_exception(api_server_test_instance: APIServer) -> No
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_payload_with_address_invalid_chars(api_server_test_instance: APIServer):
-    """ Addresses cannot have invalid characters in it. """
+    """Addresses cannot have invalid characters in it."""
     invalid_address = "0x61c808d82a3ac53231750dadc13c777b59310bdg"  # g at the end is invalid
     channel_data_obj = {
         "partner_address": invalid_address,
@@ -145,7 +145,7 @@ def test_payload_with_address_invalid_chars(api_server_test_instance: APIServer)
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_payload_with_address_invalid_length(api_server_test_instance: APIServer):
-    """ Encoded addresses must have the right length. """
+    """Encoded addresses must have the right length."""
     invalid_address = "0x61c808d82a3ac53231750dadc13c777b59310b"  # one char short
     channel_data_obj = {
         "partner_address": invalid_address,
@@ -164,7 +164,7 @@ def test_payload_with_address_invalid_length(api_server_test_instance: APIServer
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_payload_with_address_not_eip55(api_server_test_instance: APIServer):
-    """ Provided addresses must be EIP55 encoded. """
+    """Provided addresses must be EIP55 encoded."""
     invalid_address = "0xf696209d2ca35e6c88e5b99b7cda3abf316bed69"
     channel_data_obj = {
         "partner_address": invalid_address,
@@ -399,13 +399,18 @@ def test_query_partners_by_token(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_timestamp_format(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ) -> None:
     _, app1 = raiden_network
     amount = 200
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     payment_url = api_url_for(
         api_server_test_instance,
@@ -542,12 +547,16 @@ def test_get_connections_info(
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("number_of_tokens", [2])
 def test_payment_events_endpoints(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     app0, app1, app2 = raiden_network
 
     token_address0 = token_addresses[0]
     token_address1 = token_addresses[1]
+    pfs_mock.add_apps(raiden_network)
 
     app0_server = api_server_test_instance
     app1_server = prepare_api_server(app1)
@@ -557,6 +566,7 @@ def test_payment_events_endpoints(
     identifier1 = PaymentID(10)
     amount1 = PaymentAmount(10)
     secret1, secrethash1 = factories.make_secret_with_hash()
+
     request = grequests.post(
         api_url_for(
             app0_server,
@@ -583,7 +593,7 @@ def test_payment_events_endpoints(
     )
     request.send()
 
-    # Payment 3: app0 is sending some tokens of token0 to app2
+    # Payment 3: app0 is sending some tokens of token0 to app1
     identifier3 = PaymentID(30)
     amount3 = PaymentAmount(17)
     secret3, secrethash3 = factories.make_secret_with_hash()
@@ -897,13 +907,18 @@ def test_payment_events_endpoints(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_channel_events_raiden(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     request = grequests.post(
         api_url_for(
@@ -1208,7 +1223,7 @@ def test_no_udc_configured(api_server_test_instance: APIServer, retry_timeout):
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_shutdown(api_server_test_instance: APIServer):
-    """ Node must stop after shutdown is called """
+    """Node must stop after shutdown is called"""
     url = ("http://localhost:{port}/api/v1/shutdown").format(
         port=api_server_test_instance.config.port
     )

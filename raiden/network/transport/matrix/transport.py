@@ -11,18 +11,14 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import gevent
-import pkg_resources
 import structlog
 from aiortc import RTCSessionDescription
-from eth_utils import is_binary_address, to_normalized_address
+from eth_utils import encode_hex, is_binary_address, to_normalized_address
 from gevent.event import Event
-from gevent.lock import Semaphore
-from gevent.pool import Pool
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixError, MatrixHttpLibError
 from web3.types import BlockIdentifier
 
-import raiden
 from raiden.constants import (
     EMPTY_SIGNATURE,
     MATRIX_AUTO_SELECT_SERVER,
@@ -53,12 +49,11 @@ from raiden.network.transport.matrix.utils import (
     MessageAckTimingKeeper,
     UserPresence,
     address_from_userid,
-    is_valid_userid,
-    join_broadcast_room,
+    capabilities_schema,
+    get_user_id_from_metadata,
     login,
     make_client,
     make_message_batches,
-    make_room_alias,
     make_user_id,
     my_place_or_yours,
     validate_and_parse_message,
@@ -74,8 +69,8 @@ from raiden.transfer.state import QueueIdsToQueues
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
-from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
+from raiden.utils.system import get_system_spec
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
@@ -91,12 +86,10 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
-    PeerCapabilities,
     RoomID,
     Set,
     Tuple,
     UserID,
-    cast,
 )
 
 if TYPE_CHECKING:
@@ -120,11 +113,19 @@ class MessagesQueue:
     messages: List[Tuple[Message, Optional[AddressMetadata]]]
 
 
+def metadata_key_func(message_data: "_RetryQueue._MessageData") -> str:
+    address_metadata = message_data.address_metadata
+    if address_metadata is None:
+        return ""
+    uid = address_metadata.get("user_id", "")
+    return uid
+
+
 class _RetryQueue(Runnable):
-    """ A helper Runnable to send batched messages to receiver through transport """
+    """A helper Runnable to send batched messages to receiver through transport"""
 
     class _MessageData(NamedTuple):
-        """ Small helper data structure for message queue """
+        """Small helper data structure for message queue"""
 
         queue_identifier: QueueIdentifier
         message: Message
@@ -138,7 +139,6 @@ class _RetryQueue(Runnable):
         self.receiver = receiver
         self._message_queue: List[_RetryQueue._MessageData] = list()
         self._notify_event = gevent.event.Event()
-        self._lock = Semaphore()
         self._idle_since: int = 0  # Counter of idle iterations
         super().__init__()
         self.greenlet.name = f"RetryQueue recipient:{to_checksum_address(self.receiver)}"
@@ -170,53 +170,51 @@ class _RetryQueue(Runnable):
         queue_identifier: QueueIdentifier,
         messages: List[Tuple[Message, Optional[AddressMetadata]]],
     ) -> None:
-        """ Enqueue a message to be sent, and notify main loop """
+        """Enqueue a message to be sent, and notify main loop"""
         msg = (
             f"queue_identifier.recipient ({to_checksum_address(queue_identifier.recipient)}) "
             f" must match self.receiver ({to_checksum_address(self.receiver)})."
         )
         assert queue_identifier.recipient == self.receiver, msg
 
-        with self._lock:
-            timeout_generator = timeout_exponential_backoff(
-                self.transport._config.retries_before_backoff,
-                self.transport._config.retry_interval_initial,
-                self.transport._config.retry_interval_max,
+        timeout_generator = timeout_exponential_backoff(
+            self.transport._config.retries_before_backoff,
+            self.transport._config.retry_interval_initial,
+            self.transport._config.retry_interval_max,
+        )
+
+        encoded_messages = list()
+        for message, address_metadata in messages:
+            already_queued = any(
+                queue_identifier == data.queue_identifier and message == data.message
+                for data in self._message_queue
             )
 
-            encoded_messages = list()
-            for message, address_metadata in messages:
-                already_queued = any(
-                    queue_identifier == data.queue_identifier and message == data.message
-                    for data in self._message_queue
+            if already_queued:
+                self.log.warning(
+                    "Message already in queue - ignoring",
+                    receiver=to_checksum_address(self.receiver),
+                    queue=queue_identifier,
+                    message=redact_secret(DictSerializer.serialize(message)),
                 )
+            else:
+                expiration_generator = self._expiration_generator(timeout_generator)
+                data = _RetryQueue._MessageData(
+                    queue_identifier=queue_identifier,
+                    message=message,
+                    text=MessageSerializer.serialize(message),
+                    expiration_generator=expiration_generator,
+                    address_metadata=address_metadata,
+                )
+                encoded_messages.append(data)
 
-                if already_queued:
-                    self.log.warning(
-                        "Message already in queue - ignoring",
-                        receiver=to_checksum_address(self.receiver),
-                        queue=queue_identifier,
-                        message=redact_secret(DictSerializer.serialize(message)),
-                    )
-                else:
-                    expiration_generator = self._expiration_generator(timeout_generator)
-                    data = _RetryQueue._MessageData(
-                        queue_identifier=queue_identifier,
-                        message=message,
-                        text=MessageSerializer.serialize(message),
-                        expiration_generator=expiration_generator,
-                        address_metadata=address_metadata,
-                    )
-                    encoded_messages.append(data)
-
-            self._message_queue.extend(encoded_messages)
-
+        self._message_queue.extend(encoded_messages)
         self.notify()
 
     def enqueue_unordered(
         self, message: Message, address_metadata: AddressMetadata = None
     ) -> None:
-        """ Helper to enqueue a message in the unordered queue. """
+        """Helper to enqueue a message in the unordered queue."""
         self.enqueue(
             queue_identifier=QueueIdentifier(
                 recipient=self.receiver, canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE
@@ -225,32 +223,8 @@ class _RetryQueue(Runnable):
         )
 
     def notify(self) -> None:
-        """ Notify main loop to check if anything needs to be sent """
-        with self._lock:
-            self._notify_event.set()
-
-    def _batch_by_address_metadata(
-        self,
-    ) -> List[Tuple[List[_MessageData], Optional[AddressMetadata]]]:
-        def key_func(message_data: "_RetryQueue._MessageData") -> str:
-            address_metadata = message_data.address_metadata
-            if address_metadata is None:
-                return ""
-            uid = address_metadata.get("user_id", "")
-            return cast(str, uid)
-
-        batched_messages = list()
-        queue_by_user_id = sorted(self._message_queue[:], key=key_func)
-        for user_id, batch in itertools.groupby(queue_by_user_id, key_func):
-            message_data_batch = list(batch)
-            if user_id == "":
-                metadata = None
-            else:
-                # simply use the first metadata in the list, event though
-                # there could be discrepancies along the batch
-                metadata = message_data_batch[0].address_metadata
-            batched_messages.append((message_data_batch, metadata))
-        return batched_messages
+        """Notify main loop to check if anything needs to be sent"""
+        self._notify_event.set()
 
     def _check_and_send(self) -> None:
         """Check and send all pending/queued messages that are not waiting on retry timeout
@@ -264,8 +238,6 @@ class _RetryQueue(Runnable):
         if self.transport._stop_event.ready():
             self.log.warning("Can't retry", reason="Transport stopped")
             return
-
-        assert self._lock.locked(), "RetryQueue lock must be held while messages are being sent"
 
         # On startup protocol messages must be sent only after the monitoring
         # services are updated. For more details refer to the method
@@ -290,9 +262,19 @@ class _RetryQueue(Runnable):
                 for send_event in self.transport._queueids_to_queues[message_data.queue_identifier]
             )
 
-        message_texts: List[str] = list()
-        for subqueue, address_metadata in self._batch_by_address_metadata():
-            for message_data in subqueue:
+        # batch by user_id, so that we can potentially combine data for send-to-device calls
+        queue_by_user_id = sorted(self._message_queue[:], key=metadata_key_func)
+        for user_id, batch in itertools.groupby(queue_by_user_id, metadata_key_func):
+            message_data_batch = list(batch)
+            if user_id == "":
+                address_metadata = None
+            else:
+                # simply use the first metadata in the list, event though
+                # there could be discrepancies along the batch
+                address_metadata = message_data_batch[0].address_metadata
+
+            message_texts: List[str] = list()
+            for message_data in message_data_batch:
                 # Messages are sent on two conditions:
                 # - Non-retryable (e.g. Delivered)
                 #   - Those are immediately remove from the local queue
@@ -329,7 +311,6 @@ class _RetryQueue(Runnable):
                                         message_data.message.message_identifier,
                                     )
                                 ] += 1
-
                 if remove:
                     self._message_queue.remove(message_data)
 
@@ -356,14 +337,12 @@ class _RetryQueue(Runnable):
         )
         # run while transport parent is running
         while not self.transport._stop_event.ready():
-            # once entered the critical section, block any other enqueue or notify attempt
-            with self._lock:
-                self._notify_event.clear()
-                if self._message_queue:
-                    self._idle_since = 0
-                    self._check_and_send()
-                else:
-                    self._idle_since += 1
+            self._notify_event.clear()
+            if self._message_queue:
+                self._idle_since = 0
+                self._check_and_send()
+            else:
+                self._idle_since += 1
 
             if self.is_idle:
                 # There have been no messages to process for a while. Exit.
@@ -403,7 +382,6 @@ class ReceivedCallMessage(_ReceivedMessageBase):
 class MatrixTransport(Runnable):
     _room_prefix = "raiden"
     _room_sep = "_"
-    _healthcheck_queue: NotifyingQueue[Address]
     log = log
 
     def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
@@ -431,10 +409,9 @@ class MatrixTransport(Runnable):
                 self._config.retry_interval_max,
             )
 
-        version = pkg_resources.require(raiden.__name__)[0].version
+        version = get_system_spec()["raiden"]
         self._client: GMatrixClient = make_client(
             self._handle_sync_messages,
-            self._handle_member_join,
             homeserver_candidates,
             http_pool_maxsize=4,
             http_retry_timeout=40,
@@ -457,6 +434,7 @@ class MatrixTransport(Runnable):
         # FIXME this will not update the servers while Raiden is running,
         #  thus to-device user-id fallback will only try to send to those home-servers that
         #  are fetched during config time
+        #  this fixme is about servers joining the federation during runtime of a raiden node
         self._all_server_names = {self._server_name}
         for server_url in config.available_servers:
             self._all_server_names.add(urlparse(server_url).netloc)
@@ -469,7 +447,6 @@ class MatrixTransport(Runnable):
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
         self._displayname_cache = DisplayNameCache()
 
-        self.broadcast_rooms: Dict[str, Room] = dict()
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
@@ -477,7 +454,6 @@ class MatrixTransport(Runnable):
 
         self._stop_event: Event = Event()
         self._stop_event.set()
-        self._healthcheck_queue = NotifyingQueue()
 
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages: bool = True
@@ -523,18 +499,23 @@ class MatrixTransport(Runnable):
         return make_user_id(address, self._server_name) if address is not None else None
 
     @property
+    def displayname(self) -> str:
+        if self._raiden_service is None:
+            return ""
+        signature_bytes = self._raiden_service.signer.sign(str(self.user_id).encode())
+        return encode_hex(signature_bytes)
+
+    @property
     def address_metadata(self) -> Optional[AddressMetadata]:
-        own_caps = PeerCapabilities(capconfig_to_dict(self._config.capabilities_config))
+        cap_dict = capconfig_to_dict(self._config.capabilities_config)
+        own_caps = capabilities_schema.dump({"capabilities": cap_dict})["capabilities"]
         own_user_id = self.user_id
         if own_user_id is None:
             return None
-        return dict(user_id=own_user_id, capabilities=own_caps)
+        return dict(user_id=own_user_id, capabilities=own_caps, displayname=self.displayname)
 
     def start(  # type: ignore
-        self,
-        raiden_service: "RaidenService",
-        prev_auth_data: Optional[str],
-        health_check_list: Optional[List[Address]] = None,  # pylint: disable=unused-argument
+        self, raiden_service: "RaidenService", prev_auth_data: Optional[str]
     ) -> None:
         if not self._stop_event.ready():
             raise RuntimeError(f"{self!r} already started")
@@ -544,8 +525,6 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._web_rtc_manager.node_address = self._raiden_service.address
 
-        # XXX-UAM health_check_list was used to whitelist/healthcheck
-        #  addresses after replaying state
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
 
@@ -574,7 +553,6 @@ class MatrixTransport(Runnable):
             node=to_checksum_address(self._raiden_service.address),
             transport_uuid=str(self._uuid),
         )
-        self._initialize_broadcast_rooms()
         self._initialize_first_sync()
         self._initialize_sync()
 
@@ -603,7 +581,7 @@ class MatrixTransport(Runnable):
         self._client.set_presence_state(state.value)
 
     def _run(self) -> None:  # type: ignore
-        """ Runnable main method, perform wait on long-running subtasks """
+        """Runnable main method, perform wait on long-running subtasks"""
         # dispatch auth data on first scheduling after start
         assert self._raiden_service is not None, "_raiden_service not set"
         self.greenlet.name = f"MatrixTransport._run node:{self.checksummed_address}"
@@ -700,14 +678,6 @@ class MatrixTransport(Runnable):
             pass
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
-
-    def async_start_health_check(self, node_address: Address) -> None:
-        # XXX-UAM implicitly used for whitelisting addresses
-        pass
-
-    def immediate_health_check_for(self, node_address: Address) -> None:
-        # XXX-UAM implicitly used for whitelisting addresses
-        pass
 
     def send_async(self, message_queues: List[MessagesQueue]) -> None:
         """Queue messages to be sent.
@@ -856,9 +826,7 @@ class MatrixTransport(Runnable):
 
         # Call sync to fetch the inventory rooms and new invites, the sync
         # limit prevents fetching the messages.
-        filter_id = self._client.create_sync_filter(
-            not_rooms=self.broadcast_rooms.values(), limit=0
-        )
+        filter_id = self._client.create_sync_filter(limit=0)
         prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
         # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
@@ -873,29 +841,6 @@ class MatrixTransport(Runnable):
             # Leave any that are still lingering.
             room.leave()
 
-    def _initialize_broadcast_rooms(self) -> None:
-        msg = "To join the broadcast rooms the Matrix client to be properly authenticated."
-        assert self._user_id, msg
-
-        pool = Pool(size=10)
-
-        def _join_broadcast_room(transport: MatrixTransport, room_name: str) -> None:
-            broadcast_room_alias = f"#{room_name}:{transport._server_name}"
-            transport.log.debug(
-                "Joining broadcast room", broadcast_room_alias=broadcast_room_alias
-            )
-            transport.broadcast_rooms[room_name] = join_broadcast_room(
-                client=transport._client, broadcast_room_alias=broadcast_room_alias
-            )
-
-        for suffix in self._config.broadcast_rooms:
-            alias_prefix = make_room_alias(self.chain_id, suffix)
-
-            if alias_prefix not in self.broadcast_rooms:
-                pool.apply_async(_join_broadcast_room, args=(self, alias_prefix))
-
-        pool.join(raise_error=True)
-
     def _initialize_sync(self) -> None:
         msg = "_initialize_sync requires the GMatrixClient to be properly authenticated."
         assert self._user_id, msg
@@ -903,18 +848,6 @@ class MatrixTransport(Runnable):
         msg = "The sync thread must not be started twice"
         assert self._client.sync_worker is None, msg
         assert self._client.message_worker is None, msg
-
-        msg = (
-            "The node must have joined the broadcast rooms before starting the "
-            "sync thread, since that is necessary to properly generate the "
-            "filters."
-        )
-        assert self.broadcast_rooms, msg
-
-        broadcast_filter_id = self._client.create_sync_filter(
-            not_rooms=self.broadcast_rooms.values()
-        )
-        self._client.set_sync_filter_id(broadcast_filter_id)
 
         def on_success(greenlet: gevent.Greenlet) -> None:
             if greenlet in self.greenlets:
@@ -989,14 +922,6 @@ class MatrixTransport(Runnable):
             content={"membership": "leave"},
         )
 
-    def _handle_member_join(self, room: Room) -> None:
-        if self._is_broadcast_room(room):
-            raise AssertionError(
-                f"Broadcast room events should be filtered in syncs: {room.canonical_alias}."
-                f"Joined Broadcast Rooms: {list(self.broadcast_rooms.keys())}"
-                f"Should be joined to: {self._config.broadcast_rooms}"
-            )
-
     def _validate_matrix_messages(
         self, room: Optional[Room], messages: List[MatrixMessage]
     ) -> Tuple[List[ReceivedRaidenMessage], List[ReceivedCallMessage]]:
@@ -1038,12 +963,7 @@ class MatrixTransport(Runnable):
                 )
                 continue
 
-            if room and self._is_broadcast_room(room):
-                # This must not happen. Nodes must not listen on broadcast rooms.
-                raise RaidenUnrecoverableError(
-                    f"Received message in broadcast room {room.canonical_alias}"
-                )
-            elif room:
+            if room:
                 # We no longer accept node-to-node communication messages in private rooms and
                 # should not be in any.
                 raise RaidenUnrecoverableError(f"Received message in room {room.canonical_alias}.")
@@ -1100,7 +1020,7 @@ class MatrixTransport(Runnable):
         self._raiden_service.on_messages(incoming_messages)
 
     def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
-        """ Handle text messages sent to listening rooms """
+        """Handle text messages sent to listening rooms"""
         if self._stop_event.ready():
             return False
 
@@ -1179,7 +1099,7 @@ class MatrixTransport(Runnable):
                 continue
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
-        """ Construct and return a _RetryQueue for receiver """
+        """Construct and return a _RetryQueue for receiver"""
         retrier = self._address_to_retrier.get(receiver)
         # The RetryQueue may have exited due to being idle
         if retrier is None or retrier.greenlet.ready():
@@ -1230,29 +1150,6 @@ class MatrixTransport(Runnable):
 
         self._client.api.send_to_device(event_type="m.room.message", messages=messages)
 
-    def _get_possible_user_ids(
-        self, address: Address, address_metadata: AddressMetadata = None
-    ) -> Set[UserID]:
-        """Construct possible user-ids from the address
-
-        This will take the information from the connected matrix homeservers and
-        an optional AddressMetadata dictionary.
-        If the address metadata doesn't further specify what user-id to use for that
-        address, then this method will simply construct all possible user-ids on all
-        known matrix homeservers.
-        """
-        user_ids = set()
-        if address_metadata is not None:
-            user_id = address_metadata.get("user_id")
-            if is_valid_userid(user_id):
-                user_id = cast(UserID, user_id)
-                user_ids.add(user_id)
-        if not user_ids:
-            user_ids = {
-                make_user_id(address, server_name) for server_name in self._all_server_names
-            }
-        return user_ids
-
     def _send_raw(
         self,
         receiver_address: Address,
@@ -1266,11 +1163,21 @@ class MatrixTransport(Runnable):
         if self._web_rtc_manager.has_ready_channel(receiver_address):
             communication_medium = CommunicationMedium.WEB_RTC
         else:
-            user_ids = self._get_possible_user_ids(receiver_address, receiver_metadata)
+            user_id = get_user_id_from_metadata(receiver_address, receiver_metadata)
             # Don't check whether the to-device capability is set -
             # this will only happen for older, incompatible clients that
             # will simply ignore our communication attempt
             communication_medium = CommunicationMedium.TO_DEVICE
+            if user_id is None:
+                self.log.debug(
+                    "Cannot send raw message without address metadata.",
+                    receiver=to_checksum_address(receiver_address),
+                    send_medium=communication_medium.value,
+                    data=data.replace("\n", "\\n"),
+                )
+                return
+            else:
+                user_ids.add(user_id)
 
         self.log.debug(
             "Send raw message",
@@ -1435,16 +1342,10 @@ class MatrixTransport(Runnable):
         gevent.sleep(3)
         self._maybe_initialize_web_rtc(partner_address)
 
-    def _is_broadcast_room(self, room: Room) -> bool:
-        has_alias = room.canonical_alias is not None
-        return has_alias and any(
-            suffix in room.canonical_alias for suffix in self._config.broadcast_rooms
-        )
-
     def _capability_usable(
         self, capability: Capabilities, partner_capabilities_config: CapabilitiesConfig
     ) -> bool:
-        """ Checks if a given capability is enabled for the local and the partner node """
+        """Checks if a given capability is enabled for the local and the partner node"""
 
         own_caps = capconfig_to_dict(self._config.capabilities_config)
         partner_caps = capconfig_to_dict(partner_capabilities_config)
@@ -1479,7 +1380,7 @@ class MatrixTransport(Runnable):
         assert self._raiden_service is not None, "_raiden_service not set"
 
     def _sign(self, data: bytes) -> bytes:
-        """ Use eth_sign compatible hasher to sign matrix data """
+        """Use eth_sign compatible hasher to sign matrix data"""
         assert self._raiden_service is not None, "_raiden_service not set"
         return self._raiden_service.signer.sign(data=data)
 

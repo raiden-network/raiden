@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
-from typing import Any, overload
+from typing import Any
 
 import eth_hash.auto as eth_hash
 from eth_utils import keccak
@@ -11,9 +11,7 @@ from raiden.messages.cmdid import CmdId
 from raiden.messages.metadata import Metadata, RouteMetadata
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
-    SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
@@ -201,7 +199,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class SecretRequest(SignedRetrieableMessage):
-    """ Requests the secret/preimage which unlocks a lock. """
+    """Requests the secret/preimage which unlocks a lock."""
 
     cmdid: ClassVar[CmdId] = CmdId.SECRETREQUEST
 
@@ -366,18 +364,6 @@ class LockedTransferBase(EnvelopeMessage):
 
         if len(self.initiator) != 20:
             raise ValueError("initiator is an invalid address")
-
-    @overload
-    @classmethod
-    def from_event(cls, event: SendLockedTransfer) -> "LockedTransfer":
-        # pylint: disable=unused-argument
-        ...
-
-    @overload  # noqa: F811
-    @classmethod
-    def from_event(cls, event: SendRefundTransfer) -> "RefundTransfer":  # noqa: F811
-        # pylint: disable=unused-argument
-        ...
 
     @classmethod  # noqa: F811
     def from_event(cls, event: Any) -> Any:  # noqa: F811

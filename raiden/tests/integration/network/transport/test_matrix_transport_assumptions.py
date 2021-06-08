@@ -1,8 +1,6 @@
 import time
 from collections import defaultdict
 from contextlib import contextmanager
-from functools import partial
-from urllib.parse import urlsplit
 
 import gevent
 import pytest
@@ -14,27 +12,13 @@ from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
     UserPresence,
     address_from_userid,
-    join_broadcast_room,
     login,
     make_client,
     make_room_alias,
 )
-from raiden.settings import (
-    DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
-    DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
-)
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.tests.utils.mocks import MockRaidenService
-from raiden.tests.utils.transport import (
-    get_admin_credentials,
-    ignore_member_join,
-    ignore_messages,
-    new_client,
-)
-from raiden.utils.formatting import to_hex_address
-from raiden.utils.http import HTTPExecutor
+from raiden.tests.utils.transport import ignore_messages, new_client
 from raiden.utils.signer import Signer
 from raiden.utils.typing import Address, Any, Dict, Generator, Tuple
 
@@ -52,7 +36,7 @@ def must_run_for_at_least(minimum_elapsed_time: float, msg: str) -> Generator:
 
 
 def create_logged_in_client(server: str) -> Tuple[GMatrixClient, Signer]:
-    client = make_client(ignore_messages, ignore_member_join, [server])
+    client = make_client(ignore_messages, [server])
     signer = factories.make_signer()
 
     login(client, signer, DeviceIDs.RAIDEN)
@@ -253,44 +237,6 @@ def test_assumption_user_is_online_while_sync_is_blocking(local_matrix_servers):
     assert long_running.successful(), "Thread calling sync failed"
 
 
-@pytest.mark.parametrize("matrix_server_count", [2])
-def test_assumption_search_user_directory_returns_federated_users(chain_id, local_matrix_servers):
-    """The search_user_directory should return federated users.
-
-    This assumption test was added because of issue #5285. The
-    path-finding-service was not functioning properly because the call to
-    `search_user_directory` did not return federated users, only local users.
-    Becaused of that the PFS assumed the users were offline and didn't find any
-    valid routes for the payments.
-    """
-    original_server_url = urlsplit(local_matrix_servers[0]).netloc
-
-    room_alias = make_room_alias(chain_id, "broadcast_test")
-    room_name_full = f"#{room_alias}:{original_server_url}"
-
-    user_room_creator, _ = create_logged_in_client(local_matrix_servers[0])
-    user_room_creator.create_room(room_alias, is_public=True)
-
-    user_federated, _ = create_logged_in_client(local_matrix_servers[1])
-    join_broadcast_room(user_federated, room_name_full)
-
-    addresses = list()
-    for _ in range(1000):
-        user, signer = create_logged_in_client(local_matrix_servers[0])
-        join_broadcast_room(user, room_name_full)
-
-        # Make sure to close the session instance, otherwise there will be too
-        # many file descriptors opened by the underlying urllib3 connection
-        # pool.
-        user.api.session.close()
-        del user
-
-        addresses.append(signer.address)
-
-    for address in addresses:
-        assert user_federated.search_user_directory(to_hex_address(address))
-
-
 @pytest.mark.parametrize("matrix_server_count", [3])
 def test_assumption_cannot_override_room_alias(local_matrix_servers):
     """Issue: https://github.com/raiden-network/raiden/issues/5366
@@ -312,7 +258,7 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
     public_room = next(iter(server1_client.rooms.values()))
 
     for local_server in local_matrix_servers[1:]:
-        client = new_client(ignore_messages, ignore_member_join, local_server)
+        client = new_client(ignore_messages, local_server)
         assert public_room.room_id not in client.rooms
         client.join_room(public_room.canonical_alias)
         assert public_room.room_id in client.rooms
@@ -331,87 +277,6 @@ def test_assumption_cannot_override_room_alias(local_matrix_servers):
         with pytest.raises(MatrixRequestError):
             client2.api.remove_room_alias(alias_on_current_server)
             client2.create_room(room_alias_prefix, is_public=True)
-
-
-@pytest.mark.parametrize("matrix_server_count", [3])
-def test_assumption_federation_works_after_original_server_goes_down(
-    chain_id, local_matrix_servers_with_executor
-):
-    """Check that a federated broadcast room keeps working after the original server goes down.
-
-    This creates a federation of three matrix servers and a client for each.
-    It then checks that all nodes receive messages from the broadcast room.
-    Then the first matrix server is shut down and a second message send to
-    the broadcast room, which should arrive at both remaining clients.
-    """
-    original_server_url = urlsplit(local_matrix_servers_with_executor[0][0]).netloc
-
-    room_alias = make_room_alias(chain_id, "broadcast_test")
-    room_name_full = f"#{room_alias}:{original_server_url}"
-
-    user_room_creator, _ = create_logged_in_client(local_matrix_servers_with_executor[0][0])
-    original_room: Room = user_room_creator.create_room(room_alias, is_public=True)
-    user_room_creator.start_listener_thread(
-        timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
-        latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
-    )
-
-    user_federated_1, _ = create_logged_in_client(local_matrix_servers_with_executor[1][0])
-    room_server1 = join_broadcast_room(user_federated_1, room_name_full)
-    user_federated_1.rooms[room_server1.room_id] = room_server1
-    user_federated_1.start_listener_thread(
-        timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
-        latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
-    )
-
-    user_federated_2, _ = create_logged_in_client(local_matrix_servers_with_executor[2][0])
-    room_server2 = join_broadcast_room(user_federated_2, room_name_full)
-    user_federated_2.rooms[room_server2.room_id] = room_server2
-    user_federated_2.start_listener_thread(
-        timeout_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_TIMEOUT,
-        latency_ms=DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY,
-    )
-
-    received = {}
-
-    def handle_message(node_id: int, _room: Room, event: Dict[str, Any]):
-        nonlocal received
-        received[node_id] = event["content"]["body"]
-
-    original_room.add_listener(partial(handle_message, 0), "m.room.message")
-    room_server1.add_listener(partial(handle_message, 1), "m.room.message")
-    room_server2.add_listener(partial(handle_message, 2), "m.room.message")
-
-    # Full federation, send a message to check it works
-    original_room.send_text("Message1")
-
-    while not len(received) == 3:
-        gevent.sleep(0.1)
-
-    assert sorted(received.keys()) == [0, 1, 2]
-    assert all("Message1" == m for m in received.values())
-
-    # Shut down the room_creator before we stop the server
-    user_room_creator.stop_listener_thread()
-    # Shutdown server 0, the original creator of the room
-    server: HTTPExecutor = local_matrix_servers_with_executor[0][1]
-    server.stop()
-
-    # Send message from client 1, check that client 2 receives it
-    received = {}
-    room_server1.send_text("Message2")
-
-    while not len(received) == 2:
-        gevent.sleep(0.1)
-
-    assert sorted(received.keys()) == [1, 2]
-    assert all("Message2" == m for m in received.values())
-
-    # Shut down longrunning threads
-    user_federated_1.stop_listener_thread()
-    user_federated_2.stop_listener_thread()
-
-    # TODO: restart matrix server 1, check that message 2 arrives
 
 
 @pytest.mark.parametrize("matrix_server_count", [1])
@@ -435,72 +300,6 @@ def test_assumption_matrix_returns_same_id_for_same_filter_payload(chain_id, loc
     # Try again and make sure the filter has the same ID
     second_sync_filter_id = client.create_sync_filter(not_rooms=[broadcast_room])
     assert first_sync_filter_id == second_sync_filter_id
-
-
-@pytest.mark.parametrize("number_of_transports", [3])
-@pytest.mark.parametrize("matrix_server_count", [1])
-def test_admin_is_allowed_to_kick(matrix_transports, local_matrix_servers):
-    server_name = local_matrix_servers[0].netloc
-    admin_credentials = get_admin_credentials(server_name)
-    broadcast_room_name = make_room_alias(UNIT_CHAIN_ID, "discovery")
-    broadcast_room_alias = f"#{broadcast_room_name}:{server_name}"
-
-    transport0, transport1, transport2 = matrix_transports
-
-    raiden_service0 = MockRaidenService()
-    raiden_service1 = MockRaidenService()
-    # start transports to join broadcast rooms as normal users
-    transport0.start(raiden_service0, None)
-    transport1.start(raiden_service1, None)
-    # admin login using raiden.tests.utils.transport.AdminAuthProvider
-    admin_client = GMatrixClient(ignore_messages, ignore_member_join, local_matrix_servers[0])
-    admin_client.login(admin_credentials["username"], admin_credentials["password"], sync=False)
-    room_id = admin_client.join_room(broadcast_room_alias).room_id
-
-    # get members of room and filter not kickable users (power level 100)
-    def _get_joined_room_members():
-        membership_events = admin_client.api.get_room_members(room_id)["chunk"]
-        member_ids = [
-            event["state_key"]
-            for event in membership_events
-            if event["content"]["membership"] == "join"
-        ]
-        return set(member_ids)
-
-    members = _get_joined_room_members()
-    power_levels_event = admin_client.api.get_power_levels(room_id)
-    admin_user_ids = [key for key, value in power_levels_event["users"].items() if value >= 50]
-    non_admin_user_ids = [member for member in members if member not in admin_user_ids]
-    # transport0 and transport1 should still be in non_admin_user_ids
-    assert len(non_admin_user_ids) > 1
-    kick_user_id = non_admin_user_ids[0]
-
-    # kick one user
-    admin_client.api.kick_user(room_id, kick_user_id)
-
-    # Assert missing member
-    members_after_kick = _get_joined_room_members()
-    assert len(members_after_kick) == len(members) - 1
-    members_after_kick.add(kick_user_id)
-    assert members_after_kick == members
-
-    # check assumption that new user does not receive presence
-    raiden_service2 = MockRaidenService()
-
-    def local_presence_listener(event, event_id):  # pylint: disable=unused-argument
-        assert event["sender"] != kick_user_id
-
-    transport2._client.add_presence_listener(local_presence_listener)
-    transport2.start(raiden_service2, None)
-
-    transport2.stop()
-
-    # rejoin and assert that normal user cannot kick
-    kicked_transport = transport0 if transport0._user_id == kick_user_id else transport1
-    kicked_transport._client.join_room(broadcast_room_alias)
-
-    with pytest.raises(MatrixRequestError):
-        kicked_transport._client.api.kick_user(room_id, non_admin_user_ids[1])
 
 
 @raise_on_failure

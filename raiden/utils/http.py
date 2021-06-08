@@ -51,7 +51,7 @@ class TimeoutHTTPAdapter(HTTPAdapter):
 
 
 class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
-    """ Subclass off mirakuru.HTTPExecutor, which allows other methods than HEAD """
+    """Subclass off mirakuru.HTTPExecutor, which allows other methods than HEAD"""
 
     def __init__(
         self,
@@ -71,7 +71,7 @@ class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
         self.verify_tls = verify_tls
 
     def after_start_check(self):
-        """ Check if defined URL returns expected status to a <method> request. """
+        """Check if defined URL returns expected status to a <method> request."""
         try:
             if self.url.scheme == "http":
                 conn = HTTPConnection(self.host, self.port)
@@ -197,7 +197,7 @@ class HTTPExecutor(MiHTTPExecutor):  # pragma: no cover
         raise TimeoutExpired(self, timeout=self._timeout)
 
     def running(self) -> bool:
-        """ Include pre_start_check in running, so stop will wait for the underlying listener """
+        """Include pre_start_check in running, so stop will wait for the underlying listener"""
         return super().running() or self.pre_start_check()
 
     def _send_request(self, conn: HTTPConnection):

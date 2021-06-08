@@ -9,6 +9,7 @@ import pytest
 import requests
 from eth_utils import encode_hex, is_checksum_address, is_hex, is_hex_address
 
+from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.constants import RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network import pathfinding
@@ -40,6 +41,7 @@ from raiden.utils import typing
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.keys import privatekey_to_address
+from raiden.utils.signer import Signer
 from raiden.utils.typing import (
     Address,
     AddressMetadata,
@@ -49,10 +51,8 @@ from raiden.utils.typing import (
     ChainID,
     Dict,
     PaymentAmount,
-    PeerCapabilities,
     TokenAmount,
     TokenNetworkAddress,
-    UserID,
 )
 
 DEFAULT_FEEDBACK_TOKEN = UUID("381e4a005a4d4687ac200fa1acd15c6f")
@@ -63,10 +63,15 @@ def assert_checksum_address_in_url(url):
     assert any(is_checksum_address(token) for token in url.split("/")), message
 
 
-def make_address_metadata(address) -> AddressMetadata:
+def make_address_metadata(signer: Signer) -> AddressMetadata:
+    user_id = make_user_id(signer.address, "homeserver")
+    signature_bytes = signer.sign(str(user_id).encode())
+    signature_hex = encode_hex(signature_bytes)
+
     return dict(
-        user_id=UserID(make_user_id(address, "homeserver")),
-        capabilities=PeerCapabilities(capconfig_to_dict(CapabilitiesConfig())),
+        user_id=user_id,
+        capabilities=CapabilitiesSchema().dump(capconfig_to_dict(CapabilitiesConfig())),
+        displayname=signature_hex,
     )
 
 
@@ -237,7 +242,7 @@ def happy_path_fixture(chain_state, token_network_state, our_address):
     return addresses, chain_state, channel_states, response, token_network_state
 
 
-def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our_address):
+def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our_signer):
     addresses, chain_state, _, response, token_network_state = happy_path_fixture
     _, address2, _, address4 = addresses
 
@@ -246,10 +251,10 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
             chain_state=chain_state,
             token_network_state=token_network_state,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
 
     assert_checksum_address_in_url(patched.call_args[0][0])
@@ -268,7 +273,7 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
 
 
 def test_routing_mocked_pfs_happy_path_with_updated_iou(
-    happy_path_fixture, one_to_n_address, our_address
+    happy_path_fixture, one_to_n_address, our_signer
 ):
     addresses, chain_state, _, response, token_network_state = happy_path_fixture
     _, address2, _, address4 = addresses
@@ -289,10 +294,10 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
             chain_state=chain_state,
             token_network_state=token_network_state,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
             iou_json_data=dict(last_iou=last_iou.as_json()),
         )
 
@@ -313,10 +318,10 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
 
 
 def test_routing_mocked_pfs_request_error(
-    chain_state, token_network_state, one_to_n_address, our_address
+    chain_state, token_network_state, one_to_n_address, our_signer
 ):
     token_network_state, addresses, _ = create_square_network_topology(
-        token_network_state=token_network_state, our_address=our_address
+        token_network_state=token_network_state, our_address=our_signer.address
     )
     address1, address2, address3, address4 = addresses
 
@@ -332,10 +337,10 @@ def test_routing_mocked_pfs_request_error(
             chain_state=chain_state,
             token_network_state=token_network_state,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -343,10 +348,10 @@ def test_routing_mocked_pfs_request_error(
 
 
 def test_routing_mocked_pfs_bad_http_code(
-    chain_state, token_network_state, one_to_n_address, our_address
+    chain_state, token_network_state, one_to_n_address, our_signer
 ):
     token_network_state, addresses, _ = create_square_network_topology(
-        token_network_state=token_network_state, our_address=our_address
+        token_network_state=token_network_state, our_address=our_signer.address
     )
     address1, address2, address3, address4 = addresses
 
@@ -362,7 +367,7 @@ def test_routing_mocked_pfs_bad_http_code(
         "result": [
             {
                 "path": [
-                    to_checksum_address(our_address),
+                    to_checksum_address(our_signer.address),
                     to_checksum_address(address2),
                     to_checksum_address(address3),
                     to_checksum_address(address4),
@@ -379,10 +384,10 @@ def test_routing_mocked_pfs_bad_http_code(
             chain_state=chain_state,
             token_network_state=token_network_state,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -390,10 +395,10 @@ def test_routing_mocked_pfs_bad_http_code(
 
 
 def test_routing_mocked_pfs_invalid_json(
-    chain_state, token_network_state, one_to_n_address, our_address
+    chain_state, token_network_state, one_to_n_address, our_signer
 ):
     token_network_state, addresses, _ = create_square_network_topology(
-        token_network_state=token_network_state, our_address=our_address
+        token_network_state=token_network_state, our_address=our_signer.address
     )
     address1, address2, address3, address4 = addresses
 
@@ -411,10 +416,10 @@ def test_routing_mocked_pfs_invalid_json(
             chain_state=chain_state,
             token_network_state=token_network_state,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -422,10 +427,10 @@ def test_routing_mocked_pfs_invalid_json(
 
 
 def test_routing_mocked_pfs_invalid_json_structure(
-    chain_state, one_to_n_address, token_network_state, our_address
+    chain_state, one_to_n_address, token_network_state, our_signer
 ):
     token_network_state, addresses, _ = create_square_network_topology(
-        token_network_state=token_network_state, our_address=our_address
+        token_network_state=token_network_state, our_address=our_signer.address
     )
     address1, address2, address3, address4 = addresses
 
@@ -443,10 +448,10 @@ def test_routing_mocked_pfs_invalid_json_structure(
             chain_state=chain_state,
             token_network_state=token_network_state,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
         # Request to PFS failed, but we do not fall back to internal routing
         assert len(routes) == 0
@@ -454,8 +459,9 @@ def test_routing_mocked_pfs_invalid_json_structure(
 
 
 def test_routing_mocked_pfs_unavailable_peer(
-    chain_state, token_network_state, one_to_n_address, our_address
+    chain_state, token_network_state, one_to_n_address, our_signer
 ):
+    our_address = our_signer.address
     token_network_state, addresses, _ = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
@@ -493,7 +499,7 @@ def test_routing_mocked_pfs_unavailable_peer(
             from_address=our_address,
             to_address=address4,
             amount=50,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
         # Node with address2 is not reachable, so even if the only route sent by the PFS
         # is over address2, the internal routing does not provide
@@ -681,7 +687,7 @@ def assert_failed_pfs_request(
                 assert post_paths.call_count == expected_requests
 
 
-def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_address):
+def test_routing_in_direct_channel(happy_path_fixture, our_signer, one_to_n_address):
     addresses, chain_state, _, _, token_network_state = happy_path_fixture
     address1, _, _, _ = addresses
 
@@ -691,17 +697,18 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
         "raiden.routing.query_address_metadata"
     ) as pfs_user_request:
         pfs_route_request.return_value = None, [], "feedback_token"
+        pfs_user_request.return_value = None
         _, routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address1,
             amount=PaymentAmount(50),
             previous_address=None,
             pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
         assert routes[0].next_hop_address == address1
         assert not pfs_route_request.called
@@ -715,13 +722,13 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_add
             chain_state=chain_state,
             token_network_address=token_network_state.address,
             one_to_n_address=one_to_n_address,
-            from_address=our_address,
+            from_address=our_signer.address,
             to_address=address1,
             amount=PaymentAmount(51),
             previous_address=None,
             pfs_config=PFS_CONFIG,
             privkey=PRIVKEY,
-            our_address_metadata=make_address_metadata(our_address),
+            our_address_metadata=make_address_metadata(our_signer),
         )
 
         assert pfs_request.called
@@ -752,7 +759,7 @@ def valid_response_json():
 
 
 def test_query_paths_with_second_try(query_paths_args, valid_response_json):
-    """ IOU rejection errors that are expected to result in an unaltered second attempt """
+    """IOU rejection errors that are expected to result in an unaltered second attempt"""
     for try_again in (PFSError.BAD_IOU, PFSError.MISSING_IOU, PFSError.USE_THIS_IOU):
         response = [dict(error_code=try_again.value)] * 2
         assert_failed_pfs_request(
@@ -767,7 +774,7 @@ def test_query_paths_with_second_try(query_paths_args, valid_response_json):
 
 
 def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
-    """ Errors that will result in reattempting with a new iou """
+    """Errors that will result in reattempting with a new iou"""
     for scrap_iou in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
         response = [dict(error_code=scrap_iou.value)] * 2
         assert_failed_pfs_request(
@@ -789,7 +796,7 @@ def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
 
 
 def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
-    " No retries after unrecoverable errors. "
+    "No retries after unrecoverable errors."
     for unrecoverable in (
         PFSError.INVALID_REQUEST,
         PFSError.INVALID_SIGNATURE,
@@ -809,7 +816,7 @@ def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
 
 
 def test_insufficient_payment(query_paths_args, valid_response_json):
-    """ When the PFS complains about insufficient fees, the client must update it's fee info """
+    """When the PFS complains about insufficient fees, the client must update it's fee info"""
     insufficient_response = dict(error_code=PFSError.INSUFFICIENT_SERVICE_PAYMENT.value)
 
     # PFS fails to return info
@@ -846,7 +853,7 @@ def test_insufficient_payment(query_paths_args, valid_response_json):
 
 
 def test_query_paths_with_multiple_errors(query_paths_args):
-    " Max. number of attempts is not exceeded also if there is a new recoverable issue. "
+    "Max. number of attempts is not exceeded also if there is a new recoverable issue."
     different_recoverable_errors = [
         dict(error_code=PFSError.BAD_IOU.value),
         dict(error_code=PFSError.IOU_ALREADY_CLAIMED.value),
@@ -857,7 +864,7 @@ def test_query_paths_with_multiple_errors(query_paths_args):
 
 
 def test_post_pfs_feedback(query_paths_args):
-    """ Test POST feedback to PFS """
+    """Test POST feedback to PFS"""
 
     feedback_token = uuid4()
     token_network_address = factories.make_token_network_address()
@@ -913,7 +920,7 @@ def test_post_pfs_feedback(query_paths_args):
 
 
 def test_no_iou_when_pfs_price_0(query_paths_args):
-    """ Test that no IOU is sent when PFS is for free """
+    """Test that no IOU is sent when PFS is for free"""
     query_paths_args["pfs_config"] = PFSConfig(
         info=PFSInfo(
             url="abc",
@@ -964,7 +971,7 @@ def test_no_iou_when_pfs_price_0(query_paths_args):
 
 
 def test_two_parallel_queries(query_paths_args):
-    """ Test that only one IOU is being processed at a time. """
+    """Test that only one IOU is being processed at a time."""
 
     # We mock one query to last at least 0.2s
     def mocked_json_response_with_sleep(**kwargs):  # pylint: disable=unused-argument

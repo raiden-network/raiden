@@ -1,24 +1,11 @@
 FROM python:3.7-stretch
 
-# these are defined in .circleci/config.yml and passed here in the makefile
-ARG SOLC_URL_LINUX
-ARG GETH_URL_LINUX
-
 # install dependencies
 RUN apt-get update
 RUN apt-get install -y git-core wget xz-utils build-essential \
     automake pkg-config libtool libffi-dev python3-dev libgmp-dev \
     libavdevice-dev libavfilter-dev libopus-dev libvpx-dev pkg-config \
     libsrtp2-dev
-
-RUN wget -nv -O /usr/bin/solc ${SOLC_URL_LINUX} && \
-    chmod +x /usr/bin/solc
-RUN wget -nv -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && \
-    cd /tmp && \
-    tar xf geth.tar.gz && \
-    mv geth-linux-amd64-*/geth /usr/bin/geth && \
-    rm geth.tar.gz
-
 
 RUN python3 -m venv /venv
 ENV PATH="/venv/bin:$PATH"

@@ -272,7 +272,7 @@ def test_rebalancing_fee_calculation():
     ],
 )
 def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected_amount):
-    """ Tests mediation fee deduction. """
+    """Tests mediation fee deduction."""
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     lock = make_hash_time_lock_state(amount=initial_amount)
     channel_in = factories.create(
@@ -315,7 +315,7 @@ def test_get_lock_amount_after_fees(flat_fee, prop_fee, initial_amount, expected
 def test_get_lock_amount_after_fees_imbalanced_channel(
     cap_fees, flat_fee, prop_fee, imbalance_fee, initial_amount, expected_amount
 ):
-    """ Tests mediation fee deduction. """
+    """Tests mediation fee deduction."""
     balance = TokenAmount(100_000)
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     imbalance_fee = calculate_imbalance_fees(
@@ -443,7 +443,7 @@ def test_fee_round_trip(flat_fee, prop_fee, imbalance_fee, amount, balance1, bal
 )
 @settings(suppress_health_check=[HealthCheck.filter_too_much])
 def test_fee_add_remove_invariant(flat_fee, prop_fee, imbalance_fee, amount, balance1, balance2):
-    """ First adding and then removing fees must yield the original value """
+    """First adding and then removing fees must yield the original value"""
     total_balance = TokenAmount(100_000_000_000_000_000_000)
     prop_fee_per_channel = ppm_fee_per_channel(ProportionalFeeAmount(prop_fee))
     imbalance_fee = calculate_imbalance_fees(
@@ -519,7 +519,7 @@ def make_channel_pair(
 
 
 def test_mfee1():
-    """ Unit test for the fee calculation in the mfee1_flat_fee scenario """
+    """Unit test for the fee calculation in the mfee1_flat_fee scenario"""
     amount = 10_000
     deposit = 100_000
     flat_fee = 100 // 2
@@ -543,7 +543,7 @@ def test_mfee1():
 
 
 def test_mfee2():
-    """ Unit test for the fee calculation in the mfee2_proportional_fees scenario """
+    """Unit test for the fee calculation in the mfee2_proportional_fees scenario"""
     amount = 10_000
     deposit = 100_000
     prop_fee = ppm_fee_per_channel(ProportionalFeeAmount(10_000))
@@ -567,7 +567,7 @@ def test_mfee2():
 
 
 def test_mfee3():
-    """ Unit test for the fee calculation in the mfee3_only_imbalance_fees scenario """
+    """Unit test for the fee calculation in the mfee3_only_imbalance_fees scenario"""
     amount = 500_000_000_000_000_000
     deposit = TokenAmount(1_000_000_000_000_000_000)
     imbalance_penalty = calculate_imbalance_fees(deposit, ProportionalFeeAmount(10_000))
@@ -595,7 +595,7 @@ def test_mfee3():
 
 
 def test_mfee4():
-    """ Unit test for the fee calculation in the mfee4_combined_fees scenario """
+    """Unit test for the fee calculation in the mfee4_combined_fees scenario"""
     amount = PaymentAmount(500_000_000_000_000_000)
     deposit = 1_000_000_000_000_000_000
     prop_fee = ppm_fee_per_channel(ProportionalFeeAmount(10_000))

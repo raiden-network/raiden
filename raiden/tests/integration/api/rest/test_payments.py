@@ -30,11 +30,16 @@ DEFAULT_ID = "42"
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_target_error(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ) -> None:
     _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     # stop app1 to force an error
     app1.stop()
@@ -60,12 +65,15 @@ def test_api_payments(
     raiden_network: List[RaidenService],
     token_addresses,
     deposit,
+    pfs_mock,
 ) -> None:
     _, app1 = raiden_network
     amount = 100
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -111,7 +119,8 @@ def test_api_payments(
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
 
-    # Test that trying out a payment with an amount higher than what is available returns an error
+    # Test that trying out a payment with an amount higher than what is available
+    # returns an error
     payment["amount"] = str(deposit)
     request = grequests.post(
         api_url_for(
@@ -143,7 +152,10 @@ def test_api_payments(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_secret_hash_errors(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
@@ -153,6 +165,8 @@ def test_api_payments_secret_hash_errors(
     bad_secret_hash = "Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33"
     short_secret = "0x123"
     short_secret_hash = "Short secret hash"
+
+    pfs_mock.add_apps(raiden_network)
 
     request = grequests.post(
         api_url_for(
@@ -201,7 +215,11 @@ def test_api_payments_secret_hash_errors(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": DEFAULT_AMOUNT, "identifier": DEFAULT_ID, "secret_hash": bad_secret_hash},
+        json={
+            "amount": DEFAULT_AMOUNT,
+            "identifier": DEFAULT_ID,
+            "secret_hash": bad_secret_hash,
+        },
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
@@ -228,7 +246,10 @@ def test_api_payments_secret_hash_errors(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_secret_no_hash(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
@@ -236,6 +257,7 @@ def test_api_payments_with_secret_no_hash(
     secret = to_hex(factories.make_secret())
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
+    pfs_mock.add_apps(raiden_network)
 
     payment = {
         "initiator_address": to_checksum_address(our_address),
@@ -256,6 +278,7 @@ def test_api_payments_with_secret_no_hash(
     )
     with watch_for_unlock_failures(*raiden_network):
         response = request.send().response
+
     assert_proper_response(response)
     json_response = get_json_response(response)
     assert_payment_secret_and_hash(json_response, payment)
@@ -266,12 +289,14 @@ def test_api_payments_with_secret_no_hash(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_hash_no_secret(
-    api_server_test_instance, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance, raiden_network: List[RaidenService], token_addresses, pfs_mock
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.address
     secret_hash = factories.make_secret_hash()
+
+    pfs_mock.add_apps(raiden_network)
 
     request = grequests.post(
         api_url_for(
@@ -320,11 +345,12 @@ def test_api_payments_post_without_required_params(api_server_test_instance, tok
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("resolver_ports", [[None, 8000]])
 @pytest.mark.parametrize("enable_rest_api", [True])
+@pytest.mark.usefixtures("resolvers")
 def test_api_payments_with_resolver(
     api_server_test_instance: APIServer,
     raiden_network: List[RaidenService],
     token_addresses,
-    resolvers,  # pylint: disable=unused-argument
+    pfs_mock,
 ):
 
     _, app1 = raiden_network
@@ -333,6 +359,8 @@ def test_api_payments_with_resolver(
     token_address = token_addresses[0]
     target_address = app1.address
     secret_hash = factories.make_secret_hash()
+
+    pfs_mock.add_apps(raiden_network)
 
     # payment with secret_hash when both resolver and initiator don't have the secret
     request = grequests.post(
@@ -359,7 +387,11 @@ def test_api_payments_with_resolver(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(amount), "identifier": str(identifier), "secret": to_hex(secret_hash)},
+        json={
+            "amount": str(amount),
+            "identifier": str(identifier),
+            "secret": to_hex(secret_hash),
+        },
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.OK)
@@ -392,12 +424,17 @@ def test_api_payments_with_resolver(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_secret_and_hash(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.address
     secret, secret_hash = factories.make_secret_with_hash()
+
+    pfs_mock.add_apps(raiden_network)
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -436,11 +473,16 @@ def test_api_payments_with_secret_and_hash(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_conflicts(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.address
+
+    pfs_mock.add_apps(raiden_network)
 
     payment_url = api_url_for(
         api_server_test_instance,
@@ -474,7 +516,10 @@ def test_api_payments_conflicts(
 @pytest.mark.parametrize("enable_rest_api", [True])
 @pytest.mark.parametrize("deposit", [1000])
 def test_api_payments_with_lock_timeout(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
@@ -482,6 +527,8 @@ def test_api_payments_with_lock_timeout(
     number_of_nodes = 2
     reveal_timeout = number_of_nodes * 4 + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     settle_timeout = 39
+
+    pfs_mock.add_apps(raiden_network)
 
     # try lock_timeout = reveal_timeout - should not work
     request = grequests.post(
@@ -557,12 +604,17 @@ def test_api_payments_with_lock_timeout(
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_with_invalid_input(
-    api_server_test_instance: APIServer, raiden_network: List[RaidenService], token_addresses
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    pfs_mock,
 ):
     _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.address
     settle_timeout = 39
+
+    pfs_mock.add_apps(raiden_network)
 
     # Invalid identifier being 0 or negative
     request = grequests.post(
@@ -572,7 +624,11 @@ def test_api_payments_with_invalid_input(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": DEFAULT_AMOUNT, "identifier": "0", "lock_timeout": str(settle_timeout)},
+        json={
+            "amount": DEFAULT_AMOUNT,
+            "identifier": "0",
+            "lock_timeout": str(settle_timeout),
+        },
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
@@ -584,7 +640,11 @@ def test_api_payments_with_invalid_input(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": DEFAULT_AMOUNT, "identifier": "-1", "lock_timeout": str(settle_timeout)},
+        json={
+            "amount": DEFAULT_AMOUNT,
+            "identifier": "-1",
+            "lock_timeout": str(settle_timeout),
+        },
     )
     response = request.send().response
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)

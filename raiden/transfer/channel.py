@@ -32,9 +32,7 @@ from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, Ca
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
-    SendRefundTransfer,
     SendUnlock,
-    refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.mediation_fee import (
     FeeScheduleState,
@@ -428,7 +426,7 @@ def get_secret(end_state: NettingChannelEndState, secrethash: SecretHash) -> Opt
 def is_balance_proof_safe_for_onchain_operations(
     balance_proof: BalanceProofSignedState,
 ) -> bool:
-    """ Check if the balance proof would overflow onchain. """
+    """Check if the balance proof would overflow onchain."""
     total_amount = balance_proof.transferred_amount + balance_proof.locked_amount
     return total_amount <= UINT256_MAX
 
@@ -1530,49 +1528,6 @@ def send_lockedtransfer(
     return send_locked_transfer_event
 
 
-def send_refundtransfer(
-    channel_state: NettingChannelState,
-    initiator: InitiatorAddress,
-    target: TargetAddress,
-    amount: PaymentWithFeeAmount,
-    message_identifier: MessageID,
-    payment_identifier: PaymentID,
-    expiration: BlockExpiration,
-    secrethash: SecretHash,
-    route_state: RouteState,
-    recipient_metadata: AddressMetadata = None,
-) -> SendRefundTransfer:
-    msg = "Refunds are only valid for *known and pending* transfers"
-    assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
-
-    msg = "caller must make sure the channel is open"
-    assert get_status(channel_state) == ChannelState.STATE_OPENED, msg
-
-    send_mediated_transfer, pending_locks = create_sendlockedtransfer(
-        channel_state=channel_state,
-        initiator=initiator,
-        target=target,
-        amount=amount,
-        message_identifier=message_identifier,
-        payment_identifier=payment_identifier,
-        expiration=expiration,
-        secrethash=secrethash,
-        route_states=[route_state],
-        recipient_metadata=recipient_metadata,
-    )
-
-    mediated_transfer = send_mediated_transfer.transfer
-    lock = mediated_transfer.lock
-
-    channel_state.our_state.balance_proof = mediated_transfer.balance_proof
-    channel_state.our_state.nonce = mediated_transfer.balance_proof.nonce
-    channel_state.our_state.pending_locks = pending_locks
-    channel_state.our_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
-
-    refund_transfer = refund_from_sendmediated(send_mediated_transfer)
-    return refund_transfer
-
-
 def send_unlock(
     channel_state: NettingChannelState,
     message_identifier: MessageID,
@@ -1633,6 +1588,7 @@ def send_withdraw_request(
     total_withdraw: WithdrawAmount,
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
+    recipient_metadata: Optional[AddressMetadata],
 ) -> List[Event]:
     events: List[Event] = list()
 
@@ -1644,7 +1600,10 @@ def send_withdraw_request(
         block_number=block_number, reveal_timeout=channel_state.reveal_timeout
     )
     withdraw_state = PendingWithdrawState(
-        total_withdraw=total_withdraw, nonce=nonce, expiration=expiration
+        total_withdraw=total_withdraw,
+        nonce=nonce,
+        expiration=expiration,
+        recipient_metadata=recipient_metadata,
     )
 
     channel_state.our_state.nonce = nonce
@@ -1657,12 +1616,12 @@ def send_withdraw_request(
             channel_identifier=channel_state.identifier,
         ),
         recipient=channel_state.partner_state.address,
-        recipient_metadata=None,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         total_withdraw=withdraw_state.total_withdraw,
         participant=channel_state.our_state.address,
         nonce=channel_state.our_state.nonce,
         expiration=withdraw_state.expiration,
+        recipient_metadata=recipient_metadata,
     )
 
     events.append(withdraw_event)
@@ -1779,7 +1738,10 @@ def send_expired_withdraws(
 
         channel_state.our_state.withdraws_expired.append(
             ExpiredWithdrawState(
-                withdraw_state.total_withdraw, withdraw_state.expiration, withdraw_state.nonce
+                withdraw_state.total_withdraw,
+                withdraw_state.expiration,
+                withdraw_state.nonce,
+                withdraw_state.recipient_metadata,
             )
         )
         del channel_state.our_state.withdraws_pending[withdraw_state.total_withdraw]
@@ -1787,7 +1749,7 @@ def send_expired_withdraws(
         events.append(
             SendWithdrawExpired(
                 recipient=channel_state.partner_state.address,
-                recipient_metadata=None,
+                recipient_metadata=withdraw_state.recipient_metadata,
                 canonical_identifier=channel_state.canonical_identifier,
                 message_identifier=message_identifier_from_prng(pseudo_random_generator),
                 total_withdraw=withdraw_state.total_withdraw,
@@ -1912,6 +1874,7 @@ def handle_action_withdraw(
             total_withdraw=action_withdraw.total_withdraw,
             block_number=block_number,
             pseudo_random_generator=pseudo_random_generator,
+            recipient_metadata=action_withdraw.recipient_metadata,
         )
     else:
         error_msg = is_valid_withdraw.as_error_message
@@ -1963,6 +1926,7 @@ def handle_receive_withdraw_request(
             total_withdraw=withdraw_request.total_withdraw,
             nonce=withdraw_request.nonce,
             expiration=withdraw_request.expiration,
+            recipient_metadata=withdraw_request.sender_metadata,
         )
         channel_state.partner_state.withdraws_pending[
             withdraw_state.total_withdraw
@@ -1973,7 +1937,7 @@ def handle_receive_withdraw_request(
         send_withdraw = SendWithdrawConfirmation(
             canonical_identifier=channel_state.canonical_identifier,
             recipient=channel_state.partner_state.address,
-            recipient_metadata=None,
+            recipient_metadata=withdraw_request.sender_metadata,
             message_identifier=withdraw_request.message_identifier,
             total_withdraw=withdraw_request.total_withdraw,
             participant=channel_state.partner_state.address,
@@ -2003,13 +1967,18 @@ def handle_receive_withdraw_confirmation(
         channel_state=channel_state, received_withdraw=withdraw
     )
 
+    withdraw_state = channel_state.our_state.withdraws_pending.get(withdraw.total_withdraw)
+    recipient_metadata = None
+    if withdraw_state is not None:
+        recipient_metadata = withdraw_state.recipient_metadata
+
     events: List[Event]
     if is_valid:
         channel_state.partner_state.nonce = withdraw.nonce
         events = [
             SendProcessed(
                 recipient=channel_state.partner_state.address,
-                recipient_metadata=None,
+                recipient_metadata=recipient_metadata,
                 message_identifier=withdraw.message_identifier,
                 canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
@@ -2076,7 +2045,7 @@ def handle_receive_withdraw_expired(
 
         send_processed = SendProcessed(
             recipient=channel_state.partner_state.address,
-            recipient_metadata=None,
+            recipient_metadata=withdraw_state.recipient_metadata,
             message_identifier=withdraw_expired.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )

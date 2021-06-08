@@ -23,7 +23,6 @@ from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain.filters import RaidenContractFilter
-from raiden.blockchain_events_handler import after_blockchain_statechange
 from raiden.constants import (
     ABSENT_SECRET,
     BLOCK_ID_LATEST,
@@ -299,7 +298,7 @@ class SynchronizationState(Enum):
 
 
 class RaidenService(Runnable):
-    """ A Raiden node. """
+    """A Raiden node."""
 
     def __init__(
         self,
@@ -450,7 +449,7 @@ class RaidenService(Runnable):
         self.state_change_qty = 0
 
     def start(self) -> None:
-        """ Start the node synchronously. Raises directly if anything went wrong on startup """
+        """Start the node synchronously. Raises directly if anything went wrong on startup"""
         assert self.stop_event.ready(), f"Node already started. node:{self!r}"
         self.stop_event.clear()
         self.greenlets = list()
@@ -478,7 +477,7 @@ class RaidenService(Runnable):
         self.transport.greenlet.link_exception(self.on_error)
         if self.api_server:
             self.api_server.greenlet.link_exception(self.on_error)
-        self._start_transport(chain_state)
+        self._start_transport()
         self._start_alarm_task()
 
         log.debug("Raiden Service started", node=to_checksum_address(self.address))
@@ -487,7 +486,7 @@ class RaidenService(Runnable):
         self._set_rest_api_service_available()
 
     def _run(self, *args: Any, **kwargs: Any) -> None:  # pylint: disable=method-hidden
-        """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
+        """Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs"""
         self.greenlet.name = f"RaidenService._run node:{to_checksum_address(self.address)}"
         try:
             self.stop_event.wait()
@@ -500,7 +499,7 @@ class RaidenService(Runnable):
             raise
 
     def stop(self) -> None:
-        """ Stop the node gracefully. Raise if any stop-time error occurred on any subtask """
+        """Stop the node gracefully. Raise if any stop-time error occurred on any subtask"""
         if self.stop_event.ready():  # not started
             return
 
@@ -564,7 +563,7 @@ class RaidenService(Runnable):
         return self.rpc_client.privkey
 
     def add_pending_greenlet(self, greenlet: Greenlet) -> None:
-        """ Ensures an error on the passed greenlet crashes self/main greenlet. """
+        """Ensures an error on the passed greenlet crashes self/main greenlet."""
 
         def remove(_: Any) -> None:
             self.greenlets.remove(greenlet)
@@ -576,7 +575,7 @@ class RaidenService(Runnable):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} node:{to_checksum_address(self.address)}>"
 
-    def _start_transport(self, chain_state: ChainState) -> None:
+    def _start_transport(self) -> None:
         """Initialize the transport and related facilities.
 
         Note:
@@ -592,22 +591,11 @@ class RaidenService(Runnable):
         )
         assert self.blockchain_events is not None, msg
 
-        # XXX-UAM health-check list was passed to transport after a recover,
-        #  to start tracking / whitlisting e.g. initiator / target nodes
-        # health_check_list = self._get_initial_health_check_list(chain_state)
-        # log.debug(
-        #     "Initializing health checks",
-        #     neighbour_nodes=[to_checksum_address(address) for address in health_check_list],
-        #     node=to_checksum_address(self.address),
-        # )
         if self.default_service_registry is not None:
             populate_services_addresses(
                 self.transport, self.default_service_registry, BLOCK_ID_LATEST
             )
         self.transport.start(raiden_service=self, prev_auth_data=None)
-
-        for neighbour in views.all_neighbour_nodes(chain_state):
-            self.async_start_health_check_for(neighbour)
 
     def _make_initial_state(self) -> ChainState:
         # On first run Raiden needs to fetch all events for the payment
@@ -967,9 +955,6 @@ class RaidenService(Runnable):
                 raiden=self, canonical_identifier=canonical_identifier, update_fee_schedule=True
             )
 
-        for state_change in state_changes:
-            after_blockchain_statechange(self, state_change)
-
         log.debug(
             "Raiden events",
             node=to_checksum_address(self.address),
@@ -1068,28 +1053,6 @@ class RaidenService(Runnable):
                 log.error(str(e))
             else:
                 raise
-
-    def async_start_health_check_for(self, node_address: Address) -> None:
-        """Start health checking `node_address`.
-
-        This function is a noop during initialization, because health checking
-        can be started as a side effect of some events (e.g. new channel). For
-        these cases the healthcheck will be started by
-        `_start_transport`.
-        """
-        if self.transport:
-            self.transport.async_start_health_check(node_address)
-
-    def immediate_health_check_for(self, node_address: Address) -> None:
-        """Start health checking `node_address`.
-
-        This function is a noop during initialization, because health checking
-        can be started as a side effect of some events (e.g. new channel). For
-        these cases the healthcheck will be started by
-        `_start_transport`.
-        """
-        if self.transport:
-            self.transport.immediate_health_check_for(node_address)
 
     def _best_effort_synchronize(self, latest_block: BlockData) -> SynchronizationState:
         """Called with the current latest block, tries to synchronize with the
@@ -1372,7 +1335,14 @@ class RaidenService(Runnable):
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)
-                queue_messages.append((message, None))
+                # FIXME: this will load the recipient's metadata from the persisted
+                #  state. If the recipient roamed during the offline time of our node,
+                #  the message will never reach the recipient,
+                #  especially since we don't have a WebRTC connection with the recipient at
+                #  startup.
+                #  Depending on the time our node is offline, roaming of the recipient
+                #  can become more likely.
+                queue_messages.append((message, event.recipient_metadata))
 
             all_messages.append(MessagesQueue(queue_identifier, queue_messages))
 
@@ -1486,28 +1456,8 @@ class RaidenService(Runnable):
                     update_fee_schedule=True,
                 )
 
-    def _get_initial_health_check_list(self, chain_state: ChainState) -> List[Address]:
-        """ Fetch direct neighbors and mediated transfer targets on transport """
-        neighbour_addresses: List[Address] = []
-
-        all_neighbour_nodes = views.all_neighbour_nodes(chain_state)
-
-        for neighbour in all_neighbour_nodes:
-            neighbour_addresses.append(neighbour)
-
-        events_queues = views.get_all_messagequeues(chain_state)
-
-        for event_queue in events_queues.values():
-            for event in event_queue:
-                if isinstance(event, SendLockedTransfer):
-                    transfer = event.transfer
-                    if transfer.initiator == InitiatorAddress(self.address):
-                        neighbour_addresses.append(Address(transfer.target))
-
-        return neighbour_addresses
-
     def sign(self, message: Message) -> None:
-        """ Sign message inplace. """
+        """Sign message inplace."""
         if not isinstance(message, SignedMessage):
             raise ValueError("{} is not signable.".format(repr(message)))
 
@@ -1575,8 +1525,6 @@ class RaidenService(Runnable):
                 f" That secret is already registered onchain."
             )
 
-        self.async_start_health_check_for(Address(target))
-
         # Checks if there is a payment in flight with the same payment_id and
         # target. If there is such a payment and the details match, instead of
         # starting a new payment this will give the caller the existing
@@ -1630,10 +1578,16 @@ class RaidenService(Runnable):
         return payment_status
 
     def withdraw(
-        self, canonical_identifier: CanonicalIdentifier, total_withdraw: WithdrawAmount
+        self,
+        canonical_identifier: CanonicalIdentifier,
+        total_withdraw: WithdrawAmount,
+        recipient_metadata: AddressMetadata = None,
     ) -> None:
+
         init_withdraw = ActionChannelWithdraw(
-            canonical_identifier=canonical_identifier, total_withdraw=total_withdraw
+            canonical_identifier=canonical_identifier,
+            total_withdraw=total_withdraw,
+            recipient_metadata=recipient_metadata,
         )
 
         self.handle_and_track_state_changes([init_withdraw])

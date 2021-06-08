@@ -216,8 +216,8 @@ class RTCPartner(CoroutineHandler):
             asyncio.create_task(self.close())
             return None
 
-        except AttributeError as ex:
-            self.log.error("Attribute error in coroutine", coroutine=coroutine, exception=ex)
+        except AttributeError:
+            self.log.exception("Attribute error in coroutine", coroutine=coroutine)
             asyncio.create_task(self.close())
             return None
 

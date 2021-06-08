@@ -1,27 +1,20 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
-import gevent  # isort:skip # noqa
-from gevent import monkey, Timeout  # isort:skip # noqa
+# type: ignore
+from gevent import monkey
 
-monkey.patch_all(subprocess=False, thread=False)  # isort:skip # noqa
+monkey.patch_all(subprocess=False, thread=False)
 
-import asyncio
-import contextlib
-import datetime
-import os
-import signal
-import subprocess
-import sys
-import time
+# isort:split
+
+import aiortc_pyav_stub
+
+# Install the av replacement stub to make sure we catch possible version
+# upgrade breakages
+aiortc_pyav_stub.install_as_av()
+
+# isort: split
 
 import pytest
-import structlog
-
-from raiden.network.transport.matrix.rtc.aiogevent import yield_future
-from raiden.network.transport.matrix.rtc.utils import (
-    ASYNCIO_LOOP_RUNNING_TIMEOUT,
-    setup_asyncio_event_loop,
-)
-from raiden.utils.ethereum_clients import VersionSupport
 
 # Execute these before the raiden imports because rewrites can't work after the
 # module has been imported.
@@ -35,22 +28,41 @@ pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")
 pytest.register_assert_rewrite("raiden.tests.utils.smoketest")
 pytest.register_assert_rewrite("raiden.tests.utils.transfer")
 
-from raiden.constants import (  # isort:skip
+# isort:split
+
+import asyncio
+import contextlib
+import datetime
+import os
+import signal
+import subprocess
+import sys
+import time
+
+import gevent
+import structlog
+from gevent import Timeout
+
+from raiden.constants import (
     HIGHEST_SUPPORTED_GETH_VERSION,
     HIGHEST_SUPPORTED_PARITY_VERSION,
     LOWEST_SUPPORTED_GETH_VERSION,
     LOWEST_SUPPORTED_PARITY_VERSION,
     EthClient,
 )
-from raiden.log_config import configure_logging  # isort:skip
-from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403  # isort:skip
-from raiden.tests.fixtures.variables import *  # noqa: F401,F403  # isort:skip
-from raiden.tests.integration.exception import RetryTestError  # isort:skip
-from raiden.tests.utils.transport import make_requests_insecure  # isort:skip
-from raiden.utils.cli import LogLevelConfigType  # isort:skip
-from raiden.utils.debugging import enable_gevent_monitoring_signal  # isort:skip
-from raiden.utils.ethereum_clients import is_supported_client  # isort:skip
-
+from raiden.log_config import configure_logging
+from raiden.network.transport.matrix.rtc.aiogevent import yield_future
+from raiden.network.transport.matrix.rtc.utils import (
+    ASYNCIO_LOOP_RUNNING_TIMEOUT,
+    setup_asyncio_event_loop,
+)
+from raiden.tests.fixtures.blockchain import *  # noqa: F401,F403
+from raiden.tests.fixtures.variables import *  # noqa: F401,F403
+from raiden.tests.integration.exception import RetryTestError
+from raiden.tests.utils.transport import make_requests_insecure
+from raiden.utils.cli import LogLevelConfigType
+from raiden.utils.debugging import enable_gevent_monitoring_signal
+from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 
 log = structlog.get_logger()
 
@@ -370,14 +382,20 @@ def set_item_timeouts(item):
     timeout_limit_setup_and_call = item.config.getini("timeout_limit_for_setup_and_call")
 
     if timeout_limit_setup_and_call == "":
-        raise Exception("timeout_limit_for_setup_and_call must be set in setup.cfg")
+        raise RuntimeError(
+            "timeout_limit_for_setup_and_call must be set in section "
+            "'tool.pytest.ini_options' in pyproject.toml"
+        )
 
     timeout_limit_setup_and_call = float(timeout_limit_setup_and_call)
 
     timeout_limit_teardown = item.config.getini("timeout_limit_teardown")
 
     if timeout_limit_teardown == "":
-        raise Exception("timeout_limit_teardown must be set in setup.cfg")
+        raise RuntimeError(
+            "timeout_limit_teardown must be set in section "
+            "'tool.pytest.ini_options' in pyproject.toml"
+        )
 
     timeout_limit_teardown = float(timeout_limit_teardown)
 
@@ -388,7 +406,7 @@ def set_item_timeouts(item):
     timeout_setup_and_call = timeout_from_marker(marker) or timeout_limit_setup_and_call
 
     if timeout_setup_and_call > timeout_limit_setup_and_call:
-        raise Exception(
+        raise RuntimeError(
             f"Invalid value for the timeout marker {timeout_setup_and_call}. This "
             f"value must be smaller than {timeout_limit_setup_and_call}. This is "
             f"necessary because the runtime of a test has to be synchronized with "
@@ -400,10 +418,10 @@ def set_item_timeouts(item):
         )
 
     if timeout_setup_and_call <= 0:
-        raise Exception("timeout must not be negative")
+        raise RuntimeError("timeout must not be negative")
 
     if timeout_teardown <= 0:
-        raise Exception("timeout_limit_teardown must not be negative")
+        raise RuntimeError("timeout_limit_teardown must not be negative")
 
     item.timeout_setup_and_call = timeout_setup_and_call
     item.timeout_teardown = timeout_teardown

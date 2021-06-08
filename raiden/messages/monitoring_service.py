@@ -132,7 +132,7 @@ class RequestMonitoring(SignedMessage):
         return self.signature
 
     def _data_to_sign(self) -> bytes:
-        """ Return the binary data to be/which was signed """
+        """Return the binary data to be/which was signed"""
         assert self.non_closing_signature is not None, "Message is not signed yet."
         packed = pack_reward_proof(
             chain_id=self.balance_proof.chain_id,

@@ -1,5 +1,5 @@
-How is Raiden tested.
-#####################
+How is Raiden tested
+####################
 
 Raiden tests are split into these categories. The following categories are
 ordered from the faster and easier to debug to the slower and harder to debug:
@@ -70,7 +70,7 @@ Here is an overview of the fixture system:
   start of the test.
 - The fixtures responsible to start a private chain are defined in
   ``raiden/tests/integration/fixtures/blockchain.py``. These will start a new
-  private chain, either ``geth`` or ``parity``, with
+  private chain, either ``geth`` or ``openethereum``, with
   ``blockchain_number_of_nodes`` nodes. This private chain will have one
   prefunded account for each Raiden node, which allows these nodes to send
   on-chain transactions.

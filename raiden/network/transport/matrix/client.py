@@ -13,6 +13,7 @@ from eth_typing import HexStr
 from gevent import Greenlet
 from gevent.event import Event
 from gevent.lock import Semaphore
+from gevent.pool import Pool
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
@@ -48,7 +49,7 @@ def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
 
 
 class Room(MatrixRoom):
-    """ Matrix `Room` subclass that invokes listener callbacks in separate greenlets """
+    """Matrix `Room` subclass that invokes listener callbacks in separate greenlets"""
 
     def __init__(self, client: "GMatrixClient", room_id: str) -> None:
         super().__init__(client, room_id)
@@ -57,7 +58,7 @@ class Room(MatrixRoom):
         self.canonical_alias: str
 
     def get_joined_members(self, force_resync: bool = False) -> List[User]:
-        """ Return a list of members of this room. """
+        """Return a list of members of this room."""
         if force_resync:
             response = self.client.api.get_room_members(self.room_id)
             for event in response["chunk"]:
@@ -70,7 +71,7 @@ class Room(MatrixRoom):
         return list(self._members.values())
 
     def leave(self) -> None:
-        """ Leave the room. Overriding Matrix method to always return error when request. """
+        """Leave the room. Overriding Matrix method to always return error when request."""
         self.client.api.leave_room(self.room_id)
         self.client.rooms.pop(self.room_id, None)
 
@@ -205,7 +206,7 @@ class GMatrixHttpApi(MatrixHttpApi):
         self.server_ident = response.headers.get("Server")
 
     def get_room_state_type(self, room_id: str, event_type: str, state_key: str) -> Dict[str, Any]:
-        """ Perform GET /rooms/$room_id/state/$event_type/$state_key """
+        """Perform GET /rooms/$room_id/state/$event_type/$state_key"""
         return self._send("GET", f"/rooms/{room_id}/state/{event_type}/{state_key}")
 
     def create_room(
@@ -254,7 +255,7 @@ class GMatrixHttpApi(MatrixHttpApi):
 
 
 class GMatrixClient(MatrixClient):
-    """ Gevent-compliant MatrixClient subclass """
+    """Gevent-compliant MatrixClient subclass"""
 
     sync_worker: Optional[Greenlet] = None
     message_worker: Optional[Greenlet] = None
@@ -263,7 +264,6 @@ class GMatrixClient(MatrixClient):
     def __init__(
         self,
         handle_messages_callback: Callable[[MatrixSyncMessages], bool],
-        handle_member_join_callback: Callable[[Room], None],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -280,7 +280,6 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
         self.environment = environment
         self.handle_messages_callback = handle_messages_callback
-        self._handle_member_join_callback = handle_member_join_callback
         self.response_queue: NotifyingQueue[Tuple[UUID, JSONResponse, datetime]] = NotifyingQueue()
         self.stop_event = Event()
 
@@ -300,7 +299,7 @@ class GMatrixClient(MatrixClient):
 
         # Monotonically increasing id to ensure that presence updates are processed in order.
         self._presence_update_ids: Iterator[int] = itertools.count()
-        self._worker_pool = gevent.pool.Pool(size=20)
+        self._worker_pool = Pool(size=20)
         # Gets incremented every time a sync loop is completed. This is useful since the sync token
         # can remain constant over multiple loops (if no events occur).
         self.sync_progress = SyncProgress(self.response_queue)
@@ -477,7 +476,7 @@ class GMatrixClient(MatrixClient):
         self.stop_event.clear()
 
     def stop_listener_thread(self) -> None:
-        """ Kills sync_thread greenlet before joining it """
+        """Kills sync_thread greenlet before joining it"""
         # when stopping, `kill` will cause the `self.api.sync` call in _sync
         # to raise a connection error. This flag will ensure it exits gracefully then
         self.stop_event.set()
@@ -561,7 +560,7 @@ class GMatrixClient(MatrixClient):
         )
 
     def _mkroom(self, room_id: str) -> Room:
-        """ Uses a geventified Room subclass """
+        """Uses a geventified Room subclass"""
         if room_id not in self.rooms:
             self.rooms[room_id] = Room(self, room_id)
         room = self.rooms[room_id]
@@ -605,7 +604,7 @@ class GMatrixClient(MatrixClient):
         self._handle_responses(pending_queue)
 
     def _sync(self, timeout_ms: int, latency_ms: int) -> None:
-        """ Reimplements MatrixClient._sync """
+        """Reimplements MatrixClient._sync"""
         log.debug(
             "Sync called",
             node=node_address_from_userid(self.user_id),
@@ -808,7 +807,6 @@ class GMatrixClient(MatrixClient):
 
                 room = self.rooms[room_id]
                 room.prev_batch = sync_room["timeline"]["prev_batch"]
-                room_members_count = len(room._members)
 
                 for event in sync_room["state"]["events"]:
                     event["room_id"] = room_id
@@ -817,9 +815,6 @@ class GMatrixClient(MatrixClient):
                     event["room_id"] = room_id
                     room._put_event(event)
 
-                # number of members changed. Verify validity of room
-                if room_members_count != len(room._members):
-                    self._handle_member_join_callback(room)
                 all_messages.append(
                     (
                         room,
@@ -851,7 +846,7 @@ class GMatrixClient(MatrixClient):
         self.token = self.api.token = token
 
     def set_sync_filter_id(self, sync_filter_id: Optional[int]) -> Optional[int]:
-        """ Sets the sync filter to the given id and returns previous filters id """
+        """Sets the sync filter to the given id and returns previous filters id"""
         prev_id = self._sync_filter_id
         self._sync_filter_id = sync_filter_id
         return prev_id

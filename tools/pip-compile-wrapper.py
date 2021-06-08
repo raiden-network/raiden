@@ -128,7 +128,7 @@ def _run_pip_compile(
         "--verbose" if verbose else "--quiet",
         *dry_run_cmd,
         *pre_cmd,
-        "--no-index",
+        "--no-emit-index-url",
         *upgrade_packages_cmd,
         *upgrade_all_cmd,
         "--output-file",
@@ -209,7 +209,7 @@ def _get_requirement_packages(
 
 
 def _get_sources_for_packages(package_names: Set[str], where: TargetType) -> Dict[str, Set[str]]:
-    """ Return source and / or target files concerned by packages """
+    """Return source and / or target files concerned by packages"""
     package_to_source = [
         (package_name, source_name)
         for source_name in SOURCE_PATHS.keys()

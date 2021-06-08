@@ -15,7 +15,7 @@ import requests
 import structlog
 from click import Choice
 from click._compat import term_len
-from click.core import ParameterSource, augment_usage_errors  # type: ignore
+from click.core import ParameterSource, augment_usage_errors
 from click.formatting import iter_rows, measure_table, wrap_text
 from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
@@ -105,7 +105,7 @@ class GroupableOption(click.Option):
         option_parser_priority=None,
         **attrs,
     ):
-        super().__init__(  # type: ignore
+        super().__init__(
             param_decls,
             show_default,
             prompt,
@@ -219,7 +219,7 @@ class GroupableOptionCommandGroup(click.Group):
                                 param = self.opt_name_to_param[param_name]
                                 with augment_usage_errors(ctx, param=param):
                                     try:
-                                        parsed_value = param.full_process_value(ctx, parser_value)
+                                        parsed_value = param.process_value(ctx, parser_value)
                                         if param.callback is not None:
                                             value = param.callback(ctx, param, parsed_value)
                                     except Exception:
@@ -253,11 +253,11 @@ def command(name=None, cls=GroupableOptionCommand, **attrs):
 
 
 def group(name=None, **attrs):
-    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})  # type: ignore
+    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})
 
 
 def option(*args, **kwargs):
-    return click.option(*args, **{"cls": GroupableOption, **kwargs})  # type: ignore
+    return click.option(*args, **{"cls": GroupableOption, **kwargs})
 
 
 def option_group(name: str, *options: Callable):
@@ -352,7 +352,7 @@ class EnumChoiceType(Choice):
 
 
 class GasPriceChoiceType(click.Choice):
-    """ Returns a GasPriceStrategy for the choice """
+    """Returns a GasPriceStrategy for the choice"""
 
     def convert(self, value, param, ctx):  # pylint: disable=inconsistent-return-statements
         if isinstance(value, str) and value.isnumeric():
@@ -438,8 +438,8 @@ class Parser(metaclass=ABCMeta):
     def __init__(self, param_name: str, priority: int = None):
         self.name = param_name
         self.priority = priority or self.default_priority
-        self.name_map: MutableMapping[str, str] = dict()
-        self._internal_names: Set[str] = set()
+        self.name_map: MutableMapping[str, Optional[str]] = dict()
+        self._internal_names: Set[Optional[str]] = set()
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, Parser):

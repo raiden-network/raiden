@@ -106,7 +106,7 @@ def logs_blocks_sanity_check(from_block: BlockIdentifier, to_block: BlockIdentif
 
 
 def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCClient") -> None:
-    """ Raise an exception if the transaction consumed all the gas. """
+    """Raise an exception if the transaction consumed all the gas."""
 
     if was_transaction_successfully_mined(transaction):
         return
@@ -216,7 +216,7 @@ def check_transaction_failure(transaction: "TransactionMined", client: "JSONRPCC
 
 
 def was_transaction_successfully_mined(transaction: "TransactionMined") -> bool:
-    """ `True` if the transaction was successfully mined, `False` otherwise. """
+    """`True` if the transaction was successfully mined, `False` otherwise."""
     if "status" not in transaction.receipt:
         # This should never happen. Raiden checks ethereum client for compatibility at startup
         raise AssertionError(
@@ -579,11 +579,6 @@ def is_infura(web3: Web3) -> bool:
 def patched_web3_eth_estimate_gas(
     self: Any, transaction: TxParams, block_identifier: BlockIdentifier = None
 ) -> Wei:
-    """Temporary workaround until next web3.py release (5.X.X)
-
-    Current master of web3.py has this implementation already:
-    https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
-    """
     if "from" not in transaction and is_checksum_address(self.default_account):
         transaction = assoc(transaction, "from", self.default_account)
 
@@ -667,7 +662,6 @@ def estimate_gas_for_function(
 def patched_contractfunction_estimateGas(
     self: Any, transaction: TxParams = None, block_identifier: BlockIdentifier = None
 ) -> int:
-    """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
         estimate_gas_transaction: TxParams = {}
     else:
@@ -708,7 +702,7 @@ def patched_contractfunction_estimateGas(
 def make_sane_poa_middleware(
     make_request: Callable[[RPCEndpoint, Any], Any], web3: Web3  # pylint: disable=unused-argument
 ) -> Callable[[RPCEndpoint, Any], RPCResponse]:
-    """ Simpler geth_poa_middleware that doesn't break with ``null`` responses. """
+    """Simpler geth_poa_middleware that doesn't break with ``null`` responses."""
 
     def middleware(method: RPCEndpoint, params: Any) -> RPCResponse:
         response = make_request(method, params)
@@ -786,7 +780,8 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # scoped web3 instance is used for all clients
         pass
 
-    # Temporary until next web3.py release (5.X.X)
+    # We need these so that we can check for exceptions that are expected.
+    # See the docstring of check_value_error for details.
     ContractFunction.estimateGas = patched_contractfunction_estimateGas  # type: ignore
     Eth.estimateGas = patched_web3_eth_estimate_gas  # type: ignore
 
@@ -1022,7 +1017,7 @@ class TransactionMined:
 
 
 class JSONRPCClient:
-    """ Ethereum JSON RPC client. """
+    """Ethereum JSON RPC client."""
 
     def __init__(
         self,
@@ -1077,7 +1072,7 @@ class JSONRPCClient:
         )
 
     def block_number(self) -> BlockNumber:
-        """ Return the most recent block. """
+        """Return the most recent block."""
         return self.web3.eth.block_number
 
     def get_block(self, block_identifier: BlockIdentifier) -> BlockData:
@@ -1085,7 +1080,7 @@ class JSONRPCClient:
         return self.web3.eth.getBlock(block_identifier)
 
     def get_confirmed_blockhash(self) -> BlockHash:
-        """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
+        """Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash"""
         confirmed_block_number = BlockNumber(
             self.web3.eth.block_number - self.default_block_num_confirmations
         )
@@ -1114,7 +1109,7 @@ class JSONRPCClient:
 
     # FIXME: shouldn't return `TokenAmount`
     def balance(self, account: Address) -> TokenAmount:
-        """ Return the balance of the account of the given address. """
+        """Return the balance of the account of the given address."""
         return TokenAmount(self.web3.eth.get_balance(account, BLOCK_ID_PENDING))
 
     def parity_get_pending_transaction_hash_by_nonce(
@@ -1155,7 +1150,7 @@ class JSONRPCClient:
             eth_node=self.eth_node,
             extra_log_details=extra_log_details,
         )
-        return pending.estimate_gas(self.get_checking_block())
+        return pending.estimate_gas(BLOCK_ID_PENDING)
 
     def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
         """Allocates an unique `nonce` and send the transaction to the blockchain.
@@ -1558,7 +1553,7 @@ class JSONRPCClient:
         from_block: BlockIdentifier = GENESIS_BLOCK_NUMBER,
         to_block: BlockIdentifier = BLOCK_ID_LATEST,
     ) -> List[LogReceipt]:
-        """ Get events for the given query. """
+        """Get events for the given query."""
         logs_blocks_sanity_check(from_block, to_block)
         return self.web3.eth.getLogs(
             FilterParams(
@@ -1598,18 +1593,6 @@ class JSONRPCClient:
             msg = f"Failed to execute {transaction_name} due to insufficient ETH"
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
             raise InsufficientEth(msg)
-
-    def get_checking_block(self) -> BlockIdentifier:
-        """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
-        In parity doing any call() with the 'pending' block no longer falls back
-        to the latest if no pending block is found but throws a mistaken error.
-        Until that bug is fixed we need to enforce special behaviour for parity
-        and use the latest block for checking.
-        """
-        checking_block: BlockIdentifier = BLOCK_ID_PENDING
-        if self.eth_node is EthClient.PARITY:
-            checking_block = BLOCK_ID_LATEST
-        return checking_block
 
     def wait_until_block(
         self, target_block_number: BlockNumber, retry_timeout: float = 0.5

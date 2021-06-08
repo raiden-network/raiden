@@ -169,7 +169,7 @@ def logs_storage(request, tmpdir) -> str:
 
 @pytest.fixture
 def deposit() -> TokenAmount:
-    """ Raiden chain default deposit. """
+    """Raiden chain default deposit."""
     # Arbitrary initial balance for each channel, using a small number for
     # easier calculations during testing
     return TokenAmount(200)
@@ -177,25 +177,25 @@ def deposit() -> TokenAmount:
 
 @pytest.fixture
 def number_of_tokens() -> int:
-    """ Number of tokens pre-registered in the test Registry. """
+    """Number of tokens pre-registered in the test Registry."""
     return 1
 
 
 @pytest.fixture
 def register_tokens() -> bool:
-    """ Should fixture generated tokens be registered with raiden. """
+    """Should fixture generated tokens be registered with raiden."""
     return True
 
 
 @pytest.fixture
 def number_of_nodes() -> int:
-    """ Number of raiden nodes in the test network. """
+    """Number of raiden nodes in the test network."""
     return 3
 
 
 @pytest.fixture
 def channels_per_node() -> int:
-    """ Number of pre-created channels per test raiden node. """
+    """Number of pre-created channels per test raiden node."""
     return 1
 
 
@@ -242,7 +242,7 @@ def network_wait():
 
 @pytest.fixture
 def private_keys(number_of_nodes, privatekey_seed):
-    """ Private keys for each raiden node. """
+    """Private keys for each raiden node."""
 
     # Note: The fixtures depend on the order of the private keys
     result = [
@@ -296,7 +296,7 @@ def blockchain_key_seed(request):
 
 @pytest.fixture(scope="session")
 def port_generator(request, worker_id) -> Iterator[Port]:
-    """ count generator used to get a unique port number. """
+    """count generator used to get a unique port number."""
     if worker_id == "master":
         # xdist is not in use to run parallel tests
         port_offset = 0
@@ -345,7 +345,7 @@ def unrecoverable_error_should_crash():
 
 @pytest.fixture
 def transport():
-    """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
+    """'all' replaced by parametrize in conftest.pytest_generate_tests"""
     return "matrix"
 
 

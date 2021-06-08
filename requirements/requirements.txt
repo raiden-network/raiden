@@ -6,6 +6,8 @@
 #
 aioice==0.7.5
     # via aiortc
+aiortc-pyav-stub==0.1.1
+    # via -r requirements.in
 aiortc==1.2.0
     # via -r requirements.in
 aniso8601==7.0.0
@@ -22,7 +24,7 @@ base58==2.0.0
     # via multiaddr
 bitarray==1.2.1
     # via eth-account
-cachetools==4.2.1
+cachetools==4.2.2
     # via -r requirements.in
 canonicaljson==1.4.0
     # via -r requirements.in
@@ -36,7 +38,7 @@ cffi==1.12.3
     #   pylibsrtp
 chardet==3.0.4
     # via requests
-click==8.0.0a1
+click==8.0.1
     # via
     #   -r requirements.in
     #   flask
@@ -49,7 +51,7 @@ colorama==0.4.4
     # via -r requirements.in
 crc32c==2.2
     # via aiortc
-cryptography==3.3.2
+cryptography==3.4.7
     # via aiortc
 cytoolz==0.10.1
     # via
@@ -103,9 +105,9 @@ filelock==3.0.12
     # via -r requirements.in
 flask-cors==3.0.10
     # via -r requirements.in
-flask-restful==0.3.8
+flask-restful==0.3.9
     # via -r requirements.in
-flask==1.1.2
+flask==2.0.1
     # via
     #   -r requirements.in
     #   flask-cors
@@ -129,9 +131,9 @@ idna==2.8
     # via requests
 ipfshttpclient==0.7.0a1
     # via web3
-itsdangerous==1.1.0
+itsdangerous==2.0.1
     # via flask
-jinja2==2.11.3
+jinja2==3.0.1
     # via
     #   -r requirements.in
     #   flask
@@ -139,7 +141,7 @@ jsonschema==3.2.0
     # via web3
 lru-dict==1.1.6
     # via web3
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via jinja2
 marshmallow-dataclass[union]==8.0.0
     # via -r requirements.in
@@ -201,7 +203,7 @@ pytz==2019.1
     # via flask-restful
 raiden-contracts==0.37.5
     # via -r requirements.in
-raiden-webui==1.1.1
+raiden-webui==1.2.1
     # via -r requirements.in
 requests==2.25.1
     # via
@@ -221,9 +223,8 @@ semantic-version==2.8.5
     #   raiden-contracts
 simplejson==3.17.2
     # via canonicaljson
-six==1.15.0
+six==1.16.0
     # via
-    #   cryptography
     #   flask-cors
     #   flask-restful
     #   jsonschema
@@ -239,23 +240,23 @@ toolz==0.9.0
     # via cytoolz
 typeguard==2.11.1
     # via marshmallow-dataclass
-typing-extensions==3.7.4.3
+typing-extensions==3.10.0.0
     # via -r requirements.in
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
     # via -r requirements.in
-urllib3==1.25.3
+urllib3==1.26.5
     # via requests
 varint==1.0.2
     # via multiaddr
-web3==5.18.0
+web3==5.19.0
     # via
     #   -r requirements.in
     #   raiden-contracts
 websockets==8.1
     # via web3
-werkzeug==1.0.1
+werkzeug==2.0.1
     # via flask
 zope.event==4.4
     # via gevent

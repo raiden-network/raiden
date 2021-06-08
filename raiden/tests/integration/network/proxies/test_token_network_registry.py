@@ -152,7 +152,7 @@ def test_token_network_registry(
 def test_token_network_registry_max_token_networks(
     deploy_client, token_network_registry_address, contract_manager
 ):
-    """ get_max_token_networks() should return an integer """
+    """get_max_token_networks() should return an integer"""
     proxy_manager = ProxyManager(
         rpc_client=deploy_client,
         contract_manager=contract_manager,
@@ -175,7 +175,7 @@ def test_token_network_registry_max_token_networks(
 def test_token_network_registry_with_zero_token_address(
     deploy_client, token_network_registry_address, contract_manager
 ):
-    """ Try to register a token at 0x0000..00 """
+    """Try to register a token at 0x0000..00"""
     proxy_manager = ProxyManager(
         rpc_client=deploy_client,
         contract_manager=contract_manager,

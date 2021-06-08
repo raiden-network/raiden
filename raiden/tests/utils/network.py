@@ -156,7 +156,7 @@ def payment_channel_open_and_deposit(
     deposit: TokenAmount,
     settle_timeout: BlockTimeout,
 ) -> None:
-    """ Open a new channel with app0 and app1 as participants """
+    """Open a new channel with app0 and app1 as participants"""
     assert token_address
 
     block_identifier: BlockIdentifier
@@ -398,7 +398,6 @@ def create_apps(
     environment_type: Environment,
     unrecoverable_error_should_crash: bool,
     local_matrix_url: Optional[ParsedURL],
-    broadcast_rooms: List[str],
     routing_mode: RoutingMode,
     blockchain_query_interval: float,
     resolver_ports: List[Optional[int]],
@@ -406,7 +405,7 @@ def create_apps(
     port_generator: Iterator[Port],
     capabilities_config: CapabilitiesConfig,
 ) -> List[RaidenService]:
-    """ Create the apps."""
+    """Create the apps."""
     # pylint: disable=too-many-locals
     apps = []
     for idx, proxy_manager in enumerate(blockchain_services):
@@ -438,7 +437,6 @@ def create_apps(
 
         if local_matrix_url is not None:
             config.transport = MatrixTransportConfig(
-                broadcast_rooms=broadcast_rooms,
                 retries_before_backoff=retries_before_backoff,
                 retry_interval_initial=retry_interval_initial,
                 retry_interval_max=retry_interval_max,
@@ -657,12 +655,7 @@ def wait_for_channels(
     deposit: TokenAmount,
     retry_timeout: float = DEFAULT_RETRY_TIMEOUT,
 ) -> None:
-    """ Wait until all channels are usable from both directions. """
-    # XXX this is used a lot in the api / regression tests,
-    # this seems to fail around 80! tests
-
-    # This is because it calls wait for healthy internally.
-    # Maybe it's ok to just remove that
+    """Wait until all channels are usable from both directions."""
 
     for app0, app1 in app_channels:
         for token_address in token_addresses:

@@ -1,6 +1,9 @@
 Add More Tokens
 ===============
 
+At some point, you might need to top up your channels with tokens to be able to send more payments. 
+You can allocate more tokens by depositing to a channel.
+
 Deposit to a channel
 --------------------
 

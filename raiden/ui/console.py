@@ -92,7 +92,7 @@ class Console(gevent.Greenlet):
                 print(line)
 
         def lasterr(n: int = 1) -> None:
-            """ Print the last `n` entries of stderr to stdout. """
+            """Print the last `n` entries of stderr to stdout."""
             for line in (err.getvalue().strip().split("\n") or [])[-n:]:
                 print(line)
 
@@ -119,7 +119,7 @@ class Console(gevent.Greenlet):
 
 
 class ConsoleTools:
-    """ Some functions to make working in the console easier. """
+    """Some functions to make working in the console easier."""
 
     def __init__(self, raiden_service: RaidenService) -> None:
         self._raiden = raiden_service

@@ -4,9 +4,10 @@ from eth_utils import is_binary_address
 
 from raiden import waiting
 from raiden.api.exceptions import ChannelNotFound, NonexistingChannel
-from raiden.constants import NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
+from raiden.constants import BLOCK_ID_PENDING, NULL_ADDRESS_BYTES, UINT64_MAX, UINT256_MAX
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
+    ConfigurationError,
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
@@ -29,6 +30,7 @@ from raiden.exceptions import (
     UserDepositNotConfigured,
     WithdrawMismatch,
 )
+from raiden.network.pathfinding import query_address_metadata
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, PythonApiConfig
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel, views
@@ -319,7 +321,7 @@ class RaidenAPI:  # pragma: no unittest
         token_address: TokenAddress,
         retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> List[NettingChannelState]:
-        """ Close all channels and wait for settlement. """
+        """Close all channels and wait for settlement."""
         if not is_binary_address(registry_address):
             raise InvalidBinaryAddress("registry_address must be a valid address in binary")
         if not is_binary_address(token_address):
@@ -350,14 +352,14 @@ class RaidenAPI:  # pragma: no unittest
         self,
         token_network_address: TokenNetworkAddress,
         partner_address: Address,
-        block_identifier: Optional[BlockIdentifier] = None,
+        block_identifier: BlockIdentifier = BLOCK_ID_PENDING,
     ) -> bool:
         proxy_manager = self.raiden.proxy_manager
         proxy = proxy_manager.address_to_token_network[token_network_address]
         channel_identifier = proxy.get_channel_identifier_or_none(
             participant1=self.raiden.address,
             participant2=partner_address,
-            block_identifier=block_identifier or proxy_manager.client.get_checking_block(),
+            block_identifier=block_identifier,
         )
 
         return channel_identifier is not None
@@ -587,8 +589,18 @@ class RaidenAPI:  # pragma: no unittest
                 )
             )
 
+        pfs_config = self.raiden.config.pfs_config
+        recipient_address = channel_state.partner_state.address
+        if pfs_config is None:
+            raise ConfigurationError("Can't query metadata without PFS config")
+
+        recipient_metadata = query_address_metadata(
+            pfs_config=pfs_config, user_address=recipient_address
+        )
         self.raiden.withdraw(
-            canonical_identifier=channel_state.canonical_identifier, total_withdraw=total_withdraw
+            canonical_identifier=channel_state.canonical_identifier,
+            total_withdraw=total_withdraw,
+            recipient_metadata=recipient_metadata,
         )
 
         waiting.wait_for_withdraw_complete(
@@ -947,14 +959,10 @@ class RaidenAPI:  # pragma: no unittest
         return result
 
     def get_node_network_state(self, node_address: Address) -> NetworkState:
-        """ Returns the currently network status of `node_address`. """
+        """Returns the currently network status of `node_address`."""
         return views.get_node_network_status(
             chain_state=views.state_from_raiden(self.raiden), node_address=node_address
         )
-
-    def async_start_health_check_for(self, node_address: Address) -> None:
-        """ Returns the currently network status of `node_address`. """
-        self.raiden.async_start_health_check_for(node_address)
 
     def get_tokens_list(self, registry_address: TokenNetworkRegistryAddress) -> List[TokenAddress]:
         """Returns a list of tokens the node knows about"""
@@ -984,7 +992,7 @@ class RaidenAPI:  # pragma: no unittest
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
     ) -> "PaymentStatus":
-        """ Do a transfer with `target` with the given `amount` of `token_address`. """
+        """Do a transfer with `target` with the given `amount` of `token_address`."""
         # pylint: disable=too-many-arguments
 
         payment_status = self.transfer_async(

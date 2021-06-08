@@ -20,7 +20,7 @@ isort
 readme-renderer
 pylint
 mypy
-black==20.8b1
+black==21.4b2
 typed-ast>=1.4.2
 
 # Testing
@@ -50,5 +50,5 @@ coverage
 bump2version
 
 # Test support
-matrix-synapse==1.29.0
+matrix-synapse==1.33.0
 six>=1.13.0  # work around bad deps declaration in treq, see https://github.com/twisted/treq/commit/934e127a2b915bf02be86d23f2cf8a65bcdb2533#r42782781

@@ -96,7 +96,7 @@ class IdleMeasurement:
 
 @dataclass
 class Idle:
-    """ Measures how much time the thread waited on the libev backend. """
+    """Measures how much time the thread waited on the libev backend."""
 
     measurement_interval: float
     before_poll: Optional[float] = None
@@ -172,17 +172,17 @@ class Idle:
 
     @property
     def idled(self) -> float:
-        """ The amount of seconds the thread idled. """
+        """The amount of seconds the thread idled."""
         return sum(interval.after_poll - interval.before_poll for interval in self.measurements)
 
     @property
     def idled_pct(self) -> float:
-        """ The percentage of time the thread idled, waiting on the event loop. """
+        """The percentage of time the thread idled, waiting on the event loop."""
         return self.idled / self.running_interval
 
     @property
     def context_switches(self) -> int:
-        """ The number of context switches done for the past `measurement_interval`. """
+        """The number of context switches done for the past `measurement_interval`."""
         return len(IDLE.measurements)
 
     def log(self) -> None:

@@ -504,7 +504,7 @@ def service_registry_address_fixture(
 def user_deposit_address_fixture(
     deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[UserDepositAddress]:
-    """ Deploy UserDeposit and fund accounts with some balances """
+    """Deploy UserDeposit and fund accounts with some balances"""
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
 
     if services_smart_contracts:
@@ -517,7 +517,7 @@ def user_deposit_address_fixture(
 def one_to_n_address_fixture(
     deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[OneToNAddress]:
-    """ Deploy OneToN contract and return the address """
+    """Deploy OneToN contract and return the address"""
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
 
     if services_smart_contracts:
@@ -530,7 +530,7 @@ def one_to_n_address_fixture(
 def monitoring_service_address_fixture(
     deploy_smart_contract_bundle_concurrently: FixtureSmartContracts,
 ) -> Optional[MonitoringServiceAddress]:
-    """ Deploy OneToN contract and return the address """
+    """Deploy OneToN contract and return the address"""
     services_smart_contracts = deploy_smart_contract_bundle_concurrently.services_smart_contracts
 
     if services_smart_contracts:

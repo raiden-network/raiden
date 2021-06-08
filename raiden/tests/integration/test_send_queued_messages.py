@@ -157,11 +157,10 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
 
 
 @raise_on_failure
-@pytest.mark.skip(reason="Test is still using presence / health check")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
-def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
+def test_payment_statuses_are_restored(
     raiden_network: List[RaidenService],
     restart_node: RestartNode,
     token_addresses: List[TokenAddress],
@@ -208,6 +207,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
             target=target_address,
             identifier=PaymentID(identifier),
             secret=secret,
+            route_states=[create_route_state_for_route([app0, app1], token_address)],
         )
         assert payment_status.payment_identifier == identifier
 
@@ -246,8 +246,6 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     restart_node(app1)  # now that our checks are done start app1 again
 
     with watch_for_unlock_failures(*raiden_network):
-        waiting.wait_for_healthy(app0_restart, app1.address, network_wait)
-
         with gevent.Timeout(60):
             waiting.wait_for_payment_balance(
                 raiden=app1,

@@ -67,7 +67,7 @@ def wait_all_apps(raiden_network: List[RaidenService]) -> None:
 @pytest.mark.parametrize("channels_per_node", [0])
 @pytest.mark.parametrize("routing_mode", [RoutingMode.PFS])
 def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
-    raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
+    raiden_network: List[RaidenService], token_addresses: List[TokenAddress], pfs_mock
 ) -> None:
     """
     We need to test if PFSCapacityUpdates and PFSFeeUpdates are being
@@ -77,6 +77,8 @@ def test_pfs_send_capacity_updates_on_deposit_and_withdraw(
     withdraw it is checked that the correct messages are sent.
     """
     app0, app1, app2 = raiden_network
+    pfs_mock.add_apps(raiden_network)
+
     api0 = RaidenAPI(app0)
     api0.channel_open(
         token_address=token_addresses[0],

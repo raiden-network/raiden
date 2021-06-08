@@ -2,25 +2,23 @@
 Changelog
 =========
 
-* :release:`2.0.0-a0 <2021-04-26>`
-* :feature:`-` This is an alpha release. Don't run it on mainnet!
-* :feature:`6851` Raiden does not use Matrix rooms anymore. This greatly reduces the load on the matrix servers and increases the reliability of the transport layer.
-* :feature:`6898` Add support for Geth 1.10.
-* :feature:`6947` Add support for Python 3.9.
-* :feature:`6821` API endpoint for UserDeposit contract deposits/withdraws
-* :bug:`6763 major` Ensure that pending messages are sent before Raiden is stopped
+* :feature:`6673` Remove refund transfers. Refunds were intended as a way to quickly unlock funds in case a transfer can't be completed without having to wait for the lock to expire. Unfortunately they were never very good at achieving this goal and added a lot of complications to the codebase. Therefore they got removed. See the linked issue for more details.
+* :feature:`-` Fix building of binary bundles which was broken for a while.
+* :feature:`6986` Increment DB version - this will make this release incompatible with previous releases. Please refer to `the known issues section in the docs <https://raiden-network.readthedocs.io/en/latest/other/known-issues.html#database-upgrades>`_ for details.
+* :feature:`-` Update WebUI to `version 1.2.1 <https://github.com/raiden-network/webui/releases/tag/v1.2.1>`_. Adds a dialog for interacting with the UserDeposit contract (UDC).
+* :feature:`6838` Add ``/notifcations`` endpoint for showing notifications and warnings to the user.
 * :feature:`6563` Faster syncing with the blockchain.
-* :feature:`-` Update WebUI to `version 1.1.1 <https://github.com/raiden-network/webui/releases/tag/v1.1.1>`_. Which introduces a new "Quick Connect" that is simpler and more transparent than the old "join token network" feature.
+* :feature:`-` Update WebUI to `version 1.1.1 <https://github.com/raiden-network/webui/releases/tag/v1.1.1>`_. Introduces a new "Quick Connect" that is simpler and more transparent.
 * :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
 * :feature:`6582` Add ``/settings`` endpoint with information about the used pathfinding service.
 * :feature:`6657` Support for recent geth versions.
 * :feature:`6541` Remove internal routing.
 
 * :release:`1.2.0 <2020-11-06>`
-* :feature:`6646` add [Matrix toDevice](https://matrix.org/docs/spec/client_server/r0.6.0#id70) message support in transport layer
-* :feature:`6608` Compatibility with Synapse >= 1.12 and [MSC2432](https://github.com/matrix-org/matrix-doc/pull/2432)
+* :feature:`6646` add `Matrix toDevice <https://matrix.org/docs/spec/client_server/r0.6.0#id70>`_ message support in transport layer
+* :feature:`6608` Compatibility with Synapse >= 1.12 and `MSC2432 <https://github.com/matrix-org/matrix-doc/pull/2432>`_
 * :feature:`6482` Add support for client capabilities. Raiden clients can now negotiate supported features via their matrix profile.
-* :bug:`6444 major` Fix a race condition when processing blockchain events.
+* :bug:`6444` Fix a race condition when processing blockchain events.
 
 * :release:`1.1.1 <2020-07-20>`
 * :feature:`-` Update WebUI to version 1.0.2 https://github.com/raiden-network/webui/releases/tag/v1.0.2

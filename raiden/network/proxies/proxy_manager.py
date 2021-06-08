@@ -112,7 +112,7 @@ class ProxyManager:
         self._one_to_n_creation_lock = Semaphore()
 
     def token(self, token_address: TokenAddress, block_identifier: BlockIdentifier) -> Token:
-        """ Return a proxy to interact with a token. """
+        """Return a proxy to interact with a token."""
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
 
@@ -130,7 +130,7 @@ class ProxyManager:
     def custom_token(
         self, token_address: TokenAddress, block_identifier: BlockIdentifier
     ) -> CustomToken:
-        """ Return a proxy to interact with a token. """
+        """Return a proxy to interact with a token."""
         if not is_binary_address(token_address):
             raise ValueError("token_address must be a valid address")
 

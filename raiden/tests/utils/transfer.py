@@ -1,4 +1,6 @@
 """ Utilities to make and assert transfers. """
+import functools
+import itertools
 from contextlib import contextmanager, nullcontext
 from enum import Enum
 
@@ -58,7 +60,6 @@ from raiden.transfer.state import (
     make_empty_pending_locks_state,
 )
 from raiden.transfer.state_change import ContractReceiveChannelDeposit, ReceiveUnlock
-from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.timeout import BlockTimeout
@@ -79,13 +80,11 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     PaymentWithFeeAmount,
-    PeerCapabilities,
     SecretHash,
     TargetAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    UserID,
     cast,
     typecheck,
 )
@@ -94,7 +93,7 @@ ZERO_FEE = FeeAmount(0)
 
 
 class TransferState(Enum):
-    """ Represents the target state of a transfer. """
+    """Represents the target state of a transfer."""
 
     UNLOCKED = "unlocked"
     EXPIRED = "expired"
@@ -128,12 +127,7 @@ def create_route_state_for_route(
     address_metadata = dict()
     for app in apps:
         route.append(app.address)
-        user_id = UserID(app.transport.user_id)
-        capabilities = PeerCapabilities(
-            capconfig_to_dict(app.transport._config.capabilities_config)
-        )
-        assert user_id is not None
-        address_metadata[app.address] = {"user_id": user_id, "capabilities": capabilities}
+        address_metadata[app.address] = app.transport.address_metadata
 
     token_network = views.get_token_network_by_token_address(
         views.state_from_raiden(apps[0]),
@@ -149,6 +143,29 @@ def create_route_state_for_route(
     else:
         # will use the default for estimated_fee
         return RouteState(route=route, address_to_metadata=address_metadata)
+
+
+@contextmanager
+def patch_transfer_routes(routes: List[List[RaidenService]], token_address: TokenAddress):
+    """
+    Context manager to set specific routes for transfers.
+    This circumvents the lack of a PFS in the tests making a transfer fail.
+    """
+
+    apps = set(itertools.chain.from_iterable(routes))
+
+    for app in apps:
+        app.__mediated_transfer_async = app.mediated_transfer_async
+        route_states = [create_route_state_for_route(route, token_address) for route in routes]
+        app.mediated_transfer_async = functools.partial(
+            app.__mediated_transfer_async, route_states=route_states
+        )
+
+    yield
+
+    for app in apps:
+        app.mediated_transfer_async = app.__mediated_transfer_async
+        del app.__mediated_transfer_async
 
 
 @contextmanager
@@ -192,12 +209,12 @@ def transfer(
         Only the initiator and target are synced.
     """
 
+    route_states: Optional[List[RouteState]] = None
+    if routes:
+        route_states = list()
+        for route in routes:
+            route_states.append(create_route_state_for_route(route, token_address))
     if transfer_state is TransferState.UNLOCKED:
-        route_states: Optional[List[RouteState]] = None
-        if routes:
-            route_states = list()
-            for route in routes:
-                route_states.append(create_route_state_for_route(route, token_address))
         return _transfer_unlocked(
             initiator_app=initiator_app,
             target_app=target_app,
@@ -225,6 +242,7 @@ def transfer(
             amount=amount,
             identifier=identifier,
             timeout=timeout,
+            route_states=route_states,
         )
     else:
         raise RuntimeError("Type of transfer not implemented.")
@@ -339,6 +357,7 @@ def _transfer_secret_not_requested(
     amount: PaymentAmount,
     identifier: PaymentID,
     timeout: Optional[float] = None,
+    route_states: List[RouteState] = None,
 ) -> SecretHash:
     if timeout is None:
         timeout = 10
@@ -364,6 +383,7 @@ def _transfer_secret_not_requested(
         identifier=identifier,
         secret=secret,
         secrethash=secrethash,
+        route_states=route_states,
     )
 
     with Timeout(seconds=timeout):
@@ -877,7 +897,7 @@ def assert_succeeding_transfer_invariants(
     balance1: Balance,
     pending_locks1: List[HashTimeLockState],
 ) -> None:
-    """ Channels are in synced states and no unlock failures have occurred. """
+    """Channels are in synced states and no unlock failures have occurred."""
     assert not has_unlock_failure(app0)
     assert not has_unlock_failure(app1)
 
@@ -897,7 +917,7 @@ def wait_assert(func: Callable, *args, **kwargs) -> None:
             func(*args, **kwargs)
         except AssertionError as e:
             try:
-                gevent.sleep(0.5)
+                gevent.sleep(0.001)
             except gevent.Timeout:
                 raise e
         else:
@@ -905,7 +925,7 @@ def wait_assert(func: Callable, *args, **kwargs) -> None:
 
 
 def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) -> None:
-    """ Assert that `mirror` has a correct `partner_state` to represent `original`."""
+    """Assert that `mirror` has a correct `partner_state` to represent `original`."""
     original_locked_amount = channel.get_amount_locked(original.our_state)
     mirror_locked_amount = channel.get_amount_locked(mirror.partner_state)
     assert original_locked_amount == mirror_locked_amount
@@ -926,7 +946,7 @@ def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) ->
 def assert_locked(
     from_channel: NettingChannelState, pending_locks: List[HashTimeLockState]
 ) -> None:
-    """ Assert the locks created from `from_channel`. """
+    """Assert the locks created from `from_channel`."""
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
         locks = PendingLocksState([lock.encoded for lock in pending_locks])
@@ -944,7 +964,7 @@ def assert_locked(
 def assert_balance(
     from_channel: NettingChannelState, balance: Balance, locked: LockedAmount
 ) -> None:
-    """ Assert the from_channel overall token values. """
+    """Assert the from_channel overall token values."""
     assert balance >= 0
     assert locked >= 0
 

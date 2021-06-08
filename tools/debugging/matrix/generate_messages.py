@@ -147,10 +147,6 @@ def ignore_messages(sync_messages: MatrixSyncMessages) -> bool:  # pylint: disab
     pass
 
 
-def ignore_member_join(room: Room) -> None:  # pylint: disable=unused-argument
-    pass
-
-
 def handle_and_time_invite(
     invite_start: float,
     client: GMatrixClient,
@@ -174,7 +170,7 @@ def send(room: Room) -> None:
 
 
 def new_user(matrix_server_url: str) -> LoggedUser:
-    client = GMatrixClient(time_messages, ignore_member_join, matrix_server_url)
+    client = GMatrixClient(time_messages, matrix_server_url)
     signer = factories.make_signer()
 
     with logtime(USER) as details:

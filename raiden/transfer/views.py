@@ -152,7 +152,7 @@ def get_token_network_address_by_token_address(
 def get_token_network_addresses(
     chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenNetworkAddress]:
-    """ Return the list of token networks registered with the given token network registry. """
+    """Return the list of token networks registered with the given token network registry."""
     token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
@@ -167,7 +167,7 @@ def get_token_network_addresses(
 def get_token_identifiers(
     chain_state: ChainState, token_network_registry_address: TokenNetworkRegistryAddress
 ) -> List[TokenAddress]:
-    """ Return the list of tokens registered with the given token network registry. """
+    """Return the list of tokens registered with the given token network registry."""
     token_network_registry = chain_state.identifiers_to_tokennetworkregistries.get(
         token_network_registry_address
     )
@@ -239,7 +239,7 @@ def get_channelstate_for(
     token_address: TokenAddress,
     partner_address: Address,
 ) -> Optional[NettingChannelState]:
-    """ Return the NettingChannelState if it exists, None otherwise. """
+    """Return the NettingChannelState if it exists, None otherwise."""
     token_network = get_token_network_by_token_address(
         chain_state, token_network_registry_address, token_address
     )
@@ -261,7 +261,7 @@ def get_channelstate_for(
 def get_channelstate_by_token_network_and_partner(
     chain_state: ChainState, token_network_address: TokenNetworkAddress, partner_address: Address
 ) -> Optional[NettingChannelState]:
-    """ Return the NettingChannelState if it exists, None otherwise. """
+    """Return the NettingChannelState if it exists, None otherwise."""
     token_network = get_token_network_by_address(chain_state, token_network_address)
 
     channel_state = None
@@ -280,7 +280,7 @@ def get_channelstate_by_token_network_and_partner(
 def get_channelstate_by_canonical_identifier(
     chain_state: ChainState, canonical_identifier: CanonicalIdentifier
 ) -> Optional[NettingChannelState]:
-    """ Return the NettingChannelState if it exists, None otherwise. """
+    """Return the NettingChannelState if it exists, None otherwise."""
     token_network = get_token_network_by_address(
         chain_state, canonical_identifier.token_network_address
     )
@@ -300,7 +300,7 @@ def get_channelstate_filter(
     token_address: TokenAddress,
     filter_fn: Callable,
 ) -> List[NettingChannelState]:
-    """ Return the state of channels that match the condition in `filter_fn` """
+    """Return the state of channels that match the condition in `filter_fn`"""
     token_network = get_token_network_by_token_address(
         chain_state, token_network_registry_address, token_address
     )

@@ -11,12 +11,7 @@ from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.state import (
-    CHANNEL_AFTER_CLOSE_STATES,
-    ChannelState,
-    NettingChannelEndState,
-    NetworkState,
-)
+from raiden.transfer.state import CHANNEL_AFTER_CLOSE_STATES, ChannelState, NettingChannelEndState
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
@@ -194,7 +189,7 @@ def wait_single_channel_deposit(
     total_deposit: TokenAmount,
     retry_timeout: float,
 ) -> None:
-    """ Wait until a deposit of `total_deposit` for app_deposit is seen by both apps"""
+    """Wait until a deposit of `total_deposit` for app_deposit is seen by both apps"""
     wait_for_participant_deposit(
         raiden=app_deposit,
         token_network_registry_address=registry_address,
@@ -223,7 +218,7 @@ def wait_both_channel_deposit(
     total_deposit: TokenAmount,
     retry_timeout: float,
 ) -> None:
-    """ Wait until a deposit of `total_deposit` for both apps is seen by both apps"""
+    """Wait until a deposit of `total_deposit` for both apps is seen by both apps"""
     wait_single_channel_deposit(
         app_deposit=app_deposit,
         app_partner=app_partner,
@@ -441,46 +436,6 @@ def wait_for_settle(
         retry_timeout=retry_timeout,
         target_states=(ChannelState.STATE_SETTLED,),
     )
-
-
-def wait_for_network_state(
-    raiden: "RaidenService",
-    node_address: Address,
-    network_state: NetworkState,
-    retry_timeout: float,
-) -> None:  # pragma: no unittest
-    """Wait until `node_address` becomes healthy.
-
-    Note:
-        This does not time out, use gevent.Timeout.
-    """
-    network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
-    current = network_statuses.get(node_address)
-
-    log_details = {
-        "node_address": to_checksum_address(node_address),
-        "target_network_state": network_state,
-    }
-    while current != network_state:
-        assert raiden, TRANSPORT_ERROR_MSG
-        assert raiden.transport, TRANSPORT_ERROR_MSG
-
-        log.debug("wait_for_network_state", current_network_state=current, **log_details)
-        gevent.sleep(retry_timeout)
-        network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
-        current = network_statuses.get(node_address)
-
-
-def wait_for_healthy(
-    raiden: "RaidenService", node_address: Address, retry_timeout: float
-) -> None:  # pragma: no unittest
-    """Wait until `node_address` becomes healthy.
-
-    Note:
-        This does not time out, use gevent.Timeout.
-    """
-
-    wait_for_network_state(raiden, node_address, NetworkState.REACHABLE, retry_timeout)
 
 
 class TransferWaitResult(Enum):

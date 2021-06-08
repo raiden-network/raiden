@@ -58,6 +58,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         amount=PaymentAmount(10),
         identifier=PaymentID(1),
         transfer_state=TransferState.SECRET_NOT_REQUESTED,
+        routes=[[app0, app1]],
     )
     transfer(
         initiator_app=app1,
@@ -66,6 +67,7 @@ def test_locksroot_loading_during_channel_settle_handling(
         amount=PaymentAmount(7),
         identifier=PaymentID(2),
         transfer_state=TransferState.SECRET_NOT_REQUESTED,
+        routes=[[app1, app0]],
     )
 
     token_network_address = views.get_token_network_address_by_token_address(

@@ -162,7 +162,7 @@ class Token:
     def balance_of(
         self, address: Address, block_identifier: BlockIdentifier = BLOCK_ID_LATEST
     ) -> Balance:
-        """ Return the balance of `address`. """
+        """Return the balance of `address`."""
         return self.proxy.functions.balanceOf(address).call(block_identifier=block_identifier)
 
     def total_supply(
