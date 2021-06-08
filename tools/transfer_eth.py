@@ -7,7 +7,7 @@ from web3 import HTTPProvider, Web3
 from raiden.accounts import Account
 from raiden.network.rpc.client import EthTransfer, JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.utils.formatting import to_checksum_address
+from raiden.utils.formatting import to_canonical_address, to_checksum_address
 
 WEI_TO_ETH = 10 ** 18
 
@@ -48,7 +48,11 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file) -> None:
         print("  - {}".format(target))
         gas_price = web3.eth.gasPrice  # pylint: disable=no-member
         client.transact(
-            EthTransfer(to_address=target, value=eth_amount * WEI_TO_ETH, gas_price=gas_price)
+            EthTransfer(
+                to_address=to_canonical_address(target),
+                value=eth_amount * WEI_TO_ETH,
+                gas_price=gas_price,
+            )
         )
 
 
