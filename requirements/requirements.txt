@@ -167,7 +167,7 @@ mypy-extensions==0.4.3
     #   typing-inspect
 netaddr==0.7.19
     # via multiaddr
-netifaces==0.10.9
+netifaces==0.11.0
     # via
     #   -r requirements.in
     #   aioice

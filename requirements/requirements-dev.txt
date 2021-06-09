@@ -347,7 +347,7 @@ netaddr==0.7.19
     #   -r requirements.txt
     #   matrix-synapse
     #   multiaddr
-netifaces==0.10.9
+netifaces==0.11.0
     # via
     #   -r requirements.txt
     #   aioice
