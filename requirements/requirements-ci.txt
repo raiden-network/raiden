@@ -275,7 +275,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.13.1
+hypothesis==6.13.14
     # via -r requirements-dev.txt
 idna==2.8
     # via
@@ -349,7 +349,7 @@ marshmallow-enum==1.5.1
     # via -r requirements-dev.txt
 marshmallow-polyfield==5.10
     # via -r requirements-dev.txt
-marshmallow==3.11.1
+marshmallow==3.12.1
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
@@ -394,7 +394,7 @@ netaddr==0.7.19
     #   -r requirements-dev.txt
     #   matrix-synapse
     #   multiaddr
-netifaces==0.10.9
+netifaces==0.11.0
     # via
     #   -r requirements-dev.txt
     #   aioice
