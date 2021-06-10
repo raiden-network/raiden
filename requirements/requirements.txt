@@ -4,8 +4,6 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-aiohttp==3.7.4.post0
-    # via web3
 aioice==0.7.5
     # via aiortc
 aiortc-pyav-stub==0.1.1
@@ -16,12 +14,8 @@ aniso8601==7.0.0
     # via flask-restful
 asn1crypto==1.3.0
     # via coincurve
-async-timeout==3.0.1
-    # via aiohttp
 attrs==19.3.0
-    # via
-    #   aiohttp
-    #   jsonschema
+    # via jsonschema
 av==8.0.3
     # via
     #   -r requirements.in
@@ -43,9 +37,7 @@ cffi==1.12.3
     #   cryptography
     #   pylibsrtp
 chardet==3.0.4
-    # via
-    #   aiohttp
-    #   requests
+    # via requests
 click==8.0.1
     # via
     #   -r requirements.in
@@ -136,10 +128,8 @@ hexbytes==0.2.0
     #   eth-rlp
     #   web3
 idna==2.8
-    # via
-    #   requests
-    #   yarl
-ipfshttpclient==0.7.0
+    # via requests
+ipfshttpclient==0.7.0a1
     # via web3
 itsdangerous==2.0.1
     # via flask
@@ -171,10 +161,6 @@ mirakuru==2.1.2
     # via -r requirements.in
 multiaddr==0.0.9
     # via ipfshttpclient
-multidict==5.1.0
-    # via
-    #   aiohttp
-    #   yarl
 mypy-extensions==0.4.3
     # via
     #   raiden-contracts
@@ -215,7 +201,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts==0.37.5
+raiden-contracts==0.37.6
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
@@ -255,9 +241,7 @@ toolz==0.9.0
 typeguard==2.11.1
     # via marshmallow-dataclass
 typing-extensions==3.10.0.0
-    # via
-    #   -r requirements.in
-    #   aiohttp
+    # via -r requirements.in
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
@@ -274,8 +258,6 @@ websockets==8.1
     # via web3
 werkzeug==2.0.1
     # via flask
-yarl==1.6.3
-    # via aiohttp
 zope.event==4.4
     # via gevent
 zope.interface==5.1.0
