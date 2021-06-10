@@ -58,7 +58,7 @@ bitarray==1.2.1
     # via
     #   -r requirements.txt
     #   eth-account
-black==21.4b2
+black==21.5b2
     # via -r requirements-dev.in
 bleach==3.3.0
     # via
