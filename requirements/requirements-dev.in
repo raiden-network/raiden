@@ -20,7 +20,7 @@ isort
 readme-renderer
 pylint
 mypy
-black==21.4b2
+black==21.5b2
 typed-ast>=1.4.2
 
 # Testing
