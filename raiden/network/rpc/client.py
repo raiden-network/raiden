@@ -35,6 +35,7 @@ from web3.middleware import simple_cache_middleware
 from web3.types import (
     ABIFunction,
     BlockData,
+    CallOverrideParams,
     FilterParams,
     LogReceipt,
     RPCEndpoint,
@@ -602,7 +603,10 @@ def patched_web3_eth_estimate_gas(
 
 
 def patched_web3_eth_call(
-    self: Any, transaction: Dict[str, Any], block_identifier: BlockIdentifier = None
+    self: Any,
+    transaction: Dict[str, Any],
+    block_identifier: BlockIdentifier = None,
+    state_override: CallOverrideParams = None,
 ) -> HexBytes:
     if "from" not in transaction and is_checksum_address(self.default_account):
         transaction = assoc(transaction, "from", self.default_account)
@@ -610,10 +614,15 @@ def patched_web3_eth_call(
     if block_identifier is None:
         block_identifier = self.defaultBlock
 
+    args = [transaction, block_identifier]
+    # Overriding state is a debugging feature available in Geth clients,
+    # see https://geth.ethereum.org/docs/rpc/ns-eth#3-object---state-override-set
+    # for more details.
+    if state_override is not None:
+        args.append(state_override)
+
     try:
-        result = self.web3.manager.request_blocking(
-            RPCEndpoint("eth_call"), [transaction, block_identifier]
-        )
+        result = self.web3.manager.request_blocking(RPCEndpoint("eth_call"), args)
     except ValueError as e:
         if check_value_error(e, CallType.CALL):
             result = ""
