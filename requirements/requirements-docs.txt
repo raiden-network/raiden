@@ -70,7 +70,7 @@ sphinxcontrib-httpdomain==1.7.0
     # via
     #   -r requirements-docs.in
     #   sphinxcontrib-httpexample
-sphinxcontrib-httpexample==0.10.3
+sphinxcontrib-httpexample==0.11.0
     # via -r requirements-docs.in
 sphinxcontrib-images==0.9.3
     # via -r requirements-docs.in
