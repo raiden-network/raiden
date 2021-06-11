@@ -401,7 +401,7 @@ mypy-extensions==0.4.3
     #   mypy
     #   raiden-contracts
     #   typing-inspect
-mypy==0.812
+mypy==0.902
     # via -r requirements-dev.txt
 nest-asyncio==1.5.1
     # via -r requirements-dev.txt
@@ -686,6 +686,7 @@ toml==0.10.2
     # via
     #   -r requirements-dev.txt
     #   black
+    #   mypy
     #   pep517
     #   pylint
     #   pytest
@@ -708,9 +709,7 @@ twisted[tls]==21.2.0
     #   matrix-synapse
     #   treq
 typed-ast==1.4.3
-    # via
-    #   -r requirements-dev.txt
-    #   mypy
+    # via -r requirements-dev.txt
 typeguard==2.11.1
     # via
     #   -r requirements-dev.txt
