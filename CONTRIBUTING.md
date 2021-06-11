@@ -186,6 +186,16 @@ Install the development dependencies:
 
 ## Development Guidelines
 
+### Development and release branches
+
+The primary development branch is `develop`. It is used for testing and CI and
+major releases are based on it. A release branch is created only as needed,
+when the time comes for the first patch. In other words, there is no release
+branch for `2.0.0`, but once a change is identified as a candidate for a
+patch, the release branch is created and the change is cherry-picked from
+`develop` to the release branch. The same release branch is used to host
+all patch releases for the corresponding major release.
+
 ### Testing
 
 To run the tests use pytest
@@ -552,7 +562,7 @@ to test your feature/bugfix. In particular, integration tests should be avoided
 in favor of unit tests whenever possible.
 
 Afterwards you should open a Pull Request from your fork or feature branch
-against master. You will be given feedback from the core developers of raiden
+against develop. You will be given feedback from the core developers of raiden
 and you should try to incorporate that feedback into your branch. Once you do
 so and all tests pass your feature/fix will be merged.
 
@@ -572,7 +582,7 @@ linked to the initial PR.
 #### Contributing to other people's PRs
 
 If you are a core developer of Raiden with write privileges to the repository
-then you can add commits or rebase to master any Pull Request by other people.
+then you can add commits or rebase to develop any Pull Request by other people.
 
 Let us take [this](https://github.com/raiden-network/raiden/pull/221) PR as an
 example. The contributor has everything ready and all is looking good apart
@@ -610,10 +620,10 @@ won't have any conflicts and for which enforcing rebase would make no sense and
 only waste our time. As such we provide the option to use both at our own
 discretion. So the general guidelines are:
 
-- If there are patches that have been merged to master since the PR was opened,
+- If there are patches that have been merged to develop since the PR was opened,
   on top of which our current PR may have different behaviour then use **Rebase
   and Merge**.
-- If there are patches that have been merged to master since the PR was opened
+- If there are patches that have been merged to develop since the PR was opened
   which touch documentation, infrastucture or completely unrelated parts of the
   code then you can freely use **Create a Merge Commit** and save the time of
   rebasing.
