@@ -297,7 +297,7 @@ class APIServer(Runnable):  # pragma: no unittest
         # FIXME: There's a type annotation bug on flask, fixed on this commit:
         # https://github.com/pallets/flask/commit/a960236117442bec67f89c30dfa014e05483da5a
         # Remove type ignore on the next flask release this commit is included
-        self.flask_app.before_request(self._check_shutdown_before_handle_request)  # type: ignore
+        self.flask_app.before_request(self._check_shutdown_before_handle_request)
 
         # needed so flask_restful propagates the exception to our error handler above
         # or else, it'll replace it with a E500 response

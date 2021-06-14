@@ -592,7 +592,7 @@ def _run(ctx: Context, **kwargs: Any) -> None:
         )
 
         if kwargs["config_file"] is not None:
-            source = ctx.get_parameter_source("config_file")
+            source = ctx.get_parameter_source("config_file")  # type: ignore
             set_by = source.name.title() if source else None
             log.debug("Using config file", config_file=kwargs["config_file"], set_by=set_by)
 

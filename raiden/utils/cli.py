@@ -15,7 +15,7 @@ import requests
 import structlog
 from click import Choice
 from click._compat import term_len
-from click.core import ParameterSource, augment_usage_errors
+from click.core import ParameterSource, augment_usage_errors  # type: ignore
 from click.formatting import iter_rows, measure_table, wrap_text
 from toml import TomlDecodeError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy
@@ -106,22 +106,22 @@ class GroupableOption(click.Option):
         **attrs,
     ):
         super().__init__(
-            param_decls,
-            show_default,
-            prompt,
-            confirmation_prompt,
-            prompt_required,
-            hide_input,
-            is_flag,
-            flag_value,
-            multiple,
-            count,
-            allow_from_autoenv,
-            type,
-            help,
-            hidden,
-            show_choices,
-            show_envvar,
+            param_decls=param_decls,
+            show_default=show_default,
+            prompt=prompt,
+            confirmation_prompt=confirmation_prompt,
+            prompt_required=prompt_required,
+            hide_input=hide_input,
+            is_flag=is_flag,
+            flag_value=flag_value,
+            multiple=multiple,
+            count=count,
+            allow_from_autoenv=allow_from_autoenv,
+            type=type,
+            help=help,
+            hidden=hidden,
+            show_choices=show_choices,
+            show_envvar=show_envvar,
             **attrs,
         )
         self.option_group = option_group
@@ -253,11 +253,11 @@ def command(name=None, cls=GroupableOptionCommand, **attrs):
 
 
 def group(name=None, **attrs):
-    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})
+    return click.group(name, cls=GroupableOptionCommandGroup, **attrs)
 
 
 def option(*args, **kwargs):
-    return click.option(*args, **{"cls": GroupableOption, **kwargs})
+    return click.option(*args, cls=GroupableOption, **kwargs)
 
 
 def option_group(name: str, *options: Callable):
