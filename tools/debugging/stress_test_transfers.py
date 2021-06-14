@@ -13,7 +13,7 @@ from datetime import datetime
 from http import HTTPStatus
 from itertools import chain, count, product, repeat
 from time import time
-from typing import Callable, Dict, Iterable, Iterator, List, NewType, Optional
+from typing import Any, Callable, Dict, Iterable, Iterator, List, NewType, Optional
 
 import gevent
 import gevent.os
@@ -696,7 +696,7 @@ def main() -> None:
 
     iterations = args.iterations
     if iterations is None:
-        iteration_counter = count()
+        iteration_counter: Any = count()
     else:
         iteration_counter = iter(range(iterations))
 
