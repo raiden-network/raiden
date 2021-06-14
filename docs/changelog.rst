@@ -3,14 +3,18 @@ Changelog
 =========
 
 * :release:`2.0.0 <2021-06-09>`
-* :bug:`7120` Fix for transport potentially blocks at long http response times
+* :bug:`7120` Fix for transport potentially blocks at long http response times.
 * :feature:`6673` Remove refund transfers. Refunds were intended as a way to quickly unlock funds in case a transfer can't be completed without having to wait for the lock to expire. Unfortunately they were never very good at achieving this goal and added a lot of complications to the codebase. Therefore they got removed. See the linked issue for more details.
-* :feature:`-` Fix building of binary bundles which was broken for a while.
+* :feature:`7064` Fix building of binary bundles which was broken for a while.
 * :feature:`6986` Increment DB version - this will make this release incompatible with previous releases. Please refer to `the known issues section in the docs <https://raiden-network.readthedocs.io/en/latest/other/known-issues.html#database-upgrades>`_ for details.
-* :feature:`-` Update WebUI to `version 1.2.1 <https://github.com/raiden-network/webui/releases/tag/v1.2.1>`_. Adds a dialog for interacting with the UserDeposit contract (UDC).
+* :feature:`6851` Raiden does not use Matrix rooms anymore. This greatly reduces the load on the matrix servers and increases the reliability of the transport layer.
+* :feature:`6898` Add support for Geth 1.10.
+* :feature:`6947` Add support for Python 3.9.
+* :feature:`6821` API endpoint for UserDeposit contract deposits/withdraws.
+* :feature:`6763` Ensure that pending messages are sent before Raiden is stopped.
 * :feature:`6838` Add ``/notifcations`` endpoint for showing notifications and warnings to the user.
 * :feature:`6563` Faster syncing with the blockchain.
-* :feature:`-` Update WebUI to `version 1.1.1 <https://github.com/raiden-network/webui/releases/tag/v1.1.1>`_. Introduces a new "Quick Connect" that is simpler and more transparent.
+* :feature:`-` Update WebUI to `version 1.2.1 <https://github.com/raiden-network/webui/releases/tag/v1.2.1>`_. Introduces a new "Quick Connect", that is simpler and more transparent than the old "join token network" feature, and adds a dialog for interacting with the UserDeposit contract (UDC).
 * :feature:`4730` Remove "join token network" feature from API. Explicitly create and fund channels, instead.
 * :feature:`6582` Add ``/settings`` endpoint with information about the used pathfinding service.
 * :feature:`6657` Support for recent geth versions.
