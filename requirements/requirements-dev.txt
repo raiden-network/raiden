@@ -502,7 +502,7 @@ pyyaml==5.4
     # via matrix-synapse
 raiden-api-client==1.1.0
     # via -r requirements-dev.in
-raiden-contracts==0.37.5
+raiden-contracts==0.38.0
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
