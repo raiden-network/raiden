@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Callable, Tuple
 
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
@@ -294,6 +294,8 @@ class BlockchainEvents:
             contract_manager
         )
 
+        self._listeners: List[Callable] = []
+
     def fetch_logs_in_batch(self, target_block_number: BlockNumber) -> Optional[PollResult]:
         """Poll the smart contract events for a limited number of blocks to
         avoid read timeouts (issue #3558).
@@ -562,6 +564,9 @@ class BlockchainEvents:
                 )
                 result.extend(decoded_events)
 
+                for listener in self._listeners:
+                    listener(decoded_events)
+
                 # Go through the results and create the child filters, if necessary.
                 event_filter = new_filters_from_events(decoded_events)
 
@@ -575,6 +580,14 @@ class BlockchainEvents:
 
         return result, max_request_duration
 
-    def uninstall_all_event_listeners(self) -> None:
+    def stop(self) -> None:
         with self._filters_lock:
             self._address_to_abi = {}
+
+        del self._listeners[:]
+
+    def register_listener(self, listener: Callable) -> None:
+        self._listeners.append(listener)
+
+    def unregister_listener(self, listener: Callable) -> None:
+        self._listeners.remove(listener)

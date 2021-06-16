@@ -21,7 +21,7 @@ from raiden.api.objects import Notification
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.blockchain.decode import blockchainevent_to_statechange
-from raiden.blockchain.events import BlockchainEvents
+from raiden.blockchain.events import BlockchainEvents, DecodedEvent
 from raiden.blockchain.filters import RaidenContractFilter
 from raiden.constants import (
     ABSENT_SECRET,
@@ -132,6 +132,7 @@ from raiden.utils.typing import (
     typecheck,
 )
 from raiden.utils.upgrades import UpgradeManager
+from raiden_contracts.constants import ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
@@ -526,7 +527,7 @@ class RaidenService(Runnable):
         assert (
             self.blockchain_events
         ), f"The blockchain_events has to be set by the start. node:{self!r}"
-        self.blockchain_events.uninstall_all_event_listeners()
+        self.blockchain_events.stop()
 
         # Close storage DB to release internal DB lock
         assert (
@@ -774,6 +775,7 @@ class RaidenService(Runnable):
             block_batch_size_config=self.config.blockchain.block_batch_size_config,
             node_address=self.address,
         )
+        blockchain_events.register_listener(self._blockchain_event_listener)
 
         self.last_log_block = last_block_number
         self.last_log_time = time.monotonic()
@@ -789,6 +791,17 @@ class RaidenService(Runnable):
             synchronization_state = self._best_effort_synchronize(latest_block)
 
         self.alarm.register_callback(self._best_effort_synchronize)
+
+    def _blockchain_event_listener(self, events: List[DecodedEvent]) -> None:
+        for event in events:
+            args = event.event_data["args"]
+            if event.event_data["event"] == ChannelEvent.OPENED:
+                other = (
+                    args["participant1"]
+                    if args["participant1"] != self.address
+                    else args["participant2"]
+                )
+                self.transport.health_check_web_rtc(other)
 
     def _start_alarm_task(self) -> None:
         """Start the alarm task.

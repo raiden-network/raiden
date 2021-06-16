@@ -389,6 +389,8 @@ class MatrixTransport(Runnable):
         self._config = config
         self._environment = environment
         self._raiden_service: Optional["RaidenService"] = None
+        # the addresses for which we're currently trying to initialize WebRTC channels
+        self._web_rtc_channel_inits: Set[Address] = set()
 
         if config.server == MATRIX_AUTO_SELECT_SERVER:
             homeserver_candidates = config.available_servers
@@ -568,6 +570,15 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix started", config=self._config)
 
         self._schedule_new_greenlet(self._set_presence, UserPresence.ONLINE)
+
+        chain_state = views.state_from_raiden(raiden_service)
+        for neighbour in views.all_neighbour_nodes(chain_state):
+            self.health_check_web_rtc(neighbour)
+
+    def health_check_web_rtc(self, partner: Address) -> None:
+        if not self._web_rtc_manager.has_ready_channel(partner):
+            # TODO: initialize WebRTC for the partner address
+            pass
 
     def _set_presence(self, state: UserPresence) -> None:
         waiting_period = randint(SET_PRESENCE_INTERVAL // 4, SET_PRESENCE_INTERVAL)
@@ -1158,6 +1169,8 @@ class MatrixTransport(Runnable):
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
 
+        self.health_check_web_rtc(receiver_address)
+
         user_ids: Set[UserID] = set()
         if self._web_rtc_manager.has_ready_channel(receiver_address):
             communication_medium = CommunicationMedium.WEB_RTC
@@ -1201,8 +1214,7 @@ class MatrixTransport(Runnable):
             return
 
     def _maybe_initialize_web_rtc(self, address: Address) -> None:
-
-        if self._stop_event.ready():
+        if self._stop_event.ready() or address in self._web_rtc_channel_inits:
             return
 
         assert self._raiden_service is not None, "_raiden_service not set"
@@ -1216,7 +1228,14 @@ class MatrixTransport(Runnable):
                 partner_address=to_checksum_address(address),
             )
             # initiate web rtc handling
-            self._schedule_new_greenlet(self._initialize_web_rtc, address)
+            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
+
+    def _wrapped_initialize_web_rtc(self, address: Address) -> None:
+        self._web_rtc_channel_inits.add(address)
+        try:
+            return self._initialize_web_rtc(address)
+        finally:
+            self._web_rtc_channel_inits.remove(address)
 
     def _initialize_web_rtc(self, partner_address: Address) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
