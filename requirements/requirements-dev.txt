@@ -619,7 +619,7 @@ types-markupsafe==1.1.1
     # via types-jinja2
 types-pkg-resources==0.1.2
     # via -r requirements-dev.in
-types-pyyaml==5.4.1
+types-pyyaml==5.4.2
     # via -r requirements-dev.in
 types-requests==0.1.11
     # via -r requirements-dev.in
