@@ -47,7 +47,7 @@ two options:
 
 - if there are no funds worth recovering, you can also simply start over with a new
   Ethereum keystore file and
-  `start over <https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#firing-it-up>`__.
+  :ref:`start over <running_raiden>`.
   This should be true for all usage on testnet and in cases where your channel balances
   are very low on mainnet. Don't hesitate to
   `ask for help <https://gitter.im/raiden-network/raiden>`__!

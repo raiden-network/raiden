@@ -50,10 +50,10 @@ If you haven't used Raiden before, you can
 ### Use Raiden
 
 If you want to use Raiden:
-* Install Raiden easily with the [Raiden Wizard](https://docs.raiden.network/quick-start)
-* Read [all installation options](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html) for Raiden
-* Read the updated [WebUI tutorial](https://docs.raiden.network/the-raiden-web-interface) to quickly get started doing payments
-* Read the thorough guide to [get started with the Raiden API](https://raiden-network.readthedocs.io/en/stable/api_walkthrough.html)
+* Install Raiden easily with the [Raiden Wizard](https://raiden-network.readthedocs.io/en/stable/installation/quick-start)
+* Read [all installation options](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation) for Raiden
+* Read the updated [WebUI tutorial](https://raiden-network.readthedocs.io/en/stable/the-raiden-web-interface/the-raiden-web-interface.html) to quickly get started doing payments
+* Read the thorough guide to [get started with the Raiden API](https://raiden-network.readthedocs.io/en/stable/raiden-api-1/api-tutorial)
 
 ## Specification
 Read the [tentative specification for the Raiden Network](https://raiden-network-specification.readthedocs.io/en/latest/index.html) to understand in detail how Raiden works. It is maintained within [this repository](https://github.com/raiden-network/spec).
