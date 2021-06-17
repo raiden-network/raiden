@@ -430,7 +430,7 @@ def run_raiden_service(
         click.secho(
             "Default fee settings are used. "
             "If you want use Raiden with mediation fees - flat, proportional and imbalance fees - "
-            "see https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#firing-it-up",  # noqa: E501
+            "see https://raiden-network.readthedocs.io/en/latest/overview_and_guide.html#run-it",  # noqa: E501
             fg="yellow",
         )
 

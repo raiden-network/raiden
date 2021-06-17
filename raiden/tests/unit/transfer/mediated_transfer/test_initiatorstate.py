@@ -269,7 +269,7 @@ def test_init_with_fees_more_than_max_limit():
     reason_msg = (
         "none of the available routes could be used and at least one of them "
         "exceeded the maximum fee limit "
-        "(see https://docs.raiden.network/using-raiden/mediation-fees#frequently-asked-questions)"  # noqa
+        "(see https://raiden-network.readthedocs.io/en/stable/using-raiden-on-mainnet/overview.html#frequently-asked-questions)"  # noqa
     )
     assert transition.events[0].reason == reason_msg
 

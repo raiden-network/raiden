@@ -280,7 +280,7 @@ def try_new_route(
         if route_fee_exceeds_max:
             reason += (
                 " and at least one of them exceeded the maximum fee limit "
-                "(see https://docs.raiden.network/using-raiden/mediation-fees#frequently-asked-questions)"  # noqa
+                "(see https://raiden-network.readthedocs.io/en/stable/using-raiden-on-mainnet/overview.html#frequently-asked-questions)"  # noqa
             )
 
         transfer_failed = EventPaymentSentFailed(

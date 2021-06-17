@@ -1117,7 +1117,7 @@ def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
     """Calculates the capacity of the given channel
 
     For the definition of capacity see
-    https://raiden-network.readthedocs.io/en/stable/glossary.html#term-channel-capacity
+    https://raiden-network.readthedocs.io/en/stable/glossary.html#term-Channel-capacity
     """
     return TokenAmount(
         channel_state.our_total_deposit
@@ -1131,7 +1131,7 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
     """Calculates the balance for a participant in a channel.
 
     For the definition of balance see
-    https://raiden-network.readthedocs.io/en/stable/glossary.html#term-balance
+    https://raiden-network.readthedocs.io/en/stable/glossary.html#term-Balance
     """
     sender_transferred_amount = 0
     receiver_transferred_amount = 0
