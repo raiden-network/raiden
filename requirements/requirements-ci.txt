@@ -222,7 +222,7 @@ execnet==1.6.0
     # via
     #   -r requirements-dev.txt
     #   pytest-xdist
-faker==8.8.0
+faker==8.8.1
     # via -r requirements-dev.txt
 fancycompleter==0.8
     # via
