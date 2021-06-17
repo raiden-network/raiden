@@ -44,7 +44,6 @@ from raiden.network.transport.matrix.client import (
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
-    AddressReachability,
     DisplayNameCache,
     MessageAckTimingKeeper,
     UserPresence,
@@ -1354,30 +1353,6 @@ class MatrixTransport(Runnable):
         return bool(
             key in own_caps and own_caps[key] and key in partner_caps and partner_caps[key]
         )
-
-    def _address_reachability_changed(
-        self, address: Address, reachability: AddressReachability
-    ) -> None:
-        if reachability is AddressReachability.REACHABLE:
-            # _QueueRetry.notify when partner comes online
-            retrier = self._address_to_retrier.get(address)
-            if retrier:
-                retrier.notify()
-
-            # XXX-UAM: extract partner caps from metadata here
-            # XXX allow for Web-RTC again
-            allows_web_rtc = False
-            if allows_web_rtc:
-                # if lower address spawn worker to create web rtc channel
-                self._maybe_initialize_web_rtc(address)
-
-        elif reachability is AddressReachability.UNREACHABLE:
-            if address in self._web_rtc_manager.address_to_rtc_partners:
-                self._web_rtc_manager.close_connection(address)
-        else:
-            raise TypeError(f'Unexpected reachability state "{reachability}".')
-
-        assert self._raiden_service is not None, "_raiden_service not set"
 
     def _sign(self, data: bytes) -> bytes:
         """Use eth_sign compatible hasher to sign matrix data"""
