@@ -179,7 +179,7 @@ class _RTCPartner(_CoroutineHandler):
         self.peer_connection.on(
             "iceconnectionstatechange",
             partial(
-                on_ice_connection_state_change,
+                _on_ice_connection_state_change,
                 rtc_partner=self,
                 closed_callback=self._close_connection_callback,
             ),
@@ -552,7 +552,7 @@ def on_ice_gathering_state_change(
         )
 
 
-def on_ice_connection_state_change(
+def _on_ice_connection_state_change(
     rtc_partner: _RTCPartner, closed_callback: Callable[[Address], None]
 ) -> None:
     ice_connection_state = rtc_partner.peer_connection.iceConnectionState
