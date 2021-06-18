@@ -166,7 +166,7 @@ class _RTCPartner(_CoroutineHandler):
         self.peer_connection.on(
             "icegatheringstatechange",
             partial(
-                on_ice_gathering_state_change,
+                _on_ice_gathering_state_change,
                 rtc_partner=self,
                 candidates_callback=self._handle_candidates_callback,
             ),
@@ -520,7 +520,7 @@ def on_channel_message(
     )
 
 
-def on_ice_gathering_state_change(
+def _on_ice_gathering_state_change(
     rtc_partner: _RTCPartner,
     candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
 ) -> None:
