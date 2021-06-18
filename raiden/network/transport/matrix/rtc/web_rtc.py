@@ -173,7 +173,7 @@ class _RTCPartner(_CoroutineHandler):
         )
         self.peer_connection.on(
             "signalingstatechange",
-            partial(on_signalling_state_change, rtc_partner=self),
+            partial(_on_signalling_state_change, rtc_partner=self),
         )
 
         self.peer_connection.on(
@@ -563,7 +563,7 @@ def _on_ice_connection_state_change(
         wrap_callback(callback=closed_callback, partner_address=rtc_partner.partner_address)
 
 
-def on_signalling_state_change(rtc_partner: _RTCPartner) -> None:
+def _on_signalling_state_change(rtc_partner: _RTCPartner) -> None:
     signaling_state = rtc_partner.peer_connection.signalingState
     rtc_partner.log.debug("Signaling state changed", signaling_state=signaling_state)
     # if signaling state is closed also set allow candidates otherwise
