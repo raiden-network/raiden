@@ -874,19 +874,6 @@ class MatrixTransport(Runnable):
         self._client.message_worker.link_value(on_success)
         self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
-    def _extract_addresses(self, room: Room) -> List[Optional[Address]]:
-        """
-        returns list of address of room members.
-        If address can not be extracted due to false displayname
-        it will include None in the list
-        """
-        assert self._raiden_service is not None, "_raiden_service not set"
-        joined_addresses = set(
-            validate_userid_signature(user) for user in room.get_joined_members()
-        )
-
-        return [address for address in joined_addresses if address != self._raiden_service.address]
-
     def _reject_invite(self, room_id: RoomID, state: dict) -> None:
         """Handle an invite request.
 
