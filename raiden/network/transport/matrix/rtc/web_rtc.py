@@ -278,7 +278,7 @@ class _RTCPartner(_CoroutineHandler):
 
         self.peer_connection.on(
             "datachannel",
-            partial(on_datachannel, self, self.node_address),
+            partial(_on_datachannel, self, self.node_address),
         )
         answer = await self._try_signaling(self.peer_connection.createAnswer())
         if answer is None:
@@ -469,7 +469,7 @@ class WebRTCManager(_CoroutineHandler):
         self._reset_state()
 
 
-def on_datachannel(
+def _on_datachannel(
     rtc_partner: _RTCPartner,
     node_address: Address,
     channel: RTCDataChannel,
