@@ -52,7 +52,7 @@ class CoroutineHandler:
             self.cancel_all_pending()
 
         pending_coroutines = [coroutine for coroutine in self.coroutines if not coroutine.done()]
-        # This is done to have the bound keywords if it is of type RTCPartner
+        # This is done to have the bound keywords if it is of type _RTCPartner
         logger = getattr(self, "log", log)
         logger.debug("Waiting for coroutines", coroutines=pending_coroutines)
 
@@ -76,7 +76,7 @@ class CoroutineHandler:
                 coroutine.cancel()
 
 
-class RTCPartner(CoroutineHandler):
+class _RTCPartner(CoroutineHandler):
     @dataclass
     class SyncEvents:
         """
@@ -154,7 +154,7 @@ class RTCPartner(CoroutineHandler):
         self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
         self.channel: Optional[RTCDataChannel] = None
-        self.sync_events = RTCPartner.SyncEvents()
+        self.sync_events = _RTCPartner.SyncEvents()
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -377,13 +377,13 @@ class WebRTCManager(CoroutineHandler):
         self._handle_sdp_callback = _handle_sdp_callback
         self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
-        self.address_to_rtc_partners: Dict[Address, RTCPartner] = {}
+        self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
 
-    def get_rtc_partner(self, partner_address: Address) -> RTCPartner:
+    def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
         assert self.node_address, "Transport is not started yet but tried to initialize signalling"
         if partner_address not in self.address_to_rtc_partners:
 
-            self.address_to_rtc_partners[partner_address] = RTCPartner(
+            self.address_to_rtc_partners[partner_address] = _RTCPartner(
                 partner_address,
                 self.node_address,
                 self._handle_message_callback,
@@ -470,7 +470,7 @@ class WebRTCManager(CoroutineHandler):
 
 
 def on_datachannel(
-    rtc_partner: RTCPartner,
+    rtc_partner: _RTCPartner,
     node_address: Address,
     channel: RTCDataChannel,
 ) -> None:
@@ -483,7 +483,7 @@ def on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
     log.debug("Rtc datachannel open", node=to_checksum_address(node_address), label=channel.label)
 
 
-def on_channel_close(rtc_partner: RTCPartner, node_address: Address) -> None:
+def on_channel_close(rtc_partner: _RTCPartner, node_address: Address) -> None:
     """callback if channel is closed. It is part of a partial function"""
     if rtc_partner.channel is not None:
         log.debug(
@@ -502,7 +502,7 @@ def on_channel_close(rtc_partner: RTCPartner, node_address: Address) -> None:
 
 
 def on_channel_message(
-    rtc_partner: RTCPartner,
+    rtc_partner: _RTCPartner,
     handle_message_callback: Callable[[str, Address], None],
     message: str,
 ) -> None:
@@ -521,7 +521,7 @@ def on_channel_message(
 
 
 def on_ice_gathering_state_change(
-    rtc_partner: RTCPartner,
+    rtc_partner: _RTCPartner,
     candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
 ) -> None:
     peer_connection = rtc_partner.peer_connection
@@ -553,7 +553,7 @@ def on_ice_gathering_state_change(
 
 
 def on_ice_connection_state_change(
-    rtc_partner: RTCPartner, closed_callback: Callable[[Address], None]
+    rtc_partner: _RTCPartner, closed_callback: Callable[[Address], None]
 ) -> None:
     ice_connection_state = rtc_partner.peer_connection.iceConnectionState
     rtc_partner.log.debug("Ice connection state changed", signaling_state=ice_connection_state)
@@ -563,7 +563,7 @@ def on_ice_connection_state_change(
         wrap_callback(callback=closed_callback, partner_address=rtc_partner.partner_address)
 
 
-def on_signalling_state_change(rtc_partner: RTCPartner) -> None:
+def on_signalling_state_change(rtc_partner: _RTCPartner) -> None:
     signaling_state = rtc_partner.peer_connection.signalingState
     rtc_partner.log.debug("Signaling state changed", signaling_state=signaling_state)
     # if signaling state is closed also set allow candidates otherwise
