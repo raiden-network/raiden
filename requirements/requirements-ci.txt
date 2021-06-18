@@ -722,7 +722,7 @@ types-click==7.1.1
     #   types-flask
 types-filelock==0.1.4
     # via -r requirements-dev.txt
-types-flask==1.1.0
+types-flask==1.1.1
     # via -r requirements-dev.txt
 types-jinja2==2.11.1
     # via
