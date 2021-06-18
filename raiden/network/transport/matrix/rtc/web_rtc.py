@@ -190,7 +190,7 @@ class _RTCPartner(_CoroutineHandler):
             return
 
         self.channel.on(
-            "message", partial(on_channel_message, self, self._handle_message_callback)
+            "message", partial(_on_channel_message, self, self._handle_message_callback)
         )
         self.channel.on("close", partial(on_channel_close, self, self.node_address))
         self.channel.on("open", partial(on_channel_open, self.node_address, self.channel))
@@ -501,7 +501,7 @@ def on_channel_close(rtc_partner: _RTCPartner, node_address: Address) -> None:
             rtc_partner.schedule_task(rtc_partner.close())
 
 
-def on_channel_message(
+def _on_channel_message(
     rtc_partner: _RTCPartner,
     handle_message_callback: Callable[[str, Address], None],
     message: str,
