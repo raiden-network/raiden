@@ -1,22 +1,27 @@
 import json
 import os
 import random
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, field
 from datetime import datetime
 
 import pytest
+from marshmallow_dataclass import class_schema
 
 from raiden.exceptions import SerializationError
+from raiden.messages.metadata import Metadata
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
 from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
 from raiden.storage.serialization import JSONSerializer
+from raiden.storage.serialization.schemas import BaseSchema
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state
 from raiden.utils.signer import LocalSigner
+from raiden.utils.typing import Address, List
 
 # Required for test_message_identical. It would be better to have a set of
 # messages that don't depend on randomness for that test. But right now, we
@@ -270,6 +275,114 @@ def test_message_identical() -> None:
         # The assert output is more readable when we used dicts than with plain JSON
         message_dict = JSONSerializer.deserialize(MessageSerializer.serialize(message))
         assert message_dict == saved_message_dict
+
+
+def test_metadata_pass_original_readonly():
+    # construct the original metadata dict
+    original_metadata = factories.create(factories.MetadataProperties())
+    original_metadata_dict = original_metadata.to_dict()
+
+    # Now construct Metadata class that includes the original metadata dict as "original_data"
+    metadata = factories.create(factories.MetadataProperties(original_data=original_metadata_dict))
+    # It should still have deserialized to the "routes" field
+    modified_route = metadata.routes[0].route
+    # Modify the route inplace
+    modified_route.pop()
+
+    # Serialize the metadata to dict
+    metadata_dict = metadata.to_dict()
+    # Although we modified the route, the seriliazed dict should still be the same
+    # as the original data
+    assert original_metadata_dict == metadata_dict
+
+
+def test_locked_transfer_unknown_metadata():
+    signer = LocalSigner(bytes(range(32)))
+    additional_data = {
+        "arbitrary_data": {"new_key": "you didn't expect this, didn't you?"},
+        # also check that an additional "unknown_data" does not cause an overwrite of
+        # the "unknown_data" field on the dataclass used for temporary storage of the raw data
+        "unknown_data": {"test": "123"},
+    }
+
+    # First construct the "original" metadata with processeable routes
+    route_only_metadata = factories.create(factories.MetadataProperties())
+    metadata_dict = route_only_metadata.to_dict()
+    # Add the addtional, unknown data tot he serialized dict
+    metadata_original_dict = {**metadata_dict, **additional_data}
+    # Now construct the LockedTransfer that includes the additional, unexpected metadata fields
+    metadata_properties = factories.MetadataProperties(original_data=metadata_original_dict)
+    metadata = factories.create(metadata_properties)
+    locked_transfer = factories.create(factories.LockedTransferProperties(metadata=metadata))
+    locked_transfer.sign(signer)
+
+    json_msg = MessageSerializer.serialize(locked_transfer)
+    deserialized_message = MessageSerializer.deserialize(json_msg)
+    assert deserialized_message.sender == signer.address
+    assert len(deserialized_message.metadata.routes) == 1
+    assert deserialized_message.metadata.routes == route_only_metadata.routes
+
+    # The assert output is more readable when we used dicts than with plain JSON
+    message_dict = JSONSerializer.deserialize(MessageSerializer.serialize(deserialized_message))
+
+    # Explicitly check for the unknown data
+    metadata_dict = message_dict["metadata"]
+    for key, value in additional_data.items():
+        deserialized_value = metadata_dict.get(key)
+        assert deserialized_value == value
+
+    assert message_dict == JSONSerializer.deserialize(json_msg)
+
+
+def test_metadata_backwards_compatibility():
+    data = """
+    {
+        "some_addresses":
+                [
+                    "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
+                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
+                ],
+        "both_unknown": "0x94622cc2a5b64a58c25a129d48a2beec4b65b779",
+        "routes": [
+            {
+                "address_metadata": {},
+                "route": [
+                    "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
+                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
+                ]
+            }
+        ]
+    }
+    """
+    m = json.loads(data)
+
+    @dataclass(frozen=True)
+    class NewMetadata(Metadata):
+        # Needs a default because of dataclass inheritance insanity
+        some_addresses: List[Address] = field(default_factory=list)
+
+    schema_new = class_schema(NewMetadata, base_schema=BaseSchema)()
+    schema = class_schema(Metadata, base_schema=BaseSchema)()
+
+    deserialized_message_new = schema_new.load(deepcopy(m))
+    deserialized_message = schema.load(deepcopy(m))
+
+    # Check the fields present on both
+    assert len(deserialized_message.routes[0].route) == 2
+    assert len(deserialized_message_new.routes[0].route) == 2
+
+    # Assert that the correct fields are existent on the different deserialized messages
+    assert deserialized_message.original_data.get("some_addresses")
+    assert deserialized_message.original_data.get("both_unknown")
+
+    assert deserialized_message_new.original_data.get("some_addresses")
+    assert deserialized_message_new.some_addresses
+    assert deserialized_message_new.original_data.get("both_unknown")
+
+    # A node should be able to verify the signature, regardless of wether
+    # he knows about the extra data - therefore the hash in the sending node (using "NewMetadata")
+    # and the receiving node (using "Metadata") should be identical
+    assert deserialized_message_new.hash == deserialized_message.hash
 
 
 def test_hashing():

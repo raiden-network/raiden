@@ -358,6 +358,7 @@ def send_lockedtransfer(
             selected_route=route_state,
         ),
         recipient_metadata=recipient_metadata,
+        previous_metadata=None,
     )
     return lockedtransfer_event
 

@@ -375,6 +375,12 @@ class LockedTransferBase(EnvelopeMessage):
             secrethash=transfer.lock.secrethash,
         )
 
+        routes = [
+            RouteMetadata(route=r.route, address_metadata=r.address_to_metadata)
+            for r in transfer.route_states
+        ]
+        metadata = Metadata(routes=routes, original_data=transfer.metadata)
+
         # pylint: disable=unexpected-keyword-arg
         return cls(
             chain_id=balance_proof.chain_id,
@@ -392,12 +398,7 @@ class LockedTransferBase(EnvelopeMessage):
             target=transfer.target,
             initiator=transfer.initiator,
             signature=EMPTY_SIGNATURE,
-            metadata=Metadata(
-                routes=[
-                    RouteMetadata(route=r.route, address_metadata=r.address_to_metadata)
-                    for r in transfer.route_states
-                ]
-            ),
+            metadata=metadata,
         )
 
     def _packed_data(self) -> bytes:

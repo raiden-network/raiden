@@ -427,6 +427,7 @@ def forward_transfer_pair(
         secrethash=payer_transfer.lock.secrethash,
         route_states=route_states,
         recipient_metadata=recipient_metadata,
+        previous_metadata=payer_transfer.metadata,
     )
     mediated_events: List[Event] = [lockedtransfer_event]
 

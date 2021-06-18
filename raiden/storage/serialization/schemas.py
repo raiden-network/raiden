@@ -3,7 +3,7 @@ from typing import Dict, Iterable
 
 import marshmallow
 from eth_utils import to_bytes, to_canonical_address, to_hex
-from marshmallow import EXCLUDE, Schema, post_dump
+from marshmallow import EXCLUDE, Schema, SchemaOpts, post_dump
 from marshmallow_dataclass import class_schema
 from marshmallow_polyfield import PolyField
 
@@ -211,10 +211,22 @@ class CallablePolyField(PolyField):
         return self
 
 
+class BaseSchemaOpts(SchemaOpts):
+    def __init__(self, meta, **kwargs):  # type: ignore
+        SchemaOpts.__init__(self, meta, **kwargs)
+        self.serialize_missing = getattr(meta, "serialize_missing", True)
+
+
 class BaseSchema(marshmallow.Schema):
+    OPTIONS_CLASS = BaseSchemaOpts
+
     # We want to ignore unknown fields
     class Meta:
         unknown = EXCLUDE
+        # Setting this to False in a class Meta of a Schema will
+        # exclude all optional, not required fields that have value "None"
+        # from the dumped dictionary
+        serialize_missing = True
 
     TYPE_MAPPING = {
         # Addresses
@@ -303,8 +315,26 @@ class BaseSchema(marshmallow.Schema):
 
     @post_dump(pass_original=True)
     # pylint: disable=W0613,R0201
-    def add_class_type(self, data: Dict, original_data: Any, many: bool) -> Dict:
+    def _post_dump(self, data: Dict, original_data: Any, many: bool) -> Dict:
+        if self.opts.serialize_missing is False:  # type: ignore
+            data = self.remove_missing(data)
+        if data:
+            data = self.add_class_type(data, original_data)
+        return data
+
+    # pylint: disable=no-self-use
+    def add_class_type(self, data: Dict, original_data: Any) -> Dict:
         data["_type"] = class_type(original_data)
+        return data
+
+    def remove_missing(self, data: Dict) -> Dict:
+        for field_name, value in list(data.items()):
+            field = self.declared_fields.get(field_name)
+            if not field:
+                # This can be the case when we e.g. injected a field in another post_dump hook
+                continue
+            if value is None and field.required is False and field.allow_none is True:
+                del data[field_name]
         return data
 
 

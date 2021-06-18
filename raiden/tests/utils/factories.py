@@ -1,5 +1,6 @@
 import random
 import string
+from copy import deepcopy
 from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from hashlib import sha256
@@ -162,7 +163,8 @@ def _replace_properties(properties, defaults):
 
 
 def create_properties(properties: Properties, defaults: Properties = None) -> Properties:
-    full_defaults = type(properties).DEFAULTS
+    # without deepcopying, class-attributes could be modified without proper teardown
+    full_defaults = deepcopy(type(properties).DEFAULTS)
     if defaults is not None:
         full_defaults = _replace_properties(defaults, full_defaults)
     return _replace_properties(properties, full_defaults)
@@ -408,8 +410,11 @@ def create(properties: Any, defaults: Optional[Properties] = None) -> Any:
     return properties
 
 
-def _properties_to_kwargs(properties: Properties, defaults: Properties) -> Dict:
-    properties = create_properties(properties, defaults or properties.DEFAULTS)
+def _properties_to_kwargs(properties: Properties, defaults: Optional[Properties]) -> Dict:
+    if not defaults:
+        # without deepcopying, class-attributes could be modified without proper teardown
+        defaults = deepcopy(properties.DEFAULTS)
+    properties = create_properties(properties, defaults)
     return {key: create(value) for key, value in properties.__dict__.items()}
 
 
@@ -529,10 +534,13 @@ RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
 @dataclass(frozen=True)
 class MetadataProperties(Properties):
     routes: List[RouteMetadata] = EMPTY
+    original_data: Optional[Any] = EMPTY
     TARGET_TYPE = Metadata
 
 
-MetadataProperties.DEFAULTS = MetadataProperties(routes=[RouteMetadata(route=[HOP1, HOP2])])
+MetadataProperties.DEFAULTS = MetadataProperties(
+    routes=[RouteMetadata(route=[HOP1, HOP2])], original_data=None
+)
 
 
 @dataclass(frozen=True)
@@ -885,7 +893,9 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     # pylint: disable=E1101
     if route_states == EMPTY:
         route_states = create_route_states_from_routes(
-            [[Address(transfer.recipient), Address(transfer.target)]]
+            # remove duplicate addresse from the list, this can happen when e.g.
+            # transfer.recipient == transfer.target
+            [list(dict.fromkeys([Address(transfer.recipient), Address(transfer.target)]))]
         )
 
     # Those are the routes(-metadata) the LockedTransferSender included in the LT message ...
@@ -894,7 +904,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         for route_state in route_states
     ]
 
-    params["metadata"] = Metadata(routes=routes)
+    params["metadata"] = Metadata(routes=routes, original_data=None)
 
     # Create the locked-transfer message first in order to generate the balance proof
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
