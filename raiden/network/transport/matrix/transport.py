@@ -378,8 +378,6 @@ class ReceivedCallMessage(_ReceivedMessageBase):
 
 
 class MatrixTransport(Runnable):
-    _room_prefix = "raiden"
-    _room_sep = "_"
     log = log
 
     def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
