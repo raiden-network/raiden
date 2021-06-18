@@ -23,7 +23,6 @@ from raiden.constants import (
     EMPTY_SIGNATURE,
     MATRIX_AUTO_SELECT_SERVER,
     WEB_RTC_CHANNEL_TIMEOUT,
-    Capabilities,
     CommunicationMedium,
     DeviceIDs,
     Environment,
@@ -59,7 +58,7 @@ from raiden.network.transport.matrix.utils import (
     validate_userid_signature,
 )
 from raiden.network.transport.utils import timeout_exponential_backoff
-from raiden.settings import CapabilitiesConfig, MatrixTransportConfig
+from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.transfer import views
@@ -1359,19 +1358,6 @@ class MatrixTransport(Runnable):
         #        with a unique call id for each try this wont be necessary
         gevent.sleep(3)
         self._maybe_initialize_web_rtc(partner_address)
-
-    def _capability_usable(
-        self, capability: Capabilities, partner_capabilities_config: CapabilitiesConfig
-    ) -> bool:
-        """Checks if a given capability is enabled for the local and the partner node"""
-
-        own_caps = capconfig_to_dict(self._config.capabilities_config)
-        partner_caps = capconfig_to_dict(partner_capabilities_config)
-
-        key = capability.value
-        return bool(
-            key in own_caps and own_caps[key] and key in partner_caps and partner_caps[key]
-        )
 
     def retry_api_call(
         self,
