@@ -192,7 +192,7 @@ class _RTCPartner(_CoroutineHandler):
         self.channel.on(
             "message", partial(_on_channel_message, self, self._handle_message_callback)
         )
-        self.channel.on("close", partial(on_channel_close, self, self.node_address))
+        self.channel.on("close", partial(_on_channel_close, self, self.node_address))
         self.channel.on("open", partial(on_channel_open, self.node_address, self.channel))
 
     @property
@@ -483,7 +483,7 @@ def on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
     log.debug("Rtc datachannel open", node=to_checksum_address(node_address), label=channel.label)
 
 
-def on_channel_close(rtc_partner: _RTCPartner, node_address: Address) -> None:
+def _on_channel_close(rtc_partner: _RTCPartner, node_address: Address) -> None:
     """callback if channel is closed. It is part of a partial function"""
     if rtc_partner.channel is not None:
         log.debug(
