@@ -887,18 +887,6 @@ class MatrixTransport(Runnable):
 
         return [address for address in joined_addresses if address != self._raiden_service.address]
 
-    def _has_multiple_partner_addresses(self, room: Room) -> bool:
-        assert self._raiden_service is not None, "_raiden_service not set"
-        joined_addresses = set()
-        for user in room.get_joined_members():
-            address = validate_userid_signature(user)
-            if address != self._raiden_service.address:
-                joined_addresses.add(address)
-                # if address is None it means a false displayname, should leave
-                if len(joined_addresses) > 1 or address is None:
-                    return True
-        return False
-
     def _reject_invite(self, room_id: RoomID, state: dict) -> None:
         """Handle an invite request.
 
