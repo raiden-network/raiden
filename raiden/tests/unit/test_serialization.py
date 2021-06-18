@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 import pytest
-from marshmallow_dataclass import class_schema
 
 from raiden.exceptions import SerializationError
 from raiden.messages.metadata import Metadata
@@ -16,7 +15,7 @@ from raiden.messages.synchronization import Delivered, Processed
 from raiden.messages.transfers import RevealSecret, SecretRequest
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
 from raiden.storage.serialization import JSONSerializer
-from raiden.storage.serialization.schemas import BaseSchema
+from raiden.storage.serialization.schemas import BaseSchema, class_schema
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state

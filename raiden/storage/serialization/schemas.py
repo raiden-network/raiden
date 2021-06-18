@@ -197,14 +197,14 @@ class CallablePolyField(PolyField):
     @staticmethod
     def serialization_schema_selector(obj: Any, parent: Any) -> Schema:
         # pylint: disable=unused-argument
-        return SchemaCache.get_or_create_schema(obj.__class__)
+        return class_schema(obj.__class__, base_schema=BaseSchema)()
 
     def deserialization_schema_selector(
         self, deserializable_dict: Dict[str, Any], parent: Dict[str, Any]
     ) -> Schema:
         # pylint: disable=unused-argument
         type_ = deserializable_dict["_type"].split(".")[-1]
-        return SchemaCache.get_or_create_schema(self._class_of_classname[type_])
+        return class_schema(self._class_of_classname[type_], base_schema=BaseSchema)()
 
     def __call__(self, **metadata: Any) -> "CallablePolyField":
         self.metadata = metadata
@@ -340,15 +340,3 @@ class BaseSchema(marshmallow.Schema):
 
 def class_type(instance: Any) -> str:
     return f"{instance.__class__.__module__}.{instance.__class__.__name__}"
-
-
-class SchemaCache:
-    SCHEMA_CACHE: Dict[str, Schema] = {}
-
-    @classmethod
-    def get_or_create_schema(cls, clazz: type) -> Schema:
-        class_name = clazz.__name__
-        if class_name not in cls.SCHEMA_CACHE:
-            schema = class_schema(clazz, base_schema=BaseSchema)()
-            cls.SCHEMA_CACHE[class_name] = schema
-        return cls.SCHEMA_CACHE[class_name]
