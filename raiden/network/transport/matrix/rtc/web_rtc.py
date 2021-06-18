@@ -26,7 +26,7 @@ from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, O
 log = structlog.get_logger(__name__)
 
 
-class CoroutineHandler:
+class _CoroutineHandler:
     def __init__(self) -> None:
         self.coroutines: List[Task] = list()
 
@@ -76,7 +76,7 @@ class CoroutineHandler:
                 coroutine.cancel()
 
 
-class _RTCPartner(CoroutineHandler):
+class _RTCPartner(_CoroutineHandler):
     @dataclass
     class SyncEvents:
         """
@@ -362,7 +362,7 @@ class _RTCPartner(CoroutineHandler):
 
 
 @dataclass
-class WebRTCManager(CoroutineHandler):
+class WebRTCManager(_CoroutineHandler):
     def __init__(
         self,
         node_address: Optional[Address],
