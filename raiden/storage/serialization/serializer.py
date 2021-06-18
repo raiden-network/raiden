@@ -13,7 +13,7 @@ from typing import List, Mapping
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
-from raiden.storage.serialization.schemas import SchemaCache
+from raiden.storage.serialization.schemas import BaseSchema, class_schema
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import Any, Dict
 
@@ -77,7 +77,7 @@ class DictSerializer(SerializationBase):
         data = obj
         if is_dataclass(obj):
             try:
-                schema = SchemaCache.get_or_create_schema(obj.__class__)
+                schema = class_schema(obj.__class__, base_schema=BaseSchema)()
                 data = schema.dump(obj)
             except (AttributeError, TypeError, ValidationError, ValueError) as ex:
                 raise SerializationError(f"Can't serialize: {data}") from ex
@@ -98,7 +98,7 @@ class DictSerializer(SerializationBase):
         if "_type" in data:
             try:
                 klass = _import_type(data["_type"])
-                schema = SchemaCache.get_or_create_schema(klass)
+                schema = class_schema(klass, base_schema=BaseSchema)()
                 return schema.load(deepcopy(data))
             except (ValueError, TypeError, ValidationError) as ex:
                 raise SerializationError(f"Can't deserialize: {data}") from ex
