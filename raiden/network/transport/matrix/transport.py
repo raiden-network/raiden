@@ -1373,11 +1373,6 @@ class MatrixTransport(Runnable):
             key in own_caps and own_caps[key] and key in partner_caps and partner_caps[key]
         )
 
-    def _sign(self, data: bytes) -> bytes:
-        """Use eth_sign compatible hasher to sign matrix data"""
-        assert self._raiden_service is not None, "_raiden_service not set"
-        return self._raiden_service.signer.sign(data=data)
-
     def retry_api_call(
         self,
         method_with_api_request: Callable,
