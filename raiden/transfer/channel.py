@@ -87,6 +87,7 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     AddressMetadata,
+    Any,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -94,6 +95,7 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     ChannelID,
+    Dict,
     EncodedData,
     InitiatorAddress,
     List,
@@ -1355,6 +1357,7 @@ def create_sendlockedtransfer(
     secrethash: SecretHash,
     route_states: List[RouteState],
     recipient_metadata: AddressMetadata = None,
+    previous_metadata: Dict[str, Any] = None,
 ) -> Tuple[SendLockedTransfer, PendingLocksState]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
@@ -1405,6 +1408,7 @@ def create_sendlockedtransfer(
         initiator=initiator,
         target=target,
         route_states=route_states,
+        metadata=previous_metadata,
     )
 
     recipient = channel_state.partner_state.address
@@ -1504,6 +1508,7 @@ def send_lockedtransfer(
     secrethash: SecretHash,
     route_states: List[RouteState],
     recipient_metadata: AddressMetadata = None,
+    previous_metadata: Dict[str, Any] = None,
 ) -> SendLockedTransfer:
     send_locked_transfer_event, pending_locks = create_sendlockedtransfer(
         channel_state=channel_state,
@@ -1516,6 +1521,7 @@ def send_lockedtransfer(
         secrethash=secrethash,
         route_states=route_states,
         recipient_metadata=recipient_metadata,
+        previous_metadata=previous_metadata,
     )
 
     transfer = send_locked_transfer_event.transfer

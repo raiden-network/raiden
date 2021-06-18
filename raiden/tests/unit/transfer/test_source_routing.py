@@ -38,26 +38,38 @@ def test_can_create_refund_transfer_messages():
     assert len(refund_transfer.metadata.routes) == 1
 
 
-def test_route_metadata_canonical():
-    properties = factories.RouteMetadataProperties()
-    one_route_metadata = factories.create(properties)
-    assert isinstance(one_route_metadata, RouteMetadata)
-    one_canonical = one_route_metadata._canonical_dict()
+def test_metadata_canonical():
+    properties = factories.MetadataProperties()
+    one_metadata = factories.create(properties)
+    assert isinstance(one_metadata, Metadata)
+    one_canonical = one_metadata._serialize_canonical()
 
-    another_route_metadata = factories.create(properties)
-    another_canonical = another_route_metadata._canonical_dict()
+    another_metadata = factories.create(properties)
+    another_canonical = another_metadata._serialize_canonical()
 
     assert one_canonical == another_canonical, "route metadata with same routes do not match"
 
     inverted_route_metadata = factories.create(
         factories.RouteMetadataProperties(route=[factories.HOP2, factories.HOP1])
     )
-
-    inverted_route_canonical = inverted_route_metadata._canonical_dict()
+    inverted_metadata = factories.create(
+        factories.MetadataProperties(routes=[inverted_route_metadata])
+    )
+    inverted_route_canonical = inverted_metadata._serialize_canonical()
 
     assert (
         one_canonical != inverted_route_canonical
     ), "route metadata with inverted routes still match"
+
+    # different key insert order (as potentially caused by json-decoding)
+    # should still result in the same CJSON
+    item_one = ("abc", 123)
+    item_two = ("def", 456)
+    first_data = dict(x for x in (item_one, item_two))
+    second_data = dict(x for x in (item_two, item_one))
+    first_metadata = factories.create(factories.MetadataProperties(original_data=first_data))
+    second_metadata = factories.create(factories.MetadataProperties(original_data=second_data))
+    assert first_metadata._serialize_canonical() == second_metadata._serialize_canonical()
 
 
 def test_metadata_hashing():

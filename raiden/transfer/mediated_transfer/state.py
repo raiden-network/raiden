@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     AddressMetadata,
+    Any,
     BlockTimeout,
     ChannelID,
     Dict,
@@ -62,6 +63,7 @@ class LockedTransferUnsignedState(LockedTransferState):
 
     balance_proof: BalanceProofUnsignedState
     route_states: List[RouteState] = field(default_factory=list)
+    metadata: Optional[Dict[str, Any]] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -88,6 +90,7 @@ class LockedTransferSignedState(LockedTransferState):
     message_identifier: MessageID
     route_states: List[RouteState]
     balance_proof: BalanceProofSignedState = field(repr=False)
+    metadata: Optional[Dict[str, Any]] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)

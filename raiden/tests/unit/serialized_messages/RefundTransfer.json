@@ -13,7 +13,6 @@
     "metadata": {
         "routes": [
             {
-                "address_metadata": {},
                 "route": [
                     "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
                     "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
