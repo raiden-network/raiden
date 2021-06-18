@@ -193,7 +193,7 @@ class _RTCPartner(_CoroutineHandler):
             "message", partial(_on_channel_message, self, self._handle_message_callback)
         )
         self.channel.on("close", partial(_on_channel_close, self, self.node_address))
-        self.channel.on("open", partial(on_channel_open, self.node_address, self.channel))
+        self.channel.on("open", partial(_on_channel_open, self.node_address, self.channel))
 
     @property
     def call_id(self) -> str:
@@ -475,11 +475,11 @@ def on_datachannel(
     channel: RTCDataChannel,
 ) -> None:
     rtc_partner.channel = channel
-    on_channel_open(node_address, channel)
+    _on_channel_open(node_address, channel)
     rtc_partner.set_channel_callbacks()
 
 
-def on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
+def _on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
     log.debug("Rtc datachannel open", node=to_checksum_address(node_address), label=channel.label)
 
 
