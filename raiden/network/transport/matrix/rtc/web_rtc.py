@@ -17,9 +17,10 @@ from raiden.constants import (
     RTCSignallingState,
     SDPTypes,
 )
+from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_aio_event, yield_future
 from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
-from raiden.network.transport.matrix.utils import my_place_or_yours
+from raiden.network.transport.matrix.utils import my_place_or_yours, validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Union
 
@@ -366,18 +367,29 @@ class WebRTCManager(_CoroutineHandler):
     def __init__(
         self,
         node_address: Address,
-        _handle_message_callback: Callable[[str, Address], None],
+        process_messages: Callable[[List[ReceivedRaidenMessage]], None],
         _handle_sdp_callback: Callable[[Optional[RTCSessionDescription], Address], None],
         _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
         _close_connection_callback: Callable[[Address], None],
     ) -> None:
         super().__init__()
         self.node_address = node_address
-        self._handle_message_callback = _handle_message_callback
+        self._process_messages = process_messages
         self._handle_sdp_callback = _handle_sdp_callback
         self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
         self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
+
+    def _handle_message(self, message_data: str, partner_address: Address) -> None:
+        messages: List[ReceivedRaidenMessage] = []
+        for msg in validate_and_parse_message(message_data, partner_address):
+            messages.append(
+                ReceivedRaidenMessage(
+                    message=msg,
+                    sender=partner_address,
+                )
+            )
+        self._process_messages(messages)
 
     def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
         if partner_address not in self.address_to_rtc_partners:
@@ -385,7 +397,7 @@ class WebRTCManager(_CoroutineHandler):
             self.address_to_rtc_partners[partner_address] = _RTCPartner(
                 partner_address,
                 self.node_address,
-                self._handle_message_callback,
+                self._handle_message,
                 self._handle_candidates_callback,
                 self._close_connection_callback,
             )
