@@ -16,6 +16,7 @@ from raiden.constants import (
     ICEConnectionState,
     MatrixMessageType,
     RTCChannelState,
+    RTCMessageType,
     RTCSignallingState,
     SDPTypes,
 )
@@ -371,14 +372,12 @@ class WebRTCManager(_CoroutineHandler):
         node_address: Address,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
         signaling_send: Callable[[Address, str, MatrixMessageType], None],
-        _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
         _close_connection_callback: Callable[[Address], None],
     ) -> None:
         super().__init__()
         self.node_address = node_address
         self._process_messages = process_messages
         self._signaling_send = signaling_send
-        self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
         self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
 
@@ -392,6 +391,17 @@ class WebRTCManager(_CoroutineHandler):
                 )
             )
         self._process_messages(messages)
+
+    def _handle_candidates_callback(
+        self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
+    ) -> None:
+        rtc_partner = self.get_rtc_partner(partner_address)
+        message = {
+            "type": RTCMessageType.CANDIDATES.value,
+            "candidates": candidates,
+            "call_id": rtc_partner.call_id,
+        }
+        self._signaling_send(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
 
     def _handle_sdp_callback(
         self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
