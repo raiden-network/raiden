@@ -12,7 +12,6 @@ from uuid import uuid4
 
 import gevent
 import structlog
-from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.queue import JoinableQueue
@@ -501,7 +500,7 @@ class MatrixTransport(Runnable):
         self._web_rtc_manager = WebRTCManager(
             raiden_service.address,
             self._process_raiden_messages,
-            _handle_sdp_callback=self._handle_sdp_callback,
+            self._send_raw,
             _handle_candidates_callback=self._handle_candidates_callback,
             _close_connection_callback=self._handle_closed_connection,
         )
@@ -1113,6 +1112,8 @@ class MatrixTransport(Runnable):
         receiver_metadata: AddressMetadata = None,
     ) -> None:
         assert self._raiden_service is not None, "_raiden_service not set"
+        if self._stop_event.ready():
+            return
 
         self.health_check_web_rtc(receiver_address)
 
@@ -1238,43 +1239,6 @@ class MatrixTransport(Runnable):
             }
             self._send_raw(partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE)
             self._web_rtc_manager.close_connection(partner_address)
-
-    def _handle_sdp_callback(
-        self,
-        rtc_session_description: Optional[RTCSessionDescription],
-        partner_address: Address,
-    ) -> None:
-        """
-        This is a callback function to process sdp (session description protocol) messages.
-        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
-        signalling. Messages are exchanged via the partners' private matrix room.
-        Args:
-            rtc_session_description: sdp message for the partner
-            partner_address: Address of the partner
-        """
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        if self._stop_event.ready():
-            return
-
-        if rtc_session_description is None:
-            return
-
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-
-        sdp_type = rtc_session_description.type
-        message = {
-            "type": sdp_type,
-            "sdp": rtc_session_description.sdp,
-            "call_id": rtc_partner.call_id,
-        }
-        self.log.debug(
-            f"Send {sdp_type} to partner",
-            partner_address=to_checksum_address(partner_address),
-            sdp_description=message,
-        )
-
-        self._send_raw(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
 
     def _handle_candidates_callback(
         self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address

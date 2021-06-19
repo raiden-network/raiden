@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from asyncio import CancelledError, Event as AIOEvent, Task
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ from raiden.constants import (
     SDP_MID_DEFAULT,
     SDP_MLINE_INDEX_DEFAULT,
     ICEConnectionState,
+    MatrixMessageType,
     RTCChannelState,
     RTCSignallingState,
     SDPTypes,
@@ -368,14 +370,14 @@ class WebRTCManager(_CoroutineHandler):
         self,
         node_address: Address,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
-        _handle_sdp_callback: Callable[[Optional[RTCSessionDescription], Address], None],
+        signaling_send: Callable[[Address, str, MatrixMessageType], None],
         _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
         _close_connection_callback: Callable[[Address], None],
     ) -> None:
         super().__init__()
         self.node_address = node_address
         self._process_messages = process_messages
-        self._handle_sdp_callback = _handle_sdp_callback
+        self._signaling_send = signaling_send
         self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
         self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
@@ -390,6 +392,37 @@ class WebRTCManager(_CoroutineHandler):
                 )
             )
         self._process_messages(messages)
+
+    def _handle_sdp_callback(
+        self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
+    ) -> None:
+        """
+        This is a callback function to process sdp (session description protocol) messages.
+        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
+        signalling. Messages are exchanged via the partners' private matrix room.
+        Args:
+            rtc_session_description: sdp message for the partner
+            partner_address: Address of the partner
+        """
+        if rtc_session_description is None:
+            return
+
+        rtc_partner = self.get_rtc_partner(partner_address)
+
+        sdp_type = rtc_session_description.type
+        message = {
+            "type": sdp_type,
+            "sdp": rtc_session_description.sdp,
+            "call_id": rtc_partner.call_id,
+        }
+        log.debug(
+            f"Send {sdp_type} to partner",
+            node_address=to_checksum_address(self.node_address),
+            partner_address=to_checksum_address(partner_address),
+            sdp_description=message,
+        )
+
+        self._signaling_send(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
 
     def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
         if partner_address not in self.address_to_rtc_partners:

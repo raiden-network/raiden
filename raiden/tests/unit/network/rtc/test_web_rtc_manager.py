@@ -1,24 +1,24 @@
+from typing import Any
 import pytest
 
 from raiden.constants import ICEConnectionState
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.tests.utils.factories import make_signer
-from raiden.tests.utils.transport import (
-    ignore_candidates,
-    ignore_close,
-    ignore_sdp,
-    ignore_web_rtc_messages,
-)
+from raiden.tests.utils.transport import ignore_candidates, ignore_close, ignore_web_rtc_messages
 
 pytestmark = pytest.mark.asyncio
+
+
+def _dummy_send(*_args: Any) -> None:
+    pass
 
 
 def test_rtc_partner_close() -> None:
     node_address = make_signer().address
 
     web_rtc_manager = WebRTCManager(
-        node_address, ignore_web_rtc_messages, ignore_sdp, ignore_candidates, ignore_close
+        node_address, ignore_web_rtc_messages, _dummy_send, ignore_candidates, ignore_close
     )
 
     partner_address = make_signer().address
