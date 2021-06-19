@@ -15,13 +15,12 @@ pytestmark = pytest.mark.asyncio
 
 
 def test_rtc_partner_close() -> None:
+    node_address = make_signer().address
 
     web_rtc_manager = WebRTCManager(
-        None, ignore_web_rtc_messages, ignore_sdp, ignore_candidates, ignore_close
+        node_address, ignore_web_rtc_messages, ignore_sdp, ignore_candidates, ignore_close
     )
 
-    node_address = make_signer().address
-    web_rtc_manager.node_address = node_address
     partner_address = make_signer().address
     rtc_partner = web_rtc_manager.get_rtc_partner(partner_address)
     peer_connection_first = rtc_partner.peer_connection
