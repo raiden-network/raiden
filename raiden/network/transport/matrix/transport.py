@@ -111,7 +111,7 @@ class MessagesQueue:
     messages: List[Tuple[Message, Optional[AddressMetadata]]]
 
 
-def metadata_key_func(message_data: "_RetryQueue._MessageData") -> str:
+def _metadata_key_func(message_data: "_RetryQueue._MessageData") -> str:
     address_metadata = message_data.address_metadata
     if address_metadata is None:
         return ""
@@ -261,8 +261,8 @@ class _RetryQueue(Runnable):
             )
 
         # batch by user_id, so that we can potentially combine data for send-to-device calls
-        queue_by_user_id = sorted(self._message_queue[:], key=metadata_key_func)
-        for user_id, batch in itertools.groupby(queue_by_user_id, metadata_key_func):
+        queue_by_user_id = sorted(self._message_queue[:], key=_metadata_key_func)
+        for user_id, batch in itertools.groupby(queue_by_user_id, _metadata_key_func):
             message_data_batch = list(batch)
             if user_id == "":
                 address_metadata = None
