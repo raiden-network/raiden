@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from json import JSONDecodeError
 from random import randint
-from typing import TYPE_CHECKING, Counter as CounterType, Union
+from typing import TYPE_CHECKING, Counter as CounterType
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -501,7 +501,6 @@ class MatrixTransport(Runnable):
             raiden_service.address,
             self._process_raiden_messages,
             self._send_raw,
-            _handle_candidates_callback=self._handle_candidates_callback,
             _close_connection_callback=self._handle_closed_connection,
         )
 
@@ -1239,23 +1238,6 @@ class MatrixTransport(Runnable):
             }
             self._send_raw(partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE)
             self._web_rtc_manager.close_connection(partner_address)
-
-    def _handle_candidates_callback(
-        self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
-    ) -> None:
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        if self._stop_event.ready():
-            return
-
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        message = {
-            "type": RTCMessageType.CANDIDATES.value,
-            "candidates": candidates,
-            "call_id": rtc_partner.call_id,
-        }
-        self._send_raw(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
 
     def _handle_closed_connection(self, partner_address: Address) -> None:
 
