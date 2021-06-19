@@ -1,5 +1,6 @@
 import itertools
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
 from itertools import repeat
@@ -24,11 +25,12 @@ from requests.adapters import HTTPAdapter
 
 from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
+from raiden.messages.abstract import Message
 from raiden.network.transport.matrix.sync_progress import SyncProgress
 from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.notifying_queue import NotifyingQueue
-from raiden.utils.typing import AddressHex
+from raiden.utils.typing import Address, AddressHex, AddressMetadata
 
 log = structlog.get_logger(__name__)
 
@@ -39,6 +41,22 @@ MatrixMessage = Dict[str, Any]
 MatrixRoomMessages = Tuple[Optional["Room"], List[MatrixMessage]]
 MatrixSyncMessages = List[MatrixRoomMessages]
 JSONResponse = Dict[str, Any]
+
+
+@dataclass
+class _ReceivedMessageBase:
+    sender: Address
+
+
+@dataclass
+class ReceivedRaidenMessage(_ReceivedMessageBase):
+    message: Message
+    sender_metadata: Optional[AddressMetadata] = None
+
+
+@dataclass
+class ReceivedCallMessage(_ReceivedMessageBase):
+    message: MatrixMessage
 
 
 def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:

@@ -38,6 +38,8 @@ from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixMessage,
     MatrixSyncMessages,
+    ReceivedCallMessage,
+    ReceivedRaidenMessage,
     Room,
 )
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
@@ -361,22 +363,6 @@ class _RetryQueue(Runnable):
         return f"<{self.__class__.__name__} for {to_normalized_address(self.receiver)}>"
 
 
-@dataclass
-class _ReceivedMessageBase:
-    sender: Address
-
-
-@dataclass
-class ReceivedRaidenMessage(_ReceivedMessageBase):
-    message: Message
-    sender_metadata: Optional[AddressMetadata] = None
-
-
-@dataclass
-class ReceivedCallMessage(_ReceivedMessageBase):
-    message: MatrixMessage
-
-
 class MatrixTransport(Runnable):
     log = log
 
@@ -513,8 +499,8 @@ class MatrixTransport(Runnable):
         self._starting = True
         self._raiden_service = raiden_service
         self._web_rtc_manager = WebRTCManager(
-            node_address=raiden_service.address,
-            _handle_message_callback=self._handle_web_rtc_messages,
+            raiden_service.address,
+            self._process_raiden_messages,
             _handle_sdp_callback=self._handle_sdp_callback,
             _handle_candidates_callback=self._handle_candidates_callback,
             _close_connection_callback=self._handle_closed_connection,
@@ -970,6 +956,8 @@ class MatrixTransport(Runnable):
 
     def _process_raiden_messages(self, all_messages: List[ReceivedRaidenMessage]) -> None:
         assert self._raiden_service is not None, "_process_messages must be called after start"
+        if self._stop_event.is_set():
+            return
 
         incoming_messages: List[Message] = list()
         # Remove this #3254
@@ -1016,18 +1004,6 @@ class MatrixTransport(Runnable):
         self._process_raiden_messages(raiden_messages)
         self._process_call_messages(call_messages)
         return len(raiden_messages) > 0 or len(call_messages) > 0
-
-    def _handle_web_rtc_messages(self, message_data: str, partner_address: Address) -> None:
-        if not self._stop_event.is_set():
-            messages: List[ReceivedRaidenMessage] = list()
-            for msg in validate_and_parse_message(message_data, partner_address):
-                messages.append(
-                    ReceivedRaidenMessage(
-                        message=msg,
-                        sender=partner_address,
-                    )
-                )
-            self._process_raiden_messages(messages)
 
     def _process_call_messages(self, call_messages: List[ReceivedCallMessage]) -> None:
         """

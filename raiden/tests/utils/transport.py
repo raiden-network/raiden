@@ -25,7 +25,11 @@ from synapse.handlers.auth import AuthHandler
 
 from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
-from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
+from raiden.network.transport.matrix.client import (
+    GMatrixClient,
+    MatrixSyncMessages,
+    ReceivedRaidenMessage,
+)
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
@@ -74,7 +78,7 @@ def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
     return True
 
 
-def ignore_web_rtc_messages(_message_data: str, _partner_address: Address):
+def ignore_web_rtc_messages(_messages: List[ReceivedRaidenMessage]) -> None:
     pass
 
 
