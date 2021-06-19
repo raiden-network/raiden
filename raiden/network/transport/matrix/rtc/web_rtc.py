@@ -365,7 +365,7 @@ class _RTCPartner(_CoroutineHandler):
 class WebRTCManager(_CoroutineHandler):
     def __init__(
         self,
-        node_address: Optional[Address],
+        node_address: Address,
         _handle_message_callback: Callable[[str, Address], None],
         _handle_sdp_callback: Callable[[Optional[RTCSessionDescription], Address], None],
         _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
@@ -380,7 +380,6 @@ class WebRTCManager(_CoroutineHandler):
         self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
 
     def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
-        assert self.node_address, "Transport is not started yet but tried to initialize signalling"
         if partner_address not in self.address_to_rtc_partners:
 
             self.address_to_rtc_partners[partner_address] = _RTCPartner(
@@ -407,7 +406,6 @@ class WebRTCManager(_CoroutineHandler):
         self.address_to_rtc_partners = {}
 
     def initialize_signalling_for_address(self, partner_address: Address) -> None:
-        assert self.node_address, "Transport is not started yet but tried to initialize signalling"
         rtc_partner = self.get_rtc_partner(partner_address)
         self.schedule_task(
             coroutine=rtc_partner.initialize_signalling(),
@@ -418,14 +416,12 @@ class WebRTCManager(_CoroutineHandler):
     def set_candidates_for_address(
         self, partner_address: Address, content: Dict[str, Any]
     ) -> None:
-        assert self.node_address, "Transport is not started yet but tried to set candidates"
         rtc_partner = self.get_rtc_partner(partner_address)
         self.schedule_task(rtc_partner.set_candidates(content))
 
     def process_signalling_for_address(
         self, partner_address: Address, description: Dict[str, str]
     ) -> None:
-        assert self.node_address, "Transport is not started yet but tried to set candidates"
         rtc_partner = self.get_rtc_partner(partner_address)
 
         self.schedule_task(
@@ -435,14 +431,10 @@ class WebRTCManager(_CoroutineHandler):
         )
 
     def send_message_for_address(self, partner_address: Address, message: str) -> None:
-        assert self.node_address, "Transport is not started yet but tried to send message"
         rtc_partner = self.address_to_rtc_partners[partner_address]
         self.schedule_task(rtc_partner.send_message(message))
 
     def close_connection(self, partner_address: Address) -> Optional[Task]:
-        msg = "Transport not yet started but tried to close connection"
-        assert self.node_address, msg
-
         rtc_partner = self.address_to_rtc_partners.get(partner_address, None)
 
         if rtc_partner is not None:
@@ -452,9 +444,6 @@ class WebRTCManager(_CoroutineHandler):
         return None
 
     def stop(self) -> None:
-        msg = "Transport not yet started but tried to stop web rtc manager"
-        assert self.node_address, msg
-
         log.debug("Closing rtc connections", node=to_checksum_address(self.node_address))
 
         for partner_address in list(self.address_to_rtc_partners.keys()):

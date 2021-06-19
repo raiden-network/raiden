@@ -418,15 +418,6 @@ class MatrixTransport(Runnable):
             user_agent=f"Raiden {version}",
         )
 
-        # web RTC
-        self._web_rtc_manager = WebRTCManager(
-            node_address=None,
-            _handle_message_callback=self._handle_web_rtc_messages,
-            _handle_sdp_callback=self._handle_sdp_callback,
-            _handle_candidates_callback=self._handle_candidates_callback,
-            _close_connection_callback=self._handle_closed_connection,
-        )
-
         self.server_url = self._client.api.base_url
         self._server_name = urlparse(self.server_url).netloc
         # FIXME this will not update the servers while Raiden is running,
@@ -521,7 +512,13 @@ class MatrixTransport(Runnable):
         self._stop_event.clear()
         self._starting = True
         self._raiden_service = raiden_service
-        self._web_rtc_manager.node_address = self._raiden_service.address
+        self._web_rtc_manager = WebRTCManager(
+            node_address=raiden_service.address,
+            _handle_message_callback=self._handle_web_rtc_messages,
+            _handle_sdp_callback=self._handle_sdp_callback,
+            _handle_candidates_callback=self._handle_candidates_callback,
+            _close_connection_callback=self._handle_closed_connection,
+        )
 
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
@@ -573,7 +570,7 @@ class MatrixTransport(Runnable):
             self.health_check_web_rtc(neighbour)
 
     def health_check_web_rtc(self, partner: Address) -> None:
-        if not self._web_rtc_manager.has_ready_channel(partner):
+        if self._started and not self._web_rtc_manager.has_ready_channel(partner):
             # TODO: initialize WebRTC for the partner address
             pass
 
