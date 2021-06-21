@@ -15,7 +15,7 @@ import structlog
 from eth_utils import encode_hex, is_binary_address, to_normalized_address
 from gevent.event import Event
 from gevent.queue import JoinableQueue
-from matrix_client.errors import MatrixError, MatrixHttpLibError
+from matrix_client.errors import MatrixHttpLibError
 from web3.types import BlockIdentifier
 
 from raiden.constants import (
@@ -41,7 +41,6 @@ from raiden.network.transport.matrix.client import (
 )
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.utils import (
-    JOIN_RETRIES,
     DisplayNameCache,
     MessageAckTimingKeeper,
     UserPresence,
@@ -82,7 +81,6 @@ from raiden.utils.typing import (
     MessageID,
     NamedTuple,
     Optional,
-    RoomID,
     Set,
     Tuple,
     UserID,
@@ -94,9 +92,6 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
-# Combined with 10 retries (``..utils.JOIN_RETRIES``) this will give a total wait time of ~15s
-RETRY_INTERVAL = 0.1
-RETRY_INTERVAL_MULTIPLIER = 1.55
 # A RetryQueue is considered idle after this many iterations without a message
 RETRY_QUEUE_IDLE_AFTER = 10
 
@@ -425,8 +420,6 @@ class MatrixTransport(Runnable):
 
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages: bool = True
-
-        self._client.add_invite_listener(self._reject_invite)
 
         self._counters: Dict[str, CounterType[Tuple[str, MessageID]]] = {}
         self._message_timing_keeper: Optional[MessageAckTimingKeeper] = None
@@ -829,38 +822,6 @@ class MatrixTransport(Runnable):
         self._client.message_worker.link_value(on_success)
         self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
-    def _reject_invite(self, room_id: RoomID, state: dict) -> None:
-        """Handle an invite request.
-
-        We no longer use peer to peer rooms for communication.
-        Reject all incoming invites.
-        """
-        if self._stop_event.ready():
-            return
-
-        invite_events = [
-            event
-            for event in state["events"]
-            if event["type"] == "m.room.member"
-            and event["content"].get("membership") == "invite"
-            and event["state_key"] == self._user_id
-        ]
-
-        if not invite_events or not invite_events[0]:
-            # Invalid invite, ignore
-            return
-
-        sender = invite_events[0]["sender"]
-
-        self.log.debug("Rejecting invite", room_id=room_id, sender=sender)
-
-        self._retry_api_call(
-            self._client.api.send_state_event,
-            room_id=room_id,
-            event_type="m.room.member",
-            content={"membership": "leave"},
-        )
-
     def _validate_matrix_messages(
         self, room: Optional[Room], messages: List[MatrixMessage]
     ) -> Tuple[List[ReceivedRaidenMessage], List[ReceivedCallMessage]]:
@@ -1118,47 +1079,6 @@ class MatrixTransport(Runnable):
                 data=data,
             )
             return
-
-    def _retry_api_call(
-        self,
-        method_with_api_request: Callable,
-        verify_response: Callable[[Any], bool] = lambda x: True,
-        retries: int = JOIN_RETRIES,
-        retry_interval: float = RETRY_INTERVAL,
-        retry_interval_multiplier: float = RETRY_INTERVAL_MULTIPLIER,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Any:
-        """
-        This method wraps around api calls to add a retry mechanism
-        in case of failure or unsatisfying response
-
-        Args:
-            method_with_api_request: wrapped api call
-            verify_response: verify response or try again
-            retries: number of retries
-            retry_interval: retry interval
-            retry_interval_multiplier: multiplier to prolong the waiting interval
-            *args: will be passed to method_with_api_request
-            **kwargs: will be passed to method_with_api_request
-        """
-        return_value = None
-        last_ex = None
-        for _ in range(retries):
-            try:
-                return_value = method_with_api_request(*args, **kwargs)
-                if verify_response(return_value):
-                    return return_value
-            except MatrixError as e:
-                last_ex = e
-            finally:
-                if self._stop_event.wait(retry_interval):
-                    return return_value  # noqa: B012
-                retry_interval = retry_interval * retry_interval_multiplier
-
-        if last_ex is None:
-            return return_value
-        raise last_ex
 
 
 def populate_services_addresses(
