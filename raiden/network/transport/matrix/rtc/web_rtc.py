@@ -384,7 +384,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._stop_event = stop_event
         # the addresses for which we're currently trying to initialize WebRTC channels
         self._web_rtc_channel_inits: Set[Address] = set()
-        self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
+        self._address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
         self.log = log.bind(node=to_checksum_address(node_address))
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
@@ -523,9 +523,9 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._maybe_initialize_web_rtc(partner_address)
 
     def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
-        if partner_address not in self.address_to_rtc_partners:
+        if partner_address not in self._address_to_rtc_partners:
 
-            self.address_to_rtc_partners[partner_address] = _RTCPartner(
+            self._address_to_rtc_partners[partner_address] = _RTCPartner(
                 partner_address,
                 self.node_address,
                 self._handle_message,
@@ -533,12 +533,12 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 self._handle_closed_connection,
             )
 
-        return self.address_to_rtc_partners[partner_address]
+        return self._address_to_rtc_partners[partner_address]
 
     def has_ready_channel(self, partner_address: Address) -> bool:
-        if partner_address not in self.address_to_rtc_partners:
+        if partner_address not in self._address_to_rtc_partners:
             return False
-        channel = self.address_to_rtc_partners[partner_address].channel
+        channel = self._address_to_rtc_partners[partner_address].channel
         if channel is None:
             return False
         if channel.readyState == RTCChannelState.OPEN.value:
@@ -546,7 +546,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         return False
 
     def _reset_state(self) -> None:
-        self.address_to_rtc_partners = {}
+        self._address_to_rtc_partners = {}
 
     def initialize_signalling_for_address(self, partner_address: Address) -> None:
         rtc_partner = self.get_rtc_partner(partner_address)
@@ -574,11 +574,11 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         )
 
     def send_message_for_address(self, partner_address: Address, message: str) -> None:
-        rtc_partner = self.address_to_rtc_partners[partner_address]
+        rtc_partner = self._address_to_rtc_partners[partner_address]
         self.schedule_task(rtc_partner.send_message(message))
 
     def close_connection(self, partner_address: Address) -> Optional[Task]:
-        rtc_partner = self.address_to_rtc_partners.get(partner_address, None)
+        rtc_partner = self._address_to_rtc_partners.get(partner_address, None)
 
         if rtc_partner is not None:
             rtc_partner.sync_events.clear_all()
@@ -589,9 +589,9 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def stop(self) -> None:
         self.log.debug("Closing rtc connections")
 
-        for partner_address in list(self.address_to_rtc_partners.keys()):
-            if partner_address in self.address_to_rtc_partners:
-                rtc_partner = self.address_to_rtc_partners[partner_address]
+        for partner_address in list(self._address_to_rtc_partners.keys()):
+            if partner_address in self._address_to_rtc_partners:
+                rtc_partner = self._address_to_rtc_partners[partner_address]
                 close_task = self.close_connection(partner_address)
                 rtc_partner.join_all_coroutines()
                 if close_task is not None:
@@ -602,7 +602,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._send_hangup_messages()
 
     def _send_hangup_messages(self) -> None:
-        for partner_address, rtc_partner in self.address_to_rtc_partners.items():
+        for partner_address, rtc_partner in self._address_to_rtc_partners.items():
             hang_up_message = {
                 "type": RTCMessageType.HANGUP.value,
                 "call_id": rtc_partner.call_id,
