@@ -427,8 +427,6 @@ class MatrixTransport(Runnable):
         self._broadcast_event = Event()
         self._prioritize_broadcast_messages: bool = True
 
-        self._invite_queue: List[Tuple[RoomID, dict]] = []
-
         self._client.add_invite_listener(self._reject_invite)
 
         self._counters: Dict[str, CounterType[Tuple[str, MessageID]]] = {}
