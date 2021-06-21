@@ -5,6 +5,7 @@ from asyncio import CancelledError, Event as AIOEvent, Task
 from dataclasses import dataclass, field
 from functools import partial
 
+import gevent
 import structlog
 from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
@@ -13,6 +14,7 @@ from gevent.event import Event as GEvent
 from raiden.constants import (
     SDP_MID_DEFAULT,
     SDP_MLINE_INDEX_DEFAULT,
+    WEB_RTC_CHANNEL_TIMEOUT,
     ICEConnectionState,
     MatrixMessageType,
     RTCChannelState,
@@ -25,7 +27,8 @@ from raiden.network.transport.matrix.rtc.aiogevent import yield_aio_event, yield
 from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
 from raiden.network.transport.matrix.utils import my_place_or_yours, validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Union
+from raiden.utils.runnable import Runnable
+from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
 
 log = structlog.get_logger(__name__)
 
@@ -366,20 +369,23 @@ class _RTCPartner(_CoroutineHandler):
 
 
 @dataclass
-class WebRTCManager(_CoroutineHandler):
+class WebRTCManager(_CoroutineHandler, Runnable):
     def __init__(
         self,
         node_address: Address,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
         signaling_send: Callable[[Address, str, MatrixMessageType], None],
-        _close_connection_callback: Callable[[Address], None],
+        stop_event: GEvent,
     ) -> None:
         super().__init__()
         self.node_address = node_address
         self._process_messages = process_messages
         self._signaling_send = signaling_send
-        self._close_connection_callback = _close_connection_callback
+        self._stop_event = stop_event
+        # the addresses for which we're currently trying to initialize WebRTC channels
+        self._web_rtc_channel_inits: Set[Address] = set()
         self.address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
+        self.log = log.bind(node=to_checksum_address(node_address))
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
         messages: List[ReceivedRaidenMessage] = []
@@ -425,14 +431,96 @@ class WebRTCManager(_CoroutineHandler):
             "sdp": rtc_session_description.sdp,
             "call_id": rtc_partner.call_id,
         }
-        log.debug(
+        self.log.debug(
             f"Send {sdp_type} to partner",
-            node_address=to_checksum_address(self.node_address),
             partner_address=to_checksum_address(partner_address),
             sdp_description=message,
         )
 
         self._signaling_send(partner_address, json.dumps(message), MatrixMessageType.NOTICE)
+
+    def _maybe_initialize_web_rtc(self, address: Address) -> None:
+        if address in self._web_rtc_channel_inits:
+            return
+
+        self.get_rtc_partner(address).sync_events.aio_allow_init.set()
+        lower_address = my_place_or_yours(self.node_address, address)
+
+        if lower_address == self.node_address:
+            self.log.debug(
+                "Spawning initialize web rtc for partner",
+                partner_address=to_checksum_address(address),
+            )
+            # initiate web rtc handling
+            # XXX!!!:
+            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
+
+    def _wrapped_initialize_web_rtc(self, address: Address) -> None:
+        self._web_rtc_channel_inits.add(address)
+        try:
+            return self._initialize_web_rtc(address)
+        finally:
+            self._web_rtc_channel_inits.remove(address)
+
+    def _initialize_web_rtc(self, partner_address: Address) -> None:
+        rtc_partner = self.get_rtc_partner(partner_address)
+        # XXX-UAM: extract partner caps from metadata here
+        # XXX allow for Web-RTC again
+        is_to_device = False
+
+        if not is_to_device:
+            self.log.warning(
+                "Can't open WebRTC channel to peer not supporting ToDevice.", peer=partner_address
+            )
+            return
+
+        self.log.debug(
+            "Waiting for partner reachable to create rtc channel",
+            partner_address=to_checksum_address(partner_address),
+        )
+        rtc_partner.sync_events.aio_allow_init.clear()
+        # this can be ignored here since the underlying awaitables are only events
+        gevent.wait(  # pylint: disable=gevent-disable-wait
+            {rtc_partner.sync_events.g_allow_init, self._stop_event},
+            count=1,
+        )
+
+        if self._stop_event.is_set():
+            return
+
+        self.log.debug(
+            "Initiating web rtc",
+            partner_address=to_checksum_address(partner_address),
+        )
+        self.initialize_signalling_for_address(partner_address)
+
+        # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
+        if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
+            return
+
+        # if room is not None that means we are at least in the second iteration
+        # call hang up to sync with the partner about a retry
+        if not self.has_ready_channel(partner_address):
+            self.log.debug(
+                "Could not establish channel",
+                partner_address=to_checksum_address(partner_address),
+            )
+            hang_up_message = {
+                "type": RTCMessageType.HANGUP.value,
+                "call_id": self.get_rtc_partner(partner_address).call_id,
+            }
+            self._signaling_send(
+                partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE
+            )
+            self.close_connection(partner_address)
+
+    def _handle_closed_connection(self, partner_address: Address) -> None:
+        # XXX-UAM: Reachability check was here
+
+        # FIXME: temporary sleep to stretch two signaling processes a bit
+        #        with a unique call id for each try this wont be necessary
+        gevent.sleep(3)
+        self._maybe_initialize_web_rtc(partner_address)
 
     def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
         if partner_address not in self.address_to_rtc_partners:
@@ -442,7 +530,7 @@ class WebRTCManager(_CoroutineHandler):
                 self.node_address,
                 self._handle_message,
                 self._handle_candidates_callback,
-                self._close_connection_callback,
+                self._handle_closed_connection,
             )
 
         return self.address_to_rtc_partners[partner_address]
@@ -499,7 +587,7 @@ class WebRTCManager(_CoroutineHandler):
         return None
 
     def stop(self) -> None:
-        log.debug("Closing rtc connections", node=to_checksum_address(self.node_address))
+        self.log.debug("Closing rtc connections")
 
         for partner_address in list(self.address_to_rtc_partners.keys()):
             if partner_address in self.address_to_rtc_partners:

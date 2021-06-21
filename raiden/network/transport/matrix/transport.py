@@ -21,7 +21,6 @@ from web3.types import BlockIdentifier
 from raiden.constants import (
     EMPTY_SIGNATURE,
     MATRIX_AUTO_SELECT_SERVER,
-    WEB_RTC_CHANNEL_TIMEOUT,
     CommunicationMedium,
     DeviceIDs,
     Environment,
@@ -54,7 +53,6 @@ from raiden.network.transport.matrix.utils import (
     make_client,
     make_message_batches,
     make_user_id,
-    my_place_or_yours,
     validate_and_parse_message,
     validate_userid_signature,
 )
@@ -371,8 +369,6 @@ class MatrixTransport(Runnable):
         self._config = config
         self._environment = environment
         self._raiden_service: Optional["RaidenService"] = None
-        # the addresses for which we're currently trying to initialize WebRTC channels
-        self._web_rtc_channel_inits: Set[Address] = set()
 
         if config.server == MATRIX_AUTO_SELECT_SERVER:
             homeserver_candidates = config.available_servers
@@ -498,10 +494,7 @@ class MatrixTransport(Runnable):
         self._starting = True
         self._raiden_service = raiden_service
         self._web_rtc_manager = WebRTCManager(
-            raiden_service.address,
-            self._process_raiden_messages,
-            self._send_raw,
-            _close_connection_callback=self._handle_closed_connection,
+            raiden_service.address, self._process_raiden_messages, self._send_raw, self._stop_event
         )
 
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
@@ -1157,99 +1150,6 @@ class MatrixTransport(Runnable):
                 data=data,
             )
             return
-
-    def _maybe_initialize_web_rtc(self, address: Address) -> None:
-        if self._stop_event.ready() or address in self._web_rtc_channel_inits:
-            return
-
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        self._web_rtc_manager.get_rtc_partner(address).sync_events.aio_allow_init.set()
-        lower_address = my_place_or_yours(self._raiden_service.address, address)
-
-        if lower_address == self._raiden_service.address:
-            self.log.debug(
-                "Spawning initialize web rtc for partner",
-                partner_address=to_checksum_address(address),
-            )
-            # initiate web rtc handling
-            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
-
-    def _wrapped_initialize_web_rtc(self, address: Address) -> None:
-        self._web_rtc_channel_inits.add(address)
-        try:
-            return self._initialize_web_rtc(address)
-        finally:
-            self._web_rtc_channel_inits.remove(address)
-
-    def _initialize_web_rtc(self, partner_address: Address) -> None:
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        rtc_partner = self._web_rtc_manager.get_rtc_partner(partner_address)
-        # XXX-UAM: extract partner caps from metadata here
-        # XXX allow for Web-RTC again
-        is_to_device = False
-
-        if not is_to_device:
-            self.log.warning(
-                "Can't open WebRTC channel to peer not supporting ToDevice.", peer=partner_address
-            )
-            return
-
-        # we need to wait for an online partner
-        while not self._started:
-
-            self.log.debug(
-                "Waiting for partner reachable to create rtc channel",
-                partner_address=to_checksum_address(partner_address),
-                transport_started=self._started,
-            )
-            rtc_partner.sync_events.aio_allow_init.clear()
-            # this can be ignored here since the underlying awaitables are only events
-            gevent.wait(  # pylint: disable=gevent-disable-wait
-                {rtc_partner.sync_events.g_allow_init, self._stop_event},
-                count=1,
-            )
-
-            if self._stop_event.is_set():
-                return
-
-        self.log.debug(
-            "Initiating web rtc",
-            partner_address=to_checksum_address(partner_address),
-        )
-        self._web_rtc_manager.initialize_signalling_for_address(partner_address)
-
-        # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
-        if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
-            return
-
-        # if room is not None that means we are at least in the second iteration
-        # call hang up to sync with the partner about a retry
-        if not self._web_rtc_manager.has_ready_channel(partner_address):
-            self.log.debug(
-                "Could not establish channel",
-                node=self.checksummed_address,
-                partner_address=to_checksum_address(partner_address),
-            )
-            hang_up_message = {
-                "type": RTCMessageType.HANGUP.value,
-                "call_id": self._web_rtc_manager.get_rtc_partner(partner_address).call_id,
-            }
-            self._send_raw(partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE)
-            self._web_rtc_manager.close_connection(partner_address)
-
-    def _handle_closed_connection(self, partner_address: Address) -> None:
-
-        if self._stop_event.is_set():
-            return
-
-        # XXX-UAM: Reachability check was here
-
-        # FIXME: temporary sleep to stretch two signaling processes a bit
-        #        with a unique call id for each try this wont be necessary
-        gevent.sleep(3)
-        self._maybe_initialize_web_rtc(partner_address)
 
     def retry_api_call(
         self,
