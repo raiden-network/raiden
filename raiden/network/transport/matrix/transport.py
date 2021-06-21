@@ -419,7 +419,6 @@ class MatrixTransport(Runnable):
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._started = False
-        self._starting = False
 
         self._stop_event: Event = Event()
         self._stop_event.set()
@@ -488,7 +487,6 @@ class MatrixTransport(Runnable):
             raise RuntimeError(f"{self!r} already started")
         self.log.debug("Matrix starting")
         self._stop_event.clear()
-        self._starting = True
         self._raiden_service = raiden_service
         self._web_rtc_manager = WebRTCManager(
             raiden_service.address, self._process_raiden_messages, self._send_raw, self._stop_event
@@ -532,7 +530,6 @@ class MatrixTransport(Runnable):
                 retrier.start()
 
         super().start()  # start greenlet
-        self._starting = False
         self._started = True
 
         self.log.debug("Matrix started", config=self._config)
