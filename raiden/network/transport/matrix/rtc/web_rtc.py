@@ -586,6 +586,25 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         return None
 
+    def process_signalling_message(
+        self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
+    ) -> None:
+        if (
+            rtc_message_type in [RTCMessageType.OFFER.value, RTCMessageType.ANSWER.value]
+            and "sdp" in content
+        ):
+            self.process_signalling_for_address(partner_address, content)
+        elif rtc_message_type == RTCMessageType.HANGUP.value:
+            self.close_connection(partner_address)
+        elif rtc_message_type == RTCMessageType.CANDIDATES.value:
+            self.set_candidates_for_address(partner_address, content)
+        else:
+            self.log.error(
+                "Unknown rtc message type",
+                partner_address=to_checksum_address(partner_address),
+                type=rtc_message_type,
+            )
+
     def stop(self) -> None:
         self.log.debug("Closing rtc connections")
 

@@ -25,7 +25,6 @@ from raiden.constants import (
     DeviceIDs,
     Environment,
     MatrixMessageType,
-    RTCMessageType,
 )
 from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
@@ -994,7 +993,6 @@ class MatrixTransport(Runnable):
         Args:
             call_messages: List of signalling messages
         """
-        assert self._raiden_service is not None, "_raiden_service not set"
 
         for received_message in call_messages:
             call_message = received_message.message
@@ -1002,36 +1000,22 @@ class MatrixTransport(Runnable):
             try:
                 content = json.loads(call_message["content"]["body"])
                 rtc_message_type = content["type"]
-                log.debug(
-                    "Received signaling message",
-                    partner_address=to_checksum_address(partner_address),
-                    type=rtc_message_type,
-                    content=content,
-                )
-                if (
-                    rtc_message_type in [RTCMessageType.OFFER.value, RTCMessageType.ANSWER.value]
-                    and "sdp" in content
-                ):
-                    self._web_rtc_manager.process_signalling_for_address(partner_address, content)
-
-                elif rtc_message_type == RTCMessageType.HANGUP.value:
-                    self._web_rtc_manager.close_connection(partner_address)
-
-                elif rtc_message_type == RTCMessageType.CANDIDATES.value:
-                    self._web_rtc_manager.set_candidates_for_address(partner_address, content)
-                else:
-                    self.log.debug(
-                        "Unknown rtc message type",
-                        partner_address=to_checksum_address(partner_address),
-                        type=rtc_message_type,
-                    )
             except (KeyError, JSONDecodeError):
                 self.log.warning(
                     "Malformed signaling message",
                     partner_address=partner_address,
                     content=call_message["content"]["body"],
                 )
-                continue
+            else:
+                self.log.debug(
+                    "Received signaling message",
+                    partner_address=to_checksum_address(partner_address),
+                    type=rtc_message_type,
+                    content=content,
+                )
+                self._web_rtc_manager.process_signalling_message(
+                    partner_address, rtc_message_type, content
+                )
 
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """Construct and return a _RetryQueue for receiver"""
