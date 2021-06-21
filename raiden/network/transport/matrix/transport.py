@@ -594,17 +594,6 @@ class MatrixTransport(Runnable):
 
         if self._raiden_service:
             self._web_rtc_manager.stop()
-            for (
-                partner_address,
-                rtc_partner,
-            ) in self._web_rtc_manager.address_to_rtc_partners.items():
-                hang_up_message = {
-                    "type": RTCMessageType.HANGUP.value,
-                    "call_id": rtc_partner.call_id,
-                }
-                self._send_raw(
-                    partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE
-                )
 
         for retrier in self._address_to_retrier.values():
             if retrier:

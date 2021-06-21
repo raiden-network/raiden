@@ -599,6 +599,17 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         self.join_all_coroutines()
         self._reset_state()
+        self._send_hangup_messages()
+
+    def _send_hangup_messages(self) -> None:
+        for partner_address, rtc_partner in self.address_to_rtc_partners.items():
+            hang_up_message = {
+                "type": RTCMessageType.HANGUP.value,
+                "call_id": rtc_partner.call_id,
+            }
+            self._signaling_send(
+                partner_address, json.dumps(hang_up_message), MatrixMessageType.NOTICE
+            )
 
 
 def _on_datachannel(
