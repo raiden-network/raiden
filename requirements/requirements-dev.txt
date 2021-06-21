@@ -282,7 +282,7 @@ ipython-genutils==0.2.0
     # via traitlets
 ipython==7.24.1
     # via -r requirements-dev.in
-isort==5.8.0
+isort==5.9.0
     # via
     #   -r requirements-dev.in
     #   pylint
