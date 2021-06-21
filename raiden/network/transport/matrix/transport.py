@@ -857,7 +857,7 @@ class MatrixTransport(Runnable):
 
         self.log.debug("Rejecting invite", room_id=room_id, sender=sender)
 
-        self.retry_api_call(
+        self._retry_api_call(
             self._client.api.send_state_event,
             room_id=room_id,
             event_type="m.room.member",
@@ -1122,7 +1122,7 @@ class MatrixTransport(Runnable):
             )
             return
 
-    def retry_api_call(
+    def _retry_api_call(
         self,
         method_with_api_request: Callable,
         verify_response: Callable[[Any], bool] = lambda x: True,
