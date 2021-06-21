@@ -492,7 +492,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             "Initiating web rtc",
             partner_address=to_checksum_address(partner_address),
         )
-        self.initialize_signalling_for_address(partner_address)
+        self._initialize_signalling_for_address(partner_address)
 
         # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
         if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
@@ -548,7 +548,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def _reset_state(self) -> None:
         self._address_to_rtc_partners = {}
 
-    def initialize_signalling_for_address(self, partner_address: Address) -> None:
+    def _initialize_signalling_for_address(self, partner_address: Address) -> None:
         rtc_partner = self.get_rtc_partner(partner_address)
         self.schedule_task(
             coroutine=rtc_partner.initialize_signalling(),
@@ -556,13 +556,13 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             partner_address=partner_address,
         )
 
-    def set_candidates_for_address(
+    def _set_candidates_for_address(
         self, partner_address: Address, content: Dict[str, Any]
     ) -> None:
         rtc_partner = self.get_rtc_partner(partner_address)
         self.schedule_task(rtc_partner.set_candidates(content))
 
-    def process_signalling_for_address(
+    def _process_signalling_for_address(
         self, partner_address: Address, description: Dict[str, str]
     ) -> None:
         rtc_partner = self.get_rtc_partner(partner_address)
@@ -593,11 +593,11 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             rtc_message_type in [RTCMessageType.OFFER.value, RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            self.process_signalling_for_address(partner_address, content)
+            self._process_signalling_for_address(partner_address, content)
         elif rtc_message_type == RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
         elif rtc_message_type == RTCMessageType.CANDIDATES.value:
-            self.set_candidates_for_address(partner_address, content)
+            self._set_candidates_for_address(partner_address, content)
         else:
             self.log.error(
                 "Unknown rtc message type",
