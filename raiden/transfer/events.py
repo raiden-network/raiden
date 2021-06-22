@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -18,7 +19,9 @@ from raiden.utils.typing import (
     Address,
     BlockExpiration,
     BlockTimeout,
+    Callable,
     ChannelID,
+    Dict,
     InitiatorAddress,
     List,
     Nonce,
@@ -434,3 +437,35 @@ class EventInvalidSecretRequest(Event):
     payment_identifier: PaymentID
     intended_amount: PaymentAmount
     actual_amount: PaymentAmount
+
+
+@dataclass(frozen=True)
+class RequestMetadata(Event):
+    dependant_events: List[SendMessageEvent]
+
+
+@dataclass
+class EventWrapper:
+    """
+    Some events have missing data and need to be encapsulated inside wrapping events that will
+    fetch this data before they can be processed.
+    """
+
+    events: List[Event]
+    _wrapping_map: Dict[object, Callable] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._wrapping_map: Dict[object, Callable] = defaultdict(lambda: lambda x: x)
+        self._wrapping_map.update({SendMessageEvent: self._wrap_send_message_event})
+
+    @staticmethod
+    def _wrap_send_message_event(event: SendMessageEvent) -> Event:
+        return RequestMetadata([event]) if not event.recipient_metadata else event
+
+    def wrap_events(self) -> List[Event]:
+        wrapped_events = []
+        for event in self.events:
+            t_event = type(event)
+            method = self._wrapping_map[t_event]
+            wrapped_events.append(method(event))
+        return wrapped_events

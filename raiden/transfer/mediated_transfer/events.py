@@ -41,11 +41,6 @@ class SendLockedTransfer(SendMessageEvent):
 
 
 @dataclass(frozen=True)
-class RequestMetadata(Event):
-    dependant_events: List[SendMessageEvent]
-
-
-@dataclass(frozen=True)
 class SendSecretReveal(SendMessageEvent):
     """Sends a SecretReveal to another node.
 
