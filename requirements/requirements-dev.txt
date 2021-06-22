@@ -617,11 +617,11 @@ types-jinja2==2.11.1
     # via types-flask
 types-markupsafe==1.1.1
     # via types-jinja2
-types-pkg_resources==0.1.3
+types-pkg-resources==0.1.3
     # via -r requirements-dev.in
 types-pyyaml==5.4.3
     # via -r requirements-dev.in
-types-requests==0.1.13
+types-requests==2.25.0
     # via -r requirements-dev.in
 types-toml==0.1.3
     # via -r requirements-dev.in
