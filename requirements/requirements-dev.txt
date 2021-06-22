@@ -395,7 +395,7 @@ pickleshare==0.7.5
     # via ipython
 pillow==8.2.0
     # via matrix-synapse
-pip-tools==6.1.0
+pip-tools==6.2.0
     # via -r requirements-dev.in
 pluggy==0.12.0
     # via pytest
@@ -669,6 +669,8 @@ werkzeug==2.0.1
     # via
     #   -r requirements.txt
     #   flask
+wheel==0.36.2
+    # via pip-tools
 wmctrl==0.3
     # via pdbpp
 wrapt==1.11.1
