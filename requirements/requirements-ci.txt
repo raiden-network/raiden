@@ -318,7 +318,7 @@ ipython-genutils==0.2.0
     #   traitlets
 ipython==7.24.1
     # via -r requirements-dev.txt
-isort==5.9.0
+isort==5.9.1
     # via
     #   -r requirements-dev.txt
     #   pylint
@@ -732,7 +732,7 @@ types-markupsafe==1.1.1
     # via
     #   -r requirements-dev.txt
     #   types-jinja2
-types-pkg_resources==0.1.3
+types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
 types-pyyaml==5.4.3
     # via -r requirements-dev.txt
