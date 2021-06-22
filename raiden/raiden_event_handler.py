@@ -12,10 +12,10 @@ from raiden.constants import (
     EMPTY_SIGNATURE,
     LOCKSROOT_OF_NO_LOCKS,
 )
-from raiden.exceptions import InsufficientEth, RaidenUnrecoverableError
+from raiden.exceptions import InsufficientEth, RaidenUnrecoverableError, ServiceRequestFailed
 from raiden.messages.abstract import Message
 from raiden.messages.encode import message_from_sendevent
-from raiden.network.pathfinding import post_pfs_feedback
+from raiden.network.pathfinding import post_pfs_feedback, query_address_metadata
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
@@ -48,6 +48,7 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
+    RequestMetadata,
     SendProcessed,
     SendWithdrawConfirmation,
     SendWithdrawExpired,
@@ -61,14 +62,13 @@ from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
-    RequestMetadata,
     SendLockedTransfer,
     SendLockExpired,
     SendSecretRequest,
     SendSecretReveal,
     SendUnlock,
 )
-from raiden.transfer.state import ChainState, NettingChannelEndState, fetch_address_metadata
+from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import (
     get_channelstate_by_canonical_identifier,
     get_channelstate_by_token_network_and_partner,
@@ -224,7 +224,16 @@ class RaidenEventHandler(EventHandler):
     ) -> None:
         new_events: List[Event] = []
         for wrapped_event in event.dependant_events:
-            metadata = fetch_address_metadata(wrapped_event.recipient)
+            metadata = {}
+            recipient = wrapped_event.recipient
+            if raiden.config.pfs_config is not None:
+                try:
+                    metadata = query_address_metadata(raiden.config.pfs_config, recipient)
+                except ServiceRequestFailed:
+                    log.error(
+                        f"Message {wrapped_event.message_identifier} will most likely not "
+                        f"be sent: address metadata could not be fetched"
+                    )
             new_event = SendMessageEvent(
                 recipient=wrapped_event.recipient,
                 recipient_metadata=metadata,

@@ -46,7 +46,6 @@ from raiden.exceptions import (
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.messages.encode import message_from_sendevent
-from raiden.network.pathfinding import PFSConfig
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -68,20 +67,20 @@ from raiden.transfer.architecture import (
     BalanceProofSignedState,
     ContractSendEvent,
     Event as RaidenEvent,
-    SendMessageEvent,
     StateChange,
 )
 from raiden.transfer.channel import get_capacity
 from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
+    EventWrapper,
+    RequestMetadata,
     SendWithdrawExpired,
     SendWithdrawRequest,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     EventRouteFailed,
-    RequestMetadata,
     SendLockedTransfer,
     SendSecretRequest,
     SendUnlock,
@@ -308,8 +307,6 @@ class SynchronizationState(Enum):
 class RaidenService(Runnable):
     """A Raiden node."""
 
-    __pfs_config: Optional[PFSConfig] = None
-
     def __init__(
         self,
         rpc_client: JSONRPCClient,
@@ -457,12 +454,6 @@ class RaidenService(Runnable):
         # Counters used for state snapshotting
         self.state_change_qty_snapshot = 0
         self.state_change_qty = 0
-
-        RaidenService.__pfs_config = getattr(config, "pfs_config", None)
-
-    @staticmethod
-    def pfs_config() -> Optional[PFSConfig]:
-        return RaidenService.__pfs_config
 
     def start(self) -> None:
         """Start the node synchronously. Raises directly if anything went wrong on startup"""
@@ -1005,18 +996,6 @@ class RaidenService(Runnable):
             self.wal.snapshot(self.state_change_qty)
             self.state_change_qty_snapshot = self.state_change_qty
 
-    def _wrap_send_message_event(self, event: SendMessageEvent) -> Event:
-        return RequestMetadata([event]) if not event.recipient_metadata else event
-
-    def wrap_events(self, events: List[RaidenEvent]) -> List[RaidenEvent]:
-        event_wrappers: Dict[Any, Any] = defaultdict(lambda: lambda x: x)
-        event_wrappers.update({SendMessageEvent: self._wrap_send_message_event})
-        parsed_events = []
-        for event in events:
-            wrapper_method = event_wrappers[type(event)]
-            parsed_events.append(wrapper_method(event))
-        return parsed_events
-
     def async_handle_events(
         self, chain_state: ChainState, raiden_events: List[RaidenEvent]
     ) -> List[Greenlet]:
@@ -1039,7 +1018,8 @@ class RaidenService(Runnable):
         """
         typecheck(chain_state, ChainState)
 
-        parsed_events = self.wrap_events(raiden_events)
+        event_wrapper = EventWrapper(raiden_events)
+        parsed_events = event_wrapper.wrap_events()
 
         fast_events = list()
         greenlets: List[Greenlet] = list()

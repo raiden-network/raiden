@@ -601,17 +601,3 @@ def get_address_metadata(
         if recipient_metadata is not None:
             return recipient_metadata
     return None
-
-
-def fetch_address_metadata(
-    address: Address, route_states: Optional[List[RouteState]] = None
-) -> AddressMetadata:
-    from raiden.network.pathfinding import query_address_metadata
-    from raiden.raiden_service import RaidenService
-
-    metadata = get_address_metadata(address, route_states) if route_states else {}
-    metadata = metadata or {}
-    pfs_config = RaidenService.pfs_config()
-    if not metadata and pfs_config is not None:
-        metadata = query_address_metadata(pfs_config, address)
-    return metadata
