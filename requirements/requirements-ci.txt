@@ -455,7 +455,7 @@ pillow==8.2.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
-pip-tools==6.1.0
+pip-tools==6.2.0
     # via -r requirements-dev.txt
 pluggy==0.12.0
     # via
@@ -732,7 +732,7 @@ types-markupsafe==1.1.1
     # via
     #   -r requirements-dev.txt
     #   types-jinja2
-types-pkg_resources==0.1.3
+types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
 types-pyyaml==5.4.3
     # via -r requirements-dev.txt
@@ -791,6 +791,10 @@ werkzeug==2.0.1
     # via
     #   -r requirements-dev.txt
     #   flask
+wheel==0.36.2
+    # via
+    #   -r requirements-dev.txt
+    #   pip-tools
 wmctrl==0.3
     # via
     #   -r requirements-dev.txt

@@ -395,7 +395,7 @@ pickleshare==0.7.5
     # via ipython
 pillow==8.2.0
     # via matrix-synapse
-pip-tools==6.1.0
+pip-tools==6.2.0
     # via -r requirements-dev.in
 pluggy==0.12.0
     # via pytest
@@ -617,7 +617,7 @@ types-jinja2==2.11.1
     # via types-flask
 types-markupsafe==1.1.1
     # via types-jinja2
-types-pkg_resources==0.1.3
+types-pkg-resources==0.1.3
     # via -r requirements-dev.in
 types-pyyaml==5.4.3
     # via -r requirements-dev.in
@@ -669,6 +669,8 @@ werkzeug==2.0.1
     # via
     #   -r requirements.txt
     #   flask
+wheel==0.36.2
+    # via pip-tools
 wmctrl==0.3
     # via pdbpp
 wrapt==1.11.1
