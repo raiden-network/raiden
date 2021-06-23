@@ -1833,11 +1833,14 @@ def test_filter_reachable_routes():
         ),
     ]
 
+    our_address = channel1.our_state.address
     # Both nodes are online
     nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP1, HOP2])
 
     filtered_routes = routes.filter_reachable_routes(
-        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        our_address=our_address,
     )
 
     assert possible_routes[0] in filtered_routes
@@ -1847,7 +1850,9 @@ def test_filter_reachable_routes():
     nodeaddresses_to_networkstates = factories.make_node_availability_map([HOP2])
 
     filtered_routes = routes.filter_reachable_routes(
-        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        our_address=our_address,
     )
 
     assert possible_routes[0] not in filtered_routes
@@ -1857,7 +1862,9 @@ def test_filter_reachable_routes():
     nodeaddresses_to_networkstates = factories.make_node_availability_map([])
 
     filtered_routes = routes.filter_reachable_routes(
-        route_states=possible_routes, nodeaddresses_to_networkstates=nodeaddresses_to_networkstates
+        route_states=possible_routes,
+        nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+        our_address=our_address,
     )
 
     assert possible_routes[0] not in filtered_routes

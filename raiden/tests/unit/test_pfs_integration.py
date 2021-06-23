@@ -259,7 +259,7 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
 
     assert_checksum_address_in_url(patched.call_args[0][0])
 
-    assert routes[0].next_hop_address == address2
+    assert routes[0].hop_after(our_signer.address) == address2
     assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
     # Check for iou arguments in request payload
@@ -303,7 +303,7 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
 
     assert_checksum_address_in_url(patched.call_args[0][0])
 
-    assert routes[0].next_hop_address == address2
+    assert routes[0].hop_after(our_signer.address) == address2
     assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
     # Check for iou arguments in request payload
@@ -503,7 +503,7 @@ def test_routing_mocked_pfs_unavailable_peer(
         )
         # Node with address2 is not reachable, so even if the only route sent by the PFS
         # is over address2, the internal routing does not provide
-        assert routes[0].next_hop_address == address2
+        assert routes[0].hop_after(our_signer.address) == address2
         assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
 
@@ -710,7 +710,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_signer, one_to_n_addr
             privkey=PRIVKEY,
             our_address_metadata=make_address_metadata(our_signer),
         )
-        assert routes[0].next_hop_address == address1
+        assert routes[0].hop_after(our_signer.address) == address1
         assert not pfs_route_request.called
         assert pfs_user_request.called
 

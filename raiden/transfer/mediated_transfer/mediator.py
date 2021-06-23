@@ -411,6 +411,7 @@ def forward_transfer_pair(
     route_states = routes.prune_route_table(
         route_states=route_state_table,
         selected_route=route_state,
+        our_address=payer_channel.our_state.address,
     )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
@@ -998,6 +999,7 @@ def mediate_transfer(
         payer_channel.partner_state.address == payer_transfer.balance_proof.sender
     ), "Transfer must be signed by sender"
 
+    our_address = payer_channel.our_state.address
     # Makes sure we filter routes that have already been used.
     #
     # So in a setup like this, we want to make sure that node 2, having tried to
@@ -1011,14 +1013,16 @@ def mediate_transfer(
         blacklisted_channel_ids=state.refunded_channels,
         addresses_to_channel=addresses_to_channel,
         token_network_address=payer_channel.token_network_address,
+        our_address=our_address,
     )
 
     # Mediate through the first valid route
     for route_state in candidate_route_states:
-        target_token_network = route_state.swaps.get(
-            route_state.route[0], payer_channel.token_network_address
-        )
-        payee_channel = addresses_to_channel.get((target_token_network, route_state.route[1]))
+        next_hop = route_state.hop_after(our_address)
+        if not next_hop:
+            continue
+        target_token_network = route_state.swaps.get(our_address, payer_channel.token_network_address)
+        payee_channel = addresses_to_channel.get((target_token_network, next_hop))
         if not payee_channel:
             continue
 

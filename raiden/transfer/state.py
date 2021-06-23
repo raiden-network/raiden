@@ -158,21 +158,14 @@ class RouteState(MetadataValidation, State):
     def get_metadata(self) -> Optional[Dict[Address, AddressMetadata]]:
         return self.address_to_metadata
 
-    @property
-    def next_hop_address(self) -> Address:
-        assert len(self.route) >= 1, "Route has no next hop"
-        return self.route[1]
-
-    @property
-    def next_hop(self) -> Address:
-        """Identifies the next node
-
-        Use this to compare if two routes go to the same next node.
-
-        Planned change: Will return a token network in addition to the node address.
-        """
-        assert len(self.route) >= 1, "Route has no next hop"
-        return self.route[1]
+    def hop_after(self, address: Address) -> Optional[Address]:
+        try:
+            idx = self.route.index(address)
+            return self.route[idx + 1]
+        except (ValueError, IndexError):
+            # The queried address was not in the route
+            # or the queried address was the last hop
+            return None
 
     def __repr__(self) -> str:
         return "RouteState ({}), fee: {}".format(
