@@ -1875,29 +1875,24 @@ def test_resume_waiting_transfer():
     mediating the waiting_transfer as soon as this transfer's
     lock expiration becomes valid.
     """
-    setup = factories.make_transfers_pair(2)
 
-    # Also add transfer sender channel
-    partner_state = factories.NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER)
-    payer_channel = factories.create(
-        factories.NettingChannelStateProperties(partner_state=partner_state)
-    )
-    setup.channels.channels.append(payer_channel)
+    pseudo_random_generator = random.Random()
 
-    from_hop = factories.make_hop_from_channel(payer_channel)
-    possible_routes = setup.channels.get_routes()
+    # Create both our channels (backwards and forwards) in the chain:
+    # UNIT_TRANSFER_SENDER -> UNIT_OUR_ADDRESS -> UNIT_TRANSFER_TARGET
+    channels = mediator_make_channel_pair()
 
     # we received a transfer has an expiry set to a larger value than our settle_timeout.
     # The `is_channel_usable_for_new_transfer` would return False because of the above.
     # Therefore, we assign this transfer to `waiting_transfer` and wait until the current block
     # falls into the range `reveal_timeout > lock expiration >= settle_timeout`
     lock_expiration = BlockExpiration(UNIT_SETTLE_TIMEOUT + 3)
-    received_transfer = factories.create(
-        factories.LockedTransferSignedStateProperties(
-            amount=TokenAmount(1),
-            expiration=lock_expiration,
-            canonical_identifier=payer_channel.canonical_identifier,
-        )
+    amount = TokenAmount(1)
+    transfer = factories.make_signed_transfer_for(
+        channels[0],
+        LockedTransferSignedStateProperties(expiration=lock_expiration, amount=amount),
+        # allow invalid because of the the too high expiration
+        allow_invalid=True,
     )
 
     # we simulate that the initial transfer came too early (from our point of view)
@@ -1905,22 +1900,17 @@ def test_resume_waiting_transfer():
     # this can happen, when reveal_timeout is around `settle_timeout / 2` and the
     # receiving node is slightly behind with the blockchain sync
     # see: https://github.com/raiden-network/raiden/issues/4998
-    transition_result = mediator.state_transition(
+    iteration = mediator.state_transition(
         mediator_state=None,
-        state_change=ActionInitMediator(
-            from_hop=from_hop,
-            candidate_route_states=possible_routes,
-            from_transfer=received_transfer,
-            sender=payer_channel.partner_state.address,
-            balance_proof=received_transfer.balance_proof,
-        ),
-        channelidentifiers_to_channels=setup.channel_map,
-        addresses_to_channel=setup.channels.addresses_to_channel(),
-        pseudo_random_generator=random.Random(),
+        state_change=mediator_make_init_action(channels, transfer),
+        channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
+        pseudo_random_generator=pseudo_random_generator,
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
     )
-    mediator_state = transition_result.new_state
+
+    mediator_state = iteration.new_state
     assert mediator_state
     assert mediator_state.waiting_transfer is not None
 
@@ -1932,8 +1922,8 @@ def test_resume_waiting_transfer():
     iteration = mediator.state_transition(
         mediator_state=mediator_state,
         state_change=too_early_block,
-        channelidentifiers_to_channels=setup.channel_map,
-        addresses_to_channel=setup.channels.addresses_to_channel(),
+        channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(1),
         block_hash=factories.make_block_hash(),
@@ -1950,8 +1940,8 @@ def test_resume_waiting_transfer():
     iteration = mediator.state_transition(
         mediator_state=mediator_state,
         state_change=late_enough_block,
-        channelidentifiers_to_channels=setup.channel_map,
-        addresses_to_channel=setup.channels.addresses_to_channel(),
+        channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(2),
         block_hash=too_early_block.block_hash,
@@ -1961,14 +1951,14 @@ def test_resume_waiting_transfer():
         iteration.events,
         SendLockedTransfer,
         {
-            "recipient": HOP2,
+            "recipient": UNIT_TRANSFER_TARGET,
             "transfer": {
                 "lock": {
-                    "amount": 1,
-                    "expiration": UNIT_SETTLE_TIMEOUT + 3,
-                    "secrethash": received_transfer.lock.secrethash,
+                    "amount": amount,
+                    "expiration": lock_expiration,
+                    "secrethash": transfer.lock.secrethash,
                 },
-                "balance_proof": {"nonce": 1, "transferred_amount": 0, "locked_amount": 1},
+                "balance_proof": {"nonce": 1, "transferred_amount": 0, "locked_amount": amount},
             },
         },
     )
@@ -2160,7 +2150,9 @@ def test_receive_unlock():
     assert_dropped(iteration, state_change, "no transfer pairs in mediator state")
 
     payer_transfer = factories.create(
-        factories.LockedTransferSignedStateProperties(sender=HOP1, pkey=factories.HOP1_KEY)
+        factories.LockedTransferSignedStateProperties(
+            sender=Address(HOP1), pkey=factories.HOP1_KEY
+        )
     )
     payee_transfer = factories.create(factories.LockedTransferUnsignedStateProperties())
     wrong_pair = MediationPairState(

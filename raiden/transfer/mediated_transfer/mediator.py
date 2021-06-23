@@ -1011,7 +1011,9 @@ def mediate_transfer(
         next_hop = route_state.hop_after(our_address)
         if not next_hop:
             continue
-        target_token_network = route_state.swaps.get(our_address, payer_channel.token_network_address)
+        target_token_network = route_state.swaps.get(
+            our_address, payer_channel.token_network_address
+        )
         payee_channel = addresses_to_channel.get((target_token_network, next_hop))
         if not payee_channel:
             continue
