@@ -377,7 +377,7 @@ UNIT_TRANSFER_INITIATOR = Address(b"initiatorinitiatorin")
 UNIT_TRANSFER_TARGET = Address(b"targettargettargetta")
 UNIT_TRANSFER_PKEY_BIN = keccak(b"transfer pkey")
 UNIT_TRANSFER_PKEY = UNIT_TRANSFER_PKEY_BIN
-UNIT_TRANSFER_SENDER = Address(privatekey_to_address(keccak(b"transfer pkey")))
+UNIT_TRANSFER_SENDER = Address(privatekey_to_address(UNIT_TRANSFER_PKEY))
 
 HOP1_KEY = b"11111111111111111111111111111111"
 HOP2_KEY = b"22222222222222222222222222222222"
@@ -851,11 +851,11 @@ class LockedTransferSignedStateProperties(BalanceProofProperties):
     payment_identifier: PaymentID = EMPTY
     token: TokenAddress = EMPTY
     secret: Secret = EMPTY
-    sender: InitiatorAddress = EMPTY
-    recipient: TargetAddress = EMPTY
+    sender: Address = EMPTY
+    recipient: Address = EMPTY
     pkey: bytes = EMPTY
     message_identifier: MessageID = EMPTY
-    route_states: List[RouteState] = EMPTY
+    route_states: List[RouteState] = GENERATE
 
     TARGET_TYPE = LockedTransferSignedState
 
@@ -891,11 +891,23 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     # Dancing with parameters for different LockedState and LockedTransfer classes
     route_states = params.pop("route_states")
     # pylint: disable=E1101
-    if route_states == EMPTY:
+    if route_states == GENERATE:
         route_states = create_route_states_from_routes(
-            # remove duplicate addresse from the list, this can happen when e.g.
+            # remove duplicate addresses from the list, this can happen when e.g.
             # transfer.recipient == transfer.target
-            [list(dict.fromkeys([Address(transfer.recipient), Address(transfer.target)]))]
+            # or transfer.initiator == transfer.sender
+            [
+                list(
+                    dict.fromkeys(
+                        [
+                            Address(transfer.initiator),
+                            Address(transfer.sender),
+                            Address(transfer.recipient),
+                            Address(transfer.target),
+                        ]
+                    )
+                )
+            ]
         )
 
     # Those are the routes(-metadata) the LockedTransferSender included in the LT message ...
@@ -904,7 +916,11 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         for route_state in route_states
     ]
 
-    params["metadata"] = Metadata(routes=routes, original_data=None)
+    # Since the signed-state transfer is a received transfer, there always
+    # since the original_data dict will get passed to the next hop unmodified
+    original_metadata = Metadata(routes=routes).to_dict()
+    metadata = Metadata(routes=routes, original_data=original_metadata)
+    params["metadata"] = metadata
 
     # Create the locked-transfer message first in order to generate the balance proof
     locked_transfer = LockedTransfer(lock=lock, **params, signature=EMPTY_SIGNATURE)
@@ -935,6 +951,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         initiator=locked_transfer.initiator,
         target=locked_transfer.target,
         route_states=route_states,
+        metadata=original_metadata,
     )
 
 
@@ -1168,7 +1185,20 @@ class ChannelSet:
     def get_route(
         self, channel_index: int, estimated_fee: FeeAmount = FeeAmount(0)  # noqa: B008
     ) -> RouteState:
-        """Creates an *outbound* RouteState, based on channel our/partner addresses."""
+        """Creates an *outbound* (possibly incomplete) RouteState,
+        based on channel our/partner addresses.
+
+        Only use this in order to create routes to be processed by the initiator/mediator the
+        channel belongs to. This route is not suited for constructing the route-metadata of
+        a multihop payment (e.g. as the initiator).
+
+        The route create is the minimally required route for processing a transfer *locally*.
+        The requirement for this is that our address and the next hop address has to be included
+        in order for us to find the recipient of the mediated locked-transfer that will be sent
+        out.
+        A valid route for a multihop payment should include the full path from initiator to
+        target.
+        """
 
         channel = self.channels[channel_index]
         route = [channel.our_state.address, channel.partner_state.address]
@@ -1309,6 +1339,28 @@ class MediatorTransfersPair(NamedTuple):
 def make_transfers_pair(
     number_of_channels: int, amount: int = UNIT_TRANSFER_AMOUNT, block_number: int = 5
 ) -> MediatorTransfersPair:
+    """
+    Creates a set of channels and transfers_pair:
+
+
+    For example:
+
+    We are HOP1 (set as "our_state" for all channels)
+    HOP1 = US
+
+    E.g. for 5 number of channels we will create transfer pairs
+    for the following payments, always as seen from our state (US)
+
+    INITIATOR -> HOP2 -> US -> HOP3 -> HOP4 -> HOP5 -> TARGET
+      received_transfer from HOP2
+      sent transfer to HOP3
+    INITIATOR -> HOP2 -> HOP3 -> US -> HOP4 -> HOP5 -> TARGET
+      received_transfer from HOP3
+      sent transfer to HOP4
+    INITIATOR -> HOP2 -> US -> HOP3 -> HOP4 -> US -> HOP5 -> TARGET
+      received_transfer from HOP4
+      sent transfer to HOP5
+    """
 
     deposit = 5 * amount
     defaults = create_properties(
@@ -1336,6 +1388,7 @@ def make_transfers_pair(
     pseudo_random_generator = random.Random()
     transfers_pairs = list()
 
+    our_address = channels[0].our_state.address
     for payer_index in range(number_of_channels - 1):
         payee_index = payer_index + 1
 
@@ -1347,6 +1400,7 @@ def make_transfers_pair(
                 payment_identifier=UNIT_TRANSFER_IDENTIFIER,
                 canonical_identifier=receiver_channel.canonical_identifier,
                 sender=channels.partner_address(payer_index),
+                recipient=our_address,
                 pkey=channels.partner_privatekeys[payer_index],
             )
         )
@@ -1357,9 +1411,6 @@ def make_transfers_pair(
         assert is_valid, msg
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        route_states = [
-            RouteState(route=[channel.partner_state.address for channel in channels[payer_index:]])
-        ]
 
         lockedtransfer_event = channel.send_lockedtransfer(
             channel_state=channels[payee_index],
@@ -1370,7 +1421,8 @@ def make_transfers_pair(
             payment_identifier=UNIT_TRANSFER_IDENTIFIER,
             expiration=lock_expiration,
             secrethash=UNIT_SECRETHASH,
-            route_states=route_states,
+            route_states=received_transfer.route_states,
+            previous_metadata=received_transfer.metadata,
         )
         assert lockedtransfer_event
 
