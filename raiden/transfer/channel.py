@@ -1414,8 +1414,7 @@ def create_sendlockedtransfer(
     recipient = channel_state.partner_state.address
     if recipient_metadata is None:
         # if no metadata was provided explicitly, try to find it in the
-        # route states. It should be there if this is a forward LockedTransfer
-        # and not a refund.
+        # route states.
         recipient_metadata = get_address_metadata(recipient, route_states)
     lockedtransfer = SendLockedTransfer(
         recipient=recipient,

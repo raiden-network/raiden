@@ -35,7 +35,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     ChannelState,
     NettingChannelState,
-    RouteState,
     get_address_metadata,
     message_identifier_from_prng,
 )
@@ -372,8 +371,6 @@ def forward_transfer_pair(
     payer_transfer: LockedTransferSignedState,
     payer_channel: NettingChannelState,
     payee_channel: NettingChannelState,
-    route_state: RouteState,
-    route_state_table: List[RouteState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> Tuple[Optional[MediationPairState], List[Event]]:
@@ -381,8 +378,6 @@ def forward_transfer_pair(
 
     Args:
         payer_transfer: The transfer received from the payer_channel.
-        route_state: route to be tried.
-        route_state_table: list of all candidate routes
         channelidentifiers_to_channels: All the channels available for this
             transfer.
 
@@ -408,15 +403,10 @@ def forward_transfer_pair(
 
     assert payee_channel.settle_timeout >= lock_timeout, "settle_timeout must be >= lock_timeout"
 
-    route_states = routes.prune_route_table(
-        route_states=route_state_table,
-        selected_route=route_state,
-        our_address=payer_channel.our_state.address,
-    )
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
 
     recipient_address = payee_channel.partner_state.address
-    recipient_metadata = get_address_metadata(recipient_address, route_state_table)
+    recipient_metadata = get_address_metadata(recipient_address, payer_transfer.route_states)
     lockedtransfer_event = channel.send_lockedtransfer(
         channel_state=payee_channel,
         initiator=payer_transfer.initiator,
@@ -426,7 +416,7 @@ def forward_transfer_pair(
         payment_identifier=payer_transfer.payment_identifier,
         expiration=payer_transfer.lock.expiration,
         secrethash=payer_transfer.lock.secrethash,
-        route_states=route_states,
+        route_states=payer_transfer.route_states,
         recipient_metadata=recipient_metadata,
         previous_metadata=payer_transfer.metadata,
     )
@@ -1030,10 +1020,8 @@ def mediate_transfer(
             payer_transfer=payer_transfer,
             payer_channel=payer_channel,
             payee_channel=payee_channel,
-            route_state=route_state,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
-            route_state_table=candidate_route_states,
         )
         if mediation_transfer_pair is not None:
             state.transfers_pair.append(mediation_transfer_pair)

@@ -9,7 +9,7 @@ from raiden.settings import (
     MAX_MEDIATION_FEE_PERC,
     PAYMENT_AMOUNT_BASED_FEE_MARGIN,
 )
-from raiden.transfer import channel, routes
+from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import (
     EventInvalidSecretRequest,
@@ -363,11 +363,7 @@ def send_lockedtransfer(
         payment_identifier=transfer_description.payment_identifier,
         expiration=lock_expiration,
         secrethash=transfer_description.secrethash,
-        route_states=routes.prune_route_table(
-            route_states=route_states,
-            selected_route=route_state,
-            our_address=channel_state.our_state.address,
-        ),
+        route_states=route_states,
         recipient_metadata=recipient_metadata,
         previous_metadata=None,
     )

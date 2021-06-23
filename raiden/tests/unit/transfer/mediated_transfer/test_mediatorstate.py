@@ -235,13 +235,10 @@ def test_next_transfer_pair():
         ]
     )
 
-    route_state_table = channels.get_routes(1)
     pair, events = mediator.forward_transfer_pair(
         payer_transfer=payer_transfer,
         payer_channel=channels[0],
         payee_channel=channels[1],
-        route_state=route_state_table[0],
-        route_state_table=route_state_table,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -1996,8 +1993,6 @@ def _foward_transfer_pair(
         payer_transfer=payer_transfer,
         payer_channel=channels[0],
         payee_channel=channels[1],
-        route_state=channels.get_route(1),
-        route_state_table=channels.get_routes(),
         pseudo_random_generator=random.Random(),
         block_number=BlockNumber(2),
     )
