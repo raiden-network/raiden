@@ -47,35 +47,3 @@ def filter_acceptable_routes(
         if channel.identifier not in blacklisted_channel_ids:
             acceptable_routes.append(route)
     return acceptable_routes
-
-
-def prune_route_table(
-    route_states: List[RouteState], selected_route: RouteState, our_address: Address
-) -> List[RouteState]:
-    """Given a selected route, returns a filtered route table that
-    contains only routes using the same forward channel and removes our own
-    address in the process.
-    Note that address metadata are kept complete for the whole route.
-
-    Also note that we don't need to handle ``ValueError``s here since the new
-    ``RouteState``s are built from existing ones, which means the metadata have
-    already been validated.
-    """
-
-    pruned_route_states = list()
-    for rs in route_states:
-        next_hop = rs.hop_after(our_address)
-        if not next_hop:
-            continue
-        selected_next_hop = selected_route.hop_after(our_address)
-        if not selected_next_hop:
-            # This shouldn't happen, since we shouldn't select a route that has no next hop
-            continue
-        if next_hop == selected_next_hop:
-            idx = rs.route.index(our_address)
-            pruned_route = rs.route[idx + 1 :]
-            if pruned_route:
-                pruned_route_states.append(
-                    RouteState(route=pruned_route, address_to_metadata=rs.address_to_metadata)
-                )
-    return pruned_route_states
