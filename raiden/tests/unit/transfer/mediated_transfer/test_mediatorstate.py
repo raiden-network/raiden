@@ -1966,6 +1966,45 @@ def test_resume_waiting_transfer():
     assert mediator_state.waiting_transfer is None
 
 
+def test_mediator_forwards_metadata_readonly():
+
+    pseudo_random_generator = random.Random()
+    channels = mediator_make_channel_pair()
+
+    transfer = factories.make_signed_transfer_for(
+        channels[0],
+    )
+    assert transfer.metadata is not None
+    transfer.metadata.update({"new": 42, "foo": "bar"})
+    original_metadata = deepcopy(transfer.metadata)
+
+    iteration = mediator.state_transition(
+        mediator_state=None,
+        state_change=mediator_make_init_action(channels, transfer),
+        channelidentifiers_to_channels=channels.channel_map,
+        addresses_to_channel=channels.addresses_to_channel(),
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=BlockNumber(5),
+        block_hash=factories.make_block_hash(),
+    )
+
+    # modify the metadata with fields the node doesn't understand
+    mediator_state = iteration.new_state
+    assert mediator_state
+
+    # A LockedTransfer is expected
+    send_locked_transfer_event = search_for_item(
+        iteration.events,
+        SendLockedTransfer,
+        {
+            "recipient": UNIT_TRANSFER_TARGET,
+        },
+    )
+    assert send_locked_transfer_event
+    assert isinstance(send_locked_transfer_event, SendLockedTransfer)
+    assert send_locked_transfer_event.transfer.metadata == original_metadata
+
+
 def _foward_transfer_pair(
     amount: TokenAmount,
     channel_in: NettingChannelStateProperties,
