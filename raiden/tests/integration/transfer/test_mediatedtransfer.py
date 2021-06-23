@@ -34,6 +34,7 @@ from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, A
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.utils.secrethash import sha256_secrethash
 from raiden.utils.typing import (
+    Address,
     BlockExpiration,
     BlockNumber,
     BlockTimeout,
@@ -493,7 +494,7 @@ def test_mediated_transfer_calls_pfs(
                 amount=TokenAmount(5),
                 initiator=factories.HOP1,
                 target=TargetAddress(app2.address),
-                sender=factories.HOP1,
+                sender=Address(factories.HOP1),
                 pkey=factories.HOP1_KEY,
                 token=token_address,
                 canonical_identifier=factories.make_canonical_identifier(

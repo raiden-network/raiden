@@ -23,7 +23,6 @@ from raiden.utils.typing import (
     Nonce,
     PaymentAmount,
     PaymentID,
-    TargetAddress,
     TokenAmount,
 )
 
@@ -55,7 +54,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network: List[RaidenService],
             token=token_address,
             canonical_identifier=canonical_identifier,
             transferred_amount=amount,
-            recipient=TargetAddress(app0.address),
+            recipient=app0.address,
             locksroot=locksroot,
             amount=amount,
             secret=UNIT_SECRET,
