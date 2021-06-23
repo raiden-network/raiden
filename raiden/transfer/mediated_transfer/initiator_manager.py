@@ -295,6 +295,7 @@ def handle_transferreroute(
         blacklisted_channel_ids=payment_state.cancelled_channels,
         addresses_to_channel=addresses_to_channel,
         token_network_address=old_description.token_network_address,
+        our_address=channel_state.our_state.address,
     )
     transfer_description = TransferDescriptionWithSecretState(
         token_network_registry_address=old_description.token_network_registry_address,

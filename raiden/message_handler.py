@@ -350,12 +350,14 @@ class MessageHandler:
         else:
             filtered_route_states = list()
             for route_state in from_transfer.route_states:
-                if len(route_state.route) < 2:
+                next_hop_address = route_state.hop_after(raiden.address)
+                if not next_hop_address:
+                    # Route is malformed or lacking forward information
                     continue
                 channel_state = views.get_channelstate_by_token_network_and_partner(
                     chain_state=views.state_from_raiden(raiden),
                     token_network_address=from_transfer.balance_proof.token_network_address,
-                    partner_address=route_state.route[1],
+                    partner_address=next_hop_address,
                 )
                 if channel_state is not None:
                     filtered_route_states.append(route_state)

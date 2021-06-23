@@ -1253,20 +1253,20 @@ def mediator_make_channel_pair(
 def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
-    def get_forward_channel(route: List[Address]) -> Optional[ChannelID]:
+    def get_forward_channel(route_state: RouteState) -> Optional[ChannelID]:
         for channel_state in channels.channels:
-            if route[1] == channel_state.partner_state.address:
-                return channel_state.identifier
+            next_hop = route_state.hop_after(channel_state.our_state.address)
+            if next_hop:
+                if next_hop == channel_state.partner_state.address:
+                    return channel_state.identifier
         return None
 
-    forwards = [get_forward_channel(route) for route in transfer.routes]
-    assert len(forwards) == len(transfer.routes)
-
-    route_states = [RouteState(route=route) for idx, route in enumerate(transfer.routes)]
+    forwards = [get_forward_channel(route_state) for route_state in transfer.route_states]
+    assert len(forwards) == len(transfer.route_states)
 
     return ActionInitMediator(
         from_hop=channels.get_hop(0),
-        candidate_route_states=route_states,
+        candidate_route_states=transfer.route_states,
         from_transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,
@@ -1279,18 +1279,17 @@ def initiator_make_init_action(
     transfer: TransferDescriptionWithSecretState,
     estimated_fee: FeeAmount,
 ) -> ActionInitInitiator:
-    def get_forward_channel(route: List[Address]) -> Optional[ChannelID]:
+    def get_forward_channel(route_state: RouteState) -> Optional[ChannelID]:
         for channel_state in channels.channels:
-            if route[1] == channel_state.partner_state.address:
-                return channel_state.identifier
+            next_hop = route_state.hop_after(channel_state.our_state.address)
+            if next_hop:
+                if next_hop == channel_state.partner_state.address:
+                    return channel_state.identifier
         return None
 
-    forwards = [get_forward_channel(route) for route in routes]
+    route_states = [RouteState(route=route, estimated_fee=estimated_fee) for route in routes]
+    forwards = [get_forward_channel(route_state) for route_state in route_states]
     assert len(forwards) == len(routes)
-
-    route_states = [
-        RouteState(route=route, estimated_fee=estimated_fee) for idx, route in enumerate(routes)
-    ]
 
     return ActionInitInitiator(transfer=transfer, routes=route_states)
 

@@ -243,36 +243,46 @@ def try_new_route(
     channel_state = None
     chosen_route_state = None
 
-    for route_state in candidate_route_states:
-        candidate_channel_state = addresses_to_channel.get(
-            (transfer_description.token_network_address, route_state.next_hop_address)
-        )
-        if candidate_channel_state is None:
-            continue
+    try:
+        any_channel = next(iter(addresses_to_channel.values()))
+        our_address = any_channel.our_state.address
+    except StopIteration:
+        # We don't have any channels, so we can't try a new route anyways
+        pass
+    else:
+        for route_state in candidate_route_states:
+            next_hop = route_state.hop_after(our_address)
+            if not next_hop:
+                continue
+            candidate_channel_state = addresses_to_channel.get(
+                (transfer_description.token_network_address, next_hop)
+            )
+            if candidate_channel_state is None:
+                continue
 
-        amount_with_fee = calculate_safe_amount_with_fee(
-            payment_amount=transfer_description.amount,
-            estimated_fee=route_state.estimated_fee,
-        )
-        # https://github.com/raiden-network/raiden/issues/4751
-        # If the transfer amount + fees exceeds a percentage of the
-        # initial amount then don't use this route
-        max_amount_limit = transfer_description.amount + int(
-            transfer_description.amount * MAX_MEDIATION_FEE_PERC
-        )
-        if amount_with_fee > max_amount_limit:
-            route_fee_exceeds_max = True
-            continue
+            amount_with_fee = calculate_safe_amount_with_fee(
+                payment_amount=transfer_description.amount,
+                estimated_fee=route_state.estimated_fee,
+            )
+            # https://github.com/raiden-network/raiden/issues/4751
+            # If the transfer amount + fees exceeds a percentage of the
+            # initial amount then don't use this route
+            max_amount_limit = transfer_description.amount + int(
+                transfer_description.amount * MAX_MEDIATION_FEE_PERC
+            )
+            if amount_with_fee > max_amount_limit:
+                route_fee_exceeds_max = True
+                continue
 
-        channel_usability_state = channel.is_channel_usable_for_new_transfer(
-            channel_state=candidate_channel_state,
-            transfer_amount=amount_with_fee,
-            lock_timeout=transfer_description.lock_timeout,
-        )
-        if channel_usability_state is channel.ChannelUsability.USABLE:
-            channel_state = candidate_channel_state
-            chosen_route_state = route_state
-            break
+            channel_usability_state = channel.is_channel_usable_for_new_transfer(
+                channel_state=candidate_channel_state,
+                transfer_amount=amount_with_fee,
+                lock_timeout=transfer_description.lock_timeout,
+            )
+            if channel_usability_state is channel.ChannelUsability.USABLE:
+                channel_state = candidate_channel_state
+                chosen_route_state = route_state
+                break
 
     if chosen_route_state is None:
         reason = "none of the available routes could be used"
@@ -356,6 +366,7 @@ def send_lockedtransfer(
         route_states=routes.prune_route_table(
             route_states=route_states,
             selected_route=route_state,
+            our_address=channel_state.our_state.address,
         ),
         recipient_metadata=recipient_metadata,
         previous_metadata=None,
