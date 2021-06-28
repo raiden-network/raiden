@@ -1,8 +1,8 @@
 import re
 from enum import Enum
 
+from packaging.version import Version
 from pkg_resources import parse_version
-from pkg_resources.extern.packaging.version import Version  # type: ignore
 
 from raiden.constants import (
     HIGHEST_SUPPORTED_GETH_VERSION,
