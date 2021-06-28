@@ -932,9 +932,11 @@ class MatrixTransport(Runnable):
         call_messages: List[ReceivedCallMessage] = list()
 
         for room, room_messages in sync_messages:
-            raiden_messages, call_messages = self._validate_matrix_messages(room, room_messages)
-            raiden_messages.extend(raiden_messages)
-            call_messages.extend(call_messages)
+            next_raiden_messages, next_call_messages = self._validate_matrix_messages(
+                room, room_messages
+            )
+            raiden_messages.extend(next_raiden_messages)
+            call_messages.extend(next_call_messages)
 
         self._process_raiden_messages(raiden_messages)
         self._process_call_messages(call_messages)
