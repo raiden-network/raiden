@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 from eth_keys import keys
+from eth_keys.datatypes import PublicKey
 from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import keccak
 
@@ -21,12 +22,10 @@ def eth_sign_sha3(data: bytes) -> bytes:
     return keccak(data)
 
 
-def recover(
-    data: bytes, signature: Signature, hasher: Callable[[bytes], bytes] = eth_sign_sha3
-) -> Address:
-    """eth_recover address from data hash and signature"""
-    _hash = hasher(data)
-
+def get_public_key(
+    message: bytes, signature: Signature, hasher: Callable[[bytes], bytes] = eth_sign_sha3
+) -> PublicKey:
+    hashed_message = hasher(message)
     # ecdsa_recover accepts only standard [0,1] v's so we add support also for [27,28] here
     # anything else will raise BadSignature
     if signature[-1] >= 27:  # support (0,1,27,28) v values
@@ -34,9 +33,18 @@ def recover(
 
     try:
         sig = keys.Signature(signature_bytes=signature)
-        public_key = keys.ecdsa_recover(message_hash=_hash, signature=sig)
+        public_key = keys.ecdsa_recover(message_hash=hashed_message, signature=sig)
     except (BadSignature, ValidationError) as e:
         raise InvalidSignature() from e
+    return public_key
+
+
+def recover(
+    data: bytes, signature: Signature, hasher: Callable[[bytes], bytes] = eth_sign_sha3
+) -> Address:
+    """eth_recover address from data hash and signature"""
+    public_key = get_public_key(data, signature, hasher)
+
     return public_key.to_canonical_address()
 
 

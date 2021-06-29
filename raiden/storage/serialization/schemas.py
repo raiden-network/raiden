@@ -49,6 +49,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     EncodedData,
+    EncryptedSecret,
     FeeAmount,
     InitiatorAddress,
     LockedAmount,
@@ -260,6 +261,7 @@ class BaseSchema(marshmallow.Schema):
         SecretHash: BytesField,
         Signature: BytesField,
         TransactionHash: BytesField,
+        EncryptedSecret: BytesField,
         # Ints
         BlockExpiration: IntegerToStringField,
         BlockNumber: IntegerToStringField,
@@ -325,7 +327,7 @@ class BaseSchema(marshmallow.Schema):
 
     @post_dump(pass_original=True)
     # pylint: disable=W0613,R0201
-    def _post_dump(self, data: Dict, original_data: Any, many: bool) -> Dict:
+    def __post_dump(self, data: Dict, original_data: Any, many: bool) -> Dict:
         if self.opts.serialize_missing is False:  # type: ignore
             data = self.remove_missing(data)
         if data:

@@ -167,6 +167,9 @@ TransferID = NewType("TransferID", T_TransferID)
 T_Secret = bytes
 Secret = NewType("Secret", T_Secret)
 
+T_EncryptedSecret = bytes
+EncryptedSecret = NewType("EncryptedSecret", T_EncryptedSecret)
+
 T_SecretHash = bytes
 SecretHash = NewType("SecretHash", T_SecretHash)
 

@@ -1411,11 +1411,13 @@ def make_transfers_pair(
         assert is_valid, msg
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        secret = None
 
         lockedtransfer_event = channel.send_lockedtransfer(
             channel_state=channels[payee_index],
             initiator=UNIT_TRANSFER_INITIATOR,
             target=UNIT_TRANSFER_TARGET,
+            secret=secret,
             amount=amount,
             message_identifier=message_identifier,
             payment_identifier=UNIT_TRANSFER_IDENTIFIER,

@@ -2,6 +2,7 @@ import gevent
 import pytest
 import requests
 import responses
+from ecies import decrypt
 from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, keccak, to_canonical_address
 
@@ -9,9 +10,11 @@ from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_average_http_response_time
 from raiden.settings import CapabilitiesConfig
+from raiden.transfer.utils import encrypt_secret
 from raiden.utils.capabilities import capconfig_to_dict, capdict_to_config
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
+from raiden.utils.typing import UserID
 
 
 def test_privatekey_to_publickey():
@@ -36,6 +39,19 @@ def test_signer_sign():
     signer: Signer = LocalSigner(privkey)
 
     assert signer.sign(message) == signature
+
+
+def test_encrypt_secret():
+    privkey = keccak(b"secret")
+    message = b"message"
+    signer: Signer = LocalSigner(privkey)
+    signature = signer.sign(message)
+
+    encrypted_secret = encrypt_secret(
+        message, {"user_id": UserID(message.decode()), "displayname": signature.hex()}
+    )
+
+    assert decrypt(privkey, encrypted_secret) == message
 
 
 def test_recover():

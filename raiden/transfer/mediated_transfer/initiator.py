@@ -362,6 +362,7 @@ def send_lockedtransfer(
         message_identifier=message_identifier,
         payment_identifier=transfer_description.payment_identifier,
         expiration=lock_expiration,
+        secret=transfer_description.secret,
         secrethash=transfer_description.secrethash,
         route_states=route_states,
         recipient_metadata=recipient_metadata,

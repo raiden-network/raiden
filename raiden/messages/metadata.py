@@ -8,7 +8,7 @@ from marshmallow import EXCLUDE, post_dump, post_load
 
 from raiden.messages.abstract import cached_property
 from raiden.storage.serialization import serializer
-from raiden.utils.typing import Address, AddressMetadata, Dict, List, Optional
+from raiden.utils.typing import Address, AddressMetadata, Dict, EncryptedSecret, List, Optional
 from raiden.utils.validation import MetadataValidation
 
 
@@ -79,6 +79,7 @@ class Metadata:
     # inititally create the Metadata object as part of a message - this is the case when we are
     # the initiator of a transfer.
     original_data: Optional[Any] = None
+    encrypted_secret: Optional[EncryptedSecret] = None
 
     class Meta:
         """
@@ -88,6 +89,7 @@ class Metadata:
         """
 
         unknown = EXCLUDE
+        serialize_missing = False
 
     @cached_property
     def hash(self) -> bytes:
@@ -104,15 +106,16 @@ class Metadata:
     def _post_dump(  # pylint: disable=no-self-use,unused-argument
         self, data: Dict[str, Any], many: bool
     ) -> Dict[str, Any]:
-        original_data = data.pop("original_data", {})
-        if original_data:
-            # We received the metadata (Mediator/Target) and read in the data
-            # for internal processing,
-            # so once we pass them to the next node just dump the data exactly as we received them
-            return original_data
-        # We initially created the Metadata (Initiator),
-        # so dump the known fields as per the Schema
-        return data
+        """
+        `original_data` means we received the metadata (Mediator/Target) and read in the data
+        for internal processing, so once we pass them to the next node just dump the data exactly
+        as we received them.
+
+        Returning `data` means we initially created the Metadata (Initiator), so dump the known
+        fields as per the Schema
+        """
+        dumped_data = data.pop("original_data", None) or data
+        return dumped_data
 
     def __repr__(self) -> str:
         return f"Metadata: routes: {[repr(route) for route in self.routes]}"
