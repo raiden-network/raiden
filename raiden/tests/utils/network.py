@@ -7,6 +7,7 @@ import gevent
 import structlog
 from web3 import Web3
 
+import raiden.tests.utils.mocks
 from raiden import waiting
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, Environment, RoutingMode
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
@@ -413,6 +414,7 @@ def create_apps(
         assert len(resolver_ports) > idx
         resolver_port = resolver_ports[idx]
 
+        pfs_config = raiden.tests.utils.mocks.make_pfs_config()
         config = RaidenConfig(
             chain_id=chain_id,
             environment_type=environment_type,
@@ -432,6 +434,7 @@ def create_apps(
             ),
             console=False,
             transport_type="matrix",
+            pfs_config=pfs_config,
         )
         config.transport.capabilities_config = capabilities_config
 

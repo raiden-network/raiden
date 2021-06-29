@@ -15,6 +15,7 @@ from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
 from raiden.network.transport.matrix.client import GMatrixHttpApi, Room
+from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.transport import RETRY_QUEUE_IDLE_AFTER, _RetryQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.storage.serialization.serializer import MessageSerializer
@@ -117,6 +118,13 @@ def mock_matrix(
 
     transport = MatrixTransport(config=config, environment=Environment.DEVELOPMENT)
     transport._raiden_service = mock_raiden_service
+    transport._web_rtc_manager = WebRTCManager(
+        mock_raiden_service.address,
+        mock_raiden_service.pfs_proxy,
+        transport._process_raiden_messages,
+        transport._send_raw,
+        transport._stop_event,
+    )
     transport._stop_event.clear()
     # XXX-UAM address_mgr acccess was here
     # transport._address_mgr.add_userid_for_address(Address(factories.HOP1), USERID1)

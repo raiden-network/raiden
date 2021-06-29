@@ -1,7 +1,9 @@
 from typing import Any
+
 import pytest
 from gevent.event import Event
 
+import raiden.tests.utils.mocks
 from raiden.constants import ICEConnectionState
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
@@ -19,7 +21,10 @@ def test_rtc_partner_close() -> None:
     node_address = make_signer().address
     stop_event = Event()
 
-    web_rtc_manager = WebRTCManager(node_address, ignore_web_rtc_messages, _dummy_send, stop_event)
+    pfs_config = raiden.tests.utils.mocks.make_pfs_config()
+    web_rtc_manager = WebRTCManager(
+        node_address, pfs_config, ignore_web_rtc_messages, _dummy_send, stop_event
+    )
 
     partner_address = make_signer().address
     rtc_partner = web_rtc_manager.get_rtc_partner(partner_address)
