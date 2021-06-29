@@ -363,6 +363,7 @@ class MatrixTransport(Runnable):
         self._config = config
         self._environment = environment
         self._raiden_service: Optional["RaidenService"] = None
+        self._web_rtc_manager: Optional[WebRTCManager] = None
 
         if config.server == MATRIX_AUTO_SELECT_SERVER:
             homeserver_candidates = config.available_servers
@@ -481,8 +482,13 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix starting")
         self._stop_event.clear()
         self._raiden_service = raiden_service
+        assert raiden_service.config.pfs_config is not None, "must be set"
         self._web_rtc_manager = WebRTCManager(
-            raiden_service.address, self._process_raiden_messages, self._send_raw, self._stop_event
+            raiden_service.address,
+            raiden_service.config.pfs_config,
+            self._process_raiden_messages,
+            self._send_raw,
+            self._stop_event,
         )
 
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
@@ -534,9 +540,9 @@ class MatrixTransport(Runnable):
             self.health_check_web_rtc(neighbour)
 
     def health_check_web_rtc(self, partner: Address) -> None:
+        assert self._web_rtc_manager is not None, "must be set"
         if self._started and not self._web_rtc_manager.has_ready_channel(partner):
-            # TODO: initialize WebRTC for the partner address
-            pass
+            self._web_rtc_manager.health_check(partner)
 
     def _set_presence(self, state: UserPresence) -> None:
         waiting_period = randint(SET_PRESENCE_INTERVAL // 4, SET_PRESENCE_INTERVAL)
@@ -952,6 +958,7 @@ class MatrixTransport(Runnable):
             call_messages: List of signalling messages
         """
 
+        assert self._web_rtc_manager is not None, "must be set"
         for received_message in call_messages:
             call_message = received_message.message
             partner_address = received_message.sender
@@ -1038,6 +1045,7 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
 
+        assert self._web_rtc_manager is not None, "must be set"
         self.health_check_web_rtc(receiver_address)
 
         user_ids: Set[UserID] = set()
