@@ -16,7 +16,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
     SendUnlock,
 )
-from raiden.transfer.utils import hash_balance_data
+from raiden.transfer.state import get_address_metadata
+from raiden.transfer.utils import encrypt_secret, hash_balance_data
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.predicates import ishash
 from raiden.utils.typing import (
@@ -379,7 +380,8 @@ class LockedTransferBase(EnvelopeMessage):
             RouteMetadata(route=r.route, address_metadata=r.address_to_metadata)
             for r in transfer.route_states
         ]
-        metadata = Metadata(routes=routes, original_data=transfer.metadata)
+        target_metadata = get_address_metadata(transfer.target, transfer.route_states)
+        encrypted_secret = encrypt_secret(transfer.secret, target_metadata)
 
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -398,7 +400,9 @@ class LockedTransferBase(EnvelopeMessage):
             target=transfer.target,
             initiator=transfer.initiator,
             signature=EMPTY_SIGNATURE,
-            metadata=metadata,
+            metadata=Metadata(
+                routes=routes, original_data=transfer.metadata, encrypted_secret=encrypted_secret
+            ),
         )
 
     def _packed_data(self) -> bytes:

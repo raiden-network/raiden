@@ -22,36 +22,24 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
     SendUnlock,
 )
-from raiden.utils.typing import MYPY_ANNOTATION
+
+
+_EVENT_MAP = {
+    SendLockExpired: LockExpired,
+    SendLockedTransfer: LockedTransfer,
+    SendProcessed: Processed,
+    SendSecretRequest: SecretRequest,
+    SendSecretReveal: RevealSecret,
+    SendUnlock: Unlock,
+    SendWithdrawConfirmation: WithdrawConfirmation,
+    SendWithdrawExpired: WithdrawExpired,
+    SendWithdrawRequest: WithdrawRequest,
+}
 
 
 def message_from_sendevent(send_event: SendMessageEvent) -> Message:
-    if type(send_event) == SendLockedTransfer:
-        assert isinstance(send_event, SendLockedTransfer), MYPY_ANNOTATION
-        return LockedTransfer.from_event(send_event)
-    elif type(send_event) == SendSecretReveal:
-        assert isinstance(send_event, SendSecretReveal), MYPY_ANNOTATION
-        return RevealSecret.from_event(send_event)
-    elif type(send_event) == SendUnlock:
-        assert isinstance(send_event, SendUnlock), MYPY_ANNOTATION
-        return Unlock.from_event(send_event)
-    elif type(send_event) == SendSecretRequest:
-        assert isinstance(send_event, SendSecretRequest), MYPY_ANNOTATION
-        return SecretRequest.from_event(send_event)
-    elif type(send_event) == SendLockExpired:
-        assert isinstance(send_event, SendLockExpired), MYPY_ANNOTATION
-        return LockExpired.from_event(send_event)
-    elif type(send_event) == SendWithdrawRequest:
-        assert isinstance(send_event, SendWithdrawRequest), MYPY_ANNOTATION
-        return WithdrawRequest.from_event(send_event)
-    elif type(send_event) == SendWithdrawConfirmation:
-        assert isinstance(send_event, SendWithdrawConfirmation), MYPY_ANNOTATION
-        return WithdrawConfirmation.from_event(send_event)
-    elif type(send_event) == SendWithdrawExpired:
-        assert isinstance(send_event, SendWithdrawExpired), MYPY_ANNOTATION
-        return WithdrawExpired.from_event(send_event)
-    elif type(send_event) == SendProcessed:
-        assert isinstance(send_event, SendProcessed), MYPY_ANNOTATION
-        return Processed.from_event(send_event)
-    else:
-        raise ValueError(f"Unknown event type {send_event}")
+    t_event = type(send_event)
+    EventClass = _EVENT_MAP.get(t_event)
+    if EventClass is None:
+        raise ValueError(f"Unknown event type {t_event}")
+    return EventClass.from_event(send_event)  # type: ignore

@@ -381,6 +381,7 @@ def test_channelstate_send_lockedtransfer():
     lock_expiration = 10
     lock_secret = keccak(b"test_end_state")
     lock_secrethash = sha256(lock_secret).digest()
+    secret = None
 
     lock = HashTimeLockState(lock_amount, lock_expiration, lock_secrethash)
 
@@ -397,6 +398,7 @@ def test_channelstate_send_lockedtransfer():
         message_identifier,
         payment_identifier,
         lock_expiration,
+        secret,
         lock_secrethash,
         route_states=[
             RouteState(
@@ -890,6 +892,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
     )
 
     payment_identifier = 1
+    secret = None
     message_identifier = random.randint(0, UINT64_MAX)
     transfer_target = make_address()
     transfer_initiator = make_address()
@@ -898,6 +901,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
         channel_state=channel_state,
         initiator=transfer_initiator,
         target=transfer_target,
+        secret=secret,
         amount=lock_amount,
         message_identifier=message_identifier,
         payment_identifier=payment_identifier,

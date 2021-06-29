@@ -64,6 +64,7 @@ class LockedTransferUnsignedState(LockedTransferState):
     balance_proof: BalanceProofUnsignedState
     route_states: List[RouteState] = field(default_factory=list)
     metadata: Optional[Dict[str, Any]] = field(repr=False, default=None)
+    secret: Optional[Secret] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -91,6 +92,7 @@ class LockedTransferSignedState(LockedTransferState):
     route_states: List[RouteState]
     balance_proof: BalanceProofSignedState = field(repr=False)
     metadata: Optional[Dict[str, Any]] = field(repr=False, default=None)
+    secret: Optional[Secret] = field(repr=False, default=None)
 
     def __post_init__(self) -> None:
         typecheck(self.lock, HashTimeLockState)

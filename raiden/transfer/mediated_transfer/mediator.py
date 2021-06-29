@@ -415,6 +415,7 @@ def forward_transfer_pair(
         message_identifier=message_identifier,
         payment_identifier=payer_transfer.payment_identifier,
         expiration=payer_transfer.lock.expiration,
+        secret=payer_transfer.secret,
         secrethash=payer_transfer.lock.secrethash,
         route_states=payer_transfer.route_states,
         recipient_metadata=recipient_metadata,

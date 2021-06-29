@@ -2,15 +2,25 @@ import random
 from random import Random
 from typing import TYPE_CHECKING
 
+from ecies import encrypt
 from eth_hash.auto import keccak
 
+from eth_utils import decode_hex
+
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
+
+from raiden.utils.signer import get_public_key
 from raiden.utils.typing import (
+    AddressMetadata,
     Any,
     BalanceHash,
+    EncryptedSecret,
     LockedAmount,
     Locksroot,
+    Optional,
+    Secret,
     SecretHash,
+    Signature,
     TokenAmount,
     Union,
 )
@@ -53,3 +63,19 @@ def is_valid_secret_reveal(
     transfer_secrethash: SecretHash,
 ) -> bool:
     return state_change.secrethash == transfer_secrethash
+
+
+def encrypt_secret(
+    secret: Secret, target_metadata: Optional[AddressMetadata]
+) -> Optional[EncryptedSecret]:
+    if not target_metadata or not secret:
+        return None
+
+    message = target_metadata["user_id"].encode()
+    signature = Signature(decode_hex(target_metadata["displayname"]))
+
+    public_key = get_public_key(message, signature)
+    encrypted_secret = None
+    if public_key:
+        encrypted_secret = EncryptedSecret(encrypt(public_key.to_hex(), secret))
+    return encrypted_secret

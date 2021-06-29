@@ -9,6 +9,7 @@ colorama
 eth-keyfile
 eth-keys
 eth-utils
+eciespy
 filelock
 Flask
 Flask-Cors
