@@ -79,7 +79,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.transfer.utils import hash_balance_data
+from raiden.transfer.utils import FuncMap, hash_balance_data
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
@@ -2548,68 +2548,85 @@ def state_transition(
         channel_state, events
     )
 
-    if type(state_change) == Block:
-        assert isinstance(state_change, Block), MYPY_ANNOTATION
-        iteration = handle_block(
-            channel_state, state_change, block_number, pseudo_random_generator
-        )
-    elif type(state_change) == ActionChannelClose:
-        assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
-        iteration = handle_action_close(
-            channel_state=channel_state,
-            close=state_change,
-            block_number=block_number,
-            block_hash=block_hash,
-        )
-    elif type(state_change) == ActionChannelWithdraw:
-        assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
-        iteration = handle_action_withdraw(
-            channel_state=channel_state,
-            action_withdraw=state_change,
-            pseudo_random_generator=pseudo_random_generator,
-            block_number=block_number,
-        )
-    elif type(state_change) == ActionChannelSetRevealTimeout:
-        assert isinstance(state_change, ActionChannelSetRevealTimeout), MYPY_ANNOTATION
-        iteration = handle_action_set_reveal_timeout(
-            channel_state=channel_state, state_change=state_change
-        )
-    elif type(state_change) == ContractReceiveChannelClosed:
-        assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
-        iteration = handle_channel_closed(channel_state, state_change)
-    elif type(state_change) == ContractReceiveUpdateTransfer:
-        assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
-        iteration = handle_channel_updated_transfer(channel_state, state_change, block_number)
-    elif type(state_change) == ContractReceiveChannelSettled:
-        assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
-        iteration = handle_channel_settled(channel_state, state_change)
-    elif type(state_change) == ContractReceiveChannelDeposit:
-        assert isinstance(state_change, ContractReceiveChannelDeposit), MYPY_ANNOTATION
-        iteration = handle_channel_deposit(channel_state, state_change)
-    elif type(state_change) == ContractReceiveChannelBatchUnlock:
-        assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
-        iteration = handle_channel_batch_unlock(channel_state, state_change)
-    elif type(state_change) == ContractReceiveChannelWithdraw:
-        assert isinstance(state_change, ContractReceiveChannelWithdraw), MYPY_ANNOTATION
-        iteration = handle_channel_withdraw(channel_state=channel_state, state_change=state_change)
-    elif type(state_change) == ReceiveWithdrawRequest:
-        assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw_request(
-            channel_state=channel_state, withdraw_request=state_change
-        )
-    elif type(state_change) == ReceiveWithdrawConfirmation:
-        assert isinstance(state_change, ReceiveWithdrawConfirmation), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw_confirmation(
-            channel_state=channel_state,
-            withdraw=state_change,
-            block_number=block_number,
-            block_hash=block_hash,
-        )
-    elif type(state_change) == ReceiveWithdrawExpired:
-        assert isinstance(state_change, ReceiveWithdrawExpired), MYPY_ANNOTATION
-        iteration = handle_receive_withdraw_expired(
-            channel_state=channel_state, withdraw_expired=state_change, block_number=block_number
-        )
+    transition_map: Dict[Any, FuncMap] = {
+        Block: FuncMap(
+            handle_block, (channel_state, state_change, block_number, pseudo_random_generator), {}
+        ),
+        ActionChannelClose: FuncMap(
+            handle_action_close,
+            (),
+            dict(
+                channel_state=channel_state,
+                close=state_change,
+                block_number=block_number,
+                block_hash=block_hash,
+            ),
+        ),
+        ActionChannelWithdraw: FuncMap(
+            handle_action_withdraw,
+            (),
+            dict(
+                channel_state=channel_state,
+                action_withdraw=state_change,
+                pseudo_random_generator=pseudo_random_generator,
+                block_number=block_number,
+            ),
+        ),
+        ActionChannelSetRevealTimeout: FuncMap(
+            handle_action_set_reveal_timeout,
+            (),
+            dict(channel_state=channel_state, state_change=state_change),
+        ),
+        ContractReceiveChannelClosed: FuncMap(
+            handle_channel_closed, (channel_state, state_change), {}
+        ),
+        ContractReceiveUpdateTransfer: FuncMap(
+            handle_channel_updated_transfer, (channel_state, state_change, block_number), {}
+        ),
+        ContractReceiveChannelSettled: FuncMap(
+            handle_channel_settled, (channel_state, state_change), {}
+        ),
+        ContractReceiveChannelDeposit: FuncMap(
+            handle_channel_deposit, (channel_state, state_change), {}
+        ),
+        ContractReceiveChannelBatchUnlock: FuncMap(
+            handle_channel_batch_unlock, (channel_state, state_change), {}
+        ),
+        ContractReceiveChannelWithdraw: FuncMap(
+            handle_channel_withdraw,
+            (),
+            dict(channel_state=channel_state, state_change=state_change),
+        ),
+        ReceiveWithdrawRequest: FuncMap(
+            handle_receive_withdraw_request,
+            (),
+            dict(channel_state=channel_state, withdraw_request=state_change),
+        ),
+        ReceiveWithdrawConfirmation: FuncMap(
+            handle_receive_withdraw_confirmation,
+            (),
+            dict(
+                channel_state=channel_state,
+                withdraw=state_change,
+                block_number=block_number,
+                block_hash=block_hash,
+            ),
+        ),
+        ReceiveWithdrawExpired: FuncMap(
+            handle_receive_withdraw_expired,
+            (),
+            dict(
+                channel_state=channel_state,
+                withdraw_expired=state_change,
+                block_number=block_number,
+            ),
+        ),
+    }
+
+    t_state_change = type(state_change)
+    func_map = transition_map.get(t_state_change)
+    if func_map:
+        iteration = func_map.function(*func_map.args, **func_map.kwargs)  # type: ignore
 
     if iteration.new_state is not None:
         sanity_check(iteration.new_state)
