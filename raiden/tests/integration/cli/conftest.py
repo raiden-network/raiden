@@ -108,8 +108,6 @@ def cli_args(
         "1000000000",
         "--no-sync-check",
         f"--debug-logfile-path={base_logfile}",
-        "--routing-mode",
-        "private",
         "--matrix-server",
         local_matrix_servers[0],
     ]

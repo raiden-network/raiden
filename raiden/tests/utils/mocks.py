@@ -197,7 +197,9 @@ class MockRaidenService:
         self.message_handler = message_handler
         self.routing_mode = RoutingMode.PRIVATE
         self.config = RaidenConfig(
-            chain_id=self.rpc_client.chain_id, environment_type=Environment.DEVELOPMENT
+            chain_id=self.rpc_client.chain_id,
+            environment_type=Environment.DEVELOPMENT,
+            pfs_config=make_pfs_config(),
         )
 
         self.default_user_deposit = Mock()

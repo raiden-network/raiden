@@ -35,7 +35,7 @@ from raiden.tests.utils.factories import (
     NettingChannelEndStateProperties,
     make_privkeys_ordered,
 )
-from raiden.tests.utils.mocks import MockRaidenService
+from raiden.tests.utils.mocks import MockRaidenService, make_pfs_config
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.transfer import views
 from raiden.transfer.identifiers import CANONICAL_IDENTIFIER_UNORDERED_QUEUE, QueueIdentifier
@@ -498,6 +498,7 @@ def test_monitoring_broadcast_messages(
         chain_id=ChainID(1234),
         environment_type=environment_type,
         services=ServiceConfig(monitoring_enabled=True),
+        pfs_config=make_pfs_config(),
     )
 
     transport.start(raiden_service, None)
@@ -564,6 +565,7 @@ def test_monitoring_broadcast_messages_in_production_if_bigger_than_threshold(
         chain_id=1234,
         environment_type=environment_type,
         services=ServiceConfig(monitoring_enabled=True),
+        pfs_config=make_pfs_config(),
     )
 
     transport.start(raiden_service, None)
