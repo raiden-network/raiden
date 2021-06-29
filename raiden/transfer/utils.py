@@ -2,11 +2,12 @@ import random
 from random import Random
 from typing import TYPE_CHECKING
 
-from ecies import encrypt
+from ecies import decrypt, encrypt
 from eth_hash.auto import keccak
 from eth_utils import decode_hex
 
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
+from raiden.exceptions import InvalidSecret
 from raiden.utils.signer import get_public_key
 from raiden.utils.typing import (
     AddressMetadata,
@@ -16,6 +17,7 @@ from raiden.utils.typing import (
     LockedAmount,
     Locksroot,
     Optional,
+    PrivateKey,
     Secret,
     SecretHash,
     Signature,
@@ -77,3 +79,11 @@ def encrypt_secret(
     if public_key:
         encrypted_secret = EncryptedSecret(encrypt(public_key.to_hex(), secret))
     return encrypted_secret
+
+
+def decrypt_secret(encrypted_secret: EncryptedSecret, private_key: PrivateKey) -> Secret:
+    try:
+        secret = Secret(decrypt(encrypted_secret, private_key))
+    except ValueError:
+        raise InvalidSecret
+    return secret

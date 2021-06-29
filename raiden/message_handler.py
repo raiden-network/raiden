@@ -4,7 +4,7 @@ from gevent import joinall
 from gevent.pool import Pool
 
 from raiden.constants import ABSENT_SECRET, BLOCK_ID_LATEST
-from raiden.exceptions import ServiceRequestFailed
+from raiden.exceptions import InvalidSecret, ServiceRequestFailed
 from raiden.messages.abstract import Message
 from raiden.messages.decode import balanceproof_from_envelope, lockedtransfersigned_from_message
 from raiden.messages.synchronization import Delivered, Processed
@@ -40,6 +40,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
+from raiden.transfer.utils import decrypt_secret
 from raiden.transfer.views import TransferRole
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
@@ -338,6 +339,14 @@ class MessageHandler:
         sender = from_transfer.balance_proof.sender
 
         if message.target == TargetAddress(raiden.address):
+            encrypted_secret = message.metadata.encrypted_secret
+            if encrypted_secret is not None:
+                try:
+                    secret = decrypt_secret(encrypted_secret, raiden.rpc_client.privkey)
+                    log.info(f"Using encrypted secret received from {sender.hex()}")
+                    return [ReceiveSecretReveal(secret=secret, sender=message.sender)]
+                except InvalidSecret:
+                    log.error(f"Ignoring invalid encrypted secret received from {sender.hex()}")
             return [
                 ActionInitTarget(
                     from_hop=from_hop,
