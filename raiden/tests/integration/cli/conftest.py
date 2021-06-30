@@ -58,6 +58,7 @@ def raiden_testchain(
             web3=testchain["web3"],
             base_datadir=testchain["base_datadir"],
             keystore=testchain["keystore"],
+            free_port_generator=port_generator,
         )
 
         args = result.args
