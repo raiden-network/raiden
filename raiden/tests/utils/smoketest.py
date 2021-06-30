@@ -12,9 +12,11 @@ from tempfile import mkdtemp
 from typing import IO, NamedTuple
 
 import click
+import gevent
 import requests
 from eth_typing import URI, HexStr
-from eth_utils import remove_0x_prefix, to_canonical_address
+from eth_utils import denoms, remove_0x_prefix, to_canonical_address
+from flask import Flask, jsonify
 from gevent import sleep
 from typing_extensions import Protocol
 from web3 import HTTPProvider, Web3
@@ -50,7 +52,7 @@ from raiden.transfer import channel, views
 from raiden.transfer.state import ChannelState
 from raiden.ui.app import run_raiden_service
 from raiden.utils.formatting import to_checksum_address
-from raiden.utils.http import HTTPExecutor
+from raiden.utils.http import HTTPExecutor, split_endpoint
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -62,6 +64,7 @@ from raiden.utils.typing import (
     Callable,
     ChainID,
     Dict,
+    Endpoint,
     Iterable,
     Iterator,
     List,
@@ -69,6 +72,7 @@ from raiden.utils.typing import (
     OneToNAddress,
     Port,
     PrivateKey,
+    ServiceRegistryAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkRegistryAddress,
@@ -274,7 +278,9 @@ def setup_testchain(
 
     random_marker = remove_0x_prefix(HexStr(hex(random.getrandbits(100))))
     genesis_description = GenesisDescription(
-        prefunded_accounts=[AccountDescription(TEST_ACCOUNT_ADDRESS, DEFAULT_BALANCE)],
+        prefunded_accounts=[
+            AccountDescription(TEST_ACCOUNT_ADDRESS, TokenAmount(DEFAULT_BALANCE))
+        ],
         random_marker=random_marker,
         chain_id=CHAINNAME_TO_ID["smoketest"],
     )
@@ -342,6 +348,7 @@ class RaidenTestSetup(NamedTuple):
     args: Dict[str, Any]
     token: Contract
     contract_addresses: Dict[str, Address]
+    pfs_greenlet: gevent.Greenlet
 
 
 def setup_raiden(
@@ -352,6 +359,7 @@ def setup_raiden(
     web3: Web3,
     base_datadir: Path,
     keystore: Path,
+    free_port_generator: Iterator[Port],
 ) -> RaidenTestSetup:
     print_step("Deploying Raiden contracts")
 
@@ -370,8 +378,8 @@ def setup_raiden(
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
-        initial_amount=TokenAmount(1000),
-        decimals=0,
+        initial_amount=TokenAmount(1000 * denoms.ether),
+        decimals=18,
         token_name="TKN",
         token_symbol="TKN",
         token_contract_name=CONTRACT_CUSTOM_TOKEN,
@@ -395,8 +403,35 @@ def setup_raiden(
         given_block_identifier=confirmed_block_identifier,
     )
 
-    print_step("Setting up Raiden")
+    service_registry = proxy_manager.service_registry(
+        ServiceRegistryAddress(contract_addresses[CONTRACT_SERVICE_REGISTRY]),
+        block_identifier=confirmed_block_identifier,
+    )
+    price = service_registry.current_price(confirmed_block_identifier)
+
+    amount = TokenAmount(price)
+    token_proxy = proxy_manager.token(
+        TokenAddress(to_canonical_address(token.address)), confirmed_block_identifier
+    )
+    token_proxy.approve(Address(service_registry.address), amount)
+    assert price <= token_proxy.balance_of(client.address), "must have enough balance"
+    service_registry.deposit(BLOCK_ID_LATEST, amount)
+
+    pfs_port = next(free_port_generator)
+    pfs_url = f"http://127.0.0.1:{pfs_port}"
+    service_registry.set_url(pfs_url)
+
     user_deposit_contract_address = to_checksum_address(contract_addresses[CONTRACT_USER_DEPOSIT])
+
+    print_step("Starting dummy PFS")
+    pfs_greenlet = gevent.spawn(
+        _start_dummy_pfs,
+        pfs_url,
+        to_checksum_address(registry.address),
+        user_deposit_contract_address,
+    )
+
+    print_step("Setting up Raiden")
 
     args = {
         "address": to_checksum_address(TEST_ACCOUNT_ADDRESS),
@@ -410,6 +445,7 @@ def setup_raiden(
         "user_deposit_contract_address": user_deposit_contract_address,
         "sync_check": False,
         "environment_type": Environment.DEVELOPMENT,
+        "pathfinding_service_address": pfs_url,
     }
 
     # Wait until the secret registry is confirmed, otherwise the RaidenService
@@ -421,7 +457,38 @@ def setup_raiden(
         current_block = client.block_number()
         sleep(0.5)
 
-    return RaidenTestSetup(args=args, token=token, contract_addresses=contract_addresses)
+    return RaidenTestSetup(
+        args=args, token=token, contract_addresses=contract_addresses, pfs_greenlet=pfs_greenlet
+    )
+
+
+def _start_dummy_pfs(
+    url: Endpoint,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    user_deposit_address: UserDepositAddress,
+) -> None:
+    host, port = split_endpoint(url)
+
+    app = Flask("Dummy PFS")
+
+    @app.route("/api/v1/info")
+    def pfs_info():
+        return jsonify(
+            price_info=0,
+            network_info=dict(
+                chain_id=CHAINNAME_TO_ID["smoketest"],
+                token_network_registry_address=token_network_registry_address,
+                user_deposit_address=user_deposit_address,
+                confirmed_block=dict(number=0),
+            ),
+            payment_address=to_checksum_address(TEST_ACCOUNT_ADDRESS),
+            message="Welcome to the Dummy PFS",
+            operator="nobody",
+            version="1.2",
+            matrix_server="http://matrix.example",
+        )
+
+    app.run(host=host, port=port)
 
 
 def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
@@ -500,6 +567,7 @@ def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
         if app is not None:
             app.stop()
             app.greenlet.get()
+        setup.pfs_greenlet.kill()
 
 
 @contextmanager
@@ -546,6 +614,7 @@ def setup_smoketest(
                 web3=testchain["web3"],
                 base_datadir=testchain["base_datadir"],
                 keystore=testchain["keystore"],
+                free_port_generator=free_port_generator,
             )
             ethereum_nodes = testchain["node_executors"]
             assert all(ethereum_nodes)
