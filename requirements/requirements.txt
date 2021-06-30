@@ -8,9 +8,9 @@ aiohttp==3.7.4.post0
     # via web3
 aioice==0.7.5
     # via aiortc
-aiortc-pyav-stub==0.1.1
-    # via -r requirements.in
 aiortc==1.2.0
+    # via -r requirements.in
+aiortc-pyav-stub==0.1.1
     # via -r requirements.in
 aniso8601==7.0.0
     # via flask-restful
@@ -111,15 +111,15 @@ eth-utils==1.10.0
     #   web3
 filelock==3.0.12
     # via -r requirements.in
-flask-cors==3.0.10
-    # via -r requirements.in
-flask-restful==0.3.9
-    # via -r requirements.in
 flask==2.0.1
     # via
     #   -r requirements.in
     #   flask-cors
     #   flask-restful
+flask-cors==3.0.10
+    # via -r requirements.in
+flask-restful==0.3.9
+    # via -r requirements.in
 frozendict==1.2
     # via canonicaljson
 gevent==21.1.2
@@ -128,7 +128,7 @@ graphviz==0.13.2
     # via objgraph
 greenlet==0.4.17
     # via gevent
-guppy3==3.1.0
+guppy3==3.1.1
     # via -r requirements.in
 hexbytes==0.2.0
     # via
@@ -153,18 +153,18 @@ lru-dict==1.1.6
     # via web3
 markupsafe==2.0.1
     # via jinja2
-marshmallow-dataclass[union]==8.0.0
-    # via -r requirements.in
-marshmallow-enum==1.5.1
-    # via -r requirements.in
-marshmallow-polyfield==5.10
-    # via -r requirements.in
 marshmallow==3.12.1
     # via
     #   -r requirements.in
     #   marshmallow-dataclass
     #   marshmallow-enum
     #   marshmallow-polyfield
+marshmallow-dataclass[union]==8.0.0
+    # via -r requirements.in
+marshmallow-enum==1.5.1
+    # via -r requirements.in
+marshmallow-polyfield==5.10
+    # via -r requirements.in
 matrix-client==0.3.2
     # via -r requirements.in
 mirakuru==2.1.2
