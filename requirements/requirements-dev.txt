@@ -244,7 +244,7 @@ greenlet==0.4.17
     #   gevent
 grequests==0.6.0
     # via -r requirements-dev.in
-guppy3==3.1.0
+guppy3==3.1.1
     # via -r requirements.txt
 hexbytes==0.2.0
     # via
