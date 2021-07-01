@@ -212,8 +212,21 @@ class CallablePolyField(PolyField):
 
 
 class BaseSchemaOpts(SchemaOpts):
+    """
+    This class defines additional, custom options for the `class Meta` options.
+    (https://marshmallow.readthedocs.io/en/stable/api_reference.html#marshmallow.Schema.Meta)
+    They can be set per Schema definition.
+
+
+    For more info, see:
+    https://marshmallow.readthedocs.io/en/stable/extending.html#custom-class-meta-options
+    """
+
     def __init__(self, meta, **kwargs):  # type: ignore
         SchemaOpts.__init__(self, meta, **kwargs)
+        # Setting this to False in a class Meta of a Schema will
+        # exclude all optional, not required fields that have value "None"
+        # from the dumped dictionary
         self.serialize_missing = getattr(meta, "serialize_missing", True)
 
 
@@ -223,9 +236,6 @@ class BaseSchema(marshmallow.Schema):
     # We want to ignore unknown fields
     class Meta:
         unknown = EXCLUDE
-        # Setting this to False in a class Meta of a Schema will
-        # exclude all optional, not required fields that have value "None"
-        # from the dumped dictionary
         serialize_missing = True
 
     TYPE_MAPPING = {

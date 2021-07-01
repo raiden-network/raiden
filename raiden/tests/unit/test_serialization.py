@@ -298,7 +298,7 @@ def test_metadata_pass_original_readonly():
 def test_locked_transfer_unknown_metadata():
     signer = LocalSigner(bytes(range(32)))
     additional_data = {
-        "arbitrary_data": {"new_key": "you didn't expect this, didn't you?"},
+        "arbitrary_data": {"new_key": "you didn't expect this, did you?"},
         # also check that an additional "unknown_data" does not cause an overwrite of
         # the "unknown_data" field on the dataclass used for temporary storage of the raw data
         "unknown_data": {"test": "123"},
