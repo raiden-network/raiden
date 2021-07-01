@@ -28,6 +28,7 @@ from raiden.exceptions import (
     ServiceRequestFailed,
     ServiceRequestIOURejected,
 )
+from raiden.messages.metadata import RouteMetadata
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.utils import get_response_json
 from raiden.utils.formatting import to_checksum_address
@@ -567,6 +568,19 @@ def query_address_metadata(
 
     if response.status_code != 200:
         raise PFSReturnedError.from_response(response_json)
+
+    dummy_route_metadata = RouteMetadata(
+        [Address(user_address)], {Address(user_address): response_json}
+    )
+    if (
+        dummy_route_metadata.address_metadata is not None
+        and Address(user_address) not in dummy_route_metadata.address_metadata
+    ):
+        raise ServiceRequestFailed(
+            """Pathfinding Service returned invalid """
+            f"""metadata for {to_checksum_address(user_address)}""",
+            {"http_code": response.status_code},
+        )
 
     return response_json
 

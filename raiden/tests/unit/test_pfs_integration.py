@@ -65,12 +65,15 @@ def assert_checksum_address_in_url(url):
 
 def make_address_metadata(signer: Signer) -> AddressMetadata:
     user_id = make_user_id(signer.address, "homeserver")
+    cap_dict = capconfig_to_dict(CapabilitiesConfig())
+    caps = CapabilitiesSchema().dump({"capabilities": cap_dict})["capabilities"]
+
     signature_bytes = signer.sign(str(user_id).encode())
     signature_hex = encode_hex(signature_bytes)
 
     return dict(
         user_id=user_id,
-        capabilities=CapabilitiesSchema().dump(capconfig_to_dict(CapabilitiesConfig())),
+        capabilities=caps,
         displayname=signature_hex,
     )
 
