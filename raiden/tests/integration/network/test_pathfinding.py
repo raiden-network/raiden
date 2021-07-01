@@ -20,11 +20,11 @@ from raiden.network.pathfinding import (
     query_address_metadata,
     session,
 )
-from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE, CapabilitiesConfig
-from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_OUR_ADDRESS, make_address
+from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
+from raiden.tests.unit.test_pfs_integration import make_address_metadata
+from raiden.tests.utils.factories import UNIT_CHAIN_ID, make_address, make_signer
 from raiden.tests.utils.mocks import mocked_json_response
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
-from raiden.utils.capabilities import capconfig_to_dict, capdict_to_config
 from raiden.utils.keys import privatekey_to_address
 from raiden.utils.typing import (
     BlockNumber,
@@ -198,12 +198,17 @@ def test_check_pfs_for_production(
 
 
 def test_query_user():
-    matrix_user_id = "0x12345678901234567890@homeserver"
+    signer = make_signer()
+    address = signer.address
+    metadata_dict = make_address_metadata(signer)
+    matrix_user_id = metadata_dict["user_id"]
+    capabilities = metadata_dict["capabilities"]
+    print(capabilities)
     pfs_config = PFSConfig(
         info=PFSInfo(
             url="mock-address",
             chain_id=UNIT_CHAIN_ID,
-            token_network_registry_address=make_address(),
+            token_network_registry_address=TokenNetworkRegistryAddress(make_address()),
             user_deposit_address=make_address(),
             payment_address=make_address(),
             confirmed_block_number=BlockNumber(100),
@@ -222,24 +227,31 @@ def test_query_user():
         # success
         response = session_mock.get.return_value
         response.status_code = 200
-        capabilities = CapabilitiesConfig()
-        metadata_dict = dict(user_id=matrix_user_id, capabilities=capconfig_to_dict(capabilities))
         response.content = json.dumps(metadata_dict)
-        return_metadata = query_address_metadata(pfs_config, UNIT_OUR_ADDRESS)
+        return_metadata = query_address_metadata(pfs_config, address)
         assert return_metadata.get("user_id") == matrix_user_id
-        assert capdict_to_config(return_metadata["capabilities"]) == capabilities
+        assert return_metadata["capabilities"] == capabilities
+
+        # invalid signature
+        displayname = metadata_dict["displayname"]
+        metadata_dict["displayname"] = "invalid_signature"
+        response.content = json.dumps(metadata_dict)
+        with pytest.raises(ServiceRequestFailed):
+            query_address_metadata(pfs_config, address)
+        metadata_dict["displayname"] = displayname
+        response.content = json.dumps(metadata_dict)
 
         # malformed response
         response = session_mock.get.return_value
         response.status_code = 200
         response.content = "{wrong"
         with pytest.raises(ServiceRequestFailed):
-            query_address_metadata(pfs_config, UNIT_OUR_ADDRESS)
+            query_address_metadata(pfs_config, address)
 
         # error response
         response = session_mock.get.return_value
         response.status_code = 400
         response.content = json.dumps({"error_code": 123})
         with pytest.raises(PFSReturnedError) as exc_info:
-            query_address_metadata(pfs_config, UNIT_OUR_ADDRESS)
+            query_address_metadata(pfs_config, address)
             assert exc_info.value["error_code"] == 123
