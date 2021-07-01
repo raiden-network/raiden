@@ -18,6 +18,12 @@ class RouteMetadata(MetadataValidation):
     address_metadata: Optional[Dict[Address, AddressMetadata]] = None
 
     class Meta:
+        """
+        Sets meta-options for the Schema as defined in
+        raiden.storage.serialization.schema.BaseSchemaOpts and the standard marshmallow options.
+
+        """
+
         unknown = EXCLUDE
         # Don't include optional fields that are None during dumping
         serialize_missing = False
@@ -51,15 +57,15 @@ class Metadata:
     for mediating nodes.
 
     For mediating / target nodes, the original datastructure as sent out by a previous node
-    is memorized in the original_data.
+    is memorized in original_data.
 
     All other attributes are attributes that our node can use internally.
     If an additional attribute is required (non-`Optional`) this means that our node requires
     this information from the previous node in order to successfully continue the payment.
-    Therefore a strategy for error recovery has to be implemented upon deserialisation, in the
-    case that this attributes are lacking.
+    Therefore a strategy for error recovery has to be implemented upon deserialization, in the
+    case that these attributes are lacking.
 
-    Note for serialisation:
+    Note for serialization:
     If there is `original_data` present in the object, as per the `_post_dump` other attributes
     on the object (e.g. `routes`) will not get dumped, and thus only the original_data will get
     persisted, e.g. upon dumping to the WAL!
@@ -75,6 +81,12 @@ class Metadata:
     original_data: Optional[Any] = None
 
     class Meta:
+        """
+        Sets meta-options for the Schema as defined in
+        raiden.storage.serialisation.schema.BaseSchemaOpts and the standard marshmallow options.
+
+        """
+
         unknown = EXCLUDE
 
     @cached_property
