@@ -36,7 +36,7 @@ asn1crypto==1.3.0
     # via
     #   -r requirements-dev.txt
     #   coincurve
-astroid==2.5.6
+astroid==2.6.2
     # via
     #   -r requirements-dev.txt
     #   pylint
@@ -537,7 +537,7 @@ pylibsrtp==0.6.8
     # via
     #   -r requirements-dev.txt
     #   aiortc
-pylint==2.8.3
+pylint==2.9.3
     # via -r requirements-dev.txt
 pymacaroons==0.13.0
     # via
