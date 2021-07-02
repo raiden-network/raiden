@@ -569,12 +569,11 @@ def query_address_metadata(
     if response.status_code != 200:
         raise PFSReturnedError.from_response(response_json)
 
-    dummy_route_metadata = RouteMetadata(
-        [Address(user_address)], {Address(user_address): response_json}
-    )
+    # Creating a RoutMetadata object is only used for validation of the metadata
+    route_metadata = RouteMetadata([Address(user_address)], {Address(user_address): response_json})
     if (
-        dummy_route_metadata.address_metadata is not None
-        and Address(user_address) not in dummy_route_metadata.address_metadata
+        route_metadata.address_metadata is not None
+        and Address(user_address) not in route_metadata.address_metadata
     ):
         raise ServiceRequestFailed(
             """Pathfinding Service returned invalid """

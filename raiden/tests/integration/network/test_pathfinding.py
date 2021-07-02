@@ -203,7 +203,6 @@ def test_query_user():
     metadata_dict = make_address_metadata(signer)
     matrix_user_id = metadata_dict["user_id"]
     capabilities = metadata_dict["capabilities"]
-    print(capabilities)
     pfs_config = PFSConfig(
         info=PFSInfo(
             url="mock-address",
