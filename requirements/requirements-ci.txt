@@ -285,7 +285,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.14.0
+hypothesis==6.14.1
     # via -r requirements-dev.txt
 idna==2.8
     # via
