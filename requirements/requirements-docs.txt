@@ -50,9 +50,7 @@ six==1.16.0
     #   sphinxcontrib-httpdomain
 snowballstemmer==1.2.1
     # via sphinx
-sphinx-rtd-theme==0.5.2
-    # via -r requirements-docs.in
-sphinx==4.0.2
+sphinx==4.0.3
     # via
     #   -r requirements-docs.in
     #   releases
@@ -60,6 +58,8 @@ sphinx==4.0.2
     #   sphinxcontrib-httpdomain
     #   sphinxcontrib-httpexample
     #   sphinxcontrib-images
+sphinx-rtd-theme==0.5.2
+    # via -r requirements-docs.in
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
 sphinxcontrib-devhelp==1.0.2
