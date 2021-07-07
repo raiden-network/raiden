@@ -16,7 +16,7 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
-from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.tests.utils.factories import UNIT_CHAIN_ID, make_token_network_registry_address
 from raiden.tests.utils.transfer import create_route_state_for_route
 from raiden.transfer import node, views
 from raiden.transfer.state import ChainState, NettingChannelState
@@ -420,3 +420,24 @@ class PFSMock:
 
         paths = [create_route_state_for_route(route, token_address) for route in routes_apps]
         return None, paths, None
+
+
+def make_pfs_config() -> PFSConfig:
+    return PFSConfig(
+        info=PFSInfo(
+            url="mock-address",
+            chain_id=UNIT_CHAIN_ID,
+            token_network_registry_address=make_token_network_registry_address(),
+            user_deposit_address=factories.make_address(),
+            payment_address=factories.make_address(),
+            confirmed_block_number=BlockNumber(100),
+            message="",
+            operator="",
+            version="",
+            price=TokenAmount(0),
+            matrix_server="http://matrix.example.com",
+        ),
+        maximum_fee=TokenAmount(100),
+        iou_timeout=BlockTimeout(100),
+        max_paths=5,
+    )
