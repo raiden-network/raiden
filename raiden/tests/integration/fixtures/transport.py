@@ -14,7 +14,7 @@ from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
 from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import AddressMetadata, Iterable, Optional, Tuple, UserID
+from raiden.utils.typing import Iterable, Optional, Tuple, UserID
 
 
 @pytest.fixture(scope="session")
@@ -27,12 +27,10 @@ def synapse_config_generator():
 def query_address_metadata_mock(local_matrix_servers, capabilities, monkeypatch):
     def query_address_metadata(_pfs_config, user_address):
         server_name = local_matrix_servers[0]
-        return AddressMetadata(
-            dict(
-                user_id=UserID(f"@0x{user_address.hex()}:{server_name}"),
-                capabilities=CapabilitiesSchema().dump(capconfig_to_dict(capabilities)),
-                displayname="",  # FIXME: how to add correct displayname here?
-            )
+        return dict(
+            user_id=UserID(f"@0x{user_address.hex()}:{server_name}"),
+            capabilities=CapabilitiesSchema().dump(capconfig_to_dict(capabilities)),
+            displayname="",  # FIXME: how to add correct displayname here?
         )
 
     monkeypatch.setattr("raiden.routing.query_address_metadata", query_address_metadata)
