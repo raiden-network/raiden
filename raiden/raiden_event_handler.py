@@ -15,7 +15,7 @@ from raiden.constants import (
 from raiden.exceptions import InsufficientEth, RaidenUnrecoverableError, ServiceRequestFailed
 from raiden.messages.abstract import Message
 from raiden.messages.encode import message_from_sendevent
-from raiden.network.pathfinding import post_pfs_feedback, query_address_metadata
+from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
@@ -223,12 +223,13 @@ class RaidenEventHandler(EventHandler):
         raiden: "RaidenService", event: RequestMetadata, chain_state: ChainState
     ) -> None:
         new_events: List[Event] = []
+        pfs_proxy = raiden.pfs_proxy
         for wrapped_event in event.dependant_events:
             metadata = {}
             recipient = wrapped_event.recipient
             if raiden.config.pfs_config is not None:
                 try:
-                    metadata = query_address_metadata(raiden.config.pfs_config, recipient)
+                    metadata = pfs_proxy.query_address_metadata(recipient)
                 except ServiceRequestFailed:
                     log.error(
                         f"Message {wrapped_event.message_identifier} will most likely not "

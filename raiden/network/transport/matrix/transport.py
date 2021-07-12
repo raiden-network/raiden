@@ -482,10 +482,10 @@ class MatrixTransport(Runnable):
         self.log.debug("Matrix starting")
         self._stop_event.clear()
         self._raiden_service = raiden_service
-        assert raiden_service.config.pfs_config is not None, "must be set"
+        assert raiden_service.pfs_proxy is not None, "must be set"
         self._web_rtc_manager = WebRTCManager(
             raiden_service.address,
-            raiden_service.config.pfs_config,
+            raiden_service.pfs_proxy,
             self._process_raiden_messages,
             self._send_raw,
             self._stop_event,

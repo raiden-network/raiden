@@ -156,6 +156,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
         routing_mode=RoutingMode.PFS,  # not private mode, otherwise no PFS updates are queued
+        pfs_proxy=app0.pfs_proxy,
     )
     restart_node(app0_restart)
 
@@ -214,7 +215,8 @@ def test_initialize_wal_throws_when_lock_is_taken(raiden_network: List[RaidenSer
         transport=app0.transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
-        routing_mode=RoutingMode.PRIVATE,
+        routing_mode=RoutingMode.PFS,
+        pfs_proxy=app0.pfs_proxy,
     )
     with pytest.raises(RaidenUnrecoverableError):
         app0_2.start()

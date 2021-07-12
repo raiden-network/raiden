@@ -17,7 +17,6 @@ from raiden.messages.transfers import (
     Unlock,
 )
 from raiden.messages.withdraw import WithdrawConfirmation, WithdrawExpired, WithdrawRequest
-from raiden.network.pathfinding import query_address_metadata
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -125,15 +124,15 @@ class MessageHandler:
         assert message.sender, "message must be signed"
 
         sender_metadata: Optional[AddressMetadata] = None
-        if raiden.config.pfs_config is not None:
-            # FIXME querying the PFS for the address-metadata directly after receiving a message
-            #   should be optimized / factored out at a later point!
-            try:
-                sender_metadata = query_address_metadata(raiden.config.pfs_config, message.sender)
-            except ServiceRequestFailed as ex:
-                msg = f"PFS returned an error while trying to fetch user information: \n{ex}"
-                log.warning(msg)
-                sender_metadata = None
+        pfs_proxy = raiden.pfs_proxy
+        # FIXME querying the PFS for the address-metadata directly after receiving a message
+        #   should be optimized / factored out at a later point!
+        try:
+            sender_metadata = pfs_proxy.query_address_metadata(message.sender)
+        except ServiceRequestFailed as ex:
+            msg = f"PFS returned an error while trying to fetch user information: \n{ex}"
+            log.warning(msg)
+            sender_metadata = None
 
         withdraw_request = ReceiveWithdrawRequest(
             canonical_identifier=CanonicalIdentifier(

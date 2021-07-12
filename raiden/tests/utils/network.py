@@ -7,9 +7,10 @@ import gevent
 import structlog
 from web3 import Web3
 
-import raiden.tests.utils.mocks
 from raiden import waiting
 from raiden.constants import BLOCK_ID_LATEST, GENESIS_BLOCK_NUMBER, Environment, RoutingMode
+from raiden.exceptions import PFSReturnedError
+from raiden.network.pathfinding import PFSProxy
 from raiden.network.proxies.proxy_manager import ProxyManager, ProxyManagerMetadata
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -408,13 +409,12 @@ def create_apps(
 ) -> List[RaidenService]:
     """Create the apps."""
     # pylint: disable=too-many-locals
-    apps = []
+    apps: List[RaidenService] = []
     for idx, proxy_manager in enumerate(blockchain_services):
         database_path = database_from_privatekey(base_dir=database_basedir, app_number=idx)
         assert len(resolver_ports) > idx
         resolver_port = resolver_ports[idx]
 
-        pfs_config = raiden.tests.utils.mocks.make_pfs_config()
         config = RaidenConfig(
             chain_id=chain_id,
             environment_type=environment_type,
@@ -434,7 +434,6 @@ def create_apps(
             ),
             console=False,
             transport_type="matrix",
-            pfs_config=pfs_config,
         )
         config.transport.capabilities_config = capabilities_config
 
@@ -513,10 +512,25 @@ def create_apps(
             message_handler=message_handler,
             routing_mode=routing_mode,
             api_server=api_server,
+            pfs_proxy=SimplePFSProxy(apps),
         )
         apps.append(app)
 
     return apps
+
+
+class SimplePFSProxy(PFSProxy):
+    def __init__(self, services):
+        self._services = services
+
+    def query_address_metadata(self, address):
+        for service in self._services:
+            if service.address == address:
+                return service.transport.address_metadata
+        raise PFSReturnedError(message="Address not found", error_code=404, error_details={})
+
+    def set_services(self, services):
+        self._services = services
 
 
 def parallel_start_apps(raiden_apps: List[RaidenService]) -> None:

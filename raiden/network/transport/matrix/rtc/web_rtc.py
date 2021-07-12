@@ -22,12 +22,11 @@ from raiden.constants import (
     RTCSignallingState,
     SDPTypes,
 )
-from raiden.network.pathfinding import query_address_metadata
+from raiden.network.pathfinding import PFSProxy
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
 from raiden.network.transport.matrix.utils import my_place_or_yours, validate_and_parse_message
-from raiden.settings import PFSConfig
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
@@ -362,9 +361,9 @@ class _RTCPartner(_CoroutineHandler):
         self.channel = None
 
 
-def _query_metadata(pfs_config: PFSConfig, address: Address) -> Optional[AddressMetadata]:
+def _query_metadata(pfs_proxy: PFSProxy, address: Address) -> Optional[AddressMetadata]:
     try:
-        metadata = query_address_metadata(pfs_config, address)
+        metadata = pfs_proxy.query_address_metadata(address)
     except Exception as e:
         log.error(str(e))
     else:
@@ -377,7 +376,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def __init__(
         self,
         node_address: Address,
-        pfs_config: PFSConfig,
+        pfs_proxy: PFSProxy,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
         signaling_send: Callable[
             [Address, str, MatrixMessageType, Optional[AddressMetadata]], None
@@ -386,7 +385,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     ) -> None:
         super().__init__()
         self.node_address = node_address
-        self._pfs_config = pfs_config
+        self._pfs_proxy = pfs_proxy
         self._process_messages = process_messages
         self._signaling_send = signaling_send
         self._stop_event = stop_event
@@ -598,7 +597,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._send_hangup_messages()
 
     def _send_signaling_message(self, address: Address, message: str) -> None:
-        metadata = _query_metadata(self._pfs_config, address)
+        metadata = _query_metadata(self._pfs_proxy, address)
         self._signaling_send(address, message, MatrixMessageType.NOTICE, metadata)
 
     def _send_hangup_messages(self) -> None:

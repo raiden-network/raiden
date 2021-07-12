@@ -175,7 +175,8 @@ def test_recovery_unhappy_case(
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        routing_mode=RoutingMode.PRIVATE,
+        routing_mode=RoutingMode.PFS,
+        pfs_proxy=app0.pfs_proxy,
     )
     del app0  # from here on the app0_restart should be used
     restart_node(app0_restart)
@@ -239,7 +240,8 @@ def test_recovery_blockchain_events(
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        routing_mode=RoutingMode.PRIVATE,
+        routing_mode=RoutingMode.PFS,
+        pfs_proxy=app0.pfs_proxy,
     )
 
     del app0  # from here on the app0_restart should be used

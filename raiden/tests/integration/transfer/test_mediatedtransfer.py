@@ -6,7 +6,7 @@ import pytest
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
-from raiden.network.pathfinding import PFSConfig, PFSInfo
+from raiden.network.pathfinding import PFSConfig, PFSInfo, PFSProxy
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.storage.sqlite import RANGE_ALL_STATE_CHANGES
@@ -376,7 +376,7 @@ def test_mediated_transfer_calls_pfs(
     )
     assert token_network_address, "Fixture token_addresses don't have correspoding token_network"
 
-    with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
+    with patch.object(app0.pfs_proxy, "query_paths", return_value=([], None)) as patched:
 
         app0.mediated_transfer_async(
             token_network_address=token_network_address,
@@ -387,26 +387,28 @@ def test_mediated_transfer_calls_pfs(
         )
         assert not patched.called
 
-        # Setup PFS config
-        app0.config.pfs_config = PFSConfig(
-            info=PFSInfo(
-                url="mock-address",
-                chain_id=app0.rpc_client.chain_id,
-                token_network_registry_address=token_network_registry_address,
-                user_deposit_address=factories.make_address(),
-                payment_address=factories.make_address(),
-                confirmed_block_number=chain_state.block_number,
-                message="",
-                operator="",
-                version="",
-                price=TokenAmount(0),
-                matrix_server="http://matrix.example.com",
-            ),
-            maximum_fee=TokenAmount(100),
-            iou_timeout=BlockTimeout(100),
-            max_paths=5,
-        )
+    # Setup PFS config
+    pfs_config = PFSConfig(
+        info=PFSInfo(
+            url="mock-address",
+            chain_id=app0.rpc_client.chain_id,
+            token_network_registry_address=token_network_registry_address,
+            user_deposit_address=factories.make_address(),
+            payment_address=factories.make_address(),
+            confirmed_block_number=chain_state.block_number,
+            message="",
+            operator="",
+            version="",
+            price=TokenAmount(0),
+            matrix_server="http://matrix.example.com",
+        ),
+        maximum_fee=TokenAmount(100),
+        iou_timeout=BlockTimeout(100),
+        max_paths=5,
+    )
+    app0.pfs_proxy = PFSProxy(pfs_config)
 
+    with patch.object(app0.pfs_proxy, "query_paths", return_value=([], None)) as patched:
         app0.mediated_transfer_async(
             token_network_address=token_network_address,
             amount=PaymentAmount(11),
