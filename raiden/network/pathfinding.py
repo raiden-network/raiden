@@ -543,7 +543,7 @@ def post_pfs_paths(
         )
 
 
-def query_address_metadata(
+def _query_address_metadata(
     pfs_config: PFSConfig,
     user_address: Union[Address, TargetAddress],
 ) -> AddressMetadata:
@@ -584,7 +584,7 @@ def query_address_metadata(
     return response_json
 
 
-def query_paths(
+def _query_paths(
     pfs_config: PFSConfig,
     our_address: Address,
     privkey: PrivateKey,
@@ -727,4 +727,39 @@ def post_pfs_feedback(
     except RequestException as e:
         log.warning(
             "Could not send feedback to Pathfinding Service", exception_=str(e), payload=payload
+        )
+
+
+class PFSProxy:
+    def __init__(self, pfs_config: PFSConfig):
+        self._pfs_config = pfs_config
+
+    def query_address_metadata(self, address: Union[Address, TargetAddress]) -> AddressMetadata:
+        return _query_address_metadata(self._pfs_config, address)
+
+    def query_paths(
+        self,
+        our_address: Address,
+        privkey: PrivateKey,
+        current_block_number: BlockNumber,
+        token_network_address: TokenNetworkAddress,
+        one_to_n_address: OneToNAddress,
+        chain_id: ChainID,
+        route_from: InitiatorAddress,
+        route_to: TargetAddress,
+        value: PaymentAmount,
+        pfs_wait_for_block: BlockNumber,
+    ) -> Tuple[List[Dict[str, Any]], Optional[UUID]]:
+        return _query_paths(
+            self._pfs_config,
+            our_address=our_address,
+            privkey=privkey,
+            current_block_number=current_block_number,
+            token_network_address=token_network_address,
+            one_to_n_address=one_to_n_address,
+            chain_id=chain_id,
+            route_from=route_from,
+            route_to=route_to,
+            value=value,
+            pfs_wait_for_block=pfs_wait_for_block,
         )
