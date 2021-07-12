@@ -12,7 +12,7 @@ aioice==0.7.5
     # via
     #   -r requirements-dev.txt
     #   aiortc
-aiortc==1.2.0
+aiortc==1.2.1
     # via -r requirements-dev.txt
 aiortc-pyav-stub==0.1.1
     # via -r requirements-dev.txt
@@ -112,6 +112,7 @@ cffi==1.12.3
     #   bcrypt
     #   coincurve
     #   cryptography
+    #   google-crc32c
     #   pylibsrtp
     #   pynacl
 chardet==3.0.4
@@ -140,10 +141,6 @@ constantly==15.1.0
     #   twisted
 coverage==5.5
     # via -r requirements-dev.txt
-crc32c==2.2
-    # via
-    #   -r requirements-dev.txt
-    #   aiortc
 cryptography==3.4.7
     # via
     #   -r requirements-dev.txt
@@ -262,6 +259,10 @@ gevent==21.1.2
     # via
     #   -r requirements-dev.txt
     #   grequests
+google-crc32c==1.1.2
+    # via
+    #   -r requirements-dev.txt
+    #   aiortc
 graphviz==0.13.2
     # via
     #   -r requirements-dev.txt
