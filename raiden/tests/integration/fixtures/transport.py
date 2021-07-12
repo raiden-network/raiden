@@ -2,7 +2,6 @@ from typing import List
 
 import pytest
 
-from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.constants import Environment
 from raiden.network.transport import MatrixTransport
 from raiden.settings import (
@@ -12,28 +11,14 @@ from raiden.settings import (
 )
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.utils.transport import ParsedURL, generate_synapse_config, matrix_server_starter
-from raiden.utils.capabilities import capconfig_to_dict
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import Iterable, Optional, Tuple, UserID
+from raiden.utils.typing import Iterable, Optional, Tuple
 
 
 @pytest.fixture(scope="session")
 def synapse_config_generator():
     with generate_synapse_config() as generator:
         yield generator
-
-
-@pytest.fixture(autouse=True)
-def query_address_metadata_mock(local_matrix_servers, capabilities, monkeypatch):
-    def query_address_metadata(_pfs_config, user_address):
-        server_name = local_matrix_servers[0]
-        return dict(
-            user_id=UserID(f"@0x{user_address.hex()}:{server_name}"),
-            capabilities=CapabilitiesSchema().dump(capconfig_to_dict(capabilities)),
-            displayname="",  # FIXME: how to add correct displayname here?
-        )
-
-    monkeypatch.setattr("raiden.routing.query_address_metadata", query_address_metadata)
 
 
 @pytest.fixture
