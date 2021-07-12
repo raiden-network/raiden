@@ -763,10 +763,9 @@ def test_api_channel_withdraw_with_offline_partner(
     api_server_test_instance: APIServer,
     raiden_network: List[RaidenService],
     token_addresses,
-    pfs_mock,
 ):
     app0, app1 = raiden_network
-    pfs_mock.add_apps([app0])
+    app0.pfs_proxy.set_services((app0,))  # type: ignore
 
     token_address = token_addresses[0]
     partner_address = app1.address

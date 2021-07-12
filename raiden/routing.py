@@ -4,7 +4,7 @@ import structlog
 from eth_utils import to_canonical_address
 
 from raiden.exceptions import ServiceRequestFailed
-from raiden.network.pathfinding import PFSConfig, query_address_metadata, query_paths
+from raiden.network.pathfinding import PFSProxy
 from raiden.transfer import channel, views
 from raiden.transfer.state import ChainState, ChannelState, RouteState
 from raiden.utils.formatting import to_checksum_address
@@ -38,9 +38,9 @@ def get_best_routes(
     to_address: TargetAddress,
     amount: PaymentAmount,
     previous_address: Optional[Address],
-    pfs_config: Optional[PFSConfig],
     privkey: PrivateKey,
     our_address_metadata: AddressMetadata,
+    pfs_proxy: PFSProxy,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
 
     token_network = views.get_token_network_by_address(chain_state, token_network_address)
@@ -66,15 +66,13 @@ def get_best_routes(
             if is_usable is channel.ChannelUsability.USABLE:
                 address_to_address_metadata = {Address(from_address): our_address_metadata}
                 try:
-                    address_metadata = None
-                    if pfs_config is not None:
-                        address_metadata = query_address_metadata(pfs_config, to_address)
-                    if address_metadata:
-                        address_to_address_metadata[Address(to_address)] = address_metadata
+                    address_metadata = pfs_proxy.query_address_metadata(to_address)
                 except ServiceRequestFailed as ex:
                     msg = f"PFS returned an error while trying to fetch user information: \n{ex}"
-                    log.warning(msg)
+                    log.error(msg)
                     return msg, [], None
+                else:
+                    address_to_address_metadata[Address(to_address)] = address_metadata
 
                 try:
                     direct_route = RouteState(
@@ -86,7 +84,7 @@ def get_best_routes(
                 except ValueError as ex:
                     return str(ex), [], None
 
-    if pfs_config is None or one_to_n_address is None:
+    if one_to_n_address is None:
         msg = "Pathfinding Service could not be used."
         log.warning(msg)
         return msg, list(), None
@@ -122,9 +120,9 @@ def get_best_routes(
         to_address=to_address,
         amount=amount,
         previous_address=previous_address,
-        pfs_config=pfs_config,
         privkey=privkey,
         pfs_wait_for_block=BlockNumber(latest_channel_opened_at),
+        pfs_proxy=pfs_proxy,
     )
 
     if pfs_error_msg:
@@ -152,13 +150,12 @@ def get_best_routes_pfs(
     to_address: TargetAddress,
     amount: PaymentAmount,
     previous_address: Optional[Address],
-    pfs_config: PFSConfig,
     privkey: PrivateKey,
     pfs_wait_for_block: BlockNumber,
+    pfs_proxy: PFSProxy,
 ) -> Tuple[Optional[str], List[RouteState], Optional[UUID]]:
     try:
-        pfs_routes, feedback_token = query_paths(
-            pfs_config=pfs_config,
+        pfs_routes, feedback_token = pfs_proxy.query_paths(
             our_address=chain_state.our_address,
             privkey=privkey,
             current_block_number=chain_state.block_number,

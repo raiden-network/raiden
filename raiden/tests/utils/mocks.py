@@ -9,7 +9,7 @@ import click
 from raiden.api.objects import Notification
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import PFSReturnedError
-from raiden.network.pathfinding import PFSConfig, PFSInfo
+from raiden.network.pathfinding import PFSConfig, PFSInfo, PFSProxy
 from raiden.raiden_service import RaidenService
 from raiden.settings import RaidenConfig
 from raiden.storage.serialization import JSONSerializer
@@ -231,6 +231,7 @@ class MockRaidenService:
 
         self.wal = wal
         self.transport = Mock()
+        self.pfs_proxy = PFSProxy(make_pfs_config())
 
     def add_notification(
         self,

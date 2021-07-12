@@ -15,9 +15,9 @@ from raiden.exceptions import PFSReturnedError, RaidenError, ServiceRequestFaile
 from raiden.network.pathfinding import (
     PFSConfig,
     PFSInfo,
+    PFSProxy,
     check_pfs_for_production,
     configure_pfs_or_exit,
-    query_address_metadata,
     session,
 )
 from raiden.settings import DEFAULT_PATHFINDING_MAX_FEE
@@ -222,12 +222,13 @@ def test_query_user():
         max_paths=5,
     )
 
+    pfs_proxy = PFSProxy(pfs_config)
     with patch("raiden.network.pathfinding.session") as session_mock:
         # success
         response = session_mock.get.return_value
         response.status_code = 200
         response.content = json.dumps(metadata_dict)
-        return_metadata = query_address_metadata(pfs_config, address)
+        return_metadata = pfs_proxy.query_address_metadata(address)
         assert return_metadata.get("user_id") == matrix_user_id
         assert return_metadata["capabilities"] == capabilities
 
@@ -236,7 +237,7 @@ def test_query_user():
         metadata_dict["displayname"] = "invalid_signature"
         response.content = json.dumps(metadata_dict)
         with pytest.raises(ServiceRequestFailed):
-            query_address_metadata(pfs_config, address)
+            pfs_proxy.query_address_metadata(address)
         metadata_dict["displayname"] = displayname
         response.content = json.dumps(metadata_dict)
 
@@ -245,12 +246,12 @@ def test_query_user():
         response.status_code = 200
         response.content = "{wrong"
         with pytest.raises(ServiceRequestFailed):
-            query_address_metadata(pfs_config, address)
+            pfs_proxy.query_address_metadata(address)
 
         # error response
         response = session_mock.get.return_value
         response.status_code = 400
         response.content = json.dumps({"error_code": 123})
         with pytest.raises(PFSReturnedError) as exc_info:
-            query_address_metadata(pfs_config, address)
+            pfs_proxy.query_address_metadata(address)
             assert exc_info.value["error_code"] == 123

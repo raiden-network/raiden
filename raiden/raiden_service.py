@@ -46,6 +46,7 @@ from raiden.exceptions import (
 from raiden.message_handler import MessageHandler
 from raiden.messages.abstract import Message, SignedMessage
 from raiden.messages.encode import message_from_sendevent
+from raiden.network.pathfinding import PFSProxy
 from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -222,9 +223,9 @@ def initiator_init(
             to_address=target_address,
             amount=transfer_amount,
             previous_address=None,
-            pfs_config=raiden.config.pfs_config,
             privkey=raiden.privkey,
             our_address_metadata=our_address_metadata,
+            pfs_proxy=raiden.pfs_proxy,
         )
 
         # Only prepare feedback when token is available
@@ -320,6 +321,7 @@ class RaidenService(Runnable):
         routing_mode: RoutingMode,
         config: RaidenConfig,
         api_server: Optional[APIServer] = None,
+        pfs_proxy: PFSProxy = None,
     ) -> None:
         super().__init__()
 
@@ -404,6 +406,11 @@ class RaidenService(Runnable):
         self.contract_manager: ContractManager = ContractManager(config.contracts_path)
         self.wal: Optional[WriteAheadLog] = None
         self.db_lock: Optional[filelock.UnixFileLock] = None
+
+        if pfs_proxy is None:
+            assert config.pfs_config is not None, "must not be None"
+            pfs_proxy = PFSProxy(config.pfs_config)
+        self.pfs_proxy = pfs_proxy
 
         if self.config.database_path != ":memory:":
             database_dir = os.path.dirname(config.database_path)

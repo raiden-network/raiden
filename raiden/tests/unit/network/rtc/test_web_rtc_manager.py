@@ -5,6 +5,7 @@ from gevent.event import Event
 
 import raiden.tests.utils.mocks
 from raiden.constants import ICEConnectionState
+from raiden.network.pathfinding import PFSProxy
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.tests.utils.factories import make_signer
@@ -22,8 +23,9 @@ def test_rtc_partner_close() -> None:
     stop_event = Event()
 
     pfs_config = raiden.tests.utils.mocks.make_pfs_config()
+    pfs_proxy = PFSProxy(pfs_config)
     web_rtc_manager = WebRTCManager(
-        node_address, pfs_config, ignore_web_rtc_messages, _dummy_send, stop_event
+        node_address, pfs_proxy, ignore_web_rtc_messages, _dummy_send, stop_event
     )
 
     partner_address = make_signer().address

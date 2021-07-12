@@ -11,7 +11,7 @@ from raiden.tests.integration.fixtures.raiden_network import RestartNode
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.factories import make_secret
-from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.network import CHAIN, SimplePFSProxy
 from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
@@ -93,6 +93,7 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
     )
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
+    services = [app1]
     app0_restart = RaidenService(
         config=app0.config,
         rpc_client=app0.rpc_client,
@@ -106,8 +107,11 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        routing_mode=RoutingMode.PRIVATE,
+        routing_mode=RoutingMode.PFS,
+        pfs_proxy=SimplePFSProxy(services),
     )
+    services.append(app0_restart)
+    assert app0.address == app0_restart.address
 
     del app0
     restart_node(app0_restart)
@@ -211,6 +215,7 @@ def test_payment_statuses_are_restored(
         )
         assert payment_status.payment_identifier == identifier
 
+    services = [app1]
     app0_restart = RaidenService(
         config=app0.config,
         rpc_client=app0.rpc_client,
@@ -226,8 +231,10 @@ def test_payment_statuses_are_restored(
         ),
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
-        routing_mode=RoutingMode.PRIVATE,
+        routing_mode=RoutingMode.PFS,
+        pfs_proxy=SimplePFSProxy(services),
     )
+    services.append(app0_restart)
     app0.stop()
     del app0  # from here on the app0_restart should be used
     # stop app1 to make sure that we don't complete the transfers before our checks
