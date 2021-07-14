@@ -585,8 +585,9 @@ class MatrixTransport(Runnable):
         self._stop_event.set()
         self._broadcast_event.set()
 
-        if self._raiden_service:
-            self._web_rtc_manager.stop()
+        assert self._web_rtc_manager is not None, "must be set"
+        self._web_rtc_manager.stop()
+        self._web_rtc_manager = None
 
         for retrier in self._address_to_retrier.values():
             if retrier:
