@@ -1059,7 +1059,7 @@ class MatrixTransport(Runnable):
             # will simply ignore our communication attempt
             communication_medium = CommunicationMedium.TO_DEVICE
             if user_id is None:
-                self.log.debug(
+                self.log.error(
                     "Cannot send raw message without address metadata.",
                     receiver=to_checksum_address(receiver_address),
                     send_medium=communication_medium.value,
