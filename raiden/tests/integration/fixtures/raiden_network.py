@@ -244,7 +244,7 @@ def pfs_mock(
     )
     monkeypatch.setattr("raiden.routing.get_best_routes_pfs", pfs_mock.get_best_routes_pfs)
     # PFS info endpoint
-    monkeypatch.setattr("raiden.network.pathfinding", pfs_mock.get_pfs_info)
+    monkeypatch.setattr("raiden.network.pathfinding.get_pfs_info", pfs_mock.get_pfs_info)
 
     return pfs_mock
 
