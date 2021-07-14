@@ -451,7 +451,7 @@ class MatrixTransport(Runnable):
 
     @property
     def _node_address(self) -> Optional[Address]:
-        return self._raiden_service.address if self._raiden_service else None
+        return self._raiden_service.address if self._raiden_service is not None else None
 
     @property
     def user_id(self) -> Optional[UserID]:
