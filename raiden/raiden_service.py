@@ -529,13 +529,13 @@ class RaidenService(Runnable):
         # contact the disconnected client
         if self.api_server is not None:
             self.api_server.stop()
-        self.transport.stop()
-        self.alarm.stop()
-
-        if self.api_server is not None:
             self.api_server.greenlet.join()
-        self.transport.greenlet.join()
+
+        self.alarm.stop()
         self.alarm.greenlet.join()
+
+        self.transport.stop()
+        self.transport.greenlet.join()
 
         assert (
             self.blockchain_events
