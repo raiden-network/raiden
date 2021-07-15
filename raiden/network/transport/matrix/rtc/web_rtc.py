@@ -584,6 +584,8 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def stop(self) -> None:
         self.log.debug("Closing rtc connections")
 
+        self._send_hangup_messages()
+
         for partner_address in list(self._address_to_rtc_partners.keys()):
             if partner_address in self._address_to_rtc_partners:
                 rtc_partner = self._address_to_rtc_partners[partner_address]
@@ -594,7 +596,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         self.join_all_coroutines()
         self._reset_state()
-        self._send_hangup_messages()
 
     def _send_signaling_message(self, address: Address, message: str) -> None:
         metadata = _query_metadata(self._pfs_proxy, address)
