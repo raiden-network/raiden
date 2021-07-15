@@ -24,8 +24,6 @@ apipkg==1.5
     # via execnet
 appdirs==1.4.3
     # via black
-appnope==0.1.2
-    # via ipython
 asn1crypto==1.3.0
     # via
     #   -r requirements.txt
@@ -663,7 +661,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.20.1
+web3==5.21.0
     # via
     #   -r requirements.txt
     #   raiden-contracts
