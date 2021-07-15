@@ -806,6 +806,8 @@ class RaidenService(Runnable):
         self.alarm.register_callback(self._best_effort_synchronize)
 
     def _blockchain_event_listener(self, events: List[DecodedEvent]) -> None:
+        if not self.transport.started:
+            return
         for event in events:
             args = event.event_data["args"]
             if event.event_data["event"] == ChannelEvent.OPENED:
