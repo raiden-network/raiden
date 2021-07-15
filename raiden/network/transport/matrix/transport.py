@@ -432,6 +432,10 @@ class MatrixTransport(Runnable):
 
         self.services_addresses: Dict[Address, int] = dict()
 
+    @property
+    def started(self) -> bool:
+        return self._started
+
     def __repr__(self) -> str:
         if self._raiden_service is not None:
             node = f" node:{self.checksummed_address}"
@@ -579,6 +583,7 @@ class MatrixTransport(Runnable):
         but it should raise any stop-time exception"""
         if self._stop_event.ready():
             return
+        self._started = False
         self.log.debug("Matrix stopping")
         # Ensure, we send all broadcast messages before shutting down
         self._broadcast_queue.join()
