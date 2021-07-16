@@ -24,6 +24,7 @@ marshmallow_enum
 matrix-client==0.3.2
 mirakuru==2.1.2
 netifaces
+packaging
 psutil
 pylibsrtp>=0.6.8
 pysha3
