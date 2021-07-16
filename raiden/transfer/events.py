@@ -51,6 +51,7 @@ class SendWithdrawRequest(SendMessageEvent):
     participant: Address
     expiration: BlockExpiration
     nonce: Nonce
+    coop_settle: Optional[bool] = False
 
     def __repr__(self) -> str:
         return (
@@ -120,6 +121,40 @@ class ContractSendChannelWithdraw(ContractSendEvent):
             f"canonical_identifier: {self.canonical_identifier} "
             f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
             f"partner_signature: {to_hex(self.partner_signature)} "
+            f">"
+        )
+
+
+@dataclass(frozen=True)
+class ContractSendChannelCoopSettle(ContractSendEvent):
+    """Event emitted if node wants to withdraw from current channel balance."""
+
+    canonical_identifier: CanonicalIdentifier
+    our_total_withdraw: WithdrawAmount
+    partner_total_withdraw: WithdrawAmount
+    expiration: BlockExpiration
+    # This are the partner's signatures of the two withdraws.
+    # Our signature of that data will be constructed again in the event-handler
+    signature_our_withdraw: Signature
+    signature_partner_withdraw: Signature
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_address(self) -> TokenNetworkAddress:
+        return self.canonical_identifier.token_network_address
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}< "
+            f"canonical_identifier: {self.canonical_identifier} "
+            f"our_total_withdraw: {self.our_total_withdraw} "
+            f"parner_total_withdraw: {self.our_total_withdraw} "
+            f"expiration: {self.expiration} "
+            f"partner_signature_withdraw: {to_hex(self.signature_partner_withdraw)} "
+            f"partner_signature_our_withdraw: {to_hex(self.signature_our_withdraw)} "
             f">"
         )
 
@@ -412,6 +447,14 @@ class EventInvalidReceivedWithdrawExpired(Event):
 @dataclass(frozen=True)
 class EventInvalidActionWithdraw(Event):
     """Event emitted when an invalid withdraw is initiated."""
+
+    attempted_withdraw: WithdrawAmount
+    reason: str
+
+
+@dataclass(frozen=True)
+class EventInvalidActionCoopSettle(Event):
+    """Event emitted when an invalid coop-settle is initiated."""
 
     attempted_withdraw: WithdrawAmount
     reason: str

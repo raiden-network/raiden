@@ -117,6 +117,18 @@ class ActionChannelWithdraw(StateChange):
 
 
 @dataclass(frozen=True)
+class ActionChannelCoopSettle(StateChange):
+    """Withdraw funds from channel."""
+
+    canonical_identifier: CanonicalIdentifier
+    recipient_metadata: Optional[AddressMetadata] = None
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+
+@dataclass(frozen=True)
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """A new channel was created and this node IS a participant."""
 
@@ -357,6 +369,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     expiration: BlockExpiration
     signature: Signature
     participant: Address
+    coop_settle: Optional[bool] = False
     sender_metadata: Optional[AddressMetadata] = None
 
     @property

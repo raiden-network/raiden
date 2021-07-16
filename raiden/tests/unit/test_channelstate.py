@@ -1648,6 +1648,8 @@ def test_receive_withdraw_request():
     partner_model1, privkey2 = create_model(balance=100)
     signer = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
+    block_hash = make_block_hash()
+    block_number = 1
     expiration = 10
 
     # Withdraw request larger than balance
@@ -1665,7 +1667,11 @@ def test_receive_withdraw_request():
     )
 
     iteration = channel._handle_receive_withdraw_request(
-        channel_state=channel_state, action=withdraw_request
+        action=withdraw_request,
+        channel_state=channel_state,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     assert (
@@ -1699,7 +1705,11 @@ def test_receive_withdraw_request():
     )
 
     iteration = channel._handle_receive_withdraw_request(
-        channel_state=channel_state, action=withdraw_request
+        action=withdraw_request,
+        channel_state=channel_state,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     # pylint: disable=no-member
@@ -1725,7 +1735,11 @@ def test_receive_withdraw_request():
     )
 
     iteration = channel._handle_receive_withdraw_request(
-        channel_state=iteration.new_state, action=withdraw_request
+        action=withdraw_request,
+        channel_state=iteration.new_state,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     assert (
@@ -1750,7 +1764,11 @@ def test_receive_withdraw_request():
     )
 
     iteration = channel._handle_receive_withdraw_request(
-        channel_state=iteration.new_state, action=withdraw_request
+        action=withdraw_request,
+        channel_state=iteration.new_state,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     assert (
@@ -1804,8 +1822,8 @@ def test_receive_withdraw_confirmation():
     )
 
     iteration = channel._handle_receive_withdraw_confirmation(
-        channel_state=channel_state,
         action=receive_withdraw,
+        channel_state=channel_state,
         block_number=10,
         block_hash=block_hash,
     )
@@ -1831,8 +1849,8 @@ def test_receive_withdraw_confirmation():
     )
 
     iteration = channel._handle_receive_withdraw_confirmation(
-        channel_state=iteration.new_state,
         action=receive_withdraw,
+        channel_state=iteration.new_state,
         block_number=10,
         block_hash=block_hash,
     )
@@ -1856,8 +1874,8 @@ def test_receive_withdraw_confirmation():
     )
 
     iteration = channel._handle_receive_withdraw_confirmation(
-        channel_state=iteration.new_state,
         action=receive_withdraw,
+        channel_state=iteration.new_state,
         block_number=10,
         block_hash=block_hash,
     )
