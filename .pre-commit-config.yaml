@@ -51,7 +51,7 @@ repos:
       - id: rst-inline-touching-normal
 
   - repo: git://github.com/pre-commit/mirrors-isort
-    rev: v5.9.1
+    rev: v5.9.2
     hooks:
       - id: isort
         args: ["--ignore-whitespace", "--settings-path", "./"]
