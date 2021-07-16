@@ -119,6 +119,9 @@ chardet==3.0.4
     # via
     #   -r requirements-dev.txt
     #   aiohttp
+charset-normalizer==2.0.2
+    # via
+    #   -r requirements-dev.txt
     #   requests
 click==8.0.1
     # via
@@ -614,7 +617,7 @@ regex==2020.6.8
     # via
     #   -r requirements-dev.txt
     #   black
-requests==2.25.1
+requests==2.26.0
     # via
     #   -r requirements-dev.txt
     #   grequests

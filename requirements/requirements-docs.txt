@@ -12,7 +12,7 @@ babel==2.7.0
     # via sphinx
 certifi==2019.3.9
     # via requests
-chardet==3.0.4
+charset-normalizer==2.0.2
     # via requests
 docutils==0.14
     # via
@@ -37,7 +37,7 @@ pytz==2019.1
     # via babel
 releases==1.6.3
     # via -r requirements-docs.in
-requests==2.25.1
+requests==2.26.0
     # via
     #   sphinx
     #   sphinxcontrib-images
