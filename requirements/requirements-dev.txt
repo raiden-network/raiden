@@ -389,7 +389,7 @@ parso==0.7.0
     # via jedi
 pathspec==0.8.1
     # via black
-pdbpp==0.10.2
+pdbpp==0.10.3
     # via -r requirements-dev.in
 pep517==0.10.0
     # via pip-tools
