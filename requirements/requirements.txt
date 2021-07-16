@@ -44,9 +44,9 @@ cffi==1.12.3
     #   google-crc32c
     #   pylibsrtp
 chardet==3.0.4
-    # via
-    #   aiohttp
-    #   requests
+    # via aiohttp
+charset-normalizer==2.0.2
+    # via requests
 click==8.0.1
     # via
     #   -r requirements.in
@@ -225,7 +225,7 @@ raiden-contracts==0.38.0
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
-requests==2.25.1
+requests==2.26.0
     # via
     #   -r requirements.in
     #   ipfshttpclient
