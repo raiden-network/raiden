@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import click
 import gevent
@@ -7,7 +7,7 @@ import requests
 import structlog
 from eth_utils import to_hex
 from gevent.event import AsyncResult
-from pkg_resources import parse_version
+from packaging.version import LegacyVersion, Version, parse as parse_version
 from web3 import Web3
 from web3.types import BlockData
 
@@ -30,7 +30,7 @@ from raiden.utils import gas_reserve
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
 from raiden.utils.transfers import to_rdn
-from raiden.utils.typing import Any, BlockNumber, Callable, ChainID, List, Optional, Tuple
+from raiden.utils.typing import Any, BlockNumber, Callable, ChainID, List, Optional
 
 if TYPE_CHECKING:
     from raiden.raiden_service import RaidenService
@@ -39,7 +39,9 @@ REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)
 
 
-def _do_check_version(current_version: Tuple[str, ...], raiden: "RaidenService") -> bool:
+def _do_check_version(
+    current_version: Union[Version, LegacyVersion], raiden: "RaidenService"
+) -> bool:
     content = requests.get(LATEST).json()
     if "tag_name" not in content:
         # probably API rate limit exceeded

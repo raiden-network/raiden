@@ -8,12 +8,12 @@ import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import click
 import yaml
 from packaging.requirements import Requirement
-from packaging.version import Version, parse
+from packaging.version import LegacyVersion, Version, parse
 
 PRE_COMMIT_CONFG_PATH = Path(".pre-commit-config.yaml")
 REQUIREMENTS_DEV_PATH = Path("requirements", "requirements-dev.txt")
@@ -36,7 +36,7 @@ class Tool(Enum):
 @dataclass
 class ToolVersion:
     tool: Tool
-    version: Version
+    version: Union[Version, LegacyVersion]
     additional_deps: List[Requirement] = field(default_factory=list)
 
 

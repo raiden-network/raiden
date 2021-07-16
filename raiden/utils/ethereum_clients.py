@@ -1,8 +1,8 @@
 import re
 from enum import Enum
+from typing import Union
 
-from packaging.version import Version
-from pkg_resources import parse_version
+from packaging.version import LegacyVersion, Version, parse as parse_version
 
 from raiden.constants import (
     HIGHEST_SUPPORTED_GETH_VERSION,
@@ -20,7 +20,7 @@ class VersionSupport(Enum):
     UNSUPPORTED = "unsupported"
 
 
-def parse_geth_version(client_version: str) -> Optional[tuple]:
+def parse_geth_version(client_version: str) -> Optional[Union[Version, LegacyVersion]]:
     if client_version.startswith("Geth/"):
         # then this is a geth client version from web3.clientVersion
         matches = re.search(r"/v(\d+\.\d+\.\d+)", client_version)
@@ -33,7 +33,7 @@ def parse_geth_version(client_version: str) -> Optional[tuple]:
 
 
 def support_check(
-    our_version: Version,
+    our_version: Union[Version, LegacyVersion],
     highest_supported_version_string: str,
     lowest_supported_version_string: str,
 ) -> VersionSupport:
