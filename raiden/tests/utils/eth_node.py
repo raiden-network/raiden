@@ -6,10 +6,10 @@ from contextlib import ExitStack, contextmanager
 from typing import ContextManager, Iterator
 
 import gevent
+import packaging.version
 import structlog
 from eth_keyfile import create_keyfile_json
 from eth_utils import encode_hex, remove_0x_prefix, to_normalized_address
-from pkg_resources import parse_version
 from web3 import Web3
 
 from raiden.constants import BLOCK_ID_LATEST
@@ -115,7 +115,7 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> 
             "version format."
         )
 
-    if geth_version_parse >= parse_version("1.9.0"):
+    if geth_version_parse >= packaging.version.parse("1.9.0"):
         # Geth does not normally allow running an unlocked account
         # with the http interface. But since this a test blockchain we
         # can override that.

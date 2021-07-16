@@ -3,7 +3,7 @@ import re
 from unittest.mock import patch
 
 import requests
-from pkg_resources import parse_version
+from packaging.version import parse as parse_version
 
 from raiden.tasks import SECURITY_EXPRESSION, _do_check_version
 from raiden.tests.utils.mocks import MockRaidenService
