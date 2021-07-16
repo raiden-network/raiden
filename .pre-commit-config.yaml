@@ -79,7 +79,7 @@ repos:
         additional_dependencies: ["pip-tools==6.2.0"]
 
   - repo: https://github.com/PyCQA/pylint
-    rev: v2.8.3
+    rev: v2.9.3
     hooks:
       - id: pylint
         entry: tools/pre-commit/pre-commit-wrapper.py pylint
