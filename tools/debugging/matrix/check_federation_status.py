@@ -14,7 +14,7 @@ from structlog import get_logger
 from raiden.constants import DeviceIDs, ServerListType
 from raiden.exceptions import TransportError
 from raiden.network.transport.matrix import login, make_client
-from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixMessage
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.signer import LocalSigner
 
@@ -41,7 +41,7 @@ class FederationChecker:
         return errors
 
     def _make_clients(self) -> Tuple[Dict[str, GMatrixClient], List[FederationError]]:
-        def _dummy_callback(_: MatrixSyncMessages) -> bool:
+        def _dummy_callback(_: List[MatrixMessage]) -> bool:
             return True
 
         errors: List[FederationError] = []

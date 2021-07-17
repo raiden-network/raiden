@@ -37,9 +37,6 @@ log = structlog.get_logger(__name__)
 SHUTDOWN_TIMEOUT = 35
 
 MatrixMessage = Dict[str, Any]
-# No room means it's a toDevice message
-MatrixRoomMessages = Tuple[Optional["Room"], List[MatrixMessage]]
-MatrixSyncMessages = List[MatrixRoomMessages]
 JSONResponse = Dict[str, Any]
 
 
@@ -281,7 +278,7 @@ class GMatrixClient(MatrixClient):
 
     def __init__(
         self,
-        handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+        handle_messages_callback: Callable[[List[MatrixMessage]], bool],
         base_url: str,
         token: str = None,
         user_id: str = None,
@@ -788,7 +785,7 @@ class GMatrixClient(MatrixClient):
 
     def _handle_responses(self, currently_queued_responses: List[JSONResponse]) -> None:
 
-        all_messages: MatrixSyncMessages = []
+        all_messages: List[MatrixMessage] = []
 
         for response in currently_queued_responses:
             for presence_update in response["presence"]["events"]:
@@ -802,12 +799,7 @@ class GMatrixClient(MatrixClient):
 
             # Add toDevice messages to message queue
             if response["to_device"]["events"]:
-                all_messages.append(
-                    (
-                        None,
-                        response["to_device"]["events"],
-                    )
-                )
+                all_messages.extend(response["to_device"]["events"])
 
             for room_id, invite_room in response["rooms"]["invite"].items():
                 for listener in self.invite_listeners[:]:
@@ -832,18 +824,6 @@ class GMatrixClient(MatrixClient):
                 for event in sync_room["timeline"]["events"]:
                     event["room_id"] = room_id
                     room._put_event(event)
-
-                all_messages.append(
-                    (
-                        room,
-                        [
-                            message
-                            for message in sync_room["timeline"]["events"]
-                            if message["type"] == "m.room.message"
-                        ],
-                    )
-                )
-
                 for event in sync_room["ephemeral"]["events"]:
                     event["room_id"] = room_id
                     room._put_ephemeral_event(event)

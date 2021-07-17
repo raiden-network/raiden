@@ -27,7 +27,7 @@ from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
-    MatrixSyncMessages,
+    MatrixMessage,
     ReceivedRaidenMessage,
 )
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
@@ -57,7 +57,7 @@ def get_admin_credentials(server_name):
 
 
 def new_client(
-    handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    handle_messages_callback: Callable[[List[MatrixMessage]], bool],
     server: "ParsedURL",
 ) -> GMatrixClient:
     server_name = server.netloc
@@ -74,7 +74,7 @@ def new_client(
     return client
 
 
-def ignore_messages(_matrix_messages: MatrixSyncMessages) -> bool:
+def ignore_messages(_matrix_messages: List[MatrixMessage]) -> bool:
     return True
 
 

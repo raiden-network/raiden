@@ -30,7 +30,7 @@ from raiden.messages.abstract import Message, RetrieableMessage, SignedMessage
 from raiden.messages.synchronization import Processed
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
-    MatrixSyncMessages,
+    MatrixMessage,
     User,
     node_address_from_userid,
 )
@@ -491,7 +491,7 @@ def sort_servers_closest(
 
 
 def make_client(
-    handle_messages_callback: Callable[[MatrixSyncMessages], bool],
+    handle_messages_callback: Callable[[List[MatrixMessage]], bool],
     servers: List[str],
     *args: Any,
     **kwargs: Any,
