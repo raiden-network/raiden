@@ -865,7 +865,7 @@ class MatrixTransport(Runnable):
             self._displayname_cache.warm_users([user])
 
             peer_address = validate_userid_signature(user)
-            if not peer_address:
+            if peer_address is None:
                 self.log.debug(
                     "Ignoring message from user with an invalid display name signature",
                     peer_user=user.user_id,
