@@ -10,7 +10,6 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.user import User
 
 from raiden.constants import Environment, MatrixMessageType
-from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import AddressReachability
@@ -390,7 +389,7 @@ def test_normal_processing_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     event = make_message_text()
-    assert mock_matrix._handle_sync_messages([(None, [event])])
+    assert mock_matrix._handle_messages([event])
 
 
 def test_processing_invalid_json(  # pylint: disable=unused-argument
@@ -398,21 +397,21 @@ def test_processing_invalid_json(  # pylint: disable=unused-argument
 ):
     invalid_json = '{"foo": 1,'
     event = make_message_text(overwrite_data=invalid_json)
-    assert not mock_matrix._handle_sync_messages([(None, [event])])
+    assert not mock_matrix._handle_messages([event])
 
 
 def test_non_signed_message_is_rejected(
     mock_matrix, skip_userid_validation
 ):  # pylint: disable=unused-argument
     event = make_message_text(sign=False)
-    assert not mock_matrix._handle_sync_messages([(None, [event])])
+    assert not mock_matrix._handle_messages([event])
 
 
 def test_sending_nonstring_body(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation
 ):
     event = make_message_text(overwrite_data=b"somebinarydata")
-    assert not mock_matrix._handle_sync_messages([(None, [event])])
+    assert not mock_matrix._handle_messages([event])
 
 
 @pytest.mark.parametrize(
@@ -426,7 +425,7 @@ def test_processing_invalid_message_json(  # pylint: disable=unused-argument
     mock_matrix, skip_userid_validation, message_input
 ):
     event = make_message_text(overwrite_data=message_input)
-    assert not mock_matrix._handle_sync_messages([(None, [event])])
+    assert not mock_matrix._handle_messages([event])
 
 
 def test_processing_invalid_message_type_json(  # pylint: disable=unused-argument
@@ -434,16 +433,7 @@ def test_processing_invalid_message_type_json(  # pylint: disable=unused-argumen
 ):
     invalid_message = '{"_type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     event = make_message_text(overwrite_data=invalid_message)
-    assert not mock_matrix._handle_sync_messages([(None, [event])])
-
-
-def test_message_in_p2p_room_raises(  # pylint: disable=unused-argument
-    mock_matrix, skip_userid_validation
-):
-    event = make_message_text()
-    room = Room(None, "!roomID:server")  # type: ignore
-    with pytest.raises(RaidenUnrecoverableError):
-        mock_matrix._handle_sync_messages([(room, [event])])
+    assert not mock_matrix._handle_messages([event])
 
 
 def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
