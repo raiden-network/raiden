@@ -16,7 +16,7 @@ import gevent
 import structlog
 from gevent.pool import Pool
 
-from raiden.network.transport.matrix.client import GMatrixClient, MatrixSyncMessages, Room, User
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixMessage, Room, User
 from raiden.network.transport.matrix.rtc.utils import setup_asyncio_event_loop
 from raiden.network.transport.matrix.utils import login
 from raiden.settings import (
@@ -128,22 +128,21 @@ def logtime(msg: str, *args: Any, **kwargs: Any) -> Iterator[Dict[str, Any]]:
     log.info(FINISHED + msg, elapsed=elapsed, *args, **kwargs, **details)
 
 
-def time_messages(sync_messages: MatrixSyncMessages) -> bool:
-    for _, room_messages in sync_messages:
-        for message in room_messages:
-            is_valid_type = (
-                message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.text"
-            )
-            if is_valid_type:
-                data_encoded = message["content"]["body"]
-                data = json.loads(data_encoded)
-                elapsed = time.monotonic() - data["monotonic_start"]
-                log.debug(RECEIVED + MESSAGE, elapsed=elapsed)
+def time_messages(messages: List[MatrixMessage]) -> bool:
+    for message in messages:
+        is_valid_type = (
+            message["type"] == "m.room.message" and message["content"]["msgtype"] == "m.text"
+        )
+        if is_valid_type:
+            data_encoded = message["content"]["body"]
+            data = json.loads(data_encoded)
+            elapsed = time.monotonic() - data["monotonic_start"]
+            log.debug(RECEIVED + MESSAGE, elapsed=elapsed)
 
     return True
 
 
-def ignore_messages(sync_messages: MatrixSyncMessages) -> bool:  # pylint: disable=unused-argument
+def ignore_messages(messages: List[MatrixMessage]) -> bool:  # pylint: disable=unused-argument
     pass
 
 

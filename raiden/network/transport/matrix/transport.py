@@ -34,10 +34,8 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
     MatrixMessage,
-    MatrixSyncMessages,
     ReceivedCallMessage,
     ReceivedRaidenMessage,
-    Room,
 )
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.utils import (
@@ -385,7 +383,7 @@ class MatrixTransport(Runnable):
 
         version = get_system_spec()["raiden"]
         self._client: GMatrixClient = make_client(
-            self._handle_sync_messages,
+            self._handle_messages,
             homeserver_candidates,
             http_pool_maxsize=4,
             http_retry_timeout=40,
@@ -835,7 +833,7 @@ class MatrixTransport(Runnable):
         self.greenlets = [self._client.sync_worker, self._client.message_worker]
 
     def _validate_matrix_messages(
-        self, room: Optional[Room], messages: List[MatrixMessage]
+        self, messages: List[MatrixMessage]
     ) -> Tuple[List[ReceivedRaidenMessage], List[ReceivedCallMessage]]:
         assert self._raiden_service is not None, "_raiden_service not set"
 
@@ -871,16 +869,8 @@ class MatrixTransport(Runnable):
                 self.log.debug(
                     "Ignoring message from user with an invalid display name signature",
                     peer_user=user.user_id,
-                    room=room,
                 )
                 continue
-
-            if room:
-                # We no longer accept node-to-node communication messages in private rooms and
-                # should not be in any.
-                raise RaidenUnrecoverableError(f"Received message in room {room.canonical_alias}.")
-
-            # XXX-UAM: Whitelist check was here
 
             sender_metadata: AddressMetadata = dict(user_id=UserID(sender_id))
             if is_raiden_message:
@@ -933,22 +923,14 @@ class MatrixTransport(Runnable):
 
         self._raiden_service.on_messages(incoming_messages)
 
-    def _handle_sync_messages(self, sync_messages: MatrixSyncMessages) -> bool:
-        """Handle text messages sent to listening rooms"""
+    def _handle_messages(self, messages: List[MatrixMessage]) -> bool:
+        """Handle text messages"""
         if self._stop_event.ready():
             return False
 
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        raiden_messages: List[ReceivedRaidenMessage] = list()
-        call_messages: List[ReceivedCallMessage] = list()
-
-        for room, room_messages in sync_messages:
-            next_raiden_messages, next_call_messages = self._validate_matrix_messages(
-                room, room_messages
-            )
-            raiden_messages.extend(next_raiden_messages)
-            call_messages.extend(next_call_messages)
+        raiden_messages, call_messages = self._validate_matrix_messages(messages)
 
         self._process_raiden_messages(raiden_messages)
         self._process_call_messages(call_messages)
