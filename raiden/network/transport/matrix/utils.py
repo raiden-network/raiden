@@ -55,8 +55,6 @@ cached_deserialize = lru_cache()(MessageSerializer.deserialize)
 JOIN_RETRIES = 10
 USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
 DISPLAY_NAME_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{130}$")
-ROOM_NAME_SEPARATOR = "_"
-ROOM_NAME_PREFIX = "raiden"
 # The maximum matrix event size is 65 kB. Since events are larger than just the message
 # content we chose a conservative value
 MATRIX_MAX_BATCH_SIZE = 50_000
