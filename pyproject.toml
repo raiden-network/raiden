@@ -17,6 +17,7 @@ exclude = '''
 testpaths = [
     "raiden/tests",
 ]
+addopts = "--no-success-flaky-report"
 timeout_limit_for_setup_and_call = 240
 timeout_limit_teardown = 15
 norecursedirs = [

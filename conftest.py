@@ -1,5 +1,6 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
 # type: ignore
+
 from gevent import monkey
 
 monkey.patch_all(subprocess=False, thread=False)
@@ -14,19 +15,14 @@ aiortc_pyav_stub.install_as_av()
 
 # isort: split
 
+import pkgutil
 import pytest
 
-# Execute these before the raiden imports because rewrites can't work after the
-# module has been imported.
-pytest.register_assert_rewrite("raiden.tests.utils.cli")
-pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
-pytest.register_assert_rewrite("raiden.tests.utils.factories")
-pytest.register_assert_rewrite("raiden.tests.utils.messages")
-pytest.register_assert_rewrite("raiden.tests.utils.network")
-pytest.register_assert_rewrite("raiden.tests.utils.protocol")
-pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")
-pytest.register_assert_rewrite("raiden.tests.utils.smoketest")
-pytest.register_assert_rewrite("raiden.tests.utils.transfer")
+# Register pytest assert rewriting on all submodules of `raiden/tests/utils`.
+# This is necessary due to our split fixture setup since pytest doesn't detect these
+# imports automatically.
+for module_info in pkgutil.iter_modules(["raiden/tests/utils"]):
+    pytest.register_assert_rewrite(f"raiden.tests.utils.{module_info.name}")
 
 # isort:split
 
