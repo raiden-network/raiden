@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Critical Vulnerability Report
+    url: https://bounty.raiden.network/
+    about: |
+      * DO NOT REPORT SECURITY ISSUES VIA THE ISSUE TRACKER *
+      If the issue you want to report is a critical vulnerability,
+      for example something that may lead to lock up or loss of funds for Raiden users,
+      then please do not use the public issue tracker.
+      Instead send an email with a detailed report to bounty@raiden.network.
+      Click the link to the right for details on our bug bounty program.
