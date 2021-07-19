@@ -1,8 +1,8 @@
 import json
 import os
+import warnings
 
 import requests
-
 
 try:
     _CODESPEED_USER = os.environ["CODESPEED_USER"]
@@ -11,7 +11,10 @@ try:
 
     _BENCHMARK_HOST = os.environ["BENCHMARK_HOST"]
 except KeyError:
-    print("Codespeed environment variables not available, posting results would fail.")
+    warnings.warn(
+        "Codespeed environment variables not available, posting results would fail.",
+        RuntimeWarning,
+    )
 
 
 def post_result(codespeed_url, commit_id, branch, bench_name, value):
