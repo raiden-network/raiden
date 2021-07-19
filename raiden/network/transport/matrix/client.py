@@ -18,7 +18,6 @@ from gevent.pool import Pool
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
-from matrix_client.room import Room
 from matrix_client.user import User
 from requests import Response
 from requests.adapters import HTTPAdapter
@@ -27,7 +26,6 @@ from raiden.constants import Environment
 from raiden.exceptions import MatrixSyncMaxTimeoutReached, TransportError
 from raiden.messages.abstract import Message
 from raiden.network.transport.matrix.sync_progress import SyncProgress
-from raiden.utils.datastructures import merge_dict
 from raiden.utils.debugging import IDLE
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.typing import Address, AddressHex, AddressMetadata
@@ -261,72 +259,37 @@ class GMatrixClient(MatrixClient):
     def sync_iteration(self) -> int:
         return self.sync_progress.sync_iteration
 
-    def create_sync_filter(
-        self,
-        rooms: Optional[Iterable[Room]] = None,
-        not_rooms: Optional[Iterable[Room]] = None,
-        limit: Optional[int] = None,
-    ) -> Optional[int]:
+    def create_sync_filter(self, limit: int) -> Optional[int]:
         """Create a matrix sync filter
-
-        A whitelist and blacklist of rooms can be supplied optionally. If
-        no whitelist ist given, all rooms are whitelisted. The blacklist is
-        applied on top of the whitelist.
 
         Ref. https://matrix.org/docs/spec/client_server/r0.6.0#api-endpoints
 
         Args:
-            rooms: whitelist of rooms, if not given all rooms are whitelisted
-            not_rooms: blacklist of rooms, applied after the whitelist
             limit: maximum number of messages to return
-
         """
-        if not_rooms is None and rooms is None and limit is None:
-            return None
-
-        broadcast_room_filter: Dict[str, Dict] = {
+        sync_filter: Dict[str, Dict] = {
             # Get all presence updates
             "presence": {"types": ["m.presence"]},
             # filter account data
             "account_data": {"not_types": ["*"]},
-            # Ignore "message receipts" from all rooms
-            "room": {"ephemeral": {"not_types": ["m.receipt"]}},
+            "room": {
+                # Ignore "message receipts" from all rooms
+                "ephemeral": {"not_types": ["m.receipt"]},
+                # limit the number of messages
+                "timeline": {"limit": limit},
+            },
         }
-        if not_rooms:
-            negative_rooms = [room.room_id for room in not_rooms]
-            broadcast_room_filter["room"].update(
-                {
-                    # Filter out all unwanted rooms
-                    "not_rooms": negative_rooms
-                }
-            )
-        if rooms:
-            positive_rooms = [room.room_id for room in rooms]
-            broadcast_room_filter["room"].update(
-                {
-                    # Set all wanted rooms
-                    "rooms": positive_rooms
-                }
-            )
-
-        limit_filter: Dict[str, Any] = {}
-        if limit is not None:
-            limit_filter = {"room": {"timeline": {"limit": limit}}}
-
-        final_filter = broadcast_room_filter
-        merge_dict(final_filter, limit_filter)
 
         try:
-            # 0 is a valid filter ID
-            filter_response = self.api.create_filter(self.user_id, final_filter)
-            filter_id = filter_response.get("filter_id")
-            log.debug("Sync filter created", filter_id=filter_id, filter=final_filter)
-
+            filter_response = self.api.create_filter(self.user_id, sync_filter)
         except MatrixRequestError as ex:
             raise TransportError(
-                f"Failed to create filter: {final_filter} for user {self.user_id}"
+                f"Failed to create filter: {sync_filter} for user {self.user_id}"
             ) from ex
 
+        # 0 is a valid filter ID
+        filter_id = filter_response.get("filter_id")
+        log.debug("Sync filter created", filter_id=filter_id, filter=sync_filter)
         return filter_id
 
     def listen_forever(
