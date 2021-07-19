@@ -803,11 +803,6 @@ class MatrixTransport(Runnable):
         # Restore the filter to start fetching the messages
         self._client.set_sync_filter_id(prev_sync_filter_id)
 
-        for room in self._client.rooms.values():
-            # We no longer use private rooms for node-to-node communcation.
-            # Leave any that are still lingering.
-            room.leave()
-
     def _initialize_sync(self) -> None:
         msg = "_initialize_sync requires the GMatrixClient to be properly authenticated."
         assert self._user_id, msg

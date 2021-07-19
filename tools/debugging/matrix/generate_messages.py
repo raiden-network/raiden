@@ -25,7 +25,7 @@ from raiden.settings import (
 )
 from raiden.tests.utils import factories
 from raiden.utils.signer import Signer
-from raiden.utils.typing import Any, Callable, Dict, Iterator, List, RoomID
+from raiden.utils.typing import Any, Callable, Dict, Iterator, List
 
 setup_asyncio_event_loop()
 
@@ -149,7 +149,7 @@ def ignore_messages(messages: List[MatrixMessage]) -> bool:  # pylint: disable=u
 def handle_and_time_invite(
     invite_start: float,
     client: GMatrixClient,
-    room_id: RoomID,
+    room_id: Any,
     state: Dict,  # pylint: disable=unused-argument
 ) -> None:
     invite_elapsed = time.monotonic() - invite_start

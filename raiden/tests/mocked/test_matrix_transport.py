@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import List  # pylint: skip-file  # XXX-UAM remove after tests are fixed
 
 import gevent
 import pytest
@@ -12,8 +11,7 @@ from matrix_client.user import User
 from raiden.constants import Environment, MatrixMessageType
 from raiden.messages.transfers import SecretRequest
 from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix import AddressReachability
-from raiden.network.transport.matrix.client import GMatrixHttpApi, Room
+from raiden.network.transport.matrix.client import GMatrixHttpApi
 from raiden.network.transport.matrix.rtc.web_rtc import WebRTCManager
 from raiden.network.transport.matrix.transport import RETRY_QUEUE_IDLE_AFTER, _RetryQueue
 from raiden.settings import MatrixTransportConfig
@@ -153,102 +151,6 @@ def create_new_users_for_address(signer=None, number_of_users=1):
     return users
 
 
-@pytest.fixture()
-def room_with_members(mock_raiden_service, partner_config_for_room):
-
-    number_of_partners = partner_config_for_room["number_of_partners"]
-    users_per_address = partner_config_for_room["users_per_address"]
-    number_of_base_users = partner_config_for_room["number_of_base_users"]
-    room_members: List[User] = list()
-    base_users = create_new_users_for_address(mock_raiden_service.signer, number_of_base_users)
-    room_members.extend(base_users)
-
-    for _ in range(number_of_partners):
-        users = create_new_users_for_address(number_of_users=users_per_address)
-        room_members.extend(users)
-
-    room_id = "!roomofdoom:server"
-    room = Room(client=None, room_id=room_id)  # type: ignore
-    for member in room_members:
-        room._mkmembers(member)
-
-    return room, number_of_partners > 1
-
-
-@pytest.mark.parametrize(
-    "partner_config_for_room",
-    [
-        pytest.param(
-            {"number_of_partners": 1, "users_per_address": 1, "number_of_base_users": 1},
-            id="should_not_leave_one_partner",
-        ),
-        pytest.param(
-            {"number_of_partners": 1, "users_per_address": 4, "number_of_base_users": 1},
-            id="should_not_leave_multiple_use_one_address",
-        ),
-        pytest.param(
-            {"number_of_partners": 0, "users_per_address": 0, "number_of_base_users": 2},
-            id="should_not_leave_no_partner",
-        ),
-        pytest.param(
-            {"number_of_partners": 2, "users_per_address": 1, "number_of_base_users": 1},
-            id="should_leave_multiple_partners",
-        ),
-        pytest.param(
-            {"number_of_partners": 3, "users_per_address": 2, "number_of_base_users": 2},
-            id="should_leave_multiple_partners_multiple_users",
-        ),
-    ],
-)
-@pytest.fixture
-def invite_state(signer, mock_matrix):
-    invite_user = create_new_users_for_address(signer)[0]
-
-    return {
-        "events": [
-            {
-                "sender": invite_user.user_id,
-                "type": "m.room.name",
-                "state_key": "",
-                "content": {"name": "Invalid Room"},
-            },
-            {
-                "sender": invite_user.user_id,
-                "state_key": mock_matrix._user_id,
-                "content": {"membership": "invite"},
-                "type": "m.room.member",
-            },
-            {"type": "m.room.join_rules", "content": {"join_rule": "invite"}},
-            {
-                "content": {
-                    "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
-                    "displayname": "Alice Margatroid",
-                    "membership": "join",
-                },
-                "event_id": "$143273582443PhrSn:example.org",
-                "origin_server_ts": 1432735824653,
-                "room_id": "!someroom:invalidserver",
-                "sender": invite_user.user_id,
-                "state_key": invite_user.user_id,
-                "type": "m.room.member",
-                "unsigned": {"age": 1234},
-            },
-        ]
-    }
-
-
-@pytest.fixture
-def all_peers_reachable(monkeypatch):
-    def mock_get_address_reachability(
-        self, address: Address  # pylint: disable=unused-argument
-    ) -> AddressReachability:
-        return AddressReachability.REACHABLE
-
-    # monkeypatch.setattr(
-    #     UserAddressManager, "get_address_reachability", mock_get_address_reachability
-    # )
-
-
 @pytest.fixture(scope="session")
 def sync_filter_dict():
     return {}
@@ -264,63 +166,6 @@ def create_sync_filter_patch(monkeypatch, sync_filter_dict):
     monkeypatch.setattr(GMatrixHttpApi, "create_filter", mock_create_sync_filter)
 
 
-@pytest.mark.parametrize(
-    "filter_params",
-    [
-        {
-            "not_rooms": [
-                Room(None, "!room1:server"),  # type: ignore
-                Room(None, "!room2:server"),  # type: ignore
-            ],
-            "rooms": [Room(None, "!room1:server")],  # type: ignore
-            "limit": None,
-        },
-        {"not_rooms": None, "rooms": None, "limit": 0},
-        {
-            "not_rooms": [
-                Room(None, "!room1:server"),  # type: ignore
-                Room(None, "!room2:server"),  # type: ignore
-            ],
-            "rooms": None,
-            "limit": 10,
-        },
-        {"not_rooms": None, "rooms": None, "limit": None},
-    ],
-)
-@pytest.mark.usefixtures("create_sync_filter_patch")
-def test_create_sync_filter(mock_matrix, sync_filter_dict, filter_params):
-    not_rooms = filter_params["not_rooms"]
-    rooms = filter_params["rooms"]
-    limit = filter_params["limit"]
-
-    filter_id = mock_matrix._client.create_sync_filter(
-        rooms=rooms, not_rooms=not_rooms, limit=limit
-    )
-
-    if filter_id is not None:
-        sync_filter = sync_filter_dict[filter_id]
-
-    if not_rooms and not limit:
-        assert "room" in sync_filter
-        assert "presence" in sync_filter
-        assert set(sync_filter["room"]["not_rooms"]) == set(room.room_id for room in not_rooms)
-        assert set(sync_filter["room"]["rooms"]) == set(room.room_id for room in rooms)
-        assert "timeline" not in sync_filter["room"]
-
-    if limit and not not_rooms:
-        assert "room" in sync_filter
-        assert sync_filter["room"]["timeline"]["limit"] == limit
-        assert "presence" not in sync_filter
-
-    if limit and not_rooms:
-        assert "timeline" in sync_filter["room"]
-        assert "not_rooms" in sync_filter["room"]
-        assert "rooms" not in sync_filter["room"]
-
-    if not_rooms is None and rooms is None and limit is None:
-        assert filter_id is None
-
-
 @pytest.fixture
 def record_sent_messages(mock_matrix):
     original_send_raw = mock_matrix._send_raw
@@ -333,6 +178,7 @@ def record_sent_messages(mock_matrix):
         message_type: MatrixMessageType = MatrixMessageType.TEXT,
         receiver_metadata: AddressMetadata = None,
     ) -> None:
+        # pylint: disable=unused-argument
         for message in data.split("\n"):
             sent_messages.append((receiver_address, message))
 
@@ -453,6 +299,7 @@ def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
         message_type: MatrixMessageType = MatrixMessageType.TEXT,
         receiver_metadata: AddressMetadata = None,
     ) -> None:
+        # pylint: disable=unused-argument
         nonlocal send_raw_call_count
         send_raw_call_count += 1
         for message in data.split("\n"):
@@ -554,7 +401,7 @@ def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
 
 
 @pytest.mark.parametrize("retry_interval_initial", [0.01])
-@pytest.mark.usefixtures("record_sent_messages", "all_peers_reachable")
+@pytest.mark.usefixtures("record_sent_messages")
 def test_retry_queue_does_not_resend_removed_messages(
     mock_matrix: MatrixTransport, retry_interval_initial: float
 ) -> None:
@@ -633,9 +480,6 @@ def test_retryqueue_not_idle_with_messages(
     )
     retry_queue.enqueue(queue_identifier, [(make_message(), None)])
 
-    # Without the `all_peers_reachable` fixture, the default reachability will be `UNREACHABLE`
-    # therefore the message will remain in the internal queue indefinitely.
-
     # Wait for the idle timeout to expire
     gevent.sleep(idle_after + (retry_interval_initial * 5))
 
@@ -648,9 +492,7 @@ def test_retryqueue_not_idle_with_messages(
     assert retry_queue is retry_queue_2
 
 
-def test_retryqueue_enqueue_not_blocking(
-    mock_matrix: MatrixTransport, retry_interval_initial: float, monkeypatch
-) -> None:
+def test_retryqueue_enqueue_not_blocking(mock_matrix: MatrixTransport, monkeypatch) -> None:
     """Ensure ``RetryQueue``s don't become idle while messages remain in the internal queue."""
     # Pretend the Transport greenlet is running
     mock_matrix.greenlet = True
@@ -664,6 +506,7 @@ def test_retryqueue_enqueue_not_blocking(
         message_type: MatrixMessageType = MatrixMessageType.TEXT,
         receiver_metadata: AddressMetadata = None,
     ):
+        # pylint: disable=unused-argument
         nonlocal call_count
         call_count += 1
         lock.wait()

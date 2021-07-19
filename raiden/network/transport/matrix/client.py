@@ -18,7 +18,7 @@ from gevent.pool import Pool
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
 from matrix_client.errors import MatrixHttpLibError, MatrixRequestError
-from matrix_client.room import Room as MatrixRoom
+from matrix_client.room import Room
 from matrix_client.user import User
 from requests import Response
 from requests.adapters import HTTPAdapter
@@ -61,77 +61,6 @@ def node_address_from_userid(user_id: Optional[str]) -> Optional[AddressHex]:
         return AddressHex(HexStr(user_id.split(":", 1)[0][1:]))
 
     return None
-
-
-class Room(MatrixRoom):
-    """Matrix `Room` subclass that invokes listener callbacks in separate greenlets"""
-
-    def __init__(self, client: "GMatrixClient", room_id: str) -> None:
-        super().__init__(client, room_id)
-        self._members: Dict[str, User] = {}
-        self.aliases: List[str]
-        self.canonical_alias: str
-
-    def get_joined_members(self, force_resync: bool = False) -> List[User]:
-        """Return a list of members of this room."""
-        if force_resync:
-            response = self.client.api.get_room_members(self.room_id)
-            for event in response["chunk"]:
-                if event["content"]["membership"] == "join":
-                    user_id = event["state_key"]
-                    if user_id not in self._members:
-                        self._mkmembers(
-                            User(self.client.api, user_id, event["content"].get("displayname"))
-                        )
-        return list(self._members.values())
-
-    def leave(self) -> None:
-        """Leave the room. Overriding Matrix method to always return error when request."""
-        self.client.api.leave_room(self.room_id)
-        self.client.rooms.pop(self.room_id, None)
-
-    def _mkmembers(self, member: User) -> None:
-        if member.user_id not in self._members:
-            self._members[member.user_id] = member
-
-    def _rmmembers(self, user_id: str) -> None:
-        self._members.pop(user_id, None)
-
-    def __repr__(self) -> str:
-        return f"<Room id={self.room_id!r} canonical_alias={self.canonical_alias!r}>"
-
-    def update_local_alias(self) -> bool:
-        """Fetch the server local canonical alias for the room.
-
-        This is an optimization over the general `update_aliases()` method which fetches the
-        entire room state (which can be large in Raiden) and then discards all non-alias events.
-
-        With MSC2432[1] implemented only ``m.room.canonical_alias`` events exist.
-        They represent the server local canonical_alias.
-
-        Since in Raiden broadcast rooms always have a server local alias set, this method is
-        sufficient for our use case.
-
-        [1] https://github.com/matrix-org/matrix-doc/pull/2432
-
-        Returns:
-            boolean: True if the canonical_alias changed, False if not
-        """
-        changed = False
-
-        try:
-            response = self.client.api.get_room_state_type(
-                self.room_id, "m.room.canonical_alias", ""
-            )
-        except MatrixRequestError:
-            return False
-
-        server_sent_alias = response.get("alias")
-        if server_sent_alias is not None and self.canonical_alias != server_sent_alias:
-            self.canonical_alias = server_sent_alias
-            changed = True
-
-        return changed
 
 
 class GMatrixHttpApi(MatrixHttpApi):
@@ -532,7 +461,6 @@ class GMatrixClient(MatrixClient):
     def stop(self) -> None:
         self.stop_listener_thread()
         self.sync_token = None
-        self.rooms: Dict[str, Room] = {}
         self._worker_pool.join(raise_error=True)
 
     def logout(self) -> None:
@@ -574,36 +502,8 @@ class GMatrixClient(MatrixClient):
             {"presence": state, "status_msg": str(time.time())},
         )
 
-    def _mkroom(self, room_id: str) -> Room:
-        """Uses a geventified Room subclass"""
-        if room_id not in self.rooms:
-            self.rooms[room_id] = Room(self, room_id)
-        room = self.rooms[room_id]
-        if not room.canonical_alias:
-            room.update_local_alias()
-        return room
-
     def get_user_presence(self, user_id: str) -> Optional[str]:
         return self.api.get_presence(user_id).get("presence")
-
-    def create_room(
-        self, alias: str = None, is_public: bool = False, invitees: List[str] = None, **kwargs: Any
-    ) -> MatrixRoom:
-        """Create a new room on the homeserver.
-
-        Args:
-            alias (str): The canonical_alias of the room.
-            is_public (bool):  The public/private visibility of the room.
-            invitees (str[]): A set of user ids to invite into the room.
-
-        Returns:
-            Room
-
-        Raises:
-            MatrixRequestError
-        """
-        response = self.api.create_room(alias, is_public, invitees, **kwargs)
-        return self._mkroom(response["room_id"])
 
     def blocking_sync(self, timeout_ms: int, latency_ms: int) -> None:
         """Perform a /sync and process the response synchronously."""
@@ -687,32 +587,6 @@ class GMatrixClient(MatrixClient):
                 current_user=self.user_id,
                 presence_events_qty=len(response["presence"]["events"]),
                 to_device_events_qty=len(response["to_device"]["events"]),
-                rooms_invites_qty=len(response["rooms"]["invite"]),
-                rooms_leaves_qty=len(response["rooms"]["leave"]),
-                rooms_joined_member_count=sum(
-                    room["summary"].get("m.joined_member_count", 0)
-                    for room in response["rooms"]["join"].values()
-                ),
-                rooms_invited_member_count=sum(
-                    room["summary"].get("m.invited_member_count", 0)
-                    for room in response["rooms"]["join"].values()
-                ),
-                rooms_join_state_qty=sum(
-                    len(room["state"]) for room in response["rooms"]["join"].values()
-                ),
-                rooms_join_timeline_events_qty=sum(
-                    len(room["timeline"]["events"]) for room in response["rooms"]["join"].values()
-                ),
-                rooms_join_state_events_qty=sum(
-                    len(room["state"]["events"]) for room in response["rooms"]["join"].values()
-                ),
-                rooms_join_ephemeral_events_qty=sum(
-                    len(room["ephemeral"]["events"]) for room in response["rooms"]["join"].values()
-                ),
-                rooms_join_account_data_events_qty=sum(
-                    len(room["account_data"]["events"])
-                    for room in response["rooms"]["join"].values()
-                ),
             )
 
             # Updating the sync token should only be done after the response is
@@ -784,8 +658,7 @@ class GMatrixClient(MatrixClient):
             self.sync_progress.set_processed(currently_queued_response_tokens)
 
     def _handle_responses(self, currently_queued_responses: List[JSONResponse]) -> None:
-
-        all_messages: List[MatrixMessage] = []
+        messages: List[MatrixMessage] = []
 
         for response in currently_queued_responses:
             for presence_update in response["presence"]["events"]:
@@ -798,46 +671,10 @@ class GMatrixClient(MatrixClient):
                         listener["callback"](to_device_message)
 
             # Add toDevice messages to message queue
-            if response["to_device"]["events"]:
-                all_messages.extend(response["to_device"]["events"])
+            messages.extend(response["to_device"]["events"])
 
-            for room_id, invite_room in response["rooms"]["invite"].items():
-                for listener in self.invite_listeners[:]:
-                    listener(room_id, invite_room["invite_state"])
-
-            for room_id, left_room in response["rooms"]["leave"].items():
-                for listener in self.left_listeners[:]:
-                    listener(room_id, left_room)
-                if room_id in self.rooms:
-                    del self.rooms[room_id]
-
-            for room_id, sync_room in response["rooms"]["join"].items():
-                if room_id not in self.rooms:
-                    self._mkroom(room_id)
-
-                room = self.rooms[room_id]
-                room.prev_batch = sync_room["timeline"]["prev_batch"]
-
-                for event in sync_room["state"]["events"]:
-                    event["room_id"] = room_id
-                    room._process_state_event(event)
-                for event in sync_room["timeline"]["events"]:
-                    event["room_id"] = room_id
-                    room._put_event(event)
-                for event in sync_room["ephemeral"]["events"]:
-                    event["room_id"] = room_id
-                    room._put_ephemeral_event(event)
-
-                    for listener in self.ephemeral_listeners:
-                        should_call = (
-                            listener["event_type"] is None
-                            or listener["event_type"] == event["type"]
-                        )
-                        if should_call:
-                            listener["callback"](event)
-
-        if len(all_messages) > 0:
-            self.handle_messages_callback(all_messages)
+        if messages:
+            self.handle_messages_callback(messages)
 
     def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id

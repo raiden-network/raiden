@@ -194,7 +194,6 @@ CHECK_CHAIN_ID_INTERVAL = 5 * 60
 
 DEFAULT_HTTP_REQUEST_TIMEOUT = 10.0  # seconds
 
-DISCOVERY_DEFAULT_ROOM = "discovery"
 MATRIX_AUTO_SELECT_SERVER = "auto"
 
 # According to the smart contracts as of 07/08:
@@ -240,7 +239,6 @@ IMBALANCE_MED_FEE_MAX = 50_000
 class CommunicationMedium(Enum):
     WEB_RTC = "webRTC"
     TO_DEVICE = "toDevice"
-    ROOM = "room"
 
 
 class MatrixMessageType(Enum):
