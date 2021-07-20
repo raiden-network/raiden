@@ -445,14 +445,10 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         if address in self._web_rtc_channel_inits:
             return
 
-        lower_address = my_place_or_yours(self.node_address, address)
-
-        if lower_address == self.node_address:
-            self.log.debug(
-                "Spawning initialize web rtc for partner",
-                partner_address=to_checksum_address(address),
-            )
-            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
+        self.log.debug(
+            "Spawning initialize web rtc for partner", partner_address=to_checksum_address(address)
+        )
+        self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
         self._web_rtc_channel_inits.add(address)
