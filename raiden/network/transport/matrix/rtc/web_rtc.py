@@ -347,6 +347,13 @@ class _RTCConnection(_CoroutineHandler):
         }
         self._signaling_send(self.partner_address, json.dumps(message))
 
+    def send_hangup_message(self) -> None:
+        hangup_message = {
+            "type": RTCMessageType.HANGUP.value,
+            "call_id": self.call_id,
+        }
+        self._signaling_send(self.partner_address, json.dumps(hangup_message))
+
 
 @dataclass
 class WebRTCManager(_CoroutineHandler, Runnable):
@@ -446,11 +453,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 "Could not establish channel",
                 partner_address=to_checksum_address(partner_address),
             )
-            hang_up_message = {
-                "type": RTCMessageType.HANGUP.value,
-                "call_id": self.get_rtc_partner(partner_address).call_id,
-            }
-            self._signaling_send(partner_address, json.dumps(hang_up_message))
+            rtc_partner.send_hangup_message()
             self.close_connection(partner_address)
 
     def get_rtc_partner(self, partner_address: Address) -> _RTCConnection:
@@ -533,7 +536,8 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def stop(self) -> None:
         self.log.debug("Closing rtc connections")
 
-        self._send_hangup_messages()
+        for conn in self._address_to_rtc_partners.values():
+            conn.send_hangup_message()
 
         for partner_address in list(self._address_to_rtc_partners.keys()):
             if partner_address in self._address_to_rtc_partners:
@@ -545,14 +549,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         self.join_all_coroutines()
         self._reset_state()
-
-    def _send_hangup_messages(self) -> None:
-        for partner_address, rtc_partner in self._address_to_rtc_partners.items():
-            hang_up_message = {
-                "type": RTCMessageType.HANGUP.value,
-                "call_id": rtc_partner.call_id,
-            }
-            self._signaling_send(partner_address, json.dumps(hang_up_message))
 
 
 def _on_datachannel(
