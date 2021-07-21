@@ -39,7 +39,7 @@ class _CoroutineHandler:
     def schedule_task(
         self,
         coroutine: Coroutine,
-        callback: Callable[[Any, Any], None] = None,
+        callback: Callable[[Any], None] = None,
         *args: Any,
         **kwargs: Any,
     ) -> Task:
@@ -354,6 +354,33 @@ class _RTCConnection(_CoroutineHandler):
         }
         self._signaling_send(self.partner_address, json.dumps(hangup_message))
 
+    def handle_sdp_callback(
+        self, rtc_session_description: Optional[RTCSessionDescription]
+    ) -> None:
+        """
+        This is a callback function to process sdp (session description protocol) messages.
+        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
+        signalling. Messages are exchanged via Matrix.
+        Args:
+            rtc_session_description: sdp message for the partner
+        """
+        if rtc_session_description is None:
+            return
+
+        sdp_type = rtc_session_description.type
+        message = {
+            "type": sdp_type,
+            "sdp": rtc_session_description.sdp,
+            "call_id": self.call_id,
+        }
+        self.log.debug(
+            f"Send {sdp_type} to partner",
+            partner_address=to_checksum_address(self.partner_address),
+            sdp_description=message,
+        )
+
+        self._signaling_send(self.partner_address, json.dumps(message))
+
 
 @dataclass
 class WebRTCManager(_CoroutineHandler, Runnable):
@@ -379,36 +406,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         for msg in validate_and_parse_message(message_data, partner_address):
             messages.append(ReceivedRaidenMessage(message=msg, sender=partner_address))
         self._process_messages(messages)
-
-    def _handle_sdp_callback(
-        self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
-    ) -> None:
-        """
-        This is a callback function to process sdp (session description protocol) messages.
-        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
-        signalling. Messages are exchanged via the partners' private matrix room.
-        Args:
-            rtc_session_description: sdp message for the partner
-            partner_address: Address of the partner
-        """
-        if rtc_session_description is None:
-            return
-
-        rtc_partner = self.get_rtc_partner(partner_address)
-
-        sdp_type = rtc_session_description.type
-        message = {
-            "type": sdp_type,
-            "sdp": rtc_session_description.sdp,
-            "call_id": rtc_partner.call_id,
-        }
-        self.log.debug(
-            f"Send {sdp_type} to partner",
-            partner_address=to_checksum_address(partner_address),
-            sdp_description=message,
-        )
-
-        self._signaling_send(partner_address, json.dumps(message))
 
     def _maybe_initialize_web_rtc(self, address: Address) -> None:
         if address in self._web_rtc_channel_inits:
@@ -438,8 +435,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         rtc_partner = self.get_rtc_partner(partner_address)
         self.schedule_task(
             coroutine=rtc_partner.initialize_signalling(),
-            callback=self._handle_sdp_callback,
-            partner_address=partner_address,
+            callback=rtc_partner.handle_sdp_callback,
         )
 
         # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
@@ -494,8 +490,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         self.schedule_task(
             coroutine=rtc_partner.process_signalling(description=description),
-            callback=self._handle_sdp_callback,
-            partner_address=partner_address,
+            callback=rtc_partner.handle_sdp_callback,
         )
 
     def send_message_for_address(self, partner_address: Address, message: str) -> None:
