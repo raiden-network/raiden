@@ -168,6 +168,20 @@ class _RTCConnection(_CoroutineHandler):
             "iceconnectionstatechange", partial(_on_ice_connection_state_change, conn=self)
         )
 
+    @staticmethod
+    def from_offer(
+        partner_address: Address,
+        node_address: Address,
+        signaling_send: Callable[[Address, str], None],
+        handle_message_callback: Callable[[str, Address], None],
+        offer: Dict[str, str],
+    ) -> "_RTCConnection":
+        conn = _RTCConnection(
+            partner_address, node_address, signaling_send, handle_message_callback
+        )
+        conn._call_id = offer["call_id"]
+        return conn
+
     def set_channel_callbacks(self) -> None:
         if self.channel is None:
             return
