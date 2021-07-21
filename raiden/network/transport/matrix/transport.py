@@ -30,6 +30,7 @@ from raiden.exceptions import RaidenUnrecoverableError, TransportError
 from raiden.messages.abstract import Message, RetrieableMessage, SignedRetrieableMessage
 from raiden.messages.healthcheck import Ping, Pong
 from raiden.messages.synchronization import Delivered, Processed
+from raiden.network.pathfinding import PFSProxy
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.transport.matrix.client import (
     GMatrixClient,
@@ -489,7 +490,7 @@ class MatrixTransport(Runnable):
             raiden_service.address,
             raiden_service.pfs_proxy,
             self._process_raiden_messages,
-            self._send_raw,
+            self._send_signaling_message,
             self._stop_event,
         )
 
@@ -1076,6 +1077,21 @@ class MatrixTransport(Runnable):
                 data=data,
             )
             return
+
+    def _send_signaling_message(self, address: Address, message: str) -> None:
+        assert self._raiden_service is not None, "must be set"
+        metadata = _query_metadata(self._raiden_service.pfs_proxy, address)
+        self._send_raw(address, message, MatrixMessageType.NOTICE, metadata)
+
+
+def _query_metadata(pfs_proxy: PFSProxy, address: Address) -> Optional[AddressMetadata]:
+    try:
+        metadata = pfs_proxy.query_address_metadata(address)
+    except Exception as e:
+        log.error(str(e))
+    else:
+        return metadata
+    return None
 
 
 def populate_services_addresses(

@@ -16,7 +16,6 @@ from raiden.constants import (
     SDP_MLINE_INDEX_DEFAULT,
     WEB_RTC_CHANNEL_TIMEOUT,
     ICEConnectionState,
-    MatrixMessageType,
     RTCChannelState,
     RTCMessageType,
     RTCSignallingState,
@@ -29,18 +28,7 @@ from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap
 from raiden.network.transport.matrix.utils import my_place_or_yours, validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import (
-    Address,
-    AddressMetadata,
-    Any,
-    Callable,
-    Coroutine,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Union,
-)
+from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
 
 log = structlog.get_logger(__name__)
 
@@ -361,16 +349,6 @@ class _RTCConnection(_CoroutineHandler):
         self.channel = None
 
 
-def _query_metadata(pfs_proxy: PFSProxy, address: Address) -> Optional[AddressMetadata]:
-    try:
-        metadata = pfs_proxy.query_address_metadata(address)
-    except Exception as e:
-        log.error(str(e))
-    else:
-        return metadata
-    return None
-
-
 @dataclass
 class WebRTCManager(_CoroutineHandler, Runnable):
     def __init__(
@@ -378,9 +356,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         node_address: Address,
         pfs_proxy: PFSProxy,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
-        signaling_send: Callable[
-            [Address, str, MatrixMessageType, Optional[AddressMetadata]], None
-        ],
+        signaling_send: Callable[[Address, str], None],
         stop_event: GEvent,
     ) -> None:
         super().__init__()
@@ -409,7 +385,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             "candidates": candidates,
             "call_id": rtc_partner.call_id,
         }
-        self._send_signaling_message(partner_address, json.dumps(message))
+        self._signaling_send(partner_address, json.dumps(message))
 
     def _handle_sdp_callback(
         self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
@@ -439,7 +415,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             sdp_description=message,
         )
 
-        self._send_signaling_message(partner_address, json.dumps(message))
+        self._signaling_send(partner_address, json.dumps(message))
 
     def _maybe_initialize_web_rtc(self, address: Address) -> None:
         if address in self._web_rtc_channel_inits:
@@ -488,7 +464,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 "type": RTCMessageType.HANGUP.value,
                 "call_id": self.get_rtc_partner(partner_address).call_id,
             }
-            self._send_signaling_message(partner_address, json.dumps(hang_up_message))
+            self._signaling_send(partner_address, json.dumps(hang_up_message))
             self.close_connection(partner_address)
 
     def _handle_closed_connection(self, partner_address: Address) -> None:
@@ -593,17 +569,13 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self.join_all_coroutines()
         self._reset_state()
 
-    def _send_signaling_message(self, address: Address, message: str) -> None:
-        metadata = _query_metadata(self._pfs_proxy, address)
-        self._signaling_send(address, message, MatrixMessageType.NOTICE, metadata)
-
     def _send_hangup_messages(self) -> None:
         for partner_address, rtc_partner in self._address_to_rtc_partners.items():
             hang_up_message = {
                 "type": RTCMessageType.HANGUP.value,
                 "call_id": rtc_partner.call_id,
             }
-            self._send_signaling_message(partner_address, json.dumps(hang_up_message))
+            self._signaling_send(partner_address, json.dumps(hang_up_message))
 
 
 def _on_datachannel(
