@@ -23,7 +23,7 @@ from raiden.constants import (
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
-from raiden.network.transport.matrix.utils import my_place_or_yours, validate_and_parse_message
+from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
@@ -138,6 +138,7 @@ class _RTCConnection(_CoroutineHandler):
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
+        self._call_id = self._make_call_id()
         self._signaling_send = signaling_send
         self._handle_message_callback = _handle_message_callback
         self.channel: Optional[RTCDataChannel] = None
@@ -179,11 +180,7 @@ class _RTCConnection(_CoroutineHandler):
 
     @property
     def call_id(self) -> str:
-        lower_address = my_place_or_yours(self.node_address, self.partner_address)
-        higher_address = (
-            self.partner_address if lower_address == self.node_address else self.node_address
-        )
-        return f"{to_checksum_address(lower_address)}|{to_checksum_address(higher_address)}"
+        return self._call_id
 
     async def _try_signaling(self, coroutine: Coroutine) -> Optional[Any]:
         try:
@@ -206,6 +203,11 @@ class _RTCConnection(_CoroutineHandler):
     async def _set_local_description(self, description: RTCSessionDescription) -> None:
         self.log.debug("Set local description", description=description)
         await self._try_signaling(self.peer_connection.setLocalDescription(description))
+
+    def _make_call_id(self) -> str:
+        timestamp = time.time()
+        address1, address2 = sorted((self.node_address, self.partner_address))
+        return f"{to_checksum_address(address1)}|{to_checksum_address(address2)}|{timestamp}"
 
     async def initialize_signalling(
         self,
