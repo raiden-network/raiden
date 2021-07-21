@@ -21,7 +21,6 @@ from raiden.constants import (
     RTCSignallingState,
     SDPTypes,
 )
-from raiden.network.pathfinding import PFSProxy
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
@@ -354,14 +353,12 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def __init__(
         self,
         node_address: Address,
-        pfs_proxy: PFSProxy,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
         signaling_send: Callable[[Address, str], None],
         stop_event: GEvent,
     ) -> None:
         super().__init__()
         self.node_address = node_address
-        self._pfs_proxy = pfs_proxy
         self._process_messages = process_messages
         self._signaling_send = signaling_send
         self._stop_event = stop_event

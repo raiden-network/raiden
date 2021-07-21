@@ -488,7 +488,6 @@ class MatrixTransport(Runnable):
         assert raiden_service.pfs_proxy is not None, "must be set"
         self._web_rtc_manager = WebRTCManager(
             raiden_service.address,
-            raiden_service.pfs_proxy,
             self._process_raiden_messages,
             self._send_signaling_message,
             self._stop_event,
