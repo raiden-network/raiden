@@ -500,13 +500,23 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self.schedule_task(rtc_partner.set_candidates(content))
 
     def _process_signalling_for_address(
-        self, partner_address: Address, description: Dict[str, str]
+        self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
-        rtc_partner = self.get_rtc_partner(partner_address)
+        if rtc_message_type == RTCMessageType.OFFER.value:
+            conn = _RTCConnection.from_offer(
+                partner_address,
+                self.node_address,
+                self._signaling_send,
+                self._handle_message,
+                description,
+            )
+        else:
+            # must exist
+            conn = self.get_rtc_partner(partner_address)
 
         self.schedule_task(
-            coroutine=rtc_partner.process_signalling(description=description),
-            callback=rtc_partner.handle_sdp_callback,
+            coroutine=conn.process_signalling(description=description),
+            callback=conn.handle_sdp_callback,
         )
 
     def send_message_for_address(self, partner_address: Address, message: str) -> None:
@@ -532,7 +542,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             rtc_message_type in [RTCMessageType.OFFER.value, RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            self._process_signalling_for_address(partner_address, content)
+            self._process_signalling_for_address(partner_address, rtc_message_type, content)
         elif rtc_message_type == RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
         elif rtc_message_type == RTCMessageType.CANDIDATES.value:
