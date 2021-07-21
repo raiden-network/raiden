@@ -135,7 +135,6 @@ class _RTCConnection(_CoroutineHandler):
         node_address: Address,
         signaling_send: Callable[[Address, str], None],
         _handle_message_callback: Callable[[str, Address], None],
-        _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
         _close_connection_callback: Callable[[Address], None],
     ) -> None:
         super().__init__()
@@ -143,7 +142,6 @@ class _RTCConnection(_CoroutineHandler):
         self.partner_address = partner_address
         self._signaling_send = signaling_send
         self._handle_message_callback = _handle_message_callback
-        self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
         self.channel: Optional[RTCDataChannel] = None
         self.sync_events = _RTCConnection.SyncEvents()
@@ -159,7 +157,7 @@ class _RTCConnection(_CoroutineHandler):
             "icegatheringstatechange",
             partial(
                 _on_ice_gathering_state_change,
-                rtc_partner=self,
+                conn=self,
                 candidates_callback=self._handle_candidates_callback,
             ),
         )
@@ -349,6 +347,14 @@ class _RTCConnection(_CoroutineHandler):
         self._setup_peer_connection()
         self.channel = None
 
+    def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
+        message = {
+            "type": RTCMessageType.CANDIDATES.value,
+            "candidates": candidates,
+            "call_id": self.call_id,
+        }
+        self._signaling_send(self.partner_address, json.dumps(message))
+
 
 @dataclass
 class WebRTCManager(_CoroutineHandler, Runnable):
@@ -374,17 +380,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         for msg in validate_and_parse_message(message_data, partner_address):
             messages.append(ReceivedRaidenMessage(message=msg, sender=partner_address))
         self._process_messages(messages)
-
-    def _handle_candidates_callback(
-        self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
-    ) -> None:
-        rtc_partner = self.get_rtc_partner(partner_address)
-        message = {
-            "type": RTCMessageType.CANDIDATES.value,
-            "candidates": candidates,
-            "call_id": rtc_partner.call_id,
-        }
-        self._signaling_send(partner_address, json.dumps(message))
 
     def _handle_sdp_callback(
         self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
@@ -482,7 +477,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 self.node_address,
                 self._signaling_send,
                 self._handle_message,
-                self._handle_candidates_callback,
                 self._handle_closed_connection,
             )
 
@@ -630,14 +624,10 @@ def _on_channel_message(
 
 
 def _on_ice_gathering_state_change(
-    rtc_partner: _RTCConnection,
-    candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
+    conn: _RTCConnection, candidates_callback: Callable[[List[Dict[str, Union[int, str]]]], None]
 ) -> None:
-    peer_connection = rtc_partner.peer_connection
-    rtc_partner.log.debug(
-        "ICE gathering state changed",
-        state=peer_connection.iceGatheringState,
-    )
+    peer_connection = conn.peer_connection
+    conn.log.debug("ICE gathering state changed", state=peer_connection.iceGatheringState)
 
     if peer_connection.iceGatheringState == "complete":
         # candidates are ready
@@ -657,11 +647,7 @@ def _on_ice_gathering_state_change(
             }
             candidates.append(candidate)
 
-        wrap_callback(
-            callback=candidates_callback,
-            candidates=candidates,
-            partner_address=rtc_partner.partner_address,
-        )
+        wrap_callback(callback=candidates_callback, candidates=candidates)
 
 
 def _on_ice_connection_state_change(
