@@ -133,6 +133,7 @@ class _RTCConnection(_CoroutineHandler):
         self,
         partner_address: Address,
         node_address: Address,
+        signaling_send: Callable[[Address, str], None],
         _handle_message_callback: Callable[[str, Address], None],
         _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
         _close_connection_callback: Callable[[Address], None],
@@ -140,6 +141,7 @@ class _RTCConnection(_CoroutineHandler):
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
+        self._signaling_send = signaling_send
         self._handle_message_callback = _handle_message_callback
         self._handle_candidates_callback = _handle_candidates_callback
         self._close_connection_callback = _close_connection_callback
@@ -478,6 +480,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self._address_to_rtc_partners[partner_address] = _RTCConnection(
                 partner_address,
                 self.node_address,
+                self._signaling_send,
                 self._handle_message,
                 self._handle_candidates_callback,
                 self._handle_closed_connection,
