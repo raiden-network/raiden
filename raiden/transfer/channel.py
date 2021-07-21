@@ -2133,7 +2133,7 @@ def _handle_receive_withdraw_request(
 
             msg = "The expected total withdraw of the partner doesn't match the withdraw-request"
             assert (
-                our_initiated_coop_settle.total_withdraw_participant == action.total_withdraw
+                our_initiated_coop_settle.total_withdraw_partner == action.total_withdraw
             ), msg
 
             our_initiated_coop_settle.partner_signature_request = action.signature
