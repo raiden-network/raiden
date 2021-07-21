@@ -5,7 +5,6 @@ from asyncio import CancelledError, Event as AIOEvent, Task
 from dataclasses import dataclass, field
 from functools import partial
 
-import gevent
 import structlog
 from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
@@ -135,14 +134,12 @@ class _RTCConnection(_CoroutineHandler):
         node_address: Address,
         signaling_send: Callable[[Address, str], None],
         _handle_message_callback: Callable[[str, Address], None],
-        _close_connection_callback: Callable[[Address], None],
     ) -> None:
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
         self._signaling_send = signaling_send
         self._handle_message_callback = _handle_message_callback
-        self._close_connection_callback = _close_connection_callback
         self.channel: Optional[RTCDataChannel] = None
         self.sync_events = _RTCConnection.SyncEvents()
         self.log = log.bind(
@@ -167,12 +164,7 @@ class _RTCConnection(_CoroutineHandler):
         )
 
         self.peer_connection.on(
-            "iceconnectionstatechange",
-            partial(
-                _on_ice_connection_state_change,
-                rtc_partner=self,
-                closed_callback=self._close_connection_callback,
-            ),
+            "iceconnectionstatechange", partial(_on_ice_connection_state_change, conn=self)
         )
 
     def set_channel_callbacks(self) -> None:
@@ -461,14 +453,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self._signaling_send(partner_address, json.dumps(hang_up_message))
             self.close_connection(partner_address)
 
-    def _handle_closed_connection(self, partner_address: Address) -> None:
-        # XXX-UAM: Reachability check was here
-
-        # FIXME: temporary sleep to stretch two signaling processes a bit
-        #        with a unique call id for each try this wont be necessary
-        gevent.sleep(3)
-        self._maybe_initialize_web_rtc(partner_address)
-
     def get_rtc_partner(self, partner_address: Address) -> _RTCConnection:
         if partner_address not in self._address_to_rtc_partners:
 
@@ -477,7 +461,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 self.node_address,
                 self._signaling_send,
                 self._handle_message,
-                self._handle_closed_connection,
             )
 
         return self._address_to_rtc_partners[partner_address]
@@ -650,15 +633,12 @@ def _on_ice_gathering_state_change(
         wrap_callback(callback=candidates_callback, candidates=candidates)
 
 
-def _on_ice_connection_state_change(
-    rtc_partner: _RTCConnection, closed_callback: Callable[[Address], None]
-) -> None:
-    ice_connection_state = rtc_partner.peer_connection.iceConnectionState
-    rtc_partner.log.debug("Ice connection state changed", signaling_state=ice_connection_state)
+def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
+    ice_connection_state = conn.peer_connection.iceConnectionState
+    conn.log.debug("Ice connection state changed", signaling_state=ice_connection_state)
 
     if ice_connection_state in [ICEConnectionState.CLOSED.value, ICEConnectionState.FAILED.value]:
-        asyncio.create_task(rtc_partner.reset())
-        wrap_callback(callback=closed_callback, partner_address=rtc_partner.partner_address)
+        asyncio.create_task(conn.reset())
 
 
 def _on_signalling_state_change(rtc_partner: _RTCConnection) -> None:
