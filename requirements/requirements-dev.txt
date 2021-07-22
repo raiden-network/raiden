@@ -320,7 +320,7 @@ markupsafe==2.0.1
     # via
     #   -r requirements.txt
     #   jinja2
-marshmallow==3.12.2
+marshmallow==3.13.0
     # via
     #   -r requirements.txt
     #   marshmallow-dataclass
