@@ -15,7 +15,6 @@ from typing import Any, Callable, DefaultDict, Dict, Iterator, List, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import requests
-from aiortc import RTCSessionDescription
 from eth_utils import encode_hex, to_normalized_address
 from gevent import subprocess
 from requests.packages import urllib3
@@ -25,18 +24,14 @@ from synapse.handlers.auth import AuthHandler
 
 from raiden.constants import DeviceIDs, Environment
 from raiden.messages.abstract import Message
-from raiden.network.transport.matrix.client import (
-    GMatrixClient,
-    MatrixMessage,
-    ReceivedRaidenMessage,
-)
+from raiden.network.transport.matrix.client import GMatrixClient, MatrixMessage
 from raiden.network.transport.matrix.transport import MatrixTransport, MessagesQueue
 from raiden.settings import MatrixTransportConfig
 from raiden.tests.utils.factories import make_signer
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.http import EXECUTOR_IO, HTTPExecutor
 from raiden.utils.signer import recover
-from raiden.utils.typing import Address, Iterable, Optional, Port, Union
+from raiden.utils.typing import Iterable, Port
 from raiden_contracts.utils.type_aliases import Signature
 
 log = get_logger(__name__)
@@ -76,26 +71,6 @@ def new_client(
 
 def ignore_messages(_matrix_messages: List[MatrixMessage]) -> bool:
     return True
-
-
-def ignore_web_rtc_messages(_messages: List[ReceivedRaidenMessage]) -> None:
-    pass
-
-
-def ignore_sdp(
-    _session_description: Optional[RTCSessionDescription], _partner_address: Address
-) -> None:
-    pass
-
-
-def ignore_candidates(
-    _candidates: List[Dict[str, Union[int, str]]], _partner_address: Address
-) -> None:
-    pass
-
-
-def ignore_close(partner_address: Address) -> None:  # pylint: disable=unused-argument
-    pass
 
 
 class ParsedURL(str):
