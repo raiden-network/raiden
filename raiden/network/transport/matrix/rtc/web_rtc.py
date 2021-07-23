@@ -426,15 +426,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             messages.append(ReceivedRaidenMessage(message=msg, sender=partner_address))
         self._process_messages(messages)
 
-    def _maybe_initialize_web_rtc(self, address: Address) -> None:
-        if address in self._web_rtc_channel_inits:
-            return
-
-        self.log.debug(
-            "Spawning initialize web rtc for partner", partner_address=to_checksum_address(address)
-        )
-        self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
-
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
         self._web_rtc_channel_inits.add(address)
         try:
@@ -533,7 +524,8 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self.schedule_task(conn.send_message(message))
 
     def health_check(self, partner_address: Address) -> None:
-        self._maybe_initialize_web_rtc(partner_address)
+        if address not in self._web_rtc_channel_inits:
+            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
 
     def close_connection(self, partner_address: Address) -> List[Task]:
         conns = self._address_to_connections[partner_address]
