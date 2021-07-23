@@ -4,6 +4,7 @@ import json
 import time
 from asyncio import CancelledError, Event as AIOEvent, Task
 from dataclasses import dataclass, field
+from enum import Enum
 from functools import partial
 
 import structlog
@@ -11,16 +12,6 @@ from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSess
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 from gevent.event import Event as GEvent
 
-from raiden.constants import (
-    SDP_MID_DEFAULT,
-    SDP_MLINE_INDEX_DEFAULT,
-    WEB_RTC_CHANNEL_TIMEOUT,
-    ICEConnectionState,
-    RTCChannelState,
-    RTCMessageType,
-    RTCSignallingState,
-    SDPTypes,
-)
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
 from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
@@ -30,6 +21,45 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
 
 log = structlog.get_logger(__name__)
+
+
+class _RTCMessageType(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+    CANDIDATES = "candidates"
+    HANGUP = "hangup"
+
+
+class _SDPTypes(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+
+
+class _RTCChannelState(Enum):
+    CONNECTING = "connecting"
+    OPEN = "open"
+    CLOSING = "closing"
+    CLOSED = "closed"
+
+
+class _RTCSignallingState(Enum):
+    STABLE = "stable"
+    HAVE_LOCAL_OFFER = "have-local-offer"
+    HAVE_REMOTE_OFFER = "have-remote-offer"
+    CLOSED = "closed"
+
+
+class _ICEConnectionState(Enum):
+    NEW = "new"
+    CHECKING = "checking"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CLOSED = "closed"
+
+
+_WEB_RTC_CHANNEL_TIMEOUT = 30.0
+_SDP_MID_DEFAULT = "0"
+_SDP_MLINE_INDEX_DEFAULT = 0
 
 
 class _CoroutineHandler:
@@ -269,7 +299,7 @@ class _RTCConnection(_CoroutineHandler):
 
         self.sync_events.aio_allow_hangup.set()
 
-        if sdp_type == SDPTypes.ANSWER.value:
+        if sdp_type == _SDPTypes.ANSWER.value:
             return None
 
         self.peer_connection.on(
@@ -314,7 +344,7 @@ class _RTCConnection(_CoroutineHandler):
     async def send_message(self, message: str) -> None:
         """Sends message through aiortc. Not an async function. Output is written to buffer"""
 
-        if self.channel is not None and self.channel.readyState == RTCChannelState.OPEN.value:
+        if self.channel is not None and self.channel.readyState == _RTCChannelState.OPEN.value:
             self.log.debug(
                 "Sending message in asyncio kingdom",
                 channel=self.channel.label,
@@ -358,7 +388,7 @@ class _RTCConnection(_CoroutineHandler):
 
     def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
         message = {
-            "type": RTCMessageType.CANDIDATES.value,
+            "type": _RTCMessageType.CANDIDATES.value,
             "candidates": candidates,
             "call_id": self.call_id,
         }
@@ -366,7 +396,7 @@ class _RTCConnection(_CoroutineHandler):
 
     def send_hangup_message(self) -> None:
         hangup_message = {
-            "type": RTCMessageType.HANGUP.value,
+            "type": _RTCMessageType.HANGUP.value,
             "call_id": self.call_id,
         }
         self._signaling_send(self.partner_address, json.dumps(hangup_message))
@@ -451,8 +481,8 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             callback=conn.handle_sdp_callback,
         )
 
-        # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
-        if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
+        # wait for _WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
+        if self._stop_event.wait(timeout=_WEB_RTC_CHANNEL_TIMEOUT):
             return
 
         # if room is not None that means we are at least in the second iteration
@@ -485,7 +515,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         if conns is None:
             return False
         return any(
-            conn.channel is not None and conn.channel.readyState == RTCChannelState.OPEN.value
+            conn.channel is not None and conn.channel.readyState == _RTCChannelState.OPEN.value
             for conn in conns.values()
         )
 
@@ -501,7 +531,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def _process_signalling_for_address(
         self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
-        if rtc_message_type == RTCMessageType.OFFER.value:
+        if rtc_message_type == _RTCMessageType.OFFER.value:
             conn = _RTCConnection.from_offer(
                 partner_address,
                 self.node_address,
@@ -540,13 +570,13 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
     ) -> None:
         if (
-            rtc_message_type in [RTCMessageType.OFFER.value, RTCMessageType.ANSWER.value]
+            rtc_message_type in [_RTCMessageType.OFFER.value, _RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
             self._process_signalling_for_address(partner_address, rtc_message_type, content)
-        elif rtc_message_type == RTCMessageType.HANGUP.value:
+        elif rtc_message_type == _RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
-        elif rtc_message_type == RTCMessageType.CANDIDATES.value:
+        elif rtc_message_type == _RTCMessageType.CANDIDATES.value:
             self._set_candidates_for_address(partner_address, content)
         else:
             self.log.error(
@@ -597,8 +627,8 @@ def _on_channel_close(conn: _RTCConnection, node_address: Address) -> None:
         conn.channel.remove_all_listeners()
         conn.channel = None
         if conn.peer_connection.iceConnectionState in [
-            ICEConnectionState.COMPLETED,
-            ICEConnectionState.CHECKING,
+            _ICEConnectionState.COMPLETED,
+            _ICEConnectionState.CHECKING,
         ]:
             conn.schedule_task(conn.close())
 
@@ -637,10 +667,10 @@ def _on_ice_gathering_state_change(
         for candidate in rtc_ice_candidates:
             candidate = {
                 "candidate": f"candidate:{candidate_to_sdp(candidate)}",
-                "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else SDP_MID_DEFAULT,
+                "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else _SDP_MID_DEFAULT,
                 "sdpMLineIndex": candidate.sdpMLineIndex is not None
                 if candidate.sdpMLineIndex
-                else SDP_MLINE_INDEX_DEFAULT,
+                else _SDP_MLINE_INDEX_DEFAULT,
             }
             candidates.append(candidate)
 
@@ -651,7 +681,10 @@ def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
     ice_connection_state = conn.peer_connection.iceConnectionState
     conn.log.debug("ICE connection state changed", signaling_state=ice_connection_state)
 
-    if ice_connection_state in [ICEConnectionState.CLOSED.value, ICEConnectionState.FAILED.value]:
+    if ice_connection_state in [
+        _ICEConnectionState.CLOSED.value,
+        _ICEConnectionState.FAILED.value,
+    ]:
         asyncio.create_task(conn.reset())
 
 
@@ -661,7 +694,7 @@ def _on_signalling_state_change(conn: _RTCConnection) -> None:
     # if signaling state is closed also set allow candidates otherwise
     # coroutine will hang forever
     if signaling_state in [
-        RTCSignallingState.HAVE_REMOTE_OFFER.value,
-        RTCSignallingState.CLOSED.value,
+        _RTCSignallingState.HAVE_REMOTE_OFFER.value,
+        _RTCSignallingState.CLOSED.value,
     ]:
         conn.sync_events.aio_allow_candidates.set()
