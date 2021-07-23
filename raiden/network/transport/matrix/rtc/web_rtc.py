@@ -203,7 +203,7 @@ class _RTCConnection(_CoroutineHandler):
         except InvalidStateError:
             # this can happen if peer connection gets closed while awaiting in the try block
             self.log.debug(
-                "Connection state in incompatible state",
+                "Invalid connection state",
                 signaling_state=self.peer_connection.signalingState,
                 ice_connection_state=self.peer_connection.iceConnectionState,
             )
@@ -237,7 +237,7 @@ class _RTCConnection(_CoroutineHandler):
         offer = await self._try_signaling(self.peer_connection.createOffer())
         if offer is None:
             return None
-        self.log.debug("Created offer", offer=offer)
+        self.log.debug("Created WebRTC offer", offer=offer)
 
         self.schedule_task(self._set_local_description(offer))
         # hang up messages are allowed to be processed now
@@ -291,7 +291,7 @@ class _RTCConnection(_CoroutineHandler):
         if self.peer_connection.sctp is None:
             await self.sync_events.wait_for_candidates()
             if self.sync_events.reset_event.is_set():
-                self.log.debug("Reset called. Returning on coroutine")
+                self.log.debug("Reset called. Returning from coroutine")
                 return None
 
         assert self.peer_connection.sctp, "SCTP should be set by now"
@@ -375,7 +375,7 @@ class _RTCConnection(_CoroutineHandler):
         self, rtc_session_description: Optional[RTCSessionDescription]
     ) -> None:
         """
-        This is a callback function to process sdp (session description protocol) messages.
+        This is a callback function to process SDP (Session Description Protocol) messages.
         These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
         signalling. Messages are exchanged via Matrix.
         Args:
@@ -438,7 +438,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             return
 
         self.log.debug(
-            "Initiating web rtc",
+            "Establishing WebRTC channel",
             partner_address=to_checksum_address(partner_address),
         )
 
@@ -524,8 +524,8 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self.schedule_task(conn.send_message(message))
 
     def health_check(self, partner_address: Address) -> None:
-        if address not in self._web_rtc_channel_inits:
-            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
+        if partner_address not in self._web_rtc_channel_inits:
+            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
     def close_connection(self, partner_address: Address) -> List[Task]:
         conns = self._address_to_connections[partner_address]
@@ -550,13 +550,13 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self._set_candidates_for_address(partner_address, content)
         else:
             self.log.error(
-                "Unknown rtc message type",
+                "Unknown WebRTC message type",
                 partner_address=to_checksum_address(partner_address),
                 type=rtc_message_type,
             )
 
     def stop(self) -> None:
-        self.log.debug("Closing rtc connections")
+        self.log.debug("Closing WebRTC connections")
 
         for conns in self._address_to_connections.values():
             for conn in conns.values():
@@ -580,14 +580,16 @@ def _on_datachannel(conn: _RTCConnection, node_address: Address, channel: RTCDat
 
 
 def _on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
-    log.debug("Rtc datachannel open", node=to_checksum_address(node_address), label=channel.label)
+    log.debug(
+        "WebRTC data channel open", node=to_checksum_address(node_address), label=channel.label
+    )
 
 
 def _on_channel_close(conn: _RTCConnection, node_address: Address) -> None:
     """callback if channel is closed. It is part of a partial function"""
     if conn.channel is not None:
         log.debug(
-            "Rtc datachannel closed",
+            "WebRTC data channel closed",
             node=to_checksum_address(node_address),
             label=conn.channel.label,
         )
@@ -647,7 +649,7 @@ def _on_ice_gathering_state_change(
 
 def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
     ice_connection_state = conn.peer_connection.iceConnectionState
-    conn.log.debug("Ice connection state changed", signaling_state=ice_connection_state)
+    conn.log.debug("ICE connection state changed", signaling_state=ice_connection_state)
 
     if ice_connection_state in [ICEConnectionState.CLOSED.value, ICEConnectionState.FAILED.value]:
         asyncio.create_task(conn.reset())
