@@ -185,6 +185,9 @@ EncodedData = NewType("EncodedData", T_EncodedData)
 T_WithdrawAmount = int
 WithdrawAmount = NewType("WithdrawAmount", T_WithdrawAmount)
 
+T_MetadataHash = bytes
+MetadataHash = NewType("MetadataHash", T_MetadataHash)
+
 NodeNetworkStateMap = Dict[Address, "NetworkState"]
 
 Host = NewType("Host", str)

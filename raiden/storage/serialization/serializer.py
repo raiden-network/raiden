@@ -8,14 +8,14 @@ import importlib
 import json
 from dataclasses import is_dataclass
 from json import JSONDecodeError
-from typing import List, Mapping
+from typing import Optional
 
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
-from raiden.storage.serialization.schemas import BaseSchema, class_schema
+from raiden.storage.serialization.schemas import MESSAGE_ENVELOPE_KEY, BaseSchema, class_schema
 from raiden.utils.copy import deepcopy
-from raiden.utils.typing import Any, Dict
+from raiden.utils.typing import Address, Any, Dict, List, Mapping
 
 MESSAGE_NAME_TO_QUALIFIED_NAME = {
     "AuthenticatedMessage": "raiden.messages.abstract.AuthenticatedMessage",
@@ -162,7 +162,7 @@ class MessageSerializer(SerializationBase):
         return json.dumps(data)
 
     @staticmethod
-    def deserialize(data: str) -> Any:
+    def deserialize(data: str, address: Optional[Address] = None) -> Any:
         try:
             decoded_json = json.loads(data)
         except (UnicodeDecodeError, JSONDecodeError) as ex:
@@ -177,8 +177,13 @@ class MessageSerializer(SerializationBase):
             raise SerializationError("No 'type' attribute in message") from ex
 
         try:
-            decoded_json["_type"] = MESSAGE_NAME_TO_QUALIFIED_NAME[msg_type]
+            envelope = {
+                MESSAGE_ENVELOPE_KEY: decoded_json,
+                "_type": MESSAGE_NAME_TO_QUALIFIED_NAME[msg_type],
+            }
+            if address is not None:
+                envelope["peer_address"] = address
         except KeyError as ex:
             raise SerializationError(f"Unknown message type: {msg_type}") from ex
 
-        return DictSerializer.deserialize(decoded_json)
+        return DictSerializer.deserialize(envelope)

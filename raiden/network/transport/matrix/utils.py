@@ -563,7 +563,7 @@ def validate_and_parse_message(data: Any, peer_address: Address) -> List[Message
         if not line:
             continue
         try:
-            message = cached_deserialize(line)
+            message = cached_deserialize(line, peer_address)
         except SerializationError as ex:
             log.warning(
                 "Not a valid Message",

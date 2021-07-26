@@ -4,11 +4,9 @@ from typing import TYPE_CHECKING
 
 from ecies import encrypt
 from eth_hash.auto import keccak
-
 from eth_utils import decode_hex
 
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
-
 from raiden.utils.signer import get_public_key
 from raiden.utils.typing import (
     AddressMetadata,

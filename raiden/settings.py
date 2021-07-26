@@ -135,6 +135,7 @@ class CapabilitiesConfig:
     delivery: bool = True
     web_rtc: bool = False
     to_device: bool = True
+    immutable_metadata: bool = True
 
 
 @dataclass

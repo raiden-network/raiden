@@ -1,14 +1,23 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union
 
 import canonicaljson
-from eth_utils import keccak, to_checksum_address
+from eth_typing import ChecksumAddress
+from eth_utils import keccak, to_canonical_address, to_checksum_address
 from marshmallow import EXCLUDE, post_dump, post_load
 
 from raiden.messages.abstract import cached_property
 from raiden.storage.serialization import serializer
-from raiden.utils.typing import Address, AddressMetadata, Dict, EncryptedSecret, List, Optional
+from raiden.utils.typing import (
+    Address,
+    AddressMetadata,
+    Dict,
+    EncryptedSecret,
+    List,
+    MetadataHash,
+    Optional,
+)
 from raiden.utils.validation import MetadataValidation
 
 
@@ -80,6 +89,7 @@ class Metadata:
     # the initiator of a transfer.
     original_data: Optional[Any] = None
     encrypted_secret: Optional[EncryptedSecret] = None
+    _hash: Optional[MetadataHash] = None
 
     class Meta:
         """
@@ -92,8 +102,10 @@ class Metadata:
         serialize_missing = False
 
     @cached_property
-    def hash(self) -> bytes:
-        return keccak(self._serialize_canonical())
+    def hash(self) -> MetadataHash:
+        if self._hash is not None:
+            return self._hash
+        return MetadataHash(keccak(self._serialize_canonical()))
 
     @post_load(pass_original=True, pass_many=True)
     def _post_load(  # pylint: disable=no-self-use,unused-argument
@@ -115,6 +127,7 @@ class Metadata:
         fields as per the Schema
         """
         dumped_data = data.pop("original_data", None) or data
+        dumped_data.pop("_hash", None)
         return dumped_data
 
     def __repr__(self) -> str:
@@ -128,3 +141,32 @@ class Metadata:
     def _serialize_canonical(self) -> bytes:
         data = self.to_dict()
         return canonicaljson.encode_canonical_json(data)
+
+
+def hash_metadata_v2_0_0(metadata: Metadata) -> MetadataHash:
+    legacy_routes = []
+
+    for route_metadata in metadata.routes:
+        route = [
+            to_checksum_address(to_canonical_address(address)) for address in route_metadata.route
+        ]
+        # We add a default value of {} when validating. Normalize this to
+        # no key when signing.
+        canonical_route_dict: Dict[
+            str,
+            Union[
+                List[ChecksumAddress],
+                Dict[ChecksumAddress, AddressMetadata],
+            ],
+        ] = {"route": route}
+        if route_metadata.address_metadata is not None:
+
+            address_metadata = {
+                to_checksum_address(to_canonical_address(address)): metadata
+                for address, metadata in route_metadata.address_metadata.items()
+            }
+            canonical_route_dict["address_metadata"] = address_metadata
+
+        legacy_routes.append(canonical_route_dict)
+
+    return MetadataHash(keccak(canonicaljson.encode_canonical_json({"routes": legacy_routes})))
