@@ -89,10 +89,15 @@ from raiden_contracts.constants import (
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
+    LIBRARY_TOKEN_NETWORK_UTILS,
+    LIBRARY_TOKEN_NETWORK_UTILS_LINK_KEY,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
+
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
+from raiden_contracts.deploy.contract_deployer import ContractDeployer
+
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -111,6 +116,15 @@ TEST_ACCOUNT_ADDRESS = privatekey_to_address(TEST_PRIVKEY)
 class StepPrinter(Protocol):
     def __call__(self, description: str, error: bool = False) -> None:
         ...
+
+
+def _deploy_contract(
+    deployer: ContractDeployer, name: str, args: list, libs: dict = None
+) -> Address:
+    receipt = deployer.deploy(name, libs=libs, args=args)
+    address = receipt["contractAddress"]
+    assert address is not None, "must be a valid address"
+    return to_canonical_address(address)
 
 
 def ensure_executable(cmd):
@@ -133,12 +147,12 @@ def deploy_smoketest_contracts(
     elif client.eth_node is EthClient.PARITY:
         client.web3.parity.personal.unlockAccount(client.web3.eth.accounts[0], DEFAULT_PASSPHRASE)
 
-    contract_proxy, _ = client.deploy_single_contract(
-        contract_name=CONTRACT_SECRET_REGISTRY,
-        contract=contract_manager.get_contract(CONTRACT_SECRET_REGISTRY),
-        constructor_parameters=None,
+    gas_price = 2
+    gas_limit = 7_000_000
+    deployer = ContractDeployer(
+        client.web3, client.privkey, gas_limit=gas_limit, gas_price=gas_price
     )
-    secret_registry_address = Address(to_canonical_address(contract_proxy.address))
+    secret_registry_address = _deploy_contract(deployer, CONTRACT_SECRET_REGISTRY, [])
 
     secret_registry_constructor_arguments = (
         to_checksum_address(secret_registry_address),
@@ -152,50 +166,45 @@ def deploy_smoketest_contracts(
         contract=contract_manager.get_contract(CONTRACT_TOKEN_NETWORK_REGISTRY),
         constructor_parameters=secret_registry_constructor_arguments,
     )
-    token_network_registry_address = Address(to_canonical_address(contract_proxy.address))
 
-    service_registry_constructor_arguments = (
-        token_address,
-        EMPTY_ADDRESS,
-        int(500e18),
-        6,
-        5,
-        180 * SECONDS_PER_DAY,
-        1000,
-        200 * SECONDS_PER_DAY,
+    service_registry_address = _deploy_contract(
+        deployer,
+        CONTRACT_SERVICE_REGISTRY,
+        args=[
+            token_address,
+            EMPTY_ADDRESS,
+            int(500e18),
+            6,
+            5,
+            180 * SECONDS_PER_DAY,
+            1000,
+            200 * SECONDS_PER_DAY,
+        ],
     )
-    service_registry_contract, _ = client.deploy_single_contract(
-        contract_name=CONTRACT_SERVICE_REGISTRY,
-        contract=contract_manager.get_contract(CONTRACT_SERVICE_REGISTRY),
-        constructor_parameters=service_registry_constructor_arguments,
-    )
-    service_registry_address = Address(to_canonical_address(service_registry_contract.address))
 
-    user_deposit_contract, _ = client.deploy_single_contract(
-        contract_name=CONTRACT_USER_DEPOSIT,
-        contract=contract_manager.get_contract(CONTRACT_USER_DEPOSIT),
-        constructor_parameters=(token_address, UINT256_MAX),
+    user_deposit_address = _deploy_contract(
+        deployer, CONTRACT_USER_DEPOSIT, args=[token_address, UINT256_MAX]
     )
-    user_deposit_address = Address(to_canonical_address(user_deposit_contract.address))
-
-    monitoring_service_contract, _ = client.deploy_single_contract(
-        contract_name=CONTRACT_MONITORING_SERVICE,
-        contract=contract_manager.get_contract(CONTRACT_MONITORING_SERVICE),
-        constructor_parameters=(
+    monitoring_service_address = _deploy_contract(
+        deployer,
+        CONTRACT_MONITORING_SERVICE,
+        args=[
             token_address,
             service_registry_address,
             user_deposit_address,
             token_network_registry_address,
-        ),
+        ],
     )
-    monitoring_service_address = Address(to_canonical_address(monitoring_service_contract.address))
+    one_to_n_address = _deploy_contract(
+        deployer,
+        CONTRACT_ONE_TO_N,
+        args=[user_deposit_address, chain_id, service_registry_address],
+    )
 
-    one_to_n_contract, _ = client.deploy_single_contract(
-        contract_name=CONTRACT_ONE_TO_N,
-        contract=contract_manager.get_contract(CONTRACT_ONE_TO_N),
-        constructor_parameters=(user_deposit_address, chain_id, service_registry_address),
-    )
-    one_to_n_address = Address(to_canonical_address(one_to_n_contract.address))
+    # Since the contracts have been deployed without the use of our
+    # JSONRPCClient, we need to sync the client's internal nonce so that
+    # it reflects the fact that we just sent 7 transactions.
+    client.sync_nonce()
 
     proxy_manager = ProxyManager(
         rpc_client=client,
@@ -207,9 +216,7 @@ def deploy_smoketest_contracts(
     )
     user_deposit_proxy = UserDeposit(
         jsonrpc_client=client,
-        user_deposit_address=UserDepositAddress(
-            to_canonical_address(user_deposit_contract.address)
-        ),
+        user_deposit_address=UserDepositAddress(user_deposit_address),
         contract_manager=contract_manager,
         proxy_manager=proxy_manager,
         block_identifier=BLOCK_ID_LATEST,
