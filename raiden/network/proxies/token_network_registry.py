@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 
 import structlog
-from eth_utils import decode_hex, to_canonical_address
+from eth_utils import to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import BLOCK_ID_LATEST, NULL_ADDRESS_BYTES
@@ -66,7 +66,6 @@ class TokenNetworkRegistry:
             client=rpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-            expected_code=metadata.runtime_bytecode,
             given_block_identifier=block_identifier,
         )
 
@@ -303,11 +302,6 @@ class TokenNetworkRegistry:
                     client=self.rpc_client,
                     address=Address(secret_registry_address),
                     contract_name=CONTRACT_SECRET_REGISTRY,
-                    expected_code=decode_hex(
-                        self.proxy_manager.contract_manager.get_runtime_hexcode(
-                            CONTRACT_SECRET_REGISTRY
-                        )
-                    ),
                     given_block_identifier=failed_at_blocknumber,
                 )
 
@@ -428,11 +422,6 @@ class TokenNetworkRegistry:
                 client=self.rpc_client,
                 address=Address(secret_registry_address),
                 contract_name=CONTRACT_SECRET_REGISTRY,
-                expected_code=decode_hex(
-                    self.proxy_manager.contract_manager.get_runtime_hexcode(
-                        CONTRACT_SECRET_REGISTRY
-                    )
-                ),
                 given_block_identifier=failed_at_blocknumber,
             )
 

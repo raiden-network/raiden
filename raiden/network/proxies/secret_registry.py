@@ -2,7 +2,7 @@ from typing import Any, List
 
 import gevent
 import structlog
-from eth_utils import decode_hex, encode_hex, is_binary_address
+from eth_utils import encode_hex, is_binary_address
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
@@ -58,9 +58,6 @@ class SecretRegistry:
             client=jsonrpc_client,
             address=Address(secret_registry_address),
             contract_name=CONTRACT_SECRET_REGISTRY,
-            expected_code=decode_hex(
-                contract_manager.get_runtime_hexcode(CONTRACT_SECRET_REGISTRY)
-            ),
             given_block_identifier=block_identifier,
         )
 

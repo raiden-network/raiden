@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 import structlog
 import web3
-from eth_utils import decode_hex, is_binary_address, to_canonical_address
+from eth_utils import is_binary_address, to_canonical_address
 from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import BrokenPreconditionError, RaidenUnrecoverableError
@@ -44,9 +44,6 @@ class ServiceRegistry:
             client=jsonrpc_client,
             address=Address(service_registry_address),
             contract_name=CONTRACT_SERVICE_REGISTRY,
-            expected_code=decode_hex(
-                contract_manager.get_runtime_hexcode(CONTRACT_SERVICE_REGISTRY)
-            ),
             given_block_identifier=block_identifier,
         )
 

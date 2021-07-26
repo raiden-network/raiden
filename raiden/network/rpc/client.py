@@ -58,7 +58,6 @@ from raiden.constants import (
 )
 from raiden.exceptions import (
     AddressWithoutCode,
-    ContractCodeMismatch,
     EthereumNonceTooLow,
     EthNodeInterfaceError,
     InsufficientEth,
@@ -338,7 +337,6 @@ def check_address_has_code(
     address: Address,
     contract_name: str,
     given_block_identifier: BlockIdentifier,
-    expected_code: bytes = None,
 ) -> None:
     """Checks that the given address contains code.
 
@@ -373,20 +371,12 @@ def check_address_has_code(
             )
         )
 
-    if expected_code is not None and result != expected_code:
-        # The error message is printed to the user from ui/cli.py. Make sure it
-        # is readable.
-        raise ContractCodeMismatch(
-            f"[{contract_name}] Address {to_checksum_address(address)} has wrong code"
-        )
-
 
 def check_address_has_code_handle_pruned_block(
     client: "JSONRPCClient",
     address: Address,
     contract_name: str,
     given_block_identifier: BlockIdentifier,
-    expected_code: bytes = None,
 ) -> None:
     """Checks that the given address contains code.
 
@@ -394,11 +384,9 @@ def check_address_has_code_handle_pruned_block(
     `latest` instead.
     """
     try:
-        check_address_has_code(
-            client, address, contract_name, given_block_identifier, expected_code
-        )
+        check_address_has_code(client, address, contract_name, given_block_identifier)
     except ValueError:
-        check_address_has_code(client, address, contract_name, "latest", expected_code)
+        check_address_has_code(client, address, contract_name, "latest")
 
 
 def get_transaction_data(

@@ -1,14 +1,6 @@
 from dataclasses import dataclass
 
-from raiden.utils.typing import (
-    ABI,
-    Address,
-    BlockNumber,
-    EVMBytecode,
-    GasMeasurements,
-    Optional,
-    TypeVar,
-)
+from raiden.utils.typing import ABI, Address, BlockNumber, GasMeasurements, Optional, TypeVar
 
 T = TypeVar("T")
 
@@ -33,7 +25,6 @@ class SmartContractMetadata:
     address: Address
 
     abi: ABI
-    runtime_bytecode: EVMBytecode
     gas_measurements: GasMeasurements
 
     def __post_init__(self) -> None:

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from eth_utils import decode_hex, is_binary_address
+from eth_utils import is_binary_address
 from gevent.lock import Semaphore
 
 from raiden.network.proxies.custom_token import CustomToken
@@ -22,7 +22,6 @@ from raiden.utils.typing import (
     BlockNumber,
     ChannelID,
     Dict,
-    EVMBytecode,
     MonitoringServiceAddress,
     OneToNAddress,
     Optional,
@@ -154,13 +153,6 @@ class ProxyManager:
                     deployed_at=self.metadata.token_network_registry_deployed_at,
                     address=Address(address),
                     abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-                    runtime_bytecode=EVMBytecode(
-                        decode_hex(
-                            self.contract_manager.get_runtime_hexcode(
-                                CONTRACT_TOKEN_NETWORK_REGISTRY
-                            )
-                        )
-                    ),
                     gas_measurements=gas_measurements(self.contract_manager.contracts_version),
                     filters_start_at=self.metadata.filters_start_at,
                 )
@@ -186,11 +178,6 @@ class ProxyManager:
                     deployed_at=None,
                     abi=self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
                     gas_measurements=gas_measurements(self.contract_manager.contracts_version),
-                    runtime_bytecode=EVMBytecode(
-                        decode_hex(
-                            self.contract_manager.get_runtime_hexcode(CONTRACT_TOKEN_NETWORK)
-                        )
-                    ),
                     address=Address(address),
                     token_network_registry_address=None,
                     filters_start_at=self.metadata.filters_start_at,
