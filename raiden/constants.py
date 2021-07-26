@@ -85,6 +85,7 @@ class Capabilities(Enum):
     DELIVERY = "Delivery"  # expects and sends Delivery messages
     WEBRTC = "webRTC"  # supports webRTC messaging
     TODEVICE = "toDevice"  # supports sending and receiving toDevice messages on Matrix
+    IMMUTABLE_METADATA = "immutableMetadata"  # leave metadata unchanged, if 0 also prune route
 
 
 class DeviceIDs(Enum):

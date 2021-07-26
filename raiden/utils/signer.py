@@ -45,7 +45,7 @@ def recover(
     """eth_recover address from data hash and signature"""
     public_key = get_public_key(data, signature, hasher)
 
-    return public_key.to_canonical_address()
+    return Address(public_key.to_canonical_address())
 
 
 class Signer(ABC):

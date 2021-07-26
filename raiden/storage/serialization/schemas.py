@@ -3,7 +3,7 @@ from typing import Dict, Iterable
 
 import marshmallow
 from eth_utils import to_bytes, to_canonical_address, to_hex
-from marshmallow import EXCLUDE, Schema, SchemaOpts, post_dump
+from marshmallow import EXCLUDE, Schema, SchemaOpts, post_dump, pre_load
 from marshmallow_dataclass import class_schema
 from marshmallow_polyfield import PolyField
 
@@ -55,6 +55,7 @@ from raiden.utils.typing import (
     LockedAmount,
     Locksroot,
     MessageID,
+    MetadataHash,
     MonitoringServiceAddress,
     Nonce,
     OneToNAddress,
@@ -79,6 +80,8 @@ from raiden.utils.typing import (
     UserDepositAddress,
     WithdrawAmount,
 )
+
+MESSAGE_ENVELOPE_KEY = "message_data"
 
 
 class IntegerToStringField(marshmallow.fields.Integer):
@@ -257,6 +260,7 @@ class BaseSchema(marshmallow.Schema):
         BalanceHash: BytesField,
         BlockHash: BytesField,
         Locksroot: BytesField,
+        MetadataHash: BytesField,
         Secret: BytesField,
         SecretHash: BytesField,
         Signature: BytesField,
@@ -324,6 +328,13 @@ class BaseSchema(marshmallow.Schema):
         # Other
         Random: PRNGField,
     }
+
+    @pre_load()
+    # pylint: disable=W0613,R0201
+    def remove_envelope(self, data: Dict[str, Any], many: bool, **kwargs: Any) -> Dict[str, Any]:
+        if MESSAGE_ENVELOPE_KEY in data:
+            return data[MESSAGE_ENVELOPE_KEY]
+        return data
 
     @post_dump(pass_original=True)
     # pylint: disable=W0613,R0201

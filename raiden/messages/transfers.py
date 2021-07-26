@@ -1,14 +1,18 @@
 from dataclasses import dataclass, field
 from hashlib import sha256
-from typing import Any
+from typing import Any, Dict
 
 import eth_hash.auto as eth_hash
-from eth_utils import keccak
+from eth_utils import keccak, to_hex
+from marshmallow import post_load
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
+from raiden.exceptions import InvalidSignature
 from raiden.messages.abstract import SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
-from raiden.messages.metadata import Metadata, RouteMetadata
+from raiden.messages.metadata import Metadata, RouteMetadata, hash_metadata_v2_0_0
+from raiden.storage.serialization import DictSerializer
+from raiden.storage.serialization.schemas import MESSAGE_ENVELOPE_KEY
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendLockExpired,
@@ -20,6 +24,7 @@ from raiden.transfer.state import get_address_metadata
 from raiden.transfer.utils import encrypt_secret, hash_balance_data
 from raiden.utils.packing import pack_balance_proof
 from raiden.utils.predicates import ishash
+from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -418,6 +423,44 @@ class LockedTransferBase(EnvelopeMessage):
             + self.lock.secrethash
             + self.lock.amount.to_bytes(32, byteorder="big")
         )
+
+    @post_load(pass_original=True)
+    def _check_metadata_hash(  # pylint: disable=no-self-use,unused-argument
+        self, data: Dict[str, Any], original_data: Dict[str, Any], many: bool, **kwargs: Any
+    ) -> Dict[str, Any]:
+
+        metadata = data["metadata"]
+        expected_signer = original_data["peer_address"]
+        balance_hash = hash_balance_data(
+            data["transferred_amount"], data["locked_amount"], data["locksroot"]
+        )
+
+        for legacy_hash in [metadata.hash, hash_metadata_v2_0_0(metadata)]:
+            data_signed = pack_balance_proof(
+                nonce=data["nonce"],
+                balance_hash=balance_hash,
+                additional_hash=AdditionalHash(legacy_hash),
+                canonical_identifier=CanonicalIdentifier(
+                    chain_identifier=data["chain_id"],
+                    token_network_address=data["token_network_address"],
+                    channel_identifier=data["channel_identifier"],
+                ),
+            )
+
+            try:
+                address = recover(data=data_signed, signature=data["signature"])
+                if address == expected_signer:
+                    original_message_metadata = original_data[MESSAGE_ENVELOPE_KEY]["metadata"]
+                    original_message_metadata["_hash"] = to_hex(legacy_hash)
+                    original_message_metadata["_type"] = "raiden.messages.metadata.Metadata"
+                    new_metadata = DictSerializer.deserialize(original_message_metadata)
+                    data["metadata"] = new_metadata
+
+                    return data
+            except InvalidSignature:
+                pass
+
+        return data
 
 
 @dataclass(repr=False, eq=False)
