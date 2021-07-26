@@ -51,7 +51,6 @@ class Token:
             jsonrpc_client,
             Address(token_address),
             "Token",
-            expected_code=None,
             given_block_identifier=block_identifier,
         )
 

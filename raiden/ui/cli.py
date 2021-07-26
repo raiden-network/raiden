@@ -32,7 +32,6 @@ from raiden.exceptions import (
     AddressWithoutCode,
     APIServerPortInUseError,
     ConfigurationError,
-    ContractCodeMismatch,
     EthereumNonceTooLow,
     EthNodeInterfaceError,
     RaidenUnrecoverableError,
@@ -763,13 +762,6 @@ def _run(ctx: Context, **kwargs: Any) -> None:
     except ConfigurationError as e:
         click.secho(str(e), fg="red")
         sys.exit(ReturnCode.RAIDEN_CONFIGURATION_ERROR)
-    except ContractCodeMismatch as e:
-        click.secho(
-            f"{e}. This may happen if Raiden is configured to use an "
-            f"unsupported version of the contracts.",
-            fg="red",
-        )
-        sys.exit(ReturnCode.SMART_CONTRACTS_CONFIGURATION_ERROR)
     except AddressWithoutCode as e:
         click.secho(
             f"{e}. This may happen if an external ERC20 smart contract "

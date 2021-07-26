@@ -257,10 +257,6 @@ class UnexpectedChannelState(RaidenRecoverableError):
     """Raised if an operation is attempted on a channel while it is in an unexpected state."""
 
 
-class ContractCodeMismatch(RaidenError):
-    """Raised if the onchain code of the contract differs."""
-
-
 class APIServerPortInUseError(RaidenError):
     """Raised when API server port is already in use"""
 

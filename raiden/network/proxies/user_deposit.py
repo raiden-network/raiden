@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 import structlog
-from eth_utils import decode_hex, is_binary_address, to_canonical_address
+from eth_utils import is_binary_address, to_canonical_address
 from gevent.event import AsyncResult
 from gevent.threading import Lock
 from web3.exceptions import BadFunctionCallOutput
@@ -80,7 +80,6 @@ class UserDeposit:
             client=jsonrpc_client,
             address=Address(user_deposit_address),
             contract_name=CONTRACT_USER_DEPOSIT,
-            expected_code=decode_hex(contract_manager.get_runtime_hexcode(CONTRACT_USER_DEPOSIT)),
             given_block_identifier=block_identifier,
         )
 
@@ -172,16 +171,12 @@ class UserDeposit:
             client=self.client,
             address=Address(monitoring_service_address),
             contract_name=CONTRACT_MONITORING_SERVICE,
-            expected_code=decode_hex(
-                self.contract_manager.get_runtime_hexcode(CONTRACT_MONITORING_SERVICE)
-            ),
             given_block_identifier=given_block_identifier,
         )
         check_address_has_code_handle_pruned_block(
             client=self.client,
             address=Address(one_to_n_address),
             contract_name=CONTRACT_ONE_TO_N,
-            expected_code=decode_hex(self.contract_manager.get_runtime_hexcode(CONTRACT_ONE_TO_N)),
             given_block_identifier=given_block_identifier,
         )
         try:

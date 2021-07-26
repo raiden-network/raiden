@@ -162,7 +162,6 @@ class TokenNetwork:
             client=jsonrpc_client,
             address=Address(metadata.address),
             contract_name=CONTRACT_TOKEN_NETWORK,
-            expected_code=metadata.runtime_bytecode,
             given_block_identifier=block_identifier,
         )
 
