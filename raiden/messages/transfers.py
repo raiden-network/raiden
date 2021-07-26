@@ -430,7 +430,10 @@ class LockedTransferBase(EnvelopeMessage):
     ) -> Dict[str, Any]:
 
         metadata = data["metadata"]
-        expected_signer = original_data["peer_address"]
+        expected_signer = original_data.get("peer_address", None)
+        if expected_signer is None:
+            return data
+
         balance_hash = hash_balance_data(
             data["transferred_amount"], data["locked_amount"], data["locksroot"]
         )
