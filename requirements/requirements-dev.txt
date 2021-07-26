@@ -111,7 +111,7 @@ click==8.0.1
     #   flask
     #   pip-tools
     #   raiden-contracts
-coincurve==15.0.0
+coincurve==15.0.1
     # via
     #   -r requirements.txt
     #   eciespy
