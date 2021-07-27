@@ -159,6 +159,7 @@ class _RTCConnection(_CoroutineHandler):
         node_address: Address,
         signaling_send: Callable[[Address, str], None],
         channel_closed: Callable[["_RTCConnection"], None],
+        ice_connection_closed: Callable[["_RTCConnection"], None],
         _handle_message_callback: Callable[[str, Address], None],
     ) -> None:
         super().__init__()
@@ -167,6 +168,7 @@ class _RTCConnection(_CoroutineHandler):
         self._call_id = self._make_call_id()
         self._signaling_send = signaling_send
         self._channel_closed = channel_closed
+        self._ice_connection_closed = ice_connection_closed
         self._handle_message_callback = _handle_message_callback
         self.channel: Optional[RTCDataChannel] = None
         self.sync_events = _RTCConnection.SyncEvents()
@@ -201,11 +203,17 @@ class _RTCConnection(_CoroutineHandler):
         node_address: Address,
         signaling_send: Callable[[Address, str], None],
         channel_closed: Callable[["_RTCConnection"], None],
+        ice_connection_closed: Callable[["_RTCConnection"], None],
         handle_message_callback: Callable[[str, Address], None],
         offer: Dict[str, str],
     ) -> "_RTCConnection":
         conn = _RTCConnection(
-            partner_address, node_address, signaling_send, channel_closed, handle_message_callback
+            partner_address,
+            node_address,
+            signaling_send,
+            channel_closed,
+            ice_connection_closed,
+            handle_message_callback,
         )
         conn._call_id = offer["call_id"]
         return conn
@@ -373,6 +381,9 @@ class _RTCConnection(_CoroutineHandler):
         if self.channel:
             self.channel.close()
 
+    async def ice_connection_closed(self) -> None:
+        self._ice_connection_closed(self)
+
     async def reset(self) -> None:
         self.sync_events.reset()
         await self.wait_for_coroutines()
@@ -454,6 +465,9 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         if conn.call_id in self._address_to_connections[conn.partner_address]:
             del self._address_to_connections[conn.partner_address][conn.call_id]
 
+    def _handle_ice_connection_closed(self, conn: _RTCConnection) -> None:
+        self.health_check(conn.partner_address)
+
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
         if address in self._web_rtc_channel_inits:
             return
@@ -480,6 +494,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self.node_address,
             self._signaling_send,
             self._handle_channel_closed,
+            self._handle_ice_connection_closed,
             self._handle_message,
         )
         self._add_connection(partner_address, conn)
@@ -559,6 +574,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 self.node_address,
                 self._signaling_send,
                 self._handle_channel_closed,
+                self._handle_ice_connection_closed,
                 self._handle_message,
                 description,
             )
@@ -708,6 +724,7 @@ def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
         _ICEConnectionState.FAILED.value,
     ]:
         asyncio.create_task(conn.reset())
+        asyncio.create_task(conn.ice_connection_closed())
 
 
 def _on_signalling_state_change(conn: _RTCConnection) -> None:
