@@ -137,7 +137,6 @@ class _RTCConnection(_CoroutineHandler):
         """
 
         aio_allow_candidates: AIOEvent = field(default_factory=AIOEvent)
-        aio_allow_hangup: AIOEvent = field(default_factory=AIOEvent)
         reset_event: AIOEvent = field(default_factory=AIOEvent)
 
         def reset(self) -> None:
@@ -147,17 +146,12 @@ class _RTCConnection(_CoroutineHandler):
 
         def set_all(self) -> None:
             self.aio_allow_candidates.set()
-            self.aio_allow_hangup.set()
 
         def clear_all(self) -> None:
             self.aio_allow_candidates.clear()
-            self.aio_allow_hangup.clear()
 
         async def wait_for_candidates(self) -> None:
             await self.aio_allow_candidates.wait()
-
-        async def wait_for_hangup(self) -> None:
-            await self.aio_allow_hangup.wait()
 
     def __init__(
         self,
@@ -273,8 +267,6 @@ class _RTCConnection(_CoroutineHandler):
         self.log.debug("Created WebRTC offer", offer=offer)
 
         self.schedule_task(self._set_local_description(offer))
-        # hang up messages are allowed to be processed now
-        self.sync_events.aio_allow_hangup.set()
         return offer
 
     async def process_signalling(
@@ -299,8 +291,6 @@ class _RTCConnection(_CoroutineHandler):
 
         if self.peer_connection.remoteDescription is None:
             return None
-
-        self.sync_events.aio_allow_hangup.set()
 
         if sdp_type == _SDPTypes.ANSWER.value:
             return None
