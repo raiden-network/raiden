@@ -378,7 +378,7 @@ matplotlib-inline==0.1.2
     # via
     #   -r requirements-dev.txt
     #   ipython
-matrix-client==0.3.2
+matrix-client==0.4.0
     # via -r requirements-dev.txt
 matrix-synapse==1.33.0
     # via -r requirements-dev.txt
@@ -777,6 +777,7 @@ unpaddedbase64==1.1.0
 urllib3==1.26.5
     # via
     #   -r requirements-dev.txt
+    #   matrix-client
     #   requests
     #   responses
 varint==1.0.2

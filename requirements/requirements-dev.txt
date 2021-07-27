@@ -334,7 +334,7 @@ marshmallow-polyfield==5.10
     # via -r requirements.txt
 matplotlib-inline==0.1.2
     # via ipython
-matrix-client==0.3.2
+matrix-client==0.4.0
     # via -r requirements.txt
 matrix-synapse==1.33.0
     # via -r requirements-dev.in
@@ -657,6 +657,7 @@ unpaddedbase64==1.1.0
 urllib3==1.26.5
     # via
     #   -r requirements.txt
+    #   matrix-client
     #   requests
     #   responses
 varint==1.0.2
