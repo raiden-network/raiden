@@ -547,7 +547,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
         if rtc_message_type == _RTCMessageType.OFFER.value:
-            if self._have_both_connections(partner_address):
+            if self.has_ready_channel(partner_address):
                 return
             conn = _RTCConnection.from_offer(
                 partner_address,
