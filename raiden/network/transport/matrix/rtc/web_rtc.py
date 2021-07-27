@@ -1,5 +1,4 @@
 import asyncio
-import collections
 import json
 import time
 from asyncio import CancelledError, Event as AIOEvent, Task
@@ -158,7 +157,6 @@ class _RTCConnection(_CoroutineHandler):
         partner_address: Address,
         node_address: Address,
         signaling_send: Callable[[Address, str], None],
-        channel_closed: Callable[["_RTCConnection"], None],
         ice_connection_closed: Callable[["_RTCConnection"], None],
         handle_message_callback: Callable[[str, Address], None],
     ) -> None:
@@ -167,7 +165,6 @@ class _RTCConnection(_CoroutineHandler):
         self.partner_address = partner_address
         self._call_id = self._make_call_id()
         self._signaling_send = signaling_send
-        self._channel_closed = channel_closed
         self._ice_connection_closed = ice_connection_closed
         self._handle_message_callback = handle_message_callback
         self.channel: Optional[RTCDataChannel] = None
@@ -202,7 +199,6 @@ class _RTCConnection(_CoroutineHandler):
         partner_address: Address,
         node_address: Address,
         signaling_send: Callable[[Address, str], None],
-        channel_closed: Callable[["_RTCConnection"], None],
         ice_connection_closed: Callable[["_RTCConnection"], None],
         handle_message_callback: Callable[[str, Address], None],
         offer: Dict[str, str],
@@ -211,7 +207,6 @@ class _RTCConnection(_CoroutineHandler):
             partner_address,
             node_address,
             signaling_send,
-            channel_closed,
             ice_connection_closed,
             handle_message_callback,
         )
@@ -377,8 +372,7 @@ class _RTCConnection(_CoroutineHandler):
     async def close(self) -> None:
         self.log.debug("Closing peer connection")
         await self.peer_connection.close()
-        self._channel_closed(self)
-        if self.channel:
+        if self.channel is not None:
             self.channel.close()
 
     async def ice_connection_closed(self) -> None:
@@ -433,8 +427,11 @@ class _RTCConnection(_CoroutineHandler):
 
         self._signaling_send(self.partner_address, json.dumps(message))
 
+    def __repr__(self) -> str:
+        partner = to_checksum_address(self.partner_address)
+        return f"<_RTCConnection to {partner}, call_id={self.call_id}>"
 
-@dataclass
+
 class WebRTCManager(_CoroutineHandler, Runnable):
     def __init__(
         self,
@@ -450,9 +447,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._stop_event = stop_event
         # the addresses for which we're currently trying to initialize WebRTC channels
         self._web_rtc_channel_inits: Set[Address] = set()
-        self._address_to_connections: Dict[
-            Address, Dict[str, _RTCConnection]
-        ] = collections.defaultdict(dict)
+        self._address_to_connection: Dict[Address, _RTCConnection] = {}
         self.log = log.bind(node=to_checksum_address(node_address))
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
@@ -461,11 +456,9 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             messages.append(ReceivedRaidenMessage(message=msg, sender=partner_address))
         self._process_messages(messages)
 
-    def _handle_channel_closed(self, conn: _RTCConnection) -> None:
-        if conn.call_id in self._address_to_connections[conn.partner_address]:
-            del self._address_to_connections[conn.partner_address][conn.call_id]
-
     def _handle_ice_connection_closed(self, conn: _RTCConnection) -> None:
+        # the connecting may have already been removed by close_connection
+        self._address_to_connection.pop(conn.partner_address, None)
         self.health_check(conn.partner_address)
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
@@ -493,7 +486,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             partner_address,
             self.node_address,
             self._signaling_send,
-            self._handle_channel_closed,
             self._handle_ice_connection_closed,
             self._handle_message,
         )
@@ -505,12 +497,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         # wait for _WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
         if self._stop_event.wait(timeout=_WEB_RTC_CHANNEL_TIMEOUT):
-            conns = self._address_to_connections[partner_address]
-            assert len(conns) in (1, 2), "must be either 1 or 2"
-            if len(conns) == 1:
-                del self._address_to_connections[partner_address]
-            else:
-                del conns[conn.call_id]
             return
 
         # if room is not None that means we are at least in the second iteration
@@ -524,64 +510,51 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self.close_connection(partner_address)
 
     def _add_connection(self, partner_address: Address, conn: _RTCConnection) -> None:
-        assert (
-            len(self._address_to_connections[partner_address]) < 2
-        ), "cannot have more than 2 connections per partner"
-        assert (
-            conn.call_id not in self._address_to_connections[partner_address]
-        ), "must not be there already"
-        self._address_to_connections[partner_address][conn.call_id] = conn
-
-    def _get_connection(self, partner_address: Address, call_id: str = None) -> _RTCConnection:
-        conns = self._address_to_connections[partner_address]
-        if call_id is not None:
-            return conns[call_id]
-        return next(iter(conns.values()))
+        assert partner_address not in self._address_to_connection, "must not be there already"
+        self._address_to_connection[partner_address] = conn
 
     def has_ready_channel(self, partner_address: Address) -> bool:
-        conns = self._address_to_connections.get(partner_address)
-        if conns is None:
-            return False
-        return any(
-            conn.channel is not None and conn.channel.readyState == _RTCChannelState.OPEN.value
-            for conn in conns.values()
+        conn = self._address_to_connection.get(partner_address)
+        return (
+            conn is not None
+            and conn.channel is not None
+            and conn.channel.readyState == _RTCChannelState.OPEN.value
         )
 
     def _reset_state(self) -> None:
-        self._address_to_connections = {}
-
-    def _have_both_connections(self, partner_address: Address) -> bool:
-        return (
-            partner_address in self._address_to_connections
-            and len(self._address_to_connections[partner_address]) == 2
-        )
+        self._address_to_connection = {}
 
     def _set_candidates_for_address(
         self, partner_address: Address, content: Dict[str, Any]
     ) -> None:
-        if not self._have_both_connections(partner_address):
-            conn = self._get_connection(partner_address, content["call_id"])
+        conn = self._address_to_connection.get(partner_address)
+        if conn is not None:
             self.schedule_task(conn.set_candidates(content))
 
     def _process_signalling_for_address(
         self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
+        conn = self._address_to_connection.get(partner_address)
         if rtc_message_type == _RTCMessageType.OFFER.value:
-            if self.has_ready_channel(partner_address):
-                return
+            if conn is not None:
+                if conn.call_id < description["call_id"]:
+                    self.close_connection(partner_address)
+                else:
+                    # drop the offer, it's older than what we have
+                    return
             conn = _RTCConnection.from_offer(
                 partner_address,
                 self.node_address,
                 self._signaling_send,
-                self._handle_channel_closed,
                 self._handle_ice_connection_closed,
                 self._handle_message,
                 description,
             )
             self._add_connection(partner_address, conn)
         else:
-            # must exist
-            conn = self._get_connection(partner_address)
+            if conn is None:
+                # we got an answer for a connection we already removed
+                return
 
         self.schedule_task(
             coroutine=conn.process_signalling(description=description),
@@ -589,20 +562,19 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         )
 
     def send_message_for_address(self, partner_address: Address, message: str) -> None:
-        conn = self._get_connection(partner_address)
+        conn = self._address_to_connection[partner_address]
         self.schedule_task(conn.send_message(message))
 
     def health_check(self, partner_address: Address) -> None:
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
-    def close_connection(self, partner_address: Address) -> List[Task]:
-        conns = self._address_to_connections[partner_address]
-        tasks = []
-        for conn in conns.values():
+    def close_connection(self, partner_address: Address) -> Optional[Task]:
+        conn = self._address_to_connection.pop(partner_address, None)
+        if conn is not None:
             conn.sync_events.clear_all()
             task = self.schedule_task(conn.close())
-            tasks.append(task)
-        return tasks
+            return task
+        return None
 
     def process_signalling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
@@ -626,16 +598,13 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def stop(self) -> None:
         self.log.debug("Closing WebRTC connections")
 
-        for conns in self._address_to_connections.copy().values():
-            for conn in conns.values():
-                conn.send_hangup_message()
+        for conn in tuple(self._address_to_connection.values()):
+            conn.send_hangup_message()
 
-        for partner_address, conns in self._address_to_connections.copy().items():
-            tasks = self.close_connection(partner_address)
-            for conn in conns.copy().values():
-                conn.join_all_coroutines()
-            for task in tasks:
-                yield_future(task)
+        for partner_address, conn in self._address_to_connection.copy().items():
+            task = self.close_connection(partner_address)
+            conn.join_all_coroutines()
+            yield_future(task)
 
         self.join_all_coroutines()
         self._reset_state()
