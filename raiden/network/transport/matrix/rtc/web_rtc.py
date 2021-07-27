@@ -160,7 +160,7 @@ class _RTCConnection(_CoroutineHandler):
         signaling_send: Callable[[Address, str], None],
         channel_closed: Callable[["_RTCConnection"], None],
         ice_connection_closed: Callable[["_RTCConnection"], None],
-        _handle_message_callback: Callable[[str, Address], None],
+        handle_message_callback: Callable[[str, Address], None],
     ) -> None:
         super().__init__()
         self.node_address = node_address
@@ -169,7 +169,7 @@ class _RTCConnection(_CoroutineHandler):
         self._signaling_send = signaling_send
         self._channel_closed = channel_closed
         self._ice_connection_closed = ice_connection_closed
-        self._handle_message_callback = _handle_message_callback
+        self._handle_message_callback = handle_message_callback
         self.channel: Optional[RTCDataChannel] = None
         self.sync_events = _RTCConnection.SyncEvents()
         self.log = log.bind(
