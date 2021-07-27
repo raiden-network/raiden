@@ -455,11 +455,16 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             del self._address_to_connections[conn.partner_address][conn.call_id]
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
-        self._web_rtc_channel_inits.add(address)
-        try:
-            return self._initialize_web_rtc(address)
-        finally:
-            self._web_rtc_channel_inits.remove(address)
+        if address in self._web_rtc_channel_inits:
+            return
+        attempt = 0
+        while attempt < 3 and not self.has_ready_channel(address):
+            self._web_rtc_channel_inits.add(address)
+            try:
+                self._initialize_web_rtc(address)
+            finally:
+                self._web_rtc_channel_inits.remove(address)
+            attempt += 1
 
     def _initialize_web_rtc(self, partner_address: Address) -> None:
         if self._stop_event.is_set():
@@ -572,8 +577,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self.schedule_task(conn.send_message(message))
 
     def health_check(self, partner_address: Address) -> None:
-        if partner_address not in self._web_rtc_channel_inits:
-            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
+        self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
     def close_connection(self, partner_address: Address) -> List[Task]:
         conns = self._address_to_connections[partner_address]
