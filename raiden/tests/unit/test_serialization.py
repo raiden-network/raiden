@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 
 from raiden.exceptions import SerializationError
-from raiden.messages.metadata import Metadata
+from raiden.messages.metadata import Metadata, hash_metadata_v2_0_0
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
@@ -18,6 +18,7 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.serialization.schemas import BaseSchema, class_schema
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
+from raiden.tests.utils.factories import make_locked_transfer
 from raiden.transfer import state
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List
@@ -331,6 +332,62 @@ def test_locked_transfer_unknown_metadata():
         assert deserialized_value == value
 
     assert message_dict == JSONSerializer.deserialize(json_msg)
+
+
+def test_metadata_compatibility_with_v_2_0_0():
+    signer = LocalSigner(bytes(range(32)))
+
+    # First construct the "original" metadata which has no precalculated `_hash`
+    no_hash_metadata = factories.create(factories.MetadataProperties())
+    # Metadata which are not created by deserialization should not have _hash set
+    assert no_hash_metadata._hash is None
+
+    different_hashes = set()
+
+    different_hashes.add(no_hash_metadata.hash)
+    different_hashes.add(hash_metadata_v2_0_0(no_hash_metadata))
+
+    number_of_different_hashes = 2
+
+    # metadata hash of v2.0.0 should differ from current hash
+    assert len(different_hashes) == number_of_different_hashes
+
+    signatures = set()
+
+    for _hash in different_hashes:
+        locked_transfer = make_locked_transfer(_hash)
+        locked_transfer.sign(signer)
+        # add signatures to check if they are different
+        signatures.add(locked_transfer.signature)
+
+        serialized_message = MessageSerializer.serialize(locked_transfer)
+        # _hash must be removed in serialized message format
+        assert "_hash" not in json.loads(serialized_message)["metadata"]
+
+        deserialized_message = MessageSerializer.deserialize(serialized_message, signer.address)
+
+        assert deserialized_message.metadata.hash == _hash
+        assert deserialized_message.sender == signer.address
+
+    # different hashes should result in different signatures
+    assert len(signatures) == len(different_hashes)
+
+
+def test_metadata_deserialization_without_expected_address():
+    signer = LocalSigner(bytes(range(32)))
+    legacy_hash = hash_metadata_v2_0_0(factories.create(factories.MetadataProperties()))
+    locked_transfer = make_locked_transfer(legacy_hash)
+    locked_transfer.sign(signer)
+    serialized_message = MessageSerializer.serialize(locked_transfer)
+
+    deserialized_message_without_expected_address = MessageSerializer.deserialize(
+        serialized_message
+    )
+    # if no expected address is passed to the deserializer it cannot recover against
+    # any hash(legacy or current), it will fallback to assume it is the current version
+    # how metadata are hashed
+    assert deserialized_message_without_expected_address.sender != signer.address
+    assert deserialized_message_without_expected_address.metadata._hash is None
 
 
 def test_metadata_backwards_compatibility():
