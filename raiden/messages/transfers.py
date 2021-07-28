@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     InitiatorAddress,
     LockedAmount,
     Locksroot,
+    MessageID,
     Nonce,
     PaymentAmount,
     PaymentID,
@@ -411,17 +412,40 @@ class LockedTransferBase(EnvelopeMessage):
         )
 
     def _packed_data(self) -> bytes:
+        return LockedTransferBase._pack_locked_transfer_data(
+            self.cmdid,  # pylint: disable=no-member
+            self.message_identifier,
+            self.payment_identifier,
+            self.token,
+            self.recipient,
+            self.target,
+            self.initiator,
+            self.lock,
+        )
+
+    @classmethod
+    def _pack_locked_transfer_data(
+        cls,
+        cmdid: CmdId,
+        message_identifier: MessageID,
+        payment_identifier: PaymentID,
+        token: TokenAddress,
+        recipient: Address,
+        target: TargetAddress,
+        initiator: InitiatorAddress,
+        lock: Lock,
+    ) -> bytes:
         return (
-            bytes([self.cmdid.value])  # pylint: disable=no-member
-            + self.message_identifier.to_bytes(8, byteorder="big")
-            + self.payment_identifier.to_bytes(8, byteorder="big")
-            + self.lock.expiration.to_bytes(32, byteorder="big")
-            + self.token
-            + self.recipient
-            + self.target
-            + self.initiator
-            + self.lock.secrethash
-            + self.lock.amount.to_bytes(32, byteorder="big")
+            bytes([cmdid.value])
+            + message_identifier.to_bytes(8, byteorder="big")
+            + payment_identifier.to_bytes(8, byteorder="big")
+            + lock.expiration.to_bytes(32, byteorder="big")
+            + token
+            + recipient
+            + target
+            + initiator
+            + lock.secrethash
+            + lock.amount.to_bytes(32, byteorder="big")
         )
 
     @post_load(pass_original=True)
@@ -438,11 +462,23 @@ class LockedTransferBase(EnvelopeMessage):
             data["transferred_amount"], data["locked_amount"], data["locksroot"]
         )
 
-        for legacy_hash in [metadata.hash, hash_metadata_v2_0_0(metadata)]:
-            data_signed = pack_balance_proof(
+        packed_data = LockedTransferBase._pack_locked_transfer_data(
+            LockedTransfer.cmdid,
+            data["message_identifier"],
+            data["payment_identifier"],
+            data["token"],
+            data["recipient"],
+            data["target"],
+            data["initiator"],
+            data["lock"],
+        )
+
+        for possible_hash in [metadata.hash, hash_metadata_v2_0_0(metadata)]:
+            additional_hash = keccak(packed_data + possible_hash)
+            signed_data = pack_balance_proof(
                 nonce=data["nonce"],
                 balance_hash=balance_hash,
-                additional_hash=AdditionalHash(legacy_hash),
+                additional_hash=AdditionalHash(additional_hash),
                 canonical_identifier=CanonicalIdentifier(
                     chain_identifier=data["chain_id"],
                     token_network_address=data["token_network_address"],
@@ -451,10 +487,10 @@ class LockedTransferBase(EnvelopeMessage):
             )
 
             try:
-                address = recover(data=data_signed, signature=data["signature"])
+                address = recover(data=signed_data, signature=data["signature"])
                 if address == expected_signer:
                     original_message_metadata = original_data[MESSAGE_ENVELOPE_KEY]["metadata"]
-                    original_message_metadata["_hash"] = to_hex(legacy_hash)
+                    original_message_metadata["_hash"] = to_hex(possible_hash)
                     original_message_metadata["_type"] = "raiden.messages.metadata.Metadata"
                     new_metadata = DictSerializer.deserialize(original_message_metadata)
                     data["metadata"] = new_metadata
