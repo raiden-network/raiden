@@ -499,8 +499,6 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         if self._stop_event.wait(timeout=_WEB_RTC_CHANNEL_TIMEOUT):
             return
 
-        # if room is not None that means we are at least in the second iteration
-        # call hang up to sync with the partner about a retry
         if not self.has_ready_channel(partner_address):
             self.log.debug(
                 "Could not establish channel",
