@@ -251,7 +251,8 @@ class _RTCConnection(_CoroutineHandler):
 
     def _make_call_id(self) -> str:
         timestamp = time.time()
-        address1, address2 = sorted((self.node_address, self.partner_address))
+        # initiator needs to come first
+        address1, address2 = self.node_address, self.partner_address
         return f"{to_checksum_address(address1)}|{to_checksum_address(address2)}|{timestamp}"
 
     async def initialize_signalling(
@@ -459,7 +460,10 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def _handle_ice_connection_closed(self, conn: _RTCConnection) -> None:
         # the connecting may have already been removed by close_connection
         self._address_to_connection.pop(conn.partner_address, None)
-        self.health_check(conn.partner_address)
+
+        # only do a health check if we were the initiator
+        if conn.call_id.split("|", 1)[0] == to_checksum_address(self.node_address):
+            self.health_check(conn.partner_address)
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
         if address in self._web_rtc_channel_inits:
