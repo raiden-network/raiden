@@ -159,10 +159,8 @@ class _RTCConnection(_CoroutineHandler):
         conn._call_id = offer["call_id"]
         return conn
 
-    def set_channel_callbacks(self) -> None:
-        if self.channel is None:
-            return
-
+    def _set_channel_callbacks(self) -> None:
+        assert self.channel is not None, "must be set"
         self.channel.on("message", self._on_channel_message)
         self.channel.on("close", self._on_channel_close)
         self.channel.on("open", self._on_channel_open)
@@ -205,7 +203,7 @@ class _RTCConnection(_CoroutineHandler):
         """Coroutine to create channel. Setting up channel in aiortc"""
 
         self.channel = self.peer_connection.createDataChannel(self.call_id)
-        self.set_channel_callbacks()
+        self._set_channel_callbacks()
         offer = await self._try_signaling(self.peer_connection.createOffer())
         if offer is None:
             return None
@@ -360,7 +358,7 @@ class _RTCConnection(_CoroutineHandler):
     def _on_datachannel(self, channel: RTCDataChannel) -> None:
         self.channel = channel
         self._on_channel_open()
-        self.set_channel_callbacks()
+        self._set_channel_callbacks()
 
     def _on_channel_open(self) -> None:
         assert self.channel is not None, "must be set"
