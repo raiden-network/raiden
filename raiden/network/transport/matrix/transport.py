@@ -965,7 +965,7 @@ class MatrixTransport(Runnable):
                     type=rtc_message_type,
                     content=content,
                 )
-                self._web_rtc_manager.process_signalling_message(
+                self._web_rtc_manager.process_signaling_message(
                     partner_address, rtc_message_type, content
                 )
 

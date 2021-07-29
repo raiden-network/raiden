@@ -491,7 +491,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._process_messages(messages)
 
     def _handle_ice_connection_closed(self, conn: _RTCConnection) -> None:
-        # the connecting may have already been removed by close_connection
+        # the connection may have already been removed by close_connection
         self._address_to_connection.pop(conn.partner_address, None)
 
         # only do a health check if we were the initiator
@@ -559,7 +559,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         if conn is not None:
             conn.set_candidates(content)
 
-    def _process_signalling_for_address(
+    def _process_signaling_for_address(
         self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
         conn = self._address_to_connection.get(partner_address)
@@ -598,14 +598,14 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         if conn is not None:
             conn.close()
 
-    def process_signalling_message(
+    def process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
     ) -> None:
         if (
             rtc_message_type in [_RTCMessageType.OFFER.value, _RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            self._process_signalling_for_address(partner_address, rtc_message_type, content)
+            self._process_signaling_for_address(partner_address, rtc_message_type, content)
         elif rtc_message_type == _RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
         elif rtc_message_type == _RTCMessageType.CANDIDATES.value:

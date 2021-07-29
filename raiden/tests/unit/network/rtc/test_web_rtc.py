@@ -28,7 +28,7 @@ class _Transport:
         self._messages.appendleft(message)
         content = json.loads(message)
         rtc_message_type = content["type"]
-        self._other_side.process_signalling_message(self._address, rtc_message_type, content)
+        self._other_side.process_signaling_message(self._address, rtc_message_type, content)
 
 
 def test_basics() -> None:
