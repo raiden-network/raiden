@@ -224,7 +224,7 @@ class _RTCConnection(_CoroutineHandler):
         return offer
 
     def initialize_signaling(self) -> None:
-        self.schedule_task(self._initialize_signaling(), callback=self.handle_sdp_callback)
+        self.schedule_task(self._initialize_signaling(), callback=self._handle_sdp_callback)
 
     async def _process_signaling(
         self, description: Dict[str, str]
@@ -255,7 +255,9 @@ class _RTCConnection(_CoroutineHandler):
         return answer
 
     def process_signaling(self, description: Dict[str, str]) -> None:
-        self.schedule_task(self._process_signaling(description), callback=self.handle_sdp_callback)
+        self.schedule_task(
+            self._process_signaling(description), callback=self._handle_sdp_callback
+        )
 
     async def _set_candidates(self, content: Dict[str, Any]) -> None:
         if self.peer_connection.sctp is None:
@@ -342,7 +344,7 @@ class _RTCConnection(_CoroutineHandler):
         }
         self._signaling_send(self.partner_address, json.dumps(hangup_message))
 
-    def handle_sdp_callback(
+    def _handle_sdp_callback(
         self, rtc_session_description: Optional[RTCSessionDescription]
     ) -> None:
         """
