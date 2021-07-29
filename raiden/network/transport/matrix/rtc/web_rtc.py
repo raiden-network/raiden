@@ -127,7 +127,7 @@ class _RTCConnection(_CoroutineHandler):
         self._ice_connection_closed = ice_connection_closed
         self._handle_message_callback = handle_message_callback
         self._aio_allow_candidates = asyncio.Event()
-        self.channel: Optional[RTCDataChannel] = None
+        self._channel: Optional[RTCDataChannel] = None
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -160,13 +160,15 @@ class _RTCConnection(_CoroutineHandler):
         return conn
 
     def _set_channel_callbacks(self) -> None:
-        assert self.channel is not None, "must be set"
-        self.channel.on("message", self._on_channel_message)
-        self.channel.on("close", self._on_channel_close)
-        self.channel.on("open", self._on_channel_open)
+        assert self._channel is not None, "must be set"
+        self._channel.on("message", self._on_channel_message)
+        self._channel.on("close", self._on_channel_close)
+        self._channel.on("open", self._on_channel_open)
 
     def channel_open(self) -> bool:
-        return self.channel is not None and self.channel.readyState == _RTCChannelState.OPEN.value
+        return (
+            self._channel is not None and self._channel.readyState == _RTCChannelState.OPEN.value
+        )
 
     @property
     def call_id(self) -> str:
@@ -205,7 +207,7 @@ class _RTCConnection(_CoroutineHandler):
     ) -> Optional[RTCSessionDescription]:
         """Coroutine to create channel. Setting up channel in aiortc"""
 
-        self.channel = self.peer_connection.createDataChannel(self.call_id)
+        self._channel = self.peer_connection.createDataChannel(self.call_id)
         self._set_channel_callbacks()
         offer = await self._try_signaling(self.peer_connection.createOffer())
         if offer is None:
@@ -272,14 +274,14 @@ class _RTCConnection(_CoroutineHandler):
     async def send_message(self, message: str) -> None:
         """Sends message through aiortc. Not an async function. Output is written to buffer"""
 
-        if self.channel is not None and self.channel.readyState == _RTCChannelState.OPEN.value:
+        if self._channel is not None and self._channel.readyState == _RTCChannelState.OPEN.value:
             self.log.debug(
                 "Sending message in asyncio kingdom",
-                channel=self.channel.label,
+                channel=self._channel.label,
                 message=message,
                 time=time.time(),
             )
-            self.channel.send(message)
+            self._channel.send(message)
 
             try:
                 # empty outbound queue by transmitting chunks
@@ -295,17 +297,17 @@ class _RTCConnection(_CoroutineHandler):
         else:
             self.log.debug(
                 "Channel is not open but trying to send a message.",
-                ready_state=self.channel.readyState
-                if self.channel is not None
+                ready_state=self._channel.readyState
+                if self._channel is not None
                 else "No channel exists",
             )
 
     async def _close(self) -> None:
         self.log.debug("Closing peer connection")
         await self.peer_connection.close()
-        if self.channel is not None:
-            self.channel.close()
-            self.channel = None
+        if self._channel is not None:
+            self._channel.close()
+            self._channel = None
         await self.wait_for_coroutines()
         self._ice_connection_closed(self)
 
@@ -359,29 +361,29 @@ class _RTCConnection(_CoroutineHandler):
         return f"<_RTCConnection to {partner}, call_id={self.call_id}>"
 
     def _on_datachannel(self, channel: RTCDataChannel) -> None:
-        self.channel = channel
+        self._channel = channel
         self._on_channel_open()
         self._set_channel_callbacks()
 
     def _on_channel_open(self) -> None:
-        assert self.channel is not None, "must be set"
+        assert self._channel is not None, "must be set"
         self.log.debug(
             "WebRTC data channel open",
             node=to_checksum_address(self.node_address),
-            label=self.channel.label,
+            label=self._channel.label,
         )
 
     def _on_channel_close(self) -> None:
         """callback if channel is closed. It is part of a partial function"""
-        if self.channel is not None:
+        if self._channel is not None:
             log.debug(
                 "WebRTC data channel closed",
                 node=to_checksum_address(self.node_address),
-                label=self.channel.label,
+                label=self._channel.label,
             )
             # remove all listeners on channel to not receive events anymore
-            self.channel.remove_all_listeners()
-            self.channel = None
+            self._channel.remove_all_listeners()
+            self._channel = None
             if self.peer_connection.iceConnectionState in [
                 _ICEConnectionState.COMPLETED,
                 _ICEConnectionState.CHECKING,
@@ -389,10 +391,10 @@ class _RTCConnection(_CoroutineHandler):
                 self.close()
 
     def _on_channel_message(self, message: str) -> None:
-        assert self.channel is not None, "channel not set but received message"
+        assert self._channel is not None, "channel not set but received message"
         self.log.debug(
             "Received message in asyncio kingdom",
-            channel=self.channel.label,
+            channel=self._channel.label,
             message=message,
             time=time.time(),
         )
