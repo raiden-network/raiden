@@ -210,9 +210,7 @@ class _RTCConnection(_CoroutineHandler):
         address1, address2 = self.node_address, self.partner_address
         return f"{to_checksum_address(address1)}|{to_checksum_address(address2)}|{timestamp}"
 
-    async def initialize_signalling(
-        self,
-    ) -> Optional[RTCSessionDescription]:
+    async def _initialize_signaling(self) -> Optional[RTCSessionDescription]:
         """Coroutine to create channel. Setting up channel in aiortc"""
 
         self._channel = self.peer_connection.createDataChannel(self.call_id)
@@ -225,11 +223,12 @@ class _RTCConnection(_CoroutineHandler):
         self.schedule_task(self._set_local_description(offer))
         return offer
 
-    async def process_signalling(
+    def initialize_signaling(self) -> None:
+        self.schedule_task(self._initialize_signaling(), callback=self.handle_sdp_callback)
+
+    async def _process_signaling(
         self, description: Dict[str, str]
     ) -> Optional[RTCSessionDescription]:
-        """Coroutine to set remote description. Sets remote description in aiortc"""
-
         remote_description = RTCSessionDescription(description["sdp"], description["type"])
         sdp_type = description["type"]
 
@@ -252,11 +251,11 @@ class _RTCConnection(_CoroutineHandler):
         if answer is None:
             return None
 
-        self.schedule_task(
-            self._set_local_description(answer),
-            callback=None,
-        )
+        self.schedule_task(self._set_local_description(answer))
         return answer
+
+    def process_signaling(self, description: Dict[str, str]) -> None:
+        self.schedule_task(self._process_signaling(description), callback=self.handle_sdp_callback)
 
     async def set_candidates(self, content: Dict[str, Any]) -> None:
         if self.peer_connection.sctp is None:
@@ -520,10 +519,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self._handle_message,
         )
         self._add_connection(partner_address, conn)
-        self.schedule_task(
-            coroutine=conn.initialize_signalling(),
-            callback=conn.handle_sdp_callback,
-        )
+        conn.initialize_signaling()
 
         # wait for _WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
         if self._stop_event.wait(timeout=_WEB_RTC_CHANNEL_TIMEOUT):
@@ -580,10 +576,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
                 # we got an answer for a connection we already removed
                 return
 
-        self.schedule_task(
-            coroutine=conn.process_signalling(description=description),
-            callback=conn.handle_sdp_callback,
-        )
+        conn.process_signaling(description)
 
     def send_message_for_address(self, partner_address: Address, message: str) -> None:
         conn = self._address_to_connection[partner_address]
