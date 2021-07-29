@@ -388,7 +388,7 @@ def test_metadata_deserialization_without_expected_address():
     # any hash(legacy or current), it will fallback to assume it is the current version
     # how metadata are hashed
     assert deserialized_message_without_expected_address.sender != signer.address
-    assert deserialized_message_without_expected_address.metadata._hash is None
+    assert deserialized_message_without_expected_address.metadata._legacy_hash is False
 
 
 def test_metadata_backwards_compatibility():
