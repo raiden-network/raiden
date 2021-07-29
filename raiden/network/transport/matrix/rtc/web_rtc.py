@@ -165,6 +165,9 @@ class _RTCConnection(_CoroutineHandler):
         self.channel.on("close", self._on_channel_close)
         self.channel.on("open", self._on_channel_open)
 
+    def channel_open(self) -> bool:
+        return self.channel is not None and self.channel.readyState == _RTCChannelState.OPEN.value
+
     @property
     def call_id(self) -> str:
         return self._call_id
@@ -530,11 +533,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
     def has_ready_channel(self, partner_address: Address) -> bool:
         conn = self._address_to_connection.get(partner_address)
-        return (
-            conn is not None
-            and conn.channel is not None
-            and conn.channel.readyState == _RTCChannelState.OPEN.value
-        )
+        return conn is not None and conn.channel_open()
 
     def _reset_state(self) -> None:
         self._address_to_connection = {}
