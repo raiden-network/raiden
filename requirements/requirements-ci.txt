@@ -546,7 +546,7 @@ pylibsrtp==0.6.8
     # via
     #   -r requirements-dev.txt
     #   aiortc
-pylint==2.9.5
+pylint==2.9.6
     # via -r requirements-dev.txt
 pymacaroons==0.13.0
     # via
