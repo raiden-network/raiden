@@ -136,10 +136,8 @@ class _RTCConnection(_CoroutineHandler):
         """
 
         aio_allow_candidates: AIOEvent = field(default_factory=AIOEvent)
-        reset_event: AIOEvent = field(default_factory=AIOEvent)
 
         def reset(self) -> None:
-            self.reset_event.set()
             self.set_all()
             self.clear_all()
 
@@ -260,9 +258,6 @@ class _RTCConnection(_CoroutineHandler):
     ) -> Optional[RTCSessionDescription]:
         """Coroutine to create channel. Setting up channel in aiortc"""
 
-        if self.sync_events.reset_event.is_set():
-            return None
-
         self.channel = self.peer_connection.createDataChannel(self.call_id)
         self.set_channel_callbacks()
         offer = await self._try_signaling(self.peer_connection.createOffer())
@@ -277,10 +272,6 @@ class _RTCConnection(_CoroutineHandler):
         self, description: Dict[str, str]
     ) -> Optional[RTCSessionDescription]:
         """Coroutine to set remote description. Sets remote description in aiortc"""
-
-        if self.sync_events.reset_event.is_set():
-            self.log.debug("Reset called. Returning on coroutine")
-            return None
 
         remote_description = RTCSessionDescription(description["sdp"], description["type"])
         sdp_type = description["type"]
@@ -314,12 +305,8 @@ class _RTCConnection(_CoroutineHandler):
         return answer
 
     async def set_candidates(self, content: Dict[str, Any]) -> None:
-
         if self.peer_connection.sctp is None:
             await self.sync_events.wait_for_candidates()
-            if self.sync_events.reset_event.is_set():
-                self.log.debug("Reset called. Returning from coroutine")
-                return None
 
         assert self.peer_connection.sctp, "SCTP should be set by now"
 
@@ -375,16 +362,9 @@ class _RTCConnection(_CoroutineHandler):
         await self.peer_connection.close()
         if self.channel is not None:
             self.channel.close()
-
-    async def ice_connection_closed(self) -> None:
-        self._ice_connection_closed(self)
-
-    async def reset(self) -> None:
-        self.sync_events.reset()
+            self.channel = None
         await self.wait_for_coroutines()
-        self.sync_events.reset_event.clear()
-        self._setup_peer_connection()
-        self.channel = None
+        self._ice_connection_closed(self)
 
     def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
         message = {
@@ -694,8 +674,7 @@ def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
         _ICEConnectionState.CLOSED.value,
         _ICEConnectionState.FAILED.value,
     ]:
-        asyncio.create_task(conn.reset())
-        asyncio.create_task(conn.ice_connection_closed())
+        asyncio.create_task(conn.close())
 
 
 def _on_signalling_state_change(conn: _RTCConnection) -> None:
