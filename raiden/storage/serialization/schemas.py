@@ -81,7 +81,7 @@ from raiden.utils.typing import (
     WithdrawAmount,
 )
 
-MESSAGE_ENVELOPE_KEY = "message_data"
+MESSAGE_DATA_KEY = "message_data"
 
 
 class IntegerToStringField(marshmallow.fields.Integer):
@@ -332,8 +332,8 @@ class BaseSchema(marshmallow.Schema):
     @pre_load()
     # pylint: disable=W0613,R0201
     def remove_envelope(self, data: Dict[str, Any], many: bool, **kwargs: Any) -> Dict[str, Any]:
-        if MESSAGE_ENVELOPE_KEY in data:
-            return data[MESSAGE_ENVELOPE_KEY]
+        if MESSAGE_DATA_KEY in data:
+            return data[MESSAGE_DATA_KEY]
         return data
 
     @post_dump(pass_original=True)

@@ -68,7 +68,6 @@ from raiden.utils.typing import (
     List,
     Locksroot,
     MessageID,
-    MetadataHash,
     MonitoringServiceAddress,
     NamedTuple,
     NodeNetworkStateMap,
@@ -348,8 +347,8 @@ def make_hop_to_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
     return HopState(channel_state.our_state.address, channel_state.identifier)
 
 
-def make_locked_transfer(_hash: Optional[MetadataHash] = None):
-    metadata = create(MetadataProperties(_hash=_hash))
+def make_locked_transfer(_legacy_hash: Optional[bool] = False):
+    metadata = create(MetadataProperties(_legacy_hash=_legacy_hash))
     locked_transfer = create(LockedTransferProperties(metadata=metadata))
     return locked_transfer
 
@@ -540,14 +539,14 @@ RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
 
 @dataclass(frozen=True)
 class MetadataProperties(Properties):
-    _hash: Optional[MetadataHash] = EMPTY
+    _legacy_hash: Optional[bool] = EMPTY
     routes: List[RouteMetadata] = EMPTY
     original_data: Optional[Any] = EMPTY
     TARGET_TYPE = Metadata
 
 
 MetadataProperties.DEFAULTS = MetadataProperties(
-    _hash=None, routes=[RouteMetadata(route=[HOP1, HOP2])], original_data=None
+    _legacy_hash=False, routes=[RouteMetadata(route=[HOP1, HOP2])], original_data=None
 )
 
 

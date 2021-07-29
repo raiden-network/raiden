@@ -13,7 +13,7 @@ from typing import Optional
 from marshmallow import ValidationError
 
 from raiden.exceptions import SerializationError
-from raiden.storage.serialization.schemas import MESSAGE_ENVELOPE_KEY, BaseSchema, class_schema
+from raiden.storage.serialization.schemas import MESSAGE_DATA_KEY, BaseSchema, class_schema
 from raiden.utils.copy import deepcopy
 from raiden.utils.typing import Address, Any, Dict, List, Mapping
 
@@ -178,7 +178,7 @@ class MessageSerializer(SerializationBase):
 
         try:
             envelope = {
-                MESSAGE_ENVELOPE_KEY: decoded_json,
+                MESSAGE_DATA_KEY: decoded_json,
                 "_type": MESSAGE_NAME_TO_QUALIFIED_NAME[msg_type],
             }
             if address is not None:
