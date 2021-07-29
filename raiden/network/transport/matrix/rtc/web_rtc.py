@@ -128,6 +128,7 @@ class _RTCConnection(_CoroutineHandler):
         self._handle_message_callback = handle_message_callback
         self._aio_allow_candidates = asyncio.Event()
         self._channel: Optional[RTCDataChannel] = None
+        self._initiator_address = node_address
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -157,7 +158,12 @@ class _RTCConnection(_CoroutineHandler):
             handle_message_callback,
         )
         conn._call_id = offer["call_id"]
+        conn._initiator_address = partner_address
         return conn
+
+    @property
+    def initiator_address(self) -> Address:
+        return self._initiator_address
 
     def _set_channel_callbacks(self) -> None:
         assert self._channel is not None, "must be set"
@@ -480,7 +486,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
         self._address_to_connection.pop(conn.partner_address, None)
 
         # only do a health check if we were the initiator
-        if conn.call_id.split("|", 1)[0] == to_checksum_address(self.node_address):
+        if conn.initiator_address == self.node_address:
             self.health_check(conn.partner_address)
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
