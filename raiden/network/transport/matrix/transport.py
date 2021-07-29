@@ -941,7 +941,11 @@ class MatrixTransport(Runnable):
             call_messages: List of signalling messages
         """
 
+        if self._stop_event.is_set():
+            return
+
         assert self._web_rtc_manager is not None, "must be set"
+
         for received_message in call_messages:
             call_message = received_message.message
             partner_address = received_message.sender
