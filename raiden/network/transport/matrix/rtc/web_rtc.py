@@ -85,7 +85,7 @@ class _CoroutineHandler:
     async def wait_for_coroutines(self, cancel: bool = True) -> None:
 
         if cancel:
-            self.cancel_all_pending()
+            self._cancel_all_pending()
 
         pending_coroutines = [coroutine for coroutine in self.coroutines if not coroutine.done()]
         # This is done to have the bound keywords if it is of type _RTCConnection
@@ -106,7 +106,7 @@ class _CoroutineHandler:
     def join_all_coroutines(self) -> None:
         yield_future(self.wait_for_coroutines())
 
-    def cancel_all_pending(self) -> None:
+    def _cancel_all_pending(self) -> None:
         for coroutine in self.coroutines:
             if not coroutine.done() and not coroutine.cancelled():
                 coroutine.cancel()
