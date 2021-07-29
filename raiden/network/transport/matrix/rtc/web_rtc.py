@@ -127,6 +127,7 @@ class _RTCConnection(_CoroutineHandler):
         self._ice_connection_closed = ice_connection_closed
         self._handle_message_callback = handle_message_callback
         self._aio_allow_candidates = asyncio.Event()
+        self._aio_allow_remote_desc = asyncio.Event()
         self._channel: Optional[RTCDataChannel] = None
         self._initiator_address = node_address
         self.log = log.bind(
@@ -201,6 +202,7 @@ class _RTCConnection(_CoroutineHandler):
     async def _set_local_description(self, description: RTCSessionDescription) -> None:
         self.log.debug("Set local description", description=description)
         await self._try_signaling(self.peer_connection.setLocalDescription(description))
+        self._aio_allow_remote_desc.set()
 
     def _make_call_id(self) -> str:
         timestamp = time.time()
@@ -230,12 +232,12 @@ class _RTCConnection(_CoroutineHandler):
 
         remote_description = RTCSessionDescription(description["sdp"], description["type"])
         sdp_type = description["type"]
-        # We need to wait for
-        self.log.debug(
-            "Wait for existing tasks before setting remote description",
-            coroutines=self.coroutines,
-        )
-        await self.wait_for_coroutines(cancel=False)
+
+        # If we initiated the signaling process, wait until the local
+        # description is set.
+        if self._initiator_address == self.node_address:
+            await self._aio_allow_remote_desc.wait()
+
         self.log.debug("Set Remote Description", description=description)
         await self._try_signaling(self.peer_connection.setRemoteDescription(remote_description))
 
