@@ -1,8 +1,7 @@
 import asyncio
 import json
 import time
-from asyncio import CancelledError, Event as AIOEvent, Task
-from dataclasses import dataclass, field
+from asyncio import CancelledError, Task
 from enum import Enum
 
 import structlog
@@ -112,43 +111,6 @@ class _CoroutineHandler:
 
 
 class _RTCConnection(_CoroutineHandler):
-    @dataclass
-    class SyncEvents:
-        """
-        SyncEvents is a set of events which helps synchronizing the signaling process.
-        As not all messages of the signalling process (offer, answer, candidates, hangup) are
-        able to be processed in an arbitrary order, the events help to either wait or drop
-        incoming messages.
-
-        allow_candidates: when set candidates can be processed
-        allow_hangup: when set a hangup message can be processes
-
-        Conditions:
-
-        allow candidates after remote description is set (in process_signalling)
-        allow hang up only after at least one other message is received, drop otherwise
-        clear hang up after hang up is received
-
-        FIXME: This is not the best maintainable solution. Should be improved in the future
-               Data races will be reduced once there are unique call ids per connection
-               establishment (not partner)
-        """
-
-        aio_allow_candidates: AIOEvent = field(default_factory=AIOEvent)
-
-        def reset(self) -> None:
-            self.set_all()
-            self.clear_all()
-
-        def set_all(self) -> None:
-            self.aio_allow_candidates.set()
-
-        def clear_all(self) -> None:
-            self.aio_allow_candidates.clear()
-
-        async def wait_for_candidates(self) -> None:
-            await self.aio_allow_candidates.wait()
-
     def __init__(
         self,
         partner_address: Address,
@@ -164,8 +126,8 @@ class _RTCConnection(_CoroutineHandler):
         self._signaling_send = signaling_send
         self._ice_connection_closed = ice_connection_closed
         self._handle_message_callback = handle_message_callback
+        self._aio_allow_candidates = asyncio.Event()
         self.channel: Optional[RTCDataChannel] = None
-        self.sync_events = _RTCConnection.SyncEvents()
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -287,7 +249,7 @@ class _RTCConnection(_CoroutineHandler):
 
     async def set_candidates(self, content: Dict[str, Any]) -> None:
         if self.peer_connection.sctp is None:
-            await self.sync_events.wait_for_candidates()
+            await self._aio_allow_candidates.wait()
 
         assert self.peer_connection.sctp, "SCTP should be set by now"
 
@@ -483,7 +445,7 @@ class _RTCConnection(_CoroutineHandler):
             _RTCSignallingState.HAVE_REMOTE_OFFER.value,
             _RTCSignallingState.CLOSED.value,
         ]:
-            self.sync_events.aio_allow_candidates.set()
+            self._aio_allow_candidates.set()
 
 
 class WebRTCManager(_CoroutineHandler, Runnable):
