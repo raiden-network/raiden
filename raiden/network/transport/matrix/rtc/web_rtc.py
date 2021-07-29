@@ -235,12 +235,12 @@ class _RTCConnection(_CoroutineHandler):
                 signaling_state=self.peer_connection.signalingState,
                 ice_connection_state=self.peer_connection.iceConnectionState,
             )
-            asyncio.create_task(self.close())
+            self.close()
             return None
 
         except AttributeError:
             self.log.exception("Attribute error in coroutine", coroutine=coroutine)
-            asyncio.create_task(self.close())
+            self.close()
             return None
 
     async def _set_local_description(self, description: RTCSessionDescription) -> None:
@@ -346,9 +346,8 @@ class _RTCConnection(_CoroutineHandler):
                 await self.peer_connection.sctp._transmit()
             except ConnectionError:
                 self.log.debug("Connection error occurred while trying to send message")
-                await self.close()
+                await self._close()
                 return
-
         else:
             self.log.debug(
                 "Channel is not open but trying to send a message.",
@@ -357,7 +356,7 @@ class _RTCConnection(_CoroutineHandler):
                 else "No channel exists",
             )
 
-    async def close(self) -> None:
+    async def _close(self) -> None:
         self.log.debug("Closing peer connection")
         await self.peer_connection.close()
         if self.channel is not None:
@@ -365,6 +364,9 @@ class _RTCConnection(_CoroutineHandler):
             self.channel = None
         await self.wait_for_coroutines()
         self._ice_connection_closed(self)
+
+    def close(self) -> None:
+        asyncio.create_task(self._close())
 
     def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
         message = {
@@ -550,13 +552,10 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     def health_check(self, partner_address: Address) -> None:
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
-    def close_connection(self, partner_address: Address) -> Optional[Task]:
+    def close_connection(self, partner_address: Address) -> None:
         conn = self._address_to_connection.pop(partner_address, None)
         if conn is not None:
-            conn.sync_events.clear_all()
-            task = self.schedule_task(conn.close())
-            return task
-        return None
+            conn.close()
 
     def process_signalling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
@@ -584,9 +583,8 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             conn.send_hangup_message()
 
         for partner_address, conn in self._address_to_connection.copy().items():
-            task = self.close_connection(partner_address)
+            self.close_connection(partner_address)
             conn.join_all_coroutines()
-            yield_future(task)
 
         self.join_all_coroutines()
         self._reset_state()
@@ -619,7 +617,7 @@ def _on_channel_close(conn: _RTCConnection, node_address: Address) -> None:
             _ICEConnectionState.COMPLETED,
             _ICEConnectionState.CHECKING,
         ]:
-            conn.schedule_task(conn.close())
+            conn.close()
 
 
 def _on_channel_message(
@@ -674,7 +672,7 @@ def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
         _ICEConnectionState.CLOSED.value,
         _ICEConnectionState.FAILED.value,
     ]:
-        asyncio.create_task(conn.close())
+        conn.close()
 
 
 def _on_signalling_state_change(conn: _RTCConnection) -> None:
