@@ -89,7 +89,7 @@ class Metadata:
     # the initiator of a transfer.
     original_data: Optional[Any] = None
     encrypted_secret: Optional[EncryptedSecret] = None
-    _hash: Optional[MetadataHash] = None
+    _legacy_hash: bool = False
 
     class Meta:
         """
@@ -103,8 +103,8 @@ class Metadata:
 
     @cached_property
     def hash(self) -> MetadataHash:
-        if self._hash is not None:
-            return self._hash
+        if self._legacy_hash:
+            return hash_metadata_v2_0_0(self)
         return MetadataHash(keccak(self._serialize_canonical()))
 
     @post_load(pass_original=True, pass_many=True)
@@ -127,7 +127,7 @@ class Metadata:
         fields as per the Schema
         """
         dumped_data = data.pop("original_data", None) or data
-        dumped_data.pop("_hash", None)
+        dumped_data.pop("_legacy_hash", None)
         return dumped_data
 
     def __repr__(self) -> str:

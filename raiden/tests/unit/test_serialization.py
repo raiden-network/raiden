@@ -339,13 +339,14 @@ def test_metadata_compatibility_with_v_2_0_0():
 
     # First construct the "original" metadata which has no precalculated `_hash`
     no_hash_metadata = factories.create(factories.MetadataProperties())
+    legacy_hash = hash_metadata_v2_0_0(no_hash_metadata)
     # Metadata which are not created by deserialization should not have _hash set
-    assert no_hash_metadata._hash is None
+    assert no_hash_metadata._legacy_hash is False
 
     different_hashes = set()
 
     different_hashes.add(no_hash_metadata.hash)
-    different_hashes.add(hash_metadata_v2_0_0(no_hash_metadata))
+    different_hashes.add(legacy_hash)
 
     number_of_different_hashes = 2
 
@@ -355,14 +356,15 @@ def test_metadata_compatibility_with_v_2_0_0():
     signatures = set()
 
     for _hash in different_hashes:
-        locked_transfer = make_locked_transfer(_hash)
+        locked_transfer = make_locked_transfer(_hash == legacy_hash)
+        print(locked_transfer.metadata._legacy_hash)
         locked_transfer.sign(signer)
         # add signatures to check if they are different
         signatures.add(locked_transfer.signature)
 
         serialized_message = MessageSerializer.serialize(locked_transfer)
         # _hash must be removed in serialized message format
-        assert "_hash" not in json.loads(serialized_message)["metadata"]
+        assert "_legacy_hash" not in json.loads(serialized_message)["metadata"]
 
         deserialized_message = MessageSerializer.deserialize(serialized_message, signer.address)
 
@@ -375,8 +377,7 @@ def test_metadata_compatibility_with_v_2_0_0():
 
 def test_metadata_deserialization_without_expected_address():
     signer = LocalSigner(bytes(range(32)))
-    legacy_hash = hash_metadata_v2_0_0(factories.create(factories.MetadataProperties()))
-    locked_transfer = make_locked_transfer(legacy_hash)
+    locked_transfer = make_locked_transfer(True)
     locked_transfer.sign(signer)
     serialized_message = MessageSerializer.serialize(locked_transfer)
 
