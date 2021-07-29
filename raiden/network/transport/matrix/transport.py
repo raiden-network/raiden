@@ -1064,7 +1064,7 @@ class MatrixTransport(Runnable):
 
         if communication_medium is CommunicationMedium.WEB_RTC:
             # if we already have a webrtc channel ready, the address-metadata doesn't matter
-            self._web_rtc_manager.send_message_for_address(receiver_address, data)
+            self._web_rtc_manager.send_message(receiver_address, data)
             return
         else:
             msg = "Only to-device messages are supported other than web-rtc"

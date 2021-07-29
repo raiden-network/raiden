@@ -257,7 +257,7 @@ class _RTCConnection(_CoroutineHandler):
     def process_signaling(self, description: Dict[str, str]) -> None:
         self.schedule_task(self._process_signaling(description), callback=self.handle_sdp_callback)
 
-    async def set_candidates(self, content: Dict[str, Any]) -> None:
+    async def _set_candidates(self, content: Dict[str, Any]) -> None:
         if self.peer_connection.sctp is None:
             await self._aio_allow_candidates.wait()
 
@@ -278,7 +278,10 @@ class _RTCConnection(_CoroutineHandler):
                 continue
             await self.peer_connection.addIceCandidate(rtc_ice_candidate)
 
-    async def send_message(self, message: str) -> None:
+    def set_candidates(self, content: Dict[str, Any]) -> None:
+        self.schedule_task(self._set_candidates(content))
+
+    async def _send_message(self, message: str) -> None:
         """Sends message through aiortc. Not an async function. Output is written to buffer"""
 
         if self._channel is not None and self._channel.readyState == _RTCChannelState.OPEN.value:
@@ -308,6 +311,9 @@ class _RTCConnection(_CoroutineHandler):
                 if self._channel is not None
                 else "No channel exists",
             )
+
+    def send_message(self, message: str) -> None:
+        self.schedule_task(self._send_message(message))
 
     async def _close(self) -> None:
         self.log.debug("Closing peer connection")
@@ -549,7 +555,7 @@ class WebRTCManager(_CoroutineHandler, Runnable):
     ) -> None:
         conn = self._address_to_connection.get(partner_address)
         if conn is not None:
-            self.schedule_task(conn.set_candidates(content))
+            conn.set_candidates(content)
 
     def _process_signalling_for_address(
         self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
@@ -578,9 +584,9 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         conn.process_signaling(description)
 
-    def send_message_for_address(self, partner_address: Address, message: str) -> None:
+    def send_message(self, partner_address: Address, message: str) -> None:
         conn = self._address_to_connection[partner_address]
-        self.schedule_task(conn.send_message(message))
+        conn.send_message(message)
 
     def health_check(self, partner_address: Address) -> None:
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
