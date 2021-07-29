@@ -4,7 +4,6 @@ import time
 from asyncio import CancelledError, Event as AIOEvent, Task
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import partial
 
 import structlog
 from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
@@ -175,22 +174,9 @@ class _RTCConnection(_CoroutineHandler):
 
     def _setup_peer_connection(self) -> None:
         self.peer_connection = RTCPeerConnection()
-        self.peer_connection.on(
-            "icegatheringstatechange",
-            partial(
-                _on_ice_gathering_state_change,
-                conn=self,
-                candidates_callback=self._handle_candidates_callback,
-            ),
-        )
-        self.peer_connection.on(
-            "signalingstatechange",
-            partial(_on_signalling_state_change, conn=self),
-        )
-
-        self.peer_connection.on(
-            "iceconnectionstatechange", partial(_on_ice_connection_state_change, conn=self)
-        )
+        self.peer_connection.on("icegatheringstatechange", self._on_ice_gathering_state_change)
+        self.peer_connection.on("signalingstatechange", self._on_signalling_state_change)
+        self.peer_connection.on("iceconnectionstatechange", self._on_ice_connection_state_change)
 
     @staticmethod
     def from_offer(
@@ -215,11 +201,9 @@ class _RTCConnection(_CoroutineHandler):
         if self.channel is None:
             return
 
-        self.channel.on(
-            "message", partial(_on_channel_message, self, self._handle_message_callback)
-        )
-        self.channel.on("close", partial(_on_channel_close, self, self.node_address))
-        self.channel.on("open", partial(_on_channel_open, self.node_address, self.channel))
+        self.channel.on("message", self._on_channel_message)
+        self.channel.on("close", self._on_channel_close)
+        self.channel.on("open", self._on_channel_open)
 
     @property
     def call_id(self) -> str:
@@ -290,10 +274,7 @@ class _RTCConnection(_CoroutineHandler):
         if sdp_type == _SDPTypes.ANSWER.value:
             return None
 
-        self.peer_connection.on(
-            "datachannel",
-            partial(_on_datachannel, self, self.node_address),
-        )
+        self.peer_connection.on("datachannel", self._on_datachannel)
         answer = await self._try_signaling(self.peer_connection.createAnswer())
         if answer is None:
             return None
@@ -413,6 +394,96 @@ class _RTCConnection(_CoroutineHandler):
     def __repr__(self) -> str:
         partner = to_checksum_address(self.partner_address)
         return f"<_RTCConnection to {partner}, call_id={self.call_id}>"
+
+    def _on_datachannel(self, channel: RTCDataChannel) -> None:
+        self.channel = channel
+        self._on_channel_open()
+        self.set_channel_callbacks()
+
+    def _on_channel_open(self) -> None:
+        assert self.channel is not None, "must be set"
+        self.log.debug(
+            "WebRTC data channel open",
+            node=to_checksum_address(self.node_address),
+            label=self.channel.label,
+        )
+
+    def _on_channel_close(self) -> None:
+        """callback if channel is closed. It is part of a partial function"""
+        if self.channel is not None:
+            log.debug(
+                "WebRTC data channel closed",
+                node=to_checksum_address(self.node_address),
+                label=self.channel.label,
+            )
+            # remove all listeners on channel to not receive events anymore
+            self.channel.remove_all_listeners()
+            self.channel = None
+            if self.peer_connection.iceConnectionState in [
+                _ICEConnectionState.COMPLETED,
+                _ICEConnectionState.CHECKING,
+            ]:
+                self.close()
+
+    def _on_channel_message(self, message: str) -> None:
+        assert self.channel is not None, "channel not set but received message"
+        self.log.debug(
+            "Received message in asyncio kingdom",
+            channel=self.channel.label,
+            message=message,
+            time=time.time(),
+        )
+
+        wrap_callback(
+            self._handle_message_callback,
+            message_data=message,
+            partner_address=self.partner_address,
+        )
+
+    def _on_ice_gathering_state_change(self) -> None:
+        self.log.debug("ICE gathering state changed", state=self.peer_connection.iceGatheringState)
+
+        if self.peer_connection.iceGatheringState != "complete":
+            return
+
+        # candidates are ready
+        rtc_ice_candidates = (
+            self.peer_connection.sctp.transport.transport.iceGatherer.getLocalCandidates()
+        )
+
+        candidates = []
+        for candidate in rtc_ice_candidates:
+            candidate = {
+                "candidate": f"candidate:{candidate_to_sdp(candidate)}",
+                "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else _SDP_MID_DEFAULT,
+                "sdpMLineIndex": candidate.sdpMLineIndex is not None
+                if candidate.sdpMLineIndex
+                else _SDP_MLINE_INDEX_DEFAULT,
+            }
+            candidates.append(candidate)
+
+        wrap_callback(callback=self._handle_candidates_callback, candidates=candidates)
+
+    def _on_ice_connection_state_change(self) -> None:
+        ice_connection_state = self.peer_connection.iceConnectionState
+        self.log.debug("ICE connection state changed", signaling_state=ice_connection_state)
+
+        if ice_connection_state in [
+            _ICEConnectionState.CLOSED.value,
+            _ICEConnectionState.FAILED.value,
+        ]:
+            self.close()
+
+    def _on_signalling_state_change(self) -> None:
+        signaling_state = self.peer_connection.signalingState
+        self.log.debug("Signaling state changed", signaling_state=signaling_state)
+        # if signaling state is closed also set allow candidates otherwise
+        # coroutine will hang forever
+        if signaling_state in [
+            _RTCSignallingState.HAVE_REMOTE_OFFER.value,
+            _RTCSignallingState.CLOSED.value,
+        ]:
+            self.sync_events.aio_allow_candidates.set()
 
 
 class WebRTCManager(_CoroutineHandler, Runnable):
@@ -588,100 +659,3 @@ class WebRTCManager(_CoroutineHandler, Runnable):
 
         self.join_all_coroutines()
         self._reset_state()
-
-
-def _on_datachannel(conn: _RTCConnection, node_address: Address, channel: RTCDataChannel) -> None:
-    conn.channel = channel
-    _on_channel_open(node_address, channel)
-    conn.set_channel_callbacks()
-
-
-def _on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
-    log.debug(
-        "WebRTC data channel open", node=to_checksum_address(node_address), label=channel.label
-    )
-
-
-def _on_channel_close(conn: _RTCConnection, node_address: Address) -> None:
-    """callback if channel is closed. It is part of a partial function"""
-    if conn.channel is not None:
-        log.debug(
-            "WebRTC data channel closed",
-            node=to_checksum_address(node_address),
-            label=conn.channel.label,
-        )
-        # remove all listeners on channel to not receive events anymore
-        conn.channel.remove_all_listeners()
-        conn.channel = None
-        if conn.peer_connection.iceConnectionState in [
-            _ICEConnectionState.COMPLETED,
-            _ICEConnectionState.CHECKING,
-        ]:
-            conn.close()
-
-
-def _on_channel_message(
-    conn: _RTCConnection, handle_message_callback: Callable[[str, Address], None], message: str
-) -> None:
-    """callback if message is received. It is part of a partial function"""
-    assert conn.channel, "channel not set but received message"
-    conn.log.debug(
-        "Received message in asyncio kingdom",
-        channel=conn.channel.label,
-        message=message,
-        time=time.time(),
-    )
-
-    wrap_callback(
-        handle_message_callback, message_data=message, partner_address=conn.partner_address
-    )
-
-
-def _on_ice_gathering_state_change(
-    conn: _RTCConnection, candidates_callback: Callable[[List[Dict[str, Union[int, str]]]], None]
-) -> None:
-    peer_connection = conn.peer_connection
-    conn.log.debug("ICE gathering state changed", state=peer_connection.iceGatheringState)
-
-    if peer_connection.iceGatheringState == "complete":
-        # candidates are ready
-        rtc_ice_candidates = (
-            peer_connection.sctp.transport.transport.iceGatherer.getLocalCandidates()
-        )
-
-        candidates = list()
-
-        for candidate in rtc_ice_candidates:
-            candidate = {
-                "candidate": f"candidate:{candidate_to_sdp(candidate)}",
-                "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else _SDP_MID_DEFAULT,
-                "sdpMLineIndex": candidate.sdpMLineIndex is not None
-                if candidate.sdpMLineIndex
-                else _SDP_MLINE_INDEX_DEFAULT,
-            }
-            candidates.append(candidate)
-
-        wrap_callback(callback=candidates_callback, candidates=candidates)
-
-
-def _on_ice_connection_state_change(conn: _RTCConnection) -> None:
-    ice_connection_state = conn.peer_connection.iceConnectionState
-    conn.log.debug("ICE connection state changed", signaling_state=ice_connection_state)
-
-    if ice_connection_state in [
-        _ICEConnectionState.CLOSED.value,
-        _ICEConnectionState.FAILED.value,
-    ]:
-        conn.close()
-
-
-def _on_signalling_state_change(conn: _RTCConnection) -> None:
-    signaling_state = conn.peer_connection.signalingState
-    conn.log.debug("Signaling state changed", signaling_state=signaling_state)
-    # if signaling state is closed also set allow candidates otherwise
-    # coroutine will hang forever
-    if signaling_state in [
-        _RTCSignallingState.HAVE_REMOTE_OFFER.value,
-        _RTCSignallingState.CLOSED.value,
-    ]:
-        conn.sync_events.aio_allow_candidates.set()
