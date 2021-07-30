@@ -12,7 +12,7 @@ from gevent.event import Event as GEvent
 
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
-from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
+from raiden.network.transport.matrix.rtc.utils import create_task_callback
 from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
@@ -131,6 +131,7 @@ class _RTCConnection(_CoroutineHandler):
         self._aio_allow_remote_desc = asyncio.Event()
         self._channel: Optional[RTCDataChannel] = None
         self._initiator_address = node_address
+        self._greenlets: List[gevent.Greenlet] = []
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -397,11 +398,12 @@ class _RTCConnection(_CoroutineHandler):
             time=time.time(),
         )
 
-        wrap_callback(
+        greenlet = gevent.spawn(
             self._handle_message_callback,
             message_data=message,
             partner_address=self.partner_address,
         )
+        self._greenlets.append(greenlet)
 
     def _on_ice_gathering_state_change(self) -> None:
         self.log.debug("ICE gathering state changed", state=self.peer_connection.iceGatheringState)
@@ -425,7 +427,8 @@ class _RTCConnection(_CoroutineHandler):
             }
             candidates.append(candidate)
 
-        wrap_callback(callback=self._handle_candidates_callback, candidates=candidates)
+        greenlet = gevent.spawn(self._handle_candidates_callback, candidates=candidates)
+        self._greenlets.append(greenlet)
 
     def _on_connection_state_change(self) -> None:
         connection_state = self.peer_connection.connectionState
