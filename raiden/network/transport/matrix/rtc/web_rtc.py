@@ -12,7 +12,6 @@ from gevent.event import Event as GEvent
 
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import yield_future
-from raiden.network.transport.matrix.rtc.utils import create_task_callback
 from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
@@ -64,6 +63,7 @@ class _CoroutineHandler:
     def __init__(self) -> None:
         super().__init__()
         self.coroutines: List[Task] = list()
+        self._greenlets: List[gevent.Greenlet] = []
 
     def schedule_task(
         self,
@@ -71,15 +71,26 @@ class _CoroutineHandler:
         callback: Callable[[Any], None] = None,
         *args: Any,
         **kwargs: Any,
-    ) -> Task:
+    ) -> None:
+        assert asyncio.iscoroutine(coroutine), "must be a coroutine"
 
         task = asyncio.create_task(coroutine)
         if callback is not None:
-            task_callback = create_task_callback(callback, *args, **kwargs)
-            task.add_done_callback(task_callback)
+
+            def task_done(result: asyncio.Future) -> None:
+                # spawn a new greenlet that invokes the callback with the
+                # coroutine's result and provided args/kwargs
+                self.schedule_greenlet(callback, result.result(), *args, **kwargs)
+
+            task.add_done_callback(task_done)
 
         self.coroutines.append(task)
-        return task
+
+    def schedule_greenlet(
+        self, func: Callable[..., None] = None, *args: Any, **kwargs: Any
+    ) -> None:
+        greenlet = gevent.spawn(func, *args, **kwargs)
+        self._greenlets.append(greenlet)
 
     async def wait_for_coroutines(self, cancel: bool = True) -> None:
 
@@ -131,7 +142,6 @@ class _RTCConnection(_CoroutineHandler):
         self._aio_allow_remote_desc = asyncio.Event()
         self._channel: Optional[RTCDataChannel] = None
         self._initiator_address = node_address
-        self._greenlets: List[gevent.Greenlet] = []
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -398,12 +408,11 @@ class _RTCConnection(_CoroutineHandler):
             time=time.time(),
         )
 
-        greenlet = gevent.spawn(
+        self.schedule_greenlet(
             self._handle_message_callback,
             message_data=message,
             partner_address=self.partner_address,
         )
-        self._greenlets.append(greenlet)
 
     def _on_ice_gathering_state_change(self) -> None:
         self.log.debug("ICE gathering state changed", state=self.peer_connection.iceGatheringState)
@@ -427,8 +436,7 @@ class _RTCConnection(_CoroutineHandler):
             }
             candidates.append(candidate)
 
-        greenlet = gevent.spawn(self._handle_candidates_callback, candidates=candidates)
-        self._greenlets.append(greenlet)
+        self.schedule_greenlet(self._handle_candidates_callback, candidates=candidates)
 
     def _on_connection_state_change(self) -> None:
         connection_state = self.peer_connection.connectionState
