@@ -59,10 +59,9 @@ _SDP_MID_DEFAULT = "0"
 _SDP_MLINE_INDEX_DEFAULT = 0
 
 
-class _CoroutineHandler:
+class _TaskHandler:
     def __init__(self) -> None:
-        super().__init__()
-        self.coroutines: List[Task] = list()
+        self._tasks: List[Task] = []
         self._greenlets: List[gevent.Greenlet] = []
 
     def schedule_task(
@@ -84,7 +83,7 @@ class _CoroutineHandler:
 
             task.add_done_callback(task_done)
 
-        self.coroutines.append(task)
+        self._tasks.append(task)
 
     def schedule_greenlet(
         self, func: Callable[..., None] = None, *args: Any, **kwargs: Any
@@ -92,40 +91,35 @@ class _CoroutineHandler:
         greenlet = gevent.spawn(func, *args, **kwargs)
         self._greenlets.append(greenlet)
 
-    async def wait_for_coroutines(self, cancel: bool = True) -> None:
+    async def wait_for_tasks(self) -> None:
+        for task in self._tasks:
+            if not task.done() and not task.cancelled():
+                task.cancel()
 
-        if cancel:
-            self._cancel_all_pending()
-
-        pending_coroutines = [coroutine for coroutine in self.coroutines if not coroutine.done()]
+        pending_tasks = [task for task in self._tasks if not task.done()]
         # This is done to have the bound keywords if it is of type _RTCConnection
         logger = getattr(self, "log", log)
-        logger.debug("Waiting for coroutines", coroutines=pending_coroutines)
+        logger.debug("Waiting for tasks", tasks=pending_tasks)
 
         try:
-            return_values = await asyncio.gather(*pending_coroutines, return_exceptions=True)
+            return_values = await asyncio.gather(*pending_tasks, return_exceptions=True)
             for value in return_values:
                 if isinstance(value, Exception):
                     raise value
         except CancelledError:
             logger.debug(
-                "Pending coroutines cancelled",
-                cancelled=[coroutine for coroutine in self.coroutines if coroutine.cancelled()],
+                "Pending tasks cancelled",
+                cancelled=[task for task in self._tasks if task.cancelled()],
             )
 
     def wait(self) -> None:
         """Kill the greenlets and wait until all the tasks are done."""
         gevent.killall(self._greenlets)
         self._greenlets = []
-        yield_future(self.wait_for_coroutines())
-
-    def _cancel_all_pending(self) -> None:
-        for coroutine in self.coroutines:
-            if not coroutine.done() and not coroutine.cancelled():
-                coroutine.cancel()
+        yield_future(self.wait_for_tasks())
 
 
-class _RTCConnection(_CoroutineHandler):
+class _RTCConnection(_TaskHandler):
     def __init__(
         self,
         partner_address: Address,
@@ -337,7 +331,7 @@ class _RTCConnection(_CoroutineHandler):
         if self._channel is not None:
             self._channel.close()
             self._channel = None
-        await self.wait_for_coroutines()
+        await self.wait_for_tasks()
         self._ice_connection_closed(self)
 
     def close(self) -> None:
