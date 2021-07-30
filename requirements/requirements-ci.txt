@@ -748,7 +748,7 @@ types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
 types-pyyaml==5.4.3
     # via -r requirements-dev.txt
-types-requests==2.25.0
+types-requests==2.25.1
     # via -r requirements-dev.txt
 types-toml==0.1.3
     # via -r requirements-dev.txt
