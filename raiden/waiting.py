@@ -1,4 +1,6 @@
 import time
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, List
 
@@ -11,7 +13,13 @@ from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.transfer.state import CHANNEL_AFTER_CLOSE_STATES, ChannelState, NettingChannelEndState
+from raiden.transfer.state import (
+    CHANNEL_AFTER_CLOSE_STATES,
+    ChainState,
+    ChannelState,
+    NettingChannelEndState,
+    NettingChannelState,
+)
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
@@ -23,6 +31,8 @@ from raiden.utils.typing import (
     BlockNumber,
     Callable,
     ChannelID,
+    Mapping,
+    Optional,
     PaymentAmount,
     PaymentID,
     SecretHash,
@@ -40,6 +50,184 @@ log = structlog.get_logger(__name__)
 
 ALARM_TASK_ERROR_MSG = "Waiting relies on alarm task polling to update the node's internal state."
 TRANSPORT_ERROR_MSG = "Waiting for protocol messages requires a running transport."
+
+
+def _get_channel_state_by_partner_address(
+    chain_state: ChainState,
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    token_address: TokenAddress,
+    partner_address: Address,
+) -> Optional[NettingChannelState]:
+    token_network = views.get_token_network_by_token_address(
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
+    )
+
+    if token_network is None:
+        raise ValueError(
+            f"The token {to_checksum_address(token_address)} is not registered on "
+            f"the network {to_checksum_address(token_network_registry_address)}."
+        )
+    return views.get_channelstate_by_token_network_and_partner(
+        chain_state, token_network.address, partner_address
+    )
+
+
+class ChannelStateCondition(ABC):
+    @abstractmethod
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        pass
+
+    def __call__(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        return self.evaluate_condition(chain_state, channel_state)
+
+
+@dataclass
+class ChannelHasDeposit(ChannelStateCondition):
+    target_address: Address
+    target_balance: TokenAmount
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        if channel_state is None:
+            return False
+        if self.target_address == channel_state.our_state.address:
+            return channel_state.our_state.contract_balance >= self.target_balance
+        elif self.target_address == channel_state.partner_state.address:
+            return channel_state.partner_state.contract_balance >= self.target_balance
+        else:
+            raise ValueError("target_address must be one of the channel participants")
+
+
+@dataclass
+class ChannelExists(ChannelStateCondition):
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        return channel_state is not None
+
+
+@dataclass
+class ChannelHasPaymentBalance(ChannelStateCondition):
+    target_address: Address
+    target_balance: TokenAmount
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        def get_balance(end_state: NettingChannelEndState) -> TokenAmount:
+            if end_state.balance_proof:
+                return end_state.balance_proof.transferred_amount
+            else:
+                return TokenAmount(0)
+
+        if channel_state is None:
+            return False
+        if self.target_address == channel_state.our_state.address:
+            return get_balance(channel_state.our_state) >= self.target_balance
+        elif self.target_address == channel_state.partner_state.address:
+            return get_balance(channel_state.partner_state) >= self.target_balance
+        else:
+            raise ValueError("target_address must be one of the channel participants")
+
+
+@dataclass
+class ChannelInTargetStates(ChannelStateCondition):
+    target_states: Sequence[ChannelState]
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        if channel_state is None:
+            # XXX this was reversed before, why?
+            return False
+        return channel.get_status(channel_state) in self.target_states
+@dataclass
+class And(ChannelStateCondition):
+    conditions: List[ChannelStateCondition]
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        return all([condition(chain_state, channel_state) for condition in self.conditions])
+
+
+@dataclass
+class Or(ChannelStateCondition):
+    conditions: List[ChannelStateCondition]
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        return any([condition(chain_state, channel_state) for condition in self.conditions])
+
+
+@dataclass
+class ChannelStateWaiter:
+    raiden: "RaidenService"
+    retry_timeout: float
+    token_network_registry_address: TokenNetworkRegistryAddress
+    token_address: TokenAddress
+    partner_address: Address
+
+    def _get_current_chain_state(self) -> ChainState:
+        return views.state_from_raiden(self.raiden)
+
+    def _get_channel_state(self, chain_state: ChainState) -> Optional[NettingChannelState]:
+        return _get_channel_state_by_partner_address(
+            chain_state,
+            self.token_network_registry_address,
+            self.token_address,
+            self.partner_address,
+        )
+
+    def _log_details(self, condition: ChannelStateCondition) -> Mapping[str, Any]:
+        log_details = {
+            "token_network_registry_address": self.token_network_registry_address,
+            "condition": str(condition),
+        }
+        return log_details
+
+    def wait(self, condition: ChannelStateCondition) -> None:
+        chain_state = self._get_current_chain_state()
+        while condition(chain_state, self._get_channel_state(chain_state)) is not True:
+            assert self.raiden, ALARM_TASK_ERROR_MSG
+            assert self.raiden.alarm, ALARM_TASK_ERROR_MSG
+            log.debug(str(self), **self._log_details(condition))
+            gevent.sleep(self.retry_timeout)
+            chain_state = self._get_current_chain_state()
+
+
+def _get_canonical_identifier_by_channel_id(
+    raiden: "RaidenService",
+    token_network_registry_address: TokenNetworkRegistryAddress,
+    token_address: TokenAddress,
+    channel_id: ChannelID,
+) -> CanonicalIdentifier:
+    chain_state = views.state_from_raiden(raiden)
+    token_network = views.get_token_network_by_token_address(
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
+    )
+
+    if token_network is None:
+        raise ValueError(
+            f"The token {to_checksum_address(token_address)} is not registered on "
+            f"the network {to_checksum_address(token_network_registry_address)}."
+        )
+
+    return CanonicalIdentifier(
+        chain_identifier=chain_state.chain_id,
+        token_network_address=token_network.address,
+        channel_identifier=channel_id,
+    )
 
 
 def wait_until(func: Callable, wait_for: float = None, sleep_for: float = 0.5) -> Any:
@@ -101,31 +289,9 @@ def wait_for_newchannel(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden),
-        token_network_registry_address,
-        token_address,
-        partner_address,
-    )
-
-    log_details = {
-        "node": to_checksum_address(raiden.address),
-        "token_network_registry_address": to_checksum_address(token_network_registry_address),
-        "token_address": to_checksum_address(token_address),
-        "partner_address": to_checksum_address(partner_address),
-    }
-    while channel_state is None:
-        assert raiden, ALARM_TASK_ERROR_MSG
-        assert raiden.alarm, ALARM_TASK_ERROR_MSG
-
-        log.debug("wait_for_newchannel", **log_details)
-        gevent.sleep(retry_timeout)
-        channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden),
-            token_network_registry_address,
-            token_address,
-            partner_address,
-        )
+    ChannelStateWaiter(
+        raiden, retry_timeout, token_network_registry_address, token_address, partner_address
+    ).wait(ChannelExists())
 
 
 def wait_for_participant_deposit(
@@ -142,43 +308,10 @@ def wait_for_participant_deposit(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    if target_address == raiden.address:
-        balance = lambda channel_state: channel_state.our_state.contract_balance
-    else:
-        balance = lambda channel_state: channel_state.partner_state.contract_balance
-
-    channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden),
-        token_network_registry_address,
-        token_address,
-        partner_address,
-    )
-    if not channel_state:
-        raise ValueError("no channel could be found between provided partner and target addresses")
-
-    current_balance = balance(channel_state)
-
-    log_details = {
-        "node": to_checksum_address(raiden.address),
-        "token_network_registry_address": to_checksum_address(token_network_registry_address),
-        "token_address": to_checksum_address(token_address),
-        "partner_address": to_checksum_address(partner_address),
-        "target_address": to_checksum_address(target_address),
-        "target_balance": target_balance,
-    }
-    while current_balance < target_balance:
-        assert raiden, ALARM_TASK_ERROR_MSG
-        assert raiden.alarm, ALARM_TASK_ERROR_MSG
-
-        log.debug("wait_for_participant_deposit", current_balance=current_balance, **log_details)
-        gevent.sleep(retry_timeout)
-        channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden),
-            token_network_registry_address,
-            token_address,
-            partner_address,
-        )
-        current_balance = balance(channel_state)
+    condition = ChannelHasDeposit(target_address, target_balance)
+    ChannelStateWaiter(
+        raiden, retry_timeout, token_network_registry_address, token_address, partner_address
+    ).wait(condition)
 
 
 def wait_single_channel_deposit(
@@ -251,48 +384,34 @@ def wait_for_payment_balance(
     Note:
         This does not time out, use gevent.Timeout.
     """
-
-    def get_balance(end_state: NettingChannelEndState) -> TokenAmount:
-        if end_state.balance_proof:
-            return end_state.balance_proof.transferred_amount
-        else:
-            return TokenAmount(0)
-
-    if target_address == raiden.address:
-        balance = lambda channel_state: get_balance(channel_state.partner_state)
-    elif target_address == partner_address:
-        balance = lambda channel_state: get_balance(channel_state.our_state)
-    else:
-        raise ValueError("target_address must be one of the channel participants")
-
-    channel_state = views.get_channelstate_for(
-        views.state_from_raiden(raiden),
-        token_network_registry_address,
-        token_address,
-        partner_address,
+    condition = ChannelHasPaymentBalance(target_address, target_balance)
+    waiter = ChannelStateWaiter(
+        raiden, retry_timeout, token_network_registry_address, token_address, partner_address
     )
-    current_balance = balance(channel_state)
+    waiter.wait(condition)
 
-    log_details = {
-        "token_network_registry_address": to_checksum_address(token_network_registry_address),
-        "token_address": to_checksum_address(token_address),
-        "partner_address": to_checksum_address(partner_address),
-        "target_address": to_checksum_address(target_address),
-        "target_balance": target_balance,
-    }
-    while current_balance < target_balance:
-        assert raiden, ALARM_TASK_ERROR_MSG
-        assert raiden.alarm, ALARM_TASK_ERROR_MSG
 
-        log.critical("wait_for_payment_balance", current_balance=current_balance, **log_details)
-        gevent.sleep(retry_timeout)
-        channel_state = views.get_channelstate_for(
-            views.state_from_raiden(raiden),
-            token_network_registry_address,
-            token_address,
-            partner_address,
+def wait_for_channels(
+    raiden: "RaidenService",
+    canonical_id_to_condition: Mapping[CanonicalIdentifier, ChannelStateCondition],
+    retry_timeout: float,
+    timeout: Optional[int] = None,
+) -> None:
+    wait_tasks = list()
+    chain_state = views.state_from_raiden(raiden)
+    for canonical_id, condition in canonical_id_to_condition.items():
+        channel_state = views.get_channelstate_by_canonical_identifier(chain_state, canonical_id)
+        assert channel_state is not None, "Can't wait for nonexisting channels"
+        waiter = ChannelStateWaiter(
+            raiden,
+            retry_timeout,
+            channel_state.token_network_registry_address,
+            channel_state.token_address,
+            channel_state.partner_state.address,
         )
-        current_balance = balance(channel_state)
+        task = gevent.spawn(waiter.wait, condition)
+        wait_tasks.append(task)
+    gevent.joinall(wait_tasks, timeout=timeout, raise_error=True)
 
 
 def wait_for_channel_in_states(
@@ -303,66 +422,21 @@ def wait_for_channel_in_states(
     retry_timeout: float,
     target_states: Sequence[ChannelState],
 ) -> None:
-    """Wait until all channels are in `target_states`.
 
-    Raises:
-        ValueError: If the token_address is not registered in the
-            token_network_registry.
+    canonical_id_to_condition = dict()
+    condition = ChannelInTargetStates(target_states)
+    for channel_id in channel_ids:
+        canonical_id = _get_canonical_identifier_by_channel_id(
+            raiden, token_network_registry_address, token_address, channel_id
+        )
+        if canonical_id is not None:
+            canonical_id_to_condition[canonical_id] = condition
 
-    Note:
-        This does not time out, use gevent.Timeout.
-    """
-    chain_state = views.state_from_raiden(raiden)
-    token_network = views.get_token_network_by_token_address(
-        chain_state=chain_state,
-        token_network_registry_address=token_network_registry_address,
-        token_address=token_address,
+    wait_for_channels(
+        raiden,
+        canonical_id_to_condition,
+        retry_timeout,
     )
-
-    if token_network is None:
-        raise ValueError(
-            f"The token {to_checksum_address(token_address)} is not registered on "
-            f"the network {to_checksum_address(token_network_registry_address)}."
-        )
-
-    token_network_address = token_network.address
-
-    list_cannonical_ids = [
-        CanonicalIdentifier(
-            chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_address,
-            channel_identifier=channel_identifier,
-        )
-        for channel_identifier in channel_ids
-    ]
-
-    log_details = {
-        "token_network_registry_address": to_checksum_address(token_network_registry_address),
-        "token_address": to_checksum_address(token_address),
-        "list_cannonical_ids": list_cannonical_ids,
-        "target_states": target_states,
-    }
-
-    while list_cannonical_ids:
-        assert raiden, ALARM_TASK_ERROR_MSG
-        assert raiden.alarm, ALARM_TASK_ERROR_MSG
-
-        canonical_id = list_cannonical_ids[-1]
-        chain_state = views.state_from_raiden(raiden)
-
-        channel_state = views.get_channelstate_by_canonical_identifier(
-            chain_state=chain_state, canonical_identifier=canonical_id
-        )
-
-        channel_is_settled = (
-            channel_state is None or channel.get_status(channel_state) in target_states
-        )
-
-        if channel_is_settled:
-            list_cannonical_ids.pop()
-        else:
-            log.debug("wait_for_channel_in_states", **log_details)
-            gevent.sleep(retry_timeout)
 
 
 def wait_for_close(
