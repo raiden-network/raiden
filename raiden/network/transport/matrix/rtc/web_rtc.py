@@ -75,6 +75,7 @@ class _TaskHandler:
 
         task = asyncio.create_task(coroutine)
         if callback is not None:
+            assert callable(callback), "must be a callable"
 
             def task_done(result: asyncio.Future) -> None:
                 # spawn a new greenlet that invokes the callback with the
