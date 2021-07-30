@@ -11,7 +11,7 @@ from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 from gevent.event import Event as GEvent
 
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
-from raiden.network.transport.matrix.rtc.aiogevent import yield_future
+from raiden.network.transport.matrix.rtc.aiogevent import wrap_greenlet, yield_future
 from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
@@ -332,6 +332,7 @@ class _RTCConnection(_TaskHandler):
             self._channel.close()
             self._channel = None
         await self.wait_for_tasks()
+        await wrap_greenlet(gevent.spawn(gevent.joinall, self._greenlets, raise_error=True))
         self._ice_connection_closed(self)
 
     def close(self) -> None:
