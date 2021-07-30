@@ -93,11 +93,14 @@ class _TaskHandler:
         self._greenlets.append(greenlet)
 
     async def wait_for_tasks(self) -> None:
-        for task in self._tasks:
+        tasks = self._tasks
+        self._tasks = []
+
+        for task in tasks:
             if not task.done() and not task.cancelled():
                 task.cancel()
 
-        pending_tasks = [task for task in self._tasks if not task.done()]
+        pending_tasks = [task for task in tasks if not task.done()]
         # This is done to have the bound keywords if it is of type _RTCConnection
         logger = getattr(self, "log", log)
         logger.debug("Waiting for tasks", tasks=pending_tasks)
@@ -110,7 +113,7 @@ class _TaskHandler:
         except CancelledError:
             logger.debug(
                 "Pending tasks cancelled",
-                cancelled=[task for task in self._tasks if task.cancelled()],
+                cancelled=[task for task in tasks if task.cancelled()],
             )
 
     def wait(self) -> None:
