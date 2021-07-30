@@ -4,6 +4,7 @@ import time
 from asyncio import CancelledError, Task
 from enum import Enum
 
+import gevent
 import structlog
 from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
@@ -606,4 +607,5 @@ class WebRTCManager(Runnable):
             self.close_connection(partner_address)
             conn.join_all_coroutines()
 
+        gevent.killall(self.greenlets)
         self._reset_state()
