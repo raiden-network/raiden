@@ -445,7 +445,7 @@ class _RTCConnection(_CoroutineHandler):
             self._aio_allow_candidates.set()
 
 
-class WebRTCManager(_CoroutineHandler, Runnable):
+class WebRTCManager(Runnable):
     def __init__(
         self,
         node_address: Address,
@@ -606,5 +606,4 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             self.close_connection(partner_address)
             conn.join_all_coroutines()
 
-        self.join_all_coroutines()
         self._reset_state()
