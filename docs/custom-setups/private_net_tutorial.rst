@@ -51,12 +51,12 @@ Launch a private network
 Installing Geth
 ---------------
 
-Follow `the guide <https://geth.ethereum.org/install-and-build/Installing-Geth>`__ and install Geth. A command ``geth`` should be available in your shell. This guide assumes version 1.9.7, but other versions might work.
+Follow `the guide <https://geth.ethereum.org/docs/install-and-build/installing-geth>`__ and install Geth. A command ``geth`` should be available in your shell. This guide assumes version 1.10.6, but other versions might work.
 
 Preparing a genesis config
 --------------------------
 
-Prepare a file ``genesis.json`` with the following content (`@offerm <https://github.com/offerm>`__ kindly allowed to use his file here).
+Prepare a file ``genesis.json`` with the following content.
 
 .. code:: bash
 
@@ -65,18 +65,21 @@ Prepare a file ``genesis.json`` with the following content (`@offerm <https://gi
  <snip>/priv_chain
  (env) $ cat genesis.json
  {
- "config": {
- "chainId": 4321,
- "homesteadBlock": 0,
- "eip150Block": 0,
- "eip155Block": 0,
- "eip158Block": 0,
- "ByzantiumBlock": 0
- },
- "alloc": {},
- "difficulty" : "0x1",
- "gasLimit"   : "0x9880000"
- }
+"config": {
+"chainId": 4321,
+"homesteadBlock": 0,
+"eip150Block": 0,
+"eip155Block": 0,
+"eip158Block": 0,
+"ByzantiumBlock": 0,
+"eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+"ConstantinopleBlock": 0,
+"PetersburgBlock": 0
+},
+"alloc": {},
+"difficulty" : "0x1",
+"gasLimit"   : "0x9880000"
+}
 
 Starting a chain
 ----------------
@@ -189,10 +192,19 @@ Before we deploy the other contracts, we need a token contract for service payme
 
 We use the address of this token to deploy service contracts.
 
+First note down the address that you generated earlier on the geth console using:
+
 .. code:: bash
 
+ > eth.accounts
+ ["0xb97d3df9f9d112e1fe8f95f9608ffbd52e07a995"]
+
+Then deploy the service contracts
+
+.. code:: bash
+ (env) $ export ServiceRegistryController="0xb97d3df9f9d112e1fe8f95f9608ffbd52e07a995"
  (env) $ export SERVICE_TOKEN="0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
- (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256 --service-deposit-bump-numerator 5 --service-deposit-bump-denominator 4 --service-deposit-decay-constant 100000000 --initial-service-deposit-price 100000000000 --service-deposit-min-price 1000 --service-registration-duration 234000000 --contracts-version $VERSION --token-network-registry-address $TokenNetworkRegistry
+ (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256 --service-deposit-bump-numerator 5 --service-deposit-bump-denominator 4 --service-deposit-decay-constant 100000000 --initial-service-deposit-price 100000000000 --service-deposit-min-price 1000 --service-registration-duration 234000000 --contracts-version $VERSION --token-network-registry-address $TokenNetworkRegistry --service-registry-controller $ServiceRegistryController
 
 From the output, we remember the address of the UserDeposit contract.
 
