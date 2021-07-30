@@ -46,10 +46,10 @@ class _RTCSignallingState(Enum):
     CLOSED = "closed"
 
 
-class _ICEConnectionState(Enum):
+class _ConnectionState(Enum):
     NEW = "new"
-    CHECKING = "checking"
-    COMPLETED = "completed"
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
     FAILED = "failed"
     CLOSED = "closed"
 
@@ -140,7 +140,7 @@ class _RTCConnection(_CoroutineHandler):
         self.peer_connection = RTCPeerConnection()
         self.peer_connection.on("icegatheringstatechange", self._on_ice_gathering_state_change)
         self.peer_connection.on("signalingstatechange", self._on_signalling_state_change)
-        self.peer_connection.on("iceconnectionstatechange", self._on_ice_connection_state_change)
+        self.peer_connection.on("connectionstatechange", self._on_connection_state_change)
 
     @staticmethod
     def from_offer(
@@ -389,7 +389,6 @@ class _RTCConnection(_CoroutineHandler):
         )
 
     def _on_channel_close(self) -> None:
-        """callback if channel is closed. It is part of a partial function"""
         if self._channel is not None:
             log.debug(
                 "WebRTC data channel closed",
@@ -399,10 +398,10 @@ class _RTCConnection(_CoroutineHandler):
             # remove all listeners on channel to not receive events anymore
             self._channel.remove_all_listeners()
             self._channel = None
-            if self.peer_connection.iceConnectionState in [
-                _ICEConnectionState.COMPLETED,
-                _ICEConnectionState.CHECKING,
-            ]:
+            if self.peer_connection.connectionState in (
+                _ConnectionState.CONNECTED,
+                _ConnectionState.CONNECTING,
+            ):
                 self.close()
 
     def _on_channel_message(self, message: str) -> None:
@@ -444,14 +443,11 @@ class _RTCConnection(_CoroutineHandler):
 
         wrap_callback(callback=self._handle_candidates_callback, candidates=candidates)
 
-    def _on_ice_connection_state_change(self) -> None:
-        ice_connection_state = self.peer_connection.iceConnectionState
-        self.log.debug("ICE connection state changed", signaling_state=ice_connection_state)
+    def _on_connection_state_change(self) -> None:
+        connection_state = self.peer_connection.connectionState
+        self.log.debug("Connection state changed", connection_state=connection_state)
 
-        if ice_connection_state in [
-            _ICEConnectionState.CLOSED.value,
-            _ICEConnectionState.FAILED.value,
-        ]:
+        if connection_state in (_ConnectionState.CLOSED.value, _ConnectionState.FAILED.value):
             self.close()
 
     def _on_signalling_state_change(self) -> None:
@@ -459,10 +455,10 @@ class _RTCConnection(_CoroutineHandler):
         self.log.debug("Signaling state changed", signaling_state=signaling_state)
         # if signaling state is closed also set allow candidates otherwise
         # coroutine will hang forever
-        if signaling_state in [
+        if signaling_state in (
             _RTCSignallingState.HAVE_REMOTE_OFFER.value,
             _RTCSignallingState.CLOSED.value,
-        ]:
+        ):
             self._aio_allow_candidates.set()
 
 
