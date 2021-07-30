@@ -113,7 +113,10 @@ class _CoroutineHandler:
                 cancelled=[coroutine for coroutine in self.coroutines if coroutine.cancelled()],
             )
 
-    def join_all_coroutines(self) -> None:
+    def wait(self) -> None:
+        """Kill the greenlets and wait until all the tasks are done."""
+        gevent.killall(self._greenlets)
+        self._greenlets = []
         yield_future(self.wait_for_coroutines())
 
     def _cancel_all_pending(self) -> None:
@@ -616,7 +619,7 @@ class WebRTCManager(Runnable):
 
         for partner_address, conn in self._address_to_connection.copy().items():
             self.close_connection(partner_address)
-            conn.join_all_coroutines()
+            conn.wait()
 
         gevent.killall(self.greenlets)
         self._reset_state()
