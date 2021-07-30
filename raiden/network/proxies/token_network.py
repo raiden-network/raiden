@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 
 import structlog
 from eth_utils import encode_hex, is_binary_address, to_canonical_address, to_hex
@@ -95,6 +95,14 @@ def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
 
     if address1 == address2:
         raise SamePeerAddress("Using the same address for both participants is forbiden.")
+
+
+class WithdrawInput(NamedTuple):
+    total_withdraw: WithdrawAmount
+    participant: Address
+    participant_signature: Signature
+    partner_signature: Signature
+    expiration_block: BlockExpiration
 
 
 class ChannelData(NamedTuple):
@@ -1186,18 +1194,20 @@ class TokenNetwork:
         self,
         given_block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
-        total_withdraw: WithdrawAmount,
-        expiration_block: BlockExpiration,
-        participant_signature: Signature,
-        partner_signature: Signature,
-        participant: Address,
         partner: Address,
+        withdraw_input: WithdrawInput,
     ) -> TransactionHash:
         """Set total token withdraw in the channel to total_withdraw.
 
         Raises:
             ValueError: If provided total_withdraw is not an integer value.
         """
+        total_withdraw = withdraw_input.total_withdraw
+        participant = withdraw_input.participant
+        partner_signature = withdraw_input.partner_signature
+        participant_signature = withdraw_input.participant_signature
+        expiration_block = withdraw_input.expiration_block
+
         if not isinstance(total_withdraw, int):
             raise ValueError("total_withdraw needs to be an integer number.")
 
@@ -1496,6 +1506,54 @@ class TokenNetwork:
                 f"setTotalWithdraw gas estimation failed for an unknown reason. "
                 f"Reference block {failed_at_blockhash} {failed_at_blocknumber}."
             )
+
+    def coop_settle(
+        self,
+        channel_identifier: ChannelID,
+        withdraw_participant: WithdrawInput,
+        withdraw_partner: WithdrawInput,
+        given_block_identifier: BlockIdentifier,
+    ) -> TransactionHash:
+        #  Don't duplicate all the verification of the contracts here for now,
+        #   since we very soon will have revert-string feedback from the contracts,
+        #   and will get rid of the `proxies` module alltogether.
+        #  Not having this is no security flaw, we just  don't have good error feedback
+        #  for the moment.
+
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
+
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
+            "cooperativeSettle",
+            extra_log_details=log_details,
+            channel_identifier=channel_identifier,
+            data1=astuple(withdraw_participant),
+            data2=astuple(withdraw_partner),
+        )
+
+        if estimated_transaction is not None:
+            estimated_transaction.estimated_gas = safe_gas_limit(
+                estimated_transaction.estimated_gas,
+                self.metadata.gas_measurements["TokenNetwork.cooperativeSettle"],
+            )
+
+            transaction_sent = self.client.transact(estimated_transaction)
+            transaction_mined = self.client.poll_transaction(transaction_sent)
+
+            if not was_transaction_successfully_mined(transaction_mined):
+                receipt = transaction_mined.receipt
+                failed_at_blockhash = encode_hex(receipt["blockHash"])
+                failed_at_blocknumber = receipt["blockNumber"]
+
+                check_transaction_failure(transaction_mined, self.client)
+                raise RaidenRecoverableError(
+                    f"CoopSettle: mining of transaction failed (block_hash={failed_at_blockhash},"
+                    f" block_number={failed_at_blocknumber})"
+                )
+            else:
+                return transaction_mined.transaction_hash
+        else:
+            raise RaidenRecoverableError("CoopSettle: gas-estimation of transaction failed.")
 
     def close(
         self,

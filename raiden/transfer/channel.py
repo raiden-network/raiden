@@ -2055,6 +2055,10 @@ def events_for_coop_settle(
         and coop_settle_state.partner_signature_confirmation is not None
         and coop_settle_state.expiration >= block_number - channel_state.reveal_timeout
     ):
+
+        msg = "CoopSettleState should be present on our state when we initiated it"
+        assert channel_state.our_state.initiated_coop_settle is not None, msg
+
         send_coop_settle = ContractSendChannelCoopSettle(
             canonical_identifier=channel_state.canonical_identifier,
             our_total_withdraw=coop_settle_state.total_withdraw_initiator,

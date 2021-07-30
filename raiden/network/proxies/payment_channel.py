@@ -1,5 +1,5 @@
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
-from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
+from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork, WithdrawInput
 from raiden.transfer.state import NettingChannelState, PendingLocksState
 from raiden.utils.typing import (
     AdditionalHash,
@@ -123,15 +123,19 @@ class PaymentChannel:
         expiration_block: BlockExpiration,
         block_identifier: BlockIdentifier,
     ) -> TransactionHash:
+
+        withdraw_input = WithdrawInput(
+            total_withdraw=total_withdraw,
+            participant=self.participant1,
+            participant_signature=participant_signature,
+            partner_signature=partner_signature,
+            expiration_block=expiration_block,
+        )
         return self.token_network.set_total_withdraw(
             given_block_identifier=block_identifier,
             channel_identifier=self.channel_identifier,
-            total_withdraw=total_withdraw,
-            expiration_block=expiration_block,
-            participant_signature=participant_signature,
-            partner_signature=partner_signature,
-            participant=self.participant1,
             partner=self.participant2,
+            withdraw_input=withdraw_input,
         )
 
     def close(
@@ -211,5 +215,19 @@ class PaymentChannel:
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,
+            given_block_identifier=block_identifier,
+        )
+
+    def coop_settle(
+        self,
+        withdraw_participant: WithdrawInput,
+        withdraw_partner: WithdrawInput,
+        block_identifier: BlockIdentifier,
+    ) -> TransactionHash:
+        """Settles the channel cooperatively"""
+        return self.token_network.coop_settle(
+            channel_identifier=self.channel_identifier,
+            withdraw_participant=withdraw_participant,
+            withdraw_partner=withdraw_partner,
             given_block_identifier=block_identifier,
         )
