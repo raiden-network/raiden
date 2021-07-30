@@ -169,7 +169,6 @@ class _RTCConnection(_CoroutineHandler):
     def _set_channel_callbacks(self) -> None:
         assert self._channel is not None, "must be set"
         self._channel.on("message", self._on_channel_message)
-        self._channel.on("close", self._on_channel_close)
         self._channel.on("open", self._on_channel_open)
 
     def channel_open(self) -> bool:
@@ -387,22 +386,6 @@ class _RTCConnection(_CoroutineHandler):
             node=to_checksum_address(self.node_address),
             label=self._channel.label,
         )
-
-    def _on_channel_close(self) -> None:
-        if self._channel is not None:
-            log.debug(
-                "WebRTC data channel closed",
-                node=to_checksum_address(self.node_address),
-                label=self._channel.label,
-            )
-            # remove all listeners on channel to not receive events anymore
-            self._channel.remove_all_listeners()
-            self._channel = None
-            if self.peer_connection.connectionState in (
-                _ConnectionState.CONNECTED,
-                _ConnectionState.CONNECTING,
-            ):
-                self.close()
 
     def _on_channel_message(self, message: str) -> None:
         assert self._channel is not None, "channel not set but received message"
