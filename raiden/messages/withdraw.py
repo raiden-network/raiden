@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from marshmallow import EXCLUDE
+
 from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages.abstract import SignedRetrieableMessage
 from raiden.messages.cmdid import CmdId
@@ -15,6 +17,7 @@ from raiden.utils.typing import (
     ChannelID,
     ClassVar,
     Nonce,
+    Optional,
     TokenNetworkAddress,
     WithdrawAmount,
 )
@@ -35,6 +38,12 @@ class WithdrawRequest(SignedRetrieableMessage):
     total_withdraw: WithdrawAmount
     nonce: Nonce
     expiration: BlockExpiration
+    coop_settle: Optional[bool] = False
+
+    class Meta:
+        unknown = EXCLUDE
+        # Don't serialize coop_settle when not specifically set to something else than None
+        serialize_missing = False
 
     @classmethod
     def from_event(cls, event: SendWithdrawRequest) -> "WithdrawRequest":
@@ -47,6 +56,7 @@ class WithdrawRequest(SignedRetrieableMessage):
             participant=event.participant,
             nonce=event.nonce,
             expiration=event.expiration,
+            coop_settle=event.coop_settle,
             signature=EMPTY_SIGNATURE,
         )
 
