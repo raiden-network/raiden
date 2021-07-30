@@ -20,7 +20,6 @@ from raiden.blockchain.state import (
     get_contractreceiveupdatetransfer_data_from_event,
 )
 from raiden.constants import EMPTY_LOCKSROOT, LOCKSROOT_OF_NO_LOCKS
-from raiden.network.proxies.proxy_manager import ProxyManager
 from raiden.settings import MediationFeeConfig, RaidenConfig
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer.architecture import StateChange
@@ -50,7 +49,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.typing import (
     Balance,
-    BlockNumber,
     BlockTimeout,
     Optional,
     SecretRegistryAddress,
@@ -266,7 +264,9 @@ def contractreceivechannelsettled_from_event(
         transaction_hash=transaction_hash,
         canonical_identifier=channel_settle_state.canonical_identifier,
         our_onchain_locksroot=our_locksroot,
+        our_transferred_amount=channel_settle_state.our_transferred_amount,
         partner_onchain_locksroot=partner_locksroot,
+        partner_transferred_amount=channel_settle_state.partner_transferred_amount,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -317,11 +317,9 @@ def update_service_addresses_from_event(event: DecodedEvent) -> UpdateServicesAd
 
 def blockchainevent_to_statechange(
     raiden_config: RaidenConfig,
-    proxy_manager: ProxyManager,
     raiden_storage: SerializedSQLiteStorage,
     chain_state: ChainState,
     event: DecodedEvent,
-    current_confirmed_head: BlockNumber,
 ) -> Optional[StateChange]:  # pragma: no unittest
     event_name = event.event_data["event"]
 
@@ -365,10 +363,8 @@ def blockchainevent_to_statechange(
 
     elif event_name == ChannelEvent.SETTLED:
         channel_settle_state = get_contractreceivechannelsettled_data_from_event(
-            proxy_manager=proxy_manager,
             chain_state=chain_state,
             event=event,
-            current_confirmed_head=current_confirmed_head,
         )
 
         if channel_settle_state:

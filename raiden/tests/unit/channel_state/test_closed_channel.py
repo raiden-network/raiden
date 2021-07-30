@@ -220,7 +220,9 @@ def test_channelstate_unlock_unlocked_onchain():
         block_number=settle_block_number,
         block_hash=make_block_hash(),
         partner_onchain_locksroot=make_32bytes(),  # non empty
+        partner_transferred_amount=0,
         our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        our_transferred_amount=0,
     )
 
     iteration = channel._handle_channel_settled(settle_state_change, channel_state)

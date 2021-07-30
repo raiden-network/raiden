@@ -1172,11 +1172,9 @@ class RaidenService(Runnable):
                     # the `current_confirmed_head` stays valid.
                     maybe_state_change = blockchainevent_to_statechange(
                         raiden_config=self.config,
-                        proxy_manager=self.proxy_manager,
                         raiden_storage=self.wal.storage,  # FXIME: use more recent
                         chain_state=dispatcher.latest_state(),
                         event=event,
-                        current_confirmed_head=current_confirmed_head,
                     )
                     if maybe_state_change is not None:
                         events = dispatcher.dispatch(maybe_state_change)

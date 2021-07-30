@@ -106,7 +106,9 @@ def test_channel_cleared_after_two_unlocks():
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         our_onchain_locksroot=compute_locksroot(channel_state.our_state.pending_locks),
+        our_transferred_amount=0,
         partner_onchain_locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
+        partner_transferred_amount=0,
         block_number=1,
         block_hash=make_block_hash(),
     )
@@ -187,7 +189,9 @@ def test_channel_cleared_after_our_unlock():
         transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         our_onchain_locksroot=compute_locksroot(channel_state.our_state.pending_locks),
+        our_transferred_amount=0,
         partner_onchain_locksroot=compute_locksroot(channel_state.partner_state.pending_locks),
+        partner_transferred_amount=0,
         block_number=1,
         block_hash=make_block_hash(),
     )

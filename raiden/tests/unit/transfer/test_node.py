@@ -123,7 +123,9 @@ def test_is_transaction_effect_satisfied(
         transaction_hash=bytes(32),
         canonical_identifier=canonical_identifier,
         our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        our_transferred_amount=0,
         partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_transferred_amount=0,
         block_number=1,
         block_hash=make_block_hash(),
     )
