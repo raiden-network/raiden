@@ -385,8 +385,7 @@ class _RTCConnection(_TaskHandler):
         self._signaling_send(self.partner_address, json.dumps(message))
 
     def __repr__(self) -> str:
-        partner = to_checksum_address(self.partner_address)
-        return f"<_RTCConnection to {partner}, call_id={self.call_id}>"
+        return f"<_RTCConnection[{hex(id(self))}] {self.call_id}>"
 
     def _on_datachannel(self, channel: RTCDataChannel) -> None:
         self._channel = channel
