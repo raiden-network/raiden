@@ -1356,6 +1356,21 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
         channel_state.settle_transaction.result = TransactionExecutionStatus.SUCCESS
 
 
+def set_coop_settled(channel_end_state: NettingChannelEndState, block_number: BlockNumber) -> None:
+    msg = "This should only be called on a state where a CoopSettle is initiated"
+    assert channel_end_state.initiated_coop_settle is not None, msg
+    if not channel_end_state.initiated_coop_settle.transaction:
+        channel_end_state.initiated_coop_settle.transaction = TransactionExecutionStatus(
+            None, block_number, TransactionExecutionStatus.SUCCESS
+        )
+
+    elif not channel_end_state.initiated_coop_settle.transaction.finished_block_number:
+        channel_end_state.initiated_coop_settle.transaction.finished_block_number = block_number
+        channel_end_state.initiated_coop_settle.transaction.result = (
+            TransactionExecutionStatus.SUCCESS
+        )
+
+
 def update_contract_balance(end_state: NettingChannelEndState, contract_balance: Balance) -> None:
     if contract_balance > end_state.contract_balance:
         end_state.contract_balance = contract_balance
@@ -2006,7 +2021,7 @@ def _handle_action_withdraw(
         )
     else:
         error_msg = is_valid_withdraw.as_error_message
-        assert error_msg, "is_valid_action should return error msg if not valid"
+        assert error_msg, "is_valid_action_withdraw should return error msg if not valid"
         events = [
             EventInvalidActionWithdraw(attempted_withdraw=action.total_withdraw, reason=error_msg)
         ]
@@ -2067,6 +2082,9 @@ def events_for_coop_settle(
             signature_our_withdraw=coop_settle_state.partner_signature_confirmation,
             signature_partner_withdraw=coop_settle_state.partner_signature_request,
             triggered_by_block_hash=block_hash,
+        )
+        channel_state.our_state.initiated_coop_settle.transaction = TransactionExecutionStatus(
+            block_number, None, None
         )
         return [send_coop_settle]
     return []
@@ -2590,6 +2608,48 @@ def _handle_channel_settled(
         should_clear_channel = (
             our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
         )
+
+        is_coop_settle = False
+        if channel_state.our_state.initiated_coop_settle:
+            if (
+                TokenAmount(
+                    channel_state.our_state.initiated_coop_settle.total_withdraw_participant
+                )
+                == state_change.our_transferred_amount
+                and TokenAmount(
+                    channel_state.our_state.initiated_coop_settle.total_withdraw_partner
+                )
+                == state_change.partner_transferred_amount
+                and state_change.our_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+                and state_change.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+            ):
+                # This matches our initated coop-settle!
+                set_coop_settled(channel_state.our_state, state_change.block_number)
+                is_coop_settle = True
+        if channel_state.partner_state.initiated_coop_settle:
+            if (
+                TokenAmount(
+                    channel_state.partner_state.initiated_coop_settle.total_withdraw_participant
+                )
+                == state_change.partner_transferred_amount
+                and TokenAmount(
+                    channel_state.partner_state.initiated_coop_settle.total_withdraw_partner
+                )
+                == state_change.our_transferred_amount
+                and state_change.our_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+                and state_change.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+            ):
+                # This matches partners initated coop-settle!
+                set_coop_settled(channel_state.partner_state, state_change.block_number)
+                is_coop_settle = True
+
+        if is_coop_settle:
+            channel_state.partner_state.onchain_total_withdraw = WithdrawAmount(
+                state_change.partner_transferred_amount
+            )
+            channel_state.our_state.onchain_total_withdraw = WithdrawAmount(
+                state_change.our_transferred_amount
+            )
 
         if should_clear_channel:
             return TransitionResult(None, events)
