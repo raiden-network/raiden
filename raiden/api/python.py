@@ -22,6 +22,7 @@ from raiden.exceptions import (
     InvalidTokenAddress,
     RaidenRecoverableError,
     SamePeerAddress,
+    ServiceRequestFailed,
     TokenNetworkDeprecated,
     TokenNotRegistered,
     UnexpectedChannelState,
@@ -40,7 +41,7 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import ChainState, ChannelState, NettingChannelState, NetworkState
-from raiden.transfer.state_change import ActionChannelClose
+from raiden.transfer.state_change import ActionChannelClose, ActionChannelCoopSettle
 from raiden.transfer.views import TransferRole, get_token_network_by_address
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.gas_reserve import has_enough_gas_reserve
@@ -870,6 +871,10 @@ class RaidenAPI:  # pragma: no unittest
             partner_addresses=partner_addresses,
         )
 
+        non_settled_channels = self._batch_coop_settle(channels_to_close, retry_timeout)
+        if not non_settled_channels:
+            return
+
         close_state_changes: List[StateChange] = [
             ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
             for channel_state in channels_to_close
@@ -887,6 +892,83 @@ class RaidenAPI:  # pragma: no unittest
             channel_ids=channel_ids,
             retry_timeout=retry_timeout,
         )
+
+    def _batch_coop_settle(
+        self,
+        channels_to_settle: List[NettingChannelState],
+        retry_timeout: NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+    ) -> List[NettingChannelState]:
+        current_block = self.raiden.get_block_number()
+
+        pfs_proxy = self.raiden.pfs_proxy
+        coop_settle_state_changes: List[StateChange] = list()
+        unsuccessful_channels = list()
+        for channel_state in channels_to_settle:
+            try:
+                recipient_address = channel_state.partner_state.address
+                recipient_metadata = pfs_proxy.query_address_metadata(recipient_address)
+                if recipient_metadata:
+                    coop_settle_state_changes.append(
+                        ActionChannelCoopSettle(
+                            canonical_identifier=channel_state.canonical_identifier
+                        )
+                    )
+                else:
+                    unsuccessful_channels.append(channel_state)
+                    continue
+            except ServiceRequestFailed:
+                # node is offline / we can't get the metadata in order to communicate
+                # with the node, so don't event try an offchain coop-settle
+                unsuccessful_channels.append(channel_state)
+                continue
+        greenlets = set(self.raiden.handle_state_changes(coop_settle_state_changes))
+        gevent.joinall(greenlets, raise_error=True)
+
+        coop_settle_successful_condition = waiting.And(
+            [
+                waiting.ChannelInTargetStates([ChannelState.STATE_SETTLED]),
+                waiting.ChannelCoopSettleSuccess(self.raiden.address),
+            ]
+        )
+        channels_to_conditions = dict()
+        for channel_state in set(channels_to_settle) - set(unsuccessful_channels):
+            # FIXME is there a race condition when we "get" the total-withdraw-values after they
+            # have been determined by the state machine?
+            # --> because the initiated_coop_settle is removed at some point if it expired
+            # --> also this only works because the initiated_coop_settle is directly set upon
+            #       handling the ActionChannelCoopSettle. If that werent the case,
+            #       we first would have to wait several state-machine iterations
+            #       until the coop-settle-state existed on the channel-state
+            # If this is a problem, the calculation of the max-withdraw amounts
+            # would have to be done HERE and included in the ActionChannelCoopSettle,
+            # so that we know them before feeding the action into the state machine
+            # and can await them easily here...
+            coop_settle_state = channel_state.our_state.initiated_coop_settle
+            msg = "ActionChannelCoopSettle should set the initiated_coop_settle on our state in \
+            the first iteration of the state machine"
+            assert coop_settle_state, msg
+
+            coop_settle_expired_condition = waiting.ChannelExpiredCoopSettle(
+                coop_settle_initiator_address=channel_state.our_state.address,
+                participant_total_withdraw=coop_settle_state.total_withdraw_participant,
+                partner_total_withdraw=coop_settle_state.total_withdraw_partner,
+                initiation_block=current_block,
+            )
+            condition = waiting.Or(
+                [coop_settle_expired_condition, coop_settle_successful_condition]
+            )
+            channels_to_conditions[channel_state.canonical_identifier] = condition
+
+        # This only waits for all coop-settles either successful or expired
+        waiting.wait_for_channels(self.raiden, channels_to_conditions, retry_timeout=retry_timeout)
+
+        # Now determine which ones are actually settled,
+        # so that we can return the channels that eventually still need a normal
+        # settlement lifecycle
+        for channel_state in channels_to_settle:
+            if channel.get_status(channel_state) is not ChannelState.STATE_SETTLED:
+                unsuccessful_channels.append(channel_state)
+        return unsuccessful_channels
 
     def get_channel_list(
         self,

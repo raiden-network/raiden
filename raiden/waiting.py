@@ -19,6 +19,7 @@ from raiden.transfer.state import (
     ChannelState,
     NettingChannelEndState,
     NettingChannelState,
+    TransactionExecutionStatus,
 )
 from raiden.transfer.state_change import (
     ContractReceiveChannelWithdraw,
@@ -148,6 +149,63 @@ class ChannelInTargetStates(ChannelStateCondition):
             # XXX this was reversed before, why?
             return False
         return channel.get_status(channel_state) in self.target_states
+
+
+@dataclass
+class ChannelExpiredCoopSettle(ChannelStateCondition):
+    coop_settle_initiator_address: Address
+    participant_total_withdraw: WithdrawAmount
+    partner_total_withdraw: WithdrawAmount
+    initiation_block: BlockNumber
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        if channel_state is None:
+            return False
+        if self.coop_settle_initiator_address is channel_state.our_state.address:
+            channel_end_state = channel_state.our_state
+        elif self.coop_settle_initiator_address is channel_state.partner_state.address:
+            channel_end_state = channel_state.partner_state
+        else:
+            raise ValueError("target_address must be one of the channel participants")
+        try:
+            next(
+                candidate
+                for candidate in channel_end_state.expired_coop_settles
+                if candidate.total_withdraw_partner == self.partner_total_withdraw
+                and candidate.total_withdraw_participant == self.participant_total_withdraw
+                and candidate.expiration > self.initiation_block
+            )
+            return True
+        except StopIteration:
+            return False
+
+
+@dataclass
+class ChannelCoopSettleSuccess(ChannelStateCondition):
+    coop_settle_initiator_address: Address
+
+    def evaluate_condition(
+        self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
+    ) -> bool:
+        if channel_state is None:
+            return False
+        if self.coop_settle_initiator_address is channel_state.our_state.address:
+            channel_end_state = channel_state.our_state
+        elif self.coop_settle_initiator_address is channel_state.partner_state.address:
+            channel_end_state = channel_state.partner_state
+        else:
+            raise ValueError("target_address must be one of the channel participants")
+        if channel_end_state.initiated_coop_settle:
+            if channel_end_state.initiated_coop_settle.transaction:
+                return (
+                    channel_end_state.initiated_coop_settle.transaction.result
+                    is TransactionExecutionStatus.SUCCESS
+                )
+        return False
+
+
 @dataclass
 class And(ChannelStateCondition):
     conditions: List[ChannelStateCondition]
