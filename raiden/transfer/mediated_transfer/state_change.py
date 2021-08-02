@@ -68,6 +68,7 @@ class ActionInitTarget(BalanceProofStateChange):
 
     from_hop: HopState
     transfer: LockedTransferSignedState
+    received_valid_secret: Optional[bool] = field(default=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()

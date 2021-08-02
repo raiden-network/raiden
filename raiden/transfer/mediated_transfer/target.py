@@ -112,6 +112,8 @@ def handle_inittarget(
         # enforced by the nonce increasing sequentially, which is verified by
         # the handler handle_receive_lockedtransfer.
         target_state = TargetTransferState(from_hop, transfer)
+        if state_change.received_valid_secret:
+            return TransitionResult(target_state, channel_events)
 
         safe_to_wait = is_safe_to_wait(
             transfer.lock.expiration, channel_state.reveal_timeout, block_number

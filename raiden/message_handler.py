@@ -1,3 +1,5 @@
+from math import inf
+
 import structlog
 from eth_utils import to_hex
 from gevent import joinall
@@ -42,6 +44,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.utils import decrypt_secret
 from raiden.transfer.views import TransferRole
+from raiden.utils.formatting import to_checksum_address
 from raiden.utils.transfers import random_secret
 from raiden.utils.typing import (
     TYPE_CHECKING,
@@ -51,6 +54,7 @@ from raiden.utils.typing import (
     Set,
     TargetAddress,
     Tuple,
+    Union,
 )
 
 if TYPE_CHECKING:
@@ -104,18 +108,21 @@ class MessageHandler:
             # (an asynchronous network is assumed) This reduces latency when a
             # balance proof is considered invalid because of a race with the
             # blockchain view of each node.
-            def by_canonical_identifier(state_change: StateChange) -> Tuple[int, int]:
+            def by_canonical_identifier(
+                state_change: StateChange,
+            ) -> Union[Tuple[int, int], Tuple[float, float]]:
                 if isinstance(state_change, BalanceProofStateChange):
                     balance_proof = state_change.balance_proof
                     return (
                         balance_proof.canonical_identifier.channel_identifier,
                         balance_proof.nonce,
                     )
-
+                elif isinstance(state_change, ReceiveSecretReveal):
+                    # ReceiveSecretReveal depends on other state changes happening first.
+                    return inf, inf
                 return 0, 0
 
             all_state_changes.sort(key=by_canonical_identifier)
-
             raiden.handle_and_track_state_changes(all_state_changes)
 
     @staticmethod
@@ -343,10 +350,20 @@ class MessageHandler:
             if encrypted_secret is not None:
                 try:
                     secret = decrypt_secret(encrypted_secret, raiden.rpc_client.privkey)
-                    log.info(f"Using encrypted secret received from {sender.hex()}")
-                    return [ReceiveSecretReveal(secret=secret, sender=message.sender)]
+                    log.info("Using encrypted secret", sender=to_checksum_address(sender))
+                    return [
+                        ActionInitTarget(
+                            from_hop=from_hop,
+                            transfer=from_transfer,
+                            balance_proof=balance_proof,
+                            sender=sender,
+                            received_valid_secret=True,
+                        ),
+                        ReceiveSecretReveal(secret=secret, sender=message.sender),
+                    ]
                 except InvalidSecret:
-                    log.error(f"Ignoring invalid encrypted secret received from {sender.hex()}")
+                    sender_addr = to_checksum_address(sender)
+                    log.error("Ignoring invalid encrypted secret", sender=sender_addr)
             return [
                 ActionInitTarget(
                     from_hop=from_hop,

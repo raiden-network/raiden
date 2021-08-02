@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import gevent
 import pytest
 from eth_utils import to_canonical_address
@@ -12,6 +14,7 @@ from raiden.exceptions import (
     InsufficientEth,
     InsufficientGasReserve,
     InvalidBinaryAddress,
+    InvalidSecret,
     InvalidSettleTimeout,
     RaidenRecoverableError,
     SamePeerAddress,
@@ -353,15 +356,18 @@ def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unus
     assert isinstance(app1.raiden_event_handler, HoldRaidenEventHandler), msg
     app1.raiden_event_handler.hold(SendSecretRequest, {})
 
-    greenlet = gevent.spawn(
-        RaidenAPI(app0).transfer_and_wait,
-        app0.default_registry.address,
-        token_address,
-        1,
-        target=app1.address,
-    )
-    waiting.wait_for_block(app0, app1.get_block_number() + 2 * reveal_timeout + 1, retry_timeout)
-    greenlet.join(timeout=5)
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        greenlet = gevent.spawn(
+            RaidenAPI(app0).transfer_and_wait,
+            app0.default_registry.address,
+            token_address,
+            1,
+            target=app1.address,
+        )
+        waiting.wait_for_block(
+            app0, app1.get_block_number() + 2 * reveal_timeout + 1, retry_timeout
+        )
+        greenlet.join(timeout=5)
     assert not greenlet.value
 
 

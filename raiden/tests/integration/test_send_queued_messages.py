@@ -1,8 +1,11 @@
+from unittest.mock import Mock, patch
+
 import gevent
 import pytest
 
 from raiden import waiting
 from raiden.constants import RoutingMode
+from raiden.exceptions import InvalidSecret
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -164,7 +167,9 @@ def test_send_queued_messages_after_restart(  # pylint: disable=unused-argument
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [1])
 @pytest.mark.parametrize("number_of_tokens", [1])
-def test_payment_statuses_are_restored(
+@patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret)
+def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
+    decrypt_patch: Mock,
     raiden_network: List[RaidenService],
     restart_node: RestartNode,
     token_addresses: List[TokenAddress],

@@ -1,6 +1,7 @@
 import datetime
 import json
 from http import HTTPStatus
+from unittest.mock import Mock, patch
 
 import gevent
 import grequests
@@ -11,6 +12,7 @@ from flask import url_for
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer
 from raiden.constants import BLOCK_ID_LATEST, Environment
+from raiden.exceptions import InvalidSecret
 from raiden.messages.transfers import LockedTransfer, Unlock
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -937,7 +939,10 @@ def test_channel_events_raiden(
 @pytest.mark.parametrize("number_of_nodes", [3])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("enable_rest_api", [True])
-def test_pending_transfers_endpoint(raiden_network: List[RaidenService], token_addresses):
+@patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret)
+def test_pending_transfers_endpoint(
+    decrypt_patch: Mock, raiden_network: List[RaidenService], token_addresses
+):
     initiator, mediator, target = raiden_network
     token_address = token_addresses[0]
     token_network_address = views.get_token_network_address_by_token_address(

@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 import pytest
 
+from raiden.exceptions import InvalidSecret
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
@@ -22,15 +25,16 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     token_address = token_addresses[0]
 
     amount = 10
-    transfer(
-        initiator_app=app0,
-        target_app=app2,
-        token_address=token_address,
-        amount=PaymentAmount(amount),
-        identifier=PaymentID(1),
-        timeout=network_wait * number_of_nodes,
-        routes=[[app0, app1, app2]],
-    )
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        transfer(
+            initiator_app=app0,
+            target_app=app2,
+            token_address=token_address,
+            amount=PaymentAmount(amount),
+            identifier=PaymentID(1),
+            timeout=network_wait * number_of_nodes,
+            routes=[[app0, app1, app2]],
+        )
 
     def test_initiator_events():
         assert not has_unlock_failure(app0)

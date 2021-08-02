@@ -21,8 +21,8 @@ from raiden.transfer.channel import (
     compute_locksroot,
     get_secret,
     get_status,
-    handle_block,
     handle_receive_lockedtransfer,
+    handle_state_transitions,
     is_balance_proof_usable_onchain,
     is_valid_balanceproof_signature,
     set_settled,
@@ -357,20 +357,22 @@ def test_handle_block_closed_channel():
     )
     pseudo_random_generator = random.Random()
     block = Block(block_number=90, gas_limit=100000, block_hash=factories.make_block_hash())
-    before_settle = handle_block(
+    before_settle = handle_state_transitions(
+        block,
         channel_state=channel_state,
-        state_change=block,
         block_number=block.block_number,
+        block_hash=None,
         pseudo_random_generator=pseudo_random_generator,
     )
     assert get_status(before_settle.new_state) == ChannelState.STATE_CLOSED
     assert not before_settle.events
 
     block = Block(block_number=102, gas_limit=100000, block_hash=factories.make_block_hash())
-    after_settle = handle_block(
+    after_settle = handle_state_transitions(
+        block,
         channel_state=before_settle.new_state,
-        state_change=block,
         block_number=block.block_number,
+        block_hash=None,
         pseudo_random_generator=pseudo_random_generator,
     )
     assert get_status(after_settle.new_state) == ChannelState.STATE_SETTLING
