@@ -1,4 +1,5 @@
 import random
+from unittest.mock import patch
 
 import gevent
 import pytest
@@ -8,7 +9,7 @@ from gevent import Timeout
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import BLOCK_ID_LATEST, EMPTY_SIGNATURE, UINT64_MAX
-from raiden.exceptions import RaidenUnrecoverableError
+from raiden.exceptions import InvalidSecret, RaidenUnrecoverableError
 from raiden.messages.transfers import LockedTransfer, LockExpired, RevealSecret, Unlock
 from raiden.messages.withdraw import WithdrawExpired
 from raiden.raiden_service import RaidenService
@@ -241,15 +242,16 @@ def test_lock_expiry(
         LockExpired, {"secrethash": transfer_1_secrethash}
     )
 
-    alice_app.mediated_transfer_async(
-        token_network_address=token_network_address,
-        amount=alice_to_bob_amount,
-        target=target,
-        identifier=identifier,
-        secret=transfer_1_secret,
-        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
-    )
-    transfer1_received.wait()
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        alice_app.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=alice_to_bob_amount,
+            target=target,
+            identifier=identifier,
+            secret=transfer_1_secret,
+            route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
+        )
+        transfer1_received.wait()
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
@@ -292,15 +294,16 @@ def test_lock_expiry(
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
-    alice_app.mediated_transfer_async(
-        token_network_address=token_network_address,
-        amount=alice_to_bob_amount,
-        target=target,
-        identifier=identifier,
-        secret=transfer_2_secret,
-        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
-    )
-    transfer2_received.wait()
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        alice_app.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=alice_to_bob_amount,
+            target=target,
+            identifier=identifier,
+            secret=transfer_2_secret,
+            route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
+        )
+        transfer2_received.wait()
 
     # Make sure the other transfer still exists
     alice_chain_state = views.state_from_raiden(alice_app)
@@ -356,16 +359,17 @@ def test_batch_unlock(
 
     secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
-    alice_app.mediated_transfer_async(
-        token_network_address=token_network_address,
-        amount=PaymentAmount(alice_to_bob_amount),
-        target=TargetAddress(bob_address),
-        identifier=PaymentID(identifier),
-        secret=secret,
-        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
-    )
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        alice_app.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=PaymentAmount(alice_to_bob_amount),
+            target=TargetAddress(bob_address),
+            identifier=PaymentID(identifier),
+            secret=secret,
+            route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
+        )
 
-    secret_request_event.get()  # wait for the messages to be exchanged
+        secret_request_event.get()  # wait for the messages to be exchanged
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
@@ -699,16 +703,17 @@ def test_settled_lock(
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
-    app0.mediated_transfer_async(
-        token_network_address=token_network_address,
-        amount=amount,
-        target=target,
-        identifier=identifier,
-        secret=secret,
-        route_states=[create_route_state_for_route([app0, app1], token_address)],
-    )
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        app0.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=amount,
+            target=target,
+            identifier=identifier,
+            secret=secret,
+            route_states=[create_route_state_for_route([app0, app1], token_address)],
+        )
 
-    secret_available.wait()  # wait for the messages to be exchanged
+        secret_available.wait()  # wait for the messages to be exchanged
 
     # Save the pending locks from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
@@ -716,14 +721,15 @@ def test_settled_lock(
 
     hold_event_handler.release_secretrequest_for(app1, secrethash)
 
-    transfer(
-        initiator_app=app0,
-        target_app=app1,
-        token_address=token_address,
-        amount=amount,
-        identifier=PaymentID(2),
-        routes=[[app0, app1]],
-    )
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        transfer(
+            initiator_app=app0,
+            target_app=app1,
+            token_address=token_address,
+            amount=amount,
+            identifier=PaymentID(2),
+            routes=[[app0, app1]],
+        )
 
     # The channel state has to be recovered before the settlement, otherwise
     # the object is cleared from the node's state.
@@ -1077,26 +1083,27 @@ def test_batch_unlock_after_restart(
         secrethash=bob_transfer_secrethash
     )
 
-    alice_app.mediated_transfer_async(
-        token_network_address=token_network_address,
-        amount=alice_to_bob_amount,
-        target=TargetAddress(bob_app.address),
-        identifier=identifier,
-        secret=alice_transfer_secret,
-        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
-    )
+    with patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret):
+        alice_app.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=alice_to_bob_amount,
+            target=TargetAddress(bob_app.address),
+            identifier=identifier,
+            secret=alice_transfer_secret,
+            route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
+        )
 
-    bob_app.mediated_transfer_async(
-        token_network_address=token_network_address,
-        amount=alice_to_bob_amount,
-        target=TargetAddress(alice_app.address),
-        identifier=PaymentID(identifier + 1),
-        secret=bob_transfer_secret,
-        route_states=[create_route_state_for_route([bob_app, alice_app], token_address)],
-    )
+        bob_app.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=alice_to_bob_amount,
+            target=TargetAddress(alice_app.address),
+            identifier=PaymentID(identifier + 1),
+            secret=bob_transfer_secret,
+            route_states=[create_route_state_for_route([bob_app, alice_app], token_address)],
+        )
 
-    alice_transfer_hold.wait(timeout=timeout)
-    bob_transfer_hold.wait(timeout=timeout)
+        alice_transfer_hold.wait(timeout=timeout)
+        bob_transfer_hold.wait(timeout=timeout)
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     alice_lock = channel.get_lock(alice_bob_channel_state.our_state, alice_transfer_secrethash)

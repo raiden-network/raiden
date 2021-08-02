@@ -95,6 +95,7 @@ ZERO_FEE = FeeAmount(0)
 class TransferState(Enum):
     """Represents the target state of a transfer."""
 
+    LOCKED = "locked"
     UNLOCKED = "unlocked"
     EXPIRED = "expired"
     SECRET_NOT_REVEALED = "secret_not_revealed"
@@ -236,6 +237,16 @@ def transfer(
         )
     elif transfer_state is TransferState.SECRET_NOT_REQUESTED:
         return _transfer_secret_not_requested(
+            initiator_app=initiator_app,
+            target_app=target_app,
+            token_address=token_address,
+            amount=amount,
+            identifier=identifier,
+            timeout=timeout,
+            route_states=route_states,
+        )
+    elif transfer_state is TransferState.LOCKED:
+        return _transfer_locked(
             initiator_app=initiator_app,
             target_app=target_app,
             token_address=token_address,
@@ -388,6 +399,40 @@ def _transfer_secret_not_requested(
 
     with Timeout(seconds=timeout):
         hold_secret_request.get()
+
+    return secrethash
+
+
+def _transfer_locked(
+    initiator_app: RaidenService,
+    target_app: RaidenService,
+    token_address: TokenAddress,
+    amount: PaymentAmount,
+    identifier: PaymentID,
+    timeout: Optional[float] = None,
+    route_states: List[RouteState] = None,
+) -> SecretHash:
+    if timeout is None:
+        timeout = 10
+
+    secret, secrethash = make_secret_with_hash()
+
+    token_network_registry_address = initiator_app.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state=views.state_from_raiden(initiator_app),
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
+    )
+    assert token_network_address is not None
+    initiator_app.mediated_transfer_async(
+        token_network_address=token_network_address,
+        amount=amount,
+        target=TargetAddress(target_app.address),
+        identifier=identifier,
+        secret=secret,
+        secrethash=secrethash,
+        route_states=route_states,
+    )
 
     return secrethash
 

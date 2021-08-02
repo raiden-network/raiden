@@ -1,9 +1,10 @@
 from typing import List, cast
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
+import gevent
 import pytest
 
-from raiden.exceptions import RaidenUnrecoverableError
+from raiden.exceptions import InvalidSecret, RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
 from raiden.network.pathfinding import PFSConfig, PFSInfo, PFSProxy
@@ -16,8 +17,9 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import (
+    TransferState,
     assert_succeeding_transfer_invariants,
     assert_synced_channel_state,
     block_timeout_for_transfer_by_secrethash,
@@ -27,6 +29,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
+from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
@@ -47,6 +50,48 @@ from raiden.utils.typing import (
     TokenAmount,
 )
 from raiden.waiting import wait_for_block
+
+
+@raise_on_failure
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_transfer_with_secret(
+    raiden_network: List[RaidenService], number_of_nodes, deposit, token_addresses, network_wait
+):
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_raiden(app0)
+    token_network_registry_address = app0.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        chain_state, token_network_registry_address, token_address
+    )
+
+    amount = PaymentAmount(10)
+    secret_hash = transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_address=token_address,
+        amount=amount,
+        transfer_state=TransferState.LOCKED,
+        identifier=PaymentID(1),
+        timeout=network_wait * number_of_nodes,
+        routes=[[app0, app1]],
+    )
+
+    assert isinstance(app1.raiden_event_handler, HoldRaidenEventHandler)
+    app1.raiden_event_handler.hold(SendSecretRequest, {"secrethash": secret_hash})
+
+    with gevent.Timeout(20):
+        wait_assert(
+            assert_succeeding_transfer_invariants,
+            token_network_address,
+            app0,
+            deposit - amount,
+            [],
+            app1,
+            deposit + amount,
+            [],
+        )
 
 
 @raise_on_failure
@@ -440,8 +485,14 @@ def test_mediated_transfer_calls_pfs(
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [3])
+@patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret)
 def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
-    raiden_network: List[RaidenService], number_of_nodes, deposit, token_addresses, network_wait
+    decrypt_patch: Mock,
+    raiden_network: List[RaidenService],
+    number_of_nodes,
+    deposit,
+    token_addresses,
+    network_wait,
 ):
     """
     Tests a mediator node consuming more fees than allocated.

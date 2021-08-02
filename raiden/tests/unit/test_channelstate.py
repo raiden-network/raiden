@@ -1224,7 +1224,7 @@ def test_channelstate_unlock_without_locks():
         block_number=77,
         block_hash=make_block_hash(),
     )
-    iteration = channel.handle_channel_closed(channel_state, state_change)
+    iteration = channel._handle_channel_closed(state_change, channel_state)
     assert not iteration.events
 
 
@@ -1313,7 +1313,7 @@ def test_channelstate_unlock_unlocked_onchain():
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
-    iteration = channel.handle_channel_closed(channel_state, close_state_change)
+    iteration = channel._handle_channel_closed(close_state_change, channel_state)
     assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is None
 
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
@@ -1329,7 +1329,7 @@ def test_channelstate_unlock_unlocked_onchain():
         our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
     )
 
-    iteration = channel.handle_channel_settled(channel_state, settle_state_change)
+    iteration = channel._handle_channel_settled(settle_state_change, channel_state)
     assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is not None
 
 
@@ -1424,7 +1424,7 @@ def test_update_must_be_called_if_close_lost_race():
         block_number=77,
         block_hash=make_block_hash(),
     )
-    iteration = channel.handle_channel_closed(channel_state, state_change)
+    iteration = channel._handle_channel_closed(state_change, channel_state)
     assert search_for_item(iteration.events, ContractSendChannelUpdateTransfer, {}) is not None
 
 
@@ -1461,7 +1461,7 @@ def test_update_transfer():
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
-    iteration2 = channel.handle_channel_closed(channel_state, channel_close_state_change)
+    iteration2 = channel._handle_channel_closed(channel_close_state_change, channel_state)
 
     # update_transaction in channel state should not be set because there was no transfer
     channel_state = iteration2.new_state
@@ -1476,8 +1476,8 @@ def test_update_transfer():
     )
 
     update_block_number = 20
-    iteration3 = channel.handle_channel_updated_transfer(
-        channel_state, update_transfer_state_change, update_block_number
+    iteration3 = channel._handle_channel_updated_transfer(
+        update_transfer_state_change, channel_state, update_block_number
     )
 
     # now update_transaction in channel state should be set
@@ -1591,9 +1591,9 @@ def test_action_withdraw():
         canonical_identifier=channel_state.canonical_identifier, total_withdraw=100
     )
 
-    iteration = channel.handle_action_withdraw(
+    iteration = channel._handle_action_withdraw(
         channel_state=channel_state,
-        action_withdraw=action_withdraw,
+        action=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
         block_number=2,
     )
@@ -1608,9 +1608,9 @@ def test_action_withdraw():
         canonical_identifier=channel_state.canonical_identifier, total_withdraw=our_balance
     )
 
-    iteration = channel.handle_action_withdraw(
+    iteration = channel._handle_action_withdraw(
         channel_state=channel_state,
-        action_withdraw=action_withdraw,
+        action=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
         block_number=3,
     )
@@ -1626,9 +1626,9 @@ def test_action_withdraw():
         canonical_identifier=channel_state.canonical_identifier, total_withdraw=our_balance
     )
 
-    iteration = channel.handle_action_withdraw(
+    iteration = channel._handle_action_withdraw(
         channel_state=iteration.new_state,
-        action_withdraw=action_withdraw,
+        action=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
         block_number=4,
     )
@@ -1664,8 +1664,8 @@ def test_receive_withdraw_request():
         expiration=expiration,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
-        channel_state=channel_state, withdraw_request=withdraw_request
+    iteration = channel._handle_receive_withdraw_request(
+        channel_state=channel_state, action=withdraw_request
     )
 
     assert (
@@ -1698,8 +1698,8 @@ def test_receive_withdraw_request():
         expiration=expiration,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
-        channel_state=channel_state, withdraw_request=withdraw_request
+    iteration = channel._handle_receive_withdraw_request(
+        channel_state=channel_state, action=withdraw_request
     )
 
     # pylint: disable=no-member
@@ -1724,8 +1724,8 @@ def test_receive_withdraw_request():
         expiration=10,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
-        channel_state=iteration.new_state, withdraw_request=withdraw_request
+    iteration = channel._handle_receive_withdraw_request(
+        channel_state=iteration.new_state, action=withdraw_request
     )
 
     assert (
@@ -1749,8 +1749,8 @@ def test_receive_withdraw_request():
         expiration=10,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
-        channel_state=iteration.new_state, withdraw_request=withdraw_request
+    iteration = channel._handle_receive_withdraw_request(
+        channel_state=iteration.new_state, action=withdraw_request
     )
 
     assert (
@@ -1803,9 +1803,9 @@ def test_receive_withdraw_confirmation():
         expiration=expiration_block,
     )
 
-    iteration = channel.handle_receive_withdraw_confirmation(
+    iteration = channel._handle_receive_withdraw_confirmation(
         channel_state=channel_state,
-        withdraw=receive_withdraw,
+        action=receive_withdraw,
         block_number=10,
         block_hash=block_hash,
     )
@@ -1830,9 +1830,9 @@ def test_receive_withdraw_confirmation():
         expiration=expiration_block,
     )
 
-    iteration = channel.handle_receive_withdraw_confirmation(
+    iteration = channel._handle_receive_withdraw_confirmation(
         channel_state=iteration.new_state,
-        withdraw=receive_withdraw,
+        action=receive_withdraw,
         block_number=10,
         block_hash=block_hash,
     )
@@ -1855,9 +1855,9 @@ def test_receive_withdraw_confirmation():
         expiration=expiration_block,
     )
 
-    iteration = channel.handle_receive_withdraw_confirmation(
+    iteration = channel._handle_receive_withdraw_confirmation(
         channel_state=iteration.new_state,
-        withdraw=receive_withdraw,
+        action=receive_withdraw,
         block_number=10,
         block_hash=block_hash,
     )
@@ -1891,9 +1891,9 @@ def test_node_sends_withdraw_expiry():
     block_hash = make_transaction_hash()
     block = Block(block_number=expiration_threshold - 1, gas_limit=1, block_hash=block_hash)
 
-    iteration = channel.handle_block(
+    iteration = channel._handle_block(
         channel_state=channel_state,
-        state_change=block,
+        action=block,
         block_number=expiration_threshold - 1,
         pseudo_random_generator=pseudo_random_generator,
     )
@@ -1903,9 +1903,9 @@ def test_node_sends_withdraw_expiry():
     block_hash = make_transaction_hash()
     block = Block(block_number=expiration_threshold, gas_limit=1, block_hash=block_hash)
 
-    iteration = channel.handle_block(
+    iteration = channel._handle_block(
         channel_state=channel_state,
-        state_change=block,
+        action=block,
         block_number=expiration_threshold,
         pseudo_random_generator=pseudo_random_generator,
     )
@@ -2210,8 +2210,8 @@ def test_receive_contract_withdraw():
         fee_config=MediationFeeConfig(),
     )
 
-    iteration = channel.handle_channel_withdraw(
-        channel_state=channel_state, state_change=contract_receive_withdraw
+    iteration = channel._handle_channel_withdraw(
+        channel_state=channel_state, action=contract_receive_withdraw
     )
 
     assert iteration.new_state.our_state.offchain_total_withdraw == 0
@@ -2232,8 +2232,8 @@ def test_receive_contract_withdraw():
         fee_config=MediationFeeConfig(),
     )
 
-    iteration = channel.handle_channel_withdraw(
-        channel_state=iteration.new_state, state_change=contract_receive_withdraw
+    iteration = channel._handle_channel_withdraw(
+        channel_state=iteration.new_state, action=contract_receive_withdraw
     )
 
     assert iteration.new_state.partner_state.offchain_total_withdraw == 0

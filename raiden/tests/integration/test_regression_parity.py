@@ -1,10 +1,12 @@
 import math
 from typing import cast
+from unittest.mock import Mock, patch
 
 import pytest
 
 from raiden import waiting
 from raiden.constants import BLOCK_ID_LATEST
+from raiden.exceptions import InvalidSecret
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -41,7 +43,9 @@ STATE_PRUNING = {
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("blockchain_extra_config", [STATE_PRUNING])
-def test_locksroot_loading_during_channel_settle_handling(
+@patch("raiden.message_handler.decrypt_secret", side_effect=InvalidSecret)
+def test_locksroot_loading_during_channel_settle_handling(  # pylint: disable=unused-argument
+    decrypt_patch: Mock,
     raiden_chain: List[RaidenService],
     restart_node: RestartNode,
     deploy_client: JSONRPCClient,

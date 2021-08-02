@@ -83,7 +83,7 @@ def encrypt_secret(
 
 def decrypt_secret(encrypted_secret: EncryptedSecret, private_key: PrivateKey) -> Secret:
     try:
-        secret = Secret(decrypt(encrypted_secret, private_key))
+        secret = Secret(decrypt(private_key, encrypted_secret))
     except ValueError:
         raise InvalidSecret
     return secret

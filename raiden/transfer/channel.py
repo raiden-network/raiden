@@ -1,6 +1,7 @@
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,unused-argument
 import random
 from enum import Enum
+from functools import singledispatch
 from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, keccak, to_hex
@@ -79,7 +80,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.transfer.utils import FuncMap, hash_balance_data
+from raiden.transfer.utils import hash_balance_data
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.packing import pack_balance_proof, pack_withdraw
 from raiden.utils.signer import recover
@@ -1853,14 +1854,27 @@ def register_onchain_secret(
     )
 
 
-def handle_action_close(
+@singledispatch
+def handle_state_transitions(
+    action: StateChange,
     channel_state: NettingChannelState,
-    close: ActionChannelClose,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
+) -> TransitionResult[Optional[NettingChannelState]]:
+    return TransitionResult(channel_state, [])
+
+
+@handle_state_transitions.register
+def _handle_action_close(
+    action: ActionChannelClose,
+    channel_state: NettingChannelState,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     msg = "caller must make sure the ids match"
-    assert channel_state.identifier == close.channel_identifier, msg
+    assert channel_state.identifier == action.channel_identifier, msg
 
     events = events_for_close(
         channel_state=channel_state, block_number=block_number, block_hash=block_hash
@@ -1868,37 +1882,40 @@ def handle_action_close(
     return TransitionResult(channel_state, events)
 
 
-def handle_action_withdraw(
+@handle_state_transitions.register
+def _handle_action_withdraw(
+    action: ActionChannelWithdraw,
     channel_state: NettingChannelState,
-    action_withdraw: ActionChannelWithdraw,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
-    is_valid_withdraw = is_valid_action_withdraw(channel_state, action_withdraw)
+    is_valid_withdraw = is_valid_action_withdraw(channel_state, action)
 
     if is_valid_withdraw:
         events = send_withdraw_request(
             channel_state=channel_state,
-            total_withdraw=action_withdraw.total_withdraw,
+            total_withdraw=action.total_withdraw,
             block_number=block_number,
             pseudo_random_generator=pseudo_random_generator,
-            recipient_metadata=action_withdraw.recipient_metadata,
+            recipient_metadata=action.recipient_metadata,
         )
     else:
         error_msg = is_valid_withdraw.as_error_message
-        assert error_msg, "is_valid_action_withdraw should return error msg if not valid"
+        assert error_msg, "is_valid_action should return error msg if not valid"
         events = [
-            EventInvalidActionWithdraw(
-                attempted_withdraw=action_withdraw.total_withdraw, reason=error_msg
-            )
+            EventInvalidActionWithdraw(attempted_withdraw=action.total_withdraw, reason=error_msg)
         ]
 
     return TransitionResult(channel_state, events)
 
 
-def handle_action_set_reveal_timeout(
-    channel_state: NettingChannelState, state_change: ActionChannelSetRevealTimeout
+@handle_state_transitions.register
+def _handle_action_set_reveal_timeout(
+    action: ActionChannelSetRevealTimeout,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
@@ -1907,48 +1924,49 @@ def handle_action_set_reveal_timeout(
         # + the min amount of blocks expected for that transaction to be mined according
         # to fastest gas strategy where a transaction takes roughly 60 seconds to
         # be mined, which is roughly equal to 7 blocks.
-        state_change.reveal_timeout >= 7
-        and channel_state.settle_timeout >= state_change.reveal_timeout * 2
+        action.reveal_timeout >= 7
+        and channel_state.settle_timeout >= action.reveal_timeout * 2
     )
 
     if is_valid_reveal_timeout:
-        channel_state.reveal_timeout = state_change.reveal_timeout
+        channel_state.reveal_timeout = action.reveal_timeout
     else:
         error_msg = "Settle timeout should be at least twice as large as reveal timeout"
         events = [
             EventInvalidActionSetRevealTimeout(
-                reveal_timeout=state_change.reveal_timeout, reason=error_msg
+                reveal_timeout=action.reveal_timeout, reason=error_msg
             )
         ]
 
     return TransitionResult(channel_state, events)
 
 
-def handle_receive_withdraw_request(
-    channel_state: NettingChannelState, withdraw_request: ReceiveWithdrawRequest
+@handle_state_transitions.register
+def _handle_receive_withdraw_request(
+    action: ReceiveWithdrawRequest,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    is_valid = is_valid_withdraw_request(
-        channel_state=channel_state, withdraw_request=withdraw_request
-    )
+    is_valid = is_valid_withdraw_request(channel_state=channel_state, withdraw_request=action)
     if is_valid:
         withdraw_state = PendingWithdrawState(
-            total_withdraw=withdraw_request.total_withdraw,
-            nonce=withdraw_request.nonce,
-            expiration=withdraw_request.expiration,
-            recipient_metadata=withdraw_request.sender_metadata,
+            total_withdraw=action.total_withdraw,
+            nonce=action.nonce,
+            expiration=action.expiration,
+            recipient_metadata=action.sender_metadata,
         )
         channel_state.partner_state.withdraws_pending[
             withdraw_state.total_withdraw
         ] = withdraw_state
-        channel_state.partner_state.nonce = withdraw_request.nonce
+        channel_state.partner_state.nonce = action.nonce
 
         channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
         send_withdraw = SendWithdrawConfirmation(
             canonical_identifier=channel_state.canonical_identifier,
             recipient=channel_state.partner_state.address,
-            recipient_metadata=withdraw_request.sender_metadata,
-            message_identifier=withdraw_request.message_identifier,
-            total_withdraw=withdraw_request.total_withdraw,
+            recipient_metadata=action.sender_metadata,
+            message_identifier=action.message_identifier,
+            total_withdraw=action.total_withdraw,
             participant=channel_state.partner_state.address,
             nonce=channel_state.our_state.nonce,
             expiration=withdraw_state.expiration,
@@ -1959,48 +1977,50 @@ def handle_receive_withdraw_request(
         error_msg = is_valid.as_error_message
         assert error_msg, "is_valid_withdraw_request should return error msg if not valid"
         invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(
-            attempted_withdraw=withdraw_request.total_withdraw, reason=error_msg
+            attempted_withdraw=action.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw_request]
 
     return TransitionResult(channel_state, events)
 
 
-def handle_receive_withdraw_confirmation(
+@handle_state_transitions.register
+def _handle_receive_withdraw_confirmation(
+    action: ReceiveWithdrawConfirmation,
     channel_state: NettingChannelState,
-    withdraw: ReceiveWithdrawConfirmation,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     is_valid = is_valid_withdraw_confirmation(
-        channel_state=channel_state, received_withdraw=withdraw
+        channel_state=channel_state, received_withdraw=action
     )
 
-    withdraw_state = channel_state.our_state.withdraws_pending.get(withdraw.total_withdraw)
+    withdraw_state = channel_state.our_state.withdraws_pending.get(action.total_withdraw)
     recipient_metadata = None
     if withdraw_state is not None:
         recipient_metadata = withdraw_state.recipient_metadata
 
     events: List[Event]
     if is_valid:
-        channel_state.partner_state.nonce = withdraw.nonce
+        channel_state.partner_state.nonce = action.nonce
         events = [
             SendProcessed(
                 recipient=channel_state.partner_state.address,
                 recipient_metadata=recipient_metadata,
-                message_identifier=withdraw.message_identifier,
+                message_identifier=action.message_identifier,
                 canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
             )
         ]
 
         # Only send the transaction on-chain if there is enough time for the
         # withdraw transaction to be mined
-        if withdraw.expiration >= block_number - channel_state.reveal_timeout:
+        if action.expiration >= block_number - channel_state.reveal_timeout:
             withdraw_on_chain = ContractSendChannelWithdraw(
-                canonical_identifier=withdraw.canonical_identifier,
-                total_withdraw=withdraw.total_withdraw,
-                partner_signature=withdraw.signature,
-                expiration=withdraw.expiration,
+                canonical_identifier=action.canonical_identifier,
+                total_withdraw=action.total_withdraw,
+                partner_signature=action.signature,
+                expiration=action.expiration,
                 triggered_by_block_hash=block_hash,
             )
             events.append(withdraw_on_chain)
@@ -2008,34 +2028,34 @@ def handle_receive_withdraw_confirmation(
         error_msg = is_valid.as_error_message
         assert error_msg, "is_valid_withdraw_confirmation should return error msg if not valid"
         invalid_withdraw = EventInvalidReceivedWithdraw(
-            attempted_withdraw=withdraw.total_withdraw, reason=error_msg
+            attempted_withdraw=action.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw]
 
     return TransitionResult(channel_state, events)
 
 
-def handle_receive_withdraw_expired(
+@handle_state_transitions.register
+def _handle_receive_withdraw_expired(
+    action: ReceiveWithdrawExpired,
     channel_state: NettingChannelState,
-    withdraw_expired: ReceiveWithdrawExpired,
     block_number: BlockNumber,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult:
     events: List[Event] = list()
 
-    withdraw_state = channel_state.partner_state.withdraws_pending.get(
-        withdraw_expired.total_withdraw
-    )
+    withdraw_state = channel_state.partner_state.withdraws_pending.get(action.total_withdraw)
 
     if not withdraw_state:
         invalid_withdraw_expired_msg = (
-            f"Withdraw expired of {withdraw_expired.total_withdraw} "
+            f"Withdraw expired of {action.total_withdraw} "
             f"did not correspond to previous withdraw request"
         )
         return TransitionResult(
             channel_state,
             [
                 EventInvalidReceivedWithdrawExpired(
-                    attempted_withdraw=withdraw_expired.total_withdraw,
+                    attempted_withdraw=action.total_withdraw,
                     reason=invalid_withdraw_expired_msg,
                 )
             ],
@@ -2043,19 +2063,19 @@ def handle_receive_withdraw_expired(
 
     is_valid = is_valid_withdraw_expired(
         channel_state=channel_state,
-        state_change=withdraw_expired,
+        state_change=action,
         withdraw_state=withdraw_state,
         block_number=block_number,
     )
     if is_valid:
         del channel_state.partner_state.withdraws_pending[withdraw_state.total_withdraw]
 
-        channel_state.partner_state.nonce = withdraw_expired.nonce
+        channel_state.partner_state.nonce = action.nonce
 
         send_processed = SendProcessed(
             recipient=channel_state.partner_state.address,
             recipient_metadata=withdraw_state.recipient_metadata,
-            message_identifier=withdraw_expired.message_identifier,
+            message_identifier=action.message_identifier,
             canonical_identifier=CANONICAL_IDENTIFIER_UNORDERED_QUEUE,
         )
         events = [send_processed]
@@ -2063,7 +2083,7 @@ def handle_receive_withdraw_expired(
         error_msg = is_valid.as_error_message
         assert error_msg, "is_valid_withdraw_expired should return error msg if not valid"
         invalid_withdraw_expired = EventInvalidReceivedWithdrawExpired(
-            attempted_withdraw=withdraw_expired.total_withdraw, reason=error_msg
+            attempted_withdraw=action.total_withdraw, reason=error_msg
         )
         events = [invalid_withdraw_expired]
 
@@ -2231,13 +2251,15 @@ def handle_unlock(
     return is_valid, events, msg
 
 
-def handle_block(
+@handle_state_transitions.register
+def _handle_block(
+    action: Block,
     channel_state: NettingChannelState,
-    state_change: Block,
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    assert state_change.block_number == block_number, "Block number mismatch"
+    assert action.block_number == block_number, "Block number mismatch"
 
     events: List[Event] = list()
 
@@ -2258,50 +2280,53 @@ def handle_block(
         closed_block_number = channel_state.close_transaction.finished_block_number
         settlement_end = closed_block_number + channel_state.settle_timeout
 
-        if state_change.block_number > settlement_end:
+        if action.block_number > settlement_end:
             channel_state.settle_transaction = TransactionExecutionStatus(
-                state_change.block_number, None, None
+                action.block_number, None, None
             )
             event = ContractSendChannelSettle(
                 canonical_identifier=channel_state.canonical_identifier,
-                triggered_by_block_hash=state_change.block_hash,
+                triggered_by_block_hash=action.block_hash,
             )
             events.append(event)
 
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_closed(
-    channel_state: NettingChannelState, state_change: ContractReceiveChannelClosed
+@handle_state_transitions.register
+def _handle_channel_closed(
+    action: ContractReceiveChannelClosed,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
     just_closed = (
-        state_change.channel_identifier == channel_state.identifier
+        action.channel_identifier == channel_state.identifier
         and get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED
     )
 
     if just_closed:
-        set_closed(channel_state, state_change.block_number)
+        set_closed(channel_state, action.block_number)
 
         balance_proof = channel_state.partner_state.balance_proof
         call_update = (
-            state_change.transaction_from != channel_state.our_state.address
+            action.transaction_from != channel_state.our_state.address
             and balance_proof is not None
             and channel_state.update_transaction is None
         )
         if call_update:
-            expiration = BlockExpiration(state_change.block_number + channel_state.settle_timeout)
+            expiration = BlockExpiration(action.block_number + channel_state.settle_timeout)
             assert isinstance(balance_proof, BalanceProofSignedState), MYPY_ANNOTATION
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
                 expiration=expiration,
                 balance_proof=balance_proof,
-                triggered_by_block_hash=state_change.block_hash,
+                triggered_by_block_hash=action.block_hash,
             )
             channel_state.update_transaction = TransactionExecutionStatus(
-                started_block_number=state_change.block_number,
+                started_block_number=action.block_number,
                 finished_block_number=None,
                 result=None,
             )
@@ -2310,12 +2335,14 @@ def handle_channel_closed(
     return TransitionResult(channel_state, events)
 
 
-def handle_channel_updated_transfer(
+@handle_state_transitions.register
+def _handle_channel_updated_transfer(
+    action: ContractReceiveUpdateTransfer,
     channel_state: NettingChannelState,
-    state_change: ContractReceiveUpdateTransfer,
     block_number: BlockNumber,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    if state_change.channel_identifier == channel_state.identifier:
+    if action.channel_identifier == channel_state.identifier:
         # update transfer was called, make sure we don't call it again
         channel_state.update_transaction = TransactionExecutionStatus(
             started_block_number=None,
@@ -2326,16 +2353,19 @@ def handle_channel_updated_transfer(
     return TransitionResult(channel_state, list())
 
 
-def handle_channel_settled(
-    channel_state: NettingChannelState, state_change: ContractReceiveChannelSettled
+@handle_state_transitions.register
+def _handle_channel_settled(
+    action: ContractReceiveChannelSettled,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
-    if state_change.channel_identifier == channel_state.identifier:
-        set_settled(channel_state, state_change.block_number)
+    if action.channel_identifier == channel_state.identifier:
+        set_settled(channel_state, action.block_number)
 
-        our_locksroot = state_change.our_onchain_locksroot
-        partner_locksroot = state_change.partner_onchain_locksroot
+        our_locksroot = action.our_onchain_locksroot
+        partner_locksroot = action.partner_onchain_locksroot
 
         should_clear_channel = (
             our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
@@ -2350,7 +2380,7 @@ def handle_channel_settled(
         onchain_unlock = ContractSendChannelBatchUnlock(
             canonical_identifier=channel_state.canonical_identifier,
             sender=channel_state.partner_state.address,
-            triggered_by_block_hash=state_change.block_hash,
+            triggered_by_block_hash=action.block_hash,
         )
         events.append(onchain_unlock)
 
@@ -2377,11 +2407,14 @@ def update_fee_schedule_after_balance_change(
     return []
 
 
-def handle_channel_deposit(
-    channel_state: NettingChannelState, state_change: ContractReceiveChannelDeposit
+@handle_state_transitions.register
+def _handle_channel_deposit(
+    action: ContractReceiveChannelDeposit,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    participant_address = state_change.deposit_transaction.participant_address
-    contract_balance = Balance(state_change.deposit_transaction.contract_balance)
+    participant_address = action.deposit_transaction.participant_address
+    contract_balance = Balance(action.deposit_transaction.contract_balance)
 
     if participant_address == channel_state.our_state.address:
         update_contract_balance(channel_state.our_state, contract_balance)
@@ -2389,39 +2422,45 @@ def handle_channel_deposit(
         update_contract_balance(channel_state.partner_state, contract_balance)
 
     # A deposit changes the total capacity of the channel and as such the fees need to change
-    update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    update_fee_schedule_after_balance_change(channel_state, action.fee_config)
     return TransitionResult(channel_state, [])
 
 
-def handle_channel_withdraw(
-    channel_state: NettingChannelState, state_change: ContractReceiveChannelWithdraw
+@handle_state_transitions.register
+def _handle_channel_withdraw(
+    action: ContractReceiveChannelWithdraw,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     """An on-chain total withdraw took place which means that we have to keep
     track of this not to go lower than the on-chain value. The value is set to
     onchain_total_withdraw and the corresponding withdraw_state is cleared.
     """
     participants = (channel_state.our_state.address, channel_state.partner_state.address)
-    if state_change.participant not in participants:
+    if action.participant not in participants:
         return TransitionResult(channel_state, list())
 
-    if state_change.participant == channel_state.our_state.address:
+    if action.participant == channel_state.our_state.address:
         end_state = channel_state.our_state
     else:
         end_state = channel_state.partner_state
 
-    withdraw_state = end_state.withdraws_pending.get(state_change.total_withdraw)
+    withdraw_state = end_state.withdraws_pending.get(action.total_withdraw)
     if withdraw_state:
-        del end_state.withdraws_pending[state_change.total_withdraw]
+        del end_state.withdraws_pending[action.total_withdraw]
 
-    end_state.onchain_total_withdraw = state_change.total_withdraw
+    end_state.onchain_total_withdraw = action.total_withdraw
 
     # A withdraw changes the total capacity of the channel and as such the fees need to change
-    update_fee_schedule_after_balance_change(channel_state, state_change.fee_config)
+    update_fee_schedule_after_balance_change(channel_state, action.fee_config)
     return TransitionResult(channel_state, [])
 
 
-def handle_channel_batch_unlock(
-    channel_state: NettingChannelState, state_change: ContractReceiveChannelBatchUnlock
+@handle_state_transitions.register
+def _handle_channel_batch_unlock(
+    action: ContractReceiveChannelBatchUnlock,
+    channel_state: NettingChannelState,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
@@ -2434,9 +2473,9 @@ def handle_channel_batch_unlock(
         partner_state = channel_state.partner_state
 
         # partner is the address of the sender
-        if state_change.sender == our_state.address:
+        if action.sender == our_state.address:
             our_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
-        elif state_change.sender == partner_state.address:
+        elif action.sender == partner_state.address:
             partner_state.onchain_locksroot = Locksroot(LOCKSROOT_OF_NO_LOCKS)
 
         # only clear the channel state once all unlocks have been done
@@ -2543,90 +2582,13 @@ def state_transition(
 ) -> TransitionResult[Optional[NettingChannelState]]:  # pragma: no unittest
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
-    events: List[Event] = list()
-    iteration: TransitionResult[Optional[NettingChannelState]] = TransitionResult(
-        channel_state, events
+    iteration: TransitionResult[Optional[NettingChannelState]] = handle_state_transitions(
+        state_change,
+        channel_state=channel_state,
+        block_number=block_number,
+        block_hash=block_hash,
+        pseudo_random_generator=pseudo_random_generator,
     )
-
-    transition_map: Dict[Any, FuncMap] = {
-        Block: FuncMap(
-            handle_block, (channel_state, state_change, block_number, pseudo_random_generator), {}
-        ),
-        ActionChannelClose: FuncMap(
-            handle_action_close,
-            (),
-            dict(
-                channel_state=channel_state,
-                close=state_change,
-                block_number=block_number,
-                block_hash=block_hash,
-            ),
-        ),
-        ActionChannelWithdraw: FuncMap(
-            handle_action_withdraw,
-            (),
-            dict(
-                channel_state=channel_state,
-                action_withdraw=state_change,
-                pseudo_random_generator=pseudo_random_generator,
-                block_number=block_number,
-            ),
-        ),
-        ActionChannelSetRevealTimeout: FuncMap(
-            handle_action_set_reveal_timeout,
-            (),
-            dict(channel_state=channel_state, state_change=state_change),
-        ),
-        ContractReceiveChannelClosed: FuncMap(
-            handle_channel_closed, (channel_state, state_change), {}
-        ),
-        ContractReceiveUpdateTransfer: FuncMap(
-            handle_channel_updated_transfer, (channel_state, state_change, block_number), {}
-        ),
-        ContractReceiveChannelSettled: FuncMap(
-            handle_channel_settled, (channel_state, state_change), {}
-        ),
-        ContractReceiveChannelDeposit: FuncMap(
-            handle_channel_deposit, (channel_state, state_change), {}
-        ),
-        ContractReceiveChannelBatchUnlock: FuncMap(
-            handle_channel_batch_unlock, (channel_state, state_change), {}
-        ),
-        ContractReceiveChannelWithdraw: FuncMap(
-            handle_channel_withdraw,
-            (),
-            dict(channel_state=channel_state, state_change=state_change),
-        ),
-        ReceiveWithdrawRequest: FuncMap(
-            handle_receive_withdraw_request,
-            (),
-            dict(channel_state=channel_state, withdraw_request=state_change),
-        ),
-        ReceiveWithdrawConfirmation: FuncMap(
-            handle_receive_withdraw_confirmation,
-            (),
-            dict(
-                channel_state=channel_state,
-                withdraw=state_change,
-                block_number=block_number,
-                block_hash=block_hash,
-            ),
-        ),
-        ReceiveWithdrawExpired: FuncMap(
-            handle_receive_withdraw_expired,
-            (),
-            dict(
-                channel_state=channel_state,
-                withdraw_expired=state_change,
-                block_number=block_number,
-            ),
-        ),
-    }
-
-    t_state_change = type(state_change)
-    func_map = transition_map.get(t_state_change)
-    if func_map:
-        iteration = func_map.function(*func_map.args, **func_map.kwargs)  # type: ignore
 
     if iteration.new_state is not None:
         sanity_check(iteration.new_state)
