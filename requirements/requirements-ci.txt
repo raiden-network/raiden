@@ -320,7 +320,7 @@ ipfshttpclient==0.7.0
     # via
     #   -r requirements-dev.txt
     #   web3
-ipython==7.25.0
+ipython==7.26.0
     # via -r requirements-dev.txt
 ipython-genutils==0.2.0
     # via
@@ -538,7 +538,7 @@ pygments==2.7.4
     #   ipython
     #   pdbpp
     #   readme-renderer
-pyinstaller==4.4
+pyinstaller==4.5
     # via -r requirements-ci.in
 pyinstaller-hooks-contrib==2020.7
     # via pyinstaller
@@ -748,7 +748,7 @@ types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
 types-pyyaml==5.4.3
     # via -r requirements-dev.txt
-types-requests==2.25.0
+types-requests==2.25.1
     # via -r requirements-dev.txt
 types-toml==0.1.3
     # via -r requirements-dev.txt
