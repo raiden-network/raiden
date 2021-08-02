@@ -538,7 +538,7 @@ pygments==2.7.4
     #   ipython
     #   pdbpp
     #   readme-renderer
-pyinstaller==4.4
+pyinstaller==4.5
     # via -r requirements-ci.in
 pyinstaller-hooks-contrib==2020.7
     # via pyinstaller
