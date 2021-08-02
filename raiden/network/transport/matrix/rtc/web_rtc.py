@@ -1,9 +1,8 @@
 import asyncio
 import json
 import time
-from asyncio import CancelledError, Event as AIOEvent, Task
-from dataclasses import dataclass, field
-from functools import partial
+from asyncio import CancelledError, Task
+from enum import Enum
 
 import gevent
 import structlog
@@ -11,153 +10,139 @@ from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSess
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 from gevent.event import Event as GEvent
 
-from raiden.constants import (
-    SDP_MID_DEFAULT,
-    SDP_MLINE_INDEX_DEFAULT,
-    WEB_RTC_CHANNEL_TIMEOUT,
-    ICEConnectionState,
-    MatrixMessageType,
-    RTCChannelState,
-    RTCMessageType,
-    RTCSignallingState,
-    SDPTypes,
-)
-from raiden.network.pathfinding import PFSProxy
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
-from raiden.network.transport.matrix.rtc.aiogevent import yield_future
-from raiden.network.transport.matrix.rtc.utils import create_task_callback, wrap_callback
-from raiden.network.transport.matrix.utils import my_place_or_yours, validate_and_parse_message
+from raiden.network.transport.matrix.rtc.aiogevent import wrap_greenlet, yield_future
+from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import (
-    Address,
-    AddressMetadata,
-    Any,
-    Callable,
-    Coroutine,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Union,
-)
+from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
 
 log = structlog.get_logger(__name__)
 
 
-class _CoroutineHandler:
+class _RTCMessageType(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+    CANDIDATES = "candidates"
+    HANGUP = "hangup"
+
+
+class _SDPTypes(Enum):
+    OFFER = "offer"
+    ANSWER = "answer"
+
+
+class _RTCChannelState(Enum):
+    CONNECTING = "connecting"
+    OPEN = "open"
+    CLOSING = "closing"
+    CLOSED = "closed"
+
+
+class _RTCSignallingState(Enum):
+    STABLE = "stable"
+    HAVE_LOCAL_OFFER = "have-local-offer"
+    HAVE_REMOTE_OFFER = "have-remote-offer"
+    CLOSED = "closed"
+
+
+class _ConnectionState(Enum):
+    NEW = "new"
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    FAILED = "failed"
+    CLOSED = "closed"
+
+
+_WEB_RTC_CHANNEL_TIMEOUT = 30.0
+_SDP_MID_DEFAULT = "0"
+_SDP_MLINE_INDEX_DEFAULT = 0
+
+
+class _TaskHandler:
     def __init__(self) -> None:
-        super().__init__()
-        self.coroutines: List[Task] = list()
+        self._tasks: List[Task] = []
+        self._greenlets: List[gevent.Greenlet] = []
 
     def schedule_task(
         self,
         coroutine: Coroutine,
-        callback: Callable[[Any, Any], None] = None,
+        callback: Callable[[Any], None] = None,
         *args: Any,
         **kwargs: Any,
-    ) -> Task:
+    ) -> None:
+        assert asyncio.iscoroutine(coroutine), "must be a coroutine"
 
         task = asyncio.create_task(coroutine)
         if callback is not None:
-            task_callback = create_task_callback(callback, *args, **kwargs)
-            task.add_done_callback(task_callback)
+            assert callable(callback), "must be a callable"
 
-        self.coroutines.append(task)
-        return task
+            def task_done(result: asyncio.Future) -> None:
+                # spawn a new greenlet that invokes the callback with the
+                # coroutine's result and provided args/kwargs
+                self.schedule_greenlet(callback, result.result(), *args, **kwargs)
 
-    async def wait_for_coroutines(self, cancel: bool = True) -> None:
+            task.add_done_callback(task_done)
 
-        if cancel:
-            self.cancel_all_pending()
+        self._tasks.append(task)
 
-        pending_coroutines = [coroutine for coroutine in self.coroutines if not coroutine.done()]
-        # This is done to have the bound keywords if it is of type _RTCPartner
+    def schedule_greenlet(
+        self, func: Callable[..., None] = None, *args: Any, **kwargs: Any
+    ) -> None:
+        greenlet = gevent.spawn(func, *args, **kwargs)
+        self._greenlets.append(greenlet)
+
+    async def wait_for_tasks(self) -> None:
+        tasks = self._tasks
+        self._tasks = []
+
+        for task in tasks:
+            if not task.done() and not task.cancelled():
+                task.cancel()
+
+        pending_tasks = [task for task in tasks if not task.done()]
+        # This is done to have the bound keywords if it is of type _RTCConnection
         logger = getattr(self, "log", log)
-        logger.debug("Waiting for coroutines", coroutines=pending_coroutines)
+        logger.debug("Waiting for tasks", tasks=pending_tasks)
 
         try:
-            return_values = await asyncio.gather(*pending_coroutines, return_exceptions=True)
+            return_values = await asyncio.gather(*pending_tasks, return_exceptions=True)
             for value in return_values:
                 if isinstance(value, Exception):
                     raise value
         except CancelledError:
             logger.debug(
-                "Pending coroutines cancelled",
-                cancelled=[coroutine for coroutine in self.coroutines if coroutine.cancelled()],
+                "Pending tasks cancelled",
+                cancelled=[task for task in tasks if task.cancelled()],
             )
 
-    def join_all_coroutines(self) -> None:
-        yield_future(self.wait_for_coroutines())
-
-    def cancel_all_pending(self) -> None:
-        for coroutine in self.coroutines:
-            if not coroutine.done() and not coroutine.cancelled():
-                coroutine.cancel()
+    def wait(self) -> None:
+        """Kill the greenlets and wait until all the tasks are done."""
+        gevent.killall(self._greenlets)
+        self._greenlets = []
+        yield_future(self.wait_for_tasks())
 
 
-class _RTCPartner(_CoroutineHandler):
-    @dataclass
-    class SyncEvents:
-        """
-        SyncEvents is a set of events which helps synchronizing the signaling process.
-        As not all messages of the signalling process (offer, answer, candidates, hangup) are
-        able to be processed in an arbitrary order, the events help to either wait or drop
-        incoming messages.
-
-        allow_candidates: when set candidates can be processed
-        allow_hangup: when set a hangup message can be processes
-
-        Conditions:
-
-        allow candidates after remote description is set (in process_signalling)
-        allow hang up only after at least one other message is received, drop otherwise
-        clear hang up after hang up is received
-
-        FIXME: This is not the best maintainable solution. Should be improved in the future
-               Data races will be reduced once there are unique call ids per connection
-               establishment (not partner)
-        """
-
-        aio_allow_candidates: AIOEvent = field(default_factory=AIOEvent)
-        aio_allow_hangup: AIOEvent = field(default_factory=AIOEvent)
-        reset_event: AIOEvent = field(default_factory=AIOEvent)
-
-        def reset(self) -> None:
-            self.reset_event.set()
-            self.set_all()
-            self.clear_all()
-
-        def set_all(self) -> None:
-            self.aio_allow_candidates.set()
-            self.aio_allow_hangup.set()
-
-        def clear_all(self) -> None:
-            self.aio_allow_candidates.clear()
-            self.aio_allow_hangup.clear()
-
-        async def wait_for_candidates(self) -> None:
-            await self.aio_allow_candidates.wait()
-
-        async def wait_for_hangup(self) -> None:
-            await self.aio_allow_hangup.wait()
-
+class _RTCConnection(_TaskHandler):
     def __init__(
         self,
         partner_address: Address,
         node_address: Address,
-        _handle_message_callback: Callable[[str, Address], None],
-        _handle_candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
-        _close_connection_callback: Callable[[Address], None],
+        signaling_send: Callable[[Address, str], None],
+        ice_connection_closed: Callable[["_RTCConnection"], None],
+        handle_message_callback: Callable[[str, Address], None],
     ) -> None:
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
-        self._handle_message_callback = _handle_message_callback
-        self._handle_candidates_callback = _handle_candidates_callback
-        self._close_connection_callback = _close_connection_callback
-        self.channel: Optional[RTCDataChannel] = None
-        self.sync_events = _RTCPartner.SyncEvents()
+        self._call_id = self._make_call_id()
+        self._signaling_send = signaling_send
+        self._ice_connection_closed = ice_connection_closed
+        self._handle_message_callback = handle_message_callback
+        self._aio_allow_candidates = asyncio.Event()
+        self._aio_allow_remote_desc = asyncio.Event()
+        self._channel: Optional[RTCDataChannel] = None
+        self._initiator_address = node_address
         self.log = log.bind(
             node=to_checksum_address(node_address),
             partner_address=to_checksum_address(partner_address),
@@ -166,45 +151,47 @@ class _RTCPartner(_CoroutineHandler):
 
     def _setup_peer_connection(self) -> None:
         self.peer_connection = RTCPeerConnection()
-        self.peer_connection.on(
-            "icegatheringstatechange",
-            partial(
-                _on_ice_gathering_state_change,
-                rtc_partner=self,
-                candidates_callback=self._handle_candidates_callback,
-            ),
-        )
-        self.peer_connection.on(
-            "signalingstatechange",
-            partial(_on_signalling_state_change, rtc_partner=self),
-        )
+        self.peer_connection.on("icegatheringstatechange", self._on_ice_gathering_state_change)
+        self.peer_connection.on("signalingstatechange", self._on_signalling_state_change)
+        self.peer_connection.on("connectionstatechange", self._on_connection_state_change)
 
-        self.peer_connection.on(
-            "iceconnectionstatechange",
-            partial(
-                _on_ice_connection_state_change,
-                rtc_partner=self,
-                closed_callback=self._close_connection_callback,
-            ),
+    @staticmethod
+    def from_offer(
+        partner_address: Address,
+        node_address: Address,
+        signaling_send: Callable[[Address, str], None],
+        ice_connection_closed: Callable[["_RTCConnection"], None],
+        handle_message_callback: Callable[[str, Address], None],
+        offer: Dict[str, str],
+    ) -> "_RTCConnection":
+        conn = _RTCConnection(
+            partner_address,
+            node_address,
+            signaling_send,
+            ice_connection_closed,
+            handle_message_callback,
         )
+        conn._call_id = offer["call_id"]
+        conn._initiator_address = partner_address
+        return conn
 
-    def set_channel_callbacks(self) -> None:
-        if self.channel is None:
-            return
+    @property
+    def initiator_address(self) -> Address:
+        return self._initiator_address
 
-        self.channel.on(
-            "message", partial(_on_channel_message, self, self._handle_message_callback)
+    def _set_channel_callbacks(self) -> None:
+        assert self._channel is not None, "must be set"
+        self._channel.on("message", self._on_channel_message)
+        self._channel.on("open", self._on_channel_open)
+
+    def channel_open(self) -> bool:
+        return (
+            self._channel is not None and self._channel.readyState == _RTCChannelState.OPEN.value
         )
-        self.channel.on("close", partial(_on_channel_close, self, self.node_address))
-        self.channel.on("open", partial(_on_channel_open, self.node_address, self.channel))
 
     @property
     def call_id(self) -> str:
-        lower_address = my_place_or_yours(self.node_address, self.partner_address)
-        higher_address = (
-            self.partner_address if lower_address == self.node_address else self.node_address
-        )
-        return f"{to_checksum_address(lower_address)}|{to_checksum_address(higher_address)}"
+        return self._call_id
 
     async def _try_signaling(self, coroutine: Coroutine) -> Optional[Any]:
         try:
@@ -212,91 +199,81 @@ class _RTCPartner(_CoroutineHandler):
         except InvalidStateError:
             # this can happen if peer connection gets closed while awaiting in the try block
             self.log.debug(
-                "Connection state in incompatible state",
+                "Invalid connection state",
                 signaling_state=self.peer_connection.signalingState,
                 ice_connection_state=self.peer_connection.iceConnectionState,
             )
-            asyncio.create_task(self.close())
+            self.close()
             return None
 
         except AttributeError:
             self.log.exception("Attribute error in coroutine", coroutine=coroutine)
-            asyncio.create_task(self.close())
+            self.close()
             return None
 
     async def _set_local_description(self, description: RTCSessionDescription) -> None:
         self.log.debug("Set local description", description=description)
         await self._try_signaling(self.peer_connection.setLocalDescription(description))
+        self._aio_allow_remote_desc.set()
 
-    async def initialize_signalling(
-        self,
-    ) -> Optional[RTCSessionDescription]:
+    def _make_call_id(self) -> str:
+        timestamp = time.time()
+        # initiator needs to come first
+        address1, address2 = self.node_address, self.partner_address
+        return f"{to_checksum_address(address1)}|{to_checksum_address(address2)}|{timestamp}"
+
+    async def _initialize_signaling(self) -> Optional[RTCSessionDescription]:
         """Coroutine to create channel. Setting up channel in aiortc"""
 
-        if self.sync_events.reset_event.is_set():
-            return None
-
-        self.channel = self.peer_connection.createDataChannel(self.call_id)
-        self.set_channel_callbacks()
+        self._channel = self.peer_connection.createDataChannel(self.call_id)
+        self._set_channel_callbacks()
         offer = await self._try_signaling(self.peer_connection.createOffer())
         if offer is None:
             return None
-        self.log.debug("Created offer", offer=offer)
+        self.log.debug("Created WebRTC offer", offer=offer)
 
         self.schedule_task(self._set_local_description(offer))
-        # hang up messages are allowed to be processed now
-        self.sync_events.aio_allow_hangup.set()
         return offer
 
-    async def process_signalling(
+    def initialize_signaling(self) -> None:
+        self.schedule_task(self._initialize_signaling(), callback=self._handle_sdp_callback)
+
+    async def _process_signaling(
         self, description: Dict[str, str]
     ) -> Optional[RTCSessionDescription]:
-        """Coroutine to set remote description. Sets remote description in aiortc"""
-
-        if self.sync_events.reset_event.is_set():
-            self.log.debug("Reset called. Returning on coroutine")
-            return None
-
         remote_description = RTCSessionDescription(description["sdp"], description["type"])
         sdp_type = description["type"]
-        # We need to wait for
-        self.log.debug(
-            "Wait for existing tasks before setting remote description",
-            coroutines=self.coroutines,
-        )
-        await self.wait_for_coroutines(cancel=False)
+
+        # If we initiated the signaling process, wait until the local
+        # description is set.
+        if self._initiator_address == self.node_address:
+            await self._aio_allow_remote_desc.wait()
+
         self.log.debug("Set Remote Description", description=description)
         await self._try_signaling(self.peer_connection.setRemoteDescription(remote_description))
 
         if self.peer_connection.remoteDescription is None:
             return None
 
-        self.sync_events.aio_allow_hangup.set()
-
-        if sdp_type == SDPTypes.ANSWER.value:
+        if sdp_type == _SDPTypes.ANSWER.value:
             return None
 
-        self.peer_connection.on(
-            "datachannel",
-            partial(_on_datachannel, self, self.node_address),
-        )
+        self.peer_connection.on("datachannel", self._on_datachannel)
         answer = await self._try_signaling(self.peer_connection.createAnswer())
         if answer is None:
             return None
 
-        self.schedule_task(
-            self._set_local_description(answer),
-            callback=None,
-        )
+        self.schedule_task(self._set_local_description(answer))
         return answer
 
-    async def set_candidates(self, content: Dict[str, Any]) -> None:
+    def process_signaling(self, description: Dict[str, str]) -> None:
+        self.schedule_task(
+            self._process_signaling(description), callback=self._handle_sdp_callback
+        )
 
+    async def _set_candidates(self, content: Dict[str, Any]) -> None:
         if self.peer_connection.sctp is None:
-            await self.sync_events.wait_for_candidates()
-            if self.sync_events.reset_event.is_set():
-                self.log.debug("Reset called. Returning on coroutine")
-                return None
+            await self._aio_allow_candidates.wait()
 
         assert self.peer_connection.sctp, "SCTP should be set by now"
 
@@ -315,17 +292,20 @@ class _RTCPartner(_CoroutineHandler):
                 continue
             await self.peer_connection.addIceCandidate(rtc_ice_candidate)
 
-    async def send_message(self, message: str) -> None:
+    def set_candidates(self, content: Dict[str, Any]) -> None:
+        self.schedule_task(self._set_candidates(content))
+
+    async def _send_message(self, message: str) -> None:
         """Sends message through aiortc. Not an async function. Output is written to buffer"""
 
-        if self.channel is not None and self.channel.readyState == RTCChannelState.OPEN.value:
+        if self._channel is not None and self._channel.readyState == _RTCChannelState.OPEN.value:
             self.log.debug(
                 "Sending message in asyncio kingdom",
-                channel=self.channel.label,
+                channel=self._channel.label,
                 message=message,
                 time=time.time(),
             )
-            self.channel.send(message)
+            self._channel.send(message)
 
             try:
                 # empty outbound queue by transmitting chunks
@@ -336,62 +316,164 @@ class _RTCPartner(_CoroutineHandler):
                 await self.peer_connection.sctp._transmit()
             except ConnectionError:
                 self.log.debug("Connection error occurred while trying to send message")
-                await self.close()
+                await self._close()
                 return
-
         else:
             self.log.debug(
                 "Channel is not open but trying to send a message.",
-                ready_state=self.channel.readyState
-                if self.channel is not None
+                ready_state=self._channel.readyState
+                if self._channel is not None
                 else "No channel exists",
             )
 
-    async def close(self) -> None:
+    def send_message(self, message: str) -> None:
+        self.schedule_task(self._send_message(message))
+
+    async def _close(self) -> None:
         self.log.debug("Closing peer connection")
         await self.peer_connection.close()
-        if self.channel:
-            self.channel.close()
+        if self._channel is not None:
+            self._channel.close()
+            self._channel = None
+        await self.wait_for_tasks()
+        await wrap_greenlet(gevent.spawn(gevent.joinall, self._greenlets, raise_error=True))
+        self._ice_connection_closed(self)
 
-    async def reset(self) -> None:
-        self.sync_events.reset()
-        await self.wait_for_coroutines()
-        self.sync_events.reset_event.clear()
-        self._setup_peer_connection()
-        self.channel = None
+    def close(self) -> None:
+        asyncio.create_task(self._close())
+
+    def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
+        message = {
+            "type": _RTCMessageType.CANDIDATES.value,
+            "candidates": candidates,
+            "call_id": self.call_id,
+        }
+        self._signaling_send(self.partner_address, json.dumps(message))
+
+    def send_hangup_message(self) -> None:
+        hangup_message = {
+            "type": _RTCMessageType.HANGUP.value,
+            "call_id": self.call_id,
+        }
+        self._signaling_send(self.partner_address, json.dumps(hangup_message))
+
+    def _handle_sdp_callback(
+        self, rtc_session_description: Optional[RTCSessionDescription]
+    ) -> None:
+        """
+        This is a callback function to process SDP (Session Description Protocol) messages.
+        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
+        signalling. Messages are exchanged via Matrix.
+        Args:
+            rtc_session_description: sdp message for the partner
+        """
+        if rtc_session_description is None:
+            return
+
+        sdp_type = rtc_session_description.type
+        message = {
+            "type": sdp_type,
+            "sdp": rtc_session_description.sdp,
+            "call_id": self.call_id,
+        }
+        self.log.debug(
+            f"Send {sdp_type} to partner",
+            partner_address=to_checksum_address(self.partner_address),
+            sdp_description=message,
+        )
+
+        self._signaling_send(self.partner_address, json.dumps(message))
+
+    def __repr__(self) -> str:
+        return f"<_RTCConnection[{hex(id(self))}] {self.call_id}>"
+
+    def _on_datachannel(self, channel: RTCDataChannel) -> None:
+        self._channel = channel
+        self._on_channel_open()
+        self._set_channel_callbacks()
+
+    def _on_channel_open(self) -> None:
+        assert self._channel is not None, "must be set"
+        self.log.debug(
+            "WebRTC data channel open",
+            node=to_checksum_address(self.node_address),
+            label=self._channel.label,
+        )
+
+    def _on_channel_message(self, message: str) -> None:
+        assert self._channel is not None, "channel not set but received message"
+        self.log.debug(
+            "Received message in asyncio kingdom",
+            channel=self._channel.label,
+            message=message,
+            time=time.time(),
+        )
+
+        self.schedule_greenlet(
+            self._handle_message_callback,
+            message_data=message,
+            partner_address=self.partner_address,
+        )
+
+    def _on_ice_gathering_state_change(self) -> None:
+        self.log.debug("ICE gathering state changed", state=self.peer_connection.iceGatheringState)
+
+        if self.peer_connection.iceGatheringState != "complete":
+            return
+
+        # candidates are ready
+        rtc_ice_candidates = (
+            self.peer_connection.sctp.transport.transport.iceGatherer.getLocalCandidates()
+        )
+
+        candidates = []
+        for candidate in rtc_ice_candidates:
+            candidate = {
+                "candidate": f"candidate:{candidate_to_sdp(candidate)}",
+                "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else _SDP_MID_DEFAULT,
+                "sdpMLineIndex": candidate.sdpMLineIndex is not None
+                if candidate.sdpMLineIndex
+                else _SDP_MLINE_INDEX_DEFAULT,
+            }
+            candidates.append(candidate)
+
+        self.schedule_greenlet(self._handle_candidates_callback, candidates=candidates)
+
+    def _on_connection_state_change(self) -> None:
+        connection_state = self.peer_connection.connectionState
+        self.log.debug("Connection state changed", connection_state=connection_state)
+
+        if connection_state in (_ConnectionState.CLOSED.value, _ConnectionState.FAILED.value):
+            self.close()
+
+    def _on_signalling_state_change(self) -> None:
+        signaling_state = self.peer_connection.signalingState
+        self.log.debug("Signaling state changed", signaling_state=signaling_state)
+        # if signaling state is closed also set allow candidates otherwise
+        # coroutine will hang forever
+        if signaling_state in (
+            _RTCSignallingState.HAVE_REMOTE_OFFER.value,
+            _RTCSignallingState.CLOSED.value,
+        ):
+            self._aio_allow_candidates.set()
 
 
-def _query_metadata(pfs_proxy: PFSProxy, address: Address) -> Optional[AddressMetadata]:
-    try:
-        metadata = pfs_proxy.query_address_metadata(address)
-    except Exception as e:
-        log.error(str(e))
-    else:
-        return metadata
-    return None
-
-
-@dataclass
-class WebRTCManager(_CoroutineHandler, Runnable):
+class WebRTCManager(Runnable):
     def __init__(
         self,
         node_address: Address,
-        pfs_proxy: PFSProxy,
         process_messages: Callable[[List[ReceivedRaidenMessage]], None],
-        signaling_send: Callable[
-            [Address, str, MatrixMessageType, Optional[AddressMetadata]], None
-        ],
+        signaling_send: Callable[[Address, str], None],
         stop_event: GEvent,
     ) -> None:
         super().__init__()
         self.node_address = node_address
-        self._pfs_proxy = pfs_proxy
         self._process_messages = process_messages
         self._signaling_send = signaling_send
         self._stop_event = stop_event
         # the addresses for which we're currently trying to initialize WebRTC channels
         self._web_rtc_channel_inits: Set[Address] = set()
-        self._address_to_rtc_partners: Dict[Address, _RTCPartner] = {}
+        self._address_to_connection: Dict[Address, _RTCConnection] = {}
         self.log = log.bind(node=to_checksum_address(node_address))
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
@@ -400,323 +482,142 @@ class WebRTCManager(_CoroutineHandler, Runnable):
             messages.append(ReceivedRaidenMessage(message=msg, sender=partner_address))
         self._process_messages(messages)
 
-    def _handle_candidates_callback(
-        self, candidates: List[Dict[str, Union[int, str]]], partner_address: Address
-    ) -> None:
-        rtc_partner = self.get_rtc_partner(partner_address)
-        message = {
-            "type": RTCMessageType.CANDIDATES.value,
-            "candidates": candidates,
-            "call_id": rtc_partner.call_id,
-        }
-        self._send_signaling_message(partner_address, json.dumps(message))
+    def _handle_ice_connection_closed(self, conn: _RTCConnection) -> None:
+        # the connection may have already been removed by close_connection
+        self._address_to_connection.pop(conn.partner_address, None)
 
-    def _handle_sdp_callback(
-        self, rtc_session_description: Optional[RTCSessionDescription], partner_address: Address
-    ) -> None:
-        """
-        This is a callback function to process sdp (session description protocol) messages.
-        These messages are part of the ROAP (RTC Offer Answer Protocol) which is also called
-        signalling. Messages are exchanged via the partners' private matrix room.
-        Args:
-            rtc_session_description: sdp message for the partner
-            partner_address: Address of the partner
-        """
-        if rtc_session_description is None:
-            return
-
-        rtc_partner = self.get_rtc_partner(partner_address)
-
-        sdp_type = rtc_session_description.type
-        message = {
-            "type": sdp_type,
-            "sdp": rtc_session_description.sdp,
-            "call_id": rtc_partner.call_id,
-        }
-        self.log.debug(
-            f"Send {sdp_type} to partner",
-            partner_address=to_checksum_address(partner_address),
-            sdp_description=message,
-        )
-
-        self._send_signaling_message(partner_address, json.dumps(message))
-
-    def _maybe_initialize_web_rtc(self, address: Address) -> None:
-        if address in self._web_rtc_channel_inits:
-            return
-
-        lower_address = my_place_or_yours(self.node_address, address)
-
-        if lower_address == self.node_address:
-            self.log.debug(
-                "Spawning initialize web rtc for partner",
-                partner_address=to_checksum_address(address),
-            )
-            self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, address)
+        # only do a health check if we were the initiator
+        if conn.initiator_address == self.node_address:
+            self.health_check(conn.partner_address)
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
-        self._web_rtc_channel_inits.add(address)
-        try:
-            return self._initialize_web_rtc(address)
-        finally:
-            self._web_rtc_channel_inits.remove(address)
+        if address in self._web_rtc_channel_inits:
+            return
+        attempt = 0
+        while attempt < 3 and not self.has_ready_channel(address):
+            self._web_rtc_channel_inits.add(address)
+            try:
+                self._initialize_web_rtc(address)
+            finally:
+                self._web_rtc_channel_inits.remove(address)
+            attempt += 1
 
     def _initialize_web_rtc(self, partner_address: Address) -> None:
         if self._stop_event.is_set():
             return
 
         self.log.debug(
-            "Initiating web rtc",
+            "Establishing WebRTC channel",
             partner_address=to_checksum_address(partner_address),
         )
 
-        rtc_partner = self.get_rtc_partner(partner_address)
-        self.schedule_task(
-            coroutine=rtc_partner.initialize_signalling(),
-            callback=self._handle_sdp_callback,
-            partner_address=partner_address,
+        conn = _RTCConnection(
+            partner_address,
+            self.node_address,
+            self._signaling_send,
+            self._handle_ice_connection_closed,
+            self._handle_message,
         )
+        self._add_connection(partner_address, conn)
+        conn.initialize_signaling()
 
-        # wait for WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
-        if self._stop_event.wait(timeout=WEB_RTC_CHANNEL_TIMEOUT):
+        # wait for _WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
+        if self._stop_event.wait(timeout=_WEB_RTC_CHANNEL_TIMEOUT):
             return
 
-        # if room is not None that means we are at least in the second iteration
-        # call hang up to sync with the partner about a retry
         if not self.has_ready_channel(partner_address):
             self.log.debug(
                 "Could not establish channel",
                 partner_address=to_checksum_address(partner_address),
             )
-            hang_up_message = {
-                "type": RTCMessageType.HANGUP.value,
-                "call_id": self.get_rtc_partner(partner_address).call_id,
-            }
-            self._send_signaling_message(partner_address, json.dumps(hang_up_message))
+            conn.send_hangup_message()
             self.close_connection(partner_address)
 
-    def _handle_closed_connection(self, partner_address: Address) -> None:
-        # XXX-UAM: Reachability check was here
-
-        # FIXME: temporary sleep to stretch two signaling processes a bit
-        #        with a unique call id for each try this wont be necessary
-        gevent.sleep(3)
-        self._maybe_initialize_web_rtc(partner_address)
-
-    def get_rtc_partner(self, partner_address: Address) -> _RTCPartner:
-        if partner_address not in self._address_to_rtc_partners:
-
-            self._address_to_rtc_partners[partner_address] = _RTCPartner(
-                partner_address,
-                self.node_address,
-                self._handle_message,
-                self._handle_candidates_callback,
-                self._handle_closed_connection,
-            )
-
-        return self._address_to_rtc_partners[partner_address]
+    def _add_connection(self, partner_address: Address, conn: _RTCConnection) -> None:
+        assert partner_address not in self._address_to_connection, "must not be there already"
+        self._address_to_connection[partner_address] = conn
 
     def has_ready_channel(self, partner_address: Address) -> bool:
-        if partner_address not in self._address_to_rtc_partners:
-            return False
-        channel = self._address_to_rtc_partners[partner_address].channel
-        if channel is None:
-            return False
-        if channel.readyState == RTCChannelState.OPEN.value:
-            return True
-        return False
+        conn = self._address_to_connection.get(partner_address)
+        return conn is not None and conn.channel_open()
 
     def _reset_state(self) -> None:
-        self._address_to_rtc_partners = {}
+        self._address_to_connection = {}
 
     def _set_candidates_for_address(
         self, partner_address: Address, content: Dict[str, Any]
     ) -> None:
-        rtc_partner = self.get_rtc_partner(partner_address)
-        self.schedule_task(rtc_partner.set_candidates(content))
+        conn = self._address_to_connection.get(partner_address)
+        if conn is not None:
+            conn.set_candidates(content)
 
-    def _process_signalling_for_address(
-        self, partner_address: Address, description: Dict[str, str]
+    def _process_signaling_for_address(
+        self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
-        rtc_partner = self.get_rtc_partner(partner_address)
+        conn = self._address_to_connection.get(partner_address)
+        if rtc_message_type == _RTCMessageType.OFFER.value:
+            if conn is not None:
+                if conn.call_id < description["call_id"]:
+                    self.close_connection(partner_address)
+                else:
+                    # drop the offer, it's older than what we have
+                    return
+            conn = _RTCConnection.from_offer(
+                partner_address,
+                self.node_address,
+                self._signaling_send,
+                self._handle_ice_connection_closed,
+                self._handle_message,
+                description,
+            )
+            self._add_connection(partner_address, conn)
+        else:
+            if conn is None:
+                # we got an answer for a connection we already removed
+                return
 
-        self.schedule_task(
-            coroutine=rtc_partner.process_signalling(description=description),
-            callback=self._handle_sdp_callback,
-            partner_address=partner_address,
-        )
+        conn.process_signaling(description)
 
-    def send_message_for_address(self, partner_address: Address, message: str) -> None:
-        rtc_partner = self._address_to_rtc_partners[partner_address]
-        self.schedule_task(rtc_partner.send_message(message))
+    def send_message(self, partner_address: Address, message: str) -> None:
+        conn = self._address_to_connection[partner_address]
+        conn.send_message(message)
 
     def health_check(self, partner_address: Address) -> None:
-        self._maybe_initialize_web_rtc(partner_address)
+        self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
-    def close_connection(self, partner_address: Address) -> Optional[Task]:
-        rtc_partner = self._address_to_rtc_partners.get(partner_address, None)
+    def close_connection(self, partner_address: Address) -> None:
+        conn = self._address_to_connection.pop(partner_address, None)
+        if conn is not None:
+            conn.close()
 
-        if rtc_partner is not None:
-            rtc_partner.sync_events.clear_all()
-            return self.schedule_task(rtc_partner.close())
-
-        return None
-
-    def process_signalling_message(
+    def process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
     ) -> None:
         if (
-            rtc_message_type in [RTCMessageType.OFFER.value, RTCMessageType.ANSWER.value]
+            rtc_message_type in [_RTCMessageType.OFFER.value, _RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            self._process_signalling_for_address(partner_address, content)
-        elif rtc_message_type == RTCMessageType.HANGUP.value:
+            self._process_signaling_for_address(partner_address, rtc_message_type, content)
+        elif rtc_message_type == _RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
-        elif rtc_message_type == RTCMessageType.CANDIDATES.value:
+        elif rtc_message_type == _RTCMessageType.CANDIDATES.value:
             self._set_candidates_for_address(partner_address, content)
         else:
             self.log.error(
-                "Unknown rtc message type",
+                "Unknown WebRTC message type",
                 partner_address=to_checksum_address(partner_address),
                 type=rtc_message_type,
             )
 
     def stop(self) -> None:
-        self.log.debug("Closing rtc connections")
+        self.log.debug("Closing WebRTC connections")
 
-        self._send_hangup_messages()
+        for conn in tuple(self._address_to_connection.values()):
+            conn.send_hangup_message()
 
-        for partner_address in list(self._address_to_rtc_partners.keys()):
-            if partner_address in self._address_to_rtc_partners:
-                rtc_partner = self._address_to_rtc_partners[partner_address]
-                close_task = self.close_connection(partner_address)
-                rtc_partner.join_all_coroutines()
-                if close_task is not None:
-                    yield_future(close_task)
+        for partner_address, conn in self._address_to_connection.copy().items():
+            self.close_connection(partner_address)
+            conn.wait()
 
-        self.join_all_coroutines()
+        gevent.killall(self.greenlets)
         self._reset_state()
-
-    def _send_signaling_message(self, address: Address, message: str) -> None:
-        metadata = _query_metadata(self._pfs_proxy, address)
-        self._signaling_send(address, message, MatrixMessageType.NOTICE, metadata)
-
-    def _send_hangup_messages(self) -> None:
-        for partner_address, rtc_partner in self._address_to_rtc_partners.items():
-            hang_up_message = {
-                "type": RTCMessageType.HANGUP.value,
-                "call_id": rtc_partner.call_id,
-            }
-            self._send_signaling_message(partner_address, json.dumps(hang_up_message))
-
-
-def _on_datachannel(
-    rtc_partner: _RTCPartner,
-    node_address: Address,
-    channel: RTCDataChannel,
-) -> None:
-    rtc_partner.channel = channel
-    _on_channel_open(node_address, channel)
-    rtc_partner.set_channel_callbacks()
-
-
-def _on_channel_open(node_address: Address, channel: RTCDataChannel) -> None:
-    log.debug("Rtc datachannel open", node=to_checksum_address(node_address), label=channel.label)
-
-
-def _on_channel_close(rtc_partner: _RTCPartner, node_address: Address) -> None:
-    """callback if channel is closed. It is part of a partial function"""
-    if rtc_partner.channel is not None:
-        log.debug(
-            "Rtc datachannel closed",
-            node=to_checksum_address(node_address),
-            label=rtc_partner.channel.label,
-        )
-        # remove all listeners on channel to not receive events anymore
-        rtc_partner.channel.remove_all_listeners()
-        rtc_partner.channel = None
-        if rtc_partner.peer_connection.iceConnectionState in [
-            ICEConnectionState.COMPLETED,
-            ICEConnectionState.CHECKING,
-        ]:
-            rtc_partner.schedule_task(rtc_partner.close())
-
-
-def _on_channel_message(
-    rtc_partner: _RTCPartner,
-    handle_message_callback: Callable[[str, Address], None],
-    message: str,
-) -> None:
-    """callback if message is received. It is part of a partial function"""
-    assert rtc_partner.channel, "channel not set but received message"
-    rtc_partner.log.debug(
-        "Received message in asyncio kingdom",
-        channel=rtc_partner.channel.label,
-        message=message,
-        time=time.time(),
-    )
-
-    wrap_callback(
-        handle_message_callback, message_data=message, partner_address=rtc_partner.partner_address
-    )
-
-
-def _on_ice_gathering_state_change(
-    rtc_partner: _RTCPartner,
-    candidates_callback: Callable[[List[Dict[str, Union[int, str]]], Address], None],
-) -> None:
-    peer_connection = rtc_partner.peer_connection
-    rtc_partner.log.debug(
-        "ICE gathering state changed",
-        state=peer_connection.iceGatheringState,
-    )
-
-    if peer_connection.iceGatheringState == "complete":
-        # candidates are ready
-        rtc_ice_candidates = (
-            peer_connection.sctp.transport.transport.iceGatherer.getLocalCandidates()
-        )
-
-        candidates = list()
-
-        for candidate in rtc_ice_candidates:
-            candidate = {
-                "candidate": f"candidate:{candidate_to_sdp(candidate)}",
-                "sdpMid": candidate.sdpMid if candidate.sdpMid is not None else SDP_MID_DEFAULT,
-                "sdpMLineIndex": candidate.sdpMLineIndex is not None
-                if candidate.sdpMLineIndex
-                else SDP_MLINE_INDEX_DEFAULT,
-            }
-            candidates.append(candidate)
-
-        wrap_callback(
-            callback=candidates_callback,
-            candidates=candidates,
-            partner_address=rtc_partner.partner_address,
-        )
-
-
-def _on_ice_connection_state_change(
-    rtc_partner: _RTCPartner, closed_callback: Callable[[Address], None]
-) -> None:
-    ice_connection_state = rtc_partner.peer_connection.iceConnectionState
-    rtc_partner.log.debug("Ice connection state changed", signaling_state=ice_connection_state)
-
-    if ice_connection_state in [ICEConnectionState.CLOSED.value, ICEConnectionState.FAILED.value]:
-        asyncio.create_task(rtc_partner.reset())
-        wrap_callback(callback=closed_callback, partner_address=rtc_partner.partner_address)
-
-
-def _on_signalling_state_change(rtc_partner: _RTCPartner) -> None:
-    signaling_state = rtc_partner.peer_connection.signalingState
-    rtc_partner.log.debug(
-        "Signaling state changed",
-        signaling_state=signaling_state,
-    )
-    # if signaling state is closed also set allow candidates otherwise
-    # coroutine will hang forever
-    if signaling_state in [
-        RTCSignallingState.HAVE_REMOTE_OFFER.value,
-        RTCSignallingState.CLOSED.value,
-    ]:
-        rtc_partner.sync_events.aio_allow_candidates.set()

@@ -117,7 +117,6 @@ def mock_matrix(
     transport._raiden_service = mock_raiden_service
     transport._web_rtc_manager = WebRTCManager(
         mock_raiden_service.address,
-        mock_raiden_service.pfs_proxy,
         transport._process_raiden_messages,
         transport._send_raw,
         transport._stop_event,
