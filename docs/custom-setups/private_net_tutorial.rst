@@ -65,20 +65,20 @@ Prepare a file ``genesis.json`` with the following content.
  <snip>/priv_chain
  (env) $ cat genesis.json
  {
- "config": {
- "chainId": 4321,
- "homesteadBlock": 0,
- "eip150Block": 0,
- "eip155Block": 0,
- "eip158Block": 0,
- "ByzantiumBlock": 0,
- "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
- "ConstantinopleBlock": 0,
- "PetersburgBlock": 0
- },
- "alloc": {},
- "difficulty" : "0x1",
- "gasLimit"   : "0x9880000"
+  "config": {
+    "chainId": 4321,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "ByzantiumBlock": 0,
+    "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "ConstantinopleBlock": 0,
+    "PetersburgBlock": 0
+  },
+  "alloc": {},
+  "difficulty": "0x1",
+  "gasLimit": "0x9880000"
  }
 
 Starting a chain
@@ -96,13 +96,21 @@ With the ``genesis.json`` you can initialize a blockchain.
  > personal.newAccount()
  "0xd4de892c06cf4a0557c7d515f79fd20b8356d6cf"
 
-Copy the shown address somewhere.  And start mining on your own private blockchain.
+Copy the shown address somewhere and shutdown geth. And start mining on your own private blockchain
+using the following command so that geth creates a stable stream of blocks at regular intervals.
 
 .. code:: bash
 
- > miner.start()
+ (env) $ geth --rpc --datadir blkchain1 --networkid 4321 --rpcapi "eth,net,web3" --allow-insecure-unlock --mine --miner.threads=1 --miner.etherbase=0xd4de892c06cf4a0557c7d515f79fd20b8356d6cf
 
 In this console ``geth`` should keep running.
+
+In another console navigate to the `priv_chain` folder and
+an IPC connection can be established with geth using:
+
+.. code:: bash
+
+ geth attach ipc:blkchain1/geth.ipc
 
 Figure out the contract version
 ===============================
