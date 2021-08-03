@@ -74,7 +74,7 @@ eth-abi==2.1.0
     #   eth-account
     #   raiden-contracts
     #   web3
-eth-account==0.5.4
+eth-account==0.5.5
     # via web3
 eth-hash[pycryptodome]==0.3.1
     # via
@@ -272,7 +272,7 @@ urllib3==1.26.5
     # via requests
 varint==1.0.2
     # via multiaddr
-web3==5.21.0
+web3==5.22.0
     # via
     #   -r requirements.in
     #   raiden-contracts
