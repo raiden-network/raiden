@@ -5,17 +5,14 @@ from hashlib import sha256
 from eth_utils import keccak
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS, MAXIMUM_PENDING_TRANSFERS
-from raiden.tests.unit.test_channelstate import (
-    create_channel_from_models,
-    create_model,
-    make_receive_transfer_mediated,
-)
+from raiden.tests.unit.channel_state.utils import create_channel_from_models, create_model
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     NettingChannelEndStateProperties,
     make_block_hash,
     make_transaction_hash,
 )
+from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.transfer import channel
 from raiden.transfer.channel import (
     compute_locksroot,
