@@ -2213,7 +2213,7 @@ def _handle_receive_withdraw_confirmation(
         partner_initiated_coop_settle = channel_state.partner_state.initiated_coop_settle
         if our_initiated_coop_settle is not None:
             # There is a coop settle inplace  that we initiated
-            assert not partner_initiated_coop_settle, "Only one party can initiate a coop settle"
+            assert partner_initiated_coop_settle is None, "Only one party can initiate a coop settle"
 
             our_initiated_coop_settle.partner_signature_confirmation = action.signature
             coop_settle_events = events_for_coop_settle(
