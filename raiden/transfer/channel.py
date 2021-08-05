@@ -1945,7 +1945,7 @@ def _handle_action_coop_settle(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
+    events = []
 
     our_max_total_withdraw = get_max_withdraw_amount(
         channel_state.our_state, channel_state.partner_state
