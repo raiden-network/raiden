@@ -118,7 +118,8 @@ class ActionChannelWithdraw(StateChange):
 
 @dataclass(frozen=True)
 class ActionChannelCoopSettle(StateChange):
-    """Withdraw funds from channel."""
+    """Cooperatively withdraw funds from channel back to both parties
+    and close the channel in a single operation."""
 
     canonical_identifier: CanonicalIdentifier
     recipient_metadata: Optional[AddressMetadata] = None
