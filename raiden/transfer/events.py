@@ -153,8 +153,8 @@ class ContractSendChannelCoopSettle(ContractSendEvent):
             f"our_total_withdraw: {self.our_total_withdraw} "
             f"partner_total_withdraw: {self.partner_total_withdraw} "
             f"expiration: {self.expiration} "
-            f"partner_signature_withdraw: {to_hex(self.signature_partner_withdraw)} "
-            f"partner_signature_our_withdraw: {to_hex(self.signature_our_withdraw)} "
+            f"signature_partner_withdraw: {to_hex(self.signature_partner_withdraw)} "
+            f"signature_our_withdraw: {to_hex(self.signature_our_withdraw)} "
             f">"
         )
 
