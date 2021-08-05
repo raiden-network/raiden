@@ -1796,7 +1796,7 @@ def events_for_expired_withdraws(
         coop_settle = channel_state.our_state.initiated_coop_settle
         if coop_settle is not None:
             if (
-                coop_settle.total_withdraw_participant == withdraw_state.total_withdraw
+                coop_settle.total_withdraw_initiator == withdraw_state.total_withdraw
                 and coop_settle.expiration == withdraw_state.expiration
             ):
                 # We also declare the coop-settle as expired, if we initiated it
@@ -1960,14 +1960,14 @@ def _handle_action_coop_settle(
             block_number=block_number, reveal_timeout=channel_state.reveal_timeout
         )
         coop_settle = CoopSettleState(
-            total_withdraw_participant=our_max_total_withdraw,
+            total_withdraw_initiator=our_max_total_withdraw,
             total_withdraw_partner=partner_max_total_withdraw,
             expiration=expiration,
         )
         channel_state.our_state.initiated_coop_settle = coop_settle
         events = send_withdraw_request(
             channel_state=channel_state,
-            total_withdraw=coop_settle.total_withdraw_participant,
+            total_withdraw=coop_settle.total_withdraw_initiator,
             expiration=coop_settle.expiration,
             pseudo_random_generator=pseudo_random_generator,
             recipient_metadata=action.recipient_metadata,
@@ -2060,7 +2060,7 @@ def events_for_coop_settle(
     ):
         send_coop_settle = ContractSendChannelCoopSettle(
             canonical_identifier=channel_state.canonical_identifier,
-            our_total_withdraw=coop_settle_state.total_withdraw_participant,
+            our_total_withdraw=coop_settle_state.total_withdraw_initiator,
             partner_total_withdraw=coop_settle_state.total_withdraw_partner,
             expiration=coop_settle_state.expiration,
             signature_our_withdraw=coop_settle_state.partner_signature_confirmation,
@@ -2151,7 +2151,7 @@ def _handle_receive_withdraw_request(
                     SuccessOrError("Partner initiated coop-settle, but we have pending transfers.")
                 )
             partner_initiated_coop_settle = CoopSettleState(
-                total_withdraw_participant=action.total_withdraw,
+                total_withdraw_initiator=action.total_withdraw,
                 total_withdraw_partner=our_max_total_withdraw,
                 expiration=action.expiration,
             )
@@ -2213,7 +2213,9 @@ def _handle_receive_withdraw_confirmation(
         partner_initiated_coop_settle = channel_state.partner_state.initiated_coop_settle
         if our_initiated_coop_settle is not None:
             # There is a coop settle inplace  that we initiated
-            assert partner_initiated_coop_settle is None, "Only one party can initiate a coop settle"
+            assert (
+                partner_initiated_coop_settle is None
+            ), "Only one party can initiate a coop settle"
 
             our_initiated_coop_settle.partner_signature_confirmation = action.signature
             coop_settle_events = events_for_coop_settle(
@@ -2283,7 +2285,7 @@ def _handle_receive_withdraw_expired(
         coop_settle = channel_state.partner_state.initiated_coop_settle
         if coop_settle is not None:
             if (
-                coop_settle.total_withdraw_participant == withdraw_state.total_withdraw
+                coop_settle.total_withdraw_initiator == withdraw_state.total_withdraw
                 and coop_settle.expiration == withdraw_state.expiration
             ):
                 # We declare the partner's initated coop-settle as expired

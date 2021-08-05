@@ -109,7 +109,7 @@ def _assert_coop_settle_state(
     if initiated_coop_settle:
         assert our_state.initiated_coop_settle is not None
         assert (
-            our_state.initiated_coop_settle.total_withdraw_participant == our_initial_model.balance
+            our_state.initiated_coop_settle.total_withdraw_initiator == our_initial_model.balance
         )
         assert our_state.initiated_coop_settle.expiration == coop_settle_expiration
     else:
@@ -289,7 +289,7 @@ def test_contract_event():
         total_withdraw=our_model1.balance, expiration=expiration, nonce=0
     )
     channel_state.our_state.initiated_coop_settle = CoopSettleState(
-        total_withdraw_participant=our_model1.balance,
+        total_withdraw_initiator=our_model1.balance,
         total_withdraw_partner=partner_model1.balance,
         expiration=expiration,
     )
@@ -403,7 +403,7 @@ def test_receive_initiator_confirmation_has_no_effect():
         total_withdraw=partner_model1.balance, expiration=expiration, nonce=0
     )
     channel_state.partner_state.initiated_coop_settle = CoopSettleState(
-        total_withdraw_participant=partner_model1.balance,
+        total_withdraw_initiator=partner_model1.balance,
         total_withdraw_partner=our_model1.balance,
         expiration=expiration,
     )

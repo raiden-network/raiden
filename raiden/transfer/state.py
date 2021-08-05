@@ -307,7 +307,7 @@ class PendingWithdrawState:
 
 @dataclass
 class CoopSettleState:
-    total_withdraw_participant: WithdrawAmount
+    total_withdraw_initiator: WithdrawAmount
     total_withdraw_partner: WithdrawAmount
     expiration: BlockExpiration
     partner_signature_request: Optional[Signature] = None
