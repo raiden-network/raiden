@@ -133,7 +133,7 @@ class ContractSendChannelCoopSettle(ContractSendEvent):
     our_total_withdraw: WithdrawAmount
     partner_total_withdraw: WithdrawAmount
     expiration: BlockExpiration
-    # This are the partner's signatures of the two withdraws.
+    # These are the partner's signatures of the two withdraws.
     # Our signature of that data will be constructed again in the event-handler
     signature_our_withdraw: Signature
     signature_partner_withdraw: Signature
