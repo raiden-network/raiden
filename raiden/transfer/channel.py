@@ -1799,7 +1799,7 @@ def events_for_expired_withdraws(
                 coop_settle.total_withdraw_participant == withdraw_state.total_withdraw
                 and coop_settle.expiration == withdraw_state.expiration
             ):
-                # We also declare the coop-settle as expired, when we initated it
+                # We also declare the coop-settle as expired, if we initiated it
                 channel_state.our_state.initiated_coop_settle = None
 
         channel_state.our_state.withdraws_expired.append(
