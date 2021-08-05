@@ -2106,7 +2106,7 @@ def _handle_receive_withdraw_request(
 
     our_initiated_coop_settle = channel_state.our_state.initiated_coop_settle
 
-    if our_initiated_coop_settle is not None or action.coop_settle is True:
+    if our_initiated_coop_settle is not None or action.coop_settle:
         partner_max_total_withdraw = get_max_withdraw_amount(
             channel_state.partner_state, channel_state.our_state
         )
