@@ -1192,10 +1192,10 @@ def get_max_withdraw_amount(
     sender_transferred_amount = 0
     receiver_transferred_amount = 0
 
-    if sender.balance_proof:
+    if sender.balance_proof is not None:
         sender_transferred_amount = sender.balance_proof.transferred_amount
 
-    if receiver.balance_proof:
+    if receiver.balance_proof is not None:
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
     return WithdrawAmount(
