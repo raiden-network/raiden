@@ -2222,6 +2222,8 @@ def _handle_receive_withdraw_confirmation(
             events.extend(coop_settle_events)
         if our_initiated_coop_settle is None and partner_initiated_coop_settle is None:
             # Normal withdraw
+            # Only send the transaction on-chain if there is enough time for the
+            # withdraw transaction to be mined
             if action.expiration >= block_number - channel_state.reveal_timeout:
                 withdraw_on_chain = ContractSendChannelWithdraw(
                     canonical_identifier=action.canonical_identifier,
