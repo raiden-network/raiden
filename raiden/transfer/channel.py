@@ -2123,7 +2123,7 @@ def _handle_receive_withdraw_request(
         if our_initiated_coop_settle is not None:
             # There is a coop-settle inplace that we initiated
             # and partner is communicating their total withdraw with us
-            if not our_initiated_coop_settle.expiration == action.expiration:
+            if our_initiated_coop_settle.expiration != action.expiration:
                 return transition_result_invalid(
                     SuccessOrError(
                         "Partner requested withdraw while we initiated a coop-settle: "
