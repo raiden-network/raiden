@@ -152,7 +152,7 @@ def test_initiate():
     )
     # The partner still has full balance in his state.
     # He could therefore initiate a transfer in our direction now and we would accept it
-    # The then could try to continue the coop-settle with old balances.
+    # Then he could try to continue the coop-settle with old balances.
     # This is no problem, since this would invalidate later acceptance of
     # the withdraw-request - the balance would be too low for when the transfer was unlocked,
     # or we would have pending locks for the case where it was still pending.
