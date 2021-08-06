@@ -245,7 +245,7 @@ def test_receive_request():
         is not None
     )
 
-    # our view
+    # partner's view
     _assert_coop_settle_state(
         channel_state.partner_state,
         channel_state.our_state,
@@ -254,7 +254,7 @@ def test_receive_request():
         coop_settle_expiration=expiration,
         initiated_coop_settle=True,
     )
-    # partner's view
+    # our view
     _assert_coop_settle_state(
         channel_state.our_state,
         channel_state.partner_state,
