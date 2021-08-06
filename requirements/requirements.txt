@@ -181,9 +181,7 @@ multidict==5.1.0
     #   aiohttp
     #   yarl
 mypy-extensions==0.4.3
-    # via
-    #   raiden-contracts
-    #   typing-inspect
+    # via typing-inspect
 netaddr==0.7.19
     # via multiaddr
 netifaces==0.11.0
@@ -225,7 +223,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts==0.38.0
+raiden-contracts==0.39.0
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
