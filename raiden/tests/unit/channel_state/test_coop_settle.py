@@ -1,4 +1,3 @@
-# pylint: disable=too-many-locals,too-many-statements,too-many-lines
 import random
 
 import pytest
@@ -37,9 +36,7 @@ def _make_receive_coop_settle_withdraw_confirmation(
 ):
     packed = pack_withdraw(
         canonical_identifier=channel_state.canonical_identifier,
-        # pylint: disable=no-member
         participant=channel_state.our_state.address,
-        # pylint: enable=no-member
         total_withdraw=total_withdraw,
         expiration_block=withdraw_expiration,
     )
@@ -51,10 +48,8 @@ def _make_receive_coop_settle_withdraw_confirmation(
         # has to be the maximum withdrawable amount
         total_withdraw=total_withdraw,
         signature=signature,
-        # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         participant=channel_state.our_state.address,
-        # pylint: enable=no-member
         nonce=nonce,
         expiration=withdraw_expiration,
     )
@@ -66,9 +61,7 @@ def _make_receive_coop_settle_withdraw_request(
 ):
     packed = pack_withdraw(
         canonical_identifier=channel_state.canonical_identifier,
-        # pylint: disable=no-member
         participant=channel_state.partner_state.address,
-        # pylint: enable=no-member
         total_withdraw=total_withdraw,
         expiration_block=withdraw_expiration,
     )
@@ -80,10 +73,8 @@ def _make_receive_coop_settle_withdraw_request(
         # has to be the maximum withdrawable amount
         total_withdraw=total_withdraw,
         signature=signature,
-        # pylint: disable=no-member
         sender=channel_state.partner_state.address,
         participant=channel_state.partner_state.address,
-        # pylint: enable=no-member
         nonce=nonce,
         expiration=withdraw_expiration,
         coop_settle=True,
