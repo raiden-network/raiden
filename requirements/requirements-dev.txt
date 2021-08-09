@@ -616,11 +616,11 @@ typeguard==2.11.1
     # via
     #   -r requirements.txt
     #   marshmallow-dataclass
-types-cachetools==0.1.9
+types-cachetools==0.1.10
     # via -r requirements-dev.in
 types-click==7.1.1
     # via types-flask
-types-filelock==0.1.4
+types-filelock==0.1.5
     # via -r requirements-dev.in
 types-flask==1.1.1
     # via -r requirements-dev.in
