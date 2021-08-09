@@ -460,7 +460,9 @@ def token_contract_name_fixture() -> str:
 
 @pytest.fixture(name="max_token_networks")
 def max_token_networks_fixture() -> int:
-    return UINT256_MAX
+    # Circumvent this condition
+    # https://github.com/raiden-network/raiden-contracts/blob/74598401b9ef994eef5e358a78cc176a01c9245d/raiden_contracts/data/source/raiden/TokenNetworkRegistry.sol#L81-L83
+    return UINT256_MAX - 1
 
 
 @pytest.fixture(name="token_addresses")

@@ -146,9 +146,7 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=given_block_identifier
             )
-            deprecation_executor = self.get_deprecation_executor(
-                block_identifier=given_block_identifier
-            )
+            controller = self.get_controller(block_identifier=given_block_identifier)
             settlement_timeout_min = self.settlement_timeout_min(
                 block_identifier=given_block_identifier
             )
@@ -186,9 +184,9 @@ class TokenNetworkRegistry:
                     "The token is already registered in the TokenNetworkRegistry."
                 )
 
-            if deprecation_executor == NULL_ADDRESS_BYTES:
+            if controller == NULL_ADDRESS_BYTES:
                 raise BrokenPreconditionError(
-                    "The deprecation executor property for the TokenNetworkRegistry is invalid."
+                    "The controller property for the TokenNetworkRegistry is invalid."
                 )
 
             if chain_id == 0:
@@ -267,9 +265,7 @@ class TokenNetworkRegistry:
                 already_registered = self.get_token_network(
                     token_address=token_address, block_identifier=failed_at_blocknumber
                 )
-                deprecation_executor = self.get_deprecation_executor(
-                    block_identifier=failed_at_blocknumber
-                )
+                controller = self.get_controller(block_identifier=failed_at_blocknumber)
                 settlement_timeout_min = self.settlement_timeout_min(
                     block_identifier=failed_at_blocknumber
                 )
@@ -327,10 +323,9 @@ class TokenNetworkRegistry:
                         "The token was already registered in the TokenNetworkRegistry."
                     )
 
-                if deprecation_executor == NULL_ADDRESS_BYTES:
+                if controller == NULL_ADDRESS_BYTES:
                     raise RaidenUnrecoverableError(
-                        "The deprecation executor property for the "
-                        "TokenNetworkRegistry is invalid."
+                        "The controller property for the TokenNetworkRegistry is invalid."
                     )
 
                 if chain_id == 0:
@@ -397,9 +392,7 @@ class TokenNetworkRegistry:
             already_registered = self.get_token_network(
                 token_address=token_address, block_identifier=failed_at_blocknumber
             )
-            deprecation_executor = self.get_deprecation_executor(
-                block_identifier=failed_at_blocknumber
-            )
+            controller = self.get_controller(block_identifier=failed_at_blocknumber)
             settlement_timeout_min = self.settlement_timeout_min(
                 block_identifier=failed_at_blocknumber
             )
@@ -464,9 +457,9 @@ class TokenNetworkRegistry:
                     "The token was already registered in the TokenNetworkRegistry."
                 )
 
-            if deprecation_executor == NULL_ADDRESS_BYTES:
+            if controller == NULL_ADDRESS_BYTES:
                 raise RaidenUnrecoverableError(
-                    "The deprecation executor property for the TokenNetworkRegistry is invalid."
+                    "The controller property for the TokenNetworkRegistry is invalid."
                 )
 
             if chain_id == 0:
@@ -540,10 +533,10 @@ class TokenNetworkRegistry:
             )
         )
 
-    def get_deprecation_executor(self, block_identifier: BlockIdentifier) -> Address:
+    def get_controller(self, block_identifier: BlockIdentifier) -> Address:
         return Address(
             to_canonical_address(
-                self.proxy.functions.deprecation_executor().call(block_identifier=block_identifier)
+                self.proxy.functions.controller().call(block_identifier=block_identifier)
             )
         )
 

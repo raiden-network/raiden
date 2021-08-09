@@ -168,7 +168,7 @@ def test_token_network_registry_max_token_networks(
     )
     assert (
         token_network_registry_proxy.get_max_token_networks(block_identifier=BLOCK_ID_LATEST)
-        == UINT256_MAX
+        == UINT256_MAX - 1
     )
 
 
