@@ -537,7 +537,7 @@ pygments==2.7.4
     #   ipython
     #   pdbpp
     #   readme-renderer
-pyinstaller==4.5
+pyinstaller==4.5.1
     # via -r requirements-ci.in
 pyinstaller-hooks-contrib==2020.7
     # via pyinstaller
@@ -627,7 +627,7 @@ requests==2.26.0
     #   responses
     #   treq
     #   web3
-responses==0.13.3
+responses==0.13.4
     # via -r requirements-dev.txt
 rlp==2.0.1
     # via
