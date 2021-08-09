@@ -532,7 +532,7 @@ requests==2.26.0
     #   responses
     #   treq
     #   web3
-responses==0.13.3
+responses==0.13.4
     # via -r requirements-dev.in
 rlp==2.0.1
     # via
@@ -632,7 +632,7 @@ types-pkg-resources==0.1.3
     # via -r requirements-dev.in
 types-pyyaml==5.4.6
     # via -r requirements-dev.in
-types-requests==2.25.2
+types-requests==2.25.6
     # via -r requirements-dev.in
 types-toml==0.1.3
     # via -r requirements-dev.in
