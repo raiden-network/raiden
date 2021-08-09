@@ -107,7 +107,7 @@ def find_max_pending_transfers(gas_limit) -> None:
         _chain_id=CHAIN_ID,
         _settlement_timeout_min=100,
         _settlement_timeout_max=200,
-        _deprecation_executor=tester.accounts[0],
+        _controller=tester.accounts[0],
         _channel_participant_deposit_limit=10000,
         _token_network_deposit_limit=10000,
     )
