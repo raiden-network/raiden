@@ -293,7 +293,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.14.5
+hypothesis==6.14.6
     # via -r requirements-dev.txt
 idna==2.8
     # via
@@ -628,7 +628,7 @@ requests==2.26.0
     #   responses
     #   treq
     #   web3
-responses==0.13.3
+responses==0.13.4
     # via -r requirements-dev.txt
 rlp==2.0.1
     # via
