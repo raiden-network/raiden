@@ -293,7 +293,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.14.5
+hypothesis==6.14.6
     # via -r requirements-dev.txt
 idna==2.8
     # via
@@ -731,7 +731,7 @@ types-click==7.1.1
     # via
     #   -r requirements-dev.txt
     #   types-flask
-types-filelock==0.1.4
+types-filelock==0.1.5
     # via -r requirements-dev.txt
 types-flask==1.1.1
     # via -r requirements-dev.txt
