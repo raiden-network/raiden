@@ -547,6 +547,8 @@ def check_value_error(value_error: ValueError, call_type: CallType) -> bool:
 
     expected_errors = {
         CallType.ESTIMATE_GAS: [
+            # geth
+            (3, "execution reverted:"),
             # parity
             (-32016, "The execution failed due to an exception"),
         ],
