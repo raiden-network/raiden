@@ -532,7 +532,7 @@ requests==2.26.0
     #   responses
     #   treq
     #   web3
-responses==0.13.3
+responses==0.13.4
     # via -r requirements-dev.in
 rlp==2.0.1
     # via
