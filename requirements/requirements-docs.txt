@@ -71,7 +71,7 @@ sphinxcontrib-httpdomain==1.7.0
     #   sphinxcontrib-httpexample
 sphinxcontrib-httpexample==0.11.0
     # via -r requirements-docs.in
-sphinxcontrib-images==0.9.3
+sphinxcontrib-images==0.9.4
     # via -r requirements-docs.in
 sphinxcontrib-jsmath==1.0.1
     # via sphinx
