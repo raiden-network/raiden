@@ -51,7 +51,7 @@ class SendWithdrawRequest(SendMessageEvent):
     participant: Address
     expiration: BlockExpiration
     nonce: Nonce
-    coop_settle: Optional[bool] = False
+    coop_settle: bool = False
 
     def __repr__(self) -> str:
         return (
