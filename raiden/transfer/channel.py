@@ -1939,6 +1939,7 @@ def _handle_action_coop_settle(
     channel_state: NettingChannelState,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
+    **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     events = []
 
@@ -2127,9 +2128,7 @@ def _handle_receive_withdraw_request(
                 )
 
             msg = "The expected total withdraw of the partner doesn't match the withdraw-request"
-            assert (
-                our_initiated_coop_settle.total_withdraw_partner == action.total_withdraw
-            ), msg
+            assert our_initiated_coop_settle.total_withdraw_partner == action.total_withdraw, msg
 
             our_initiated_coop_settle.partner_signature_request = action.signature
             coop_settle_events = events_for_coop_settle(

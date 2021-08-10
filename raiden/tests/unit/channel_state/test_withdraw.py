@@ -47,9 +47,9 @@ def test_action_withdraw():
         canonical_identifier=channel_state.canonical_identifier, total_withdraw=100
     )
 
-    iteration = channel.handle_action_withdraw(
+    iteration = channel._handle_action_withdraw(
+        action=action_withdraw,
         channel_state=channel_state,
-        action_withdraw=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
         block_number=2,
     )
@@ -64,9 +64,9 @@ def test_action_withdraw():
         canonical_identifier=channel_state.canonical_identifier, total_withdraw=our_balance
     )
 
-    iteration = channel.handle_action_withdraw(
+    iteration = channel._handle_action_withdraw(
+        action=action_withdraw,
         channel_state=channel_state,
-        action_withdraw=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
         block_number=3,
     )
@@ -82,9 +82,9 @@ def test_action_withdraw():
         canonical_identifier=channel_state.canonical_identifier, total_withdraw=our_balance
     )
 
-    iteration = channel.handle_action_withdraw(
+    iteration = channel._handle_action_withdraw(
+        action=action_withdraw,
         channel_state=iteration.new_state,
-        action_withdraw=action_withdraw,
         pseudo_random_generator=pseudo_random_generator,
         block_number=4,
     )
@@ -122,9 +122,9 @@ def test_receive_withdraw_request():
         expiration=expiration,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
+    iteration = channel._handle_receive_withdraw_request(
+        action=withdraw_request,
         channel_state=channel_state,
-        withdraw_request=withdraw_request,
         block_hash=block_hash,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
@@ -160,9 +160,9 @@ def test_receive_withdraw_request():
         expiration=expiration,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
+    iteration = channel._handle_receive_withdraw_request(
+        action=withdraw_request,
         channel_state=channel_state,
-        withdraw_request=withdraw_request,
         block_hash=block_hash,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
@@ -190,9 +190,9 @@ def test_receive_withdraw_request():
         expiration=10,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
+    iteration = channel._handle_receive_withdraw_request(
+        action=withdraw_request,
         channel_state=iteration.new_state,
-        withdraw_request=withdraw_request,
         block_hash=block_hash,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
@@ -219,9 +219,9 @@ def test_receive_withdraw_request():
         expiration=10,
     )
 
-    iteration = channel.handle_receive_withdraw_request(
+    iteration = channel._handle_receive_withdraw_request(
+        action=withdraw_request,
         channel_state=iteration.new_state,
-        withdraw_request=withdraw_request,
         block_hash=block_hash,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
