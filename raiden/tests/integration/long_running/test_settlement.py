@@ -753,7 +753,8 @@ def test_settled_lock(
     # The transfer locksroot must not contain the unlocked lock, the
     # unlock must fail.
     with pytest.raises(RaidenUnrecoverableError):
-        netting_channel.unlock(
+        netting_channel.token_network.unlock(
+            channel_identifier=netting_channel.channel_identifier,
             sender=channelstate_0_1.our_state.address,
             receiver=channelstate_0_1.partner_state.address,
             pending_locks=pending_locks,

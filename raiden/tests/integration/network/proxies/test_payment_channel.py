@@ -168,14 +168,16 @@ def test_payment_channel_proxy_basics(
         target_block_number=BlockNumber(rpc_client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
     )
 
-    transaction_hash = channel_proxy_1.settle(
+    transaction_hash = channel_proxy_1.token_network.settle(
+        channel_identifier=channel_proxy_1.channel_identifier,
         transferred_amount=TokenAmount(0),
         locked_amount=LockedAmount(0),
         locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner=channel_proxy_1.participant2,
         partner_transferred_amount=TokenAmount(0),
         partner_locked_amount=LockedAmount(0),
         partner_locksroot=LOCKSROOT_OF_NO_LOCKS,
-        block_identifier=BLOCK_ID_LATEST,
+        given_block_identifier=BLOCK_ID_LATEST,
     )
     assert is_tx_hash_bytes(transaction_hash)
     assert channel_proxy_1.settled(BLOCK_ID_LATEST) is True

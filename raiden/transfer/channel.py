@@ -945,12 +945,6 @@ def is_valid_total_withdraw(
         return SuccessOrError()
 
 
-def is_valid_action_withdraw(
-    channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
-) -> SuccessOrError:
-    return is_valid_total_withdraw(channel_state, withdraw.total_withdraw)
-
-
 def is_valid_action_coopsettle(
     channel_state: NettingChannelState,
     coop_settle: ActionChannelCoopSettle,  # pylint: disable=unused-argument
@@ -1363,7 +1357,6 @@ def set_coop_settled(channel_end_state: NettingChannelEndState, block_number: Bl
         channel_end_state.initiated_coop_settle.transaction = TransactionExecutionStatus(
             None, block_number, TransactionExecutionStatus.SUCCESS
         )
-
     elif not channel_end_state.initiated_coop_settle.transaction.finished_block_number:
         channel_end_state.initiated_coop_settle.transaction.finished_block_number = block_number
         channel_end_state.initiated_coop_settle.transaction.result = (
@@ -2006,7 +1999,7 @@ def _handle_action_withdraw(
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = []
-    is_valid_withdraw = is_valid_action_withdraw(channel_state, action)
+    is_valid_withdraw = is_valid_total_withdraw(channel_state, action.total_withdraw)
 
     if is_valid_withdraw:
         expiration = get_safe_initial_expiration(
@@ -2021,7 +2014,7 @@ def _handle_action_withdraw(
         )
     else:
         error_msg = is_valid_withdraw.as_error_message
-        assert error_msg, "is_valid_action_withdraw should return error msg if not valid"
+        assert error_msg, "is_valid_total_withdraw should return error msg if not valid"
         events = [
             EventInvalidActionWithdraw(attempted_withdraw=action.total_withdraw, reason=error_msg)
         ]
@@ -2071,7 +2064,7 @@ def events_for_coop_settle(
         and coop_settle_state.expiration >= block_number - channel_state.reveal_timeout
     ):
 
-        msg = "CoopSettleState should be present on our state when we initiated it"
+        msg = "CoopSettleState should be present in our state if we initiated it"
         assert channel_state.our_state.initiated_coop_settle is not None, msg
 
         send_coop_settle = ContractSendChannelCoopSettle(
@@ -2610,45 +2603,46 @@ def _handle_channel_settled(
         )
 
         is_coop_settle = False
+        initiator_lock_check = action.our_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+        partner_lock_check = action.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
         if channel_state.our_state.initiated_coop_settle:
-            if (
-                TokenAmount(
-                    channel_state.our_state.initiated_coop_settle.total_withdraw_participant
-                )
-                == state_change.our_transferred_amount
-                and TokenAmount(
-                    channel_state.our_state.initiated_coop_settle.total_withdraw_partner
-                )
-                == state_change.partner_transferred_amount
-                and state_change.our_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
-                and state_change.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
-            ):
+            coop_settle = channel_state.our_state.initiated_coop_settle
+            initiator_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_initiator) == action.our_transferred_amount
+            )
+            partner_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_partner)
+                == action.partner_transferred_amount
+            )
+            initiator_checks = initiator_transfer_check and initiator_lock_check
+            partner_checks = partner_transfer_check and partner_lock_check
+
+            if initiator_checks and partner_checks:
                 # This matches our initated coop-settle!
-                set_coop_settled(channel_state.our_state, state_change.block_number)
+                set_coop_settled(channel_state.our_state, action.block_number)
                 is_coop_settle = True
         if channel_state.partner_state.initiated_coop_settle:
-            if (
-                TokenAmount(
-                    channel_state.partner_state.initiated_coop_settle.total_withdraw_participant
-                )
-                == state_change.partner_transferred_amount
-                and TokenAmount(
-                    channel_state.partner_state.initiated_coop_settle.total_withdraw_partner
-                )
-                == state_change.our_transferred_amount
-                and state_change.our_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
-                and state_change.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
-            ):
-                # This matches partners initated coop-settle!
-                set_coop_settled(channel_state.partner_state, state_change.block_number)
+            coop_settle = channel_state.partner_state.initiated_coop_settle
+            partner_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_initiator)
+                == action.partner_transferred_amount
+            )
+            initiator_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_partner) == action.our_transferred_amount
+            )
+            initiator_checks = initiator_transfer_check and initiator_lock_check
+            partner_checks = partner_transfer_check and partner_lock_check
+            if initiator_checks and partner_checks:
+                # This matches partners initiated coop-settle!
+                set_coop_settled(channel_state.partner_state, action.block_number)
                 is_coop_settle = True
 
         if is_coop_settle:
             channel_state.partner_state.onchain_total_withdraw = WithdrawAmount(
-                state_change.partner_transferred_amount
+                action.partner_transferred_amount
             )
             channel_state.our_state.onchain_total_withdraw = WithdrawAmount(
-                state_change.our_transferred_amount
+                action.our_transferred_amount
             )
 
         if should_clear_channel:

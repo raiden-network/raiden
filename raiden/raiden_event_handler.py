@@ -470,13 +470,12 @@ class RaidenEventHandler(EventHandler):
             total_withdraw=channel_coopsettle_event.our_total_withdraw,
             expiration_block=channel_coopsettle_event.expiration,
         )
-        # We are the "participant"
-        our_signature_participant = raiden.signer.sign(data=participant_withdraw_data)
-        withdraw_participant = WithdrawInput(
+        our_signature_initiator = raiden.signer.sign(data=participant_withdraw_data)
+        withdraw_initiator = WithdrawInput(
             total_withdraw=channel_coopsettle_event.our_total_withdraw,
             expiration_block=channel_coopsettle_event.expiration,
-            participant=raiden.address,
-            participant_signature=our_signature_participant,
+            initiator=raiden.address,
+            initiator_signature=our_signature_initiator,
             partner_signature=channel_coopsettle_event.signature_our_withdraw,
         )
 
@@ -491,8 +490,8 @@ class RaidenEventHandler(EventHandler):
         withdraw_partner = WithdrawInput(
             total_withdraw=channel_coopsettle_event.partner_total_withdraw,
             expiration_block=channel_coopsettle_event.expiration,
-            participant=raiden.address,
-            participant_signature=our_signature_partner,
+            initiator=raiden.address,
+            initiator_signature=our_signature_partner,
             partner_signature=channel_coopsettle_event.signature_partner_withdraw,
         )
         chain_state = state_from_raiden(raiden)
@@ -509,10 +508,11 @@ class RaidenEventHandler(EventHandler):
             channel_state=channel_state, block_identifier=confirmed_block_identifier
         )
         try:
-            channel_proxy.coop_settle(
+            channel_proxy.token_network.coop_settle(
+                channel_identifier=channel_proxy.channel_identifier,
                 withdraw_partner=withdraw_partner,
-                withdraw_participant=withdraw_participant,
-                block_identifier=channel_coopsettle_event.triggered_by_block_hash,
+                withdraw_initiator=withdraw_initiator,
+                given_block_identifier=channel_coopsettle_event.triggered_by_block_hash,
             )
         except InsufficientEth as e:
             raise RaidenUnrecoverableError(str(e)) from e
@@ -724,7 +724,8 @@ class RaidenEventHandler(EventHandler):
             gain = sum(unlock.lock.amount for unlock in onchain_unlocked)
 
             if gain > 0:
-                payment_channel.unlock(
+                payment_channel.token_network.unlock(
+                    channel_identifier=payment_channel.channel_identifier,
                     sender=partner_address,
                     receiver=our_address,
                     pending_locks=restored_channel_state.partner_state.pending_locks,
@@ -765,10 +766,11 @@ class RaidenEventHandler(EventHandler):
 
             if gain > 0:
                 try:
-                    payment_channel.unlock(
-                        pending_locks=restored_channel_state.our_state.pending_locks,
+                    payment_channel.token_network.unlock(
+                        channel_identifier=payment_channel.channel_identifier,
                         sender=our_address,
                         receiver=partner_address,
+                        pending_locks=restored_channel_state.our_state.pending_locks,
                         given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                     )
                 except InsufficientEth as e:
@@ -888,14 +890,16 @@ class RaidenEventHandler(EventHandler):
             partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         try:
-            payment_channel.settle(
+            payment_channel.token_network.settle(
+                channel_identifier=payment_channel.channel_identifier,
                 transferred_amount=our_transferred_amount,
                 locked_amount=our_locked_amount,
                 locksroot=our_locksroot,
+                partner=payment_channel.participant2,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,
-                block_identifier=triggered_by_block_hash,
+                given_block_identifier=triggered_by_block_hash,
             )
         except InsufficientEth as e:
             raise RaidenUnrecoverableError(str(e)) from e

@@ -24,6 +24,7 @@ import structlog
 from eth_utils import to_hex
 
 from raiden.blockchain.events import DecodedEvent
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.storage.restore import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_locksroot,
@@ -50,8 +51,6 @@ log = structlog.get_logger(__name__)
 @dataclass(frozen=True)
 class ChannelSettleState:
     """Recovered channel state that corresponds to the on-chain data."""
-
-    # XXX backwards compatibility database?
 
     canonical_identifier: CanonicalIdentifier
     our_transferred_amount: TokenAmount
@@ -112,9 +111,10 @@ def get_contractreceivechannelsettled_data_from_event(
         partner_locksroot = locksroot_participant1
         partner_amount = amount_participant1
     else:
-        log.debug("Discarding settle event, we're not part of it")
-        # XXX this shouldn't happen because of the channel_state check
-        return None
+        raise RaidenUnrecoverableError(
+            "Received settle event that we're not a part of. "
+            f"Settlement was between {participant1} and {participant2}",
+        )
 
     return ChannelSettleState(
         canonical_identifier, our_amount, our_locksroot, partner_amount, partner_locksroot

@@ -42,7 +42,6 @@ class WithdrawRequest(SignedRetrieableMessage):
 
     class Meta:
         unknown = EXCLUDE
-        # Don't serialize coop_settle when not specifically set to something else than None
         serialize_missing = False
 
     @classmethod

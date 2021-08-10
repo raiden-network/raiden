@@ -1,15 +1,12 @@
 from raiden.blockchain.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork, WithdrawInput
-from raiden.transfer.state import NettingChannelState, PendingLocksState
+from raiden.transfer.state import NettingChannelState
 from raiden.utils.typing import (
     AdditionalHash,
-    Address,
     BalanceHash,
     BlockExpiration,
     BlockIdentifier,
     BlockTimeout,
-    LockedAmount,
-    Locksroot,
     Nonce,
     Signature,
     TokenAddress,
@@ -126,8 +123,8 @@ class PaymentChannel:
 
         withdraw_input = WithdrawInput(
             total_withdraw=total_withdraw,
-            participant=self.participant1,
-            participant_signature=participant_signature,
+            initiator=self.participant1,
+            initiator_signature=participant_signature,
             partner_signature=partner_signature,
             expiration_block=expiration_block,
         )
@@ -177,57 +174,5 @@ class PaymentChannel:
             additional_hash=additional_hash,
             closing_signature=partner_signature,
             non_closing_signature=signature,
-            given_block_identifier=block_identifier,
-        )
-
-    def unlock(
-        self,
-        sender: Address,
-        receiver: Address,
-        pending_locks: PendingLocksState,
-        given_block_identifier: BlockIdentifier,
-    ) -> TransactionHash:
-        return self.token_network.unlock(
-            channel_identifier=self.channel_identifier,
-            sender=sender,
-            receiver=receiver,
-            pending_locks=pending_locks,
-            given_block_identifier=given_block_identifier,
-        )
-
-    def settle(
-        self,
-        transferred_amount: TokenAmount,
-        locked_amount: LockedAmount,
-        locksroot: Locksroot,
-        partner_transferred_amount: TokenAmount,
-        partner_locked_amount: LockedAmount,
-        partner_locksroot: Locksroot,
-        block_identifier: BlockIdentifier,
-    ) -> TransactionHash:
-        """Settles the channel."""
-        return self.token_network.settle(
-            channel_identifier=self.channel_identifier,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            partner=self.participant2,
-            partner_transferred_amount=partner_transferred_amount,
-            partner_locked_amount=partner_locked_amount,
-            partner_locksroot=partner_locksroot,
-            given_block_identifier=block_identifier,
-        )
-
-    def coop_settle(
-        self,
-        withdraw_participant: WithdrawInput,
-        withdraw_partner: WithdrawInput,
-        block_identifier: BlockIdentifier,
-    ) -> TransactionHash:
-        """Settles the channel cooperatively"""
-        return self.token_network.coop_settle(
-            channel_identifier=self.channel_identifier,
-            withdraw_participant=withdraw_participant,
-            withdraw_partner=withdraw_partner,
             given_block_identifier=block_identifier,
         )

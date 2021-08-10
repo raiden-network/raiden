@@ -901,42 +901,35 @@ class RaidenAPI:  # pragma: no unittest
         current_block = self.raiden.get_block_number()
 
         pfs_proxy = self.raiden.pfs_proxy
-        coop_settle_state_changes: List[StateChange] = list()
-        unsuccessful_channels = list()
+        coop_settle_state_changes: List[StateChange] = []
+        unsuccessful_channels = []
         for channel_state in channels_to_settle:
+            recipient_address = channel_state.partner_state.address
             try:
-                recipient_address = channel_state.partner_state.address
-                recipient_metadata = pfs_proxy.query_address_metadata(recipient_address)
-                if recipient_metadata:
-                    coop_settle_state_changes.append(
-                        ActionChannelCoopSettle(
-                            canonical_identifier=channel_state.canonical_identifier
-                        )
-                    )
-                else:
-                    unsuccessful_channels.append(channel_state)
-                    continue
+                pfs_proxy.query_address_metadata(recipient_address)
             except ServiceRequestFailed:
-                # node is offline / we can't get the metadata in order to communicate
-                # with the node, so don't event try an offchain coop-settle
+                # node is offline, so don't even try an offchain coop-settle
                 unsuccessful_channels.append(channel_state)
                 continue
+            coop_settle_state_changes.append(
+                ActionChannelCoopSettle(canonical_identifier=channel_state.canonical_identifier)
+            )
         greenlets = set(self.raiden.handle_state_changes(coop_settle_state_changes))
         gevent.joinall(greenlets, raise_error=True)
 
         coop_settle_successful_condition = waiting.And(
-            [
+            (
                 waiting.ChannelInTargetStates([ChannelState.STATE_SETTLED]),
                 waiting.ChannelCoopSettleSuccess(self.raiden.address),
-            ]
+            )
         )
-        channels_to_conditions = dict()
+        channels_to_conditions = {}
         for channel_state in set(channels_to_settle) - set(unsuccessful_channels):
             # FIXME is there a race condition when we "get" the total-withdraw-values after they
             # have been determined by the state machine?
             # --> because the initiated_coop_settle is removed at some point if it expired
             # --> also this only works because the initiated_coop_settle is directly set upon
-            #       handling the ActionChannelCoopSettle. If that werent the case,
+            #       handling the ActionChannelCoopSettle. If that wasn't the case,
             #       we first would have to wait several state-machine iterations
             #       until the coop-settle-state existed on the channel-state
             # If this is a problem, the calculation of the max-withdraw amounts
@@ -950,7 +943,7 @@ class RaidenAPI:  # pragma: no unittest
 
             coop_settle_expired_condition = waiting.ChannelExpiredCoopSettle(
                 coop_settle_initiator_address=channel_state.our_state.address,
-                participant_total_withdraw=coop_settle_state.total_withdraw_participant,
+                participant_total_withdraw=coop_settle_state.total_withdraw_initiator,
                 partner_total_withdraw=coop_settle_state.total_withdraw_partner,
                 initiation_block=current_block,
             )

@@ -32,6 +32,7 @@ from raiden.utils.typing import (
     BlockNumber,
     Callable,
     ChannelID,
+    Iterable,
     Mapping,
     Optional,
     PaymentAmount,
@@ -77,7 +78,7 @@ def _get_channel_state_by_partner_address(
 
 class ChannelStateCondition(ABC):
     @abstractmethod
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         pass
@@ -85,7 +86,7 @@ class ChannelStateCondition(ABC):
     def __call__(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
-        return self.evaluate_condition(chain_state, channel_state)
+        return self.evaluate(chain_state, channel_state)
 
 
 @dataclass
@@ -93,7 +94,7 @@ class ChannelHasDeposit(ChannelStateCondition):
     target_address: Address
     target_balance: TokenAmount
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         if channel_state is None:
@@ -108,7 +109,7 @@ class ChannelHasDeposit(ChannelStateCondition):
 
 @dataclass
 class ChannelExists(ChannelStateCondition):
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         return channel_state is not None
@@ -119,7 +120,7 @@ class ChannelHasPaymentBalance(ChannelStateCondition):
     target_address: Address
     target_balance: TokenAmount
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         def get_balance(end_state: NettingChannelEndState) -> TokenAmount:
@@ -142,7 +143,7 @@ class ChannelHasPaymentBalance(ChannelStateCondition):
 class ChannelInTargetStates(ChannelStateCondition):
     target_states: Sequence[ChannelState]
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         if channel_state is None:
@@ -158,14 +159,14 @@ class ChannelExpiredCoopSettle(ChannelStateCondition):
     partner_total_withdraw: WithdrawAmount
     initiation_block: BlockNumber
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         if channel_state is None:
             return False
-        if self.coop_settle_initiator_address is channel_state.our_state.address:
+        if self.coop_settle_initiator_address == channel_state.our_state.address:
             channel_end_state = channel_state.our_state
-        elif self.coop_settle_initiator_address is channel_state.partner_state.address:
+        elif self.coop_settle_initiator_address == channel_state.partner_state.address:
             channel_end_state = channel_state.partner_state
         else:
             raise ValueError("target_address must be one of the channel participants")
@@ -174,7 +175,7 @@ class ChannelExpiredCoopSettle(ChannelStateCondition):
                 candidate
                 for candidate in channel_end_state.expired_coop_settles
                 if candidate.total_withdraw_partner == self.partner_total_withdraw
-                and candidate.total_withdraw_participant == self.participant_total_withdraw
+                and candidate.total_withdraw_initiator == self.participant_total_withdraw
                 and candidate.expiration > self.initiation_block
             )
             return True
@@ -186,7 +187,7 @@ class ChannelExpiredCoopSettle(ChannelStateCondition):
 class ChannelCoopSettleSuccess(ChannelStateCondition):
     coop_settle_initiator_address: Address
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         if channel_state is None:
@@ -197,33 +198,35 @@ class ChannelCoopSettleSuccess(ChannelStateCondition):
             channel_end_state = channel_state.partner_state
         else:
             raise ValueError("target_address must be one of the channel participants")
-        if channel_end_state.initiated_coop_settle:
-            if channel_end_state.initiated_coop_settle.transaction:
-                return (
-                    channel_end_state.initiated_coop_settle.transaction.result
-                    is TransactionExecutionStatus.SUCCESS
-                )
+        if (
+            channel_end_state.initiated_coop_settle is not None
+            and channel_end_state.initiated_coop_settle.transaction is not None
+        ):
+            return (
+                channel_end_state.initiated_coop_settle.transaction.result
+                is TransactionExecutionStatus.SUCCESS
+            )
         return False
 
 
 @dataclass
 class And(ChannelStateCondition):
-    conditions: List[ChannelStateCondition]
+    conditions: Iterable[ChannelStateCondition]
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
-        return all([condition(chain_state, channel_state) for condition in self.conditions])
+        return all(condition(chain_state, channel_state) for condition in self.conditions)
 
 
 @dataclass
 class Or(ChannelStateCondition):
-    conditions: List[ChannelStateCondition]
+    conditions: Iterable[ChannelStateCondition]
 
-    def evaluate_condition(
+    def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
-        return any([condition(chain_state, channel_state) for condition in self.conditions])
+        return any(condition(chain_state, channel_state) for condition in self.conditions)
 
 
 @dataclass
@@ -254,9 +257,9 @@ class ChannelStateWaiter:
 
     def wait(self, condition: ChannelStateCondition) -> None:
         chain_state = self._get_current_chain_state()
-        while condition(chain_state, self._get_channel_state(chain_state)) is not True:
-            assert self.raiden, ALARM_TASK_ERROR_MSG
-            assert self.raiden.alarm, ALARM_TASK_ERROR_MSG
+        while condition(chain_state, self._get_channel_state(chain_state)):
+            assert self.raiden.is_running(), ALARM_TASK_ERROR_MSG
+            assert self.raiden.alarm.is_running(), ALARM_TASK_ERROR_MSG
             log.debug(str(self), **self._log_details(condition))
             gevent.sleep(self.retry_timeout)
             chain_state = self._get_current_chain_state()
@@ -453,9 +456,9 @@ def wait_for_channels(
     raiden: "RaidenService",
     canonical_id_to_condition: Mapping[CanonicalIdentifier, ChannelStateCondition],
     retry_timeout: float,
-    timeout: Optional[int] = None,
+    timeout: int = None,
 ) -> None:
-    wait_tasks = list()
+    wait_tasks = []
     chain_state = views.state_from_raiden(raiden)
     for canonical_id, condition in canonical_id_to_condition.items():
         channel_state = views.get_channelstate_by_canonical_identifier(chain_state, canonical_id)
@@ -481,14 +484,13 @@ def wait_for_channel_in_states(
     target_states: Sequence[ChannelState],
 ) -> None:
 
-    canonical_id_to_condition = dict()
+    canonical_id_to_condition = {}
     condition = ChannelInTargetStates(target_states)
     for channel_id in channel_ids:
         canonical_id = _get_canonical_identifier_by_channel_id(
             raiden, token_network_registry_address, token_address, channel_id
         )
-        if canonical_id is not None:
-            canonical_id_to_condition[canonical_id] = condition
+        canonical_id_to_condition[canonical_id] = condition
 
     wait_for_channels(
         raiden,
