@@ -1788,6 +1788,7 @@ def events_for_expired_withdraws(
             break
 
         nonce = get_next_nonce(channel_state.our_state)
+        channel_state.our_state.nonce = nonce
         coop_settle = channel_state.our_state.initiated_coop_settle
         if coop_settle is not None:
             if (
