@@ -1158,7 +1158,11 @@ def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
     )
 
 
-def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> Balance:
+def get_balance(
+    sender: NettingChannelEndState,
+    receiver: NettingChannelEndState,
+    ignore_offchain_withdraws: bool = False,
+) -> Balance:
     """Calculates the balance for a participant in a channel.
 
     For the definition of balance see
@@ -1173,9 +1177,11 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
     if receiver.balance_proof:
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
+    offchain_total_withdraw = 0 if ignore_offchain_withdraws else sender.offchain_total_withdraw
+
     return Balance(
         sender.contract_balance
-        - max(sender.offchain_total_withdraw, sender.onchain_total_withdraw)
+        - max(offchain_total_withdraw, sender.onchain_total_withdraw)
         - sender_transferred_amount
         + receiver_transferred_amount
     )
@@ -1189,18 +1195,7 @@ def get_max_withdraw_amount(
     or pending as offchain-withdraw.
 
     """
-    sender_transferred_amount = 0
-    receiver_transferred_amount = 0
-
-    if sender.balance_proof is not None:
-        sender_transferred_amount = sender.balance_proof.transferred_amount
-
-    if receiver.balance_proof is not None:
-        receiver_transferred_amount = receiver.balance_proof.transferred_amount
-
-    return WithdrawAmount(
-        sender.contract_balance - sender_transferred_amount + receiver_transferred_amount
-    )
+    return WithdrawAmount(get_balance(sender, receiver, ignore_offchain_withdraws=True))
 
 
 def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofData:
