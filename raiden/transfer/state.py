@@ -325,7 +325,7 @@ class NettingChannelEndState(State):
     withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
         repr=False, default_factory=dict
     )
-    initiated_coop_settle: Optional[CoopSettleState] = field(repr=False, default=None)
+    initiated_coop_settle: Optional[CoopSettleState] = field(default=None)
     expired_coop_settles: List[CoopSettleState] = field(repr=False, default_factory=list)
     withdraws_expired: List[ExpiredWithdrawState] = field(repr=False, default_factory=list)
     #: Locks which have been introduced with a locked transfer, however the

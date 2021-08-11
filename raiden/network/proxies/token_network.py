@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import astuple, dataclass
+from dataclasses import dataclass
 
 import structlog
 from eth_utils import encode_hex, is_binary_address, to_canonical_address, to_hex
@@ -98,11 +98,11 @@ def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
 
 
 class WithdrawInput(NamedTuple):
-    total_withdraw: WithdrawAmount
     initiator: Address
+    total_withdraw: WithdrawAmount
+    expiration_block: BlockExpiration
     initiator_signature: Signature
     partner_signature: Signature
-    expiration_block: BlockExpiration
 
 
 class ChannelData(NamedTuple):
@@ -1527,8 +1527,8 @@ class TokenNetwork:
             "cooperativeSettle",
             extra_log_details=log_details,
             channel_identifier=channel_identifier,
-            data1=astuple(withdraw_initiator),
-            data2=astuple(withdraw_partner),
+            data1=tuple(withdraw_initiator),
+            data2=tuple(withdraw_partner),
         )
 
         if estimated_transaction is None:

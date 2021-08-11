@@ -17,7 +17,6 @@ from raiden.utils.typing import (
     ChannelID,
     ClassVar,
     Nonce,
-    Optional,
     TokenNetworkAddress,
     WithdrawAmount,
 )
@@ -38,7 +37,7 @@ class WithdrawRequest(SignedRetrieableMessage):
     total_withdraw: WithdrawAmount
     nonce: Nonce
     expiration: BlockExpiration
-    coop_settle: Optional[bool] = False
+    coop_settle: bool = False
 
     class Meta:
         unknown = EXCLUDE

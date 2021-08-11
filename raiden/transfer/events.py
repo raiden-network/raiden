@@ -58,6 +58,7 @@ class SendWithdrawRequest(SendMessageEvent):
             f"{self.__class__.__name__}< "
             f"total_withdraw: {self.total_withdraw} expiration: {self.expiration} "
             f"participant: {to_checksum_address(self.participant)} nonce: {self.nonce} "
+            f"coop_settle: {self.coop_settle}"
             f">"
         )
 

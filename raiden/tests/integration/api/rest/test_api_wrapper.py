@@ -108,4 +108,5 @@ def test_api_wrapper(raiden_network, unregistered_custom_token, retry_timeout, p
 
     # Test closing channel
     resp = wrapper.close_channel(partner=address2, token=token)
-    assert resp.state == "closed"
+    # Coop-settle was done, the response should be empty.
+    assert not resp

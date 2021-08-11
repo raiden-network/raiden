@@ -132,7 +132,7 @@ def test_settle_is_automatically_called(
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    RaidenAPI(app1).channel_close(registry_address, token_address, app0.address)
+    RaidenAPI(app1).channel_close(registry_address, token_address, app0.address, coop_settle=False)
 
     waiting.wait_for_close(
         app0,
@@ -403,7 +403,7 @@ def test_batch_unlock(
     # The token network will emit a ChannelClose event, this will be polled by
     # both apps and each must start a task for calling settle.
     RaidenAPI(bob_app).channel_close(
-        token_network_registry_address, token_address, alice_app.address
+        token_network_registry_address, token_address, alice_app.address, coop_settle=False
     )
 
     # The secret has to be registered manually because Bob never learned the
@@ -735,7 +735,7 @@ def test_settled_lock(
     # the object is cleared from the node's state.
     channelstate_1_0 = get_channelstate(app1, app0, token_network_address)
 
-    RaidenAPI(app1).channel_close(registry_address, token_address, app0.address)
+    RaidenAPI(app1).channel_close(registry_address, token_address, app0.address, coop_settle=False)
 
     waiting.wait_for_settle(
         app1,
@@ -992,7 +992,7 @@ def test_automatic_dispute(
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to
     # use the one with the largest transferred_amount.
-    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address)
+    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address, coop_settle=False)
 
     # Bob needs to provide a transfer otherwise its netted balance will be
     # wrong, so he is incentivised to use Alice's transfer with the largest
@@ -1132,6 +1132,7 @@ def test_batch_unlock_after_restart(
         registry_address=registry_address,
         token_address=token_address,
         partner_address=alice_app.address,
+        coop_settle=False,
     )
 
     # wait for the close transaction to be mined, this is necessary to compute
@@ -1226,6 +1227,7 @@ def test_handle_insufficient_eth(
             registry_address=registry_address,
             token_address=token,
             partner_address=app1.address,
+            coop_settle=False,
         )
         waiting.wait_for_settle(
             raiden=app0,

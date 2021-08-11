@@ -100,12 +100,12 @@ def get_contractreceivechannelsettled_data_from_event(
     if not channel_state:
         return None
 
-    if participant1 == chain_state.our_address:
+    if participant1 == to_checksum_address(chain_state.our_address):
         our_locksroot = locksroot_participant1
         our_amount = amount_participant1
         partner_locksroot = locksroot_participant2
         partner_amount = amount_participant2
-    elif participant2 == chain_state.our_address:
+    elif participant2 == to_checksum_address(chain_state.our_address):
         our_locksroot = locksroot_participant2
         our_amount = amount_participant2
         partner_locksroot = locksroot_participant1

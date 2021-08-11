@@ -463,6 +463,15 @@ class RaidenEventHandler(EventHandler):
     def handle_contract_send_coopsettle(
         raiden: "RaidenService", channel_coopsettle_event: ContractSendChannelCoopSettle
     ) -> None:
+        chain_state = state_from_raiden(raiden)
+        channel_state = get_channelstate_by_canonical_identifier(
+            chain_state=chain_state,
+            canonical_identifier=channel_coopsettle_event.canonical_identifier,
+        )
+        if channel_state is None:
+            raise RaidenUnrecoverableError(
+                "ContractSendChannelCoopSettle for non-existing channel."
+            )
 
         participant_withdraw_data = pack_withdraw(
             canonical_identifier=channel_coopsettle_event.canonical_identifier,
@@ -472,16 +481,16 @@ class RaidenEventHandler(EventHandler):
         )
         our_signature_initiator = raiden.signer.sign(data=participant_withdraw_data)
         withdraw_initiator = WithdrawInput(
+            initiator=raiden.address,
             total_withdraw=channel_coopsettle_event.our_total_withdraw,
             expiration_block=channel_coopsettle_event.expiration,
-            initiator=raiden.address,
             initiator_signature=our_signature_initiator,
             partner_signature=channel_coopsettle_event.signature_our_withdraw,
         )
 
         partner_withdraw_data = pack_withdraw(
             canonical_identifier=channel_coopsettle_event.canonical_identifier,
-            participant=raiden.address,
+            participant=channel_state.partner_state.address,
             total_withdraw=channel_coopsettle_event.partner_total_withdraw,
             expiration_block=channel_coopsettle_event.expiration,
         )
@@ -490,20 +499,12 @@ class RaidenEventHandler(EventHandler):
         withdraw_partner = WithdrawInput(
             total_withdraw=channel_coopsettle_event.partner_total_withdraw,
             expiration_block=channel_coopsettle_event.expiration,
-            initiator=raiden.address,
-            initiator_signature=our_signature_partner,
-            partner_signature=channel_coopsettle_event.signature_partner_withdraw,
+            initiator=channel_state.partner_state.address,
+            partner_signature=our_signature_partner,
+            initiator_signature=channel_coopsettle_event.signature_partner_withdraw,
         )
-        chain_state = state_from_raiden(raiden)
+
         confirmed_block_identifier = chain_state.block_hash
-        channel_state = get_channelstate_by_canonical_identifier(
-            chain_state=chain_state,
-            canonical_identifier=channel_coopsettle_event.canonical_identifier,
-        )
-
-        if channel_state is None:
-            raise RaidenUnrecoverableError("ContractSendChannelWithdraw for non-existing channel.")
-
         channel_proxy = raiden.proxy_manager.payment_channel(
             channel_state=channel_state, block_identifier=confirmed_block_identifier
         )

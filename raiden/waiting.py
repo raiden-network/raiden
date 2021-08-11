@@ -19,9 +19,9 @@ from raiden.transfer.state import (
     ChannelState,
     NettingChannelEndState,
     NettingChannelState,
-    TransactionExecutionStatus,
 )
 from raiden.transfer.state_change import (
+    ContractReceiveChannelSettled,
     ContractReceiveChannelWithdraw,
     ContractReceiveSecretReveal,
 )
@@ -131,10 +131,11 @@ class ChannelHasPaymentBalance(ChannelStateCondition):
 
         if channel_state is None:
             return False
+
         if self.target_address == channel_state.our_state.address:
-            return get_balance(channel_state.our_state) >= self.target_balance
-        elif self.target_address == channel_state.partner_state.address:
             return get_balance(channel_state.partner_state) >= self.target_balance
+        elif self.target_address == channel_state.partner_state.address:
+            return get_balance(channel_state.our_state) >= self.target_balance
         else:
             raise ValueError("target_address must be one of the channel participants")
 
@@ -147,65 +148,46 @@ class ChannelInTargetStates(ChannelStateCondition):
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
         if channel_state is None:
-            # XXX this was reversed before, why?
-            return False
+            # If the channel is settled, then it will disappear from
+            # chain_state and so channel_state will never be None.
+            return True
         return channel.get_status(channel_state) in self.target_states
 
 
 @dataclass
 class ChannelExpiredCoopSettle(ChannelStateCondition):
-    coop_settle_initiator_address: Address
-    participant_total_withdraw: WithdrawAmount
-    partner_total_withdraw: WithdrawAmount
-    initiation_block: BlockNumber
+    raiden: "RaidenService"
+    canonical_identifier: CanonicalIdentifier
 
     def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
-        if channel_state is None:
-            return False
-        if self.coop_settle_initiator_address == channel_state.our_state.address:
-            channel_end_state = channel_state.our_state
-        elif self.coop_settle_initiator_address == channel_state.partner_state.address:
-            channel_end_state = channel_state.partner_state
-        else:
-            raise ValueError("target_address must be one of the channel participants")
-        try:
-            next(
-                candidate
-                for candidate in channel_end_state.expired_coop_settles
-                if candidate.total_withdraw_partner == self.partner_total_withdraw
-                and candidate.total_withdraw_initiator == self.participant_total_withdraw
-                and candidate.expiration > self.initiation_block
-            )
-            return True
-        except StopIteration:
-            return False
+        if channel_state is not None:
+            coop_settle = channel_state.our_state.initiated_coop_settle
+            assert coop_settle is not None, "must be set"
+            return self.raiden.get_block_number() > coop_settle.expiration
+        return False
 
 
 @dataclass
 class ChannelCoopSettleSuccess(ChannelStateCondition):
-    coop_settle_initiator_address: Address
+    raiden: "RaidenService"
+    canonical_identifier: CanonicalIdentifier
+
+    def __post_init__(self) -> None:
+        assert self.raiden.wal is not None, "must be set"
+        self._stream = self.raiden.wal.storage.get_state_changes_stream(0.1)
 
     def evaluate(
         self, chain_state: ChainState, channel_state: Optional[NettingChannelState]
     ) -> bool:
-        if channel_state is None:
-            return False
-        if self.coop_settle_initiator_address is channel_state.our_state.address:
-            channel_end_state = channel_state.our_state
-        elif self.coop_settle_initiator_address is channel_state.partner_state.address:
-            channel_end_state = channel_state.partner_state
-        else:
-            raise ValueError("target_address must be one of the channel participants")
-        if (
-            channel_end_state.initiated_coop_settle is not None
-            and channel_end_state.initiated_coop_settle.transaction is not None
-        ):
-            return (
-                channel_end_state.initiated_coop_settle.transaction.result
-                is TransactionExecutionStatus.SUCCESS
-            )
+        state_changes = next(self._stream)
+        for state_change in state_changes:
+            if (
+                isinstance(state_change, ContractReceiveChannelSettled)
+                and state_change.canonical_identifier == self.canonical_identifier
+            ):
+                return True
         return False
 
 
@@ -237,9 +219,6 @@ class ChannelStateWaiter:
     token_address: TokenAddress
     partner_address: Address
 
-    def _get_current_chain_state(self) -> ChainState:
-        return views.state_from_raiden(self.raiden)
-
     def _get_channel_state(self, chain_state: ChainState) -> Optional[NettingChannelState]:
         return _get_channel_state_by_partner_address(
             chain_state,
@@ -248,21 +227,19 @@ class ChannelStateWaiter:
             self.partner_address,
         )
 
-    def _log_details(self, condition: ChannelStateCondition) -> Mapping[str, Any]:
-        log_details = {
-            "token_network_registry_address": self.token_network_registry_address,
-            "condition": str(condition),
-        }
-        return log_details
-
     def wait(self, condition: ChannelStateCondition) -> None:
-        chain_state = self._get_current_chain_state()
-        while condition(chain_state, self._get_channel_state(chain_state)):
+        chain_state = views.state_from_raiden(self.raiden)
+        while not condition(chain_state, self._get_channel_state(chain_state)):
             assert self.raiden.is_running(), ALARM_TASK_ERROR_MSG
             assert self.raiden.alarm.is_running(), ALARM_TASK_ERROR_MSG
-            log.debug(str(self), **self._log_details(condition))
+            log.debug(
+                "Waiting on channel",
+                node=to_checksum_address(self.raiden.address),
+                partner_address=to_checksum_address(self.partner_address),
+                condition=condition,
+            )
             gevent.sleep(self.retry_timeout)
-            chain_state = self._get_current_chain_state()
+            chain_state = views.state_from_raiden(self.raiden)
 
 
 def _get_canonical_identifier_by_channel_id(
@@ -462,7 +439,8 @@ def wait_for_channels(
     chain_state = views.state_from_raiden(raiden)
     for canonical_id, condition in canonical_id_to_condition.items():
         channel_state = views.get_channelstate_by_canonical_identifier(chain_state, canonical_id)
-        assert channel_state is not None, "Can't wait for nonexisting channels"
+        if channel_state is None:
+            continue
         waiter = ChannelStateWaiter(
             raiden,
             retry_timeout,

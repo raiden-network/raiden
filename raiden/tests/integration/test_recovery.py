@@ -318,6 +318,7 @@ def test_node_clears_pending_withdraw_transaction_after_channel_is_closed(
         registry_address=app0.default_registry.address,
         token_address=token_address,
         partner_address=app0.address,
+        coop_settle=False,
     )
 
     waiting.wait_for_close(

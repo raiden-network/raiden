@@ -1181,6 +1181,8 @@ class OnChainMixin:
             ),
             block_number=self.block_number + 1,
             block_hash=factories.make_block_hash(),
+            our_transferred_amount=0,
+            partner_transferred_amount=0,
             our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
             partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
         )

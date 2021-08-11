@@ -156,6 +156,7 @@ class MessageHandler:
             expiration=message.expiration,
             signature=message.signature,
             sender_metadata=sender_metadata,
+            coop_settle=message.coop_settle,
         )
         return [withdraw_request]
 
