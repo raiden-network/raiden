@@ -14,7 +14,7 @@ if [[ -n ${CIRCLE_TAG} ]]; then
 fi
 
 # shellcheck disable=SC2154
-if [[ -z ${CIRCLE_PR_NUMBER} ]]; then
+if [[ -z ${CIRCLE_PULL_REQUEST} ]]; then
     # Not a PR, also never skip
     echo "Not a PR, not skipping build"
     exit 0
