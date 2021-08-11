@@ -43,6 +43,7 @@ from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask,
 from raiden.transfer.state import ChainState, TokenNetworkRegistryState, TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelCoopSettle,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     Block,
@@ -729,8 +730,9 @@ def handle_state_change(
     state_change_map: Dict[Any, List] = {
         Block: [handle_block, []],
         ActionChannelClose: [handle_token_network_action, []],
-        ActionChannelWithdraw: [subdispatch_by_canonical_id, [canonical_identifier]],
         ActionChannelSetRevealTimeout: [subdispatch_by_canonical_id, [canonical_identifier]],
+        ActionChannelWithdraw: [subdispatch_by_canonical_id, [canonical_identifier]],
+        ActionChannelCoopSettle: [subdispatch_by_canonical_id, [canonical_identifier]],
         ActionInitInitiator: [handle_action_init_initiator, []],
         ActionInitMediator: [handle_action_init_mediator, []],
         ActionInitTarget: [handle_action_init_target, []],

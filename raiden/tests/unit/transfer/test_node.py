@@ -2,7 +2,7 @@ import pytest
 
 from raiden.constants import LOCKSROOT_OF_NO_LOCKS
 from raiden.settings import GAS_LIMIT
-from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
+from raiden.tests.unit.channel_state.utils import create_channel_from_models, create_model
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     HOP1,

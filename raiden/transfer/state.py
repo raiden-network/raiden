@@ -48,6 +48,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    Signature,
     T_Address,
     T_BlockHash,
     T_BlockNumber,
@@ -305,6 +306,15 @@ class PendingWithdrawState:
 
 
 @dataclass
+class CoopSettleState:
+    total_withdraw_initiator: WithdrawAmount
+    total_withdraw_partner: WithdrawAmount
+    expiration: BlockExpiration
+    partner_signature_request: Optional[Signature] = None
+    partner_signature_confirmation: Optional[Signature] = None
+
+
+@dataclass
 class NettingChannelEndState(State):
     """The state of one of the nodes in a two party netting channel."""
 
@@ -314,6 +324,7 @@ class NettingChannelEndState(State):
     withdraws_pending: Dict[WithdrawAmount, PendingWithdrawState] = field(
         repr=False, default_factory=dict
     )
+    initiated_coop_settle: Optional[CoopSettleState] = field(repr=False, default=None)
     withdraws_expired: List[ExpiredWithdrawState] = field(repr=False, default_factory=list)
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet

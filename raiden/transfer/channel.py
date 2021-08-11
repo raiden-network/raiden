@@ -12,9 +12,11 @@ from raiden.transfer.architecture import Event, StateChange, SuccessOrError, Tra
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
+    ContractSendChannelCoopSettle,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
+    EventInvalidActionCoopSettle,
     EventInvalidActionSetRevealTimeout,
     EventInvalidActionWithdraw,
     EventInvalidReceivedLockedTransfer,
@@ -52,6 +54,7 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChannelState,
+    CoopSettleState,
     ExpiredWithdrawState,
     HashTimeLockState,
     NettingChannelEndState,
@@ -66,6 +69,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelCoopSettle,
     ActionChannelSetRevealTimeout,
     ActionChannelWithdraw,
     Block,
@@ -915,30 +919,56 @@ def is_valid_unlock(
     return result
 
 
-def is_valid_action_withdraw(
-    channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
+def is_valid_total_withdraw(
+    channel_state: NettingChannelState, our_total_withdraw: WithdrawAmount
 ) -> SuccessOrError:
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
     withdraw_overflow = not is_valid_channel_total_withdraw(
-        TokenAmount(withdraw.total_withdraw + channel_state.partner_total_withdraw)
+        TokenAmount(our_total_withdraw + channel_state.partner_total_withdraw)
     )
 
-    withdraw_amount = withdraw.total_withdraw - channel_state.our_total_withdraw
+    withdraw_amount = our_total_withdraw - channel_state.our_total_withdraw
     if get_status(channel_state) != ChannelState.STATE_OPENED:
         return SuccessOrError("Invalid withdraw, the channel is not opened")
     elif withdraw_amount <= 0:
-        return SuccessOrError(f"Total withdraw {withdraw.total_withdraw} did not increase")
+        return SuccessOrError(f"Total withdraw {our_total_withdraw} did not increase")
     elif balance < withdraw_amount:
         return SuccessOrError(
             f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
         )
     elif withdraw_overflow:
         return SuccessOrError(
-            f"The new total_withdraw {withdraw.total_withdraw} will cause an overflow"
+            f"The new total_withdraw {our_total_withdraw} will cause an overflow"
         )
     else:
         return SuccessOrError()
+
+
+def is_valid_action_withdraw(
+    channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
+) -> SuccessOrError:
+    return is_valid_total_withdraw(channel_state, withdraw.total_withdraw)
+
+
+def is_valid_action_coopsettle(
+    channel_state: NettingChannelState,
+    coop_settle: ActionChannelCoopSettle,  # pylint: disable=unused-argument
+    total_withdraw: WithdrawAmount,
+) -> SuccessOrError:
+    result = is_valid_total_withdraw(channel_state, total_withdraw)
+    if not result:
+        return result
+
+    if get_number_of_pending_transfers(channel_state.our_state) > 0:
+        return SuccessOrError("Coop-Settle not allowed: We still have pending locks")
+    if get_number_of_pending_transfers(channel_state.partner_state) > 0:
+        return SuccessOrError("Coop-Settle not allowed: Partner still has pending locks")
+    if channel_state.our_state.offchain_total_withdraw > 0:
+        return SuccessOrError("Coop-Settle not allowed: We still have pending withdraws")
+    if channel_state.partner_state.offchain_total_withdraw > 0:
+        return SuccessOrError("Coop-Settle not allowed: Partner still has pending withdraws")
+    return SuccessOrError()
 
 
 def is_valid_withdraw_request(
@@ -1004,8 +1034,6 @@ def is_valid_withdraw_confirmation(
 
     expected_nonce = get_next_nonce(channel_state.partner_state)
 
-    is_valid = is_valid_withdraw(received_withdraw)
-
     if not withdraw_state:
         return SuccessOrError(
             f"Received withdraw confirmation {received_withdraw.total_withdraw} "
@@ -1053,7 +1081,7 @@ def is_valid_withdraw_confirmation(
             f"The new total_withdraw {received_withdraw.total_withdraw} will cause an overflow"
         )
     else:
-        return is_valid
+        return is_valid_withdraw(received_withdraw)
 
 
 def is_valid_withdraw_expired(
@@ -1130,7 +1158,11 @@ def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
     )
 
 
-def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState) -> Balance:
+def get_balance(
+    sender: NettingChannelEndState,
+    receiver: NettingChannelEndState,
+    ignore_offchain_withdraws: bool = False,
+) -> Balance:
     """Calculates the balance for a participant in a channel.
 
     For the definition of balance see
@@ -1145,12 +1177,25 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
     if receiver.balance_proof:
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
+    offchain_total_withdraw = 0 if ignore_offchain_withdraws else sender.offchain_total_withdraw
+
     return Balance(
         sender.contract_balance
-        - max(sender.offchain_total_withdraw, sender.onchain_total_withdraw)
+        - max(offchain_total_withdraw, sender.onchain_total_withdraw)
         - sender_transferred_amount
         + receiver_transferred_amount
     )
+
+
+def get_max_withdraw_amount(
+    sender: NettingChannelEndState, receiver: NettingChannelEndState
+) -> WithdrawAmount:
+    """Calculates the maximum "total_withdraw_amount" for a channel.
+    This will leave the channel without funds, when this is withdrawn from the contract,
+    or pending as offchain-withdraw.
+
+    """
+    return WithdrawAmount(get_balance(sender, receiver, ignore_offchain_withdraws=True))
 
 
 def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofData:
@@ -1596,9 +1641,10 @@ def events_for_close(
 def send_withdraw_request(
     channel_state: NettingChannelState,
     total_withdraw: WithdrawAmount,
-    block_number: BlockNumber,
+    expiration: BlockExpiration,
     pseudo_random_generator: random.Random,
     recipient_metadata: Optional[AddressMetadata],
+    coop_settle: bool = False,
 ) -> List[Event]:
     events: List[Event] = list()
 
@@ -1606,9 +1652,6 @@ def send_withdraw_request(
         return events
 
     nonce = get_next_nonce(channel_state.our_state)
-    expiration = get_safe_initial_expiration(
-        block_number=block_number, reveal_timeout=channel_state.reveal_timeout
-    )
     withdraw_state = PendingWithdrawState(
         total_withdraw=total_withdraw,
         nonce=nonce,
@@ -1632,6 +1675,7 @@ def send_withdraw_request(
         nonce=channel_state.our_state.nonce,
         expiration=withdraw_state.expiration,
         recipient_metadata=recipient_metadata,
+        coop_settle=coop_settle,
     )
 
     events.append(withdraw_event)
@@ -1724,7 +1768,7 @@ def send_lock_expired(
     return []
 
 
-def send_expired_withdraws(
+def events_for_expired_withdraws(
     channel_state: NettingChannelState,
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
@@ -1745,6 +1789,14 @@ def send_expired_withdraws(
 
         nonce = get_next_nonce(channel_state.our_state)
         channel_state.our_state.nonce = nonce
+        coop_settle = channel_state.our_state.initiated_coop_settle
+        if coop_settle is not None:
+            if (
+                coop_settle.total_withdraw_initiator == withdraw_state.total_withdraw
+                and coop_settle.expiration == withdraw_state.expiration
+            ):
+                # We also declare the coop-settle as expired, if we initiated it
+                channel_state.our_state.initiated_coop_settle = None
 
         channel_state.our_state.withdraws_expired.append(
             ExpiredWithdrawState(
@@ -1883,6 +1935,54 @@ def _handle_action_close(
 
 
 @handle_state_transitions.register
+def _handle_action_coop_settle(
+    action: ActionChannelCoopSettle,
+    channel_state: NettingChannelState,
+    pseudo_random_generator: random.Random,
+    block_number: BlockNumber,
+    **kwargs: Optional[Dict[Any, Any]],
+) -> TransitionResult[NettingChannelState]:
+    events = []
+
+    our_max_total_withdraw = get_max_withdraw_amount(
+        channel_state.our_state, channel_state.partner_state
+    )
+    partner_max_total_withdraw = get_max_withdraw_amount(
+        channel_state.partner_state, channel_state.our_state
+    )
+    valid_coop_settle = is_valid_action_coopsettle(channel_state, action, our_max_total_withdraw)
+
+    if valid_coop_settle:
+        expiration = get_safe_initial_expiration(
+            block_number=block_number, reveal_timeout=channel_state.reveal_timeout
+        )
+        coop_settle = CoopSettleState(
+            total_withdraw_initiator=our_max_total_withdraw,
+            total_withdraw_partner=partner_max_total_withdraw,
+            expiration=expiration,
+        )
+        channel_state.our_state.initiated_coop_settle = coop_settle
+        events = send_withdraw_request(
+            channel_state=channel_state,
+            total_withdraw=coop_settle.total_withdraw_initiator,
+            expiration=coop_settle.expiration,
+            pseudo_random_generator=pseudo_random_generator,
+            recipient_metadata=action.recipient_metadata,
+            coop_settle=True,
+        )
+    else:
+        error_msg = valid_coop_settle.as_error_message
+        assert error_msg, "is_valid_action_coopsettle should return error msg if not valid"
+        events = [
+            EventInvalidActionCoopSettle(
+                attempted_withdraw=our_max_total_withdraw, reason=error_msg
+            )
+        ]
+
+    return TransitionResult(channel_state, events)
+
+
+@handle_state_transitions.register
 def _handle_action_withdraw(
     action: ActionChannelWithdraw,
     channel_state: NettingChannelState,
@@ -1894,10 +1994,13 @@ def _handle_action_withdraw(
     is_valid_withdraw = is_valid_action_withdraw(channel_state, action)
 
     if is_valid_withdraw:
+        expiration = get_safe_initial_expiration(
+            block_number=block_number, reveal_timeout=channel_state.reveal_timeout
+        )
         events = send_withdraw_request(
             channel_state=channel_state,
             total_withdraw=action.total_withdraw,
-            block_number=block_number,
+            expiration=expiration,
             pseudo_random_generator=pseudo_random_generator,
             recipient_metadata=action.recipient_metadata,
         )
@@ -1941,46 +2044,135 @@ def _handle_action_set_reveal_timeout(
     return TransitionResult(channel_state, events)
 
 
+def events_for_coop_settle(
+    channel_state: NettingChannelState,
+    coop_settle_state: CoopSettleState,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+) -> List[Event]:
+    if (
+        coop_settle_state.partner_signature_request is not None
+        and coop_settle_state.partner_signature_confirmation is not None
+        and coop_settle_state.expiration >= block_number - channel_state.reveal_timeout
+    ):
+        send_coop_settle = ContractSendChannelCoopSettle(
+            canonical_identifier=channel_state.canonical_identifier,
+            our_total_withdraw=coop_settle_state.total_withdraw_initiator,
+            partner_total_withdraw=coop_settle_state.total_withdraw_partner,
+            expiration=coop_settle_state.expiration,
+            signature_our_withdraw=coop_settle_state.partner_signature_confirmation,
+            signature_partner_withdraw=coop_settle_state.partner_signature_request,
+            triggered_by_block_hash=block_hash,
+        )
+        return [send_coop_settle]
+    return []
+
+
 @handle_state_transitions.register
 def _handle_receive_withdraw_request(
     action: ReceiveWithdrawRequest,
     channel_state: NettingChannelState,
-    **kwargs: Optional[Dict[Any, Any]],
+    block_number: BlockNumber,
+    block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
-    is_valid = is_valid_withdraw_request(channel_state=channel_state, withdraw_request=action)
-    if is_valid:
-        withdraw_state = PendingWithdrawState(
-            total_withdraw=action.total_withdraw,
-            nonce=action.nonce,
-            expiration=action.expiration,
-            recipient_metadata=action.sender_metadata,
-        )
-        channel_state.partner_state.withdraws_pending[
-            withdraw_state.total_withdraw
-        ] = withdraw_state
-        channel_state.partner_state.nonce = action.nonce
+    events: List[Event] = list()
 
-        channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
-        send_withdraw = SendWithdrawConfirmation(
-            canonical_identifier=channel_state.canonical_identifier,
-            recipient=channel_state.partner_state.address,
-            recipient_metadata=action.sender_metadata,
-            message_identifier=action.message_identifier,
-            total_withdraw=action.total_withdraw,
-            participant=channel_state.partner_state.address,
-            nonce=channel_state.our_state.nonce,
-            expiration=withdraw_state.expiration,
-        )
-
-        events: List[Event] = [send_withdraw]
-    else:
-        error_msg = is_valid.as_error_message
+    def transition_result_invalid(
+        success_or_error: SuccessOrError,
+    ) -> TransitionResult[NettingChannelState]:
+        error_msg = success_or_error.as_error_message
         assert error_msg, "is_valid_withdraw_request should return error msg if not valid"
         invalid_withdraw_request = EventInvalidReceivedWithdrawRequest(
             attempted_withdraw=action.total_withdraw, reason=error_msg
         )
-        events = [invalid_withdraw_request]
+        return TransitionResult(channel_state, [invalid_withdraw_request])
 
+    is_valid = is_valid_withdraw_request(channel_state=channel_state, withdraw_request=action)
+    if not is_valid:
+        return transition_result_invalid(is_valid)
+
+    withdraw_state = PendingWithdrawState(
+        total_withdraw=action.total_withdraw,
+        nonce=action.nonce,
+        expiration=action.expiration,
+        recipient_metadata=action.sender_metadata,
+    )
+    channel_state.partner_state.withdraws_pending[withdraw_state.total_withdraw] = withdraw_state
+    channel_state.partner_state.nonce = action.nonce
+
+    our_initiated_coop_settle = channel_state.our_state.initiated_coop_settle
+
+    if our_initiated_coop_settle is not None or action.coop_settle:
+        partner_max_total_withdraw = get_max_withdraw_amount(
+            channel_state.partner_state, channel_state.our_state
+        )
+        if partner_max_total_withdraw != action.total_withdraw:
+            return transition_result_invalid(
+                SuccessOrError(
+                    "Partner requested withdraw while we initiated a coop-settle: "
+                    "Partner did not withdraw with maximum balance."
+                )
+            )
+        if get_number_of_pending_transfers(channel_state.partner_state) > 0:
+            return transition_result_invalid(SuccessOrError("Partner has pending transfers."))
+
+        if our_initiated_coop_settle is not None:
+            # There is a coop-settle inplace that we initiated
+            # and partner is communicating their total withdraw with us
+            if our_initiated_coop_settle.expiration != action.expiration:
+                return transition_result_invalid(
+                    SuccessOrError(
+                        "Partner requested withdraw while we initiated a coop-settle: "
+                        "Partner's withdraw has differing expiration."
+                    )
+                )
+
+            msg = "The expected total withdraw of the partner doesn't match the withdraw-request"
+            assert our_initiated_coop_settle.total_withdraw_partner == action.total_withdraw, msg
+
+            our_initiated_coop_settle.partner_signature_request = action.signature
+            coop_settle_events = events_for_coop_settle(
+                channel_state, our_initiated_coop_settle, block_number, block_hash
+            )
+            events.extend(coop_settle_events)
+        else:
+            # Partner initiated a coop-settle
+            our_max_total_withdraw = get_max_withdraw_amount(
+                channel_state.our_state, channel_state.partner_state
+            )
+            if get_number_of_pending_transfers(channel_state.our_state) > 0:
+                return transition_result_invalid(
+                    SuccessOrError("Partner initiated coop-settle, but we have pending transfers.")
+                )
+            partner_initiated_coop_settle = CoopSettleState(
+                total_withdraw_initiator=action.total_withdraw,
+                total_withdraw_partner=our_max_total_withdraw,
+                expiration=action.expiration,
+            )
+            channel_state.partner_state.initiated_coop_settle = partner_initiated_coop_settle
+            events = send_withdraw_request(
+                channel_state=channel_state,
+                expiration=partner_initiated_coop_settle.expiration,
+                total_withdraw=our_max_total_withdraw,
+                pseudo_random_generator=pseudo_random_generator,
+                recipient_metadata=action.sender_metadata,
+                coop_settle=False,
+            )
+            events.extend(events)
+
+    channel_state.our_state.nonce = get_next_nonce(channel_state.our_state)
+    send_withdraw = SendWithdrawConfirmation(
+        canonical_identifier=channel_state.canonical_identifier,
+        recipient=channel_state.partner_state.address,
+        recipient_metadata=action.sender_metadata,
+        message_identifier=action.message_identifier,
+        total_withdraw=action.total_withdraw,
+        participant=channel_state.partner_state.address,
+        nonce=channel_state.our_state.nonce,
+        expiration=withdraw_state.expiration,
+    )
+    events.append(send_withdraw)
     return TransitionResult(channel_state, events)
 
 
@@ -1995,7 +2187,6 @@ def _handle_receive_withdraw_confirmation(
     is_valid = is_valid_withdraw_confirmation(
         channel_state=channel_state, received_withdraw=action
     )
-
     withdraw_state = channel_state.our_state.withdraws_pending.get(action.total_withdraw)
     recipient_metadata = None
     if withdraw_state is not None:
@@ -2013,17 +2204,32 @@ def _handle_receive_withdraw_confirmation(
             )
         ]
 
-        # Only send the transaction on-chain if there is enough time for the
-        # withdraw transaction to be mined
-        if action.expiration >= block_number - channel_state.reveal_timeout:
-            withdraw_on_chain = ContractSendChannelWithdraw(
-                canonical_identifier=action.canonical_identifier,
-                total_withdraw=action.total_withdraw,
-                partner_signature=action.signature,
-                expiration=action.expiration,
-                triggered_by_block_hash=block_hash,
+        our_initiated_coop_settle = channel_state.our_state.initiated_coop_settle
+        partner_initiated_coop_settle = channel_state.partner_state.initiated_coop_settle
+        if our_initiated_coop_settle is not None:
+            # There is a coop settle inplace  that we initiated
+            assert (
+                partner_initiated_coop_settle is None
+            ), "Only one party can initiate a coop settle"
+
+            our_initiated_coop_settle.partner_signature_confirmation = action.signature
+            coop_settle_events = events_for_coop_settle(
+                channel_state, our_initiated_coop_settle, block_number, block_hash
             )
-            events.append(withdraw_on_chain)
+            events.extend(coop_settle_events)
+        if our_initiated_coop_settle is None and partner_initiated_coop_settle is None:
+            # Normal withdraw
+            # Only send the transaction on-chain if there is enough time for the
+            # withdraw transaction to be mined
+            if action.expiration >= block_number - channel_state.reveal_timeout:
+                withdraw_on_chain = ContractSendChannelWithdraw(
+                    canonical_identifier=action.canonical_identifier,
+                    total_withdraw=action.total_withdraw,
+                    partner_signature=action.signature,
+                    expiration=action.expiration,
+                    triggered_by_block_hash=block_hash,
+                )
+                events.append(withdraw_on_chain)
     else:
         error_msg = is_valid.as_error_message
         assert error_msg, "is_valid_withdraw_confirmation should return error msg if not valid"
@@ -2069,8 +2275,18 @@ def _handle_receive_withdraw_expired(
     )
     if is_valid:
         del channel_state.partner_state.withdraws_pending[withdraw_state.total_withdraw]
-
         channel_state.partner_state.nonce = action.nonce
+
+        coop_settle = channel_state.partner_state.initiated_coop_settle
+        if coop_settle is not None:
+            if (
+                coop_settle.total_withdraw_initiator == withdraw_state.total_withdraw
+                and coop_settle.expiration == withdraw_state.expiration
+            ):
+                # We declare the partner's initated coop-settle as expired
+                # and remove it from the state.
+                # This will be used in the handling of incoming withdraw messages.
+                channel_state.partner_state.initiated_coop_settle = None
 
         send_processed = SendProcessed(
             recipient=channel_state.partner_state.address,
@@ -2264,7 +2480,7 @@ def _handle_block(
     events: List[Event] = list()
 
     if get_status(channel_state) == ChannelState.STATE_OPENED:
-        expired_withdraws = send_expired_withdraws(
+        expired_withdraws = events_for_expired_withdraws(
             channel_state=channel_state,
             block_number=block_number,
             pseudo_random_generator=pseudo_random_generator,
