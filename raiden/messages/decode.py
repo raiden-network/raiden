@@ -32,7 +32,7 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
     balance_proof = balanceproof_from_envelope(message)
 
     lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
-    route_states = list()
+    route_states = []
     for route_metadata in message.metadata.routes:
         try:
             rs = RouteState(

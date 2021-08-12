@@ -1151,7 +1151,7 @@ class OnChainMixin:
                 block_hash=make_block_hash(),
             )
             for client in self.address_to_client.values():
-                events = list()
+                events = []
                 result = node.state_transition(client.chain_state, block_state_change)
                 events.extend(result.events)
             # TODO assert on events

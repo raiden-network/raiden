@@ -159,7 +159,7 @@ def get_token_network_addresses(
         token_networks = token_network_registry.tokennetworkaddresses_to_tokennetworks.values()
         return [token_network.address for token_network in token_networks]
 
-    return list()
+    return []
 
 
 def get_token_identifiers(
@@ -174,7 +174,7 @@ def get_token_identifiers(
         token_addresses = token_network_registry.tokenaddresses_to_tokennetworkaddresses.keys()
         return list(token_addresses)
 
-    return list()
+    return []
 
 
 def total_token_network_channels(

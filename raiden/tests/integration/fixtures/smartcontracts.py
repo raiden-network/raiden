@@ -303,7 +303,7 @@ def deploy_smart_contract_bundle_concurrently(
     greenlets.add(token_network_registry_deploy_greenlet)
 
     # ERC20 tokens used for token networks
-    token_contracts_greenlets = list()
+    token_contracts_greenlets = []
     for _ in range(number_of_tokens):
         token_deploy_greenlet = gevent.spawn(
             deploy_token,

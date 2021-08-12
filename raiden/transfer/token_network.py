@@ -44,7 +44,7 @@ def subdispatch_to_channel_by_id(
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult:
-    events = list()
+    events = []
 
     ids_to_channels = token_network_state.channelidentifiers_to_channels
 
@@ -126,7 +126,7 @@ def handle_channel_set_reveal_timeout(
 def handle_channelnew(
     token_network_state: TokenNetworkState, state_change: ContractReceiveChannelNew
 ) -> TransitionResult:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     channel_state = state_change.channel_state
     channel_identifier = channel_state.identifier
@@ -231,7 +231,7 @@ def handle_batch_unlock(
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult:
-    events = list()
+    events = []
     channel_state = token_network_state.channelidentifiers_to_channels.get(
         state_change.canonical_identifier.channel_identifier
     )

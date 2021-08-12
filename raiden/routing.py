@@ -87,7 +87,7 @@ def get_best_routes(
     if one_to_n_address is None:
         msg = "Pathfinding Service could not be used."
         log.warning(msg)
-        return msg, list(), None
+        return msg, [], None
 
     # Does any channel have sufficient capacity for the payment?
     channels = [
@@ -103,7 +103,7 @@ def get_best_routes(
         if is_usable is channel.ChannelUsability.USABLE:
             break
     else:
-        return "You have no suitable channel to initiate this payment.", list(), None
+        return "You have no suitable channel to initiate this payment.", [], None
 
     # Make sure that the PFS knows about the last channel we opened
     latest_channel_opened_at = 0
@@ -131,12 +131,12 @@ def get_best_routes(
             "No routes to the target were found.",
             pfs_message=pfs_error_msg,
         )
-        return pfs_error_msg, list(), None
+        return pfs_error_msg, [], None
 
     if not pfs_routes:
         # As of version 0.5 it is possible for the PFS to return an empty
         # list of routes without an error message.
-        return "PFS could not find any routes", list(), None
+        return "PFS could not find any routes", [], None
 
     log.info("Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token)
     return pfs_error_msg, pfs_routes, pfs_feedback_token

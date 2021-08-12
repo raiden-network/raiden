@@ -548,7 +548,7 @@ def make_client(
 
 
 def validate_and_parse_message(data: Any, peer_address: Address) -> List[Message]:
-    messages: List[Message] = list()
+    messages: List[Message] = []
 
     if not isinstance(data, str):
         log.warning(

@@ -239,7 +239,7 @@ class WriteAheadLog(Generic[ST]):
                     state_change=self.storage.serializer.serialize(state_change),
                 )
 
-                event_data = list()
+                event_data = []
                 for event in events:
                     event_data.append((state_change_id, self.storage.serializer.serialize(event)))
 

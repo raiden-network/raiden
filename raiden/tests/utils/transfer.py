@@ -124,7 +124,7 @@ def create_route_state_for_route(
 ) -> RouteState:
     assert len(apps) > 1, "Need at least two nodes for a route"
 
-    route = list()
+    route = []
     address_metadata = dict()
     for app in apps:
         route.append(app.address)
@@ -212,7 +212,7 @@ def transfer(
 
     route_states: Optional[List[RouteState]] = None
     if routes:
-        route_states = list()
+        route_states = []
         for route in routes:
             route_states.append(create_route_state_for_route(route, token_address))
     if transfer_state is TransferState.UNLOCKED:
@@ -481,7 +481,7 @@ def transfer_and_assert_path(
         assert token_network_address == app_token_network_address, msg
 
     pairs = zip(path[:-1], path[1:])
-    receiving = list()
+    receiving = []
     for from_app, to_app in pairs:
         from_channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=views.state_from_raiden(from_app),

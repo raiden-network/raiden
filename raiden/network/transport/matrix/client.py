@@ -447,7 +447,7 @@ class GMatrixClient(MatrixClient):
                     exc_info=ex,
                     term=term,
                 )
-                return list()
+                return []
             else:
                 raise ex
         try:
@@ -456,7 +456,7 @@ class GMatrixClient(MatrixClient):
                 for _user in response["results"]
             ]
         except KeyError:
-            return list()
+            return []
 
     def set_presence_state(self, state: str) -> Dict:
         return self.api._send(
@@ -580,8 +580,8 @@ class GMatrixClient(MatrixClient):
             # potential of introducing latency.
             #
             # The Queue's iterator cannot be used because it defaults do `get`.
-            currently_queued_response_tokens = list()
-            currently_queued_responses = list()
+            currently_queued_response_tokens = []
+            currently_queued_responses = []
             for token, response, received_at in response_queue.queue.queue:
                 assert response is not None, "None is not a valid value for a Matrix response."
 

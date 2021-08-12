@@ -63,7 +63,7 @@ def test_invalid_instantiation_mediation_pair_state():
 def test_invalid_instantiation_action_init_initiator():
     wrong_type_transfer = factories.create(factories.LockedTransferSignedStateProperties())
     with pytest.raises(ValueError):
-        ActionInitInitiator(transfer=wrong_type_transfer, routes=list())
+        ActionInitInitiator(transfer=wrong_type_transfer, routes=[])
 
 
 @pytest.fixture

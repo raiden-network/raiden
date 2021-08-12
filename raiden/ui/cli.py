@@ -915,7 +915,7 @@ def _smoketest(
 
                 # If no empty `args` is provided, it would use sys.argv[1:] and thus the
                 # call args for the outer smoketest() method
-                call_args: List[str] = list()
+                call_args: List[str] = []
                 _setup_raiden_config(
                     args=call_args, default_map=args.copy(), standalone_mode=False
                 )

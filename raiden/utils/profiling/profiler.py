@@ -53,14 +53,14 @@ def _copy_call(call):
 
     call.setdefault("calls", 0)
     # wall time
-    call.setdefault("wall_enter_time", list())
-    call.setdefault("wall_exit_time", list())
+    call.setdefault("wall_enter_time", [])
+    call.setdefault("wall_exit_time", [])
     # wall time (when a switch happened)
-    call.setdefault("sleep_start_time", list())
-    call.setdefault("sleep_end_time", list())
+    call.setdefault("sleep_start_time", [])
+    call.setdefault("sleep_end_time", [])
     # wall time (when a subcall is made)
-    call.setdefault("subcall_enter_time", list())
-    call.setdefault("subcall_exit_time", list())
+    call.setdefault("subcall_enter_time", [])
+    call.setdefault("subcall_exit_time", [])
 
     return call
 
@@ -367,7 +367,7 @@ def zip_outter_join(equal, *element_list):
         raise ValueError("equal must be a callable")
 
     length = len(element_list)
-    result: List[List] = [list() for __ in range(length)]
+    result: List[List] = [[] for __ in range(length)]
 
     # do it all in one swipe
     for iteration in zip_longest(*element_list):

@@ -124,7 +124,7 @@ def test_broadcast_messages_must_be_sent_before_protocol_messages_on_restarts(
         # - A `PFSCapacityUpdate`
         # - A `PFSFeeUpdate`
         queue_copy = transport._broadcast_queue.copy()
-        queued_messages = list()
+        queued_messages = []
         for _ in range(len(transport._broadcast_queue)):
             queued_messages.append(queue_copy.get())
 

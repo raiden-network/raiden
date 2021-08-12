@@ -922,7 +922,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
 
     pseudo_random_generator = random.Random()
 
-    transitions = list()
+    transitions = []
     block_number = 1
     for _ in range(MAXIMUM_PENDING_TRANSFERS + 1):
         transfer_description = factories.create(factories.TransferDescriptionProperties())

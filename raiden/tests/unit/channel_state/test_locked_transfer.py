@@ -215,7 +215,7 @@ def test_channelstate_receive_lockedtransfer():
         balance=partner_model2.balance - lock_amount,
         amount_locked=0,
         next_nonce=3,
-        pending_locks=list(),
+        pending_locks=[],
     )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)

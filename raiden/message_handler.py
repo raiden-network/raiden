@@ -97,7 +97,7 @@ class MessageHandler:
                 continue
             pool.apply_async(handler_map[t_message], (raiden, message))
 
-        all_state_changes: List[StateChange] = list()
+        all_state_changes: List[StateChange] = []
         for greenlet in joinall(set(pool), raise_error=True):
             all_state_changes.extend(greenlet.get())
 
@@ -373,7 +373,7 @@ class MessageHandler:
                 )
             ]
         else:
-            filtered_route_states = list()
+            filtered_route_states = []
             for route_state in from_transfer.route_states:
                 next_hop_address = route_state.hop_after(raiden.address)
                 if not next_hop_address:

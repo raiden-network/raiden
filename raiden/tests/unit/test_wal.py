@@ -38,7 +38,7 @@ class Empty(State):
 
 
 def state_transition_noop(state, state_change):  # pylint: disable=unused-argument
-    return TransitionResult(Empty(), list())
+    return TransitionResult(Empty(), [])
 
 
 @dataclass
@@ -49,7 +49,7 @@ class AccState(State):
 def state_transtion_acc(state, state_change):
     state = state
     state.state_changes.append(state_change)
-    return TransitionResult(state, list())
+    return TransitionResult(state, [])
 
 
 def new_wal(state_transition: Callable, state: State = None) -> WriteAheadLog:

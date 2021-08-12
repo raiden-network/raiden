@@ -76,12 +76,12 @@ class MessageHandler:
 
 def get_to_device_broadcast_messages(to_device_mock, expected_receiver_addresses, device_id):
 
-    collected_messages = list()
+    collected_messages = []
     for _, kwargs in to_device_mock.call_args_list:
         assert kwargs["event_type"] == "m.room.message"
         # has to always be broadcasted to all services for each api call
-        messages_batch = list()
-        addresses = list()
+        messages_batch = []
+        addresses = []
         for address, to_device_dict in kwargs["messages"].items():
             # ignore home-server, but extract the address prefix
             addresses.append(address.split(":")[0][1:])
@@ -460,7 +460,7 @@ def test_matrix_broadcast(matrix_transports, services, device_id):
     transport.start(MockRaidenService(None), "")
     gevent.idle()
 
-    sent_messages = list()
+    sent_messages = []
     for i in range(5):
         message = Processed(message_identifier=MessageID(i), signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)

@@ -716,7 +716,7 @@ class RestAPI:  # pragma: no unittest
         )
         closed_channels = self.raiden_api.token_network_leave(registry_address, token_address)
 
-        closed_channels_result = list()
+        closed_channels_result = []
         for channel_state in closed_channels:
             result = self._updated_channel_state(registry_address, channel_state)
             closed_channels_result.append(result)
@@ -773,7 +773,7 @@ class RestAPI:  # pragma: no unittest
         )
         typecheck(raiden_service_result, list)
 
-        channels_result = list()
+        channels_result = []
         for channel_state in raiden_service_result:
             result = self._updated_channel_state(registry_address, channel_state)
             channels_result.append(result)

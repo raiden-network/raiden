@@ -40,7 +40,7 @@ class NotifyingQueue(Event, Generic[T]):
         """Copies the current queue items."""
         copy = self.queue.copy()
 
-        result = list()
+        result = []
         while not copy.empty():
             result.append(copy.get_nowait())
         return result

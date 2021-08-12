@@ -687,13 +687,13 @@ def _query_paths(
                         )
                 elif code == PFSError.NO_ROUTE_FOUND:
                     log.info(f"Pathfinding Service can not find a route: {error}.")
-                    return list(), None
+                    return [], None
                 log.info(
                     f"Pathfinding Service rejected our payment. Reason: {error}. Attempting again."
                 )
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
-    return list(), None
+    return [], None
 
 
 def post_pfs_feedback(

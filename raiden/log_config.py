@@ -74,7 +74,7 @@ class LogFilter:
         # the empty module is not matched, so set it here
         self._default_level = config.get("", default_level)
         self._log_rules = [
-            (logger.split(".") if logger else list(), level) for logger, level in config.items()
+            (logger.split(".") if logger else [], level) for logger, level in config.items()
         ]
 
     def _get_log_level(self, logger_name: str) -> str:

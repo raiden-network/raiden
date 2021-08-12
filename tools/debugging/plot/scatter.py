@@ -39,8 +39,8 @@ def configure_axes(axes: Axes) -> None:
     axes.xaxis.set_tick_params(which="minor", rotation=90)
 
 
-x_axis = list()
-y_axis = list()
+x_axis = []
+y_axis = []
 
 if args.header:
     headers = args.header.split(",")

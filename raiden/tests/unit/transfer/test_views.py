@@ -79,7 +79,7 @@ def test_get_token_network_addresses_empty_list_for_token_network_registry_none(
         get_token_network_addresses(
             chain_state=chain_state, token_network_registry_address=factories.make_address()
         )
-        == list()
+        == []
     )
 
 
@@ -88,7 +88,7 @@ def test_token_identifiers_empty_list_for_token_network_registry_none(chain_stat
         get_token_identifiers(
             chain_state=chain_state, token_network_registry_address=factories.make_address()
         )
-        == list()
+        == []
     )
 
 

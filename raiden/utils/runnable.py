@@ -25,7 +25,7 @@ class Runnable:
 
         self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
         self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
-        self.greenlets: List[Greenlet] = list()
+        self.greenlets: List[Greenlet] = []
 
     def start(self) -> None:
         """Synchronously start task

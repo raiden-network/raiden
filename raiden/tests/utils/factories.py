@@ -397,7 +397,7 @@ ADDR = TargetAddress(b"addraddraddraddraddr")
 
 
 def make_pending_locks(locks: List[HashTimeLockState]) -> PendingLocksState:
-    ret = PendingLocksState(list())
+    ret = PendingLocksState([])
     for lock in locks:
         ret.locks.append(bytes(lock.encoded))
     return ret
@@ -1034,7 +1034,7 @@ def create_route_states_from_routes(
     address_to_address_metadata: Dict[Address, AddressMetadata] = None,
     mock_missing_metadata: bool = False,  # pylint: disable=unused-argument
 ):
-    route_states = list()
+    route_states = []
     for route in routes:
         address_metadata = dict()
         if address_to_address_metadata:
@@ -1234,12 +1234,12 @@ def make_channel_set(
     if number_of_channels is None:
         number_of_channels = len(properties)
 
-    channels = list()
+    channels = []
     our_pkeys = [None] * number_of_channels
     partner_pkeys = [None] * number_of_channels
 
     if properties is None:
-        properties = list()
+        properties = []
     while len(properties) < number_of_channels:
         properties.append(NettingChannelStateProperties())
 
@@ -1393,7 +1393,7 @@ def make_transfers_pair(
 
     lock_expiration = block_number + UNIT_REVEAL_TIMEOUT * 2
     pseudo_random_generator = random.Random()
-    transfers_pairs = list()
+    transfers_pairs = []
 
     our_address = channels[0].our_state.address
     for payer_index in range(number_of_channels - 1):
@@ -1591,7 +1591,7 @@ def create_network(
 
     block_hash = block_hash or make_block_hash()
     state = token_network_state
-    channels = list()
+    channels = []
 
     for route in routes:
         if route.address1 == our_address:
