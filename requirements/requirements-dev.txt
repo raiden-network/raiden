@@ -336,7 +336,7 @@ matplotlib-inline==0.1.2
     # via ipython
 matrix-client==0.3.2
     # via -r requirements.txt
-matrix-synapse==1.33.0
+matrix-synapse==1.33.2
     # via -r requirements-dev.in
 mccabe==0.6.1
     # via
