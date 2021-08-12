@@ -137,7 +137,7 @@ def get_user_id_from_metadata(
 
 class DisplayNameCache:
     def __init__(self) -> None:
-        self.userid_to_displayname: Dict[str, str] = dict()
+        self.userid_to_displayname: Dict[str, str] = {}
 
     def warm_users(self, users: List[User]) -> None:
         for user in users:

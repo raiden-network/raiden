@@ -77,22 +77,20 @@ class ProxyManager:
         contract_manager: ContractManager,
         metadata: ProxyManagerMetadata,
     ) -> None:
-        self.address_to_secret_registry: Dict[SecretRegistryAddress, SecretRegistry] = dict()
-        self.address_to_token: Dict[TokenAddress, Token] = dict()
-        self.address_to_custom_token: Dict[TokenAddress, CustomToken] = dict()
-        self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
+        self.address_to_secret_registry: Dict[SecretRegistryAddress, SecretRegistry] = {}
+        self.address_to_token: Dict[TokenAddress, Token] = {}
+        self.address_to_custom_token: Dict[TokenAddress, CustomToken] = {}
+        self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = {}
         self.address_to_token_network_registry: Dict[
             TokenNetworkRegistryAddress, TokenNetworkRegistry
-        ] = dict()
-        self.address_to_user_deposit: Dict[UserDepositAddress, UserDeposit] = dict()
-        self.address_to_service_registry: Dict[ServiceRegistryAddress, ServiceRegistry] = dict()
-        self.address_to_monitoring_service: Dict[
-            MonitoringServiceAddress, MonitoringService
-        ] = dict()
-        self.address_to_one_to_n: Dict[OneToNAddress, OneToN] = dict()
+        ] = {}
+        self.address_to_user_deposit: Dict[UserDepositAddress, UserDeposit] = {}
+        self.address_to_service_registry: Dict[ServiceRegistryAddress, ServiceRegistry] = {}
+        self.address_to_monitoring_service: Dict[MonitoringServiceAddress, MonitoringService] = {}
+        self.address_to_one_to_n: Dict[OneToNAddress, OneToN] = {}
         self.identifier_to_payment_channel: Dict[
             Tuple[TokenNetworkAddress, ChannelID], PaymentChannel
-        ] = dict()
+        ] = {}
 
         self.client = rpc_client
         self.contract_manager = contract_manager

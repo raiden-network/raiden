@@ -293,8 +293,8 @@ def network_with_minimum_channels(
     # with no channels. In this scenario we need to force the use
     # of the node with the least number of channels.
 
-    unconnected_apps = dict()
-    channel_count = dict()
+    unconnected_apps = {}
+    channel_count = {}
 
     # assume that the apps don't have any connection among them
     for curr_app in apps:

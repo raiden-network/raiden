@@ -148,7 +148,7 @@ def _sanitize_limit_and_offset(
 
 def _filter_from_dict(current: Dict[str, Any]) -> Dict[str, Any]:
     """Takes in a nested dictionary as a filter and returns a flattened filter dictionary"""
-    filter_ = dict()
+    filter_ = {}
 
     for k, v in current.items():
         if isinstance(v, dict):
@@ -288,7 +288,7 @@ class SQLiteStorage:
 
         # Dict[Type[ID], ULIDMonotonicFactory[ID]] is not supported yet.
         # Reference: https://github.com/python/mypy/issues/4928
-        self._ulid_factories: Dict = dict()
+        self._ulid_factories: Dict = {}
 
     def _ulid_factory(self, id_type: Type[ID]) -> ulid.api.api.Api:
         """Return an ULID Factory for a specific table.

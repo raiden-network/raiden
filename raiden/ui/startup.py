@@ -147,7 +147,7 @@ def load_deployed_contracts_data(
     """
     check_raiden_environment(chain_id, config.environment_type)
 
-    deployed_contracts_data: Dict[str, Any] = dict()
+    deployed_contracts_data: Dict[str, Any] = {}
     contracts_version = RAIDEN_CONTRACT_VERSION
 
     config.contracts_path = contracts_precompiled_path(contracts_version)
@@ -257,7 +257,7 @@ def raiden_bundle_from_contracts_deployment(
         ("secret_registry", secret_registry_address, proxy_manager.secret_registry),
     ]
 
-    proxies = dict()
+    proxies = {}
 
     for contractname, address, constructor in contractname_address:
         proxy = constructor(address, block_identifier=BLOCK_ID_LATEST)  # type: ignore
@@ -320,7 +320,7 @@ def services_bundle_from_contracts_deployment(
             ("one_to_n", Address(deployed_addresses.one_to_n_address), proxy_manager.one_to_n)
         )
 
-    proxies = dict()
+    proxies = {}
 
     for contractname, address, constructor in contractname_address:
         proxy = constructor(address, block_identifier=BLOCK_ID_LATEST)

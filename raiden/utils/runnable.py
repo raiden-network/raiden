@@ -17,7 +17,7 @@ class Runnable:
 
     greenlet: Greenlet
     args: Sequence = tuple()  # args for _run()
-    kwargs: dict = dict()  # kwargs for _run()
+    kwargs: dict = {}  # kwargs for _run()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.args = args

@@ -62,9 +62,9 @@ USERNAMES = [
 class ScenarioItems:
     def __init__(self) -> None:
         self.scenario_log: Optional[os.PathLike] = None
-        self.users: Dict[str, Any] = dict()
+        self.users: Dict[str, Any] = {}
         self.token_networks: List[str] = []
-        self.db_files: Dict[str, Any] = dict()
+        self.db_files: Dict[str, Any] = {}
 
     def __repr__(self) -> str:
         return json.dumps(self.__dict__)

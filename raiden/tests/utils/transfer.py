@@ -125,7 +125,7 @@ def create_route_state_for_route(
     assert len(apps) > 1, "Need at least two nodes for a route"
 
     route = []
-    address_metadata = dict()
+    address_metadata = {}
     for app in apps:
         route.append(app.address)
         address_metadata[app.address] = app.transport.address_metadata

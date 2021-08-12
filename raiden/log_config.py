@@ -185,7 +185,7 @@ def configure_logging(
 ) -> None:
     structlog.reset_defaults()
 
-    logger_level_config = logger_level_config or dict()
+    logger_level_config = logger_level_config or {}
     logger_level_config.setdefault("filelock", "ERROR")
     logger_level_config.setdefault("", DEFAULT_LOG_LEVEL)
 
@@ -208,7 +208,7 @@ def configure_logging(
 
     redact = redactor(LOG_BLACKLIST)
 
-    handlers: Dict[str, Any] = dict()
+    handlers: Dict[str, Any] = {}
     if log_file:
         handlers["file"] = {
             "class": "logging.handlers.WatchedFileHandler",

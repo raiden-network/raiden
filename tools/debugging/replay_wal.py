@@ -51,7 +51,7 @@ class Translator(dict):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs = {k.lower(): v for k, v in args[0].items()}
         super().__init__(kwargs)
-        self._extra_keys: Dict[str, str] = dict()
+        self._extra_keys: Dict[str, str] = {}
         self._regex: Optional[re.Pattern[str]] = None
         self._make_regex()
 

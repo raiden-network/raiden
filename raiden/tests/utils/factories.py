@@ -1036,7 +1036,7 @@ def create_route_states_from_routes(
 ):
     route_states = []
     for route in routes:
-        address_metadata = dict()
+        address_metadata = {}
         if address_to_address_metadata:
             for address in route:
                 metadata = address_to_address_metadata.get(address)

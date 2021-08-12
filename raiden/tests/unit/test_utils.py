@@ -131,7 +131,7 @@ def test_deserialize_capabilities():
         capabilities_schema.dump({"capabilities": parsed})["capabilities"] != f"mxc://{capstring}"
     )
 
-    assert capabilities_schema.load({"capabilities": ""})["capabilities"] == dict()
+    assert capabilities_schema.load({"capabilities": ""})["capabilities"] == {}
 
     assert capabilities_schema.load({})["capabilities"] == "mxc://"
 
