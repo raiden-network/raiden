@@ -137,7 +137,7 @@ def mock_matrix(
 
 
 def create_new_users_for_address(signer=None, number_of_users=1):
-    users = list()
+    users = []
     if signer is None:
         signer = make_signer()
 
@@ -169,7 +169,7 @@ def create_sync_filter_patch(monkeypatch, sync_filter_dict):
 def record_sent_messages(mock_matrix):
     original_send_raw = mock_matrix._send_raw
 
-    sent_messages = list()
+    sent_messages = []
 
     def send_raw(
         receiver_address: Address,
@@ -289,7 +289,7 @@ def test_retry_queue_batch_by_user_id(mock_matrix: MatrixTransport) -> None:
 
     original_send_raw = mock_matrix._send_raw
     sent_messages_by_callcount = defaultdict(list)
-    sent_messages = list()
+    sent_messages = []
     send_raw_call_count = 0
 
     def send_raw(

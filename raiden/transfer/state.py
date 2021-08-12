@@ -274,7 +274,7 @@ class PendingLocksState(State):
 
 
 def make_empty_pending_locks_state() -> PendingLocksState:
-    return PendingLocksState(list())
+    return PendingLocksState([])
 
 
 @dataclass(order=True)

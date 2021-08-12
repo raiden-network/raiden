@@ -42,8 +42,8 @@ def configure_axes(axes: Axes) -> None:
     axes.xaxis.set_tick_params(which="minor", rotation=90)
 
 
-timestamps = list()
-rtts = list()
+timestamps = []
+rtts = []
 
 if args.header:
     headers = args.header.split(",")

@@ -117,7 +117,7 @@ def subdispatch_to_all_channels(
     block_number: BlockNumber,
     block_hash: BlockHash,
 ) -> TransitionResult[ChainState]:
-    events = list()
+    events = []
 
     for token_network_registry in chain_state.identifiers_to_tokennetworkregistries.values():
         for (
@@ -143,7 +143,7 @@ def subdispatch_by_canonical_id(
         chain_state, canonical_identifier.token_network_address
     )
 
-    events: List[Event] = list()
+    events: List[Event] = []
     if token_network_state:
         iteration = token_network.state_transition(
             token_network_state=token_network_state,
@@ -162,7 +162,7 @@ def subdispatch_by_canonical_id(
 def subdispatch_to_all_lockedtransfers(
     chain_state: ChainState, state_change: StateChange
 ) -> TransitionResult[ChainState]:
-    events = list()
+    events = []
 
     for secrethash in list(chain_state.payment_mapping.secrethashes_to_task.keys()):
         result = subdispatch_to_paymenttask(chain_state, state_change, secrethash)
@@ -177,7 +177,7 @@ def subdispatch_to_paymenttask(
     block_number = chain_state.block_number
     block_hash = chain_state.block_hash
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if sub_task:
         pseudo_random_generator = chain_state.pseudo_random_generator
@@ -317,7 +317,7 @@ def subdispatch_mediatortask(
     else:
         is_valid_subtask = False
 
-    events: List[Event] = list()
+    events: List[Event] = []
     if is_valid_subtask:
         token_network_state = get_token_network_by_address(chain_state, token_network_address)
 
@@ -365,7 +365,7 @@ def subdispatch_targettask(
     else:
         is_valid_subtask = False
 
-    events: List[Event] = list()
+    events: List[Event] = []
     channel_state = None
     if is_valid_subtask:
         channel_state = views.get_channelstate_by_canonical_identifier(
@@ -495,7 +495,7 @@ def handle_token_network_action(
         chain_state, state_change.token_network_address
     )
 
-    events: List[Event] = list()
+    events: List[Event] = []
     if token_network_state:
         iteration = token_network.state_transition(
             token_network_state=token_network_state,
@@ -546,7 +546,7 @@ def handle_receive_delivered(
 def handle_contract_receive_new_token_network_registry(
     chain_state: ChainState, state_change: ContractReceiveNewTokenNetworkRegistry
 ) -> TransitionResult[ChainState]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     token_network_registry = state_change.token_network_registry
     token_network_registry_address = TokenNetworkRegistryAddress(token_network_registry.address)
@@ -561,7 +561,7 @@ def handle_contract_receive_new_token_network_registry(
 def handle_contract_receive_new_token_network(
     chain_state: ChainState, state_change: ContractReceiveNewTokenNetwork
 ) -> TransitionResult[ChainState]:
-    events: List[Event] = list()
+    events: List[Event] = []
     maybe_add_tokennetwork(
         chain_state, state_change.token_network_registry_address, state_change.token_network
     )
@@ -697,7 +697,7 @@ def handle_receive_secret_request(
 def handle_receive_processed(
     chain_state: ChainState, state_change: ReceiveProcessed
 ) -> TransitionResult[ChainState]:
-    events: List[Event] = list()
+    events: List[Event] = []
     # Clean up message queue
     for queueid in list(chain_state.queueids_to_queues.keys()):
         inplace_delete_message_queue(chain_state, state_change, queueid)

@@ -365,7 +365,7 @@ def create_sequential_channels(
         raise ValueError("can only create networks with 0, 1, 2 or CHAIN channels")
 
     if channels_per_node == 0:
-        app_channels = list()
+        app_channels = []
 
     if channels_per_node == 1:
         assert len(raiden_apps) % 2 == 0, "needs an even number of nodes"
@@ -570,7 +570,7 @@ def jsonrpc_services(
         token_network_registry_address, block_identifier=block_identifier
     )
 
-    blockchain_services = list()
+    blockchain_services = []
     for privkey in private_keys:
         rpc_client = JSONRPCClient(web3, privkey)
         proxy_manager = ProxyManager(

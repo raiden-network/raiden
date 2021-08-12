@@ -1321,7 +1321,7 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
 def test_set_offchain_secret():
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, [])
 
-    assert mediator_state.transfers_pair == list()
+    assert mediator_state.transfers_pair == []
     assert mediator_state.secret is None
     assert mediator_state.secrethash == UNIT_SECRETHASH
 

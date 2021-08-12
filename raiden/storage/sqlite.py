@@ -241,7 +241,7 @@ def write_events(
     cursor: sqlite3.Cursor,
     events: List[Tuple[StateChangeID, str]],
 ) -> List[EventID]:
-    events_ids: List[EventID] = list()
+    events_ids: List[EventID] = []
 
     query = (
         "INSERT INTO state_events("
@@ -385,8 +385,8 @@ class SQLiteStorage:
         """Write `state_changes` to the database and returns the corresponding IDs."""
         ulid_factory = self._ulid_factory(StateChangeID)
 
-        state_change_data = list()
-        state_change_ids = list()
+        state_change_data = []
+        state_change_ids = []
         for state_change in state_changes:
             new_id = ulid_factory.new()
             state_change_ids.append(StateChangeID(new_id))
@@ -431,7 +431,7 @@ class SQLiteStorage:
 
     def write_events(self, events: List[Tuple[StateChangeID, str]]) -> List[EventID]:
         ulid_factory = self._ulid_factory(EventID)
-        events_ids: List[EventID] = list()
+        events_ids: List[EventID] = []
 
         query = (
             "INSERT INTO state_events("

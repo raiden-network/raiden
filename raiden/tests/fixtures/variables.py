@@ -313,7 +313,7 @@ def eth_nodes_configuration(
     blockchain_type,
     blockchain_extra_config,
 ) -> List[EthNodeDescription]:
-    eth_nodes = list()
+    eth_nodes = []
 
     for position in range(blockchain_number_of_nodes):
         key = keccak(blockchain_key_seed.format(position).encode())

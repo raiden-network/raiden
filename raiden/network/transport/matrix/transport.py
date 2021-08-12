@@ -127,7 +127,7 @@ class _RetryQueue(Runnable):
     def __init__(self, transport: "MatrixTransport", receiver: Address) -> None:
         self.transport = transport
         self.receiver = receiver
-        self._message_queue: List[_RetryQueue._MessageData] = list()
+        self._message_queue: List[_RetryQueue._MessageData] = []
         self._notify_event = gevent.event.Event()
         self._idle_since: int = 0  # Counter of idle iterations
         super().__init__()
@@ -173,7 +173,7 @@ class _RetryQueue(Runnable):
             self.transport._config.retry_interval_max,
         )
 
-        encoded_messages = list()
+        encoded_messages = []
         for message, address_metadata in messages:
             already_queued = any(
                 queue_identifier == data.queue_identifier and message == data.message
@@ -263,7 +263,7 @@ class _RetryQueue(Runnable):
                 # there could be discrepancies along the batch
                 address_metadata = message_data_batch[0].address_metadata
 
-            message_texts: List[str] = list()
+            message_texts: List[str] = []
             for message_data in message_data_batch:
                 # Messages are sent on two conditions:
                 # - Non-retryable (e.g. Delivered)
@@ -406,7 +406,7 @@ class MatrixTransport(Runnable):
         msg = "There needs to be at least one matrix server known."
         assert self._all_server_names, msg
 
-        self.greenlets: List[gevent.Greenlet] = list()
+        self.greenlets: List[gevent.Greenlet] = []
 
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
         self._displayname_cache = DisplayNameCache()
@@ -832,8 +832,8 @@ class MatrixTransport(Runnable):
     ) -> Tuple[List[ReceivedRaidenMessage], List[ReceivedCallMessage]]:
         assert self._raiden_service is not None, "_raiden_service not set"
 
-        raiden_messages: List[ReceivedRaidenMessage] = list()
-        call_messages: List[ReceivedCallMessage] = list()
+        raiden_messages: List[ReceivedRaidenMessage] = []
+        call_messages: List[ReceivedCallMessage] = []
 
         for message in messages:
 
@@ -891,7 +891,7 @@ class MatrixTransport(Runnable):
         if self._stop_event.is_set():
             return
 
-        incoming_messages: List[Message] = list()
+        incoming_messages: List[Message] = []
         # Remove this #3254
         for received_message in all_messages:
             message = received_message.message

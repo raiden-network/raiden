@@ -89,10 +89,10 @@ class SecretRegistry:
     def register_secret_batch(self, secrets: List[Secret]) -> List[TransactionHash]:
         """Register a batch of secrets. Check if they are already registered at
         the given block identifier."""
-        secrets_to_register = list()
-        secrethashes_to_register = list()
-        secrethashes_not_sent = list()
-        secrets_results = list()
+        secrets_to_register = []
+        secrethashes_to_register = []
+        secrethashes_not_sent = []
+        secrets_results = []
         transaction_result = AsyncResult()
         wait_for = set()
 

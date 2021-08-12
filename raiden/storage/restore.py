@@ -73,7 +73,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
     Use this function to find a balance proof for a call to settle, which only
     has the blinded balance proof data.
     """
-    filters: List[Dict[str, Any]] = list()
+    filters: List[Dict[str, Any]] = []
     filters.append(
         {
             "balance_proof.canonical_identifier.chain_identifier": str(
@@ -109,7 +109,7 @@ def get_state_change_with_balance_proof_by_locksroot(
     happens after settle, so the channel has the unblinded version of the
     balance proof.
     """
-    filters: List[Dict[str, Any]] = list()
+    filters: List[Dict[str, Any]] = []
     filters.append(
         {
             "balance_proof.canonical_identifier.chain_identifier": str(
@@ -143,7 +143,7 @@ def get_event_with_balance_proof_by_balance_hash(
     Use this function to find a balance proof for a call to settle, which only
     has the blinded balance proof data.
     """
-    filters: List[Dict[str, Any]] = list()
+    filters: List[Dict[str, Any]] = []
 
     filter_items = {
         "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
@@ -182,7 +182,7 @@ def get_event_with_balance_proof_by_locksroot(
     happens after settle, so the channel has the unblinded version of the
     balance proof.
     """
-    filters: List[Dict[str, Any]] = list()
+    filters: List[Dict[str, Any]] = []
 
     filter_items = {
         "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),

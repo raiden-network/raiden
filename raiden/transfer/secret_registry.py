@@ -11,7 +11,7 @@ def events_for_onchain_secretreveal(
     expiration: BlockExpiration,
     block_hash: BlockHash,
 ) -> List[Event]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     typecheck(secret, T_Secret)
 

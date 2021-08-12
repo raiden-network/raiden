@@ -405,7 +405,7 @@ def get_transaction_data(
     web3: Web3, abi: ABI, function_name: str, args: Any = None, kwargs: Any = None
 ) -> str:
     """Get encoded transaction data"""
-    args = args or list()
+    args = args or []
     fn_abi = find_matching_fn_abi(
         abi=abi, abi_codec=web3.codec, fn_identifier=function_name, args=args, kwargs=kwargs
     )

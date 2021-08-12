@@ -82,7 +82,7 @@ def events_for_onchain_secretreveal(
             block_hash=block_hash,
         )
 
-    return list()
+    return []
 
 
 def handle_inittarget(
@@ -195,7 +195,7 @@ def handle_offchain_secretreveal(
 
     else:
         # TODO: event for byzantine behavior
-        iteration = TransitionResult(target_state, list())
+        iteration = TransitionResult(target_state, [])
 
     return iteration
 
@@ -221,7 +221,7 @@ def handle_onchain_secretreveal(
         target_state.state = TargetTransferState.ONCHAIN_UNLOCK
         target_state.secret = state_change.secret
 
-    return TransitionResult(target_state, list())
+    return TransitionResult(target_state, [])
 
 
 def handle_unlock(
@@ -265,7 +265,7 @@ def handle_block(
     handle expiration of the hash time lock.
     """
     transfer = target_state.transfer
-    events: List[Event] = list()
+    events: List[Event] = []
     lock = transfer.lock
 
     secret_known = channel.is_secret_known(channel_state.partner_state, lock.secrethash)
@@ -334,7 +334,7 @@ def state_transition(
     """State machine for the target node of a mediated transfer."""
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
-    iteration = TransitionResult(target_state, list())
+    iteration = TransitionResult(target_state, [])
     if type(state_change) == ActionInitTarget:
         assert isinstance(state_change, ActionInitTarget), MYPY_ANNOTATION
         if target_state is None:

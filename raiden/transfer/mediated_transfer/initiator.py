@@ -151,11 +151,11 @@ def handle_block(
 
     if not locked_lock:
         if channel_state.partner_state.secrethashes_to_lockedlocks.get(secrethash):
-            return TransitionResult(initiator_state, list())
+            return TransitionResult(initiator_state, [])
         else:
             # if lock is not in our or our partner's locked locks then the
             # task can go
-            return TransitionResult(None, list())
+            return TransitionResult(None, [])
 
     lock_expiration_threshold = BlockExpiration(
         locked_lock.expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
@@ -167,7 +167,7 @@ def handle_block(
         lock_expiration_threshold=lock_expiration_threshold,
     )
 
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if lock_has_expired and initiator_state.transfer_state != "transfer_expired":
         is_channel_open = channel.get_status(channel_state) == ChannelState.STATE_OPENED
@@ -237,7 +237,7 @@ def try_new_route(
 ) -> TransitionResult[Optional[InitiatorTransferState]]:
 
     initiator_state = None
-    events: List[Event] = list()
+    events: List[Event] = []
     route_fee_exceeds_max = False
 
     channel_state = None
@@ -385,7 +385,7 @@ def handle_secretrequest(
         == initiator_state.transfer_description.payment_identifier
     )
     if not is_message_from_target:
-        return TransitionResult(initiator_state, list())
+        return TransitionResult(initiator_state, [])
 
     lock = channel.get_lock(
         channel_state.our_state, initiator_state.transfer_description.secrethash
@@ -398,7 +398,7 @@ def handle_secretrequest(
     if initiator_state.received_secret_request:
         # A secret request was received earlier, all subsequent are ignored
         # as it might be an attack.
-        return TransitionResult(initiator_state, list())
+        return TransitionResult(initiator_state, [])
 
     # transfer_description.amount is the actual payment amount without fees.
     # For the transfer to be valid and the unlock allowed the target must
@@ -485,7 +485,7 @@ def handle_offchain_secretreveal(
         )
         iteration = TransitionResult(None, events)
     else:
-        events = list()
+        events = []
         iteration = TransitionResult(initiator_state, events)
 
     return iteration
@@ -543,7 +543,7 @@ def handle_onchain_secretreveal(
         )
         iteration = TransitionResult(None, events)
     else:
-        events = list()
+        events = []
         iteration = TransitionResult(initiator_state, events)
 
     return iteration
@@ -577,6 +577,6 @@ def state_transition(
             initiator_state, state_change, channel_state, pseudo_random_generator, block_number
         )
     else:
-        iteration = TransitionResult(initiator_state, list())
+        iteration = TransitionResult(initiator_state, [])
 
     return iteration

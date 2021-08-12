@@ -48,11 +48,11 @@ if args.header:
 else:
     reader = csv.DictReader(sys.stdin)
 
-lines: List[List[Any]] = [list() for _ in range(len(args.line))]
+lines: List[List[Any]] = [[] for _ in range(len(args.line))]
 
 x_axis: List[Any]
 if args.x:
-    x_axis = list()
+    x_axis = []
     for data in reader:
         x_axis.append(parse_datetime(data[args.x]))
 

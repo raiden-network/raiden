@@ -186,4 +186,4 @@ def get_list_of_block_numbers(item):
         block_number = item["blockNumber"]
         return [block_number]
 
-    return list()
+    return []

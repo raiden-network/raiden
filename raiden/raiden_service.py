@@ -398,7 +398,7 @@ class RaidenService(Runnable):
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
-        self.greenlets: List[Greenlet] = list()
+        self.greenlets: List[Greenlet] = []
 
         self.last_log_time = time.monotonic()
         self.last_log_block = BlockNumber(0)
@@ -466,7 +466,7 @@ class RaidenService(Runnable):
         """Start the node synchronously. Raises directly if anything went wrong on startup"""
         assert self.stop_event.ready(), f"Node already started. node:{self!r}"
         self.stop_event.clear()
-        self.greenlets = list()
+        self.greenlets = []
 
         self.ready_to_process_events = False  # set to False because of restarts
 
@@ -995,7 +995,7 @@ class RaidenService(Runnable):
         if self.ready_to_process_events:
             return self.async_handle_events(chain_state=new_state, raiden_events=events)
         else:
-            return list()
+            return []
 
     def _maybe_snapshot(self) -> None:
         if self.state_change_qty > self.state_change_qty_snapshot + SNAPSHOT_STATE_CHANGES_COUNT:
@@ -1030,8 +1030,8 @@ class RaidenService(Runnable):
         event_wrapper = EventWrapper(raiden_events)
         parsed_events = event_wrapper.wrap_events()
 
-        fast_events = list()
-        greenlets: List[Greenlet] = list()
+        fast_events = []
+        greenlets: List[Greenlet] = []
 
         # These events are slow to process, and they will add extra delay to the protocol messages.
         # To avoid unnecessary delays and weird edge cases, every event that can lead to a blocking
@@ -1360,10 +1360,10 @@ class RaidenService(Runnable):
             node=to_checksum_address(self.address),
         )
 
-        all_messages: List[MessagesQueue] = list()
+        all_messages: List[MessagesQueue] = []
         for queue_identifier, event_queue in events_queues.items():
 
-            queue_messages: List[Tuple[Message, Optional[AddressMetadata]]] = list()
+            queue_messages: List[Tuple[Message, Optional[AddressMetadata]]] = []
             for event in event_queue:
                 message = message_from_sendevent(event)
                 self.sign(message)

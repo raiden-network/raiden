@@ -176,7 +176,7 @@ class AlarmTask(Runnable):
     def __init__(self, proxy_manager: ProxyManager, sleep_time: float) -> None:
         super().__init__()
 
-        self.callbacks: List[Callable] = list()
+        self.callbacks: List[Callable] = []
         self.proxy_manager = proxy_manager
         self.rpc_client = proxy_manager.client
 
@@ -202,7 +202,7 @@ class AlarmTask(Runnable):
         try:
             self.loop_until_stop()
         finally:
-            self.callbacks = list()
+            self.callbacks = []
 
     def register_callback(self, callback: Callable) -> None:
         """Register a new callback.
@@ -268,7 +268,7 @@ class AlarmTask(Runnable):
 
             log.debug("Received new block", **log_details)
 
-            remove = list()
+            remove = []
             for callback in self.callbacks:
                 result = callback(latest_block)
                 if result is REMOVE_CALLBACK:

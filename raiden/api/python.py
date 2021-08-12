@@ -161,7 +161,7 @@ def transfer_tasks_view(
     token_address: TokenAddress = None,
     channel_id: ChannelID = None,
 ) -> List[Dict[str, Any]]:
-    view = list()
+    view = []
 
     for secrethash, transfer_task in transfer_tasks.items():
         transfer = get_transfer_from_task(secrethash, transfer_task)

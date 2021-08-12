@@ -129,7 +129,7 @@ def channel_deposit_with_the_same_token_network(deposit_queue: List[ChannelDepos
     concurrent deposits on the same token network. (Issue #5447)
     """
     while deposit_queue:
-        to_delete = list()
+        to_delete = []
 
         for pos, channel_deposit in enumerate(deposit_queue):
             channel = channel_details(

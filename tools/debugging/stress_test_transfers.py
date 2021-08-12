@@ -488,7 +488,7 @@ def run_profiler(
 ) -> List[Popen]:
     os.makedirs(os.path.expanduser(profiler_data_directory), exist_ok=True)
 
-    profiler_processes: List[Popen] = list()
+    profiler_processes: List[Popen] = []
     for node in running_nodes:
         args = [
             "py-spy",
@@ -540,7 +540,7 @@ def run_stress_test(
     nursery: Nursery, running_nodes: List[RunningNode], config: StressTestConfiguration
 ) -> None:
     identifier_generator = count(start=FIRST_VALID_PAYMENT_ID)
-    profiler_processes: List[Popen] = list()
+    profiler_processes: List[Popen] = []
 
     # TODO: Add tests with fees. This may require changes to the transfer plan,
     # since ATM it depends only in the `capacity_lower_bound` settings.
@@ -634,7 +634,7 @@ def main() -> None:
     port_generator = get_free_port(5000)
     retry_timeout = 1
 
-    nodes_config: List[NodeConfig] = list()
+    nodes_config: List[NodeConfig] = []
 
     token_address = config.defaults()["token-address"]
     if not is_checksum_address(token_address):

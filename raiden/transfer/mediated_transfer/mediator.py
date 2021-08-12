@@ -475,7 +475,7 @@ def set_offchain_secret(
         )
         return [unexpected_reveal]
 
-    return list()
+    return []
 
 
 def set_onchain_secret(
@@ -528,7 +528,7 @@ def set_onchain_secret(
         )
         return [unexpected_reveal]
 
-    return list()
+    return []
 
 
 def set_offchain_reveal_state(
@@ -549,7 +549,7 @@ def events_for_expired_pairs(
     """Informational events for expired locks."""
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
-    events: List[Event] = list()
+    events: List[Event] = []
     for pair in pending_transfers_pairs:
         payer_balance_proof = pair.payer_transfer.balance_proof
         payer_channel = channelidentifiers_to_channels.get(payer_balance_proof.channel_identifier)
@@ -634,7 +634,7 @@ def events_for_secretreveal(
     won't lose tokens since it knows the secret can go on-chain at any time.
     """
 
-    events: List[Event] = list()
+    events: List[Event] = []
     for pair in reversed(transfers_pair):
         payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
         payer_knows_secret = pair.payer_state in STATE_SECRET_KNOWN
@@ -669,7 +669,7 @@ def events_for_balanceproof(
 ) -> List[Event]:
     """While it's safe do the off-chain unlock."""
 
-    events: List[Event] = list()
+    events: List[Event] = []
     for pair in reversed(transfers_pair):
         payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
         payee_payed = pair.payee_state in STATE_TRANSFER_PAID
@@ -739,7 +739,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
     """Reveal the secret on-chain if the lock enters the unsafe region and the
     secret is not yet on-chain.
     """
-    events: List[Event] = list()
+    events: List[Event] = []
 
     all_payer_channels = []
     for pair in transfers_pair:
@@ -808,7 +808,7 @@ def events_for_onchain_secretreveal_if_closed(
         If the secret is learned before the channel is closed, then the channel
         will register the secrets in bulk, not the transfer.
     """
-    events: List[Event] = list()
+    events: List[Event] = []
 
     all_payer_channels = []
     for pair in transfers_pair:
@@ -861,7 +861,7 @@ def events_to_remove_expired_locks(
     This only considers the *sent* transfers, received transfers can only be
     updated by the partner.
     """
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if not mediator_state.transfers_pair:
         return events
@@ -1175,7 +1175,7 @@ def handle_refundtransfer(
     Returns:
         TransitionResult: The resulting iteration.
     """
-    events: List[Event] = list()
+    events: List[Event] = []
     if mediator_state.secret is None:
         # The last sent transfer is the only one that may be refunded, all the
         # previous ones are refunded already.
@@ -1185,7 +1185,7 @@ def handle_refundtransfer(
         channel_identifier = payer_transfer.balance_proof.channel_identifier
         payer_channel = channelidentifiers_to_channels.get(channel_identifier)
         if not payer_channel:
-            return TransitionResult(mediator_state, list())
+            return TransitionResult(mediator_state, [])
 
         is_valid, channel_events, _ = channel.handle_refundtransfer(
             received_transfer=payee_transfer,
@@ -1231,7 +1231,7 @@ def handle_offchain_secretreveal(
     if not mediator_state.transfers_pair:
         # This will not happen during normal operation, but attackers might
         # send weird messages.
-        return TransitionResult(mediator_state, list())
+        return TransitionResult(mediator_state, [])
 
     # a SecretReveal should be rejected if the payer transfer
     # has expired. To check for this, we use the last
@@ -1241,7 +1241,7 @@ def handle_offchain_secretreveal(
     channel_identifier = payer_transfer.balance_proof.channel_identifier
     payer_channel = channelidentifiers_to_channels.get(channel_identifier)
     if not payer_channel:
-        return TransitionResult(mediator_state, list())
+        return TransitionResult(mediator_state, [])
 
     has_payer_transfer_expired = channel.is_transfer_expired(
         transfer=transfer_pair.payer_transfer,
@@ -1262,7 +1262,7 @@ def handle_offchain_secretreveal(
         )
 
     else:
-        iteration = TransitionResult(mediator_state, list())
+        iteration = TransitionResult(mediator_state, [])
 
     return iteration
 
@@ -1306,7 +1306,7 @@ def handle_onchain_secretreveal(
         )
         iteration = TransitionResult(mediator_state, secret_reveal + balance_proof)
     else:
-        iteration = TransitionResult(mediator_state, list())
+        iteration = TransitionResult(mediator_state, [])
 
     return iteration
 
@@ -1317,7 +1317,7 @@ def handle_unlock(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
 ) -> TransitionResult[MediatorTransferState]:
     """Handle a ReceiveUnlock state change."""
-    events = list()
+    events = []
     balance_proof_sender = state_change.balance_proof.sender
     channel_identifier = state_change.balance_proof.channel_identifier
 
@@ -1351,14 +1351,14 @@ def handle_lock_expired(
     channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     for transfer_pair in mediator_state.transfers_pair:
         balance_proof = transfer_pair.payer_transfer.balance_proof
         channel_state = channelidentifiers_to_channels.get(balance_proof.channel_identifier)
 
         if not channel_state:
-            return TransitionResult(mediator_state, list())
+            return TransitionResult(mediator_state, [])
 
         recipient_address = channel_state.partner_state.address
         recipient_metadata = get_address_metadata(recipient_address, mediator_state.routes)
@@ -1410,7 +1410,7 @@ def state_transition(
     #   doesn't control the secret reveal and needs to wait for the lock
     #   expiration before safely discarding the transfer.
 
-    iteration = TransitionResult(mediator_state, list())
+    iteration = TransitionResult(mediator_state, [])
 
     if type(state_change) == ActionInitMediator:
         assert isinstance(state_change, ActionInitMediator), MYPY_ANNOTATION

@@ -1616,7 +1616,7 @@ def send_unlock(
 def events_for_close(
     channel_state: NettingChannelState, block_number: BlockNumber, block_hash: BlockHash
 ) -> List[Event]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED:
         channel_state.close_transaction = TransactionExecutionStatus(block_number, None, None)
@@ -1646,7 +1646,7 @@ def send_withdraw_request(
     recipient_metadata: Optional[AddressMetadata],
     coop_settle: bool = False,
 ) -> List[Event]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
         return events
@@ -1773,7 +1773,7 @@ def events_for_expired_withdraws(
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> List[SendWithdrawExpired]:
-    events: List[SendWithdrawExpired] = list()
+    events: List[SendWithdrawExpired] = []
 
     for withdraw_state in list(channel_state.our_state.withdraws_pending.values()):
         withdraw_expired = is_withdraw_expired(
@@ -1990,7 +1990,7 @@ def _handle_action_withdraw(
     block_number: BlockNumber,
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
+    events: List[Event] = []
     is_valid_withdraw = is_valid_action_withdraw(channel_state, action)
 
     if is_valid_withdraw:
@@ -2020,7 +2020,7 @@ def _handle_action_set_reveal_timeout(
     channel_state: NettingChannelState,
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     is_valid_reveal_timeout = (
         # This has to account for the bare minimum for block & transaction propagation
@@ -2076,7 +2076,7 @@ def _handle_receive_withdraw_request(
     block_hash: BlockHash,
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     def transition_result_invalid(
         success_or_error: SuccessOrError,
@@ -2248,7 +2248,7 @@ def _handle_receive_withdraw_expired(
     block_number: BlockNumber,
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     withdraw_state = channel_state.partner_state.withdraws_pending.get(action.total_withdraw)
 
@@ -2364,7 +2364,7 @@ def handle_receive_lock_expired(
         block_number=block_number,
     )
 
-    events: List[Event] = list()
+    events: List[Event] = []
     if is_valid:
         assert pending_locks, "is_valid_lock_expired should return pending locks if valid"
         channel_state.partner_state.balance_proof = state_change.balance_proof
@@ -2477,7 +2477,7 @@ def _handle_block(
 ) -> TransitionResult[NettingChannelState]:
     assert action.block_number == block_number, "Block number mismatch"
 
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if get_status(channel_state) == ChannelState.STATE_OPENED:
         expired_withdraws = events_for_expired_withdraws(
@@ -2515,7 +2515,7 @@ def _handle_channel_closed(
     channel_state: NettingChannelState,
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     just_closed = (
         action.channel_identifier == channel_state.identifier
@@ -2566,7 +2566,7 @@ def _handle_channel_updated_transfer(
             result=TransactionExecutionStatus.SUCCESS,
         )
 
-    return TransitionResult(channel_state, list())
+    return TransitionResult(channel_state, [])
 
 
 @handle_state_transitions.register
@@ -2575,7 +2575,7 @@ def _handle_channel_settled(
     channel_state: NettingChannelState,
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[Optional[NettingChannelState]]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     if action.channel_identifier == channel_state.identifier:
         set_settled(channel_state, action.block_number)
@@ -2654,7 +2654,7 @@ def _handle_channel_withdraw(
     """
     participants = (channel_state.our_state.address, channel_state.partner_state.address)
     if action.participant not in participants:
-        return TransitionResult(channel_state, list())
+        return TransitionResult(channel_state, [])
 
     if action.participant == channel_state.our_state.address:
         end_state = channel_state.our_state
@@ -2678,7 +2678,7 @@ def _handle_channel_batch_unlock(
     channel_state: NettingChannelState,
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[Optional[NettingChannelState]]:
-    events: List[Event] = list()
+    events: List[Event] = []
 
     new_channel_state: Optional[NettingChannelState] = channel_state
     # Unlock is allowed by the smart contract only on a settled channel.

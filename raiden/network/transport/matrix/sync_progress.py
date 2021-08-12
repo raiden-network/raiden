@@ -20,7 +20,7 @@ class SyncEvent(Event):
 
     def __init__(self) -> None:
         super(Event, self).__init__()
-        self.tokens: List[UUID] = list()
+        self.tokens: List[UUID] = []
 
     def set(self, tokens: List[UUID]) -> None:
         self.tokens = tokens

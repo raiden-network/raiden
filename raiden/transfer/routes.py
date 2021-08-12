@@ -12,7 +12,7 @@ def filter_reachable_routes(
     """This function makes sure we use reachable routes only."""
     # TODO this function is not used anymore (only in tests), probably can be removed
 
-    filtered_routes = list()
+    filtered_routes = []
     for route in route_states:
         next_hop = route.hop_after(our_address)
         if not next_hop:
@@ -36,7 +36,7 @@ def filter_acceptable_routes(
 ) -> List[RouteState]:
     """Keeps only routes whose forward_channel is not in the list of blacklisted channels"""
 
-    acceptable_routes = list()
+    acceptable_routes = []
     for route in route_states:
         next_hop = route.hop_after(our_address)
         if not next_hop:

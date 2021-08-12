@@ -167,7 +167,7 @@ class GroupableOptionCommandGroup(click.Group):
         **attrs,
     ):
         super().__init__(**attrs)
-        self._extra_parsers = list()
+        self._extra_parsers = []
         self.internal_to_external_names = dict()
         self.opt_name_to_param = dict()
         self.use_option_parsers = use_option_parsers

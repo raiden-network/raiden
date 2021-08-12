@@ -81,7 +81,7 @@ class HoldRaidenEventHandler(EventHandler):
     def on_raiden_events(
         self, raiden: RaidenService, chain_state: ChainState, events: List[RaidenEvent]
     ):
-        events_to_dispatch = list()
+        events_to_dispatch = []
 
         for event in events:
             for hook in self.pre_hooks:

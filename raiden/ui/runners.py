@@ -17,7 +17,7 @@ log = structlog.get_logger(__name__)
 def run_services(options: Dict[str, Any]) -> None:
     raiden_service = run_raiden_service(**options)
 
-    gevent_tasks: List[gevent.Greenlet] = list()
+    gevent_tasks: List[gevent.Greenlet] = []
 
     if options["console"]:
         from raiden.ui.console import Console
