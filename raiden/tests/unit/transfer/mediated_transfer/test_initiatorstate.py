@@ -281,7 +281,7 @@ def test_init_without_routes():
 
     init_state_change = ActionInitInitiator(factories.UNIT_TRANSFER_DESCRIPTION, routes)
 
-    channel_map = dict()
+    channel_map = {}
     iteration = initiator_manager.state_transition(
         payment_state=None,
         state_change=init_state_change,
@@ -1769,7 +1769,7 @@ def test_initiator_manager_drops_invalid_state_changes():
 
     prng = random.Random()
 
-    state = InitiatorPaymentState(routes=[], initiator_transfers=dict())
+    state = InitiatorPaymentState(routes=[], initiator_transfers={})
     iteration = initiator_manager.state_transition(
         payment_state=state,
         state_change=lock_expired,
@@ -1793,7 +1793,7 @@ def test_initiator_manager_drops_invalid_state_changes():
     iteration = initiator_manager.state_transition(
         payment_state=state,
         state_change=lock_expired,
-        channelidentifiers_to_channels=dict(),
+        channelidentifiers_to_channels={},
         addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=prng,
         block_number=1,

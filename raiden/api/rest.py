@@ -733,7 +733,7 @@ class RestAPI:  # pragma: no unittest
             node=self.checksum_address,
             registry_address=to_checksum_address(registry_address),
         )
-        connection_managers = dict()
+        connection_managers = {}
 
         for token in self.raiden_api.get_tokens_list(registry_address):
             open_channels = views.get_channelstate_open(

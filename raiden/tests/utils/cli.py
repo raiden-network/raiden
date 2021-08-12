@@ -40,7 +40,7 @@ def assert_invoked_kwargs(
 ):
     ctx = kwargs["ctx"]
 
-    dic = dict()
+    dic = {}
     for k, v in kwargs.items():
         if k in expected_args:
             dic[k] = (ctx.get_parameter_source(k), v)

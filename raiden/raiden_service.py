@@ -439,7 +439,7 @@ class RaidenService(Runnable):
         self.payment_identifier_lock = gevent.lock.Semaphore()
 
         # A list is not hashable, so use tuple as key here
-        self.route_to_feedback_token: Dict[Tuple[Address, ...], UUID] = dict()
+        self.route_to_feedback_token: Dict[Tuple[Address, ...], UUID] = {}
 
         # Flag used to skip the processing of all Raiden events during the
         # startup.
@@ -935,7 +935,7 @@ class RaidenService(Runnable):
         # all state changes to produce and send only unique messages. Assumption is
         # that the latest related state_change defines the correct messages.
         # Goal is to reduce messages.
-        monitoring_updates: Dict[CanonicalIdentifier, BalanceProofStateChange] = dict()
+        monitoring_updates: Dict[CanonicalIdentifier, BalanceProofStateChange] = {}
         pfs_fee_updates: Set[CanonicalIdentifier] = set()
         pfs_capacity_updates: Set[CanonicalIdentifier] = set()
 

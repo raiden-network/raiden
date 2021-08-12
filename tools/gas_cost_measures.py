@@ -52,8 +52,8 @@ class ContractTester:
         self.contract_manager = ContractManager(
             contracts_precompiled_path(RAIDEN_CONTRACT_VERSION)
         )
-        self.name_to_creation_hash: Dict[str, bytes] = dict()
-        self.name_to_contract: Dict[str, str] = dict()
+        self.name_to_creation_hash: Dict[str, bytes] = {}
+        self.name_to_contract: Dict[str, str] = {}
 
     def deploy_contract(self, name, **kwargs):
         raise NotImplementedError("needs refactoring")

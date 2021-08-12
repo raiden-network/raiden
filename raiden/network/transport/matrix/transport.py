@@ -408,7 +408,7 @@ class MatrixTransport(Runnable):
 
         self.greenlets: List[gevent.Greenlet] = []
 
-        self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
+        self._address_to_retrier: Dict[Address, _RetryQueue] = {}
         self._displayname_cache = DisplayNameCache()
 
         self._broadcast_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
@@ -429,7 +429,7 @@ class MatrixTransport(Runnable):
             self._counters["dispatch"] = Counter()
             self._message_timing_keeper = MessageAckTimingKeeper()
 
-        self.services_addresses: Dict[Address, int] = dict()
+        self.services_addresses: Dict[Address, int] = {}
 
     @property
     def started(self) -> bool:
@@ -1099,7 +1099,7 @@ def populate_services_addresses(
     block_identifier: BlockIdentifier,
 ) -> None:
     if service_registry is not None:
-        services_addresses: Dict[Address, int] = dict()
+        services_addresses: Dict[Address, int] = {}
         for index in range(service_registry.ever_made_deposits_len(block_identifier)):
             address = service_registry.ever_made_deposits(block_identifier, index)
             if address is None:

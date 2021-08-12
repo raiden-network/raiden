@@ -242,8 +242,8 @@ class Client:
 class ChainStateStateMachine(RuleBasedStateMachine):
     def __init__(self):
         self.replay_path: bool = False
-        self.address_to_privkey: Dict[Address, PrivateKey] = dict()
-        self.address_to_client: Dict[Address, Client] = dict()
+        self.address_to_privkey: Dict[Address, PrivateKey] = {}
+        self.address_to_client: Dict[Address, Client] = {}
         self.transfer_order = TransferOrder()
         super().__init__()
 
@@ -959,9 +959,9 @@ class MediatorMixin:
 
     def __init__(self):
         super().__init__()
-        self.partner_to_balance_proof_data: Dict[Address, BalanceProofData] = dict()
-        self.secrethash_to_secret: Dict[SecretHash, Secret] = dict()
-        self.waiting_for_unlock: Dict[Secret, Address] = dict()
+        self.partner_to_balance_proof_data: Dict[Address, BalanceProofData] = {}
+        self.secrethash_to_secret: Dict[SecretHash, Secret] = {}
+        self.waiting_for_unlock: Dict[Secret, Address] = {}
         self.initial_number_of_channels = 2
 
     def _get_balance_proof_data(self, partner, client_address):

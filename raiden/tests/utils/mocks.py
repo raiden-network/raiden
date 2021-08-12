@@ -86,7 +86,7 @@ class MockProxyManager:
         # let's make a single mock token network for testing
         self.client = MockJSONRPCClient(node_address)
         self.token_network = MockTokenNetworkProxy(client=self.client)
-        self.mocked_addresses = mocked_addresses or dict()
+        self.mocked_addresses = mocked_addresses or {}
 
     def payment_channel(
         self, channel_state: NettingChannelState, block_identifier: BlockIdentifier
@@ -335,7 +335,7 @@ class PFSMock:
 
     def __init__(self, pfs_info: PFSInfo):
         self.pfs_info: PFSInfo = pfs_info
-        self.address_to_address_metadata: Dict[Address, AddressMetadata] = dict()
+        self.address_to_address_metadata: Dict[Address, AddressMetadata] = {}
         self.routes: RoutesDict = defaultdict(lambda: defaultdict(list))
 
     def get_pfs_info(self, url: str) -> PFSInfo:  # pylint: disable=unused-argument

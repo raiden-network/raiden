@@ -288,8 +288,8 @@ def main() -> None:
         config = json.load(handler)
 
     # validate the endpoints
-    node_to_endpoint = dict()
-    node_to_address = dict()
+    node_to_endpoint = {}
+    node_to_address = {}
     for node_name, node_info in config["nodes"].items():
         if urlsplit(node_info["endpoint"]).scheme == "":
             raise ValueError("'endpoint' must have the protocol defined")

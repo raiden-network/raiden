@@ -168,8 +168,8 @@ class GroupableOptionCommandGroup(click.Group):
     ):
         super().__init__(**attrs)
         self._extra_parsers = []
-        self.internal_to_external_names = dict()
-        self.opt_name_to_param = dict()
+        self.internal_to_external_names = {}
+        self.opt_name_to_param = {}
         self.use_option_parsers = use_option_parsers
 
         for param in self.params:
@@ -310,7 +310,7 @@ class LogLevelConfigType(click.ParamType):
             self.fail(f"`{value}` is not a valid logging format.", param, ctx)
 
         # Parse to dict
-        level_config = dict()
+        level_config = {}
         if value.strip(" ") == "":
             return None  # default value
 
@@ -438,7 +438,7 @@ class Parser(metaclass=ABCMeta):
     def __init__(self, param_name: str, priority: int = None):
         self.name = param_name
         self.priority = priority or self.default_priority
-        self.name_map: MutableMapping[str, Optional[str]] = dict()
+        self.name_map: MutableMapping[str, Optional[str]] = {}
         self._internal_names: Set[Optional[str]] = set()
 
     def __lt__(self, other: object) -> bool:
@@ -511,7 +511,7 @@ class ConfigParser(Parser):
         try:
             with config_path.open() as config_file:
                 parsed_config_dict = load(config_file)
-                config_dict = dict()
+                config_dict = {}
                 for ext_name, value in parsed_config_dict.items():
                     int_name = self.get_internal_name(ext_name)
                     if int_name is None:

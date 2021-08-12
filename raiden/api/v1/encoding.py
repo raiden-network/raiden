@@ -171,7 +171,7 @@ class CapabilitiesField(fields.Field):
     def _deserialize(self, value, attr, data, **kwargs):  # pylint: disable=unused-argument
         capstring = url_parse(value)
         capdict = parse_qs(capstring.query)
-        capabilities: Dict[str, Any] = dict()
+        capabilities: Dict[str, Any] = {}
         for key, value in capdict.items():
             # reduce lists with one entry to just their element
             if len(value) == 1:

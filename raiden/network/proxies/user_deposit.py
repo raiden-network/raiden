@@ -100,7 +100,7 @@ class UserDeposit:
 
         # Keeps track of the current in-flight deposits, to avoid sending
         # unecessary transactions.
-        self._inflight_deposits: Dict[Address, InflightDeposit] = dict()
+        self._inflight_deposits: Dict[Address, InflightDeposit] = {}
 
         # Don't allow concurrent withdraw_plan and withdraw calls.
         # This simplifies the precondition checks.

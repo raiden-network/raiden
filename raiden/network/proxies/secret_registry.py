@@ -80,7 +80,7 @@ class SecretRegistry:
         # The dictionary of open transactions is used to avoid sending a
         # transaction for the same secret more than once. This requires
         # synchronization for the local threads.
-        self.open_secret_transactions: Dict[Secret, AsyncResult] = dict()
+        self.open_secret_transactions: Dict[Secret, AsyncResult] = {}
         self._open_secret_transactions_lock = Semaphore()
 
     def register_secret(self, secret: Secret) -> None:

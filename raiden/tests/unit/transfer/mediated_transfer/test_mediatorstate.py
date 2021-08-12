@@ -1335,33 +1335,33 @@ def test_set_offchain_secret():
     assert payee_channel
     assert payer_channel
 
-    assert payer_channel.our_state.secrethashes_to_lockedlocks == dict()
-    assert payer_channel.our_state.secrethashes_to_unlockedlocks == dict()
+    assert payer_channel.our_state.secrethashes_to_lockedlocks == {}
+    assert payer_channel.our_state.secrethashes_to_unlockedlocks == {}
 
     assert UNIT_SECRETHASH in payer_channel.partner_state.secrethashes_to_lockedlocks.keys()
-    assert payer_channel.partner_state.secrethashes_to_unlockedlocks == dict()
+    assert payer_channel.partner_state.secrethashes_to_unlockedlocks == {}
 
     assert UNIT_SECRETHASH in payee_channel.our_state.secrethashes_to_lockedlocks.keys()
-    assert payee_channel.our_state.secrethashes_to_unlockedlocks == dict()
+    assert payee_channel.our_state.secrethashes_to_unlockedlocks == {}
 
-    assert payee_channel.partner_state.secrethashes_to_lockedlocks == dict()
-    assert payee_channel.partner_state.secrethashes_to_unlockedlocks == dict()
+    assert payee_channel.partner_state.secrethashes_to_lockedlocks == {}
+    assert payee_channel.partner_state.secrethashes_to_unlockedlocks == {}
 
     set_offchain_secret(mediator_state, channel_map, UNIT_SECRET, UNIT_SECRETHASH)
 
     assert mediator_state.secret == UNIT_SECRET
 
-    assert payer_channel.our_state.secrethashes_to_lockedlocks == dict()
-    assert payer_channel.our_state.secrethashes_to_unlockedlocks == dict()
+    assert payer_channel.our_state.secrethashes_to_lockedlocks == {}
+    assert payer_channel.our_state.secrethashes_to_unlockedlocks == {}
 
-    assert payer_channel.partner_state.secrethashes_to_lockedlocks == dict()
+    assert payer_channel.partner_state.secrethashes_to_lockedlocks == {}
     assert UNIT_SECRETHASH in payer_channel.partner_state.secrethashes_to_unlockedlocks.keys()
 
-    assert payee_channel.our_state.secrethashes_to_lockedlocks == dict()
+    assert payee_channel.our_state.secrethashes_to_lockedlocks == {}
     assert UNIT_SECRETHASH in payee_channel.our_state.secrethashes_to_unlockedlocks.keys()
 
-    assert payee_channel.partner_state.secrethashes_to_lockedlocks == dict()
-    assert payee_channel.partner_state.secrethashes_to_unlockedlocks == dict()
+    assert payee_channel.partner_state.secrethashes_to_lockedlocks == {}
+    assert payee_channel.partner_state.secrethashes_to_unlockedlocks == {}
 
 
 def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
@@ -2219,7 +2219,7 @@ def test_receive_unlock():
     iteration = mediator.state_transition(
         mediator_state=state,
         state_change=state_change,
-        channelidentifiers_to_channels=dict(),
+        channelidentifiers_to_channels={},
         addresses_to_channel=channels.addresses_to_channel(),
         pseudo_random_generator=prng,
         block_number=BlockNumber(1),
