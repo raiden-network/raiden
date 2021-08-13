@@ -666,7 +666,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.22.0
+web3==5.23.0
     # via
     #   -r requirements.txt
     #   raiden-contracts
