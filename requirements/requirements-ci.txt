@@ -242,7 +242,7 @@ flake8==3.9.2
     #   flake8-tuple
 flake8-bugbear==21.4.3
     # via -r requirements-dev.txt
-flake8-comprehensions==3.5.0
+flake8-comprehensions==3.6.1
     # via -r requirements-dev.txt
 flake8-tuple==0.4.1
     # via -r requirements-dev.txt
