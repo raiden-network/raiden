@@ -387,7 +387,13 @@ class LockedTransferBase(EnvelopeMessage):
             for r in transfer.route_states
         ]
         target_metadata = get_address_metadata(transfer.target, transfer.route_states)
-        encrypted_secret = encrypt_secret(transfer.secret, target_metadata)
+
+        encrypted_secret = encrypt_secret(
+            transfer.secret,
+            target_metadata,
+            event.transfer.lock.amount,
+            event.transfer.payment_identifier,
+        )
 
         # pylint: disable=unexpected-keyword-arg
         return cls(
@@ -407,7 +413,7 @@ class LockedTransferBase(EnvelopeMessage):
             initiator=transfer.initiator,
             signature=EMPTY_SIGNATURE,
             metadata=Metadata(
-                routes=routes, original_data=transfer.metadata, encrypted_secret=encrypted_secret
+                routes=routes, original_data=transfer.metadata, secret=encrypted_secret
             ),
         )
 

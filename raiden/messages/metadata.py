@@ -88,7 +88,7 @@ class Metadata:
     # inititally create the Metadata object as part of a message - this is the case when we are
     # the initiator of a transfer.
     original_data: Optional[Any] = None
-    encrypted_secret: Optional[EncryptedSecret] = None
+    secret: Optional[EncryptedSecret] = None
     _legacy_hash: bool = False
 
     class Meta:

@@ -1,10 +1,11 @@
+import json
 import random
 from random import Random
 from typing import TYPE_CHECKING
 
 from ecies import decrypt, encrypt
 from eth_hash.auto import keccak
-from eth_utils import decode_hex
+from eth_utils import decode_hex, encode_hex
 
 from raiden.constants import EMPTY_HASH, LOCKSROOT_OF_NO_LOCKS
 from raiden.exceptions import InvalidSecret
@@ -17,6 +18,8 @@ from raiden.utils.typing import (
     LockedAmount,
     Locksroot,
     Optional,
+    PaymentAmount,
+    PaymentID,
     PrivateKey,
     Secret,
     SecretHash,
@@ -66,7 +69,10 @@ def is_valid_secret_reveal(
 
 
 def encrypt_secret(
-    secret: Secret, target_metadata: Optional[AddressMetadata]
+    secret: Secret,
+    target_metadata: Optional[AddressMetadata],
+    amount: PaymentAmount,
+    payment_identifier: PaymentID,
 ) -> Optional[EncryptedSecret]:
     if not target_metadata or not secret:
         return None
@@ -77,13 +83,21 @@ def encrypt_secret(
     public_key = get_public_key(message, signature)
     encrypted_secret = None
     if public_key:
-        encrypted_secret = EncryptedSecret(encrypt(public_key.to_hex(), secret))
+        to_encrypt = {
+            "secret": encode_hex(secret),
+            "amount": amount,
+            "payment_identifier": payment_identifier,
+        }
+        encrypted_secret = EncryptedSecret(
+            encrypt(public_key.to_hex(), json.dumps(to_encrypt).encode())
+        )
     return encrypted_secret
 
 
 def decrypt_secret(encrypted_secret: EncryptedSecret, private_key: PrivateKey) -> Secret:
     try:
-        secret = Secret(decrypt(private_key, encrypted_secret))
-    except ValueError:
+        secret_dict = json.loads(decrypt(private_key, encrypted_secret).decode())
+        secret = Secret(decode_hex(secret_dict["secret"]))
+    except (ValueError, json.JSONDecodeError):
         raise InvalidSecret
     return secret

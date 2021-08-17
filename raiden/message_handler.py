@@ -346,7 +346,7 @@ class MessageHandler:
         sender = from_transfer.balance_proof.sender
 
         if message.target == TargetAddress(raiden.address):
-            encrypted_secret = message.metadata.encrypted_secret
+            encrypted_secret = message.metadata.secret
             if encrypted_secret is not None:
                 try:
                     secret = decrypt_secret(encrypted_secret, raiden.rpc_client.privkey)
