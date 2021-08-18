@@ -67,8 +67,8 @@ def test_metadata_canonical():
     item_two = ("def", 456)
     first_data = dict(x for x in (item_one, item_two))
     second_data = dict(x for x in (item_two, item_one))
-    first_metadata = factories.create(factories.MetadataProperties(original_data=first_data))
-    second_metadata = factories.create(factories.MetadataProperties(original_data=second_data))
+    first_metadata = factories.create(factories.MetadataProperties(_original_data=first_data))
+    second_metadata = factories.create(factories.MetadataProperties(_original_data=second_data))
     assert first_metadata._serialize_canonical() == second_metadata._serialize_canonical()
 
 

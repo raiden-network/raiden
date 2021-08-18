@@ -347,12 +347,6 @@ def make_hop_to_channel(channel_state: NettingChannelState = EMPTY) -> HopState:
     return HopState(channel_state.our_state.address, channel_state.identifier)
 
 
-def make_locked_transfer(_legacy_hash: Optional[bool] = False):
-    metadata = create(MetadataProperties(_legacy_hash=_legacy_hash))
-    locked_transfer = create(LockedTransferProperties(metadata=metadata))
-    return locked_transfer
-
-
 # CONSTANTS
 # In this module constants are in the bottom because we need some of the
 # factories.
@@ -539,14 +533,13 @@ RouteMetadataProperties.DEFAULTS = RouteMetadataProperties(route=[HOP1, HOP2])
 
 @dataclass(frozen=True)
 class MetadataProperties(Properties):
-    _legacy_hash: Optional[bool] = EMPTY
     routes: List[RouteMetadata] = EMPTY
-    original_data: Optional[Any] = EMPTY
+    _original_data: Optional[Any] = EMPTY
     TARGET_TYPE = Metadata
 
 
 MetadataProperties.DEFAULTS = MetadataProperties(
-    _legacy_hash=False, routes=[RouteMetadata(route=[HOP1, HOP2])], original_data=None
+    routes=[RouteMetadata(route=[HOP1, HOP2])], _original_data=None
 )
 
 
@@ -924,9 +917,9 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     ]
 
     # Since the signed-state transfer is a received transfer, there always
-    # since the original_data dict will get passed to the next hop unmodified
+    # since the _original_data dict will get passed to the next hop unmodified
     original_metadata = Metadata(routes=routes).to_dict()
-    metadata = Metadata(routes=routes, original_data=original_metadata)
+    metadata = Metadata(routes=routes, _original_data=original_metadata)
     params["metadata"] = metadata
 
     # Create the locked-transfer message first in order to generate the balance proof

@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 
 from raiden.exceptions import SerializationError
-from raiden.messages.metadata import Metadata, hash_metadata_v2_0_0
+from raiden.messages.metadata import Metadata
 from raiden.messages.monitoring_service import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.messages.path_finding_service import PFSCapacityUpdate, PFSFeeUpdate
 from raiden.messages.synchronization import Delivered, Processed
@@ -18,7 +18,6 @@ from raiden.storage.serialization import JSONSerializer
 from raiden.storage.serialization.schemas import BaseSchema, class_schema
 from raiden.storage.serialization.serializer import MessageSerializer
 from raiden.tests.utils import factories
-from raiden.tests.utils.factories import make_locked_transfer
 from raiden.transfer import state
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List
@@ -282,8 +281,10 @@ def test_metadata_pass_original_readonly():
     original_metadata = factories.create(factories.MetadataProperties())
     original_metadata_dict = original_metadata.to_dict()
 
-    # Now construct Metadata class that includes the original metadata dict as "original_data"
-    metadata = factories.create(factories.MetadataProperties(original_data=original_metadata_dict))
+    # Now construct Metadata class that includes the original metadata dict as "_original_data"
+    metadata = factories.create(
+        factories.MetadataProperties(_original_data=original_metadata_dict)
+    )
     # It should still have deserialized to the "routes" field
     modified_route = metadata.routes[0].route
     # Modify the route inplace
@@ -291,7 +292,7 @@ def test_metadata_pass_original_readonly():
 
     # Serialize the metadata to dict
     metadata_dict = metadata.to_dict()
-    # Although we modified the route, the seriliazed dict should still be the same
+    # Although we modified the route, the serialized dict should still be the same
     # as the original data
     assert original_metadata_dict == metadata_dict
 
@@ -311,7 +312,7 @@ def test_locked_transfer_unknown_metadata():
     # Add the addtional, unknown data tot he serialized dict
     metadata_original_dict = {**metadata_dict, **additional_data}
     # Now construct the LockedTransfer that includes the additional, unexpected metadata fields
-    metadata_properties = factories.MetadataProperties(original_data=metadata_original_dict)
+    metadata_properties = factories.MetadataProperties(_original_data=metadata_original_dict)
     metadata = factories.create(metadata_properties)
     locked_transfer = factories.create(factories.LockedTransferProperties(metadata=metadata))
     locked_transfer.sign(signer)
@@ -334,84 +335,24 @@ def test_locked_transfer_unknown_metadata():
     assert message_dict == JSONSerializer.deserialize(json_msg)
 
 
-def test_metadata_compatibility_with_v_2_0_0():
-    signer = LocalSigner(bytes(range(32)))
-
-    # First construct the "original" metadata which has no precalculated `_hash`
-    no_hash_metadata = factories.create(factories.MetadataProperties())
-    legacy_hash = hash_metadata_v2_0_0(no_hash_metadata)
-    # Metadata which are not created by deserialization should not have _hash set
-    assert no_hash_metadata._legacy_hash is False
-
-    different_hashes = set()
-
-    different_hashes.add(no_hash_metadata.hash)
-    different_hashes.add(legacy_hash)
-
-    number_of_different_hashes = 2
-
-    # metadata hash of v2.0.0 should differ from current hash
-    assert len(different_hashes) == number_of_different_hashes
-
-    signatures = set()
-
-    for _hash in different_hashes:
-        locked_transfer = make_locked_transfer(_hash == legacy_hash)
-        print(locked_transfer.metadata._legacy_hash)
-        locked_transfer.sign(signer)
-        # add signatures to check if they are different
-        signatures.add(locked_transfer.signature)
-
-        serialized_message = MessageSerializer.serialize(locked_transfer)
-        # _hash must be removed in serialized message format
-        assert "_legacy_hash" not in json.loads(serialized_message)["metadata"]
-
-        deserialized_message = MessageSerializer.deserialize(serialized_message, signer.address)
-
-        assert deserialized_message.metadata.hash == _hash
-        assert deserialized_message.sender == signer.address
-
-    # different hashes should result in different signatures
-    assert len(signatures) == len(different_hashes)
-
-
-def test_metadata_deserialization_without_expected_address():
-    signer = LocalSigner(bytes(range(32)))
-    locked_transfer = make_locked_transfer(True)
-    locked_transfer.sign(signer)
-    serialized_message = MessageSerializer.serialize(locked_transfer)
-
-    deserialized_message_without_expected_address = MessageSerializer.deserialize(
-        serialized_message
-    )
-    # if no expected address is passed to the deserializer it cannot recover against
-    # any hash(legacy or current), it will fallback to assume it is the current version
-    # how metadata are hashed
-    assert deserialized_message_without_expected_address.sender != signer.address
-    assert deserialized_message_without_expected_address.metadata._legacy_hash is False
-
-
 def test_metadata_backwards_compatibility():
-    data = """
-    {
-        "some_addresses":
-                [
-                    "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
-                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
-                ],
+
+    metadata_content = {
+        "some_addresses": [
+            "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
+            "0x94622cc2a5b64a58c25a129d48a2beec4b65b779",
+        ],
         "both_unknown": "0x94622cc2a5b64a58c25a129d48a2beec4b65b779",
         "routes": [
             {
                 "address_metadata": {},
                 "route": [
                     "0x77952ce83ca3cad9f7adcfabeda85bd2f1f52008",
-                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779"
-                ]
+                    "0x94622cc2a5b64a58c25a129d48a2beec4b65b779",
+                ],
             }
-        ]
+        ],
     }
-    """
-    m = json.loads(data)
 
     @dataclass(frozen=True)
     class NewMetadata(Metadata):
@@ -421,23 +362,23 @@ def test_metadata_backwards_compatibility():
     schema_new = class_schema(NewMetadata, base_schema=BaseSchema)()
     schema = class_schema(Metadata, base_schema=BaseSchema)()
 
-    deserialized_message_new = schema_new.load(deepcopy(m))
-    deserialized_message = schema.load(deepcopy(m))
+    deserialized_message_new = schema_new.load(deepcopy(metadata_content))
+    deserialized_message = schema.load(deepcopy(metadata_content))
 
     # Check the fields present on both
     assert len(deserialized_message.routes[0].route) == 2
     assert len(deserialized_message_new.routes[0].route) == 2
 
     # Assert that the correct fields are existent on the different deserialized messages
-    assert deserialized_message.original_data.get("some_addresses")
-    assert deserialized_message.original_data.get("both_unknown")
+    assert deserialized_message._original_data.get("some_addresses")
+    assert deserialized_message._original_data.get("both_unknown")
 
-    assert deserialized_message_new.original_data.get("some_addresses")
+    assert deserialized_message_new._original_data.get("some_addresses")
     assert deserialized_message_new.some_addresses
-    assert deserialized_message_new.original_data.get("both_unknown")
+    assert deserialized_message_new._original_data.get("both_unknown")
 
-    # A node should be able to verify the signature, regardless of wether
-    # he knows about the extra data - therefore the hash in the sending node (using "NewMetadata")
+    # A node should be able to verify the signature, regardless of whether
+    # it knows about the extra data - therefore the hash in the sending node (using "NewMetadata")
     # and the receiving node (using "Metadata") should be identical
     assert deserialized_message_new.hash == deserialized_message.hash
 
