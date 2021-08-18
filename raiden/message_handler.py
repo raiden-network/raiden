@@ -349,7 +349,14 @@ class MessageHandler:
             encrypted_secret = message.metadata.secret
             if encrypted_secret is not None:
                 try:
-                    secret = decrypt_secret(encrypted_secret, raiden.rpc_client.privkey)
+                    secret, amount, payment_identifier = decrypt_secret(
+                        encrypted_secret, raiden.rpc_client.privkey
+                    )
+                    if (
+                        from_transfer.lock.amount < amount
+                        or from_transfer.payment_identifier != payment_identifier
+                    ):
+                        raise InvalidSecret
                     log.info("Using encrypted secret", sender=to_checksum_address(sender))
                     return [
                         ActionInitTarget(
