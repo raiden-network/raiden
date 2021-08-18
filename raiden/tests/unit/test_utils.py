@@ -50,7 +50,10 @@ def test_encrypt_secret():
         message, {"user_id": UserID(message.decode()), "displayname": signature.hex()}, 0, 0
     )
 
-    assert decrypt_secret(encrypted_secret, privkey) == message
+    decrypted_message, amount, payment_id = decrypt_secret(encrypted_secret, privkey)
+    assert decrypted_message == message
+    assert amount == 0
+    assert payment_id == 0
 
 
 def test_recover():

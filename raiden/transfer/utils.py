@@ -25,6 +25,7 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     TokenAmount,
+    Tuple,
     Union,
 )
 
@@ -94,10 +95,14 @@ def encrypt_secret(
     return encrypted_secret
 
 
-def decrypt_secret(encrypted_secret: EncryptedSecret, private_key: PrivateKey) -> Secret:
+def decrypt_secret(
+    encrypted_secret: EncryptedSecret, private_key: PrivateKey
+) -> Tuple[Secret, PaymentAmount, PaymentID]:
     try:
         secret_dict = json.loads(decrypt(private_key, encrypted_secret).decode())
-        secret = Secret(decode_hex(secret_dict["secret"]))
     except (ValueError, json.JSONDecodeError):
         raise InvalidSecret
-    return secret
+    secret = Secret(decode_hex(secret_dict["secret"]))
+    amount = PaymentAmount(secret_dict["amount"])
+    payment_id = PaymentID(secret_dict["payment_identifier"])
+    return secret, amount, payment_id
