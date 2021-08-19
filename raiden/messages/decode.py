@@ -42,7 +42,7 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
         except ValueError as ex:
             log.warning("Invalid metadata in received route", route=route_metadata, error=str(ex))
 
-    transfer_state = LockedTransferSignedState(
+    return LockedTransferSignedState(
         message_identifier=message.message_identifier,
         payment_identifier=message.payment_identifier,
         token=message.token,
@@ -51,7 +51,5 @@ def lockedtransfersigned_from_message(message: LockedTransferBase) -> LockedTran
         initiator=message.initiator,
         target=message.target,
         route_states=route_states,
-        metadata=message.metadata.original_data,
+        metadata=message.metadata.to_dict(),
     )
-
-    return transfer_state

@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
+    PaymentWithFeeAmount,
     PrivateKey,
     Secret,
     SecretHash,
@@ -70,9 +71,9 @@ def is_valid_secret_reveal(
 
 
 def encrypt_secret(
-    secret: Secret,
+    secret: Optional[Secret],
     target_metadata: Optional[AddressMetadata],
-    amount: PaymentAmount,
+    amount: Union[PaymentAmount, PaymentWithFeeAmount],
     payment_identifier: PaymentID,
 ) -> Optional[EncryptedSecret]:
     if not target_metadata or not secret:
