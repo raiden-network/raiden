@@ -57,7 +57,7 @@ def limit_thread_cpu_usage_by_time() -> None:
     # This code must not use the tracer from the monitor_thread because calls
     # to `did_block_hub` will reset its internal state. If two threads use the
     # same underlying tracer false positives will happen, because the switch
-    # counter will be artifically reset.
+    # counter will be artificially reset.
     greenlet_tracer = GreenletTracer()
 
     def kill_offender(hub: Hub) -> None:
@@ -68,7 +68,7 @@ def limit_thread_cpu_usage_by_time() -> None:
             if monitor_thread._tracer.active_greenlet != active_greenlet:
                 msg = (
                     f"Mismatch values for the active_greenlet among the "
-                    f"monitor_thread and deubgging tracer, this either means "
+                    f"monitor_thread and debugging tracer, this either means "
                     f"there is a bug in the trace chain (the wrong values are "
                     f"forwarded), or that one of the trace functions was wrongly "
                     f"uninstalled. Active greenlets "
@@ -164,7 +164,7 @@ class Idle:
 
         This will take into account the measurements frequency. Ideally the
         measurements would happen exactly every `measurement_interval` seconds,
-        however that dependends on the existing load for the given thread, if
+        however that depends on the existing load for the given thread, if
         the event loop doesn't run often enough the running_interval  will be
         larger than the target `measurement_interval`.
         """
