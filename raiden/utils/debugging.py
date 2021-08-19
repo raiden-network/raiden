@@ -176,8 +176,8 @@ class Idle:
         return sum(interval.after_poll - interval.before_poll for interval in self.measurements)
 
     @property
-    def idled_pct(self) -> float:
-        """The percentage of time the thread idled, waiting on the event loop."""
+    def idled_ratio(self) -> float:
+        """The ratio of time the thread idled, waiting on the event loop."""
         return self.idled / self.running_interval
 
     @property
@@ -204,7 +204,7 @@ class Idle:
             context_switches=self.context_switches,
             idled=self.idled,
             interval=self.running_interval,
-            idle_pct=self.idled_pct,
+            idle_pct=self.idled_ratio,
         )
 
     def __bool__(self) -> bool:
@@ -216,7 +216,7 @@ class Idle:
 
         return (
             f"The thread had {self.context_switches} context_switches, and "
-            f"idled {self.idled_pct}% of the time."
+            f"idled {self.idled_ratio:%} of the time."
         )
 
 
