@@ -57,7 +57,7 @@ from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.integration.exception import RetryTestError
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
-from raiden.utils.debugging import enable_gevent_monitoring_signal
+from raiden.utils.debugging import enable_monitoring_signal
 from raiden.utils.ethereum_clients import VersionSupport, is_supported_client
 
 log = structlog.get_logger()
@@ -171,8 +171,8 @@ def check_parity_version_for_tests(blockchain_type):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def auto_enable_gevent_monitoring_signal():
-    enable_gevent_monitoring_signal()
+def auto_enable_monitoring_signal():
+    enable_monitoring_signal()
 
 
 @pytest.fixture(scope="session", autouse=True)
