@@ -604,7 +604,7 @@ pyyaml==5.4
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
-raiden-api-client==1.1.0
+raiden-api-client==1.1.1
     # via -r requirements-dev.txt
 raiden-contracts==0.39.0
     # via -r requirements-dev.txt
