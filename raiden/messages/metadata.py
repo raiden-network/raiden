@@ -10,7 +10,7 @@ from raiden.messages.abstract import cached_property
 from raiden.storage.serialization import serializer
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.state import get_address_metadata
-from raiden.transfer.utils import encrypt_secret
+from raiden.transfer.utils.secret import encrypt_secret
 from raiden.utils.typing import (
     Address,
     AddressMetadata,

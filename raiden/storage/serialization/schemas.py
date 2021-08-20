@@ -232,6 +232,7 @@ class BaseSchemaOpts(SchemaOpts):
         # exclude all optional, not required fields that have value "None"
         # from the dumped dictionary
         self.serialize_missing = getattr(meta, "serialize_missing", True)
+        self.add_class_types = getattr(meta, "add_class_types", True)
 
 
 class BaseSchema(marshmallow.Schema):
@@ -241,6 +242,7 @@ class BaseSchema(marshmallow.Schema):
     class Meta:
         unknown = EXCLUDE
         serialize_missing = True
+        add_class_types = True
 
     TYPE_MAPPING = {
         # Addresses
@@ -341,7 +343,7 @@ class BaseSchema(marshmallow.Schema):
     def __post_dump(self, data: Dict, original_data: Any, many: bool) -> Dict:
         if self.opts.serialize_missing is False:  # type: ignore
             data = self.remove_missing(data)
-        if data:
+        if data and self.opts.add_class_types:  # type: ignore
             data = self.add_class_type(data, original_data)
         return data
 
