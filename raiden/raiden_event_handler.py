@@ -16,7 +16,7 @@ from raiden.exceptions import InsufficientEth, RaidenUnrecoverableError, Service
 from raiden.messages.abstract import Message
 from raiden.messages.encode import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
-from raiden.network.proxies.payment_channel import PaymentChannel
+from raiden.network.proxies.payment_channel import PaymentChannel, WithdrawInput
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
 from raiden.network.transport.matrix.transport import MessagesQueue
@@ -31,6 +31,7 @@ from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
+    ContractSendChannelCoopSettle,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendChannelWithdraw,
@@ -194,6 +195,7 @@ class RaidenEventHandler(EventHandler):
             ],
             ContractSendChannelSettle: [self.handle_contract_send_channelsettle, []],
             ContractSendChannelWithdraw: [self.handle_contract_send_channelwithdraw, []],
+            ContractSendChannelCoopSettle: [self.handle_contract_send_coopsettle, []],
             UpdateServicesAddresses: [self.handle_update_services_addresses, []],
             RequestMetadata: [self.handle_missing_metadata_events, [chain_state]],
         }
@@ -458,6 +460,65 @@ class RaidenEventHandler(EventHandler):
             raise RaidenUnrecoverableError(str(e)) from e
 
     @staticmethod
+    def handle_contract_send_coopsettle(
+        raiden: "RaidenService", channel_coopsettle_event: ContractSendChannelCoopSettle
+    ) -> None:
+        chain_state = state_from_raiden(raiden)
+        channel_state = get_channelstate_by_canonical_identifier(
+            chain_state=chain_state,
+            canonical_identifier=channel_coopsettle_event.canonical_identifier,
+        )
+        if channel_state is None:
+            raise RaidenUnrecoverableError(
+                "ContractSendChannelCoopSettle for non-existing channel."
+            )
+
+        participant_withdraw_data = pack_withdraw(
+            canonical_identifier=channel_coopsettle_event.canonical_identifier,
+            participant=raiden.address,
+            total_withdraw=channel_coopsettle_event.our_total_withdraw,
+            expiration_block=channel_coopsettle_event.expiration,
+        )
+        our_signature_initiator = raiden.signer.sign(data=participant_withdraw_data)
+        withdraw_initiator = WithdrawInput(
+            initiator=raiden.address,
+            total_withdraw=channel_coopsettle_event.our_total_withdraw,
+            expiration_block=channel_coopsettle_event.expiration,
+            initiator_signature=our_signature_initiator,
+            partner_signature=channel_coopsettle_event.signature_our_withdraw,
+        )
+
+        partner_withdraw_data = pack_withdraw(
+            canonical_identifier=channel_coopsettle_event.canonical_identifier,
+            participant=channel_state.partner_state.address,
+            total_withdraw=channel_coopsettle_event.partner_total_withdraw,
+            expiration_block=channel_coopsettle_event.expiration,
+        )
+        # Partner is the "partner"
+        our_signature_partner = raiden.signer.sign(data=partner_withdraw_data)
+        withdraw_partner = WithdrawInput(
+            total_withdraw=channel_coopsettle_event.partner_total_withdraw,
+            expiration_block=channel_coopsettle_event.expiration,
+            initiator=channel_state.partner_state.address,
+            partner_signature=our_signature_partner,
+            initiator_signature=channel_coopsettle_event.signature_partner_withdraw,
+        )
+
+        confirmed_block_identifier = chain_state.block_hash
+        channel_proxy = raiden.proxy_manager.payment_channel(
+            channel_state=channel_state, block_identifier=confirmed_block_identifier
+        )
+        try:
+            channel_proxy.token_network.coop_settle(
+                channel_identifier=channel_proxy.channel_identifier,
+                withdraw_partner=withdraw_partner,
+                withdraw_initiator=withdraw_initiator,
+                given_block_identifier=channel_coopsettle_event.triggered_by_block_hash,
+            )
+        except InsufficientEth as e:
+            raise RaidenUnrecoverableError(str(e)) from e
+
+    @staticmethod
     def handle_contract_send_channelclose(
         raiden: "RaidenService",
         channel_close_event: ContractSendChannelClose,
@@ -664,7 +725,8 @@ class RaidenEventHandler(EventHandler):
             gain = sum(unlock.lock.amount for unlock in onchain_unlocked)
 
             if gain > 0:
-                payment_channel.unlock(
+                payment_channel.token_network.unlock(
+                    channel_identifier=payment_channel.channel_identifier,
                     sender=partner_address,
                     receiver=our_address,
                     pending_locks=restored_channel_state.partner_state.pending_locks,
@@ -705,10 +767,11 @@ class RaidenEventHandler(EventHandler):
 
             if gain > 0:
                 try:
-                    payment_channel.unlock(
-                        pending_locks=restored_channel_state.our_state.pending_locks,
+                    payment_channel.token_network.unlock(
+                        channel_identifier=payment_channel.channel_identifier,
                         sender=our_address,
                         receiver=partner_address,
+                        pending_locks=restored_channel_state.our_state.pending_locks,
                         given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                     )
                 except InsufficientEth as e:
@@ -828,14 +891,16 @@ class RaidenEventHandler(EventHandler):
             partner_locksroot = LOCKSROOT_OF_NO_LOCKS
 
         try:
-            payment_channel.settle(
+            payment_channel.token_network.settle(
+                channel_identifier=payment_channel.channel_identifier,
                 transferred_amount=our_transferred_amount,
                 locked_amount=our_locked_amount,
                 locksroot=our_locksroot,
+                partner=payment_channel.participant2,
                 partner_transferred_amount=partner_transferred_amount,
                 partner_locked_amount=partner_locked_amount,
                 partner_locksroot=partner_locksroot,
-                block_identifier=triggered_by_block_hash,
+                given_block_identifier=triggered_by_block_hash,
             )
         except InsufficientEth as e:
             raise RaidenUnrecoverableError(str(e)) from e

@@ -724,7 +724,10 @@ def handle_state_change(
 ) -> TransitionResult[ChainState]:
 
     canonical_identifier = None
-    if isinstance(state_change, (ActionChannelWithdraw, ActionChannelSetRevealTimeout)):
+    if isinstance(
+        state_change,
+        (ActionChannelWithdraw, ActionChannelSetRevealTimeout, ActionChannelCoopSettle),
+    ):
         canonical_identifier = state_change.canonical_identifier
 
     state_change_map: Dict[Any, List] = {

@@ -575,7 +575,7 @@ def test_clear_closed_queue(raiden_network: List[RaidenService], token_addresses
     ]
 
     # A ChannelClose event will be generated, this will be polled by both apps
-    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address)
+    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address, coop_settle=False)
 
     with block_offset_timeout(app0, "Could not get close event"):
         waiting.wait_for_close(

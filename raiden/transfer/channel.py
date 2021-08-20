@@ -920,7 +920,9 @@ def is_valid_unlock(
 
 
 def is_valid_total_withdraw(
-    channel_state: NettingChannelState, our_total_withdraw: WithdrawAmount
+    channel_state: NettingChannelState,
+    our_total_withdraw: WithdrawAmount,
+    allow_zero: bool = False,
 ) -> SuccessOrError:
     balance = get_balance(sender=channel_state.our_state, receiver=channel_state.partner_state)
 
@@ -931,7 +933,9 @@ def is_valid_total_withdraw(
     withdraw_amount = our_total_withdraw - channel_state.our_total_withdraw
     if get_status(channel_state) != ChannelState.STATE_OPENED:
         return SuccessOrError("Invalid withdraw, the channel is not opened")
-    elif withdraw_amount <= 0:
+    elif withdraw_amount < 0:
+        return SuccessOrError(f"Total withdraw {our_total_withdraw} decreased")
+    elif not allow_zero and withdraw_amount == 0:
         return SuccessOrError(f"Total withdraw {our_total_withdraw} did not increase")
     elif balance < withdraw_amount:
         return SuccessOrError(
@@ -945,18 +949,12 @@ def is_valid_total_withdraw(
         return SuccessOrError()
 
 
-def is_valid_action_withdraw(
-    channel_state: NettingChannelState, withdraw: ActionChannelWithdraw
-) -> SuccessOrError:
-    return is_valid_total_withdraw(channel_state, withdraw.total_withdraw)
-
-
 def is_valid_action_coopsettle(
     channel_state: NettingChannelState,
     coop_settle: ActionChannelCoopSettle,  # pylint: disable=unused-argument
     total_withdraw: WithdrawAmount,
 ) -> SuccessOrError:
-    result = is_valid_total_withdraw(channel_state, total_withdraw)
+    result = is_valid_total_withdraw(channel_state, total_withdraw, allow_zero=True)
     if not result:
         return result
 
@@ -1354,6 +1352,20 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
     elif not channel_state.settle_transaction.finished_block_number:
         channel_state.settle_transaction.finished_block_number = block_number
         channel_state.settle_transaction.result = TransactionExecutionStatus.SUCCESS
+
+
+def set_coop_settled(channel_end_state: NettingChannelEndState, block_number: BlockNumber) -> None:
+    msg = "This should only be called on a state where a CoopSettle is initiated"
+    assert channel_end_state.initiated_coop_settle is not None, msg
+    if not channel_end_state.initiated_coop_settle.transaction:
+        channel_end_state.initiated_coop_settle.transaction = TransactionExecutionStatus(
+            None, block_number, TransactionExecutionStatus.SUCCESS
+        )
+    elif not channel_end_state.initiated_coop_settle.transaction.finished_block_number:
+        channel_end_state.initiated_coop_settle.transaction.finished_block_number = block_number
+        channel_end_state.initiated_coop_settle.transaction.result = (
+            TransactionExecutionStatus.SUCCESS
+        )
 
 
 def update_contract_balance(end_state: NettingChannelEndState, contract_balance: Balance) -> None:
@@ -1991,7 +2003,7 @@ def _handle_action_withdraw(
     **kwargs: Optional[Dict[Any, Any]],
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = []
-    is_valid_withdraw = is_valid_action_withdraw(channel_state, action)
+    is_valid_withdraw = is_valid_total_withdraw(channel_state, action.total_withdraw)
 
     if is_valid_withdraw:
         expiration = get_safe_initial_expiration(
@@ -2006,7 +2018,7 @@ def _handle_action_withdraw(
         )
     else:
         error_msg = is_valid_withdraw.as_error_message
-        assert error_msg, "is_valid_action should return error msg if not valid"
+        assert error_msg, "is_valid_total_withdraw should return error msg if not valid"
         events = [
             EventInvalidActionWithdraw(attempted_withdraw=action.total_withdraw, reason=error_msg)
         ]
@@ -2055,6 +2067,10 @@ def events_for_coop_settle(
         and coop_settle_state.partner_signature_confirmation is not None
         and coop_settle_state.expiration >= block_number - channel_state.reveal_timeout
     ):
+
+        msg = "CoopSettleState should be present in our state if we initiated it"
+        assert channel_state.our_state.initiated_coop_settle is not None, msg
+
         send_coop_settle = ContractSendChannelCoopSettle(
             canonical_identifier=channel_state.canonical_identifier,
             our_total_withdraw=coop_settle_state.total_withdraw_initiator,
@@ -2063,6 +2079,9 @@ def events_for_coop_settle(
             signature_our_withdraw=coop_settle_state.partner_signature_confirmation,
             signature_partner_withdraw=coop_settle_state.partner_signature_request,
             triggered_by_block_hash=block_hash,
+        )
+        channel_state.our_state.initiated_coop_settle.transaction = TransactionExecutionStatus(
+            block_number, None, None
         )
         return [send_coop_settle]
     return []
@@ -2149,6 +2168,7 @@ def _handle_receive_withdraw_request(
                 total_withdraw_initiator=action.total_withdraw,
                 total_withdraw_partner=our_max_total_withdraw,
                 expiration=action.expiration,
+                partner_signature_request=action.signature,
             )
             channel_state.partner_state.initiated_coop_settle = partner_initiated_coop_settle
             events = send_withdraw_request(
@@ -2587,6 +2607,49 @@ def _handle_channel_settled(
             our_locksroot == LOCKSROOT_OF_NO_LOCKS and partner_locksroot == LOCKSROOT_OF_NO_LOCKS
         )
 
+        is_coop_settle = False
+        initiator_lock_check = action.our_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+        partner_lock_check = action.partner_onchain_locksroot == LOCKSROOT_OF_NO_LOCKS
+        if channel_state.our_state.initiated_coop_settle:
+            coop_settle = channel_state.our_state.initiated_coop_settle
+            initiator_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_initiator) == action.our_transferred_amount
+            )
+            partner_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_partner)
+                == action.partner_transferred_amount
+            )
+            initiator_checks = initiator_transfer_check and initiator_lock_check
+            partner_checks = partner_transfer_check and partner_lock_check
+
+            if initiator_checks and partner_checks:
+                # This matches our initated coop-settle!
+                set_coop_settled(channel_state.our_state, action.block_number)
+                is_coop_settle = True
+        if channel_state.partner_state.initiated_coop_settle:
+            coop_settle = channel_state.partner_state.initiated_coop_settle
+            partner_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_initiator)
+                == action.partner_transferred_amount
+            )
+            initiator_transfer_check = (
+                TokenAmount(coop_settle.total_withdraw_partner) == action.our_transferred_amount
+            )
+            initiator_checks = initiator_transfer_check and initiator_lock_check
+            partner_checks = partner_transfer_check and partner_lock_check
+            if initiator_checks and partner_checks:
+                # This matches partners initiated coop-settle!
+                set_coop_settled(channel_state.partner_state, action.block_number)
+                is_coop_settle = True
+
+        if is_coop_settle:
+            channel_state.partner_state.onchain_total_withdraw = WithdrawAmount(
+                action.partner_transferred_amount
+            )
+            channel_state.our_state.onchain_total_withdraw = WithdrawAmount(
+                action.our_transferred_amount
+            )
+
         if should_clear_channel:
             return TransitionResult(None, events)
 
@@ -2714,8 +2777,13 @@ def sanity_check(channel_state: NettingChannelState) -> None:
     our_state = channel_state.our_state
 
     previous = WithdrawAmount(0)
+    coop_settle = (
+        channel_state.our_state.initiated_coop_settle is not None
+        or channel_state.partner_state.initiated_coop_settle is not None
+    )
     for total_withdraw, withdraw_state in our_state.withdraws_pending.items():
-        assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
+        if not coop_settle:
+            assert withdraw_state.total_withdraw > previous, "total_withdraw must be ordered"
         assert total_withdraw == withdraw_state.total_withdraw, "Total withdraw mismatch"
         previous = withdraw_state.total_withdraw
 

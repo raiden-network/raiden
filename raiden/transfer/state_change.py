@@ -201,7 +201,9 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
     canonical_identifier: CanonicalIdentifier
     our_onchain_locksroot: Locksroot
+    our_transferred_amount: TokenAmount
     partner_onchain_locksroot: Locksroot
+    partner_transferred_amount: TokenAmount
 
     @property
     def channel_identifier(self) -> ChannelID:

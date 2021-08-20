@@ -511,7 +511,7 @@ pytz==2019.1
     #   flask-restful
 pyyaml==5.4
     # via matrix-synapse
-raiden-api-client==1.1.0
+raiden-api-client==1.1.1
     # via -r requirements-dev.in
 raiden-contracts==0.39.0
     # via -r requirements.txt

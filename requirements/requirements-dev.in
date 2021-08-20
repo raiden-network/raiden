@@ -38,7 +38,7 @@ pytest-xdist
 grequests
 pexpect
 hypothesis
-raiden-api-client
+raiden-api-client>=1.1.1
 responses
 flaky
 Faker

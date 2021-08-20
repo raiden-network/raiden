@@ -100,6 +100,9 @@ class Runnable:
     def __bool__(self) -> bool:
         return bool(self.greenlet)
 
+    def is_running(self) -> bool:
+        return bool(self.greenlet)
+
     def rawlink(self, callback: Callable) -> None:
         if not self.greenlet:
             return

@@ -152,7 +152,9 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        our_transferred_amount=0,
         partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_transferred_amount=0,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -245,9 +247,11 @@ def test_channel_data_removed_after_unlock(
         our_onchain_locksroot=compute_locksroot(
             channel_state_after_closed.our_state.pending_locks
         ),
+        our_transferred_amount=0,
         partner_onchain_locksroot=compute_locksroot(
             channel_state_after_closed.partner_state.pending_locks
         ),
+        partner_transferred_amount=0,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -368,7 +372,9 @@ def test_mediator_clear_pairs_after_batch_unlock(
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
+        our_transferred_amount=0,
         partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_transferred_amount=0,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -383,7 +389,6 @@ def test_mediator_clear_pairs_after_batch_unlock(
     ids_to_channels = token_network_state_after_settle.channelidentifiers_to_channels
     assert len(ids_to_channels) == 1
     assert channel_state.identifier in ids_to_channels
-
     block_number = closed_block_number + 1
     channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=factories.make_transaction_hash(),
@@ -488,7 +493,9 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
+        our_transferred_amount=0,
         partner_onchain_locksroot=LOCKSROOT_OF_NO_LOCKS,
+        partner_transferred_amount=0,
     )
 
     channel_settled_iteration = token_network.state_transition(

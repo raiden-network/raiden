@@ -267,7 +267,7 @@ def test_received_lockedtransfer_closedchannel(
     assert token_network_address
     channel0 = get_channelstate(app0, app1, token_network_address)
 
-    RaidenAPI(app1).channel_close(registry_address, token_address, app0.address)
+    RaidenAPI(app1).channel_close(registry_address, token_address, app0.address, coop_settle=False)
 
     app0.rpc_client.wait_until_block(
         target_block_number=BlockNumber(app0.rpc_client.block_number() + 1)

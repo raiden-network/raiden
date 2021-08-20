@@ -97,6 +97,14 @@ def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
         raise SamePeerAddress("Using the same address for both participants is forbiden.")
 
 
+class WithdrawInput(NamedTuple):
+    initiator: Address
+    total_withdraw: WithdrawAmount
+    expiration_block: BlockExpiration
+    initiator_signature: Signature
+    partner_signature: Signature
+
+
 class ChannelData(NamedTuple):
     channel_identifier: ChannelID
     settle_block_number: BlockNumber
@@ -1186,18 +1194,20 @@ class TokenNetwork:
         self,
         given_block_identifier: BlockIdentifier,
         channel_identifier: ChannelID,
-        total_withdraw: WithdrawAmount,
-        expiration_block: BlockExpiration,
-        participant_signature: Signature,
-        partner_signature: Signature,
-        participant: Address,
         partner: Address,
+        withdraw_input: WithdrawInput,
     ) -> TransactionHash:
         """Set total token withdraw in the channel to total_withdraw.
 
         Raises:
             ValueError: If provided total_withdraw is not an integer value.
         """
+        total_withdraw = withdraw_input.total_withdraw
+        initiator = withdraw_input.initiator
+        partner_signature = withdraw_input.partner_signature
+        initiator_signature = withdraw_input.initiator_signature
+        expiration_block = withdraw_input.expiration_block
+
         if not isinstance(total_withdraw, int):
             raise ValueError("total_withdraw needs to be an integer number.")
 
@@ -1209,21 +1219,21 @@ class TokenNetwork:
         with self.channel_operations_lock[partner]:
             try:
                 channel_onchain_detail = self._detail_channel(
-                    participant1=participant,
+                    participant1=initiator,
                     participant2=partner,
                     block_identifier=given_block_identifier,
                     channel_identifier=channel_identifier,
                 )
                 our_details = self._detail_participant(
                     channel_identifier=channel_identifier,
-                    detail_for=participant,
+                    detail_for=initiator,
                     partner=partner,
                     block_identifier=given_block_identifier,
                 )
                 partner_details = self._detail_participant(
                     channel_identifier=channel_identifier,
                     detail_for=partner,
-                    partner=participant,
+                    partner=initiator,
                     block_identifier=given_block_identifier,
                 )
                 given_block_number = self.client.get_block(given_block_identifier)["number"]
@@ -1268,7 +1278,7 @@ class TokenNetwork:
                     )
                     raise BrokenPreconditionError(msg)
 
-                if participant_signature == EMPTY_SIGNATURE:
+                if initiator_signature == EMPTY_SIGNATURE:
                     msg = "set_total_withdraw requires a valid participant signature"
                     raise RaidenUnrecoverableError(msg)
 
@@ -1282,25 +1292,25 @@ class TokenNetwork:
                     channel_identifier=channel_identifier,
                 )
                 participant_signed_data = pack_withdraw(
-                    participant=participant,
+                    participant=initiator,
                     total_withdraw=total_withdraw,
                     canonical_identifier=canonical_identifier,
                     expiration_block=expiration_block,
                 )
                 try:
                     participant_recovered_address = recover(
-                        data=participant_signed_data, signature=participant_signature
+                        data=participant_signed_data, signature=initiator_signature
                     )
                 except Exception:  # pylint: disable=broad-except
                     raise RaidenUnrecoverableError(
-                        "Couldn't verify the participant withdraw signature"
+                        "Couldn't verify the initiator withdraw signature"
                     )
                 else:
-                    if participant_recovered_address != participant:
-                        raise RaidenUnrecoverableError("Invalid withdraw participant signature")
+                    if participant_recovered_address != initiator:
+                        raise RaidenUnrecoverableError("Invalid withdraw initiator signature")
 
                 partner_signed_data = pack_withdraw(
-                    participant=participant,
+                    participant=initiator,
                     total_withdraw=total_withdraw,
                     canonical_identifier=canonical_identifier,
                     expiration_block=expiration_block,
@@ -1323,10 +1333,10 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
                 total_withdraw=total_withdraw,
                 expiration_block=expiration_block,
-                participant=participant,
+                participant=initiator,
                 partner=partner,
                 partner_signature=partner_signature,
-                participant_signature=participant_signature,
+                participant_signature=initiator_signature,
                 log_details=log_details,
             )
 
@@ -1496,6 +1506,54 @@ class TokenNetwork:
                 f"setTotalWithdraw gas estimation failed for an unknown reason. "
                 f"Reference block {failed_at_blockhash} {failed_at_blocknumber}."
             )
+
+    def coop_settle(
+        self,
+        channel_identifier: ChannelID,
+        withdraw_initiator: WithdrawInput,
+        withdraw_partner: WithdrawInput,
+        given_block_identifier: BlockIdentifier,
+    ) -> TransactionHash:
+        #  Don't duplicate all the verification of the contracts here for now,
+        #  since we very soon will have revert-string feedback from the contracts,
+        #  and will get rid of the `proxies` module altogether.
+        #  Not having this is no security flaw, we just  don't have good error feedback
+        #  for the moment.
+
+        log_details = {"given_block_identifier": format_block_id(given_block_identifier)}
+
+        estimated_transaction = self.client.estimate_gas(
+            self.proxy,
+            "cooperativeSettle",
+            extra_log_details=log_details,
+            channel_identifier=channel_identifier,
+            data1=tuple(withdraw_initiator),
+            data2=tuple(withdraw_partner),
+        )
+
+        if estimated_transaction is None:
+            raise RaidenRecoverableError("CoopSettle: gas-estimation of transaction failed.")
+
+        estimated_transaction.estimated_gas = safe_gas_limit(
+            estimated_transaction.estimated_gas,
+            self.metadata.gas_measurements["TokenNetwork.cooperativeSettle"],
+        )
+
+        transaction_sent = self.client.transact(estimated_transaction)
+        transaction_mined = self.client.poll_transaction(transaction_sent)
+
+        if was_transaction_successfully_mined(transaction_mined):
+            return transaction_mined.transaction_hash
+
+        receipt = transaction_mined.receipt
+        failed_at_blockhash = encode_hex(receipt["blockHash"])
+        failed_at_blocknumber = receipt["blockNumber"]
+
+        check_transaction_failure(transaction_mined, self.client)
+        raise RaidenRecoverableError(
+            f"CoopSettle: mining of transaction failed (block_hash={failed_at_blockhash},"
+            f" block_number={failed_at_blocknumber})"
+        )
 
     def close(
         self,
