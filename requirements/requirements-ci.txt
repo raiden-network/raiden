@@ -356,7 +356,7 @@ lru-dict==1.1.6
     # via
     #   -r requirements-dev.txt
     #   web3
-macholib==1.14
+macholib==1.15
     # via -r requirements-ci.in
 markupsafe==2.0.1
     # via
@@ -724,7 +724,7 @@ typeguard==2.11.1
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
-types-cachetools==0.1.10
+types-cachetools==4.2.0
     # via -r requirements-dev.txt
 types-click==7.1.1
     # via
