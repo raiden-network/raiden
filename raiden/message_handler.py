@@ -42,7 +42,7 @@ from raiden.transfer.state_change import (
     ReceiveWithdrawExpired,
     ReceiveWithdrawRequest,
 )
-from raiden.transfer.utils import decrypt_secret
+from raiden.transfer.utils.secret import decrypt_secret
 from raiden.transfer.views import TransferRole
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.transfers import random_secret

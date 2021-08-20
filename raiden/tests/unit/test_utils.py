@@ -9,7 +9,7 @@ from raiden.api.v1.encoding import CapabilitiesSchema
 from raiden.exceptions import InvalidSignature
 from raiden.network.utils import get_average_http_response_time
 from raiden.settings import CapabilitiesConfig
-from raiden.transfer.utils import decrypt_secret, encrypt_secret
+from raiden.transfer.utils.secret import decrypt_secret, encrypt_secret
 from raiden.utils.capabilities import capconfig_to_dict, capdict_to_config
 from raiden.utils.keys import privatekey_to_publickey
 from raiden.utils.signer import LocalSigner, Signer, recover
