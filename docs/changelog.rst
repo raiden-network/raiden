@@ -2,8 +2,12 @@
 Changelog
 =========
 
+* :feature:`7196` Send encrypted secret with the initial LockedTransfer message, obviating the need for SecretRequest and SecretReveal messages. This reduces the time needed to complete a payment.
+* :feature:`7195` Enable Raiden Node communication over WebRTC. This will allow payments to complete faster due to direct communication between peers.
+* :feature:`1541` Add support for cooperative settlement. If both parties are online and agree to settle cooperatively, closing and settling a channel is performed much quicker without having to wait for the on-chain settlement timeout. Closing a channel will now automatically try to perform a cooperative settlement first.
+
 * :release:`2.0.0 <2021-06-09>`
-* :bug:`7120` Fix for transport potentially blocks at long http response times.
+* :bug:`7120 major` Fix for transport potentially blocks at long http response times.
 * :feature:`6673` Remove refund transfers. Refunds were intended as a way to quickly unlock funds in case a transfer can't be completed without having to wait for the lock to expire. Unfortunately they were never very good at achieving this goal and added a lot of complications to the codebase. Therefore they got removed. See the linked issue for more details.
 * :feature:`7064` Fix building of binary bundles which was broken for a while.
 * :feature:`6986` Increment DB version - this will make this release incompatible with previous releases. Please refer to `the known issues section in the docs <https://raiden-network.readthedocs.io/en/latest/other/known-issues.html#database-upgrades>`_ for details.
@@ -24,7 +28,7 @@ Changelog
 * :feature:`6646` add `Matrix toDevice <https://matrix.org/docs/spec/client_server/r0.6.0#id70>`_ message support in transport layer
 * :feature:`6608` Compatibility with Synapse >= 1.12 and `MSC2432 <https://github.com/matrix-org/matrix-doc/pull/2432>`_
 * :feature:`6482` Add support for client capabilities. Raiden clients can now negotiate supported features via their matrix profile.
-* :bug:`6444` Fix a race condition when processing blockchain events.
+* :bug:`6444 major` Fix a race condition when processing blockchain events.
 
 * :release:`1.1.1 <2020-07-20>`
 * :feature:`-` Update WebUI to version 1.0.2 https://github.com/raiden-network/webui/releases/tag/v1.0.2
