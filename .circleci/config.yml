@@ -11,8 +11,9 @@ templates:
     py-version: &py-version-template
       description: "python version to be used in the executor"
       default: "3.7"
-      type: string
-    resource:
+      type: enum
+      enum: ["3.7", "3.8", "3.9"]
+    resource: &resource-type-template
       description: "resource type for underlying VM"
       default: "medium"
       type: enum
@@ -64,13 +65,10 @@ executors:
       py-version:
         <<: *py-version-template
       resource:
-        description: "resource type for underlying VM"
-        default: "medium"
-        type: enum
-        enum: ["small", "medium", "medium+", "large", "xlarge"]
+        <<: *resource-type-template
     working_directory: ~/raiden
     docker:
-      - image: circleci/python:<< parameters.py-version >>
+      - image: cimg/python:<< parameters.py-version >>
     resource_class: << parameters.resource >>
     environment:
       <<: *default-environment
@@ -198,7 +196,7 @@ commands:
           py-version: << parameters.py-version >>
       - restore_cache:
           keys:
-          - system-deps-pyenv-v5-{{ arch }}-<< parameters.py-version >>
+          - system-deps-pyenv-v6-{{ arch }}-<< parameters.py-version >>
       - run:
           name: Installing Python on MacOS
           command: |
@@ -210,15 +208,15 @@ commands:
               env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYENV_PYTHON_VERSION -sv
             fi
       - save_cache:
-          key: system-deps-pyenv-v5-{{ arch }}-<< parameters.py-version >>
+          key: system-deps-pyenv-v6-{{ arch }}-<< parameters.py-version >>
           paths:
           - "~/.local-MACOS/.pyenv"
       - restore_cache:
-          key: pip-cache-v2-{{ arch }}-<< parameters.py-version >>
+          key: pip-cache-v3-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - python-deps-v8-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-          - python-deps-v8-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v9-{{ arch }}-<< parameters.py-version >>-
       - run:
           name: Creating virtualenv
           command: |
@@ -246,12 +244,12 @@ commands:
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
       - save_cache:
-          key: python-deps-v8-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          key: python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
           - "~/venv-<< parameters.py-version >>-LINUX"
           - "~/venv-<< parameters.py-version >>-MACOS"
       - save_cache:
-          key: pip-cache-v2-{{ arch }}-<< parameters.py-version >>
+          key: pip-cache-v3-{{ arch }}-<< parameters.py-version >>
           paths:
           - "~/.cache/pip"
       - persist_to_workspace:
@@ -407,14 +405,6 @@ jobs:
             pip install ~/scenario-player
             pip install -Ue ~/raiden
       - run:
-          name: Set Locale
-          command: |
-            echo 'export LANGUAGE=en_US.UTF-8' >> ${BASH_ENV}
-            echo 'export LANG=en_US.UTF-8' >> ${BASH_ENV}
-            echo 'export LC_ALL=en_US.UTF-8' >> ${BASH_ENV}
-            locale-gen en_US.UTF-8
-            sudo dpkg-reconfigure locales
-      - run:
           name: Run Unit Tests
           command: |
             cd ~/scenario-player
@@ -529,10 +519,7 @@ jobs:
       py-version:
         <<: *py-version-template
       resource:
-        description: "resource type for underlying VM"
-        default: "medium"
-        type: enum
-        enum: ["small", "medium", "medium+", "large", "xlarge"]
+        <<: *resource-type-template
       remote-host:
         description: "name of the arm server"
         default: ""
