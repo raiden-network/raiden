@@ -50,8 +50,7 @@ def debug_asyncio() -> None:
         asyncio.get_running_loop()
     except RuntimeError:
         return
-    tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
-    for task in tasks:
+    for task in asyncio.all_tasks():
         task.print_stack()
 
 
