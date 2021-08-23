@@ -67,7 +67,7 @@ from raiden.utils.cli import (
     option,
     option_group,
 )
-from raiden.utils.debugging import IDLE, enable_gevent_monitoring_signal
+from raiden.utils.debugging import IDLE, enable_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.system import get_system_spec
 from raiden.utils.typing import MYPY_ANNOTATION, ChainID
@@ -596,7 +596,7 @@ def _run(ctx: Context, **kwargs: Any) -> None:
             set_by = source.name.title() if source else None
             log.debug("Using config file", config_file=kwargs["config_file"], set_by=set_by)
 
-        enable_gevent_monitoring_signal()
+        enable_monitoring_signal()
 
         if ctx.invoked_subcommand is not None:
             return
