@@ -212,7 +212,7 @@ scenario:
             - assert_sum: {from: 0, balance_sum: 1_995_000_000_000_000_000}
             - assert_sum: {from: 3, balance_sum: 2_000_000_000_000_000_000}
       - serial:
-          name: "Close channel between 0 and 4"
+          name: "Close channel between 0 and 4, using cooperative settlement"
           tasks:
             - close_channel: {from: 0, to: 4}
       - serial:
@@ -222,11 +222,13 @@ scenario:
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "ChannelClosed"
-                num_events: 1
+                num_events: 0
                 event_args: {closing_participant: 0}
-            - assert: {from: 0, to: 4, state: "closed"}
-            # Make sure that channel between 0 and 4 is also settled
-            - wait_blocks: "{{ settlement_timeout_min }}"
+            - assert_events:
+                contract_name: "TokenNetwork"
+                event_name: "ChannelSettled"
+                num_events: 1
+                event_args: { participant1: 0, participant2: 4 }
       - serial:
           name: "Close channel between 3 and 4 while 4 is offline"
           tasks:
