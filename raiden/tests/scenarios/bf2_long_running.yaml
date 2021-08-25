@@ -173,6 +173,14 @@ scenario:
             - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 20_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000, balance: 101_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 101_000_000_000_000_000, state: "opened"}
+      - parallel:
+          name: "Enable checking the coop-settle later in the scenario"
+          tasks:
+            - store_channel_info: {from: 0, to: 1, key: "CoopSettle Test Channel 0-1"}
+            - store_channel_info: {from: 0, to: 4, key: "CoopSettle Test Channel 0-4"}
+            - store_channel_info: {from: 1, to: 2, key: "CoopSettle Test Channel 1-2"}
+            - store_channel_info: {from: 2, to: 3, key: "CoopSettle Test Channel 2-3"}
+            - store_channel_info: {from: 2, to: 4, key: "CoopSettle Test Channel 2-4"}
       - serial:
           name: "stop node1"
           tasks:
@@ -233,8 +241,12 @@ scenario:
           tasks:
             - close_channel: {from: 4, to: 2}
             - wait: {{ wait_short }}
-            - assert: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "closed"}
-            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "closed"}
+            - assert_channel_settled_event:
+                initiator: 4
+                initiator_amount: 50_000_000_000_000_000
+                partner: 2
+                partner_amount: 100_000_000_000_000_000
+                channel_info_key: "CoopSettle Test Channel 2-4"
       - serial:
           name: "Payment from node0 to node3"
           tasks:
@@ -282,11 +294,12 @@ scenario:
           tasks:
             - close_channel: {from: 4, to: 0}
             - wait: {{ wait_short }}
-      - parallel:
-          name: "Check if channel was closed"
-          tasks:
-            - assert: {from: 4, to: 0, total_deposit: 25_000_000_000_000_000, balance: 15_000_000_000_000_000, state: "closed"}
-            - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 20_000_000_000_000_000, state: "closed"}
+            - assert_channel_settled_event:
+                initiator: 4
+                initiator_amount: 15_000_000_000_000_000
+                partner: 0
+                partner_amount: 20_000_000_000_000_000
+                channel_info_key: "CoopSettle Test Channel 0-4"
       - parallel:
           name: "All nodes try to make a payment to node4, should fail because all channels to node4 are closed"
           tasks:
@@ -300,6 +313,18 @@ scenario:
             - leave_network: {from: 0}
             - leave_network: {from: 1}
             - wait: {{ wait_short }}
+            - assert_channel_settled_event:
+                initiator: 0
+                initiator_amount: 0
+                partner: 1
+                partner_amount: 360_000_000_000_000_000
+                channel_info_key: "CoopSettle Test Channel 0-1"
+            - assert_channel_settled_event:
+                initiator: 1
+                initiator_amount: 0
+                partner: 2
+                partner_amount: 200_000_000_000_000_000
+                channel_info_key: "CoopSettle Test Channel 1-2"
       - serial:
           name: "Check that channel node2 <-> node3 is still open"
           tasks:
@@ -310,12 +335,37 @@ scenario:
           tasks:
             - close_channel: {from: 2, to: 3}
             - wait: {{ wait_short }}
+            - assert_channel_settled_event:
+                initiator: 2
+                initiator_amount: 0
+                partner: 3
+                partner_amount: 202_000_000_000_000_000
+                channel_info_key: "CoopSettle Test Channel 2-3"
       - parallel:
-          name: "Check final state of the channels"
+          name: "Check for lack of ChannelClosed, this would mean coop-settle didn't work"
           tasks:
-            - assert: {from: 2, to: 3, total_deposit: 101_000_000_000_000_000, balance: 0, state: "closed"}
-            - assert: {from: 3, to: 2, total_deposit: 101_000_000_000_000_000, balance: 202_000_000_000_000_000, state: "closed"}
-            # node1 <-> node2 channels cannot be asserted as node1 leaves which settles all channels of node1
-            # node0 <-> node1 channels cannot be asserted because node0 and node1 both leave the network
-            # node0 <-> node4 channels have long been settled hence cannot be asserted
-            # node2 <-> node4 channels are already settled at this point
+              - assert_events:
+                  contract_name: "TokenNetwork"
+                  event_name: "ChannelClosed"
+                  num_events: 0
+                  event_args: {closing_participant: 0}
+              - assert_events:
+                  contract_name: "TokenNetwork"
+                  event_name: "ChannelClosed"
+                  num_events: 0
+                  event_args: {closing_participant: 1}
+              - assert_events:
+                  contract_name: "TokenNetwork"
+                  event_name: "ChannelClosed"
+                  num_events: 0
+                  event_args: {closing_participant: 2}
+              - assert_events:
+                  contract_name: "TokenNetwork"
+                  event_name: "ChannelClosed"
+                  num_events: 0
+                  event_args: {closing_participant: 3}
+              - assert_events:
+                  contract_name: "TokenNetwork"
+                  event_name: "ChannelClosed"
+                  num_events: 0
+                  event_args: {closing_participant: 4}
