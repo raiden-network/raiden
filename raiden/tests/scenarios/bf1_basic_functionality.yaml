@@ -87,9 +87,10 @@ scenario:
             - assert: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
       - parallel:
-          name: "Enable MSs between node 4 and 3 (will be used later in the scenario)"
+          name: "Memorize the channel info for later assertions"
           tasks:
             - store_channel_info: {from: 4, to: 3, key: "MS Test Channel 3-4"}
+            - store_channel_info: {from: 0, to: 4, key: "CoopSettle Test Channel 0-4"}
       - serial:
           name: "Make 10 transfers from 3 to 0"
           repeat: 10
@@ -219,16 +220,15 @@ scenario:
           name: "Assert after closing channel between 0 and 4"
           tasks:
             - wait: {{ wait_short }}
+            - assert_channel_settled_event:
+                initiator: 0
+                partner: 4
+                channel_info_key: "CoopSettle Test Channel 0-4"
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "ChannelClosed"
                 num_events: 0
                 event_args: {closing_participant: 0}
-            - assert_events:
-                contract_name: "TokenNetwork"
-                event_name: "ChannelSettled"
-                num_events: 1
-                event_args: { participant1: 0, participant2: 4 }
       - serial:
           name: "Close channel between 3 and 4 while 4 is offline"
           tasks:
