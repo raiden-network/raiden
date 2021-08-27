@@ -1159,7 +1159,14 @@ def get_capacity(channel_state: NettingChannelState) -> TokenAmount:
 def get_balance(
     sender: NettingChannelEndState,
     receiver: NettingChannelEndState,
-    ignore_offchain_withdraws: bool = False,
+) -> Balance:
+    return _get_balance(sender, receiver, subtract_withdraws=True)
+
+
+def _get_balance(
+    sender: NettingChannelEndState,
+    receiver: NettingChannelEndState,
+    subtract_withdraws: bool = True,
 ) -> Balance:
     """Calculates the balance for a participant in a channel.
 
@@ -1175,11 +1182,12 @@ def get_balance(
     if receiver.balance_proof:
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
-    offchain_total_withdraw = 0 if ignore_offchain_withdraws else sender.offchain_total_withdraw
+    max_withdraw = max(sender.offchain_total_withdraw, sender.onchain_total_withdraw)
+    withdraw = max_withdraw if subtract_withdraws else 0
 
     return Balance(
         sender.contract_balance
-        - max(offchain_total_withdraw, sender.onchain_total_withdraw)
+        - withdraw
         - sender_transferred_amount
         + receiver_transferred_amount
     )
@@ -1193,7 +1201,7 @@ def get_max_withdraw_amount(
     or pending as offchain-withdraw.
 
     """
-    return WithdrawAmount(get_balance(sender, receiver, ignore_offchain_withdraws=True))
+    return WithdrawAmount(_get_balance(sender, receiver, subtract_withdraws=False))
 
 
 def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofData:
@@ -2129,8 +2137,8 @@ def _handle_receive_withdraw_request(
         if partner_max_total_withdraw != action.total_withdraw:
             return transition_result_invalid(
                 SuccessOrError(
-                    "Partner requested withdraw while we initiated a coop-settle: "
-                    "Partner did not withdraw with maximum balance."
+                    "Partner did not withdraw with maximum balance "
+                    f"(should={partner_max_total_withdraw})."
                 )
             )
         if get_number_of_pending_transfers(channel_state.partner_state) > 0:
