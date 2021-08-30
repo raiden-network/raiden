@@ -994,8 +994,8 @@ def is_valid_withdraw_request(
         return SuccessOrError("Invalid participant, it must be the partner address")
     elif withdraw_request.sender != channel_state.partner_state.address:
         return SuccessOrError("Invalid sender, withdraw request must be sent by the partner.")
-    elif withdraw_amount <= 0:
-        return SuccessOrError(f"Total withdraw {withdraw_request.total_withdraw} did not increase")
+    elif withdraw_amount < 0:
+        return SuccessOrError(f"Total withdraw {withdraw_request.total_withdraw} decreased")
     elif balance < withdraw_amount:
         return SuccessOrError(
             f"Insufficient balance: {balance}. Requested {withdraw_amount} for withdraw"
