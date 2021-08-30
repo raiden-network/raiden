@@ -19,7 +19,6 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     SamePeerAddress,
     TokenNotRegistered,
-    UnexpectedChannelState,
     UnknownTokenAddress,
 )
 from raiden.raiden_service import RaidenService
@@ -724,14 +723,11 @@ def test_raidenapi_channel_lifecycle(
 
     api1.channel_close(registry_address, token_address, api2.address)
 
-    # Load the new state with the channel closed
-    channel12 = get_channelstate(app1, app2, token_network_address)
-    assert channel.get_status(channel12) == ChannelState.STATE_CLOSED
-
-    with pytest.raises(UnexpectedChannelState):
-        api1.set_total_channel_deposit(
-            registry_address, token_address, api2.address, deposit + 100
-        )
+    # Make sure that there is no channel anymore, since we coop settled.
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        views.state_from_raiden(app1), token_network_address, app2.address
+    )
+    assert channel_state is None
 
     assert wait_for_state_change(
         app1,

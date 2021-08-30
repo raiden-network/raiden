@@ -362,23 +362,6 @@ def test_query_events(
         contract_manager=app0.contract_manager,
     )
 
-    closed_events = get_netting_channel_closed_events(
-        proxy_manager=app0.proxy_manager,
-        token_network_address=token_network_address,
-        netting_channel_identifier=channel_id,
-        contract_manager=contract_manager,
-    )
-
-    closed_event = {
-        "event": ChannelEvent.CLOSED,
-        "args": {
-            "channel_identifier": channel_id,
-            "closing_participant": to_checksum_address(app0.address),
-        },
-    }
-    assert must_have_event(closed_events, closed_event)
-    assert must_have_event(all_netting_channel_events, closed_event)
-
     settle_expiration = app0.rpc_client.block_number() + settle_timeout + 5
     app0.proxy_manager.client.wait_until_block(target_block_number=settle_expiration)
 
