@@ -534,7 +534,10 @@ class WebRTCManager(Runnable):
             self.close_connection(partner_address)
 
     def _add_connection(self, partner_address: Address, conn: _RTCConnection) -> None:
-        assert partner_address not in self._address_to_connection, "must not be there already"
+        previous_connection = self._address_to_connection.get(partner_address)
+        assert (
+            previous_connection is None or previous_connection != conn
+        ), f"partner address {to_checksum_address(partner_address)} already has a connection"
         self._address_to_connection[partner_address] = conn
 
     def has_ready_channel(self, partner_address: Address) -> bool:
