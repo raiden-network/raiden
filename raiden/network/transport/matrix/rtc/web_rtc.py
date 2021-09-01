@@ -337,11 +337,13 @@ class _RTCConnection(_TaskHandler):
         self.schedule_task(self._send_message(message))
 
     async def _close(self) -> None:
+        if self._channel is None:
+            return
         self.log.debug("Closing peer connection")
+        self._channel.close()
+        self._channel = None
         await self.peer_connection.close()
-        if self._channel is not None:
-            self._channel.close()
-            self._channel = None
+        self.peer_connection = None
         await self.wait_for_tasks()
         await wrap_greenlet(gevent.spawn(gevent.joinall, self._greenlets, raise_error=True))
         self._ice_connection_closed(self)
