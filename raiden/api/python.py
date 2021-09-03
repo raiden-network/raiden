@@ -910,7 +910,9 @@ class RaidenAPI:  # pragma: no unittest
             try:
                 metadata = pfs_proxy.query_address_metadata(recipient_address)
             except ServiceRequestFailed:
-                # node is offline, so don't even try an offchain coop-settle
+                log.error(
+                    "Partner is offline, coop settle not possible", address=recipient_address
+                )
                 continue
             to_coop_settle.add(channel_state.canonical_identifier)
             coop_settle_state_changes.append(

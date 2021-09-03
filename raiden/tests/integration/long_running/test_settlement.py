@@ -37,6 +37,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
+    ContractReceiveChannelWithdraw,
 )
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.secrethash import sha256_secrethash
@@ -186,6 +187,172 @@ def test_settle_is_automatically_called(
         state_changes,
         ContractReceiveChannelSettled,
         {"token_network_address": token_network_address, "channel_identifier": channel_identifier},
+    )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_coop_settle_is_automatically_called(
+    raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
+) -> None:
+    """Settle is automatically called by one of the nodes."""
+    app0, app1 = raiden_network
+    registry_address = app0.default_registry.address
+    token_address = token_addresses[0]
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
+    )
+    assert token_network_address, "token_network_address must not be None"
+    token_network = views.get_token_network_by_address(
+        views.state_from_raiden(app0), token_network_address
+    )
+    assert token_network, "token_network must exist"
+
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(app0), registry_address, token_address, app1.address
+    )
+
+    assert channel_state is not None, "channel_state must exist"
+
+    app_to_expected_balances = {
+        app0: channel_state.our_state.contract_balance + 10,
+        app1: channel_state.partner_state.contract_balance - 10,
+    }
+
+    payment_id = factories.make_payment_id()
+    secret = factories.make_secret(0)
+    secrethash = sha256_secrethash(secret)
+
+    RaidenAPI(app1).transfer_and_wait(
+        app0.default_registry.address,
+        token_address,
+        target=TargetAddress(app0.address),
+        amount=PaymentAmount(10),
+        identifier=payment_id,
+        secret=secret,
+        secrethash=secrethash,
+    )
+
+    waiting.wait_for_received_transfer_result(app0, payment_id, PaymentAmount(10), 1.0, secrethash)
+
+    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address, coop_settle=True)
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(app0), registry_address, token_address, app1.address
+    )
+    assert channel_state is None, "channel_state must have been deleted after channel is settled"
+
+    token_network = views.get_token_network_by_address(
+        views.state_from_raiden(app0), token_network_address
+    )
+    assert token_network
+
+    assert (
+        channel_identifier
+        not in token_network.partneraddresses_to_channelidentifiers[app1.address]
+    )
+
+    assert app0.wal, MSG_BLOCKCHAIN_EVENTS
+    assert app0.alarm, MSG_BLOCKCHAIN_EVENTS
+    state_changes = app0.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
+    for app, partner_app in ((app0, app1), (app1, app0)):
+        assert app.wal, MSG_BLOCKCHAIN_EVENTS
+        assert app.alarm, MSG_BLOCKCHAIN_EVENTS
+        state_changes = app.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
+        assert not search_for_item(
+            state_changes,
+            ContractReceiveChannelClosed,
+            {
+                "token_network_address": token_network_address,
+                "channel_identifier": channel_identifier,
+            },
+        )
+
+        assert search_for_item(
+            state_changes,
+            ContractReceiveChannelWithdraw,
+            {
+                "token_network_address": token_network_address,
+                "channel_identifier": channel_identifier,
+            },
+        )
+        assert search_for_item(
+            state_changes,
+            ContractReceiveChannelSettled,
+            {
+                "token_network_address": token_network_address,
+                "channel_identifier": channel_identifier,
+                "our_transferred_amount": app_to_expected_balances[app],
+                "partner_transferred_amount": app_to_expected_balances[partner_app],
+            },
+        )
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+def test_coop_settle_fails_with_pending_lock(
+    raiden_network: List[RaidenService], token_addresses: List[TokenAddress]
+) -> None:
+    """Settle is automatically called by one of the nodes."""
+    app0, app1 = raiden_network
+    registry_address = app0.default_registry.address
+    token_address = token_addresses[0]
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_raiden(app0), app0.default_registry.address, token_address
+    )
+    assert token_network_address, "token_network_address must not be None"
+
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
+
+    hold_event_handler = app1.raiden_event_handler
+    msg = "hold event handler necessary to control messages"
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler), msg
+
+    secret = factories.make_secret()
+    secrethash = sha256_secrethash(secret)
+
+    RaidenAPI(app1).transfer_and_wait(
+        app0.default_registry.address,
+        token_address,
+        target=TargetAddress(app0.address),
+        amount=PaymentAmount(10),
+        secret=secret,
+        secrethash=secrethash,
+    )
+
+    # guarantee that the lock will not be released
+    hold_event_handler.hold_unlock_for(secrethash=secrethash)
+    RaidenAPI(app0).channel_close(registry_address, token_address, app1.address, coop_settle=True)
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(app0), registry_address, token_address, app1.address
+    )
+
+    assert app0.wal, MSG_BLOCKCHAIN_EVENTS
+    assert app0.alarm, MSG_BLOCKCHAIN_EVENTS
+    state_changes = app0.wal.storage.get_statechanges_by_range(RANGE_ALL_STATE_CHANGES)
+
+    # Channel will be settled in non-coop way
+    assert channel_state is not None, "Channel state should not be deleted"
+    assert search_for_item(
+        state_changes,
+        ContractReceiveChannelClosed,
+        {
+            "token_network_address": token_network_address,
+            "channel_identifier": channel_identifier,
+        },
+    )
+    assert not search_for_item(
+        state_changes,
+        ContractReceiveChannelSettled,
+        {
+            "token_network_address": token_network_address,
+            "channel_identifier": channel_identifier,
+        },
     )
 
 
