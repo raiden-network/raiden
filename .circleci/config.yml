@@ -52,8 +52,6 @@ templates:
     PARITY_VERSION: 'v3.1.0'
     SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.6.3/solc-static-linux'
     SOLC_VERSION: 'v0.6.3'
-    PYENV_PYTHON_VERSION_38: '3.8.6'
-    PYENV_PYTHON_VERSION_37: '3.7.9'
 
 
 orbs:
@@ -181,14 +179,6 @@ commands:
             echo "export OS_NAME=$OS_NAME" >> ${BASH_ENV}
             if [[ ${OS_NAME} == "MACOS" ]]; then
               echo "export PYENV_ROOT=~/.local-MACOS/.pyenv" >> ${BASH_ENV}
-              if [[ $PYTHON_VERSION_SHORT == 3.8 ]]; then
-                export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION_38
-              elif [[ $PYTHON_VERSION_SHORT == 3.7 ]]; then
-                export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION_37
-              else
-                exit 1
-              fi
-              echo "export PYENV_PYTHON_VERSION=$PYENV_PYTHON_VERSION" >> ${BASH_ENV}
             fi
             echo "SHA: ${CIRCLE_SHA1}"
             echo "TAG: ${CIRCLE_TAG}"
@@ -205,18 +195,20 @@ commands:
                 git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
               fi
               export PATH=${PYENV_ROOT}/bin:${PATH}
-              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $PYENV_PYTHON_VERSION -sv
+              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install << parameters.py-version >> -sv
             fi
+            python<< parameters.py-version >> --version | cut -d ' ' -f 2 > /tmp/python-version
+            echo "Python version: $(cat /tmp/python-version)"
       - save_cache:
           key: system-deps-pyenv-v6-{{ arch }}-<< parameters.py-version >>
           paths:
           - "~/.local-MACOS/.pyenv"
       - restore_cache:
-          key: pip-cache-v3-{{ arch }}-<< parameters.py-version >>
+          key: pip-cache-v3-{{ arch }}-<< parameters.py-version >>-
       - restore_cache:
           keys:
-          - python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
-          - python-deps-v9-{{ arch }}-<< parameters.py-version >>-
+          - python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "/tmp/python-version" }}-{{ checksum "requirements/requirements-ci.txt" }}
+          - python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "/tmp/python-version" }}-
       - run:
           name: Creating virtualenv
           command: |
@@ -244,7 +236,7 @@ commands:
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
       - save_cache:
-          key: python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements/requirements-ci.txt" }}
+          key: python-deps-v9-{{ arch }}-<< parameters.py-version >>-{{ checksum "/tmp/python-version" }}-{{ checksum "requirements/requirements-ci.txt" }}
           paths:
           - "~/venv-<< parameters.py-version >>-LINUX"
           - "~/venv-<< parameters.py-version >>-MACOS"
