@@ -54,7 +54,6 @@ class _ConnectionState(Enum):
     CLOSED = "closed"
 
 
-_WEB_RTC_CHANNEL_TIMEOUT = 30.0
 _SDP_MID_DEFAULT = "0"
 _SDP_MLINE_INDEX_DEFAULT = 0
 
@@ -530,8 +529,8 @@ class WebRTCManager(Runnable):
         self._add_connection(partner_address, conn)
         conn.initialize_signaling()
 
-        # wait for _WEB_RTC_CHANNEL_TIMEOUT seconds and check if connection was established
-        if self._stop_event.wait(timeout=_WEB_RTC_CHANNEL_TIMEOUT):
+        # wait for channel init timeout period and check if connection was established
+        if self._stop_event.wait(timeout=self.get_channel_init_timeout()):
             return
 
         if not self.has_ready_channel(partner_address):
@@ -543,6 +542,11 @@ class WebRTCManager(Runnable):
             task = self.close_connection(partner_address)
             if task is not None:
                 yield_future(task)
+
+    def get_channel_init_timeout(self) -> float:
+        """Returns the number of seconds to wait for a channel to be established."""
+        # pylint: disable=no-self-use
+        return 30.0
 
     def _add_connection(self, partner_address: Address, conn: _RTCConnection) -> None:
         assert partner_address not in self._address_to_connection, "must not be there already"
