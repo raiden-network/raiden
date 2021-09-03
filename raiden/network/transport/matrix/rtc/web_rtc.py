@@ -348,8 +348,8 @@ class _RTCConnection(_TaskHandler):
         self.peer_connection = None
         self._ice_connection_closed(self)
 
-    def close(self) -> None:
-        asyncio.create_task(self._close())
+    def close(self) -> Task:
+        return asyncio.create_task(self._close())
 
     def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
         message = {
@@ -540,7 +540,9 @@ class WebRTCManager(Runnable):
                 partner_address=to_checksum_address(partner_address),
             )
             conn.send_hangup_message()
-            self.close_connection(partner_address)
+            task = self.close_connection(partner_address)
+            if task is not None:
+                yield_future(task)
 
     def _add_connection(self, partner_address: Address, conn: _RTCConnection) -> None:
         assert partner_address not in self._address_to_connection, "must not be there already"
@@ -594,10 +596,11 @@ class WebRTCManager(Runnable):
     def health_check(self, partner_address: Address) -> None:
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
-    def close_connection(self, partner_address: Address) -> None:
+    def close_connection(self, partner_address: Address) -> Optional[Task]:
         conn = self._address_to_connection.pop(partner_address, None)
         if conn is not None:
-            conn.close()
+            return conn.close()
+        return None
 
     def process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
