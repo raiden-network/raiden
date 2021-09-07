@@ -492,6 +492,7 @@ class MatrixTransport(Runnable):
             self._send_signaling_message,
             self._stop_event,
         )
+        self._web_rtc_manager.greenlet.link_exception(self.on_error)
 
         assert asyncio.get_event_loop().is_running(), "the loop must be running"
         self.log.debug("Asyncio loop is running", running=asyncio.get_event_loop().is_running())
