@@ -77,10 +77,17 @@ class _TaskHandler:
         if callback is not None:
             assert callable(callback), "must be a callable"
 
-            def task_done(result: asyncio.Future) -> None:
-                # spawn a new greenlet that invokes the callback with the
-                # coroutine's result and provided args/kwargs
-                self.schedule_greenlet(callback, result.result(), *args, **kwargs)
+            def task_done(future: asyncio.Future) -> None:
+                try:
+                    result = future.result()
+                except asyncio.CancelledError:
+                    pass
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Exception raised by task %r", task)
+                else:
+                    # spawn a new greenlet that invokes the callback with the
+                    # coroutine's result and provided args/kwargs
+                    self.schedule_greenlet(callback, result, *args, **kwargs)
 
             task.add_done_callback(task_done)
 
