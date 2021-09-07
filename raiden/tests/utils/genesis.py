@@ -15,6 +15,7 @@ GENESIS_STUB: Dict = {
         "ByzantiumBlock": 0,
         "ConstantinopleBlock": 0,
         "PetersburgBlock": 0,
+        "IstanbulBlock": 0,
     },
     "nonce": "0x0",
     "mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
