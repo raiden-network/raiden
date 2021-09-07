@@ -98,7 +98,6 @@ def deploy_token_network_registry(
     deploy_client: JSONRPCClient,
     contract_manager: ContractManager,
     proxy_manager: ProxyManager,
-    chain_id: ChainID,
     settle_timeout_min: int,
     settle_timeout_max: int,
     max_token_networks: int,
@@ -109,7 +108,6 @@ def deploy_token_network_registry(
         contract=contract_manager.get_contract(CONTRACT_TOKEN_NETWORK_REGISTRY),
         constructor_parameters=[
             secret_registry_proxy.address,
-            chain_id,
             settle_timeout_min,
             settle_timeout_max,
             max_token_networks,
@@ -295,7 +293,6 @@ def deploy_smart_contract_bundle_concurrently(
         deploy_client=deploy_client,
         contract_manager=contract_manager,
         proxy_manager=proxy_manager,
-        chain_id=chain_id,
         settle_timeout_min=settle_timeout_min,
         settle_timeout_max=settle_timeout_max,
         max_token_networks=max_token_networks,
