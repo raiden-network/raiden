@@ -29,7 +29,7 @@ psutil
 pylibsrtp>=0.6.8
 pysha3
 toml
-raiden-contracts
+raiden-contracts==0.40.0rc0
 raiden-webui
 requests
 structlog
