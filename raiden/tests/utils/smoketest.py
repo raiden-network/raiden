@@ -142,7 +142,6 @@ def deploy_smoketest_contracts(
 
     secret_registry_constructor_arguments = (
         to_checksum_address(secret_registry_address),
-        chain_id,
         TEST_SETTLE_TIMEOUT_MIN,
         TEST_SETTLE_TIMEOUT_MAX,
         UINT256_MAX,

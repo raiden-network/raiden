@@ -153,7 +153,7 @@ class TokenNetworkRegistry:
             settlement_timeout_max = self.settlement_timeout_max(
                 block_identifier=given_block_identifier
             )
-            chain_id = self.get_chain_id(block_identifier=given_block_identifier)
+            chain_id = self.get_chain_id()
             secret_registry_address = self.get_secret_registry_address(
                 block_identifier=given_block_identifier
             )
@@ -272,7 +272,7 @@ class TokenNetworkRegistry:
                 settlement_timeout_max = self.settlement_timeout_max(
                     block_identifier=failed_at_blocknumber
                 )
-                chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
+                chain_id = self.get_chain_id()
                 secret_registry_address = self.get_secret_registry_address(
                     block_identifier=failed_at_blocknumber
                 )
@@ -399,7 +399,7 @@ class TokenNetworkRegistry:
             settlement_timeout_max = self.settlement_timeout_max(
                 block_identifier=failed_at_blocknumber
             )
-            chain_id = self.get_chain_id(block_identifier=failed_at_blocknumber)
+            chain_id = self.get_chain_id()
             secret_registry_address = self.get_secret_registry_address(
                 block_identifier=failed_at_blocknumber
             )
@@ -519,8 +519,8 @@ class TokenNetworkRegistry:
 
         return events
 
-    def get_chain_id(self, block_identifier: BlockIdentifier) -> int:
-        return self.proxy.functions.chain_id().call(block_identifier=block_identifier)
+    def get_chain_id(self) -> int:
+        return self.rpc_client.chain_id
 
     def get_secret_registry_address(
         self, block_identifier: BlockIdentifier
