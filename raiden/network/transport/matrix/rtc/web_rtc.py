@@ -15,7 +15,7 @@ from raiden.network.transport.matrix.rtc.aiogevent import wrap_greenlet, yield_f
 from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
+from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Union
 
 log = structlog.get_logger(__name__)
 
@@ -479,8 +479,6 @@ class WebRTCManager(Runnable):
         self._process_messages = process_messages
         self._signaling_send = signaling_send
         self._stop_event = stop_event
-        # the addresses for which we're currently trying to initialize WebRTC channels
-        self._web_rtc_channel_inits: Set[Address] = set()
         self._address_to_connection: Dict[Address, _RTCConnection] = {}
         self.log = log.bind(node=to_checksum_address(node_address))
 
@@ -499,18 +497,17 @@ class WebRTCManager(Runnable):
             self.health_check(conn.partner_address)
 
     def _wrapped_initialize_web_rtc(self, address: Address) -> None:
-        if address in self._web_rtc_channel_inits:
-            return
         attempt = 0
         while attempt < 3 and not self.has_ready_channel(address):
-            self._web_rtc_channel_inits.add(address)
-            try:
-                self._initialize_web_rtc(address)
-            finally:
-                self._web_rtc_channel_inits.remove(address)
+            self._initialize_web_rtc(address)
             attempt += 1
 
     def _initialize_web_rtc(self, partner_address: Address) -> None:
+        if partner_address in self._address_to_connection:
+            # don't do anything if signaling is already in progress or the
+            # connection has already been established
+            return
+
         if self._stop_event.is_set():
             return
 
