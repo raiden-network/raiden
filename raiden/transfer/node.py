@@ -390,7 +390,10 @@ def subdispatch_targettask(
         events = iteration.events
 
         if iteration.new_state:
-            sub_task = TargetTask(channel_state.canonical_identifier, iteration.new_state)
+            sub_task = TargetTask(  # pylint: disable=no-value-for-parameter
+                canonical_identifier=channel_state.canonical_identifier,
+                target_state=iteration.new_state,
+            )
             if sub_task is not None:
                 chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
         elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
