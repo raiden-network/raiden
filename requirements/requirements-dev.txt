@@ -401,7 +401,7 @@ phonenumbers==8.10.13
     # via matrix-synapse
 pickleshare==0.7.5
     # via ipython
-pillow==8.2.0
+pillow==8.3.2
     # via matrix-synapse
 pip-tools==6.2.0
     # via -r requirements-dev.in
