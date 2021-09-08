@@ -262,7 +262,7 @@ toolz==0.9.0
     # via cytoolz
 typeguard==2.11.1
     # via marshmallow-dataclass
-typing-extensions==3.10.0.0
+typing-extensions==3.10.0.2
     # via
     #   -r requirements.in
     #   aiohttp

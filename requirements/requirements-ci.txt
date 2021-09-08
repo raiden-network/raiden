@@ -758,7 +758,7 @@ types-werkzeug==1.0.1
     # via
     #   -r requirements-dev.txt
     #   types-flask
-typing-extensions==3.10.0.0
+typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
