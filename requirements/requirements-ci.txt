@@ -316,7 +316,7 @@ iniconfig==1.0.1
     # via
     #   -r requirements-dev.txt
     #   pytest
-ipfshttpclient==0.7.0
+ipfshttpclient==0.8.0a2
     # via
     #   -r requirements-dev.txt
     #   web3
@@ -758,7 +758,7 @@ types-werkzeug==1.0.1
     # via
     #   -r requirements-dev.txt
     #   types-flask
-typing-extensions==3.10.0.0
+typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
@@ -789,7 +789,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.23.0
+web3==5.23.1
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts

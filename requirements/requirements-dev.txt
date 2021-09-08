@@ -282,7 +282,7 @@ incremental==17.5.0
     #   twisted
 iniconfig==1.0.1
     # via pytest
-ipfshttpclient==0.7.0
+ipfshttpclient==0.8.0a2
     # via
     #   -r requirements.txt
     #   web3
@@ -640,7 +640,7 @@ types-toml==0.1.5
     # via -r requirements-dev.in
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==3.10.0.0
+typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
@@ -668,7 +668,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.23.0
+web3==5.23.1
     # via
     #   -r requirements.txt
     #   raiden-contracts
