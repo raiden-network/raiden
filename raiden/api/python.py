@@ -946,12 +946,12 @@ class RaidenAPI:  # pragma: no unittest
             # would have to be done HERE and included in the ActionChannelCoopSettle,
             # so that we know them before feeding the action into the state machine
             # and can await them easily here...
-            coop_settle_state = channel_state.our_state.initiated_coop_settle
-            msg = (
-                "ActionChannelCoopSettle should set the initiated_coop_settle on our state "
-                "in the first iteration of the state machine"
-            )
-            assert coop_settle_state is not None, msg
+
+            # Initiating a cooop settle for this channel did not succeed
+            # (e.g. due to pending locks or withdraws) so don't wait on it.
+            # The channel will be closed later in a non-coop manner.
+            if channel_state.our_state.initiated_coop_settle is None:
+                continue
 
             expired = waiting.ChannelExpiredCoopSettle(
                 self.raiden, channel_state.canonical_identifier
