@@ -155,7 +155,7 @@ def test_target_task_view():
         transfer=transfer,
         secret=secret,
     )
-    task = TargetTask(
+    task = TargetTask(  # pylint: disable=no-value-for-parameter
         canonical_identifier=mediator_channel.canonical_identifier, target_state=transfer_state
     )
     payment_mapping = {secrethash: cast(TransferTask, task)}

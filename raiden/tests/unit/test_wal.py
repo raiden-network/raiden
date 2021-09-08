@@ -162,8 +162,10 @@ def test_timestamped_event():
     timestamped = TimestampedEvent(event, log_time)
     assert timestamped.log_time == log_time
     assert isinstance(timestamped.event, EventPaymentSentFailed)
-    assert timestamped.reason == timestamped.event.reason == "whatever"
-    assert timestamped.identifier == timestamped.event.identifier == 1
+    assert (
+        timestamped.reason == timestamped.event.reason == "whatever"  # pylint: disable=no-member
+    )
+    assert timestamped.identifier == timestamped.event.identifier == 1  # pylint: disable=no-member
 
 
 def test_write_read_events():

@@ -172,7 +172,7 @@ def test_subdispatch_to_paymenttask_target(chain_state, netting_channel_state):
         transfer=factories.create(factories.LockedTransferSignedStateProperties()),
         secret=UNIT_SECRET,
     )
-    subtask = TargetTask(
+    subtask = TargetTask(  # pylint: disable=no-value-for-parameter
         canonical_identifier=netting_channel_state.canonical_identifier, target_state=target_state
     )
     chain_state.payment_mapping.secrethashes_to_task[UNIT_SECRETHASH] = subtask
