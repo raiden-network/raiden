@@ -141,6 +141,7 @@ class _RTCConnection(_TaskHandler):
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
+        self._closing = False
         self._call_id = self._make_call_id()
         self._signaling_send = signaling_send
         self._ice_connection_closed = ice_connection_closed
@@ -336,13 +337,15 @@ class _RTCConnection(_TaskHandler):
         self.schedule_task(self._send_message(message))
 
     async def _close(self) -> None:
-        if self._channel is None:
+        if self._closing:
             return
+        self._closing = True
         self.log.debug("Closing peer connection")
         await self.wait_for_tasks()
         await wrap_greenlet(gevent.spawn(gevent.joinall, self._greenlets, raise_error=True))
-        self._channel.close()
-        self._channel = None
+        if self._channel is not None:
+            self._channel.close()
+            self._channel = None
         await self.peer_connection.close()
         self.peer_connection = None
         self._ice_connection_closed(self)
@@ -536,9 +539,7 @@ class WebRTCManager(Runnable):
                 partner_address=to_checksum_address(partner_address),
             )
             conn.send_hangup_message()
-            task = self.close_connection(partner_address)
-            if task is not None:
-                yield_future(task)
+            self.close_connection(partner_address)
 
     def get_channel_init_timeout(self) -> float:
         """Returns the number of seconds to wait for a channel to be established."""
@@ -597,13 +598,15 @@ class WebRTCManager(Runnable):
     def health_check(self, partner_address: Address) -> None:
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
-    def close_connection(self, partner_address: Address) -> Optional[Task]:
-        conn = self._address_to_connection.pop(partner_address, None)
+    def close_connection(self, partner_address: Address) -> None:
+        conn = self._address_to_connection.get(partner_address)
         if conn is not None:
-            return conn.close()
-        return None
+            yield_future(conn.close())
+            conn.wait()
+            # only remove the connection once we are completely done with it
+            self._address_to_connection.pop(partner_address, None)
 
-    def process_signaling_message(
+    def _process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
     ) -> None:
         if (
@@ -621,6 +624,13 @@ class WebRTCManager(Runnable):
                 partner_address=to_checksum_address(partner_address),
                 type=rtc_message_type,
             )
+
+    def process_signaling_message(
+        self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
+    ) -> None:
+        self._schedule_new_greenlet(
+            self._process_signaling_message, partner_address, rtc_message_type, content
+        )
 
     def stop(self) -> None:
         self.log.debug("Closing WebRTC connections")
