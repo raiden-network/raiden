@@ -141,7 +141,7 @@ class _RTCConnection(_TaskHandler):
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
-        self._closing = False
+        self._closing_task = None
         self._call_id = self._make_call_id()
         self._signaling_send = signaling_send
         self._ice_connection_closed = ice_connection_closed
@@ -337,9 +337,6 @@ class _RTCConnection(_TaskHandler):
         self.schedule_task(self._send_message(message))
 
     async def _close(self) -> None:
-        if self._closing:
-            return
-        self._closing = True
         self.log.debug("Closing peer connection")
         await self.wait_for_tasks()
         await wrap_greenlet(gevent.spawn(gevent.joinall, self._greenlets, raise_error=True))
@@ -351,7 +348,9 @@ class _RTCConnection(_TaskHandler):
         self._ice_connection_closed(self)
 
     def close(self) -> Task:
-        return asyncio.create_task(self._close())
+        if self._closing_task is None:
+            self._closing_task = asyncio.create_task(self._close())
+        return self._closing_task
 
     def _handle_candidates_callback(self, candidates: List[Dict[str, Union[int, str]]]) -> None:
         message = {
@@ -603,8 +602,6 @@ class WebRTCManager(Runnable):
         if conn is not None:
             yield_future(conn.close())
             conn.wait()
-            # only remove the connection once we are completely done with it
-            self._address_to_connection.pop(partner_address, None)
 
     def _process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
