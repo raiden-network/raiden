@@ -68,8 +68,9 @@ def test_basics() -> None:
 
     while manager1.has_ready_channel(address2):
         gevent.sleep(0.1)
-
+    stop_event1.set()
     manager1.stop()
+    stop_event2.set()
     manager2.stop()
 
 
@@ -111,6 +112,7 @@ def test_leak_file_descriptors(monkeypatch: Any) -> None:
             max_open_fds = max(count, max_open_fds)
         else:
             assert count <= max_open_fds, "possible leakage of file descriptors"
-
+    stop_event1.set()
     manager1.stop()
+    stop_event2.set()
     manager2.stop()

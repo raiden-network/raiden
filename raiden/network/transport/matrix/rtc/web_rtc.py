@@ -141,7 +141,7 @@ class _RTCConnection(_TaskHandler):
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
-        self._closing_task = None
+        self._closing_task: Optional[Task] = None
         self._call_id = self._make_call_id()
         self._signaling_send = signaling_send
         self._ice_connection_closed = ice_connection_closed
@@ -574,6 +574,9 @@ class WebRTCManager(Runnable):
                 else:
                     # drop the offer, it's older than what we have
                     return
+
+            if self._stop_event.is_set():
+                return
             conn = _RTCConnection.from_offer(
                 partner_address,
                 self.node_address,
