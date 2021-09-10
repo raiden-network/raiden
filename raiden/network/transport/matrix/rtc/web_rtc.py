@@ -232,6 +232,9 @@ class _RTCConnection(_TaskHandler):
     async def _initialize_signaling(self) -> Optional[RTCSessionDescription]:
         """Coroutine to create channel. Setting up channel in aiortc"""
 
+        if self._closing_task is not None:
+            return None
+
         self._channel = self.peer_connection.createDataChannel(self.call_id)
         self._set_channel_callbacks()
         offer = await self._try_signaling(self.peer_connection.createOffer())
@@ -250,6 +253,9 @@ class _RTCConnection(_TaskHandler):
     ) -> Optional[RTCSessionDescription]:
         remote_description = RTCSessionDescription(description["sdp"], description["type"])
         sdp_type = description["type"]
+
+        if self._closing_task is not None:
+            return None
 
         # If we initiated the signaling process, wait until the local
         # description is set.
@@ -323,7 +329,7 @@ class _RTCConnection(_TaskHandler):
                 await self.peer_connection.sctp._transmit()
             except ConnectionError:
                 self.log.debug("Connection error occurred while trying to send message")
-                await self._close()
+                self.close()
                 return
         else:
             self.log.debug(
@@ -577,6 +583,7 @@ class WebRTCManager(Runnable):
 
             if self._stop_event.is_set():
                 return
+
             conn = _RTCConnection.from_offer(
                 partner_address,
                 self.node_address,
