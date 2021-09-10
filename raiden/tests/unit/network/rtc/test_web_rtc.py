@@ -68,6 +68,7 @@ def test_basics() -> None:
 
     while manager1.has_ready_channel(address2):
         gevent.sleep(0.1)
+
     stop_event1.set()
     manager1.stop()
     stop_event2.set()
@@ -80,7 +81,6 @@ def _get_file_descriptors() -> List:
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="this is a Linux-only test")
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="it seems we leak on Python < 3.8")
 def test_leak_file_descriptors(monkeypatch: Any) -> None:
     address1 = make_signer().address
     address2 = make_signer().address
@@ -112,6 +112,7 @@ def test_leak_file_descriptors(monkeypatch: Any) -> None:
             max_open_fds = max(count, max_open_fds)
         else:
             assert count <= max_open_fds, "possible leakage of file descriptors"
+
     stop_event1.set()
     manager1.stop()
     stop_event2.set()
