@@ -179,6 +179,7 @@ commands:
             echo "export OS_NAME=$OS_NAME" >> ${BASH_ENV}
             if [[ ${OS_NAME} == "MACOS" ]]; then
               echo "export PYENV_ROOT=~/.local-MACOS/.pyenv" >> ${BASH_ENV}
+              echo 'export PATH=${PYENV_ROOT}/bin:${PATH}' >> ${BASH_ENV}
             fi
             echo "SHA: ${CIRCLE_SHA1}"
             echo "TAG: ${CIRCLE_TAG}"
@@ -194,8 +195,11 @@ commands:
               if [[ ! -x $PYENV_ROOT ]]; then
                 git clone https://github.com/pyenv/pyenv.git $PYENV_ROOT
               fi
-              export PATH=${PYENV_ROOT}/bin:${PATH}
-              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install $(pyenv install --list | grep -E "^\s*$(echo "<< parameters.py-version >>" | sed -e 's/\./\\./')\.[0-9]\s*$" | tail -1)
+              export PYENV_VERSION=$(pyenv install --list | grep -E "^\s*$(echo "<< parameters.py-version >>" | sed -e 's/\./\\./')\.[0-9]\s*$" | tail -1 | sed -e 's/\s*//g')
+              echo "export PYENV_VERSION=${PYENV_VERSION}" >> ${BASH_ENV}
+              eval "$(pyenv init --path)"
+              echo 'eval "$(pyenv init --path)"' >> ${BASH_ENV}
+              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${PYENV_VERSION}
             fi
             python<< parameters.py-version >> --version | cut -d ' ' -f 2 > /tmp/python-version
             echo "Python version: $(cat /tmp/python-version)"
