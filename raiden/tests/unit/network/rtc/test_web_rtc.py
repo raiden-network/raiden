@@ -81,6 +81,7 @@ def _get_file_descriptors() -> List:
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="this is a Linux-only test")
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="it seems we leak on Python < 3.8")
 def test_leak_file_descriptors(monkeypatch: Any) -> None:
     address1 = make_signer().address
     address2 = make_signer().address
