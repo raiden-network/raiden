@@ -198,7 +198,7 @@ commands:
               export PYENV_VERSION=$(pyenv install --list | grep -E "^\s*$(echo "<< parameters.py-version >>" | sed -e 's/\./\\./')\.[0-9]\s*$" | tail -1 | sed -e 's/\s*//g')
               echo "export PYENV_VERSION="'"'"${PYENV_VERSION}"'"' >> ${BASH_ENV}
               eval "$(pyenv init --path)"
-              echo 'eval "$(pyenv init --path)"' >> ${BASH_ENV}
+              echo "$(pyenv init --path)" >> ${BASH_ENV}
               env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${PYENV_VERSION}
             fi
             python<< parameters.py-version >> --version | cut -d ' ' -f 2 > /tmp/python-version
