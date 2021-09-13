@@ -216,13 +216,6 @@ commands:
       - run:
           name: Creating virtualenv
           command: |
-            if [[ ${OS_NAME} == "MACOS" ]]; then
-              export PATH=${PYENV_ROOT}/bin:${PATH}
-              eval "$(pyenv init -)"
-              eval "$(pyenv init --path)"
-              pyenv local $PYENV_PYTHON_VERSION
-              echo "Detected MacOS: Using pyenv Python at $(pyenv which python<< parameters.py-version >>)"
-            fi
             if [ ! -x ~/venv-<< parameters.py-version >>/bin/python ]; then
               echo "Virtual env not found. Creating virtual env using $(python<< parameters.py-version >> --version)."
               python<< parameters.py-version >> -m venv ~/venv-<< parameters.py-version >>-${OS_NAME}
