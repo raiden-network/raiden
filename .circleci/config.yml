@@ -199,7 +199,7 @@ commands:
               echo "export PYENV_VERSION="'"'"${PYENV_VERSION}"'"' >> ${BASH_ENV}
               eval "$(pyenv init --path)"
               echo "$(pyenv init --path)" >> ${BASH_ENV}
-              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${PYENV_VERSION}
+              env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s ${PYENV_VERSION}
             fi
             python<< parameters.py-version >> --version | cut -d ' ' -f 2 > /tmp/python-version
             echo "Python version: $(cat /tmp/python-version)"
