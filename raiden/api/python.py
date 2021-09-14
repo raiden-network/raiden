@@ -40,7 +40,13 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import ChainState, ChannelState, NettingChannelState, NetworkState
+from raiden.transfer.state import (
+    ChainState,
+    ChannelState,
+    NettingChannelState,
+    NetworkState,
+    RouteState,
+)
 from raiden.transfer.state_change import ActionChannelClose, ActionChannelCoopSettle
 from raiden.transfer.views import TransferRole, get_token_network_by_address
 from raiden.utils.formatting import to_checksum_address
@@ -1072,6 +1078,7 @@ class RaidenAPI:  # pragma: no unittest
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
+        route_states: List[RouteState] = None,
     ) -> "PaymentStatus":
         """Do a transfer with `target` with the given `amount` of `token_address`."""
         # pylint: disable=too-many-arguments
@@ -1085,6 +1092,7 @@ class RaidenAPI:  # pragma: no unittest
             secret=secret,
             secrethash=secrethash,
             lock_timeout=lock_timeout,
+            route_states=route_states,
         )
         payment_status.payment_done.wait(timeout=transfer_timeout)
         return payment_status
@@ -1099,6 +1107,7 @@ class RaidenAPI:  # pragma: no unittest
         secret: Secret = None,
         secrethash: SecretHash = None,
         lock_timeout: BlockTimeout = None,
+        route_states: List[RouteState] = None,
     ) -> "PaymentStatus":
         current_state = views.state_from_raiden(self.raiden)
         token_network_registry_address = self.raiden.default_registry.address
@@ -1174,6 +1183,7 @@ class RaidenAPI:  # pragma: no unittest
             secret=secret,
             secrethash=secrethash,
             lock_timeout=lock_timeout,
+            route_states=route_states,
         )
         return payment_status
 

@@ -36,7 +36,7 @@ from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUN
 from raiden.storage.serialization.schemas import IntegerToStringField
 from raiden.storage.utils import TimestampedEvent
 from raiden.transfer import channel
-from raiden.transfer.state import ChainState, ChannelState, NettingChannelState
+from raiden.transfer.state import ChainState, ChannelState, NettingChannelState, RouteState
 from raiden.transfer.views import get_token_network_by_address
 from raiden.utils.capabilities import _bool_to_binary, int_bool
 from raiden.utils.typing import Address as AddressBytes, AddressHex
@@ -325,6 +325,17 @@ class ChannelPatchSchema(BaseSchema):
     )
 
 
+class RouteMetadataSchema(BaseSchema):
+    class Meta:
+        decoding_class = RouteState
+
+    route = fields.List(AddressField(), required=True)
+    address_to_metadata = fields.Dict(
+        keys=AddressField(), required=True, data_key="address_metadata"
+    )
+    estimated_fee = fields.Integer(required=False, data_key="fee")
+
+
 class PaymentSchema(BaseSchema):
     initiator_address = AddressField(missing=None)
     target_address = AddressField(missing=None)
@@ -334,6 +345,7 @@ class PaymentSchema(BaseSchema):
     secret = SecretField(missing=None)
     secret_hash = SecretHashField(missing=None)
     lock_timeout = IntegerToStringField(missing=None)
+    paths = fields.List(fields.Nested(RouteMetadataSchema()), missing=None)
 
 
 class ConnectionsConnectSchema(BaseSchema):

@@ -105,7 +105,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.state import ChannelState, NettingChannelState
+from raiden.transfer.state import ChannelState, NettingChannelState, RouteState
 from raiden.ui.sync import blocks_to_sync
 from raiden.utils.formatting import optional_address_to_string, to_checksum_address
 from raiden.utils.gevent import spawn_named
@@ -949,6 +949,7 @@ class RestAPI:  # pragma: no unittest
         secret: Secret,
         secret_hash: SecretHash,
         lock_timeout: BlockTimeout,
+        route_states: List[RouteState] = None,
     ) -> Response:
         log.debug(
             "Initiating payment",
@@ -976,6 +977,7 @@ class RestAPI:  # pragma: no unittest
                 secret=secret,
                 secrethash=secret_hash,
                 lock_timeout=lock_timeout,
+                route_states=route_states,
             )
         except (
             InvalidAmount,

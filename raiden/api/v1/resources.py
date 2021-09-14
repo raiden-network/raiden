@@ -214,7 +214,7 @@ class PaymentEventsResource(BaseResource):
 
 class PaymentResource(BaseResource):
     post_schema = PaymentSchema(
-        only=("amount", "identifier", "secret", "secret_hash", "lock_timeout")
+        only=("amount", "identifier", "secret", "secret_hash", "lock_timeout", "paths")
     )
     get_schema = RaidenEventsRequestSchema()
 
@@ -231,11 +231,13 @@ class PaymentResource(BaseResource):
     @if_api_available
     def post(self, token_address: TokenAddress, target_address: TargetAddress) -> Response:
         kwargs = validate_json(self.post_schema)
+        route_states = kwargs.pop("paths", None)
 
         return self.rest_api.initiate_payment(
             registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
             token_address=token_address,
             target_address=target_address,
+            route_states=route_states,
             **kwargs,
         )
 

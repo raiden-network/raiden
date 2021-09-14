@@ -151,6 +151,107 @@ def test_api_payments(
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_payments_without_pfs(
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+    deposit,
+) -> None:
+    _, app1 = raiden_network
+    amount = 100
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.address
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+    our_metadata = api_server_test_instance.rest_api.raiden_api.raiden.transport.address_metadata
+
+    payment = {
+        "initiator_address": to_checksum_address(our_address),
+        "target_address": to_checksum_address(target_address),
+        "token_address": to_checksum_address(token_address),
+        "amount": str(amount),
+        "identifier": str(identifier),
+    }
+
+    # Test a normal payment
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            "amount": str(amount),
+            "identifier": str(identifier),
+            "paths": [
+                {
+                    "route": [to_checksum_address(our_address), to_checksum_address(app1.address)],
+                    "address_metadata": {
+                        to_checksum_address(our_address): our_metadata,
+                        to_checksum_address(app1.address): app1.transport.address_metadata,
+                    },
+                }
+            ],
+        },
+    )
+
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
+    assert_proper_response(response)
+    json_response = get_json_response(response)
+    assert_payment_secret_and_hash(json_response, payment)
+
+    # Test a payment without providing an identifier
+    payment["amount"] = "1"
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": "1"},
+    )
+    with watch_for_unlock_failures(*raiden_network):
+        response = request.send().response
+    assert_proper_response(response)
+    json_response = get_json_response(response)
+    assert_payment_secret_and_hash(json_response, payment)
+
+    # Test that trying out a payment with an amount higher than what is available
+    # returns an error
+    payment["amount"] = str(deposit)
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            "token_target_paymentresource",
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={"amount": str(deposit)},
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    # Test that querying the internal events resource works
+    limit = 5
+    request = grequests.get(
+        api_url_for(
+            api_server_test_instance, "raideninternaleventsresource", limit=limit, offset=0
+        )
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    events = response.json()
+    assert len(events) == limit
+    assert all("TimestampedEvent" in event for event in events)
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("enable_rest_api", [True])
 def test_api_payments_secret_hash_errors(
     api_server_test_instance: APIServer,
     raiden_network: List[RaidenService],
