@@ -784,12 +784,30 @@ Besides you can query all payments that you sent or received.
 
       {
           "amount": "200",
-          "identifier": "42"
+          "identifier": "42",
+          "paths": [
+              {
+                  "route": ["0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8", "0x61C808D82A3Ac53231750daDc13c777b59310bD9"],
+                  "address_metadata": {
+                      "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8": {
+                          "user_id": "@0xea674fdde714fd979de3edf0f56aa9716b898ec8:localhost:8502",
+                          "capabilities": "mxc://raiden.network/cap?Receive=1&Mediate=1&Delivery=1&webRTC=1&toDevice=1&immutableMetadata=1",
+                          "displayname": "0xdf714485248a7d83f29e059622004acbb8a6b8a09c1506c304c2748e4e941cf769e864764ef028b31da525280d35d5ab87ee196dc738bc0f8de81ca3355a0c111b"
+                      },
+                      "0x61C808D82A3Ac53231750daDc13c777b59310bD9": {
+                          "user_id": "@0x61c808d82a3ac53231750dadc13c777b59310bd9:localhost:8502",
+                          "capabilities": "mxc://raiden.network/cap?Receive=1&Mediate=1&Delivery=1&webRTC=1&toDevice=1&immutableMetadata=1",
+                          "displayname": "0x56682a1fecb4df0ce8e0e3aa9a0eaae4a6bc1a6265284f3fffbb1423e018122838353e6930c6000892e94f305b97c726a8e74c27dcce98adda9340f93555f5bb1c"
+                      }
+                  }
+              }
+          ]
       }
 
    :reqjson string amount: Amount to be sent to the target
    :reqjson string identifier: Identifier of the payment (optional)
    :reqjson string lock_timeout: lock timeout, in blocks, to be used with the payment. Default is 2 * channel's reveal_timeout, Value must be greater than channel's reveal_timeout (optional)
+   :reqjson string path: static route to the target node (optional)
 
 
    **Example Response**:
@@ -813,7 +831,7 @@ Besides you can query all payments that you sent or received.
    :statuscode 400: The provided json is in some way malformed
    :statuscode 402: The payment can't start due to insufficient balance
    :statuscode 404: The given token and / or target addresses are not valid EIP55-encoded Ethereum addresses
-   :statuscode 409: The address or the amount is invalid, or there is no path to the target, or the identifier is already in use for a different payment.
+   :statuscode 409: The address or the amount is invalid, or there is no path to the target, or the identifier is already in use for a different payment, or the static path sent is not usable.
    :statuscode 500: Internal Raiden node error
    :statuscode 503: The API is currently unavailable, e. g. because the Raiden node is still in the initial sync or shutting down.
 
