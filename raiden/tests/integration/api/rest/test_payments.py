@@ -212,13 +212,19 @@ def test_api_payments_without_pfs(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": "1"},
+        json={
+            "amount": str(amount),
+            "paths": [
+                {
+                    "route": [to_checksum_address(our_address), to_checksum_address(app1.address)],
+                    "address_metadata": {
+                        to_checksum_address(our_address): our_metadata,
+                        to_checksum_address(app1.address): app1.transport.address_metadata,
+                    },
+                }
+            ],
+        },
     )
-    with watch_for_unlock_failures(*raiden_network):
-        response = request.send().response
-    assert_proper_response(response)
-    json_response = get_json_response(response)
-    assert_payment_secret_and_hash(json_response, payment)
 
     # Test that trying out a payment with an amount higher than what is available
     # returns an error
@@ -230,23 +236,97 @@ def test_api_payments_without_pfs(
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
         ),
-        json={"amount": str(deposit)},
+        json={
+            "amount": str(deposit),
+            "identifier": str(identifier),
+            "paths": [
+                {
+                    "route": [to_checksum_address(our_address), to_checksum_address(app1.address)],
+                    "address_metadata": {
+                        to_checksum_address(our_address): our_metadata,
+                        to_checksum_address(app1.address): app1.transport.address_metadata,
+                    },
+                }
+            ],
+        },
     )
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
 
-    # Test that querying the internal events resource works
-    limit = 5
-    request = grequests.get(
-        api_url_for(
-            api_server_test_instance, "raideninternaleventsresource", limit=limit, offset=0
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("enable_rest_api", [True])
+def test_api_payments_without_pfs_failure(
+    api_server_test_instance: APIServer,
+    raiden_network: List[RaidenService],
+    token_addresses,
+) -> None:
+    app0, app1 = raiden_network
+    amount = 100
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.address
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+    our_metadata = api_server_test_instance.rest_api.raiden_api.raiden.transport.address_metadata
+
+    def send_request(paths):
+        request = grequests.post(
+            api_url_for(
+                api_server_test_instance,
+                "token_target_paymentresource",
+                token_address=to_checksum_address(token_address),
+                target_address=to_checksum_address(target_address),
+            ),
+            json={"amount": str(amount), "identifier": str(identifier), "paths": paths},
         )
-    )
-    response = request.send().response
-    assert_proper_response(response)
-    events = response.json()
-    assert len(events) == limit
-    assert all("TimestampedEvent" in event for event in events)
+
+        return request.send().response
+
+    # No route to target
+    paths = [
+        {
+            "route": [to_checksum_address(our_address), to_checksum_address(app0.address)],
+            "address_metadata": {
+                to_checksum_address(our_address): our_metadata,
+                to_checksum_address(app1.address): app1.transport.address_metadata,
+            },
+        }
+    ]
+
+    response = send_request(paths)
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    # Path keys are invalid
+    paths = [
+        {
+            "fake_route": [
+                to_checksum_address(our_address),
+                to_checksum_address(app0.address),
+            ],
+            "fake_address_metadata": {
+                to_checksum_address(our_address): our_metadata,
+                to_checksum_address(app1.address): app1.transport.address_metadata,
+            },
+        }
+    ]
+    response = send_request(paths)
+    assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
+
+    # Bad data types
+    paths = [
+        {
+            "route": ["fake_app0", "fake_app1"],  # type: ignore
+            "address_metadata": {
+                "fake_app0": our_metadata,  # type: ignore
+                "fake_app1": app1.transport.address_metadata,  # type: ignore
+            },
+        }
+    ]
+
+    response = send_request(paths)
+    assert_proper_response(response, status_code=HTTPStatus.BAD_REQUEST)
 
 
 @raise_on_failure
