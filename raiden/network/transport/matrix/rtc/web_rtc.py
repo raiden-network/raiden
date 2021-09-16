@@ -9,13 +9,14 @@ import structlog
 from aiortc import InvalidStateError, RTCDataChannel, RTCPeerConnection, RTCSessionDescription
 from aiortc.sdp import candidate_from_sdp, candidate_to_sdp
 from gevent.event import Event as GEvent
+from gevent.lock import Semaphore
 
 from raiden.network.transport.matrix.client import ReceivedRaidenMessage
 from raiden.network.transport.matrix.rtc.aiogevent import wrap_greenlet, yield_future
 from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
+from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Union
 
 log = structlog.get_logger(__name__)
 
@@ -124,9 +125,6 @@ class _TaskHandler:
 
 
 class _RTCConnection(_TaskHandler):
-
-    LOCKED_ADDRESSES: Set[Address] = set()
-
     def __init__(
         self,
         partner_address: Address,
@@ -145,7 +143,7 @@ class _RTCConnection(_TaskHandler):
             f"{to_checksum_address(partner_address)} if locked. "
             f"Please handle this check before calling the constructor"
         )
-        assert partner_address not in _RTCConnection.LOCKED_ADDRESSES, msg
+        assert partner_address not in WebRTCManager.LOCKED_ADDRESSES, msg
 
         super().__init__()
         self.node_address = node_address
@@ -170,10 +168,6 @@ class _RTCConnection(_TaskHandler):
         self.peer_connection.on("icegatheringstatechange", self._on_ice_gathering_state_change)
         self.peer_connection.on("signalingstatechange", self._on_signalling_state_change)
         self.peer_connection.on("connectionstatechange", self._on_connection_state_change)
-
-    @staticmethod
-    def is_locked(address: Address) -> bool:
-        return address in _RTCConnection.LOCKED_ADDRESSES
 
     @staticmethod
     def from_offer(
@@ -488,6 +482,9 @@ class _RTCConnection(_TaskHandler):
 
 
 class WebRTCManager(Runnable):
+
+    LOCKED_ADDRESSES: Dict[Address, Semaphore] = {}
+
     def __init__(
         self,
         node_address: Address,
@@ -502,6 +499,13 @@ class WebRTCManager(Runnable):
         self._stop_event = stop_event
         self._address_to_connection: Dict[Address, _RTCConnection] = {}
         self.log = log.bind(node=to_checksum_address(node_address))
+
+    @staticmethod
+    def is_locked(address: Address) -> bool:
+        return (
+            address in WebRTCManager.LOCKED_ADDRESSES
+            and WebRTCManager.LOCKED_ADDRESSES[address].locked()
+        )
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
         messages: List[ReceivedRaidenMessage] = []
@@ -537,7 +541,7 @@ class WebRTCManager(Runnable):
             partner_address=to_checksum_address(partner_address),
         )
 
-        if _RTCConnection.is_locked(partner_address):
+        if WebRTCManager.is_locked(partner_address):
             return
 
         conn = _RTCConnection(
@@ -563,7 +567,8 @@ class WebRTCManager(Runnable):
                 partner_address=to_checksum_address(partner_address),
             )
             conn.send_hangup_message()
-            self.close_connection(partner_address)
+            with WebRTCManager.LOCKED_ADDRESSES[partner_address]:
+                self.close_connection(partner_address)
 
     def get_channel_init_timeout(self) -> float:
         """Returns the number of seconds to wait for a channel to be established."""
@@ -603,12 +608,6 @@ class WebRTCManager(Runnable):
             if self._stop_event.is_set():
                 return
 
-            msg = (
-                f"address {to_checksum_address(partner_address)} should never be locked when "
-                f"creating a new connection from offer"
-            )
-            assert not _RTCConnection.is_locked(partner_address), msg
-
             conn = _RTCConnection.from_offer(
                 partner_address,
                 self.node_address,
@@ -638,11 +637,9 @@ class WebRTCManager(Runnable):
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
     def close_connection(self, partner_address: Address) -> None:
-        _RTCConnection.LOCKED_ADDRESSES.add(partner_address)
         conn = self._address_to_connection.get(partner_address)
         if conn is not None:
             yield_future(conn.close())
-        _RTCConnection.LOCKED_ADDRESSES.remove(partner_address)
 
     def _process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
@@ -651,7 +648,8 @@ class WebRTCManager(Runnable):
             rtc_message_type in [_RTCMessageType.OFFER.value, _RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            self._process_signaling_for_address(partner_address, rtc_message_type, content)
+            with WebRTCManager.LOCKED_ADDRESSES[partner_address]:
+                self._process_signaling_for_address(partner_address, rtc_message_type, content)
         elif rtc_message_type == _RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
         elif rtc_message_type == _RTCMessageType.CANDIDATES.value:
