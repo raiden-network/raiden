@@ -986,8 +986,9 @@ class MatrixTransport(Runnable):
     def _send_with_retry(self, queue: MessagesQueue) -> None:
         recipient = queue.queue_identifier.recipient
         retrier = self._get_retrier(recipient)
-        self.health_check_web_rtc(recipient)
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
+        if self.started:
+            self.health_check_web_rtc(recipient)
 
     def _multicast_services(
         self,
