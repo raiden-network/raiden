@@ -2,7 +2,6 @@ import asyncio
 import json
 import time
 from asyncio import CancelledError, Task
-from collections import defaultdict
 from enum import Enum
 
 import gevent
@@ -134,17 +133,6 @@ class _RTCConnection(_TaskHandler):
         ice_connection_closed: Callable[["_RTCConnection"], None],
         handle_message_callback: Callable[[str, Address], None],
     ) -> None:
-
-        # NOTE: It may happen that we need block creation of connections
-        # due to concurrent greenlets racing each other. In this case we can
-        # explicitly add the address to LOCKED_ADDRESSES prohibiting the creation of new objects
-        # For reference look at WebRTCManager.close_connection()
-        msg = (
-            f"Not allowed to create a new connection for address "
-            f"{to_checksum_address(partner_address)} if locked. "
-            f"Please handle this check before calling the constructor"
-        )
-        assert not WebRTCManager.is_locked(partner_address), msg
 
         super().__init__()
         self.node_address = node_address
@@ -483,9 +471,6 @@ class _RTCConnection(_TaskHandler):
 
 
 class WebRTCManager(Runnable):
-
-    LOCKED_ADDRESSES: Dict[Address, Semaphore] = {}
-
     def __init__(
         self,
         node_address: Address,
@@ -499,17 +484,21 @@ class WebRTCManager(Runnable):
         self._signaling_send = signaling_send
         self._stop_event = stop_event
         self._address_to_connection: Dict[Address, _RTCConnection] = {}
+        # NOTE: It may happen that we need to block creation of connections
+        # due to concurrent greenlets racing each other. In this case we can
+        # explicitly acquire the lock making sure that whoever has the lock
+        # will produce the next RTCConnection object.
+        # For reference look at process_signalling and initialize_web_rtc
+        self._address_to_lock: Dict[Address, Semaphore] = {}
         self.log = log.bind(node=to_checksum_address(node_address))
 
-    @staticmethod
-    def get_lock(address: Address) -> Semaphore:
-        if address not in WebRTCManager.LOCKED_ADDRESSES:
-            WebRTCManager.LOCKED_ADDRESSES[address] = Semaphore()
-        return WebRTCManager.LOCKED_ADDRESSES[address]
+    def get_lock(self, address: Address) -> Semaphore:
+        if address not in self._address_to_lock:
+            self._address_to_lock[address] = Semaphore()
+        return self._address_to_lock[address]
 
-    @staticmethod
-    def is_locked(address: Address) -> bool:
-        return WebRTCManager.get_lock(address).locked()
+    def is_locked(self, address: Address) -> bool:
+        return self.get_lock(address).locked()
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
         messages: List[ReceivedRaidenMessage] = []
@@ -545,7 +534,9 @@ class WebRTCManager(Runnable):
             partner_address=to_checksum_address(partner_address),
         )
 
-        if WebRTCManager.is_locked(partner_address):
+        # here we can drop out if the lock is acquired as it would mean we have
+        # received an offer and we are the callee.
+        if self.is_locked(partner_address):
             return
 
         conn = _RTCConnection(
@@ -562,6 +553,8 @@ class WebRTCManager(Runnable):
         if self._stop_event.wait(timeout=self.get_channel_init_timeout()):
             return
 
+        # if there is already a new connection object it means we already closed the old one.
+        # We can drop out here and proceed with the new conn object
         if conn is not self._address_to_connection.get(partner_address, None):
             return
 
@@ -571,7 +564,10 @@ class WebRTCManager(Runnable):
                 partner_address=to_checksum_address(partner_address),
             )
             conn.send_hangup_message()
-            with WebRTCManager.get_lock(partner_address):
+            # Closing connection should acquire the lock as we want to be the
+            # next one creating a new connection object to maintain the
+            # 3 attempts plan
+            with self.get_lock(partner_address):
                 self.close_connection(partner_address)
 
     def get_channel_init_timeout(self) -> float:
@@ -600,7 +596,9 @@ class WebRTCManager(Runnable):
     def _process_signaling_for_address(
         self, partner_address: Address, rtc_message_type: str, description: Dict[str, str]
     ) -> None:
+
         conn = self._address_to_connection.get(partner_address)
+
         if rtc_message_type == _RTCMessageType.OFFER.value:
             if conn is not None:
                 if conn.call_id < description["call_id"]:
@@ -652,7 +650,12 @@ class WebRTCManager(Runnable):
             rtc_message_type in [_RTCMessageType.OFFER.value, _RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            with WebRTCManager.get_lock(partner_address):
+            # we want to acquire the lock here as multiple offer and answer messages
+            # (for the same address) can be processed concurrently. We specifically want
+            # to block here because an offer can create a new connection. And we want
+            # this connection object to be added to address_to_connection.
+            # All succeeding offer/answer messages should be handled by the logic of the code
+            with self.get_lock(partner_address):
                 self._process_signaling_for_address(partner_address, rtc_message_type, content)
         elif rtc_message_type == _RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)

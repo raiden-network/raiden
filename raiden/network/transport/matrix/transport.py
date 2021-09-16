@@ -984,7 +984,9 @@ class MatrixTransport(Runnable):
         return retrier
 
     def _send_with_retry(self, queue: MessagesQueue) -> None:
-        retrier = self._get_retrier(queue.queue_identifier.recipient)
+        recipient = queue.queue_identifier.recipient
+        retrier = self._get_retrier(recipient)
+        self.health_check_web_rtc(recipient)
         retrier.enqueue(queue_identifier=queue.queue_identifier, messages=queue.messages)
 
     def _multicast_services(
@@ -1034,7 +1036,6 @@ class MatrixTransport(Runnable):
             return
 
         assert self._web_rtc_manager is not None, "must be set"
-        self.health_check_web_rtc(receiver_address)
 
         user_ids: Set[UserID] = set()
         if self._web_rtc_manager.has_ready_channel(receiver_address):
