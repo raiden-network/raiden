@@ -15,7 +15,7 @@ from raiden.network.transport.matrix.rtc.aiogevent import wrap_greenlet, yield_f
 from raiden.network.transport.matrix.utils import validate_and_parse_message
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Union
+from raiden.utils.typing import Address, Any, Callable, Coroutine, Dict, List, Optional, Set, Union
 
 log = structlog.get_logger(__name__)
 
@@ -122,14 +122,11 @@ class _TaskHandler:
                 cancelled=[task for task in tasks if task.cancelled()],
             )
 
-    def wait(self) -> None:
-        """Kill the greenlets and wait until all the tasks are done."""
-        gevent.killall(self._greenlets)
-        self._greenlets = []
-        yield_future(self.wait_for_tasks())
-
 
 class _RTCConnection(_TaskHandler):
+
+    LOCKED_ADDRESSES: Set[Address] = set()
+
     def __init__(
         self,
         partner_address: Address,
@@ -138,6 +135,18 @@ class _RTCConnection(_TaskHandler):
         ice_connection_closed: Callable[["_RTCConnection"], None],
         handle_message_callback: Callable[[str, Address], None],
     ) -> None:
+
+        # NOTE: It may happen that we need block creation of connections
+        # due to concurrent greenlets racing each other. In this case we can
+        # explicitly add the address to LOCKED_ADDRESSES prohibiting the creation of new objects
+        # For reference look at WebRTCManager.close_connection()
+        msg = (
+            f"Not allowed to create a new connection for address "
+            f"{to_checksum_address(partner_address)} if locked. "
+            f"Please handle this check before calling the constructor"
+        )
+        assert partner_address not in _RTCConnection.LOCKED_ADDRESSES, msg
+
         super().__init__()
         self.node_address = node_address
         self.partner_address = partner_address
@@ -161,6 +170,10 @@ class _RTCConnection(_TaskHandler):
         self.peer_connection.on("icegatheringstatechange", self._on_ice_gathering_state_change)
         self.peer_connection.on("signalingstatechange", self._on_signalling_state_change)
         self.peer_connection.on("connectionstatechange", self._on_connection_state_change)
+
+    @staticmethod
+    def is_locked(address: Address) -> bool:
+        return address in _RTCConnection.LOCKED_ADDRESSES
 
     @staticmethod
     def from_offer(
@@ -210,13 +223,12 @@ class _RTCConnection(_TaskHandler):
                 signaling_state=self.peer_connection.signalingState,
                 ice_connection_state=self.peer_connection.iceConnectionState,
             )
-            self.close()
-            return None
 
         except AttributeError:
             self.log.exception("Attribute error in coroutine", coroutine=coroutine)
-            self.close()
-            return None
+
+        self.close()
+        return None
 
     async def _set_local_description(self, description: RTCSessionDescription) -> None:
         self.log.debug("Set local description", description=description)
@@ -345,12 +357,13 @@ class _RTCConnection(_TaskHandler):
     async def _close(self) -> None:
         self.log.debug("Closing peer connection")
         await self.wait_for_tasks()
-        await wrap_greenlet(gevent.spawn(gevent.joinall, self._greenlets, raise_error=True))
+        await wrap_greenlet(gevent.spawn(gevent.killall, self._greenlets))
         if self._channel is not None:
             self._channel.close()
             self._channel = None
         await self.peer_connection.close()
         self.peer_connection = None
+        # there must not be a context switch after self._ice_connection_closed(self)
         self._ice_connection_closed(self)
 
     def close(self) -> Task:
@@ -524,6 +537,9 @@ class WebRTCManager(Runnable):
             partner_address=to_checksum_address(partner_address),
         )
 
+        if _RTCConnection.is_locked(partner_address):
+            return
+
         conn = _RTCConnection(
             partner_address,
             self.node_address,
@@ -536,6 +552,9 @@ class WebRTCManager(Runnable):
 
         # wait for channel init timeout period and check if connection was established
         if self._stop_event.wait(timeout=self.get_channel_init_timeout()):
+            return
+
+        if conn is not self._address_to_connection.get(partner_address, None):
             return
 
         if not self.has_ready_channel(partner_address):
@@ -584,6 +603,12 @@ class WebRTCManager(Runnable):
             if self._stop_event.is_set():
                 return
 
+            msg = (
+                f"address {to_checksum_address(partner_address)} should never be locked when "
+                f"creating a new connection from offer"
+            )
+            assert not _RTCConnection.is_locked(partner_address), msg
+
             conn = _RTCConnection.from_offer(
                 partner_address,
                 self.node_address,
@@ -592,6 +617,7 @@ class WebRTCManager(Runnable):
                 self._handle_message,
                 description,
             )
+
             self._add_connection(partner_address, conn)
         else:
             if conn is None:
@@ -605,13 +631,18 @@ class WebRTCManager(Runnable):
         conn.send_message(message)
 
     def health_check(self, partner_address: Address) -> None:
+        if partner_address in self._address_to_connection:
+            # don't do anything if signaling is already in progress or the
+            # connection has already been established
+            return
         self._schedule_new_greenlet(self._wrapped_initialize_web_rtc, partner_address)
 
     def close_connection(self, partner_address: Address) -> None:
+        _RTCConnection.LOCKED_ADDRESSES.add(partner_address)
         conn = self._address_to_connection.get(partner_address)
         if conn is not None:
             yield_future(conn.close())
-            conn.wait()
+        _RTCConnection.LOCKED_ADDRESSES.remove(partner_address)
 
     def _process_signaling_message(
         self, partner_address: Address, rtc_message_type: str, content: Dict[str, str]
@@ -645,9 +676,8 @@ class WebRTCManager(Runnable):
         for conn in tuple(self._address_to_connection.values()):
             conn.send_hangup_message()
 
-        for partner_address, conn in self._address_to_connection.copy().items():
+        for partner_address in self._address_to_connection.copy().keys():
             self.close_connection(partner_address)
-            conn.wait()
 
         gevent.killall(self.greenlets)
         self._reset_state()
