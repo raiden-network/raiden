@@ -144,7 +144,7 @@ class _RTCConnection(_TaskHandler):
             f"{to_checksum_address(partner_address)} if locked. "
             f"Please handle this check before calling the constructor"
         )
-        assert partner_address not in WebRTCManager.LOCKED_ADDRESSES, msg
+        assert not WebRTCManager.is_locked(partner_address), msg
 
         super().__init__()
         self.node_address = node_address
@@ -484,7 +484,7 @@ class _RTCConnection(_TaskHandler):
 
 class WebRTCManager(Runnable):
 
-    LOCKED_ADDRESSES: Dict[Address, Semaphore] = defaultdict(Semaphore)
+    LOCKED_ADDRESSES: Dict[Address, Semaphore] = {}
 
     def __init__(
         self,
@@ -502,11 +502,14 @@ class WebRTCManager(Runnable):
         self.log = log.bind(node=to_checksum_address(node_address))
 
     @staticmethod
+    def get_lock(address: Address) -> Semaphore:
+        if address not in WebRTCManager.LOCKED_ADDRESSES:
+            WebRTCManager.LOCKED_ADDRESSES[address] = Semaphore()
+        return WebRTCManager.LOCKED_ADDRESSES[address]
+
+    @staticmethod
     def is_locked(address: Address) -> bool:
-        return (
-            address in WebRTCManager.LOCKED_ADDRESSES
-            and WebRTCManager.LOCKED_ADDRESSES[address].locked()
-        )
+        return WebRTCManager.get_lock(address).locked()
 
     def _handle_message(self, message_data: str, partner_address: Address) -> None:
         messages: List[ReceivedRaidenMessage] = []
@@ -568,7 +571,7 @@ class WebRTCManager(Runnable):
                 partner_address=to_checksum_address(partner_address),
             )
             conn.send_hangup_message()
-            with WebRTCManager.LOCKED_ADDRESSES[partner_address]:
+            with WebRTCManager.get_lock(partner_address):
                 self.close_connection(partner_address)
 
     def get_channel_init_timeout(self) -> float:
@@ -649,7 +652,7 @@ class WebRTCManager(Runnable):
             rtc_message_type in [_RTCMessageType.OFFER.value, _RTCMessageType.ANSWER.value]
             and "sdp" in content
         ):
-            with WebRTCManager.LOCKED_ADDRESSES[partner_address]:
+            with WebRTCManager.get_lock(partner_address):
                 self._process_signaling_for_address(partner_address, rtc_message_type, content)
         elif rtc_message_type == _RTCMessageType.HANGUP.value:
             self.close_connection(partner_address)
