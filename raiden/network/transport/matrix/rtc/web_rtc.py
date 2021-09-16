@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 from asyncio import CancelledError, Task
+from collections import defaultdict
 from enum import Enum
 
 import gevent
@@ -483,7 +484,7 @@ class _RTCConnection(_TaskHandler):
 
 class WebRTCManager(Runnable):
 
-    LOCKED_ADDRESSES: Dict[Address, Semaphore] = {}
+    LOCKED_ADDRESSES: Dict[Address, Semaphore] = defaultdict(Semaphore)
 
     def __init__(
         self,
