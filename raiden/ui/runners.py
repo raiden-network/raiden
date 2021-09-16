@@ -93,7 +93,9 @@ def run_services(options: Dict[str, Any]) -> None:
         if signal_received:
             print("\r", end="")  # Reset cursor to overwrite a possibly printed "^C"
             log.info("Signal received. Shutting down.", signal=signal_received)
-    finally:
+    except Exception:
+        raise
+    else:
         for task in gevent_tasks:
             task.kill()
 
@@ -104,5 +106,3 @@ def run_services(options: Dict[str, Any]) -> None:
             raiden_service.config.shutdown_timeout,
             raise_error=True,
         )
-
-        raiden_service.stop()

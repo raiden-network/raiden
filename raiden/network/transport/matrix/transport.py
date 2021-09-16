@@ -570,9 +570,6 @@ class MatrixTransport(Runnable):
             self._stop_event.set()
             gevent.killall(self.greenlets)  # kill children
             raise  # re-raise to keep killed status
-        except Exception:
-            self.stop()  # ensure cleanup and wait on subtasks
-            raise
 
     def stop(self) -> None:
         """Try to gracefully stop the greenlet synchronously

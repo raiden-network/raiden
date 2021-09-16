@@ -508,9 +508,6 @@ class RaidenService(Runnable):
             self.stop_event.set()
             gevent.killall([self.alarm.greenlet, self.transport.greenlet])  # kill children
             raise  # re-raise to keep killed status
-        except Exception:
-            self.stop()
-            raise
 
     def stop(self) -> None:
         """Stop the node gracefully. Raise if any stop-time error occurred on any subtask"""
