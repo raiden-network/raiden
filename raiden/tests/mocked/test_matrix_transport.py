@@ -122,9 +122,9 @@ def mock_matrix(
         transport._stop_event,
     )
     transport._stop_event.clear()
-    # XXX-UAM address_mgr acccess was here
-    # transport._address_mgr.add_userid_for_address(Address(factories.HOP1), USERID1)
+
     transport._client.user_id = USERID0
+    transport._started = True
 
     monkeypatch.setattr(transport._raiden_service, "on_messages", mock_on_messages)
     monkeypatch.setattr(GMatrixClient, "get_user_presence", mock_get_user_presence)
