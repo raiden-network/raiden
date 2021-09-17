@@ -780,26 +780,10 @@ class MatrixTransport(Runnable):
         msg = "The first sync requires the Matrix client to be properly authenticated."
         assert self._user_id, msg
 
-        msg = (
-            "The sync thread must not be started before the `_inventory_rooms` "
-            "is executed, the listener for the inventory rooms must be set up "
-            "before any messages can be processed."
-        )
-        assert self._client.sync_thread is None, msg
-        assert self._client.message_worker is None, msg
-        assert self._raiden_service is not None, "_raiden_service not set"
-
-        # Call sync to fetch the inventory rooms and new invites, the sync
-        # limit prevents fetching the messages.
-        filter_id = self._client.create_sync_filter(limit=0)
-        prev_sync_filter_id = self._client.set_sync_filter_id(filter_id)
-        # Need to reset this here, otherwise we might run into problems after a restart
         self._client.last_sync = float("inf")
         self._client.blocking_sync(
             timeout_ms=self._config.sync_timeout, latency_ms=self._config.sync_latency
         )
-        # Restore the filter to start fetching the messages
-        self._client.set_sync_filter_id(prev_sync_filter_id)
 
     def _initialize_sync(self) -> None:
         msg = "_initialize_sync requires the GMatrixClient to be properly authenticated."
@@ -921,10 +905,12 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return False
 
+        if not self.started:
+            return False
+
         assert self._raiden_service is not None, "_raiden_service not set"
 
         raiden_messages, call_messages = self._validate_matrix_messages(messages)
-
         self._process_raiden_messages(raiden_messages)
         self._process_call_messages(call_messages)
         return len(raiden_messages) > 0 or len(call_messages) > 0
