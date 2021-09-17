@@ -28,10 +28,6 @@ apipkg==1.5
     # via
     #   -r requirements-dev.txt
     #   execnet
-appdirs==1.4.3
-    # via
-    #   -r requirements-dev.txt
-    #   black
 asn1crypto==1.3.0
     # via
     #   -r requirements-dev.txt
@@ -85,7 +81,7 @@ bitarray==1.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-black==21.7b0
+black==21.9b0
     # via -r requirements-dev.txt
 bleach==3.3.0
     # via
@@ -436,7 +432,7 @@ parso==0.7.0
     # via
     #   -r requirements-dev.txt
     #   jedi
-pathspec==0.8.1
+pathspec==0.9.0
     # via
     #   -r requirements-dev.txt
     #   black
@@ -467,6 +463,7 @@ pip-tools==6.2.0
 platformdirs==2.2.0
     # via
     #   -r requirements-dev.txt
+    #   black
     #   pylint
 pluggy==0.12.0
     # via
@@ -762,6 +759,7 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
+    #   black
     #   matrix-synapse
     #   mypy
     #   signedjson
