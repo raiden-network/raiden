@@ -264,7 +264,7 @@ hyperlink==21.0.0
     # via
     #   treq
     #   twisted
-hypothesis==6.15.0
+hypothesis==6.21.5
     # via -r requirements-dev.in
 idna==2.8
     # via
