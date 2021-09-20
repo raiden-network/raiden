@@ -611,6 +611,8 @@ def setup_smoketest(
         stdout_manager = contextlib.redirect_stdout(stdout)  # type: ignore
 
     with stdout_manager, testchain_manager as testchain, matrix_manager as server_urls:
+
+        ethereum_nodes = None
         try:
             raiden_setup = setup_raiden(
                 matrix_server=server_urls[0][0],
@@ -627,7 +629,7 @@ def setup_smoketest(
 
             yield raiden_setup
         finally:
-            if ethereum_nodes:
+            if ethereum_nodes is not None:
                 for node_executor in ethereum_nodes:
                     node = node_executor.process
                     if node is not None:
