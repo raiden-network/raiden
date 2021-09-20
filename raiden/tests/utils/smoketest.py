@@ -150,20 +150,16 @@ def deploy_smoketest_contracts(
     )
     secret_registry_address = _deploy_contract(deployer, CONTRACT_SECRET_REGISTRY, [])
 
-    secret_registry_constructor_arguments = (
-        to_checksum_address(secret_registry_address),
-        TEST_SETTLE_TIMEOUT_MIN,
-        TEST_SETTLE_TIMEOUT_MAX,
-        UINT256_MAX,
+    token_network_registry_address = _deploy_contract(
+        deployer,
+        CONTRACT_TOKEN_NETWORK_REGISTRY,
+        [
+            to_checksum_address(secret_registry_address),
+            TEST_SETTLE_TIMEOUT_MIN,
+            TEST_SETTLE_TIMEOUT_MAX,
+            UINT256_MAX,
+        ],
     )
-
-    contract_proxy, _ = client.deploy_single_contract(
-        contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-        contract=contract_manager.get_contract(CONTRACT_TOKEN_NETWORK_REGISTRY),
-        constructor_parameters=secret_registry_constructor_arguments,
-    )
-
-    token_network_registry_address = Address(to_canonical_address(contract_proxy.address))
 
     service_registry_address = _deploy_contract(
         deployer,
