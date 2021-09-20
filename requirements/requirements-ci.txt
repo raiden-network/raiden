@@ -293,7 +293,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.15.0
+hypothesis==6.21.5
     # via -r requirements-dev.txt
 idna==2.8
     # via
@@ -356,7 +356,7 @@ lru-dict==1.1.6
     # via
     #   -r requirements-dev.txt
     #   web3
-macholib==1.15.1
+macholib==1.15.2
     # via -r requirements-ci.in
 markupsafe==2.0.1
     # via
