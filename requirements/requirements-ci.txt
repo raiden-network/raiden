@@ -628,7 +628,7 @@ requests==2.26.0
     #   responses
     #   treq
     #   web3
-responses==0.13.4
+responses==0.14.0
     # via -r requirements-dev.txt
 rlp==2.0.1
     # via
@@ -745,7 +745,7 @@ types-markupsafe==1.1.1
     #   types-jinja2
 types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
-types-pyyaml==5.4.6
+types-pyyaml==5.4.10
     # via -r requirements-dev.txt
 types-requests==2.25.6
     # via -r requirements-dev.txt
