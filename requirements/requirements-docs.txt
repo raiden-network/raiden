@@ -57,7 +57,7 @@ sphinx==4.2.0
     #   sphinxcontrib-httpdomain
     #   sphinxcontrib-httpexample
     #   sphinxcontrib-images
-sphinx_rtd_theme==1.0.0
+sphinx-rtd-theme==1.0.0
     # via -r requirements-docs.in
 sphinxcontrib-applehelp==1.0.2
     # via sphinx
@@ -69,7 +69,7 @@ sphinxcontrib-httpdomain==1.7.0
     # via
     #   -r requirements-docs.in
     #   sphinxcontrib-httpexample
-sphinxcontrib-httpexample==0.11.0
+sphinxcontrib-httpexample==1.0
     # via -r requirements-docs.in
 sphinxcontrib-images==0.9.4
     # via -r requirements-docs.in
