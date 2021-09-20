@@ -45,8 +45,8 @@ DEFAULT_TRANSPORT_MATRIX_SYNC_LATENCY = 15_000
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
-        "96b7df9ed93a1d73f9f4ede8db4773c0045e1c3b/known_servers/"
-        "known_servers-production-v3.0.0-test.json"
+        "/96b7df9ed93a1d73f9f4ede8db4773c0045e1c3b/known_servers"
+        "/known_servers-production-v3.0.0-test.json"
     ),
     Environment.DEVELOPMENT: (
         "https://raw.githubusercontent.com/raiden-network/raiden-service-bundle"
