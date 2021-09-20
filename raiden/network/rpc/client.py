@@ -1078,7 +1078,7 @@ class JSONRPCClient:
         """Given a block number, query the chain to get its corresponding block hash"""
         return self.web3.eth.getBlock(block_identifier)
 
-    def sync_nonce(self) -> None:
+    def _sync_nonce(self) -> None:
         self._available_nonce = discover_next_available_nonce(
             self.web3, self.eth_node, self.address
         )

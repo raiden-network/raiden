@@ -89,8 +89,6 @@ from raiden_contracts.constants import (
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
-    LIBRARY_TOKEN_NETWORK_UTILS,
-    LIBRARY_TOKEN_NETWORK_UTILS_LINK_KEY,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
@@ -118,10 +116,8 @@ class StepPrinter(Protocol):
         ...
 
 
-def _deploy_contract(
-    deployer: ContractDeployer, name: str, args: list, libs: dict = None
-) -> Address:
-    receipt = deployer.deploy(name, libs=libs, args=args)
+def _deploy_contract(deployer: ContractDeployer, name: str, args: list) -> Address:
+    receipt = deployer.deploy(name, args=args)
     address = receipt["contractAddress"]
     assert address is not None, "must be a valid address"
     return to_canonical_address(address)
@@ -167,6 +163,8 @@ def deploy_smoketest_contracts(
         constructor_parameters=secret_registry_constructor_arguments,
     )
 
+    token_network_registry_address = Address(to_canonical_address(contract_proxy.address))
+
     service_registry_address = _deploy_contract(
         deployer,
         CONTRACT_SERVICE_REGISTRY,
@@ -204,7 +202,7 @@ def deploy_smoketest_contracts(
     # Since the contracts have been deployed without the use of our
     # JSONRPCClient, we need to sync the client's internal nonce so that
     # it reflects the fact that we just sent 7 transactions.
-    client.sync_nonce()
+    client._sync_nonce()
 
     proxy_manager = ProxyManager(
         rpc_client=client,
