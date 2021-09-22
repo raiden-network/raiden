@@ -401,7 +401,7 @@ pickleshare==0.7.5
     # via ipython
 pillow==8.3.2
     # via matrix-synapse
-pip-tools==6.2.0
+pip-tools==6.3.0
     # via -r requirements-dev.in
 platformdirs==2.2.0
     # via
