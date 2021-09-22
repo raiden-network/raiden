@@ -25,6 +25,9 @@ nodes:
     pathfinding-max-paths: 5
     pathfinding-max-fee: "{{ pfs_fee }}"
     enable-monitoring: true
+    flat-fee:
+      - "{{ transfer_token }}"
+      - 0
     proportional-fee:
       - "{{ transfer_token }}"
       - 0
