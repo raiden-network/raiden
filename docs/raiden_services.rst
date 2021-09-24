@@ -18,7 +18,7 @@ Pathfinding Services
 
 Pathfinding services have a global view on a token network can provide suitable payment paths for Raiden nodes.
 
-The service will keep its view on the token network updated by listening to blockchain events and a public matrix room where current capacities and fees (Capacity Updates) are being published. Nodes can publish their channel capacities and fees in order to advertise their channels and mediate payments.
+The service will keep its view on the token network updated by listening to blockchain events and messages send from individual nodes in which current capacities and fees are being published. Nodes can voluntarily publish this information in order to advertise their channels and mediate payments.
 
 
 Choosing a Pathfinding Service
