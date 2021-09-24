@@ -10,9 +10,6 @@ Payments and Transfers
     MediatedTransfer
         A mediated transfer is a hashlocked transfer between an initiator and a target propagated through nodes in the network.
 
-    RefundTransfer
-        A refund transfer is a special type of :term:`MediatedTransfer` that is used when a node can no longer propagate a transfer and a routing backtrack needs to be done.
-
     Reveal timeout
         The number of blocks in a channel allowed for learning about a secret being revealed through the blockchain and acting on it.
 
@@ -54,12 +51,12 @@ Payments and Transfers
 
     Locked balance
         The locked balance of a channel participant is the sum of the locked amount for all pending transfers :math:`T_{pending}`.
-        
+
         :math:`B_{locked} = \sum_{k=0}^{N-1} T_{pending}` where :math:`N` is the number of pending transfers
 
     Available balance
-        The available balance of a channel participant is: 
-        
+        The available balance of a channel participant is:
+
         :math:`B_{available} = B_{participant} - B_{locked}`
 
     Balance proof
