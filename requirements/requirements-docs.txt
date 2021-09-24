@@ -65,7 +65,7 @@ sphinxcontrib-devhelp==1.0.2
     # via sphinx
 sphinxcontrib-htmlhelp==2.0.0
     # via sphinx
-sphinxcontrib-httpdomain==1.7.0
+sphinxcontrib-httpdomain==1.8.0
     # via
     #   -r requirements-docs.in
     #   sphinxcontrib-httpexample
