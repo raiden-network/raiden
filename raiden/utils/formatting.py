@@ -1,3 +1,4 @@
+from functools import lru_cache
 from eth_hash.auto import keccak
 from eth_typing import HexStr
 from eth_utils import (
@@ -39,6 +40,7 @@ def address_checksum_and_decode(addr: str) -> Address:
     return to_canonical_address(addr)
 
 
+@lru_cache(maxsize=5000)
 def to_checksum_address(address: AddressTypes) -> ChecksumAddress:
     """Implementation of EIP-55 checksum address.
 

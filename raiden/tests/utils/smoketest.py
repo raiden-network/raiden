@@ -522,7 +522,7 @@ def run_smoketest(print_step: StepPrinter, setup: RaidenTestSetup) -> None:
             partner_address=partner_address,
             total_deposit=TEST_DEPOSIT_AMOUNT,
         )
-        token_addresses = [to_checksum_address(setup.token.address)]  # type: ignore
+        token_addresses = [to_checksum_address(setup.token.address)]
 
         print_step("Running smoketest")
 
