@@ -84,7 +84,9 @@ Routing
 
 At the moment routing in Raiden works in a very simple manner. Each node has a global view of the network knowing the initial capacity of each channel by watching for the deposit events happening on chain. As a result each node keeps a graph of the network but that graph may be outdated due to the capacity changing because of offchain transfers.
 
-Each node tries to forward the transfer through the shortest path with enough capacity to the target. If at some point the transfer can't go through due to the actual capacity not being sufficient or due to the node being offline then a special kind of LockedTransfer called a `Refund Transfer <https://github.com/raiden-network/raiden/blob/38971b372dafb3205cbd3df8cfc3306922a55eac/raiden/messages.py#L1344>`_ will be sent back to the payer, effectively refunding him the transferred amount and allowing him to try another route. This is repeated until either a route is found or we have no other ways to reach the target at which case the Transfer fails.
+For this reason nodes **can** send capacity updates to the pathfinding services. Those collect this information and incorporate it into their network graph. This in turn allows them to compute routes based on the current network state.
+
+For a given payment the node asks the pathfinding service for a set of possible routes. It then tries those in order and if any payment fails, the next on will be tried and the failing one expires eventually.
 
 If the transfer reaches the target and the protocol is followed properly as we saw in the :ref:`happy transfer case <happy-case-transfer-messages>` above then all the pending transfers in the path will be unlocked and the node balances will be updated.
 
@@ -248,7 +250,6 @@ The `Delivered <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401
 The `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`__ message is sent for the following cases (essentially messages containing a BP):
 
 - Succesfully handling a valid unlock (aka Secret) message at both target and mediator.
-- Handling a valid refund transfer message
 - Handling a valid lock expired message
 - Handling a valid locked transfer message
 
