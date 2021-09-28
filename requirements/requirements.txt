@@ -112,7 +112,7 @@ eth-utils==1.10.0
     #   raiden-contracts
     #   rlp
     #   web3
-filelock==3.0.12
+filelock==3.1.0
     # via -r requirements.in
 flask==2.0.1
     # via
@@ -144,10 +144,6 @@ idna==2.8
     # via
     #   requests
     #   yarl
-importlib-metadata==4.8.1
-    # via
-    #   click
-    #   jsonschema
 ipfshttpclient==0.8.0a2
     # via web3
 itsdangerous==2.0.1
@@ -270,10 +266,6 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements.in
     #   aiohttp
-    #   importlib-metadata
-    #   structlog
-    #   web3
-    #   yarl
 typing-inspect==0.4.0
     # via marshmallow-dataclass
 ulid-py==1.1.0
@@ -292,8 +284,6 @@ werkzeug==2.0.1
     # via flask
 yarl==1.6.3
     # via aiohttp
-zipp==3.5.0
-    # via importlib-metadata
 zope.event==4.4
     # via gevent
 zope.interface==5.1.0
