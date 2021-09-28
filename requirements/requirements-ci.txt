@@ -636,7 +636,7 @@ rlp==2.0.1
     #   eth-account
     #   eth-rlp
     #   raiden-contracts
-s3cmd==2.1.0
+s3cmd==2.2.0
     # via -r requirements-ci.in
 semantic-version==2.8.5
     # via
