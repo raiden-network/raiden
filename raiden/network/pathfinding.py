@@ -18,6 +18,7 @@ from web3 import Web3
 from raiden.constants import (
     DEFAULT_HTTP_REQUEST_TIMEOUT,
     MATRIX_AUTO_SELECT_SERVER,
+    PFS_PATHS_REQUEST_TIMEOUT,
     ZERO_TOKENS,
     RoutingMode,
 )
@@ -505,7 +506,9 @@ def post_pfs_paths(
 ) -> Tuple[List[Dict[str, Any]], UUID]:
     try:
         response = session.post(
-            f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths", json=payload
+            f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths",
+            json=payload,
+            timeout=PFS_PATHS_REQUEST_TIMEOUT,
         )
     except RequestException as e:
         raise ServiceRequestFailed(

@@ -245,3 +245,6 @@ class CommunicationMedium(Enum):
 class MatrixMessageType(Enum):
     TEXT = "m.text"
     NOTICE = "m.notice"
+
+
+PFS_PATHS_REQUEST_TIMEOUT = 90
