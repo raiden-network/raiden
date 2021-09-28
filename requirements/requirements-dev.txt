@@ -286,7 +286,7 @@ ipfshttpclient==0.8.0a2
     # via
     #   -r requirements.txt
     #   web3
-ipython==7.27.0
+ipython==7.28.0
     # via -r requirements-dev.in
 ipython-genutils==0.2.0
     # via traitlets
