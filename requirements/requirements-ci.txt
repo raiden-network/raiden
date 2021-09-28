@@ -174,7 +174,7 @@ eth-abi==2.1.0
     #   eth-account
     #   raiden-contracts
     #   web3
-eth-account==0.5.5
+eth-account==0.5.6
     # via
     #   -r requirements-dev.txt
     #   web3
@@ -789,7 +789,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.23.1
+web3==5.24.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
