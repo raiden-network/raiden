@@ -1,4 +1,5 @@
 import gevent
+import opentracing
 import structlog
 from eth_utils import is_binary_address
 
@@ -246,7 +247,8 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(partner_address):
             raise InvalidBinaryAddress("Expected binary address format for partner in get_channel")
 
-        channel_list = self.get_channel_list(registry_address, token_address, partner_address)
+        with opentracing.tracer.start_span("get_channel"):
+            channel_list = self.get_channel_list(registry_address, token_address, partner_address)
         msg = f"Found {len(channel_list)} channels, but expected 0 or 1."
         assert len(channel_list) <= 1, msg
 
@@ -1021,12 +1023,13 @@ class RaidenAPI:  # pragma: no unittest
                 raise UnknownTokenAddress("Provided a partner address but no token address")
 
         if token_address and partner_address:
-            channel_state = views.get_channelstate_for(
-                chain_state=views.state_from_raiden(self.raiden),
-                token_network_registry_address=registry_address,
-                token_address=token_address,
-                partner_address=partner_address,
-            )
+            with opentracing.tracer.start_span("get_channel_list"):
+                channel_state = views.get_channelstate_for(
+                    chain_state=views.state_from_raiden(self.raiden),
+                    token_network_registry_address=registry_address,
+                    token_address=token_address,
+                    partner_address=partner_address,
+                )
 
             if channel_state:
                 result = [channel_state]
@@ -1034,11 +1037,12 @@ class RaidenAPI:  # pragma: no unittest
                 result = []
 
         elif token_address:
-            result = views.list_channelstate_for_tokennetwork(
-                chain_state=views.state_from_raiden(self.raiden),
-                token_network_registry_address=registry_address,
-                token_address=token_address,
-            )
+            with opentracing.tracer.start_span("get_token_network"):
+                result = views.list_channelstate_for_tokennetwork(
+                    chain_state=views.state_from_raiden(self.raiden),
+                    token_network_registry_address=registry_address,
+                    token_address=token_address,
+                )
 
         else:
             result = views.list_all_channelstate(chain_state=views.state_from_raiden(self.raiden))
@@ -1083,18 +1087,19 @@ class RaidenAPI:  # pragma: no unittest
         """Do a transfer with `target` with the given `amount` of `token_address`."""
         # pylint: disable=too-many-arguments
 
-        payment_status = self.transfer_async(
-            registry_address=registry_address,
-            token_address=token_address,
-            amount=amount,
-            target=target,
-            identifier=identifier,
-            secret=secret,
-            secrethash=secrethash,
-            lock_timeout=lock_timeout,
-            route_states=route_states,
-        )
-        payment_status.payment_done.wait(timeout=transfer_timeout)
+        with opentracing.tracer.start_span("transfer_and_wait"):
+            payment_status = self.transfer_async(
+                registry_address=registry_address,
+                token_address=token_address,
+                amount=amount,
+                target=target,
+                identifier=identifier,
+                secret=secret,
+                secrethash=secrethash,
+                lock_timeout=lock_timeout,
+                route_states=route_states,
+            )
+            payment_status.payment_done.wait(timeout=transfer_timeout)
         return payment_status
 
     def transfer_async(
@@ -1175,16 +1180,17 @@ class RaidenAPI:  # pragma: no unittest
                 f"with the network {to_checksum_address(registry_address)}."
             )
 
-        payment_status = self.raiden.mediated_transfer_async(
-            token_network_address=token_network_address,
-            amount=amount,
-            target=target,
-            identifier=identifier,
-            secret=secret,
-            secrethash=secrethash,
-            lock_timeout=lock_timeout,
-            route_states=route_states,
-        )
+        with opentracing.tracer.start_span("mediated_transfer_async"):
+            payment_status = self.raiden.mediated_transfer_async(
+                token_network_address=token_network_address,
+                amount=amount,
+                target=target,
+                identifier=identifier,
+                secret=secret,
+                secrethash=secrethash,
+                lock_timeout=lock_timeout,
+                route_states=route_states,
+            )
         return payment_status
 
     def get_raiden_events_payment_history_with_timestamps(

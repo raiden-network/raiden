@@ -443,6 +443,12 @@ OPTIONS = [
             default=True,
             show_default=True,
         ),
+        option(
+            "--enable-tracing",
+            help=("Enable Jaeger tracing logs."),
+            default=False,
+            show_default=True,
+        ),
     ),
     option_group(
         "Debugging options",

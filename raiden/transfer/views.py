@@ -1,3 +1,5 @@
+import opentracing
+
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -42,14 +44,14 @@ def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
     have a channel open with this one.
     """
     addresses = set()
-
-    for token_network_registry in chain_state.identifiers_to_tokennetworkregistries.values():
-        for (
-            token_network
-        ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
-            channel_states = token_network.channelidentifiers_to_channels.values()
-            for channel_state in channel_states:
-                addresses.add(channel_state.partner_state.address)
+    with opentracing.tracer.start_span("get_neighbour_nodes"):
+        for token_network_registry in chain_state.identifiers_to_tokennetworkregistries.values():
+            for (
+                token_network
+            ) in token_network_registry.tokennetworkaddresses_to_tokennetworks.values():
+                channel_states = token_network.channelidentifiers_to_channels.values()
+                for channel_state in channel_states:
+                    addresses.add(channel_state.partner_state.address)
 
     return addresses
 
@@ -88,15 +90,16 @@ def get_participants_addresses(
     token_network_registry_address: TokenNetworkRegistryAddress,
     token_address: TokenAddress,
 ) -> Set[Address]:
-    token_network = get_token_network_by_token_address(
-        chain_state, token_network_registry_address, token_address
-    )
+    with opentracing.tracer.start_span("get_participants_addresses"):
+        token_network = get_token_network_by_token_address(
+            chain_state, token_network_registry_address, token_address
+        )
 
-    addresses = set()
-    if token_network is not None:
-        for channel_state in token_network.channelidentifiers_to_channels.values():
-            addresses.add(channel_state.partner_state.address)
-            addresses.add(channel_state.our_state.address)
+        addresses = set()
+        if token_network is not None:
+            for channel_state in token_network.channelidentifiers_to_channels.values():
+                addresses.add(channel_state.partner_state.address)
+                addresses.add(channel_state.our_state.address)
 
     return addresses
 
