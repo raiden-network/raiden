@@ -7,11 +7,13 @@ from typing import Type
 
 import gevent
 import gevent.pool
+import opentracing
 import structlog
 from eth_utils import encode_hex
 from flask import Flask, Response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
+from flask_opentracing import FlaskTracing
 from flask_restful import Api
 from gevent.event import Event
 from gevent.pywsgi import WSGIServer
@@ -254,7 +256,11 @@ class APIServer(Runnable):  # pragma: no unittest
     _api_prefix = "/api/1"
 
     def __init__(
-        self, rest_api: "RestAPI", config: RestApiConfig, eth_rpc_endpoint: str = None
+        self,
+        rest_api: "RestAPI",
+        config: RestApiConfig,
+        eth_rpc_endpoint: str = None,
+        enable_tracing: bool = False,
     ) -> None:
         super().__init__()
         if rest_api.version != 1:
@@ -264,6 +270,9 @@ class APIServer(Runnable):  # pragma: no unittest
         flask_app = Flask(__name__)
         if config.cors_domain_list:
             CORS(flask_app, origins=config.cors_domain_list)
+
+        if enable_tracing:
+            FlaskTracing(opentracing.tracer, trace_all_requests=True, app=flask_app)
 
         if eth_rpc_endpoint:
             if not eth_rpc_endpoint.startswith("http"):

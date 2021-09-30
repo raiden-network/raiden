@@ -161,10 +161,18 @@ def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> URI:
 
 
 def start_api_server(
-    rpc_client: JSONRPCClient, config: RestApiConfig, eth_rpc_endpoint: str
+    rpc_client: JSONRPCClient,
+    config: RestApiConfig,
+    eth_rpc_endpoint: str,
+    enable_tracing: bool = False,
 ) -> APIServer:
     api = RestAPI(rpc_client=rpc_client)
-    api_server = APIServer(rest_api=api, config=config, eth_rpc_endpoint=eth_rpc_endpoint)
+    api_server = APIServer(
+        rest_api=api,
+        config=config,
+        eth_rpc_endpoint=eth_rpc_endpoint,
+        enable_tracing=enable_tracing,
+    )
     api_server.start()
 
     url = f"http://{config.host}:{config.port}/"
@@ -287,6 +295,7 @@ def run_raiden_service(
     datadir: Optional[str],
     pathfinding_service_address: str,
     routing_mode: RoutingMode,
+    enable_tracing: bool = False,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ) -> RaidenService:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -344,6 +353,7 @@ def run_raiden_service(
             rpc_client=rpc_client,
             config=config.rest_api,
             eth_rpc_endpoint=config.rest_api.eth_rpc_endpoint,
+            enable_tracing=enable_tracing,
         )
 
     if sync_check:
