@@ -13,6 +13,8 @@ from typing import Any, AnyStr, Callable, List, Optional
 import click
 import filelock
 import structlog
+from jaeger_client import Config
+from opentracing.scope_managers.gevent import GeventScopeManager
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
 from urllib3.exceptions import ReadTimeoutError
 
@@ -446,7 +448,7 @@ OPTIONS = [
         option(
             "--enable-tracing",
             help=("Enable Jaeger tracing logs."),
-            default=False,
+            is_flag=True,
             show_default=True,
         ),
     ),
@@ -719,6 +721,20 @@ def _run(ctx: Context, **kwargs: Any) -> None:
                 "disclaimer and privacy warning?",
                 abort=True,
             )
+
+        enable_tracing = kwargs["enable_tracing"]
+        if enable_tracing:
+            tracing_config = Config(
+                config={
+                    "sampler": {"type": "static", "param": "1"},
+                    "logging": True,
+                },
+                service_name="raide_client",
+                scope_manager=GeventScopeManager(),
+                validate=True,
+            )
+            # Tracer is stored in `opentracing.tracer`
+            tracing_config.initialize_tracer()
 
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did

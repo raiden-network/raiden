@@ -260,7 +260,6 @@ class APIServer(Runnable):  # pragma: no unittest
         rest_api: "RestAPI",
         config: RestApiConfig,
         eth_rpc_endpoint: str = None,
-        enable_tracing: bool = False,
     ) -> None:
         super().__init__()
         if rest_api.version != 1:
@@ -271,7 +270,7 @@ class APIServer(Runnable):  # pragma: no unittest
         if config.cors_domain_list:
             CORS(flask_app, origins=config.cors_domain_list)
 
-        if enable_tracing:
+        if config.enable_tracing:
             FlaskTracing(opentracing.tracer, trace_all_requests=True, app=flask_app)
 
         if eth_rpc_endpoint:

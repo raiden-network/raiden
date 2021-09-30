@@ -247,7 +247,7 @@ class RaidenAPI:  # pragma: no unittest
         if not is_binary_address(partner_address):
             raise InvalidBinaryAddress("Expected binary address format for partner in get_channel")
 
-        with opentracing.tracer.start_span("get_channel"):
+        with opentracing.tracer.start_span("get_channel_list"):
             channel_list = self.get_channel_list(registry_address, token_address, partner_address)
         msg = f"Found {len(channel_list)} channels, but expected 0 or 1."
         assert len(channel_list) <= 1, msg
@@ -1023,7 +1023,7 @@ class RaidenAPI:  # pragma: no unittest
                 raise UnknownTokenAddress("Provided a partner address but no token address")
 
         if token_address and partner_address:
-            with opentracing.tracer.start_span("get_channel_list"):
+            with opentracing.tracer.start_span("get_channel_state_for"):
                 channel_state = views.get_channelstate_for(
                     chain_state=views.state_from_raiden(self.raiden),
                     token_network_registry_address=registry_address,
@@ -1037,7 +1037,7 @@ class RaidenAPI:  # pragma: no unittest
                 result = []
 
         elif token_address:
-            with opentracing.tracer.start_span("get_token_network"):
+            with opentracing.tracer.start_span("get_channel_state_for_token_network"):
                 result = views.list_channelstate_for_tokennetwork(
                     chain_state=views.state_from_raiden(self.raiden),
                     token_network_registry_address=registry_address,

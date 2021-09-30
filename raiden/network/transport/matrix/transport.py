@@ -65,6 +65,7 @@ from raiden.utils.formatting import to_checksum_address
 from raiden.utils.logging import redact_secret
 from raiden.utils.runnable import Runnable
 from raiden.utils.system import get_system_spec
+from raiden.utils.tracing import matrix_client_enable_requests_tracing
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
@@ -356,7 +357,12 @@ class _RetryQueue(Runnable):
 class MatrixTransport(Runnable):
     log = log
 
-    def __init__(self, config: MatrixTransportConfig, environment: Environment) -> None:
+    def __init__(
+        self,
+        config: MatrixTransportConfig,
+        environment: Environment,
+        enable_tracing: Optional[bool] = False,
+    ) -> None:
         super().__init__()
         self._uuid = uuid4()
         self._config = config
@@ -392,6 +398,9 @@ class MatrixTransport(Runnable):
             environment=environment,
             user_agent=f"Raiden {version}",
         )
+
+        if enable_tracing:
+            matrix_client_enable_requests_tracing(self._client)
 
         self.server_url = self._client.api.base_url
         self._server_name = urlparse(self.server_url).netloc
