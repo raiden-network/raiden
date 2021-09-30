@@ -164,14 +164,12 @@ def start_api_server(
     rpc_client: JSONRPCClient,
     config: RestApiConfig,
     eth_rpc_endpoint: str,
-    enable_tracing: bool = False,
 ) -> APIServer:
     api = RestAPI(rpc_client=rpc_client)
     api_server = APIServer(
         rest_api=api,
         config=config,
         eth_rpc_endpoint=eth_rpc_endpoint,
-        enable_tracing=enable_tracing,
     )
     api_server.start()
 
@@ -207,6 +205,7 @@ def setup_raiden_config(
     proportional_imbalance_fee: Tuple[Tuple[TokenAddress, ProportionalFeeAmount], ...],
     blockchain_query_interval: float,
     cap_mediation_fees: bool,
+    enable_tracing: bool,
     **kwargs: Any,
 ) -> RaidenConfig:
     """
@@ -243,6 +242,7 @@ def setup_raiden_config(
         eth_rpc_endpoint=eth_rpc_endpoint,
         host=api_host,
         port=api_port,
+        enable_tracing=enable_tracing,
     )
 
     minimum_reveal_timeout = get_min_reveal_timeout(chain_id)
@@ -275,6 +275,7 @@ def setup_raiden_config(
         resolver_endpoint=resolver_endpoint,
         rest_api=rest_api_config,
         python_api=python_api_config,
+        enable_tracing=enable_tracing,
     )
     config.blockchain.query_interval = blockchain_query_interval
     config.services.monitoring_enabled = enable_monitoring
@@ -295,7 +296,6 @@ def run_raiden_service(
     datadir: Optional[str],
     pathfinding_service_address: str,
     routing_mode: RoutingMode,
-    enable_tracing: bool = False,
     **kwargs: Any,  # FIXME: not used here, but still receives stuff in smoketest
 ) -> RaidenService:
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
@@ -353,7 +353,6 @@ def run_raiden_service(
             rpc_client=rpc_client,
             config=config.rest_api,
             eth_rpc_endpoint=config.rest_api.eth_rpc_endpoint,
-            enable_tracing=enable_tracing,
         )
 
     if sync_check:
@@ -424,7 +423,9 @@ def run_raiden_service(
     )
 
     matrix_transport = MatrixTransport(
-        config=config.transport, environment=config.environment_type
+        config=config.transport,
+        environment=config.environment_type,
+        enable_tracing=config.enable_tracing,
     )
 
     event_handler: EventHandler = RaidenEventHandler()

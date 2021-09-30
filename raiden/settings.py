@@ -186,6 +186,7 @@ class RestApiConfig:
 
     host: Optional[Host] = None
     port: Optional[Port] = None
+    enable_tracing: bool = False
 
 
 @dataclass
@@ -231,3 +232,4 @@ class RaidenConfig:
     resolver_endpoint: Optional[str] = None
 
     pfs_config: Optional[PFSConfig] = None
+    enable_tracing: Optional[bool] = False

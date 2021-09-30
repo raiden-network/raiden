@@ -37,7 +37,7 @@ web3
 typing_extensions
 objgraph
 ulid-py
-jaeger-client==4.8.0
-dbapi-opentracing==0.0.5
-Flask-Opentracing==1.1.0
-requests-opentracing==0.3.0
+jaeger-client
+dbapi-opentracing
+Flask-Opentracing
+requests-opentracing
