@@ -262,7 +262,7 @@ def configure_pfs_or_exit(
     If pfs_url is 'auto' then we randomly choose a PFS address from the registry
     """
     msg = "Invalid code path; configure_pfs needs routing mode PFS"
-    assert routing_mode == RoutingMode.PFS, msg
+    assert routing_mode is RoutingMode.PFS, msg
 
     msg = "With PFS routing mode we shouldn't get to configure_pfs with pfs_address being None"
     assert pfs_url, msg
@@ -302,7 +302,7 @@ def configure_pfs_or_exit(
             f"Raiden will shut down. Please try a different Pathfinding Service."
         )
 
-    if not node_chain_id == pathfinding_service_info.chain_id:
+    if node_chain_id != pathfinding_service_info.chain_id:
         raise RaidenError(
             f"Invalid reply from Pathfinding Service {pfs_url}\n"
             f"Pathfinding Service is not operating on the same network "
