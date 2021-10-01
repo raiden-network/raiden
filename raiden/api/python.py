@@ -1092,7 +1092,8 @@ class RaidenAPI:  # pragma: no unittest
 
         with opentracing.tracer.start_span("transfer_and_wait") as span:
             span.set_tag("token_address", to_checksum_address(token_address))
-            span.set_tag("target", to_checksum_address(target))
+            if isinstance(target, bytes):
+                span.set_tag("target", to_checksum_address(target))
             span.set_tag("payment_identifier", identifier)
             payment_status = self.transfer_async(
                 registry_address=registry_address,
