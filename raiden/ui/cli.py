@@ -16,6 +16,7 @@ import structlog
 from jaeger_client import Config
 from opentracing.scope_managers.gevent import GeventScopeManager
 from requests.exceptions import ConnectionError as RequestsConnectionError, ConnectTimeout
+from tornado.ioloop import IOLoop
 from urllib3.exceptions import ReadTimeoutError
 
 from raiden.accounts import KeystoreAuthenticationError, KeystoreFileNotFound
@@ -71,6 +72,7 @@ from raiden.utils.cli import (
 from raiden.utils.debugging import IDLE, enable_monitoring_signal
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.system import get_system_spec
+from raiden.utils.tracing import enable_pfs_request_tracing
 from raiden.utils.typing import MYPY_ANNOTATION, ChainID
 from raiden_contracts.constants import ID_TO_CHAINNAME
 from raiden_contracts.contract_manager import ContractDevEnvironment
@@ -726,15 +728,21 @@ def _run(ctx: Context, **kwargs: Any) -> None:
         if enable_tracing:
             tracing_config = Config(
                 config={
-                    "sampler": {"type": "static", "param": "1"},
+                    "sampler": {"type": "const", "param": "1"},
                     "logging": True,
+                    "tags": {
+                        "raiden.client.version": get_version(short=True),
+                        "raiden.client.type": "Python",
+                    },
                 },
-                service_name="raide_client",
+                service_name="raiden_client",
                 scope_manager=GeventScopeManager(),
                 validate=True,
             )
             # Tracer is stored in `opentracing.tracer`
-            tracing_config.initialize_tracer()
+            tracing_config.initialize_tracer(io_loop=IOLoop.current())
+
+            enable_pfs_request_tracing()
 
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did

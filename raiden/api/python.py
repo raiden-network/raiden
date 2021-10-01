@@ -1023,7 +1023,9 @@ class RaidenAPI:  # pragma: no unittest
                 raise UnknownTokenAddress("Provided a partner address but no token address")
 
         if token_address and partner_address:
-            with opentracing.tracer.start_span("get_channel_state_for"):
+            with opentracing.tracer.start_span("get_channelstate_for") as span:
+                span.set_tag("token_address", to_checksum_address(token_address))
+                span.set_tag("partner_address", to_checksum_address(partner_address))
                 channel_state = views.get_channelstate_for(
                     chain_state=views.state_from_raiden(self.raiden),
                     token_network_registry_address=registry_address,
@@ -1037,7 +1039,8 @@ class RaidenAPI:  # pragma: no unittest
                 result = []
 
         elif token_address:
-            with opentracing.tracer.start_span("get_channel_state_for_token_network"):
+            with opentracing.tracer.start_span("list_channelstate_for_tokennetwork") as span:
+                span.set_tag("token_address", to_checksum_address(token_address))
                 result = views.list_channelstate_for_tokennetwork(
                     chain_state=views.state_from_raiden(self.raiden),
                     token_network_registry_address=registry_address,
@@ -1087,7 +1090,10 @@ class RaidenAPI:  # pragma: no unittest
         """Do a transfer with `target` with the given `amount` of `token_address`."""
         # pylint: disable=too-many-arguments
 
-        with opentracing.tracer.start_span("transfer_and_wait"):
+        with opentracing.tracer.start_span("transfer_and_wait") as span:
+            span.set_tag("token_address", to_checksum_address(token_address))
+            span.set_tag("target", to_checksum_address(target))
+            span.set_tag("payment_identifier", identifier)
             payment_status = self.transfer_async(
                 registry_address=registry_address,
                 token_address=token_address,

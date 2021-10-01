@@ -1082,7 +1082,7 @@ def _query_metadata(pfs_proxy: PFSProxy, address: Address) -> Optional[AddressMe
     try:
         metadata = pfs_proxy.query_address_metadata(address)
     except Exception as e:
-        log.error(str(e))
+        log.warning("Can't query metadata", reason=str(e))
     else:
         return metadata
     return None
