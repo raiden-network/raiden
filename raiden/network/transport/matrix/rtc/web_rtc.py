@@ -314,6 +314,8 @@ class _RTCConnection(_TaskHandler):
                 time=time.time(),
             )
             self._channel.send(message)
+            # pylint: disable=no-member
+            sent_info = self.peer_connection.sctp.get_sent_info(message)
 
             try:
                 # empty outbound queue by transmitting chunks
@@ -326,6 +328,25 @@ class _RTCConnection(_TaskHandler):
                 self.log.debug("Connection error occurred while trying to send message")
                 self.close()
                 return
+
+            if sent_info is not None:
+                await sent_info.success_event.wait()
+                msg = "Queue time not set"
+                assert sent_info.outbound_queue_time is not None, msg
+                assert sent_info.channel_queue_time is not None, msg
+                channel_queue_time = sent_info.outbound_queue_time - sent_info.channel_queue_time
+                outbound_queue_time = sent_info.sent_time - sent_info.outbound_queue_time
+                total_time = channel_queue_time + outbound_queue_time
+
+                log.debug(
+                    "Message handed over to transport",
+                    message=message,
+                    total_time=f"{total_time:.20f}",
+                    channel_queue_time=f"{channel_queue_time:.20f}",
+                    outbound_queue_time=f"{outbound_queue_time:.20f}",
+                )
+                # pylint: disable=no-member
+                self.peer_connection.sctp.del_sent_info(message)
         else:
             self.log.debug(
                 "Channel is not open but trying to send a message.",
