@@ -533,7 +533,7 @@ raiden-contracts==0.40.0rc0
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
-readme-renderer==29.0
+readme-renderer==30.0
     # via -r requirements-dev.in
 regex==2020.6.8
     # via black
@@ -594,7 +594,6 @@ six==1.16.0
     #   pyopenssl
     #   pyrsistent
     #   python-dateutil
-    #   readme-renderer
     #   responses
     #   thrift
     #   traitlets
