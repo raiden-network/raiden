@@ -120,7 +120,7 @@ colour==0.1.5
     # via -r requirements-dev.in
 constantly==15.1.0
     # via twisted
-coverage==5.5
+coverage==6.0.1
     # via -r requirements-dev.in
 cryptography==3.4.7
     # via
