@@ -755,7 +755,7 @@ typeguard==2.11.1
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
-types-cachetools==4.2.0
+types-cachetools==4.2.2
     # via -r requirements-dev.txt
 types-click==7.1.1
     # via
