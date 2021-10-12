@@ -281,7 +281,7 @@ greenlet==0.4.17
     #   gevent
 grequests==0.6.0
     # via -r requirements-dev.txt
-guppy3==3.1.1
+guppy3==3.1.2
     # via -r requirements-dev.txt
 hexbytes==0.2.0
     # via
@@ -755,7 +755,7 @@ typeguard==2.11.1
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
-types-cachetools==4.2.2
+types-cachetools==4.2.3
     # via -r requirements-dev.txt
 types-click==7.1.1
     # via
