@@ -168,9 +168,16 @@ def get_safe_initial_expiration(
     than blockchain.
     """
     if lock_timeout:
-        return BlockExpiration(block_number + lock_timeout)
+        expiration = block_number + lock_timeout
+    else:
+        expiration = block_number + reveal_timeout * 2
 
-    return BlockExpiration(block_number + reveal_timeout * 2)
+    # Other nodes may not see the same block we do, so allow for a difference
+    # of 1 block. A mediator node can fail to use an open channel if the lock
+    # timeout is greater than the settle timeout due to different blocks being
+    # seen between nodes. This delays mediation for at least one block time
+    # and therefore increases payment time.
+    return BlockExpiration(expiration - 1)
 
 
 def get_sender_expiration_threshold(expiration: BlockExpiration) -> BlockExpiration:
