@@ -277,6 +277,8 @@ idna==2.8
     #   requests
     #   twisted
     #   yarl
+ijson==3.1.4
+    # via matrix-synapse
 importlib-metadata==4.8.1
     # via pluggy
 incremental==17.5.0
@@ -341,7 +343,7 @@ matplotlib-inline==0.1.2
     # via ipython
 matrix-client==0.3.2
     # via -r requirements.txt
-matrix-synapse==1.33.0
+matrix-synapse==1.41.1
     # via -r requirements-dev.in
 mccabe==0.6.1
     # via
