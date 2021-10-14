@@ -119,7 +119,7 @@ charset-normalizer==2.0.2
     # via
     #   -r requirements-dev.txt
     #   requests
-click==8.0.1
+click==8.0.3
     # via
     #   -r requirements-dev.txt
     #   black
