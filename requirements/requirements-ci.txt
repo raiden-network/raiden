@@ -119,7 +119,7 @@ charset-normalizer==2.0.2
     # via
     #   -r requirements-dev.txt
     #   requests
-click==8.0.1
+click==8.0.3
     # via
     #   -r requirements-dev.txt
     #   black
@@ -224,7 +224,7 @@ execnet==1.6.0
     # via
     #   -r requirements-dev.txt
     #   pytest-xdist
-faker==9.2.0
+faker==9.3.1
     # via -r requirements-dev.txt
 fancycompleter==0.8
     # via
