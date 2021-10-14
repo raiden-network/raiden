@@ -111,7 +111,7 @@ class MediationFeeConfig:
     token_to_proportional_imbalance_fee: Dict[TokenAddress, ProportionalFeeAmount] = field(
         default_factory=dict
     )
-    cap_meditation_fees: bool = True
+    cap_mediation_fees: bool = True
 
     def get_flat_fee(self, token_address: TokenAddress) -> FeeAmount:
         return self.token_to_flat_fee.get(  # pylint: disable=no-member
