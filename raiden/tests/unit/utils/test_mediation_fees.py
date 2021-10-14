@@ -37,7 +37,7 @@ def test_prepare_mediation_fee_config_flat_fee(cli_flat_fee, expected_channel_fl
     )
 
     assert fee_config.get_flat_fee(token_address) == expected_channel_flat_fee
-    assert fee_config.cap_meditation_fees is False
+    assert fee_config.cap_mediation_fees is False
 
 
 @pytest.mark.parametrize(

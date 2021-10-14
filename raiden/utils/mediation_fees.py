@@ -54,5 +54,5 @@ def prepare_mediation_fee_config(
         token_to_flat_fee=tn_to_flat_fee,
         token_to_proportional_fee=tn_to_proportional_fee,
         token_to_proportional_imbalance_fee=tn_to_proportional_imbalance_fee,
-        cap_meditation_fees=cli_cap_mediation_fees,
+        cap_mediation_fees=cli_cap_mediation_fees,
     )

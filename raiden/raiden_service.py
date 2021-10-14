@@ -1462,7 +1462,7 @@ class RaidenService(Runnable):
                 log.info(
                     "Updating channel fees",
                     channel=channel.canonical_identifier,
-                    cap_mediation_fees=fee_config.cap_meditation_fees,
+                    cap_mediation_fees=fee_config.cap_mediation_fees,
                     flat_fee=flat_fee,
                     proportional_fee=proportional_fee,
                     proportional_imbalance_fee=proportional_imbalance_fee,
@@ -1472,7 +1472,7 @@ class RaidenService(Runnable):
                     proportional_imbalance_fee=proportional_imbalance_fee,
                 )
                 channel.fee_schedule = FeeScheduleState(
-                    cap_fees=fee_config.cap_meditation_fees,
+                    cap_fees=fee_config.cap_mediation_fees,
                     flat=flat_fee,
                     proportional=proportional_fee,
                     imbalance_penalty=imbalance_penalty,
