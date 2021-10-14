@@ -647,6 +647,72 @@ def test_batch_unlock(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("reveal_timeout", [10])
+def test_register_secret(
+    raiden_network: List[RaidenService],
+    token_addresses: List[TokenAddress],
+    secret_registry_address: SecretRegistryAddress,
+) -> None:
+    """Tests that the secret is automatically registered on-chain.
+
+    This test will start a single incomplete transfer, then wait for the Raiden
+    client to reveal secret will be revealed *on-chain* in time.
+    """
+    # Setup
+    alice_app, bob_app = raiden_network
+    bob_address = bob_app.address
+
+    token_network_registry_address = alice_app.default_registry.address
+    token_address = token_addresses[0]
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_raiden(alice_app), token_network_registry_address, token_address
+    )
+    assert token_network_address
+
+    hold_event_handler = alice_app.raiden_event_handler
+    assert isinstance(hold_event_handler, HoldRaidenEventHandler)
+
+    canonical_identifier = get_channelstate(
+        alice_app, bob_app, token_network_address
+    ).canonical_identifier
+
+    assert is_channel_registered(alice_app, bob_app, canonical_identifier)
+    assert is_channel_registered(bob_app, alice_app, canonical_identifier)
+
+    secret = Secret(keccak(bob_address))
+    secrethash = sha256_secrethash(secret)
+
+    # Send payment while holding Unlock message
+    unlock_event = hold_event_handler.hold_unlock_for(secrethash=secrethash)
+    alice_app.mediated_transfer_async(
+        token_network_address=token_network_address,
+        amount=PaymentAmount(10),
+        target=TargetAddress(bob_address),
+        identifier=PaymentID(1),
+        secret=secret,
+        route_states=[create_route_state_for_route([alice_app, bob_app], token_address)],
+    )
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
+    lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
+    assert lock
+    unlock_event.get()  # wait for the messages to be exchanged
+
+    # Check result
+    secret_registry_proxy = alice_app.proxy_manager.secret_registry(
+        secret_registry_address, block_identifier=BLOCK_ID_LATEST
+    )
+    registered_block = waiting.wait_until(
+        lambda: secret_registry_proxy.get_secret_registration_block_by_secrethash(
+            secrethash=secrethash, block_identifier=BLOCK_ID_LATEST
+        ),
+        wait_for=30,
+    )
+    assert registered_block, "Secret must be registered on-chain!"
+    assert registered_block < lock.expiration, "Secret must be registered before lock times out."
+
+
+@raise_on_failure
+@pytest.mark.parametrize("number_of_nodes", [2])
 def test_channel_withdraw(
     raiden_network: List[RaidenService],
     token_addresses: List[TokenAddress],
