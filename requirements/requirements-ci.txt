@@ -139,7 +139,7 @@ constantly==15.1.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-coverage==6.0.1
+coverage==6.0.2
     # via -r requirements-dev.txt
 cryptography==3.4.7
     # via
@@ -240,7 +240,7 @@ flake8==3.9.2
     #   flake8-tuple
 flake8-bugbear==21.9.2
     # via -r requirements-dev.txt
-flake8-comprehensions==3.6.1
+flake8-comprehensions==3.7.0
     # via -r requirements-dev.txt
 flake8-tuple==0.4.1
     # via -r requirements-dev.txt
