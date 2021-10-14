@@ -647,7 +647,7 @@ def test_batch_unlock(
 
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
-@pytest.mark.parametrize("reveal_timeout", [10])
+@pytest.mark.parametrize("reveal_timeout", [8])
 def test_register_secret(
     raiden_network: List[RaidenService],
     token_addresses: List[TokenAddress],
@@ -655,8 +655,9 @@ def test_register_secret(
 ) -> None:
     """Tests that the secret is automatically registered on-chain.
 
-    This test will start a single incomplete transfer, then wait for the Raiden
-    client to reveal secret will be revealed *on-chain* in time.
+    This test will start a single incomplete transfer, wait for the Raiden
+    client to reveal the secret *on-chain* and then check that it did so in
+    time.
     """
     # Setup
     alice_app, bob_app = raiden_network
@@ -667,7 +668,7 @@ def test_register_secret(
     token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(alice_app), token_network_registry_address, token_address
     )
-    assert token_network_address
+    assert token_network_address is not None
 
     hold_event_handler = alice_app.raiden_event_handler
     assert isinstance(hold_event_handler, HoldRaidenEventHandler)
@@ -694,7 +695,7 @@ def test_register_secret(
     )
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
-    assert lock
+    assert lock is not None
     unlock_event.get()  # wait for the messages to be exchanged
 
     # Check result
@@ -707,7 +708,7 @@ def test_register_secret(
         ),
         wait_for=30,
     )
-    assert registered_block, "Secret must be registered on-chain!"
+    assert registered_block is not None, "Secret must be registered on-chain!"
     assert registered_block < lock.expiration, "Secret must be registered before lock times out."
 
 
