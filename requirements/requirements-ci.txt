@@ -779,7 +779,7 @@ types-pyyaml==5.4.11
     # via -r requirements-dev.txt
 types-requests==2.25.10
     # via -r requirements-dev.txt
-types-toml==0.10.0
+types-toml==0.10.1
     # via -r requirements-dev.txt
 types-werkzeug==1.0.1
     # via
