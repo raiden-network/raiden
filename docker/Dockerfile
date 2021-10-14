@@ -8,7 +8,7 @@
 #
 #   docker build . -t raiden
 
-FROM python:3.7 as builder
+FROM python:3.9 as builder
 
 # use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
 ARG REPO=raiden-network/raiden
@@ -29,7 +29,7 @@ WORKDIR /app/raiden
 RUN make install
 
 
-FROM python:3.7-slim as runner
+FROM python:3.9-slim as runner
 
 COPY --from=builder /opt/venv /opt/venv
 
