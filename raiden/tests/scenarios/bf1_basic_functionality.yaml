@@ -255,8 +255,8 @@ scenario:
                 event_args: {closing_participant: 3}
 
             ## Monitored channel must be settled before the monitoring service can claim its reward.
-            ## To make sure the transactions gets mined in time, 5 additional blocks are added
+            ## To make sure the transactions gets mined in time, 20 additional blocks are added
             ## Monitoring Service only reacts for the second closing because node4 settled to first
             ## channel itself
-            - wait_blocks: 5
+            - wait_blocks: 20
             - assert_ms_claim: {channel_info_key: "MS Test Channel 3-4"}
