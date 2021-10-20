@@ -17,7 +17,7 @@ Find suitable partner nodes
 To make payments, you need to be connected to the target node either
 directly, or indirectly by having a channel with a well connected that
 mediates your payment to the target. If you already know to which node
-you want to connect, skip ahead to the `next section <Open a channel>`.
+you want to connect, skip ahead to the :ref:`next section <Open a channel>`.
 
 The Path Finding Service (PFS) can suggest partners that are highly
 connected. These nodes will be able to mediate your payments to a large
@@ -88,6 +88,7 @@ the following response object:
    {
        "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "channel_identifier": "99",
+       "network_state": "unknown",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": "1337",
@@ -104,7 +105,7 @@ inside the token network.
 
 You're now ready to start :ref:`making payments <api_tut_make_payment>`.
 
-.. note:: Opening a channel with a partner node is not dependent on whether the partner node holds tokens or not. It will work either way. 
+.. note:: Opening a channel with a partner node is not dependent on whether the partner node holds tokens or not. It will work either way.
 
 .. _api_tut_channel_state:
 

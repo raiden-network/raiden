@@ -36,6 +36,7 @@ set to ``"closed"``.
    {
        "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "channel_identifier": "99",
+       "network_state": "unknown",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": "350",
@@ -61,8 +62,7 @@ endpoint with the token address as a path parameter.
    http://localhost:5001/api/v1/connections/0x9aBa529db3FF2D8409A1da4C9eB148879b046700 \
    -H 'Content-Type: application/json'
 
-Once done, the response will return a list containing the addresses of
-all closed channels.
+Once done, the response will return a list of channel-state objects of all closed channels.
 
 .. code:: bash
 
@@ -70,14 +70,23 @@ all closed channels.
    Content-Type: application/json
 
    [
-       "0x41BCBC2fD72a731bcc136Cf6F7442e9C19e9f313",
-       "0x5A5f458F6c1a034930E45dC9a64B99d7def06D7E",
-       "0x8942c06FaA74cEBFf7d55B79F9989AdfC85C6b85"
+        {
+            "token_network_address": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
+            "channel_identifier": "99",
+            "network_state": "unknown",
+            "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+            "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
+            "balance": "350",
+            "total_deposit": "7331",
+            "total_withdraw": "0",
+            "state": "closed",
+            "settle_timeout": "500",
+            "reveal_timeout": "50"
+        }
    ]
 
 .. note::
 
    Please note that leaving a token network will take some time since you need
    to wait for the settle timeout to expire for each channel before a settle
-   can happen. 
-
+   can happen.
