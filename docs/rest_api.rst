@@ -25,6 +25,7 @@ Channel Object
 
     {
        "channel_identifier": "21",
+       "network_state": "unknown",
        "token_network_address": "0x2a65Aca4D5fC5B5C859090a6c34d164135398226",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
@@ -53,6 +54,11 @@ A channel object consists of a
   token network the channel is part of.
 
 - ``balance``: string of the amount of the ``token_address`` token we have available for payments.
+
+- ``network_state``: string representing the online/offline status of the partner node for the channel. Possibly values are:
+    - ``"unknown"``: Network status is not known (**currently this is the only value returned**)
+    - ``"reachable"``:  The node is known to be online and ready to send and receive messages
+    - ``"unreachable"``:  The node is known to be offline and not ready to send and receive messages
 
 - ``total_deposit``: string of the amount of the ``token_address`` token we have deposited into the contract for this channel.
 
@@ -145,11 +151,11 @@ Status
 
 .. http:get:: /api/(version)/status
 
-   Query the node status. Possible answers are:
+   Query the node status. The responses ``status`` attribute can be one of:
 
    - ``"ready"``: The node is listening on its API endpoints.
 
-   - ``"syncing"``: The node is still in the initial sync. Number of blocks to sync will also be given.
+   - ``"syncing"``: The node is still in the initial sync. Number of remaining blocks to sync will also be given.
 
    - ``"unavailable"``: The node is unavailable for some other reason.
 
@@ -415,6 +421,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
           {
               "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
               "channel_identifier": "20",
+              "network_state": "unknown",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": "25000000",
@@ -452,6 +459,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
           {
               "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
               "channel_identifier": "20",
+              "network_state": "unknown",
               "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
               "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
               "balance": "25000000",
@@ -492,6 +500,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": "20",
+          "network_state": "unknown",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": "25000000",
@@ -551,6 +560,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": "20",
+          "network_state": "unknown",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": "25000000",
@@ -648,6 +658,7 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
       {
           "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": "20",
+          "network_state": "unknown",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
           "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
           "balance": "25000000",
@@ -807,6 +818,8 @@ Besides you can query all payments that you sent or received.
    :reqjson string amount: Amount to be sent to the target
    :reqjson string identifier: Identifier of the payment (optional)
    :reqjson string lock_timeout: lock timeout, in blocks, to be used with the payment. Default is 2 * channel's reveal_timeout, Value must be greater than channel's reveal_timeout (optional)
+   :reqjson string secret: secret for the HTL, if this should not be randomly generated (optional)
+   :reqjson string secret_hash: The hash of the provided secret (``sha256(secret)``) this feature currently only works if ``secret`` is provided. If ``secret`` is provided, but ``secret_hash`` is omitted the hash will be calculated by the client automatically (optional)
    :reqjson string path: static route to the target node (optional)
 
 
@@ -868,7 +881,7 @@ This endpoint can be used to deposit to and withdraw from the UDC.
           "total_deposit": "200000"
       }
 
-   :reqjson string total_deposit: The total deposit token amount. Should be the sum of the current value and the desired deposit.
+   :reqjson string total_deposit: The total deposit token amount. Should be the sum of the current total value and the desired (relative) deposit.
 
    **Example Response**:
 
@@ -1021,7 +1034,7 @@ The connections endpoints allow you to query details about all joined token netw
 
    The request might take some time because it will only return once all blockchain calls for closing and settling a channel have been completed.
 
-   The response is a list with the addresses of all closed channels.
+   The response is a list of all the channel state objects of the channels that have been closed.
 
    **Example Request**:
 
@@ -1038,11 +1051,35 @@ The connections endpoints allow you to query details about all joined token netw
       HTTP/1.1 200 OK
       Content-Type: application/json
 
-      [
-         "0x41BCBC2fD72a731bcc136Cf6F7442e9C19e9f313",
-         "0x5A5f458F6c1a034930E45dC9a64B99d7def06D7E",
-         "0x8942c06FaA74cEBFf7d55B79F9989AdfC85C6b85"
-      ]
+      ~
+        [
+            {
+                "balance": "0",
+                "channel_identifier": "8854",
+                "network_state": "unknown",
+                "partner_address": "0x4D156A78Ed6dFDfBbF3E569558eAF895b40217D6",
+                "reveal_timeout": "50",
+                "settle_timeout": "500",
+                "state": "closed",
+                "token_address": "0x59105441977ecD9d805A4f5b060E34676F50F806",
+                "token_network_address": "0x625F82D937ccA0f1fF0097864895ba91635309A3",
+                "total_deposit": "100000000000000000",
+                "total_withdraw": "100000000000000000"
+            },
+            {
+                "balance": "0",
+                "channel_identifier": "81",
+                "network_state": "unknown",
+                "partner_address": "0xbea332584a468b462100f8bfe5b38b0573ef1e36",
+                "reveal_timeout": "50",
+                "settle_timeout": "500",
+                "state": "closed",
+                "token_address": "0x59105441977ecD9d805A4f5b060E34676F50F806",
+                "token_network_address": "0x625F82D937ccA0f1fF0097864895ba91635309A3",
+                "total_deposit": "2000000000000",
+                "total_withdraw": "2000000000000"
+            }
+        ]
 
    :statuscode 200: Successfully leaving a token network
    :statuscode 404: The given token address is not a valid EIP55-encoded Ethereum address
