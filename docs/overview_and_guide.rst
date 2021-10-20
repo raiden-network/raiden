@@ -68,24 +68,31 @@ Or you can use Homebrew to install the most up to date binary::
 An Ethereum client is required in both cases. The Raiden binary takes the same command line
 arguments as the ``raiden`` script.
 
-Raiden is also available as a PyPi package and can be installed with ``pip install raiden``.
+Raiden is also available as a PyPi package and can be installed with :ref:``pip <installation_pip>``.
 
 Raspberry Pi
 ~~~~~~~~~~~~
 
-There is no binary for Raspberry Pi at the moment. However, the installation via pip can be used. 
-See below for the installation instructions.
+Currently we don't provide any pre-built executables for the Raspberry Pi. You can still install
+Raiden from a PyPi package with :ref:``pip <installation_pip>``.
+
+This process will work on any Raspberry Pi from Model 2B onwards without any other
+dependencies. Please be patient for the installation process, since there might not be pre-built
+wheels available for most dependencies.
+
+An Ethereum client is required to run Raiden.
+
 
 .. _installation_pip:
 
 Installation using pip
 **********************
 
-To get the latest available stable version via `pip`::
+To get the latest available stable version via ``pip``::
 
     pip install raiden
 
-If you'd like to give the pre-releases a spin, use pip's `--pre` flag::
+If you'd like to give the pre-releases a spin, use pip's ``--pre`` flag::
 
     pip install --pre raiden
 
@@ -229,7 +236,7 @@ Sign up with `Infura <https://infura.io/>`__ to get an API token. After that you
 
     raiden --keystore-path  ~/.ethereum/keystore --eth-rpc-endpoint "https://<network>.infura.io/v3/<yourToken>"
 
-Where `<network>` can be mainnet, ropsten, etc.
+Where ``<network>`` can be mainnet, ropsten, etc.
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 
