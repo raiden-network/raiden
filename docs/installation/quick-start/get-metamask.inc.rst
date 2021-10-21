@@ -1,5 +1,8 @@
-Get MetaMask
-############
+Get MetaMask (optional)
+#######################
+
+Instead of using MetaMask you can buy ETH directly in the Raiden Wizard 
+via fiat money.
 
 Install MetaMask
 ================

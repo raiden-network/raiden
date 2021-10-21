@@ -30,7 +30,8 @@ The installation steps of the Raiden Wizard will let you:
 
 -  Create a new Ethereum Account (the "Raiden Account") specifically for
    using with the Wizard.
--  Fund this new Raiden Account with ETH.
+-  Fund this new Raiden Account with ETH, either from your MetaMask 
+   account or by buying ETH via fiat money.
 -  Acquire ``RDN`` tokens for using the pathfinding and monitoring
    services.
 -  Acquire ``DAI`` tokens for making payments in the Raiden Network.
