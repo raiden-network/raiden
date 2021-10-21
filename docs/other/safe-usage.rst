@@ -7,7 +7,7 @@ Safe Usage
 .. warning::
 
    Always keep in mind: Despite the fact that
-   Bespin is more mature and reliable than previous releases, it is still a
+   Coruscant is more mature and reliable than previous releases, it is still a
    beta release. Please make sure to follow the below security notes and
    system requirements to avoid increasing the risk of losing funds. Note
    that the loss of tokens could happen even if you follow these

@@ -1,7 +1,7 @@
 Get Whitelisted Tokens
 ======================
 
-The Raiden Bespin release puts a certain
+The Raiden Coruscant release puts a certain
 limit on the amount of tokens that can be deposited into a channel. This
 is to minimize potential loss of funds in case of bugs.
 

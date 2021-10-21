@@ -22,6 +22,7 @@ This will return the following response object:
    {
        "token_network_address": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
        "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da5",
+       "network_state": "unknown",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
        "balance": "3958",

@@ -37,7 +37,7 @@ After selecting a token network with open channels. Click on the
 
 .. note::
 
-   **How does payment channels work?**
+   **How do payment channels work?**
 
    Payment channels enable parties to exchange tokens off-chain without
    involving the blockchain for every transaction.
