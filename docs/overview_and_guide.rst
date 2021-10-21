@@ -73,15 +73,8 @@ Raiden is also available as a PyPi package and can be installed with ``pip insta
 Raspberry Pi
 ~~~~~~~~~~~~
 
-`Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-linux-armv7l.tar.gz` or :code:`raiden-<version>-linux-aarch64.tar.gz` for the respective Raspberry Pi Model and extract it::
-
-    tar -xvzf  raiden-<version>-linux-*.tar.gz
-
-The resulting binary will work on any Raspberry Pi from Model 2B onwards without any other
-dependencies.
-
-An Ethereum client is required in both cases. The Raiden binary takes the same command line
-arguments as the ``raiden`` script.
+There is no binary for Raspberry Pi at the moment. However, the installation via pip can be used. 
+See below for the installation instructions.
 
 .. _installation_pip:
 
