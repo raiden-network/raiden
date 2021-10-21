@@ -247,7 +247,7 @@ Tokens
 The tokens endpoints are used for registering new tokens and querying information about already registered tokens.
 
 .. note::
-   For the Bespin release two tokens are registered, DAI and WETH.
+   For the Coruscant release two tokens are registered, DAI and WETH.
 
 **Information about Tokens**
 
@@ -341,7 +341,7 @@ The tokens endpoints are used for registering new tokens and querying informatio
 **Register a Token**
 
 .. warning::
-   For the Bespin release it is not be possible to register more than two tokens, due to security reasons in order to minimise possible loss of funds in the case of bugs.
+   For the Coruscant release it is not be possible to register more than two tokens, due to security reasons in order to minimise possible loss of funds in the case of bugs.
    The two token that are registered are DAI and WETH.
 
 .. http:put:: /api/(version)/tokens/(token_address)
@@ -384,7 +384,7 @@ Channels
 The channels endpoints allow you to open channels with other Raiden nodes as well as closing channels, querying them for information and making deposits or withdrawals.
 
 .. warning::
-   The maximum deposits per token and node for the Bespin release are:
+   The maximum deposits per token and node for the Coruscant release are:
 
    **DAI**: The deposit limit is 1000 worth of DAI per channel participant making the maximum amount of DAI 2000 per channel.
 
