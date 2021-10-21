@@ -6,7 +6,7 @@ Overview
 This quick start section will help you install Raiden and run a Raiden node on the Ethereum mainnet using the Raiden Wizard.
 We will walk through the steps to:
 
--  `Get MetaMask`_
+-  `Get MetaMask (optional)`_
 -  `Get an Infura ID`_
 -  `Download and run the Raiden Wizard`_
 
@@ -23,7 +23,7 @@ In order to use the Raiden Wizard and Raiden you'll need:
 
 -  A computer running **Linux** or **macOS**
 -  `MetaMask <https://metamask.io>`__ and an account with at least
-   ``0.13`` ETH
+   ``0.13`` ETH (optional)
 -  An `Infura <https://infura.io>`__ ID
 
 
