@@ -8,7 +8,7 @@ alabaster==0.7.12
     # via sphinx
 astunparse==1.6.2
     # via sphinxcontrib-httpexample
-babel==2.7.0
+babel==2.9.1
     # via sphinx
 certifi==2019.3.9
     # via requests
