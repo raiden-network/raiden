@@ -75,7 +75,7 @@ bump2version==1.0.1
     # via -r requirements-dev.in
 cachetools==4.2.4
     # via -r requirements.txt
-canonicaljson==1.4.0
+canonicaljson==1.5.0
     # via
     #   -r requirements.txt
     #   matrix-synapse
