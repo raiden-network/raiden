@@ -92,7 +92,7 @@ bump2version==1.0.1
     # via -r requirements-dev.txt
 cachetools==4.2.4
     # via -r requirements-dev.txt
-canonicaljson==1.4.0
+canonicaljson==1.5.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
@@ -365,7 +365,7 @@ markupsafe==2.0.1
     # via
     #   -r requirements-dev.txt
     #   jinja2
-marshmallow==3.13.0
+marshmallow==3.14.0
     # via
     #   -r requirements-dev.txt
     #   marshmallow-dataclass
