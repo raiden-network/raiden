@@ -34,5 +34,5 @@ RUN pyinstaller --noconfirm --clean raiden.spec
 # pack result to have a unique name to get it out of the container later
 RUN export FILE_TAG=${ARCHIVE_TAG:-v$(python setup.py --version)} && \
     cd dist && \
-    tar -cvzf ./raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG}.tar.gz raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG} && \
-    mv raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG}.tar.gz ..
+    tar -cvf ./raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG}.tar raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG} && \
+    mv raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG}.tar ..

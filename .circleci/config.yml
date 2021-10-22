@@ -591,7 +591,7 @@ jobs:
           name: Build macOS Binary
           command: |
             pyinstaller --noconfirm --clean raiden.spec
-            zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64
+            zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64 LICENSE
             echo ${RELEASE_TYPE}/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-${RELEASE_TYPE}-macOS-x86_64.txt
       - run:
           name: Test if Binary can be launched
