@@ -17,7 +17,7 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import make_secret
 from raiden.tests.utils.mediation_fees import get_amount_for_sending_before_and_after_fees
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import (
     TransferState,
     assert_succeeding_transfer_invariants,
@@ -29,7 +29,6 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
-from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
@@ -67,7 +66,7 @@ def test_transfer_with_secret(
     )
 
     amount = PaymentAmount(10)
-    secret_hash = transfer(
+    transfer(
         initiator_app=app0,
         target_app=app1,
         token_address=token_address,
@@ -78,9 +77,6 @@ def test_transfer_with_secret(
         routes=[[app0, app1]],
     )
 
-    assert isinstance(app1.raiden_event_handler, HoldRaidenEventHandler)
-    app1.raiden_event_handler.hold(SendSecretRequest, {"secrethash": secret_hash})
-
     with gevent.Timeout(20):
         wait_assert(
             assert_succeeding_transfer_invariants,
@@ -90,6 +86,30 @@ def test_transfer_with_secret(
             [],
             app1,
             deposit + amount,
+            [],
+        )
+
+    # Send back payment leads to the initial balances
+    transfer(
+        initiator_app=app1,
+        target_app=app0,
+        token_address=token_address,
+        amount=amount,
+        transfer_state=TransferState.LOCKED,
+        identifier=PaymentID(1),
+        timeout=network_wait * number_of_nodes,
+        routes=[[app1, app0]],
+    )
+
+    with gevent.Timeout(20):
+        wait_assert(
+            assert_succeeding_transfer_invariants,
+            token_network_address,
+            app0,
+            deposit,
+            [],
+            app1,
+            deposit,
             [],
         )
 
