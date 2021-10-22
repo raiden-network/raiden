@@ -436,7 +436,7 @@ class BlockchainEvents:
                 # the batch size
                 self.block_batch_size_adjuster.decrease()
 
-            latest_confirmed_block = self.web3.eth.getBlock(to_block)
+            latest_confirmed_block = self.web3.eth.get_block(to_block)
 
             self.last_fetched_block = to_block
 

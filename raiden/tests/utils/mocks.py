@@ -309,7 +309,7 @@ class MockEth:
     def __init__(self, chain_id):
         self.chain_id = chain_id
 
-    def getBlock(  # pylint: disable=unused-argument, no-self-use
+    def get_block(  # pylint: disable=unused-argument, no-self-use
         self, block_identifier: BlockIdentifier
     ) -> Dict:
         return {

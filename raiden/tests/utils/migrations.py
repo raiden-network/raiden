@@ -8,7 +8,7 @@ class FakeEth:
     def __init__(self, block_to_blockhash: Dict[int, Any]):
         self.block_to_blockhash = block_to_blockhash
 
-    def getBlock(self, number: int) -> Dict[str, Any]:
+    def get_block(self, number: int) -> Dict[str, Any]:
         block_hash = self.block_to_blockhash[number]
         return {"hash": block_hash}
 

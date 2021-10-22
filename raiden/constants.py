@@ -207,7 +207,7 @@ EMPTY_ADDRESS = b"\0" * 20
 BLOCK_ID_LATEST: Literal["latest"] = "latest"
 BLOCK_ID_PENDING: Literal["pending"] = "pending"
 
-# Thresholds for the ``eth.getLogs`` call. Used to automatically adjust the block batch size.
+# Thresholds for the ``eth.get_logs`` call. Used to automatically adjust the block batch size.
 ETH_GET_LOGS_TIMEOUT = 10
 ETH_GET_LOGS_THRESHOLD_FAST = ETH_GET_LOGS_TIMEOUT // 4
 ETH_GET_LOGS_THRESHOLD_SLOW = ETH_GET_LOGS_TIMEOUT // 2
