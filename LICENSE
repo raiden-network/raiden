@@ -19,3 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+
+"chardet" is licensed under the LPGL v2.1 license (https://github.com/chardet/chardet/blob/master/LICENSE).
+It's source code can be found at https://github.com/chardet/chardet - you are free to modify it's source code
+and build a bundled version of the Raiden software (https://github.com/raiden-network/raiden) including the changes.
+
+"mirakuru" is licensed under the LPGL v3.0 license: https://github.com/ClearcodeHQ/mirakuru/blob/main/LICENSE
+It's source code can be found at https://github.com/ClearcodeHQ/mirakuru/ - you are free to modify it's source code
+and build a bundled version of the Raiden software (https://github.com/raiden-network/raiden) including the changes.
