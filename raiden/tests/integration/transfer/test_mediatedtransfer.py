@@ -3,7 +3,9 @@ from unittest.mock import Mock, patch
 
 import gevent
 import pytest
+from eth_utils.crypto import keccak
 
+from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.exceptions import InvalidSecret, RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages.transfers import LockedTransfer, RevealSecret, SecretRequest
@@ -29,6 +31,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
+from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.initiator import calculate_fee_margin
 from raiden.transfer.mediated_transfer.mediation_fee import FeeScheduleState
@@ -758,3 +761,74 @@ def test_mediated_transfer_with_fees(
             fee_estimate=fee_without_margin,
         )
     assert_balances(case["expected_transferred_amounts"])
+
+
+@raise_on_failure
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("settle_timeout", [1000])
+def test_max_locks_reached(raiden_network: List[RaidenService], token_addresses):
+    """
+    Test that once the limit of concurrent transfers is reached for a channel, no new
+    transfers can be started.
+    """
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    token_network_registry_address = app0.default_registry.address
+    token_network_address = views.get_token_network_address_by_token_address(
+        views.state_from_raiden(app0), token_network_registry_address, token_address
+    )
+    assert token_network_address is not None
+
+    hold_event_handler_app1 = app1.raiden_event_handler
+    assert isinstance(hold_event_handler_app1, HoldRaidenEventHandler)
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(app0), token_network_registry_address, token_address, app1.address
+    )
+    assert channel_state is not None
+
+    # Create `MAXIMUM_PENDING_TRANSFERS` unfinished payments
+    secrethashes = []
+    for i in range(MAXIMUM_PENDING_TRANSFERS):
+        secret = Secret(keccak(i))
+        secrethash = sha256_secrethash(secret)
+
+        secrethashes.append(secrethash)
+
+        # Send payment while holding SecretReveal messages
+        for shash in secrethashes:
+            hold_event_handler_app1.hold_secretreveal_for(secrethash=shash)
+
+        app0.mediated_transfer_async(
+            token_network_address=token_network_address,
+            amount=PaymentAmount(1),
+            target=TargetAddress(app1.address),
+            identifier=PaymentID(i),
+            secret=secret,
+            lock_timeout=channel_state.settle_timeout,
+        )
+
+    channel_state = views.get_channelstate_for(
+        views.state_from_raiden(app0), token_network_registry_address, token_address, app1.address
+    )
+    assert channel_state is not None
+    locks = channel_state.our_state.pending_locks.locks
+    assert len(locks) == MAXIMUM_PENDING_TRANSFERS
+
+    # Send another payment. This should fail as the limit of concurrent payments is reached
+    payment_id = 1111
+    secret = Secret(keccak(payment_id))
+    secrethash = sha256_secrethash(secret)
+    failed_status = app0.mediated_transfer_async(
+        token_network_address=token_network_address,
+        amount=PaymentAmount(1),
+        target=TargetAddress(app1.address),
+        identifier=PaymentID(payment_id),
+        secret=secret,
+    )
+
+    failed_status.payment_done.wait()
+    result = failed_status.payment_done.value
+    assert isinstance(result, EventPaymentSentFailed)
+    assert result.reason == "You have no suitable channel to initiate this payment."

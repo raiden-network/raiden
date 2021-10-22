@@ -10,7 +10,11 @@ from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent
-from raiden.transfer.mediated_transfer.events import SendSecretRequest, SendUnlock
+from raiden.transfer.mediated_transfer.events import (
+    SendSecretRequest,
+    SendSecretReveal,
+    SendUnlock,
+)
 from raiden.transfer.state import ChainState
 from raiden.utils.formatting import to_checksum_address
 from raiden.utils.typing import Callable, Dict, List, NamedTuple, SecretHash, Set
@@ -159,6 +163,9 @@ class HoldRaidenEventHandler(EventHandler):
 
     def hold_unlock_for(self, secrethash: SecretHash):
         return self.hold(SendUnlock, {"secrethash": secrethash})
+
+    def hold_secretreveal_for(self, secrethash: SecretHash):
+        return self.hold(SendSecretReveal, {"secrethash": secrethash})
 
     def release_secretrequest_for(self, raiden: RaidenService, secrethash: SecretHash):
         for hold in self.eventtype_to_holdings[SendSecretRequest]:
