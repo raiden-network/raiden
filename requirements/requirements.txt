@@ -165,7 +165,7 @@ lru-dict==1.1.6
     # via web3
 markupsafe==2.0.1
     # via jinja2
-marshmallow==3.13.0
+marshmallow==3.14.0
     # via
     #   -r requirements.in
     #   marshmallow-dataclass
