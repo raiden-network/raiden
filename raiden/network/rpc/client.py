@@ -358,7 +358,7 @@ def check_address_has_code(
     if is_bytes(given_block_identifier):
         assert isinstance(given_block_identifier, bytes), MYPY_ANNOTATION
         block_hash = encode_hex(given_block_identifier)
-        given_block_identifier = client.web3.eth.getBlock(block_hash)["number"]
+        given_block_identifier = client.web3.eth.get_block(block_hash)["number"]
 
     result = client.web3.eth.get_code(address, given_block_identifier)
 
@@ -413,20 +413,20 @@ def gas_price_for_fast_transaction(web3: Web3) -> int:
         # but both strategies that we are using (time-based and rpc-based) don't make
         # use of this argument. It is therefore safe to not provide it at the moment.
         # This needs to be reevaluated if we use different gas price strategies
-        maybe_price = web3.eth.generateGasPrice()
+        maybe_price = web3.eth.generate_gas_price()
         if maybe_price is not None:
             price = int(maybe_price)
         else:
-            price = int(web3.eth.gasPrice)
+            price = int(web3.eth.gas_price)
     except AttributeError:  # workaround for Infura gas strategy key error
         # As per https://github.com/raiden-network/raiden/issues/3201
         # we can sporadically get an AtttributeError here. If that happens
         # use latest gas price
-        price = int(web3.eth.gasPrice)
+        price = int(web3.eth.gas_price)
     except IndexError:  # work around for a web3.py exception when
         # the blockchain is somewhat empty.
         # https://github.com/ethereum/web3.py/issues/1149
-        price = int(web3.eth.gasPrice)
+        price = int(web3.eth.gas_price)
 
     return price
 
@@ -722,7 +722,7 @@ def make_sane_poa_middleware(
 def make_patched_web3_get_block(
     original_func: Callable[[BlockIdentifier, bool], BlockData]
 ) -> Callable[[BlockIdentifier, bool], BlockData]:
-    """Patch Eth.getBlock() to retry in case of ``BlockNotFound``
+    """Patch Eth.get_block() to retry in case of ``BlockNotFound``
 
     Infura sometimes erroneously returns a `null` response for
     ``eth_getBlockByNumber`` and ``eth_getBlockByHash`` for existing blocks.
@@ -767,7 +767,7 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         web3.middleware_onion.add(simple_cache_middleware)
 
         # set gas price strategy
-        web3.eth.setGasPriceStrategy(gas_price_strategy)
+        web3.eth.set_gas_price_strategy(gas_price_strategy)
 
         # we use a PoA chain for the smoke, unit and integration tests
         # The built-in `geth_poa_middleware` doesn't correctly deal with `null` responses
@@ -794,7 +794,7 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # Infura sometimes erroneously returns `null` for existing (but very recent) blocks.
         # Work around this by retrying those requests.
         # See docstring for details.
-        web3.eth.getBlock = make_patched_web3_get_block(web3.eth.getBlock)
+        web3.eth.get_block = make_patched_web3_get_block(web3.eth.get_block)
 
 
 @dataclass
@@ -919,7 +919,7 @@ class TransactionPending:
             if not expected_error:
                 raise err
 
-        block = self.data.contract.web3.eth.getBlock(BLOCK_ID_LATEST)
+        block = self.data.contract.web3.eth.get_block(BLOCK_ID_LATEST)
 
         if estimated_gas is not None:
             gas_price = gas_price_for_fast_transaction(self.data.contract.web3)
@@ -937,7 +937,7 @@ class TransactionPending:
             log.debug(
                 "Transaction gas estimated",
                 **transaction_estimated.to_log_details(),
-                node_gas_price=self.data.contract.web3.eth.gasPrice,
+                node_gas_price=self.data.contract.web3.eth.gas_price,
             )
 
             return transaction_estimated
@@ -1076,7 +1076,7 @@ class JSONRPCClient:
 
     def get_block(self, block_identifier: BlockIdentifier) -> BlockData:
         """Given a block number, query the chain to get its corresponding block hash"""
-        return self.web3.eth.getBlock(block_identifier)
+        return self.web3.eth.get_block(block_identifier)
 
     def _sync_nonce(self) -> None:
         self._available_nonce = discover_next_available_nonce(
@@ -1106,7 +1106,7 @@ class JSONRPCClient:
         More info: https://github.com/raiden-network/raiden/issues/3566.
         """
         latest_block_number = self.block_number()
-        preconditions_block = self.web3.eth.getBlock(block_identifier)
+        preconditions_block = self.web3.eth.get_block(block_identifier)
         preconditions_block_number = int(preconditions_block["number"])
         difference = latest_block_number - preconditions_block_number
         return difference < NO_STATE_QUERY_AFTER_BLOCKS
@@ -1498,7 +1498,7 @@ class JSONRPCClient:
         while True:
             tx_receipt: Optional[TxReceipt] = None
             try:
-                tx_receipt = self.web3.eth.getTransactionReceipt(transaction_hash_hex)
+                tx_receipt = self.web3.eth.get_transaction_receipt(transaction_hash_hex)
             except TransactionNotFound:
                 pass
 
@@ -1559,7 +1559,7 @@ class JSONRPCClient:
     ) -> List[LogReceipt]:
         """Get events for the given query."""
         logs_blocks_sanity_check(from_block, to_block)
-        return self.web3.eth.getLogs(
+        return self.web3.eth.get_logs(
             FilterParams(
                 {
                     "fromBlock": from_block,

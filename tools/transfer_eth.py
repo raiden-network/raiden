@@ -46,7 +46,7 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file) -> None:
 
     for target in targets:
         print("  - {}".format(target))
-        gas_price = web3.eth.gasPrice  # pylint: disable=no-member
+        gas_price = web3.eth.gas_price  # pylint: disable=no-member
         client.transact(
             EthTransfer(
                 to_address=to_canonical_address(target),

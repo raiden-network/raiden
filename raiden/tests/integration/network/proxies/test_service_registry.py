@@ -109,7 +109,7 @@ def test_service_registry_events(service_registry_address, private_keys, web3, c
     )
     web3 = c1_service_proxy.client.web3
     flt[0].pop("_name")
-    events = web3.eth.getLogs(flt[0])
+    events = web3.eth.get_logs(flt[0])
     assert len(events) == 3
 
     ABI = c1_service_proxy.proxy.abi

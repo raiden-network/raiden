@@ -17,7 +17,7 @@ class UnknownRaidenEventType(RaidenUnrecoverableError):
 
 
 class EthGetLogsTimeout(RaidenRecoverableError):
-    """Raised when an eth.getLogs RPC call caused a ReadTimeout exception.
+    """Raised when an eth.get_logs RPC call caused a ReadTimeout exception.
 
     It is used to automatically tune the block batching size.
     """
@@ -28,5 +28,5 @@ class BlockBatchSizeTooSmall(RaidenUnrecoverableError):
 
     This is an unrecoverable error since it indicates that either the connected Eth-node or the
     network connection is not capable of supporting minimum performance requirements for the
-    eth.getLogs call.
+    eth.get_logs call.
     """

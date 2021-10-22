@@ -40,7 +40,9 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
     transaction has been mined a different exception is raised.
     """
     # Use a _fixed_ gas price strategy so that both transactions are identical.
-    deploy_client.web3.eth.setGasPriceStrategy(make_fixed_gas_price_strategy(GasPrice(2000000000)))
+    deploy_client.web3.eth.set_gas_price_strategy(
+        make_fixed_gas_price_strategy(GasPrice(2000000000))
+    )
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
@@ -72,7 +74,9 @@ def test_resending_pending_transaction_raises(deploy_client: JSONRPCClient) -> N
 def test_resending_mined_transaction_raises(deploy_client: JSONRPCClient) -> None:
     """If a mined transaction is re-sent the exception `EthereumNonceTooLow` is raised."""
     # Use a _fixed_ gas price strategy so that both transactions are identical.
-    deploy_client.web3.eth.setGasPriceStrategy(make_fixed_gas_price_strategy(GasPrice(2000000000)))
+    deploy_client.web3.eth.set_gas_price_strategy(
+        make_fixed_gas_price_strategy(GasPrice(2000000000))
+    )
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
     address = contract_proxy.address
@@ -144,7 +148,7 @@ def test_local_transaction_with_zero_gasprice_is_mined(deploy_client: JSONRPCCli
 
     gas_price = GasPrice(0)
     gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
-    deploy_client.web3.eth.setGasPriceStrategy(gas_price_strategy)
+    deploy_client.web3.eth.set_gas_price_strategy(gas_price_strategy)
     zero_gas_proxy = deploy_client.new_contract_proxy(
         abi=normal_gas_proxy.abi, contract_address=normal_gas_proxy.address
     )
@@ -194,7 +198,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
 
     gas_price = GasPrice(0)
     gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
-    client.web3.eth.setGasPriceStrategy(gas_price_strategy)
+    client.web3.eth.set_gas_price_strategy(gas_price_strategy)
     zero_gas_proxy = client.new_contract_proxy(
         abi=normal_gas_proxy.abi, contract_address=normal_gas_proxy.address
     )
@@ -219,7 +223,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
         miner_zerogas_tx = miner_client.web3.eth.getTransaction(
             zerogas_transaction_sent.transaction_hash
         )
-        miner_zerogas_receipt = miner_client.web3.eth.getTransactionReceipt(
+        miner_zerogas_receipt = miner_client.web3.eth.get_transaction_receipt(
             HexBytes(zerogas_transaction_sent.transaction_hash)
         )
     except TransactionNotFound:
@@ -238,7 +242,7 @@ def test_remote_transaction_with_zero_gasprice_is_not_mined(
 
     zerogas_receipt: Optional[TxReceipt]
     try:
-        zerogas_receipt = client.web3.eth.getTransactionReceipt(
+        zerogas_receipt = client.web3.eth.get_transaction_receipt(
             HexBytes(zerogas_transaction_sent.transaction_hash)
         )
     except TransactionNotFound:
@@ -252,7 +256,7 @@ def test_resending_pending_transaction_with_lower_gas_raises(deploy_client: JSON
     """If the same transaction is sent twice a JSON RPC error is raised."""
     # Use a _decreasing_ gas price strategy so that the second transactions is
     # lower than the first.
-    deploy_client.web3.eth.setGasPriceStrategy(
+    deploy_client.web3.eth.set_gas_price_strategy(
         make_decreasing_gas_price_strategy(GasPrice(2000000000))
     )
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
@@ -287,7 +291,7 @@ def test_reusing_nonce_with_lower_gas_raises(deploy_client: JSONRPCClient) -> No
     """
     # Use a _decreasing_ gas price strategy so that the second transactions is
     # lower than the first.
-    deploy_client.web3.eth.setGasPriceStrategy(
+    deploy_client.web3.eth.set_gas_price_strategy(
         make_decreasing_gas_price_strategy(GasPrice(2000000000))
     )
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")

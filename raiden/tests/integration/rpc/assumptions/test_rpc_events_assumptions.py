@@ -54,8 +54,8 @@ def test_events_can_happen_in_the_deployment_block(web3: Web3, deploy_key: bytes
 
         while True:
             try:
-                deploy_tx_receipt = web3.eth.getTransactionReceipt(deploy_tx_hash)
-                call_tx_receipt = web3.eth.getTransactionReceipt(call_tx_hash)
+                deploy_tx_receipt = web3.eth.get_transaction_receipt(deploy_tx_hash)
+                call_tx_receipt = web3.eth.get_transaction_receipt(call_tx_hash)
 
                 # This is the condition this test is trying to hit, when both
                 # the deployment of the transaction and it's first call happen

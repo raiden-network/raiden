@@ -70,7 +70,7 @@ class ContractTester:
     def contract_address(self, name):
         raise NotImplementedError("needs refactoring")
         # tx_hash = self.name_to_creation_hash[name]
-        # return self.web3.eth.getTransactionReceipt(tx_hash)["contractAddress"]
+        # return self.web3.eth.get_transaction_receipt(tx_hash)["contractAddress"]
 
     def call_transaction(self, contract, function, **kwargs):
         raise NotImplementedError("needs refactoring")
@@ -80,7 +80,7 @@ class ContractTester:
         #     .functions[function](**kwargs)
         #     .transact({"from": sender})
         # )
-        # return self.web3.eth.getTransactionReceipt(tx_hash)
+        # return self.web3.eth.get_transaction_receipt(tx_hash)
 
 
 def find_max_pending_transfers(gas_limit) -> None:
