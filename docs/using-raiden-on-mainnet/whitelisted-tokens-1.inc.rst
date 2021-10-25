@@ -19,12 +19,12 @@ W-ETH
 W-ETH stands for *Wrapped Ether* and is essentially Ether that has been
 packaged to become ERC-20 compatible.
 
-There are several ways in which you can create W-ETH from your Ether.
+There are several ways in which you can get W-ETH from your Ether.
 
--  Using the `Radar Relay <https://relay.radar.tech/>`__ interface
 -  Using the
    `contract <https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2#code>`__
    directly
+-  Trade the token on an exchange, e.g. `Uniswap <https://app.uniswap.org/#/swap?inputCurrency=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2>`__
 
 DAI
 ---
