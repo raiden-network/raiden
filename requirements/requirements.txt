@@ -4,6 +4,9 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
+# TODO: remove this in the next PR
+# Comment, just to trigger the license checker
+
 aiohttp==3.7.4.post0
     # via web3
 aioice==0.7.5

@@ -33,3 +33,35 @@ markers = [
     "asyncio: tests that require an asyncio eventloop",
 ]
 junit_family = "xunit1"
+
+[tool.liccheck]
+authorized_licenses = [
+	"apache software",
+	"public domain",
+	"python software foundation",
+	"apache license 2.0",
+	"mit license",
+	"mozilla public license 2.0 (mpl 2.0)",
+	"zope public license",
+	"zope public",
+	"bsd 3-clause",
+	"isc license (iscl)",
+	"bsd",
+	"3-clause bsd license",
+	"3-clause bsd",
+	"apache 2.0",
+	"mit",
+	"historical permission notice and disclaimer (hpnd)",
+]
+unauthorized_licenses = [
+	"gnu lesser general public license v3 or later (lgplv3+)",
+	"gnu library or lesser general public license (lgpl)",
+	"gnu general public license v2 (gplv2)",
+	"gpl v3"
+]
+[tool.liccheck.authorized_packages]
+aiortc-pyav-stub = "0.1"
+graphviz = "0.13"
+marshmallow-dataclass = "8.0"
+chardet = "3.0"
+mirakuru = "2.1"
