@@ -14,6 +14,8 @@ experience. These services include
 - allowing users to go offline safely by monitoring open payment channels.
 
 
+.. _services-pathfinding:
+
 Pathfinding Services
 ====================
 
@@ -52,6 +54,8 @@ updates are broadcasted. However, this also means that the PFS has no
 information about the channels of that node and will **never** mediate payments
 over these channels.
 
+
+.. _services-monitoring:
 
 Monitoring Services
 ===================

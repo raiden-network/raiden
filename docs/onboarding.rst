@@ -1,4 +1,4 @@
-Raiden Developer Onboarding Guide
+eaiden Developer Onboarding Guide
 #################################
 .. toctree::
   :maxdepth: 2
@@ -59,7 +59,7 @@ An Unhappy Case
 
 Looking at a similar network topology as shown in the happy case above, let's see how the protocol behaves when something goes wrong and our partner does not follow the protocol.
 
-As seen in the figure above once the payee sends the ``Reveal Secret`` message the payer does not respond with the expected balance proof message. If that happens the payee has two choices:
+As seen in the figure above once the payee sends the ``RevealSecret`` message the payer does not respond with the expected balance proof message. If that happens the payee has two choices:
 
 1. If the amount involved in the token is really small then the payee can just do nothing and forfeit it.
 2. If the amount is worth an on-chain transaction then the payee can go on-chain by registering the secret on the ``SecretRegistry`` contract and prove he knew the secret before the block of the lock expiration. From that point on the protocol can continue as before but now the secret is visible onchain so everyone along the path now knows it.
@@ -82,13 +82,12 @@ Routing
 
     Routing a Transfer
 
-.. FIXME This is outdated, we don't keep any network graph on the node anymore
 
-At the moment routing in Raiden works in a very simple manner. Each node has a global view of the network knowing the initial capacity of each channel by watching for the deposit events happening on chain. As a result each node keeps a graph of the network but that graph may be outdated due to the capacity changing because of offchain transfers.
-
-For this reason nodes **can** send capacity updates to the pathfinding services. Those collect this information and incorporate it into their network graph. This in turn allows them to compute routes based on the current network state.
-
+At the moment routing in Raiden is handled by an external service, the :ref:``Pathfinding Service (PFS) <services-pathfinding>``. The PFS tries to keep a global view of the network by listening to the Raiden nodes' capacity updates, that they the nodes can chose to send to the PFS.
+With this information the PFS can compute routes based on the current network state, which are available for the Raiden nodes to query for a small fee.
 For a given payment the node asks the pathfinding service for a set of possible routes. It then tries those in order and if any payment fails, the next on will be tried and the failing one expires eventually.
+
+The :ref:``payment REST endpoint <api-init-payment>`` does provide an optional argument, where a manually determined route can be given, if the route-request to the PFS should be bypassed.
 
 If the transfer reaches the target and the protocol is followed properly as we saw in the :ref:`happy transfer case <happy-case-transfer-messages>` above then all the pending transfers in the path will be unlocked and the node balances will be updated.
 
@@ -321,8 +320,6 @@ The WebUI
 =========
 
 Raiden has a graphical user interface. It's an angular application running by default along with the raiden node and exposing an interface that can be accessed via the user's Browser
-
-TODO: Small overview of code architecture for the WebUI.
 
 Frequently Asked Questions
 ==========================
