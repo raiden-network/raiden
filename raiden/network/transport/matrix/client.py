@@ -542,20 +542,23 @@ class GMatrixClient(MatrixClient):
         if response:
             token = uuid4()
 
+            presence = response.get("presence")
+            to_device = response.get("to_device")
             log.debug(
                 "Sync returned",
                 node=node_address_from_userid(self.user_id),
                 token=token,
                 elapsed=time_after_sync - time_before_sync,
                 current_user=self.user_id,
-                presence_events_qty=len(response["presence"]["events"]),
-                to_device_events_qty=len(response["to_device"]["events"]),
+                presence_events_qty=presence and len(presence["events"]) or 0,
+                to_device_events_qty=to_device and len(to_device["events"]) or 0,
             )
 
             # Updating the sync token should only be done after the response is
             # saved in the queue, otherwise the data can be lost in a stop/start.
             self.response_queue.put((token, response, datetime.now()))
-            self.sync_token = response["next_batch"]
+            # XXX what to do if none?
+            self.sync_token = response.get("next_batch")
             self.sync_progress.set_synced(token)
 
     def _handle_message(
@@ -624,17 +627,19 @@ class GMatrixClient(MatrixClient):
         messages: List[MatrixMessage] = []
 
         for response in currently_queued_responses:
-            for presence_update in response["presence"]["events"]:
-                for callback in list(self.presence_listeners.values()):
-                    callback(presence_update, next(self._presence_update_ids))
+            if "presence" in response:
+                for presence_update in response["presence"]["events"]:
+                    for callback in list(self.presence_listeners.values()):
+                        callback(presence_update, next(self._presence_update_ids))
 
-            for to_device_message in response["to_device"]["events"]:
-                for listener in self.listeners[:]:
-                    if listener["event_type"] == "to_device":
-                        listener["callback"](to_device_message)
+            if "to_device" in response:
+                for to_device_message in response["to_device"]["events"]:
+                    for listener in self.listeners[:]:
+                        if listener["event_type"] == "to_device":
+                            listener["callback"](to_device_message)
 
-            # Add toDevice messages to message queue
-            messages.extend(response["to_device"]["events"])
+                # Add toDevice messages to message queue
+                messages.extend(response["to_device"]["events"])
 
         if messages:
             self.handle_messages_callback(messages)
