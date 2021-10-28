@@ -48,6 +48,8 @@ The counterparty which can either be a ``Mediator`` or the ``Initiator`` will re
 
 This concludes the transfer for that hop. If the receiver of ``RevealSecret`` was the ``Initiator`` then the transfer is finished end-to-end. If it was just a ``Mediator`` then they will have to propagate the transfer backwards by sending a ``RevealSecret`` message backwards to their partner repeating the procedure outlined above.
 
+In this manner, two nodes can send the same amounts of token back-and-forth theoretically an unlimited amount of times
+The partner's channel states will retain the same properties as before the complementary payments and from an on-chain perspective (if the channels will ever be closed) it looks like the complementary transfers never happened.
 
 An Unhappy Case
 ~~~~~~~~~~~~~~~
