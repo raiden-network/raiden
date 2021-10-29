@@ -789,16 +789,12 @@ def test_max_locks_reached(raiden_network: List[RaidenService], token_addresses)
     assert channel_state is not None
 
     # Create `MAXIMUM_PENDING_TRANSFERS` unfinished payments
-    secrethashes = []
     for i in range(MAXIMUM_PENDING_TRANSFERS):
         secret = Secret(keccak(i))
         secrethash = sha256_secrethash(secret)
 
-        secrethashes.append(secrethash)
-
-        # Send payment while holding SecretReveal messages
-        for shash in secrethashes:
-            hold_event_handler_app1.hold_secretreveal_for(secrethash=shash)
+        # Send payment while holding SecretRequest message
+        hold_event_handler_app1.hold_secretreveal_for(secrethash=secrethash)
 
         app0.mediated_transfer_async(
             token_network_address=token_network_address,

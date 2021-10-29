@@ -107,7 +107,8 @@ class HoldRaidenEventHandler(EventHandler):
                     raise RuntimeError(msg)
 
             waitingholds = self.eventtype_to_waitingholds[event_type]
-            for pos, waiting_hold in enumerate(waitingholds):
+
+            for waiting_hold in waitingholds[:]:
 
                 # If it is a match:
                 # - Delete the waiting hold and add it to the holding
@@ -121,7 +122,7 @@ class HoldRaidenEventHandler(EventHandler):
                         async_result=waiting_hold.async_result,
                         attributes=waiting_hold.attributes,
                     )
-                    del self.eventtype_to_waitingholds[event_type][pos]
+                    self.eventtype_to_waitingholds[event_type].remove(waiting_hold)
                     self.eventtype_to_holdings[event_type].append(holding)
                     waiting_hold.async_result.set(event)
                     break
