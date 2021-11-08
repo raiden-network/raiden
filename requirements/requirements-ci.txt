@@ -552,7 +552,7 @@ pygments==2.7.4
     #   ipython
     #   pdbpp
     #   readme-renderer
-pyinstaller==4.5.1
+pyinstaller==4.6
     # via -r requirements-ci.in
 pyinstaller-hooks-contrib==2020.7
     # via pyinstaller
@@ -789,11 +789,9 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
-    #   astroid
     #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
