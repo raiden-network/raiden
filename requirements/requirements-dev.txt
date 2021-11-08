@@ -551,7 +551,7 @@ requests==2.26.0
     #   web3
 requests-opentracing==0.3.0
     # via -r requirements.txt
-responses==0.14.0
+responses==0.15.0
     # via -r requirements-dev.in
 rlp==2.0.1
     # via
