@@ -645,7 +645,7 @@ requests==2.26.0
     #   web3
 requests-opentracing==0.3.0
     # via -r requirements-dev.txt
-responses==0.14.0
+responses==0.15.0
     # via -r requirements-dev.txt
 rlp==2.0.1
     # via
@@ -775,7 +775,7 @@ types-markupsafe==1.1.1
     #   types-jinja2
 types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
-types-pyyaml==5.4.12
+types-pyyaml==6.0.0
     # via -r requirements-dev.txt
 types-requests==2.25.11
     # via -r requirements-dev.txt
