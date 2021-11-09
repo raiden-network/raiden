@@ -139,7 +139,7 @@ constantly==15.1.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-coverage==6.0.2
+coverage==6.1.1
     # via -r requirements-dev.txt
 cryptography==3.4.7
     # via
