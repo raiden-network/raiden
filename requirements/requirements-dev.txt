@@ -120,7 +120,7 @@ colour==0.1.5
     # via -r requirements-dev.in
 constantly==15.1.0
     # via twisted
-coverage==6.0.2
+coverage==6.1.1
     # via -r requirements-dev.in
 cryptography==3.4.7
     # via
@@ -267,7 +267,7 @@ hyperlink==21.0.0
     # via
     #   treq
     #   twisted
-hypothesis==6.23.2
+hypothesis==6.24.2
     # via -r requirements-dev.in
 idna==2.8
     # via

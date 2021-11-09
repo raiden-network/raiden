@@ -139,7 +139,7 @@ constantly==15.1.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-coverage==6.0.2
+coverage==6.1.1
     # via -r requirements-dev.txt
 cryptography==3.4.7
     # via
@@ -294,7 +294,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.23.2
+hypothesis==6.24.2
     # via -r requirements-dev.txt
 idna==2.8
     # via
