@@ -35,6 +35,12 @@ markers = [
 junit_family = "xunit1"
 
 [tool.liccheck]
+# This are license strings that will get matched
+# with the package's metadata exactly (case-insensitive).
+# The values of the metadata are not standardized and can be set by
+# the package maintainers.
+# Thus, if a new dependency is added that falls under a license that already exists here,
+# but represents a slightly different version-string, this string can be safely added here.
 authorized_licenses = [
 	"apache software",
 	"public domain",
@@ -53,13 +59,21 @@ authorized_licenses = [
 	"mit",
 	"historical permission notice and disclaimer (hpnd)",
 ]
+
 unauthorized_licenses = [
 	"gnu lesser general public license v3 or later (lgplv3+)",
 	"gnu library or lesser general public license (lgpl)",
 	"gnu general public license v2 (gplv2)",
 	"gpl v3"
 ]
+
 [tool.liccheck.authorized_packages]
+#If a new dependency is added that falls under a LPGL license, the dependency has to be addded to the authorized_packages manually.
+#Additionally, the following text has to be added (with correct parameters) to the LICENSE file:
+
+#        "<package_name>" is licensed under the LPGL v<LGPL version number> license (<link to packages license file>).
+#        It's source code can be found at <package source code> - you are free to modify it's source code
+#        and build a bundled version of the Raiden software (https://github.com/raiden-network/raiden) including the changes.
 aiortc-pyav-stub = "0.1"
 graphviz = "0.13"
 marshmallow-dataclass = "8.0"
