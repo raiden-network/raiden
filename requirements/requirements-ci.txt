@@ -81,7 +81,7 @@ bitarray==1.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-black==21.9b0
+black==21.10b0
     # via -r requirements-dev.txt
 bleach==3.3.0
     # via
@@ -139,7 +139,7 @@ constantly==15.1.0
     # via
     #   -r requirements-dev.txt
     #   twisted
-coverage==6.0.2
+coverage==6.1.1
     # via -r requirements-dev.txt
 cryptography==3.4.7
     # via
@@ -645,7 +645,7 @@ requests==2.26.0
     #   web3
 requests-opentracing==0.3.0
     # via -r requirements-dev.txt
-responses==0.14.0
+responses==0.15.0
     # via -r requirements-dev.txt
 rlp==2.0.1
     # via
