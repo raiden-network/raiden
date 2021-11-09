@@ -294,7 +294,7 @@ hyperlink==21.0.0
     #   -r requirements-dev.txt
     #   treq
     #   twisted
-hypothesis==6.23.2
+hypothesis==6.24.2
     # via -r requirements-dev.txt
 idna==2.8
     # via
@@ -777,7 +777,7 @@ types-pkg-resources==0.1.3
     # via -r requirements-dev.txt
 types-pyyaml==6.0.0
     # via -r requirements-dev.txt
-types-requests==2.25.11
+types-requests==2.25.12
     # via -r requirements-dev.txt
 types-toml==0.10.1
     # via -r requirements-dev.txt
