@@ -267,7 +267,7 @@ def test_init_with_fees_more_than_max_limit():
     assert transition.new_state is None
     assert isinstance(transition.events[0], EventPaymentSentFailed)
     reason_msg = (
-        "none of the available routes could be used and at least one of them "
+        "None of the available routes could be used and at least one of them "
         "exceeded the maximum fee limit "
         "(see https://raiden-network.readthedocs.io/en/stable/using-raiden-on-mainnet/overview.html#frequently-asked-questions)"  # noqa
     )
