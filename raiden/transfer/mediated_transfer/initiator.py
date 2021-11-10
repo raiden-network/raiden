@@ -285,7 +285,7 @@ def try_new_route(
                 break
 
     if chosen_route_state is None:
-        reason = "none of the available routes could be used"
+        reason = "None of the available routes could be used"
 
         if route_fee_exceeds_max:
             reason += (
