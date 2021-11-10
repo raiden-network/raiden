@@ -101,7 +101,9 @@ class HoldRaidenEventHandler(EventHandler):
                         f"Matching event of type {event.__class__.__name__} emitted "
                         f"twice, this should not happen. Either there is a bug in the "
                         f"state machine or the hold.attributes is too generic and "
-                        f"multiple different events are matching. Event: {event} "
+                        f"multiple different events are matching. "
+                        f"Incoming Event: {event} "
+                        f"Hold Event: {hold.event} "
                         f"Attributes: {hold.attributes}"
                     )
                     raise RuntimeError(msg)
@@ -167,6 +169,11 @@ class HoldRaidenEventHandler(EventHandler):
 
     def hold_secretreveal_for(self, secrethash: SecretHash):
         return self.hold(SendSecretReveal, {"secrethash": secrethash})
+
+    def release_secretreveal_for(self, raiden: RaidenService, secrethash: SecretHash):
+        for hold in self.eventtype_to_holdings[SendSecretReveal]:
+            if hold.attributes["secrethash"] == secrethash:
+                self.release(raiden, hold.event)
 
     def release_secretrequest_for(self, raiden: RaidenService, secrethash: SecretHash):
         for hold in self.eventtype_to_holdings[SendSecretRequest]:
