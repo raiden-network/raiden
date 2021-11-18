@@ -57,7 +57,7 @@ repos:
         args: ["--ignore-whitespace", "--settings-path", "./"]
 
   - repo: https://github.com/python/black
-    rev: 21.9b0
+    rev: 21.11b1
     hooks:
       - id: black
 
