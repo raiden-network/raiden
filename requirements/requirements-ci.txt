@@ -81,7 +81,7 @@ bitarray==1.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-black==21.9b0
+black==21.11b1
     # via -r requirements-dev.txt
 bleach==3.3.0
     # via
@@ -627,7 +627,7 @@ raiden-webui==1.2.1
     # via -r requirements-dev.txt
 readme-renderer==30.0
     # via -r requirements-dev.txt
-regex==2020.6.8
+regex==2021.11.10
     # via
     #   -r requirements-dev.txt
     #   black
