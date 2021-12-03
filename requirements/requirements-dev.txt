@@ -237,7 +237,7 @@ frozendict==1.2
     #   -r requirements.txt
     #   canonicaljson
     #   matrix-synapse
-gevent==21.1.2
+gevent==21.8.0
     # via
     #   -r requirements.txt
     #   grequests
@@ -249,7 +249,7 @@ graphviz==0.13.2
     # via
     #   -r requirements.txt
     #   objgraph
-greenlet==0.4.17
+greenlet==1.1.2
     # via
     #   -r requirements.txt
     #   gevent
@@ -277,8 +277,10 @@ idna==2.8
     #   requests
     #   twisted
     #   yarl
-importlib-metadata==4.8.1
-    # via pluggy
+importlib-metadata==4.2.0
+    # via
+    #   -r requirements-dev.in
+    #   pluggy
 incremental==17.5.0
     # via
     #   treq
@@ -642,7 +644,7 @@ twisted[tls]==21.2.0
     # via
     #   matrix-synapse
     #   treq
-typed-ast==1.4.3
+typed-ast==1.5.0
     # via -r requirements-dev.in
 typeguard==2.11.1
     # via
@@ -699,7 +701,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.24.0
+web3==5.24
     # via
     #   -r requirements.txt
     #   raiden-contracts
