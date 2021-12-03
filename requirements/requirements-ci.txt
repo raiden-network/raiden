@@ -263,7 +263,7 @@ frozendict==1.2
     #   -r requirements-dev.txt
     #   canonicaljson
     #   matrix-synapse
-gevent==21.1.2
+gevent==21.8.0
     # via
     #   -r requirements-dev.txt
     #   grequests
@@ -275,7 +275,7 @@ graphviz==0.13.2
     # via
     #   -r requirements-dev.txt
     #   objgraph
-greenlet==0.4.17
+greenlet==1.1.2
     # via
     #   -r requirements-dev.txt
     #   gevent
@@ -817,7 +817,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.24.0
+web3==5.24
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
