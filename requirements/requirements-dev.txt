@@ -200,7 +200,7 @@ eth-utils==1.10.0
     #   web3
 execnet==1.6.0
     # via pytest-xdist
-faker==9.3.1
+faker==9.9.0
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
