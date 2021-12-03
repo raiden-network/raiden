@@ -168,7 +168,7 @@ docutils==0.16
     # via
     #   -r requirements-dev.txt
     #   readme-renderer
-eciespy==0.3.10
+eciespy==0.3.11
     # via -r requirements-dev.txt
 eth-abi==2.1.0
     # via

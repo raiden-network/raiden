@@ -146,7 +146,7 @@ dnspython==2.1.0
     #   aioice
 docutils==0.16
     # via readme-renderer
-eciespy==0.3.10
+eciespy==0.3.11
     # via -r requirements.txt
 eth-abi==2.1.0
     # via

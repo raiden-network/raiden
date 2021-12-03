@@ -70,7 +70,7 @@ dbapi-opentracing==0.0.5
     # via -r requirements.in
 dnspython==2.1.0
     # via aioice
-eciespy==0.3.10
+eciespy==0.3.11
     # via -r requirements.in
 eth-abi==2.1.0
     # via
