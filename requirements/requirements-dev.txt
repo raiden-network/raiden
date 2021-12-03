@@ -146,7 +146,7 @@ dnspython==2.1.0
     #   aioice
 docutils==0.16
     # via readme-renderer
-eciespy==0.3.10
+eciespy==0.3.11
     # via -r requirements.txt
 eth-abi==2.1.0
     # via
@@ -699,7 +699,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.24.0
+web3==5.24
     # via
     #   -r requirements.txt
     #   raiden-contracts

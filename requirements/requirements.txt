@@ -5,7 +5,6 @@
 #    'requirements/deps compile' (for details see requirements/README)
 #
 #
-
 aiohttp==3.7.4.post0
     # via web3
 aioice==0.7.5
@@ -71,7 +70,7 @@ dbapi-opentracing==0.0.5
     # via -r requirements.in
 dnspython==2.1.0
     # via aioice
-eciespy==0.3.10
+eciespy==0.3.11
     # via -r requirements.in
 eth-abi==2.1.0
     # via
@@ -301,7 +300,7 @@ urllib3==1.26.5
     # via requests
 varint==1.0.2
     # via multiaddr
-web3==5.24.0
+web3==5.24
     # via
     #   -r requirements.in
     #   raiden-contracts

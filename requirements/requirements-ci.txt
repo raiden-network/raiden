@@ -168,7 +168,7 @@ docutils==0.16
     # via
     #   -r requirements-dev.txt
     #   readme-renderer
-eciespy==0.3.10
+eciespy==0.3.11
     # via -r requirements-dev.txt
 eth-abi==2.1.0
     # via
@@ -817,7 +817,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.24.0
+web3==5.24
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
