@@ -304,7 +304,7 @@ idna==2.8
     #   requests
     #   twisted
     #   yarl
-importlib-metadata==4.8.1
+importlib-metadata==4.2.0
     # via
     #   -r requirements-dev.txt
     #   pluggy

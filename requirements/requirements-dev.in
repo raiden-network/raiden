@@ -59,3 +59,6 @@ bump2version
 # Test support
 matrix-synapse
 six>=1.13.0  # work around bad deps declaration in treq, see https://github.com/twisted/treq/commit/934e127a2b915bf02be86d23f2cf8a65bcdb2533#r42782781
+
+# Mac build failure
+importlib-metadata<4.3
