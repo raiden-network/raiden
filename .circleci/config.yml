@@ -228,8 +228,7 @@ commands:
           command: |
             . ${VENV_PATH}/bin/activate
             pip config set global.progress_bar off
-            # Pin pip to 21.2.4, 21.3 is broken, see https://github.com/pypa/pip/issues/10573.
-            pip install -U pip==21.2.4 wheel pip-tools
+            pip install -U pip wheel pip-tools
             pushd requirements
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
