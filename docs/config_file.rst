@@ -2,6 +2,9 @@ Raiden Config File
 ##################
 
 Raiden supports reading configuration parameters from a configuration file.
+Raiden configuration parameter can also be given as environment variables - the variable has to be prefixed
+with ``RAIDEN_`` - otherwise the options are the same as the commandline arguments.
+
 
 Location
 --------
@@ -18,6 +21,7 @@ Precedence
 The precedence order in which configuration option values are applied is as follows (high to low):
 
 #. Option given on the command line
+#. Option read from the prefixed ``RAIDEN_<config option>`` environment variables
 #. Option read from the config file
 #. Option default value (as seen in the output of ``raiden --help``)
 
