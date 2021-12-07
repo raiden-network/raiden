@@ -644,7 +644,7 @@ twisted[tls]==21.2.0
     # via
     #   matrix-synapse
     #   treq
-typed-ast==1.5.0
+typed-ast==1.4.3
     # via -r requirements-dev.in
 typeguard==2.11.1
     # via
