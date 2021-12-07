@@ -386,9 +386,9 @@ The channels endpoints allow you to open channels with other Raiden nodes as wel
 .. warning::
    The maximum deposits per token and node for the Coruscant release are:
 
-   **DAI**: The deposit limit is 1000 worth of DAI per channel participant making the maximum amount of DAI 2000 per channel.
+   **DAI**: The deposit limit is 5000 worth of DAI per channel participant making the maximum amount of DAI 10000 per channel.
 
-   **WETH**: The deposit limit is 4.683 worth of WETH per channel participant making the maximum amount of WETH 9.366 per channel.
+   **WETH**: The deposit limit is around 1.1905 worth of WETH per channel participant making the maximum amount of around WETH 2.3810 per channel.
 
 
 **Information about Channels**

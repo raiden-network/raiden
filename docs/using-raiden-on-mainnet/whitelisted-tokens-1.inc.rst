@@ -5,8 +5,8 @@ The Raiden Coruscant release puts a certain
 limit on the amount of tokens that can be deposited into a channel. This
 is to minimize potential loss of funds in case of bugs.
 
--  The global limit per token network is approximately **$1000000**.
--  The limit per channel side is approximately **$1000**.
+-  The global limit per token network is approximately **$5000000**.
+-  The limit per channel side is approximately **$5000**.
 
 .. note::
 
