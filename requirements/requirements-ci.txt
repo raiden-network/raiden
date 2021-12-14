@@ -511,7 +511,7 @@ py-solc-x==1.1.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
-py-spy==0.3.10
+py-spy==0.3.11
     # via -r requirements-dev.txt
 pyasn1==0.4.5
     # via
