@@ -156,7 +156,7 @@ itsdangerous==2.0.1
     # via flask
 jaeger-client==4.8.0
     # via -r requirements.in
-jinja2==3.0.2
+jinja2==3.0.3
     # via
     #   -r requirements.in
     #   flask
