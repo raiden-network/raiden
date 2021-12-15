@@ -156,7 +156,7 @@ itsdangerous==2.0.1
     # via flask
 jaeger-client==4.8.0
     # via -r requirements.in
-jinja2==3.0.2
+jinja2==3.0.3
     # via
     #   -r requirements.in
     #   flask
@@ -204,7 +204,7 @@ opentracing==2.3.0
     #   flask-opentracing
     #   jaeger-client
     #   requests-opentracing
-packaging==21.0
+packaging==21.3
     # via -r requirements.in
 parsimonious==0.8.1
     # via eth-abi
