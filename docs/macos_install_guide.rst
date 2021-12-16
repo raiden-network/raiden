@@ -41,9 +41,9 @@ The following instructions will guide you from a clean installation of macOS to 
 
     $ sudo pip install virtualenv
 
-#. Create a virtualenv for raiden (requires python3.7)::
+#. Create a virtualenv for raiden (requires python3.8)::
 
-    $ virtualenv --python=python3.7 venv-raiden
+    $ virtualenv --python=python3.8 venv-raiden
 
 #. "Activate" the virtualenv::
 

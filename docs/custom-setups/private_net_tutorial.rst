@@ -21,7 +21,7 @@ If ``mkdir`` fails, choose a different name, or move the existing ``priv_chain``
 .. code:: bash
 
  $ cd priv_chain
- $ virtualenv -p python3.7 env
+ $ virtualenv -p python3.9 env
  $ source env/bin/activate
 
 You should now be in the virtual environment, where all Python package installations are separately managed.
@@ -129,8 +129,8 @@ Figure out the value ``CONTRACTS_VERSION``
 .. code:: bash
 
  (env) $ cd raiden
- (env) $ grep 'CONTRACTS_VERSION = ' -r ../env/lib/python3.7/site-packages/raiden_contracts
- ../env/lib/python3.7/site-packages/raiden_contracts/constants.py:CONTRACTS_VERSION = "0.37.0"
+ (env) $ grep 'CONTRACTS_VERSION = ' -r ../env/lib/python3.9/site-packages/raiden_contracts
+ ../env/lib/python3.9/site-packages/raiden_contracts/constants.py:CONTRACTS_VERSION = "0.37.0"
 
 Copy the shown version somewhere.
 

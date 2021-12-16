@@ -126,7 +126,7 @@ GITHUB_ACCESS_TOKEN_ARG=--build-arg GITHUB_ACCESS_TOKEN_FRAGMENT=$(GITHUB_ACCESS
 endif
 
 # architecture needs to be asked in docker because docker can be run on remote host to create binary for different architectures
-bundle-docker: ARCHITECTURE_TAG = $(shell docker run --rm python:3.7 uname -m)
+bundle-docker: ARCHITECTURE_TAG = $(shell docker run --rm python:3.9 uname -m)
 bundle-docker: ARCHIVE_TAG ?= v$(shell python setup.py --version)
 bundle-docker:
 	docker build -t pyinstallerbuilder --build-arg ARCHITECTURE_TAG=$(ARCHITECTURE_TAG) --build-arg ARCHIVE_TAG=$(ARCHIVE_TAG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .

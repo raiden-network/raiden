@@ -11,7 +11,7 @@
 #       virtualenvs on first run. See tools/pre-commit/pre-commit-wrapper.py for details.
 
 default_language_version:
-  python: python3.7
+  python: python3.9
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

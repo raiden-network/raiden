@@ -8,7 +8,7 @@
 
 #### Quicklinks
 
-[![Python 3.7](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/raiden-network/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Python 3.9](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/raiden-network/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 - [Getting Started](#getting-started)
 - [Repositories](#repositories)

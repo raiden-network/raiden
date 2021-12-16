@@ -10,9 +10,9 @@ templates:
   parameter-templates: &parameter-templates
     py-version: &py-version-template
       description: "python version to be used in the executor"
-      default: "3.7"
+      default: "3.9"
       type: enum
-      enum: ["3.7", "3.8", "3.9"]
+      enum: ["3.8", "3.9"]
     resource: &resource-type-template
       description: "resource type for underlying VM"
       default: "medium"
@@ -498,7 +498,7 @@ jobs:
   finalize:
     executor:
       name: docker
-      py-version: "3.7"
+      py-version: "3.9"
     steps:
       - run:
           command: "true"
@@ -523,7 +523,7 @@ jobs:
 
     executor:
       name: docker
-      py-version: "3.7"
+      py-version: "3.9"
       resource: << parameters.resource >>
 
     steps:
@@ -572,7 +572,7 @@ jobs:
 
     executor:
       name: macos
-      py-version: "3.7"
+      py-version: "3.9"
 
     steps:
       - attach-and-link:
@@ -608,7 +608,7 @@ jobs:
 
     executor:
       name: docker
-      py-version: "3.7"
+      py-version: "3.9"
 
     steps:
       - add_ssh_keys:
@@ -657,7 +657,7 @@ jobs:
 
     executor:
       name: docker
-      py-version: "3.7"
+      py-version: "3.9"
 
     steps:
       - attach-and-link:
@@ -699,7 +699,7 @@ jobs:
 
     executor:
       name: docker
-      py-version: "3.7"
+      py-version: "3.9"
 
     steps:
       - attach-and-link:
@@ -733,7 +733,7 @@ workflows:
       - prepare-python-linux:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
           requires:
             - prepare-system-linux
 
@@ -745,21 +745,21 @@ workflows:
       - lint:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
           requires:
             - prepare-python-linux-<< matrix.py-version >>
 
       - build-docs:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
           requires:
             - prepare-python-linux-<< matrix.py-version >>
 
       - smoketest:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
               transport-layer: ["matrix"]
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
@@ -770,7 +770,7 @@ workflows:
           matrix:
             alias: test
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
             - lint-<< matrix.py-version >>
@@ -779,7 +779,7 @@ workflows:
           matrix:
             alias: test-fuzz
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
@@ -796,7 +796,7 @@ workflows:
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
-          py-version: "3.7"
+          py-version: "3.9"
           requires:
             - smoketest
             - test
@@ -807,7 +807,7 @@ workflows:
           matrix:
             alias: test-integration
             parameters:
-              py-version: ["3.7"]
+              py-version: ["3.9"]
               test-type: ["integration"]
               blockchain-type: ["geth", "parity"]
           resource: "medium+"
@@ -844,14 +844,14 @@ workflows:
             <<: *only-tagged-version-filter
 
       - prepare-python-linux:
-          py-version: '3.7'
+          py-version: '3.9'
           requires:
             - prepare-system-linux
           filters:
             <<: *only-tagged-version-filter
 
       - prepare-python-macos:
-          py-version: '3.7'
+          py-version: '3.9'
           requires:
             - prepare-system-macos
           filters:
@@ -911,7 +911,7 @@ workflows:
       - prepare-python-linux:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
           requires:
           - prepare-system-linux
 
@@ -923,21 +923,21 @@ workflows:
       - lint:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
           requires:
           - prepare-python-linux-<< matrix.py-version >>
 
       - build-docs:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
           requires:
             - prepare-python-linux-<< matrix.py-version >>
 
       - smoketest:
           matrix:
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
               transport-layer: ["matrix"]
               environment-type: ["production", "development"]
               blockchain-type: ["geth", "parity"]
@@ -948,7 +948,7 @@ workflows:
           matrix:
             alias: test
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
               test-type: ["unit", "mocked"]
           requires:
             - lint-<< matrix.py-version >>
@@ -957,7 +957,7 @@ workflows:
           matrix:
             alias: test-fuzz
             parameters:
-              py-version: ["3.7", "3.8", "3.9"]
+              py-version: ["3.8", "3.9"]
               test-type: ["fuzz"]
           additional-args: "--hypothesis-show-statistics"
           requires:
@@ -974,7 +974,7 @@ workflows:
 
       - scenario-player-integration-test:
           name: scenario-player-integration-test
-          py-version: "3.7"
+          py-version: "3.9"
           requires:
             - smoketest
             - test
@@ -985,7 +985,7 @@ workflows:
           matrix:
             alias: test-integration
             parameters:
-              py-version: ["3.7"]
+              py-version: ["3.9"]
               test-type: ["integration"]
               blockchain-type: ["geth", "parity"]
           resource: "medium+"
@@ -1013,15 +1013,15 @@ workflows:
             - checkout
 
       - prepare-python-macos:
-          name: prepare-python-macos-3.7
-          py-version: '3.7'
+          name: prepare-python-macos-3.9
+          py-version: '3.9'
           requires:
             - prepare-system-macos
 
       - build-binary-macos:
           requires:
             - finalize
-            - prepare-python-macos-3.7
+            - prepare-python-macos-3.9
 
       - deploy-digitalocean:
           context: "raiden-py"
