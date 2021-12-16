@@ -433,7 +433,7 @@ opentracing==2.3.0
     #   flask-opentracing
     #   jaeger-client
     #   requests-opentracing
-packaging==21.0
+packaging==21.3
     # via
     #   -r requirements-dev.txt
     #   bleach
@@ -625,7 +625,7 @@ raiden-contracts==0.40.0
     # via -r requirements-dev.txt
 raiden-webui==1.2.1
     # via -r requirements-dev.txt
-readme-renderer==30.0
+readme-renderer==32.0
     # via -r requirements-dev.txt
 regex==2021.11.10
     # via
