@@ -134,7 +134,7 @@ See [nix.rst](docs/nix.rst).
 
 These are the required external dependencies for development:
 
-- Python >=3.7.
+- Python >=3.8.
 - Ethereum client (Geth recommended).
 - Solidity compiler >=0.4.23.
 - A matrix capable server (Synapse recommended).

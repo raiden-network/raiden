@@ -154,7 +154,7 @@ Navigate to the directory::
 
     cd raiden
 
-It's strongly advised to create a virtualenv_ for Raiden (requires python3.7) and install all python dependencies there.
+It's strongly advised to create a virtualenv_ for Raiden (requires python3.8) and install all python dependencies there.
 
 After you have done that you can proceed to install the dependencies::
 
