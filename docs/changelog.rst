@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :release:`3.0.0 <2021-11-30>`
+* :release:`3.0.0 <2021-12-23>`
 * :feature:`7196` Send encrypted secret with the initial LockedTransfer message, obviating the need for SecretRequest and SecretReveal messages. This reduces the time needed to complete a payment.
 * :feature:`7195` Enable Raiden Node communication over WebRTC. This will allow payments to complete faster due to direct communication between peers.
 * :feature:`1541` Add support for cooperative settlement. If both parties are online and agree to settle cooperatively, closing and settling a channel is performed much quicker without having to wait for the on-chain settlement timeout. Closing a channel will now automatically try to perform a cooperative settlement first.
