@@ -6,12 +6,10 @@ Safe Usage
 
 .. warning::
 
-   Always keep in mind: Despite the fact that
-   Coruscant is more mature and reliable than previous releases, it is still a
-   beta release. Please make sure to follow the below security notes and
-   system requirements to avoid increasing the risk of losing funds. Note
-   that the loss of tokens could happen even if you follow these
-   guidelines.
+   Despite the fact that Coruscant is the most mature and reliable release, it
+   might contain bugs. Please make sure to follow the below security notes and
+   system requirements to avoid increasing the risk of losing funds. Note that
+   the loss of tokens could happen even if you follow these guidelines.
 
 -  **Ethereum node in sync and running reliably:** Ensure that layer 1
    works reliably. This means that you have to have an Ethereum node,
