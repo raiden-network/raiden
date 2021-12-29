@@ -1,4 +1,4 @@
-eaiden Developer Onboarding Guide
+Raiden Developer Onboarding Guide
 #################################
 .. toctree::
   :maxdepth: 2
