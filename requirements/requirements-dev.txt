@@ -532,7 +532,7 @@ pyyaml==5.4
     # via matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.in
-raiden-contracts==0.40.1
+raiden-contracts==0.40.2
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
@@ -702,7 +702,7 @@ varint==1.0.2
     #   multiaddr
 wcwidth==0.1.9
     # via prompt-toolkit
-web3==5.24
+web3==5.25.0
     # via
     #   -r requirements.txt
     #   raiden-contracts
