@@ -212,7 +212,7 @@ flake8==4.0.1
     #   flake8-bugbear
     #   flake8-comprehensions
     #   flake8-tuple
-flake8-bugbear==21.9.2
+flake8-bugbear==22.1.11
     # via -r requirements-dev.in
 flake8-comprehensions==3.7.0
     # via -r requirements-dev.in
