@@ -2,6 +2,9 @@
 Changelog
 =========
 
+* :release:`3.0.1 <2022-01-13>`
+* :support:`7493` Update ``raiden-contracts`` package.
+
 * :release:`3.0.0 <2021-12-23>`
 * :feature:`7196` Send encrypted secret with the initial LockedTransfer message, obviating the need for SecretRequest and SecretReveal messages. This reduces the time needed to complete a payment.
 * :feature:`7195` Enable Raiden Node communication over WebRTC. This will allow payments to complete faster due to direct communication between peers.
