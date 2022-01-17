@@ -29,7 +29,6 @@ psutil
 pylibsrtp>=0.6.8
 pysha3
 toml
-raiden-contracts>=0.40.0,<0.41.0
 raiden-webui
 requests
 structlog
@@ -41,3 +40,5 @@ jaeger-client
 dbapi-opentracing
 Flask-Opentracing
 requests-opentracing
+
+git+https://github.com/raiden-network/raiden-contracts.git@arbitrum#egg=raiden-contracts

@@ -4,7 +4,6 @@
 #
 #    'requirements/deps compile' (for details see requirements/README)
 #
-#
 aiohttp==3.7.4.post0
     # via web3
 aioice==0.7.5
@@ -239,7 +238,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts==0.40.2
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@arbitrum
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in

@@ -28,6 +28,10 @@ apipkg==1.5
     # via
     #   -r requirements-dev.txt
     #   execnet
+appnope==0.1.2
+    # via
+    #   -r requirements-dev.txt
+    #   ipython
 asn1crypto==1.3.0
     # via
     #   -r requirements-dev.txt
@@ -360,7 +364,9 @@ lru-dict==1.1.6
     #   -r requirements-dev.txt
     #   web3
 macholib==1.15.2
-    # via -r requirements-ci.in
+    # via
+    #   -r requirements-ci.in
+    #   pyinstaller
 markupsafe==2.0.1
     # via
     #   -r requirements-dev.txt
@@ -622,7 +628,7 @@ pyyaml==5.4
     #   matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.txt
-raiden-contracts==0.40.2
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@arbitrum
     # via -r requirements-dev.txt
 raiden-webui==1.2.1
     # via -r requirements-dev.txt
@@ -790,9 +796,11 @@ typing-extensions==4.0.1
     # via
     #   -r requirements-dev.txt
     #   aiohttp
+    #   astroid
     #   black
     #   matrix-synapse
     #   mypy
+    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via

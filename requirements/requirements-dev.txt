@@ -22,6 +22,8 @@ aniso8601==7.0.0
     #   flask-restful
 apipkg==1.5
     # via execnet
+appnope==0.1.2
+    # via ipython
 asn1crypto==1.3.0
     # via
     #   -r requirements.txt
@@ -532,7 +534,7 @@ pyyaml==5.4
     # via matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.in
-raiden-contracts==0.40.2
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@arbitrum
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
@@ -677,9 +679,11 @@ typing-extensions==4.0.1
     # via
     #   -r requirements.txt
     #   aiohttp
+    #   astroid
     #   black
     #   matrix-synapse
     #   mypy
+    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
