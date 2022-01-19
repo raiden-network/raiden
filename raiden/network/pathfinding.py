@@ -107,7 +107,7 @@ class IOU:
                 sender=to_checksum_address(self.sender),
                 receiver=to_checksum_address(self.receiver),
                 amount=self.amount,
-                expiration_block=self.expiration_block,
+                claimable_until=self.expiration_block * 15,
                 one_to_n_address=to_checksum_address(self.one_to_n_address),
                 chain_id=self.chain_id,
             )
@@ -119,7 +119,7 @@ class IOU:
             receiver=to_checksum_address(self.receiver),
             one_to_n_address=to_checksum_address(self.one_to_n_address),
             amount=self.amount,
-            expiration_block=self.expiration_block,
+            claimable_until=self.expiration_block * 15,
             chain_id=self.chain_id,
         )
 
@@ -445,7 +445,7 @@ def update_iou(
             sender=to_checksum_address(iou.sender),
             receiver=to_checksum_address(iou.receiver),
             amount=iou.amount,
-            expiration_block=iou.expiration_block,
+            claimable_until=iou.expiration_block,
             one_to_n_address=to_checksum_address(iou.one_to_n_address),
             chain_id=iou.chain_id,
         )

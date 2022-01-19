@@ -72,7 +72,6 @@ from raiden.utils.typing import (
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
-    ChannelInfoIndex,
     ChannelState,
     MessageTypeId,
     ParticipantInfoIndex,
@@ -486,7 +485,7 @@ class TokenNetwork:
                 "channel_identifier must be larger then 0 and smaller then uint256"
             )
 
-        channel_data = self.proxy.functions.getChannelInfo(
+        channel_state = self.proxy.functions.getChannelState(
             channel_identifier=channel_identifier,
             participant1=participant1,
             participant2=participant2,
@@ -494,8 +493,8 @@ class TokenNetwork:
 
         return ChannelData(
             channel_identifier=channel_identifier,
-            settle_block_number=channel_data[ChannelInfoIndex.SETTLE_BLOCK],
-            state=channel_data[ChannelInfoIndex.STATE],
+            settle_block_number=BlockNumber(1),
+            state=channel_state,
         )
 
     def detail_participants(
