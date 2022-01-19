@@ -89,6 +89,9 @@ BlockHash = Hash32
 
 T_BlockNumber = int
 
+T_Timestamp = int
+Timestamp = NewType("Timestamp", T_Timestamp)
+
 # A relative number of blocks
 T_BlockTimeout = int
 BlockTimeout = NewType("BlockTimeout", T_BlockTimeout)
