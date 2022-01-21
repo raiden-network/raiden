@@ -321,7 +321,7 @@ ipfshttpclient==0.8.0a2
     # via
     #   -r requirements-dev.txt
     #   web3
-ipython==7.28.0
+ipython==7.31.1
     # via -r requirements-dev.txt
 ipython-genutils==0.2.0
     # via
