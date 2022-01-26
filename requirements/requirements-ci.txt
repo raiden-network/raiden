@@ -628,7 +628,7 @@ pyyaml==5.4
     #   matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.txt
-raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@upgrade/web3
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@arbitrum
     # via -r requirements-dev.txt
 raiden-webui==1.2.1
     # via -r requirements-dev.txt
