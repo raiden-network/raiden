@@ -238,7 +238,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@arbitrum
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@7ed90eaefc79acdeafeab5de8da3dfa95e5d82a0
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in

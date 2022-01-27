@@ -41,4 +41,4 @@ dbapi-opentracing
 Flask-Opentracing
 requests-opentracing
 
-git+https://github.com/raiden-network/raiden-contracts.git@arbitrum#egg=raiden-contracts
+git+https://github.com/raiden-network/raiden-contracts.git@7ed90eaefc79acdeafeab5de8da3dfa95e5d82a0#egg=raiden-contracts
