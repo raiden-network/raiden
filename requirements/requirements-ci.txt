@@ -696,7 +696,6 @@ six==1.16.0
     #   responses
     #   thrift
     #   traitlets
-    #   treq
 sortedcontainers==2.1.0
     # via
     #   -r requirements-dev.txt
@@ -741,7 +740,7 @@ traitlets==4.3.2
     #   -r requirements-dev.txt
     #   ipython
     #   matplotlib-inline
-treq==21.1.0
+treq==22.1.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
