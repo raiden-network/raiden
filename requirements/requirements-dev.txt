@@ -600,7 +600,6 @@ six==1.16.0
     #   responses
     #   thrift
     #   traitlets
-    #   treq
 sortedcontainers==2.1.0
     # via
     #   hypothesis
@@ -639,7 +638,7 @@ traitlets==4.3.2
     # via
     #   ipython
     #   matplotlib-inline
-treq==21.1.0
+treq==22.1.0
     # via matrix-synapse
 twisted[tls]==21.2.0
     # via
