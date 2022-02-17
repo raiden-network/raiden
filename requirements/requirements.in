@@ -16,17 +16,14 @@ Flask-Cors
 Flask-RESTful
 gevent>=1.5a3
 guppy3
-jinja2>=2.11
 marshmallow-dataclass[union]
 marshmallow-polyfield
 marshmallow
 marshmallow_enum
 matrix-client==0.3.2
 mirakuru==2.1.2
-netifaces
 packaging
 psutil
-pylibsrtp>=0.6.8
 pysha3
 toml
 raiden-contracts>=0.40.0,<0.41.0
