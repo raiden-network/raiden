@@ -77,7 +77,7 @@ eth-abi==2.1.0
     #   eth-account
     #   raiden-contracts
     #   web3
-eth-account==0.5.6
+eth-account==0.5.7
     # via web3
 eth-hash[pycryptodome]==0.3.1
     # via
@@ -87,7 +87,7 @@ eth-keyfile==0.5.1
     # via
     #   -r requirements.in
     #   eth-account
-eth-keys==0.3.3
+eth-keys==0.3.4
     # via
     #   -r requirements.in
     #   eciespy
@@ -239,7 +239,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts==0.40.2
+raiden-contracts==0.40.3
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
@@ -302,7 +302,7 @@ urllib3==1.26.5
     # via requests
 varint==1.0.2
     # via multiaddr
-web3==5.25.0
+web3==5.28.0
     # via
     #   -r requirements.in
     #   raiden-contracts

@@ -176,7 +176,7 @@ eth-abi==2.1.0
     #   eth-account
     #   raiden-contracts
     #   web3
-eth-account==0.5.6
+eth-account==0.5.7
     # via
     #   -r requirements-dev.txt
     #   web3
@@ -189,7 +189,7 @@ eth-keyfile==0.5.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-eth-keys==0.3.3
+eth-keys==0.3.4
     # via
     #   -r requirements-dev.txt
     #   eciespy
@@ -622,7 +622,7 @@ pyyaml==5.4
     #   matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.txt
-raiden-contracts==0.40.2
+raiden-contracts==0.40.3
     # via -r requirements-dev.txt
 raiden-webui==1.2.1
     # via -r requirements-dev.txt
@@ -817,7 +817,7 @@ wcwidth==0.1.9
     # via
     #   -r requirements-dev.txt
     #   prompt-toolkit
-web3==5.25.0
+web3==5.28.0
     # via
     #   -r requirements-dev.txt
     #   raiden-contracts
