@@ -94,7 +94,7 @@ eth-keys==0.3.4
     #   eth-keyfile
 eth-rlp==0.2.1
     # via eth-account
-eth-typing==2.2.1
+eth-typing==2.3.0
     # via
     #   eth-abi
     #   eth-keys
