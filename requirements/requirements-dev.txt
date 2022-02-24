@@ -177,7 +177,7 @@ eth-rlp==0.2.1
     # via
     #   -r requirements.txt
     #   eth-account
-eth-typing==2.2.1
+eth-typing==2.3.0
     # via
     #   -r requirements.txt
     #   eth-abi
@@ -672,7 +672,7 @@ types-toml==0.10.1
     # via -r requirements-dev.in
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==4.0.1
+typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
