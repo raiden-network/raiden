@@ -28,6 +28,8 @@ asn1crypto==1.3.0
     #   coincurve
 astroid==2.8.0
     # via pylint
+asttokens==2.0.5
+    # via stack-data
 async-timeout==3.0.1
     # via
     #   -r requirements.txt
@@ -137,9 +139,7 @@ cytoolz==0.10.1
 dbapi-opentracing==0.0.5
     # via -r requirements.txt
 decorator==4.4.2
-    # via
-    #   ipython
-    #   traitlets
+    # via ipython
 dnspython==2.1.0
     # via
     #   -r requirements.txt
@@ -200,6 +200,8 @@ eth-utils==1.10.0
     #   web3
 execnet==1.6.0
     # via pytest-xdist
+executing==0.8.3
+    # via stack-data
 faker==9.9.0
     # via -r requirements-dev.in
 fancycompleter==0.8
@@ -291,10 +293,8 @@ ipfshttpclient==0.8.0a2
     # via
     #   -r requirements.txt
     #   web3
-ipython==7.28.0
+ipython==8.1.0
     # via -r requirements-dev.in
-ipython-genutils==0.2.0
-    # via traitlets
 isort==5.9.3
     # via
     #   -r requirements-dev.in
@@ -440,6 +440,8 @@ psutil==5.8.0
     #   mirakuru
 ptyprocess==0.6.0
     # via pexpect
+pure-eval==0.2.2
+    # via stack-data
 py==1.10.0
     # via pytest
 py-solc-x==1.1.0
@@ -581,6 +583,7 @@ six==1.16.0
     # via
     #   -r requirements-dev.in
     #   -r requirements.txt
+    #   asttokens
     #   attrdict
     #   automat
     #   bcrypt
@@ -599,11 +602,12 @@ six==1.16.0
     #   python-dateutil
     #   responses
     #   thrift
-    #   traitlets
 sortedcontainers==2.1.0
     # via
     #   hypothesis
     #   matrix-synapse
+stack-data==0.2.0
+    # via ipython
 structlog==21.2.0
     # via -r requirements.txt
 text-unidecode==1.3
@@ -634,7 +638,7 @@ tornado==6.1
     #   -r requirements.txt
     #   jaeger-client
     #   threadloop
-traitlets==4.3.2
+traitlets==5.1.1
     # via
     #   ipython
     #   matplotlib-inline
@@ -672,15 +676,13 @@ types-toml==0.10.1
     # via -r requirements-dev.in
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==4.0.1
+typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
-    #   astroid
     #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
@@ -732,11 +734,11 @@ yarl==1.6.3
     #   aiohttp
 zipp==3.5.0
     # via importlib-metadata
-zope.event==4.4
+zope-event==4.4
     # via
     #   -r requirements.txt
     #   gevent
-zope.interface==5.1.0
+zope-interface==5.1.0
     # via
     #   -r requirements.txt
     #   gevent
