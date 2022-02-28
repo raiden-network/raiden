@@ -18,6 +18,7 @@ from click._compat import term_len
 from click.core import ParameterSource, augment_usage_errors  # type: ignore
 from click.formatting import iter_rows, measure_table, wrap_text
 from toml import TomlDecodeError, load
+from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.gas_strategies.time_based import fast_gas_price_strategy
 
 from raiden.constants import ServerListType
@@ -370,11 +371,19 @@ class GasPriceChoiceType(click.Choice):
                 # the convert() method has to be idempotent, so when the value is callable
                 # we assume it is already the correct gas-price-strategies function
                 return value
+
+            gas_strategies = {
+                "normal": fast_gas_price_strategy,
+                "fast": faster_gas_price_strategy,
+                "rpc": rpc_gas_price_strategy,
+            }
+
             gas_price_string = super().convert(value, param, ctx)
-            if gas_price_string == "fast":
-                return faster_gas_price_strategy
-            else:
-                return fast_gas_price_strategy
+            
+            if gas_price_string not in gas_strategies:
+                raise ConfigurationError(f"Unknown gas price (strategy): {gas_price_string}")
+
+            return gas_strategies[gas_price_string]
 
 
 class MatrixServerType(click.Choice):
