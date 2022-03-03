@@ -139,6 +139,7 @@ RECEIPT_FAILURE_CODE = 0
 class EthClient(Enum):
     GETH = "geth"
     PARITY = "parity"
+    ARBITRUM = "arbitrum"
 
 
 SNAPSHOT_STATE_CHANGES_COUNT = 500
