@@ -31,7 +31,6 @@ def parse_geth_version(client_version: str) -> Optional[Union[Version, LegacyVer
         return None
     return parse_version(matches.groups()[0])
 
-
 def support_check(
     our_version: Union[Version, LegacyVersion],
     highest_supported_version_string: str,
@@ -83,5 +82,8 @@ def is_supported_client(
             lowest_supported_version_string=LOWEST_SUPPORTED_GETH_VERSION,
         )
         return supported, EthClient.GETH, str(our_geth_version)
+    elif client_version.startswith("arb-rpc-node"):
+        our_version = client_version.split("/")[-1][1:]
+        return VersionSupport.SUPPORTED, EthClient.ARBITRUM, our_version
 
     return VersionSupport.UNSUPPORTED, None, None
