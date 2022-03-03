@@ -293,14 +293,6 @@ def parity_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     )
     return Nonce(int(next_nonce_encoded, 16))
 
-def arbitrum_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
-    """Returns the next available nonce for `address`."""
-    next_nonce_encoded = web3.manager.request_blocking(
-        RPCEndpoint("arbitrum_nextNonce"), [to_checksum_address(address)]
-    )
-    return Nonce(int(next_nonce_encoded, 16))
-
-
 def geth_discover_next_available_nonce(web3: Web3, address: Address) -> Nonce:
     """Returns the next available nonce for `address`."""
     return web3.eth.get_transaction_count(address, BLOCK_ID_PENDING)
@@ -336,7 +328,7 @@ def discover_next_available_nonce(web3: Web3, eth_node: EthClient, address: Addr
         geth_assert_rpc_interfaces(web3)
         available_nonce = geth_discover_next_available_nonce(web3, address)
     elif eth_node is EthClient.ARBITRUM:
-        available_nonce = arbitrum_discover_next_available_nonce(web3, address)
+        available_nonce = geth_discover_next_available_nonce(web3, address)
 
 
     return available_nonce
