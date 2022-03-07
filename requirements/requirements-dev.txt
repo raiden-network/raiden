@@ -534,7 +534,7 @@ pyyaml==5.4
     # via matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.in
-raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@v1.0.0rc2
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@v1.0.0rc4
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
@@ -675,7 +675,7 @@ types-toml==0.10.1
     # via -r requirements-dev.in
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==4.0.1
+typing-extensions==4.1.1
     # via
     #   -r requirements.txt
     #   aiohttp
@@ -735,11 +735,11 @@ yarl==1.6.3
     #   aiohttp
 zipp==3.5.0
     # via importlib-metadata
-zope.event==4.4
+zope-event==4.4
     # via
     #   -r requirements.txt
     #   gevent
-zope.interface==5.1.0
+zope-interface==5.1.0
     # via
     #   -r requirements.txt
     #   gevent

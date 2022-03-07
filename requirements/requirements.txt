@@ -238,7 +238,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@v1.0.0rc2
+raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@v1.0.0rc4
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
@@ -289,7 +289,7 @@ tornado==6.1
     #   threadloop
 typeguard==2.11.1
     # via marshmallow-dataclass
-typing-extensions<=4.0.1
+typing-extensions==4.1.1
     # via
     #   -r requirements.in
     #   aiohttp
@@ -313,9 +313,9 @@ wrapt==1.12.1
     # via dbapi-opentracing
 yarl==1.6.3
     # via aiohttp
-zope.event==4.4
+zope-event==4.4
     # via gevent
-zope.interface==5.1.0
+zope-interface==5.1.0
     # via gevent
 
 # The following packages are considered to be unsafe in a requirements file:
