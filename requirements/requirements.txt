@@ -242,7 +242,7 @@ raiden-contracts @ git+https://github.com/raiden-network/raiden-contracts.git@v1
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
-requests==2.26.0
+requests==2.27.1
     # via
     #   -r requirements.in
     #   ipfshttpclient
@@ -272,7 +272,7 @@ six==1.16.0
     #   parsimonious
     #   protobuf
     #   pyrsistent
-    #   thrif
+    #   thrift
 structlog==21.2.0
     # via -r requirements.in
 threadloop==1.0.2

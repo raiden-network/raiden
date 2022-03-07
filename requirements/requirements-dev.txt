@@ -542,7 +542,7 @@ readme-renderer==30.0
     # via -r requirements-dev.in
 regex==2021.11.10
     # via black
-requests==2.26.0
+requests==2.27.1
     # via
     #   -r requirements.txt
     #   grequests

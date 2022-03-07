@@ -638,7 +638,7 @@ regex==2021.11.10
     # via
     #   -r requirements-dev.txt
     #   black
-requests==2.26.0
+requests==2.27.1
     # via
     #   -r requirements-dev.txt
     #   grequests
