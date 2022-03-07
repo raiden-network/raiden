@@ -86,7 +86,7 @@ certifi==2019.3.9
     # via
     #   -r requirements.txt
     #   requests
-cffi==1.12.3
+cffi>=1.12.3
     # via
     #   -r requirements.txt
     #   aiortc
@@ -461,7 +461,7 @@ pyasn1-modules==0.2.5
     #   service-identity
 pycodestyle==2.8.0
     # via flake8
-pycparser==2.19
+pycparser>=2.19
     # via
     #   -r requirements.txt
     #   cffi
