@@ -272,7 +272,7 @@ six==1.16.0
     #   parsimonious
     #   protobuf
     #   pyrsistent
-    #   thrift
+    #   thrif
 structlog==21.2.0
     # via -r requirements.in
 threadloop==1.0.2
@@ -313,9 +313,9 @@ wrapt==1.12.1
     # via dbapi-opentracing
 yarl==1.6.3
     # via aiohttp
-zope-event==4.4
+zope.event==4.4
     # via gevent
-zope-interface==5.1.0
+zope.interface==5.1.0
     # via gevent
 
 # The following packages are considered to be unsafe in a requirements file:
