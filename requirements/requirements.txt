@@ -36,7 +36,7 @@ canonicaljson==1.5.0
     # via -r requirements.in
 certifi==2019.3.9
     # via requests
-cffi>=1.12.3
+cffi==1.15.0
     # via
     #   aiortc
     #   coincurve
@@ -217,7 +217,7 @@ psutil==5.8.0
     #   mirakuru
 py-solc-x==1.1.0
     # via raiden-contracts
-pycparser>=2.19
+pycparser==2.21
     # via cffi
 pycryptodome==3.10.1
     # via
@@ -289,7 +289,7 @@ tornado==6.1
     #   threadloop
 typeguard==2.11.1
     # via marshmallow-dataclass
-typing-extensions<=4.0.1
+typing-extensions==4.1.1
     # via
     #   -r requirements.in
     #   aiohttp
