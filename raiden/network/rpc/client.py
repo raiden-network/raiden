@@ -891,7 +891,7 @@ class TransactionPending:
         fn = getattr(self.data.contract.functions, self.data.function)
         from_address = to_checksum_address(self.from_address)
 
-        if self.eth_node is EthClient.GETH:
+        if self.eth_node in (EthClient.GETH, EthClient.ARBITRUM):
             # Unfortunately geth does not follow the ethereum JSON-RPC spec and
             # does not accept a block identifier argument for eth_estimateGas
             # parity and py-evm (trinity) do.
