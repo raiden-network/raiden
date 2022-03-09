@@ -581,9 +581,6 @@ def patched_web3_eth_estimate_gas(
         params = [transaction, block_identifier]
 
     try:
-        log.debug(f"Estimating gas for transaction: {transaction}")
-        log.debug(f"RPC endpoint: {RPCEndpoint('eth_estimateGas')}")
-        log.debug(f"Function called: {self.web3.manager.request_blocking}")
         result = self.web3.manager.request_blocking(RPCEndpoint("eth_estimateGas"), params)
     except ValueError as e:
         if check_value_error(e, CallType.ESTIMATE_GAS):
@@ -652,6 +649,8 @@ def estimate_gas_for_function(
     )
 
     try:
+        log.debug(f"Estimating gas for transaction: {estimate_transaction}")
+        log.debug(f"Block_identifier: {block_identifier}")
         gas_estimate = web3.eth.estimate_gas(estimate_transaction, block_identifier)
     except ValueError as e:
         if check_value_error(e, CallType.ESTIMATE_GAS):
