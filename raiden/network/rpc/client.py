@@ -649,8 +649,6 @@ def estimate_gas_for_function(
     )
 
     try:
-        log.debug(f"Estimating gas for transaction: {estimate_transaction}")
-        log.debug(f"Block_identifier: {block_identifier}")
         gas_estimate = web3.eth.estimate_gas(estimate_transaction, block_identifier)
     except ValueError as e:
         if check_value_error(e, CallType.ESTIMATE_GAS):
