@@ -30,7 +30,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
 
 ## This scenario tests that the MS does not kick in, if the node requesting monitoring does
 ## not have enough funds deposited in the UDC. A channel is opened between node0 and node1.

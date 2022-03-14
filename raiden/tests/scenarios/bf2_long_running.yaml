@@ -21,7 +21,7 @@ nodes:
   enable-monitoring: false
   default_options:
     gas-price: fast
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
     proportional-fee:
       - "{{ transfer_token }}"
       - 0
@@ -129,6 +129,7 @@ scenario:
             # node0 opens a channel with node4
             - open_channel: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, expected_http_status: 201}
             - assert: {from: 0, to: 4, total_deposit: 10_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
+            - wait: {{ wait_short }}
             # node4 deposits tokens into the node0-node4 channel
             - deposit: {from: 4, to: 0, total_deposit: 25_000_000_000_000_000}
             - wait: {{ wait_short }}

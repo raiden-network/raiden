@@ -30,7 +30,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
 
 # This is the PFS5 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and 0 <-> 4 <-> 3
 # where 0 <-> 4 <-> 3 doesn't have enough capacity to make a second transfer and hence the other path

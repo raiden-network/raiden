@@ -29,7 +29,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
 
 # This is the MS2 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
 # and node0 closes the channel. After the monitoring trigger block is passed node1 gets back online.

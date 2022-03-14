@@ -34,7 +34,7 @@ nodes:
       - "{{ transfer_token }}"
       - 10_000  # 1% imbalance fee on channel balance
     no-cap-mediation-fees: true
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
 
 # Make a transfer over a single mediator with enabled imbalance fees. The
 # channels start at maximum imbalance, which causes negative fees. To test this,

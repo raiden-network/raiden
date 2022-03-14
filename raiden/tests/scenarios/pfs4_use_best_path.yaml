@@ -29,7 +29,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
 
 ## This is the PFS4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and 0 -> 4 -> 3
 ## and checks whether the best path is the one used for the payment.

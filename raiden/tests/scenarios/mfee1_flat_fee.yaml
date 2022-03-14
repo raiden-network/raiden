@@ -33,7 +33,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: 60
+    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
 
 ## This is the MFEE1 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
 ## whether a path is returned. It also checks that correct flat mediation fees are deducted.
