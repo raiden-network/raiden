@@ -21,7 +21,6 @@ nodes:
   raiden_version: local
 
   default_options:
-    gas-price: fast
     enable-monitoring: true
     proportional-fee:
       - "{{ transfer_token }}"
@@ -29,8 +28,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: {{ settlement_timeout_min }}
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
 
 # This is the MS3 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
 # and node0 closes the channel. Before the monitoring trigger block is passed node1 gets back online.
@@ -41,11 +39,11 @@ scenario:
     tasks:
       - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
       - transfer: {from: 0, to: 1, amount: 500_000_000_000_000_000, expected_http_status: 200}
+      ## Wait for Monitor Request to be sent
+      - wait_blocks: 1
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
       - close_channel: {from: 0, to: 1}
-      ## Wait for channel to be closed
-      - wait_blocks: 1
       - assert: {from: 0 ,to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
       - assert_events:
           contract_name: "TokenNetwork"
@@ -55,13 +53,12 @@ scenario:
 
       ## node1 gets back online before the MS reacts
       ## node1 should call updateNonClosingBalanceProof in this case and the MS wont react
-      - wait_blocks: 2
       - start_node: 1
 
-      ## The MS reacts after 0.3 * settle_timeout at the earliest. 0.3 * 40 = 12
-      ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 40 = 32
+      ## The MS reacts after 0.3 * settle_timeout at the earliest. 0.3 * 180 = 54s
+      ## The MS reacts after 0.8 * settle_timeout at the latest. 0.8 * 180 = 144s
       ## But we just need to check for the event from node1 before the monitoring service reacts
-      - wait_blocks: 20
+      - wait: {{ wait_short }}
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"
@@ -70,7 +67,7 @@ scenario:
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
       ## We already waited 22 blocks, so we can subtract that from the settlement_timeout_min.
-      ## Add 20 blocks as safety margin.
-      - wait_blocks: {{ settlement_timeout_min - 22 + 20 }}
+      ## Add 20 seconds as safety margin.
+      - wait: {{ settlement_timeout_min - wait_short + 20 }}
       # will fail for now since channel was closed by node1.
       - assert_ms_claim: {channel_info_key: "MS Test Channel", must_claim: False}

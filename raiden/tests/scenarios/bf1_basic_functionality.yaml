@@ -34,8 +34,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: "{{ settlement_timeout_min }}"
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
   node_options:
     0:
       matrix-server: "{{ matrix_servers[0] }}"
@@ -68,10 +67,11 @@ scenario:
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - wait_blocks: 1
       - serial:
           name: "Make transfer in the direction with no deposit (should fail) - No path available"
           tasks:
-            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30, expected_http_status: 409}
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 409}
       - parallel:
           name: "Deposit in the other directions"
           tasks:
@@ -98,7 +98,7 @@ scenario:
           name: "Make 10 transfers from 3 to 0"
           repeat: 10
           tasks:
-            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 10 payments from 3 to 0"
           tasks:
@@ -109,7 +109,7 @@ scenario:
           name: "Make 10 transfers from 1 to 4"
           repeat: 10
           tasks:
-            - transfer: {from: 1, to: 4, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 1, to: 4, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 10 payments from 1 to 4"
           tasks:
@@ -139,7 +139,7 @@ scenario:
           name: "Make payments from 2 to 4 after withdraw"
           repeat: 10
           tasks:
-            - transfer: {from: 2, to: 4, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 2, to: 4, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 10 payments from 2 to 4"
           tasks:
@@ -150,7 +150,7 @@ scenario:
           name: "Make payments from 0 to 2 after withdraw"
           repeat: 5
           tasks:
-            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 5 payments from 0 to 2"
           tasks:
@@ -179,7 +179,7 @@ scenario:
           name: "Make 100 payments from 0 to 3"
           repeat: 100
           tasks:
-            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 100 payments from 0 to 3"
           tasks:
@@ -197,7 +197,7 @@ scenario:
           name: "Make 10 payments from 0 to 3 after restart"
           repeat: 10
           tasks:
-            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 10 payments from 0 to 3"
           tasks:
@@ -208,7 +208,7 @@ scenario:
           name: "Make 100 payments from 3 to 0"
           repeat: 100
           tasks:
-            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000}
       - serial:
           name: "Assert after 100 payments from 3 to 0"
           tasks:
@@ -247,7 +247,7 @@ scenario:
                 event_args: {closing_participant: 3}
 
             ## The MS reacts within the settle_timeout
-            - wait_blocks: "{{ settlement_timeout_min }}"
+            - wait: {{ settlement_timeout_min }}
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "NonClosingBalanceProofUpdated"
@@ -258,5 +258,5 @@ scenario:
             ## To make sure the transactions gets mined in time, 20 additional blocks are added
             ## Monitoring Service only reacts for the second closing because node4 settled to first
             ## channel itself
-            - wait_blocks: 20
+            - wait: {{ wait_short }}
             - assert_ms_claim: {channel_info_key: "MS Test Channel 3-4"}

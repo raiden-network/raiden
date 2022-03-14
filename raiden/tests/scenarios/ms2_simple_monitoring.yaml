@@ -29,8 +29,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: {{ settlement_timeout_min }}
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
 
 # This is the MS2 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
 # and node0 closes the channel. After the monitoring trigger block is passed node1 gets back online.
@@ -40,11 +39,11 @@ scenario:
     tasks:
       - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000}
       - transfer: {from: 0, to: 1, amount: 500_000_000_000_000_000, expected_http_status: 200}
+      ## Wait for Monitor Request to be sent
+      - wait_blocks: 1
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
       - close_channel: {from: 0, to: 1}
-      ## Wait for channel to be closed
-      - wait_blocks: 10
       - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
       - assert_events:
           contract_name: "TokenNetwork"
@@ -53,7 +52,7 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## The MS reacts within the settle_timeout
-      - wait_blocks: {{ settlement_timeout_min }}
+      - wait: {{ settlement_timeout_min }}
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"

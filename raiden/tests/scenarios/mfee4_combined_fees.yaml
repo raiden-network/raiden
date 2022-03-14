@@ -34,6 +34,7 @@ nodes:
       - "{{ transfer_token }}"
       - 20_000  # 2% imbalance fee on channel balance
     no-cap-mediation-fees: true
+    default-reveal-timeout: 60
 
 ## This is the MFEE4 scenario. It creates a network with topology 0 -> 1 -> 2 -> 3 and checks
 ## whether a path is returned. It also checks that correct fees are deducted.

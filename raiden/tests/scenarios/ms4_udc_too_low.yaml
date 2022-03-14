@@ -30,8 +30,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: {{ settlement_timeout_min }}
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
 
 ## This scenario tests that the MS does not kick in, if the node requesting monitoring does
 ## not have enough funds deposited in the UDC. A channel is opened between node0 and node1.
@@ -63,7 +62,6 @@ scenario:
       - serial:
           name: "Wait for channel close and assert that it is closed"
           tasks:
-            - wait_blocks: 1
             - assert: {from: 0 ,to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
             - assert_events:
                 contract_name: "TokenNetwork"
@@ -75,7 +73,7 @@ scenario:
           name: "Wait for MS to not react"
           tasks:
             # The MS reacts within the settle_timeout
-            - wait_blocks: {{ settlement_timeout_min }}
+            - wait: {{ settlement_timeout_min }}
             # Note that 0 events are expected
             - assert_events:
                 contract_name: "TokenNetwork"
@@ -88,7 +86,7 @@ scenario:
           tasks:
             # Monitored channel must be settled before the monitoring service can claim its reward
             # To make sure the transactions gets mined in time, 10 additional blocks are added
-            - wait_blocks: 10
+            - wait: {{ wait_long }}
             - assert_events:
                 contract_name: "TokenNetwork"
                 event_name: "NonClosingBalanceProofUpdated"

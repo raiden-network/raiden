@@ -19,7 +19,7 @@ nodes:
   raiden_version: local
 
   default_options:
-    gas-price: fast
+    gas-price: {{ gas_price }}
     routing-mode: pfs
     # Only use one path per call to make sure the expected one is used
     pathfinding-max-paths: 1
@@ -31,6 +31,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
+    default-reveal-timeout: 60
 
 ## This is the PFS8 scenario. It aims to make sure that the PFS reacts correctly if a node along
 ## a path goes offline and thus provides a new path if one is available.
@@ -49,6 +50,10 @@ scenario:
             - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 0, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - serial:
+          name: "Wait for open channels"
+          tasks:
+            - wait_blocks: 1
       - parallel:
           name: "Deposit in the other directions"
           tasks:

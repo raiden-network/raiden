@@ -31,8 +31,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: {{ settlement_timeout_min }}
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
 
 # This is the bf4 scenario. It sets up a topology of [ [0, 1, 2], [0, 1, 3], [0, 4, 5] ]
 # with deposits in the directions starting from node0 going towards node2, node3 and node5.
@@ -67,17 +66,17 @@ scenario:
                 name: "Make 100 transfers from 0 to 2"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 2, amount: 1_000_000_000_000_000}
             - serial:
                 name: "Make 100 transfers from 0 to 3"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 3, amount: 1_000_000_000_000_000}
             - serial:
                 name: "Make 100 transfers from 0 to 5"
                 repeat: 100
                 tasks:
-                  - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000, lock_timeout: 30}
+                  - transfer: {from: 0, to: 5, amount: 1_000_000_000_000_000}
       # Make sure that all transfers are finalized before asserting
       - wait: {{ wait_short }}
       - parallel:

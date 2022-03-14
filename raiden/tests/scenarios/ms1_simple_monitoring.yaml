@@ -29,8 +29,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-settle-timeout: {{ settlement_timeout_min }}
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
 
 # This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node1 goes offline
 # and node0 closes the channel. The last assert checks whether the monitoring service interferes and received its reward.
@@ -53,7 +52,7 @@ scenario:
           event_args: {closing_participant: 0}
 
       ## The MS reacts within the settle_timeout
-      - wait_blocks: {{ settlement_timeout_min }}
+      - wait: {{ settlement_timeout_min }}
       - assert_events:
           contract_name: "TokenNetwork"
           event_name: "NonClosingBalanceProofUpdated"
@@ -62,5 +61,5 @@ scenario:
 
       ## Monitored channel must be settled before the monitoring service can claim its reward
       ## To make sure the transactions gets mined in time, 20 additional blocks are added
-      - wait_blocks: 20
+      - wait: {{ wait_short }}
       - assert_ms_claim: {channel_info_key: "MS Test Channel"}

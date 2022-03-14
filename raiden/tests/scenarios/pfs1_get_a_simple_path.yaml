@@ -29,6 +29,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
+    default-reveal-timeout: 60
 
 ## This is the PFS1 scenario. It creates a network with topology 0 <-> 1 <-> 2 <-> 3 and checks
 ## whether a path is returned.

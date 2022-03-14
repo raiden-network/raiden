@@ -31,6 +31,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
+    default-reveal-timeout: 60
 
 # This is the bf3 scenario. It sets up a topology of [0, 1, 2, 3, 4] and deposits in both directions between all nodes.
 # When all channels are opened and deposits have taken place, 100 payments are started from node0 to node4
@@ -54,6 +55,7 @@ scenario:
             - assert: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - wait: {{ wait_short }}  # Wait for the other nodes to detect channel before attempting counter-deposit
       - parallel:
           name: "Deposit in the other directions"
           tasks:
@@ -61,7 +63,6 @@ scenario:
             - deposit: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
-      - wait: {{ wait_short }}  # Wait for the PFS to receive and process the capacity updates
       - parallel:
           name: "Assert after deposits"
           tasks:
@@ -69,6 +70,7 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 3, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+      - wait: {{ wait_short }}  # Wait for the PFS to receive and process the capacity updates
       - parallel:
           name: "Make 100 transfers from 0 to 4, and 100 transfers from 4 to 0 in parallel"
           tasks:

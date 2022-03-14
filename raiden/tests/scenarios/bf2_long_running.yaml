@@ -21,8 +21,7 @@ nodes:
   enable-monitoring: false
   default_options:
     gas-price: fast
-    default-settle-timeout: {{ settlement_timeout_min }}
-    default-reveal-timeout: 20
+    default-reveal-timeout: 60
     proportional-fee:
       - "{{ transfer_token }}"
       - 0
@@ -134,7 +133,7 @@ scenario:
             - deposit: {from: 4, to: 0, total_deposit: 25_000_000_000_000_000}
             - wait: {{ wait_short }}
             # node0 performs a payment to node4 (path 0<->1<->2<->4)
-            - transfer: {from: 0, to: 4, amount: 50_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 0, to: 4, amount: 50_000_000_000_000_000, expected_http_status: 200}
             - wait: {{ wait_short }}
             - assert: {from: 0, to: 1, total_deposit: 100_000_000_000_000_000, balance: 50_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 150_000_000_000_000_000, state: "opened"}
@@ -143,19 +142,19 @@ scenario:
             - assert: {from: 2, to: 4, total_deposit: 150_000_000_000_000_000, balance: 100_000_000_000_000_000, state: "opened"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50_000_000_000_000_000, state: "opened"}
             # node2 sends all of its tokens to node1 (one transfer)
-            - transfer: {from: 2, to: 1, amount: 150_000_000_000_000_000, expected_http_status: 200, lock_timeout: 30}
+            - transfer: {from: 2, to: 1, amount: 150_000_000_000_000_000, expected_http_status: 200}
             - wait: {{ wait_short }}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 0, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 200_000_000_000_000_000, state: "opened"}
             # node2 tries to send another tokens payment to node1 (fail no route with enough capacity)
-            - transfer: {from: 2, to: 1, amount: 150_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
+            - transfer: {from: 2, to: 1, amount: 150_000_000_000_000_000, expected_http_status: 409}
             - wait: {{ wait_short }}
       - serial:
           name: "Multiple multi hop payments"
           repeat: 10
           tasks:
             # node2 sends 10 payments to node1 by using the 2 <-> 4 <-> 0 <-> 1 route
-            - transfer: {from: 2, to: 1, amount: 1_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 2, to: 1, amount: 1_000_000_000_000_000}
       - serial:
           name: "Allow nodes to process the payments"
           tasks:
@@ -191,7 +190,7 @@ scenario:
           name: "Multi hop payment node2"
           tasks:
             # node0 sends 10 tokens to node2 (using the 0 <-> 4 <-> 2 route)
-            - transfer: {from: 0, to: 2, amount: 10_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 2, amount: 10_000_000_000_000_000}
             - wait: {{ wait_short }}
       - parallel:
           name: "Assert transfer was executed correctly"
@@ -217,7 +216,7 @@ scenario:
       - serial:
           name: "Payment from node3 to node2"
           tasks:
-            - transfer: {from: 3, to: 2, amount: 99_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 3, to: 2, amount: 99_000_000_000_000_000}
       - wait: {{ wait_short }}
       - serial:
           name: "Checking if payments were made successfully"
@@ -250,7 +249,7 @@ scenario:
       - serial:
           name: "Payment from node0 to node3"
           tasks:
-            - transfer: {from: 0, to: 3, amount: 200_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 0, to: 3, amount: 200_000_000_000_000_000}
       - wait: {{ wait_short }}
       - parallel:
           name: "Assert channels after transfers"
@@ -268,17 +267,17 @@ scenario:
             - deposit: {from: 2, to: 4, total_deposit: 200_000_000_000_000_000, expected_http_status: 409}
             - wait: {{ wait_short }}
             # node2 sends tokens to node1
-            - transfer: {from: 2, to: 1, amount: 10_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 2, to: 1, amount: 10_000_000_000_000_000}
             - wait: {{ wait_short }}
             - assert: {from: 1, to: 2, total_deposit: 100_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100_000_000_000_000_000, balance: 190_000_000_000_000_000, state: "opened"}
             # node1 sends tokens to node0
-            - transfer: {from: 1, to: 0, amount: 10_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 1, to: 0, amount: 10_000_000_000_000_000}
             - wait: {{ wait_short }}
             - assert: {from: 0, to: 1, total_deposit: 260_000_000_000_000_000, balance: 10_000_000_000_000_000, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100_000_000_000_000_000, balance: 350_000_000_000_000_000, state: "opened"}
             # node4 sends tokens to node2 (0 -> 1-> 2)
-            - transfer: {from: 4, to: 2, amount: 10_000_000_000_000_000, lock_timeout: 30}
+            - transfer: {from: 4, to: 2, amount: 10_000_000_000_000_000}
             - wait: {{ wait_short }}
       - parallel:
           name: "Assert for the channel states after mediated transfers were completed"
@@ -303,10 +302,10 @@ scenario:
       - parallel:
           name: "All nodes try to make a payment to node4, should fail because all channels to node4 are closed"
           tasks:
-            - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
-            - transfer: {from: 1, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
-            - transfer: {from: 2, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
-            - transfer: {from: 3, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409, lock_timeout: 30}
+            - transfer: {from: 0, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409}
+            - transfer: {from: 1, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409}
+            - transfer: {from: 2, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409}
+            - transfer: {from: 3, to: 4, amount: 1_000_000_000_000_000, expected_http_status: 409}
       - serial:
           name: "node0 and node1 leave token netwwork"
           tasks:
