@@ -536,7 +536,7 @@ raiden-contracts==0.40.3
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
-readme-renderer==30.0
+readme-renderer==34.0
     # via -r requirements-dev.in
 regex==2021.11.10
     # via black
@@ -672,15 +672,13 @@ types-toml==0.10.1
     # via -r requirements-dev.in
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==4.0.1
+typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
-    #   astroid
     #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
@@ -732,11 +730,11 @@ yarl==1.6.3
     #   aiohttp
 zipp==3.5.0
     # via importlib-metadata
-zope.event==4.4
+zope-event==4.4
     # via
     #   -r requirements.txt
     #   gevent
-zope.interface==5.1.0
+zope-interface==5.1.0
     # via
     #   -r requirements.txt
     #   gevent
