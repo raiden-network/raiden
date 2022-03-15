@@ -21,6 +21,7 @@ nodes:
   raiden_version: local
 
   default_options:
+    gas-price: fast
     enable-monitoring: true
     proportional-fee:
       - "{{ transfer_token }}"
