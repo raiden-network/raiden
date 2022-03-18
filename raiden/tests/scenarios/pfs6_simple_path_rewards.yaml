@@ -44,6 +44,7 @@ scenario:
             - open_channel: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 1, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
             - open_channel: {from: 2, to: 3, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 201}
+      - wait: {{ wait_short }}
       - serial:
           name: "Check that no IOUs exist and create one"
           tasks:

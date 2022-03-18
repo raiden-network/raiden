@@ -55,6 +55,7 @@ scenario:
           name: "Stop node1"
           tasks:
             - stop_node: 1
+      - wait: {{ wait_short }}
       - serial:
           name: "node0 closes the channel"
           tasks:
