@@ -58,6 +58,7 @@ scenario:
       - serial:
           name: "node0 closes the channel"
           tasks:
+            - wait: {{ wait_short }}
             - close_channel: {from: 0, to: 1}
       - serial:
           name: "Wait for channel close and assert that it is closed"

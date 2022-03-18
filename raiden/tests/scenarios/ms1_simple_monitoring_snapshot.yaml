@@ -48,6 +48,7 @@ scenario:
       - wait_blocks: 1
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
+      - wait: {{ wait_short }}
       - close_channel: {from: 0, to: 1}
       ## Wait for channel to be closed
       - wait_blocks: 1

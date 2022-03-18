@@ -44,6 +44,7 @@ scenario:
       - wait_blocks: 1
       - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
       - stop_node: 1
+      - wait: {{ wait_short }}
       - close_channel: {from: 0, to: 1}
       - assert: {from: 0 ,to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 500_000_000_000_000_000, state: "closed"}
       - assert_events:
