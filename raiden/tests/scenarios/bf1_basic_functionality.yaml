@@ -236,6 +236,7 @@ scenario:
           name: "Close channel between 3 and 4 while 4 is offline"
           tasks:
             - stop_node: 4
+            - wait: {{ wait_short }}
             - close_channel: {from: 3, to: 4}
             ## Wait for channel to be closed
             - wait_blocks: 1
