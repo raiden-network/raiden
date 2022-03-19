@@ -57,10 +57,7 @@ scenario:
             - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
-      - serial:
-          name: "adding a wait before the asserts"
-          tasks:
-            - wait: {{ wait_long }}
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert after opening and depositing"
           tasks:

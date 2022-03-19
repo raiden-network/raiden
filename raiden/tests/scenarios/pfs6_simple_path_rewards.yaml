@@ -66,6 +66,7 @@ scenario:
           tasks:
             - deposit: {from: 1, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 2, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - wait: {{ wait_short }}
       - serial:
           name: "Assert on all channel deposits"
           tasks:
@@ -81,7 +82,6 @@ scenario:
           tasks:
             # Now that there is a path with capacity the transfer should go through
             # and another IOU should exist
-            - wait_blocks: 1
             - transfer: {from: 3, to: 0, amount: 1_000_000_000_000_000, expected_http_status: 200}
             - wait_blocks: 1
             - assert_pfs_history: {source: 3, target: 0, request_count: 2}

@@ -60,6 +60,7 @@ scenario:
             - deposit: {from: 3, to: 2, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 3, to: 4, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
             - deposit: {from: 4, to: 0, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+      - wait: {{ wait_short }}
       - parallel:
           name: "Assert after deposits"
           tasks:
@@ -77,7 +78,6 @@ scenario:
           name: "Make payment from 0 to 3"
           tasks:
             # Check that a payment is made with shortest path [0, 4, 3] from 0 to 3
-            - wait_blocks: 1
             - transfer: {from: 0, to: 3, amount: 300_000_000_000_000_000, expected_http_status: 200}
 
             # Assert that correct amount was tranferred on the correct path
