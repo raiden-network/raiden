@@ -1156,7 +1156,8 @@ class JSONRPCClient:
             eth_node=self.eth_node,
             extra_log_details=extra_log_details,
         )
-        return pending.estimate_gas(BLOCK_ID_PENDING)
+        estimate = pending.estimate_gas(BLOCK_ID_PENDING)
+        return estimate * 2  # return an error margin for arbitrum
 
     def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
         """Allocates an unique `nonce` and send the transaction to the blockchain.

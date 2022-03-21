@@ -60,17 +60,17 @@ class CustomToken(Token):
             self.proxy, "mintFor", extra_log_details, amount, address
         )
 
-        if estimated_transaction is not None:
-            transaction_sent = self.client.transact(estimated_transaction)
-            transaction_mined = self.client.poll_transaction(transaction_sent)
-
-            if not was_transaction_successfully_mined(transaction_mined):
-                raise MintFailed("Call to contract method mintFor: Transaction failed.")
-            else:
-                return transaction_mined.transaction_hash
-
-        else:
+        if estimated_transaction is None:
             raise MintFailed(
                 "Gas estimation failed. Make sure the token has a method "
                 "named mintFor(uint256,address)."
             )
+        
+        transaction_sent = self.client.transact(estimated_transaction)
+        transaction_mined = self.client.poll_transaction(transaction_sent)
+
+        if not was_transaction_successfully_mined(transaction_mined):
+            raise MintFailed("Call to contract method mintFor: Transaction failed.")
+        else:
+            return transaction_mined.transaction_hash
+    
