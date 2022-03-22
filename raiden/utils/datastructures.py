@@ -1,4 +1,4 @@
-import collections
+from collections.abc import Mapping
 from itertools import zip_longest
 from typing import Iterable, Tuple
 
@@ -6,9 +6,7 @@ from typing import Iterable, Tuple
 def merge_dict(to_update: dict, other_dict: dict) -> None:
     """merges b into a"""
     for key, value in other_dict.items():
-        has_map = isinstance(value, collections.Mapping) and isinstance(
-            to_update.get(key, None), collections.Mapping
-        )
+        has_map = isinstance(value, Mapping) and isinstance(to_update.get(key, None), Mapping)
 
         if has_map:
             merge_dict(to_update[key], value)
