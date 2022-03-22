@@ -932,7 +932,7 @@ class TransactionPending:
                 data=self.data,
                 extra_log_details=self.extra_log_details,
                 estimated_gas=safe_gas_limit(estimated_gas),
-                gas_price=gas_price,
+                gas_price=gas_price * 2,  # add an error margin for arbitrum
                 approximate_block=(BlockHash(block["hash"]), BlockNumber(block["number"])),
             )
 
@@ -1157,7 +1157,7 @@ class JSONRPCClient:
             extra_log_details=extra_log_details,
         )
         estimate = pending.estimate_gas(BLOCK_ID_PENDING)
-        return estimate * 2  # return an error margin for arbitrum
+        return estimate
 
     def transact(self, transaction: Union[TransactionEstimated, EthTransfer]) -> TransactionSent:
         """Allocates an unique `nonce` and send the transaction to the blockchain.
