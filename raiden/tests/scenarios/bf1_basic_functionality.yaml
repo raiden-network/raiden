@@ -34,7 +34,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
+    default-reveal-timeout: {{ settlement_timeout_min // 4 }}
   node_options:
     0:
       matrix-server: "{{ matrix_servers[0] }}"

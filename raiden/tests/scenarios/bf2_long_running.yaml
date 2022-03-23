@@ -21,7 +21,7 @@ nodes:
   enable-monitoring: false
   default_options:
     gas-price: fast
-    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
+    default-reveal-timeout: {{ settlement_timeout_min // 4 }}
     proportional-fee:
       - "{{ transfer_token }}"
       - 0

@@ -30,7 +30,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
+    default-reveal-timeout: {{ settlement_timeout_min // 4 }}
 
 ## This scenario sets up a topology of [0, 1, 2, 3] and [0, 4, 3] with deposits in both directions.
 ## 100 payments is then carried out and assertions are made to ensure the PFS gets the corrects amount

@@ -31,7 +31,7 @@ nodes:
     proportional-imbalance-fee:
       - "{{ transfer_token }}"
       - 0
-    default-reveal-timeout: {{ settlement_timeout_min / 4 }}
+    default-reveal-timeout: {{ settlement_timeout_min // 4 }}
 
 # This is the bf4 scenario. It sets up a topology of [ [0, 1, 2], [0, 1, 3], [0, 4, 5] ]
 # with deposits in the directions starting from node0 going towards node2, node3 and node5.
