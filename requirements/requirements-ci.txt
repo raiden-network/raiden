@@ -495,7 +495,7 @@ prompt-toolkit==3.0.5
     # via
     #   -r requirements-dev.txt
     #   ipython
-protobuf==3.11.3
+protobuf==3.15.0
     # via
     #   -r requirements-dev.txt
     #   web3

@@ -205,7 +205,7 @@ packaging==21.3
     # via -r requirements.in
 parsimonious==0.8.1
     # via eth-abi
-protobuf==3.11.3
+protobuf==3.15.0
     # via web3
 psutil==5.8.0
     # via
