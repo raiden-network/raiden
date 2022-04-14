@@ -23,6 +23,7 @@ jobs:
           python3 -m venv .venv-raiden
           source .venv-raiden/bin/activate
           make install
+          pip install -U pip setuptools
           pip install liccheck
       - name: check versions
         run: |
