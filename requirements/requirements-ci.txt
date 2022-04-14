@@ -476,7 +476,7 @@ pillow==9.0.1
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
-pip-tools==6.4.0
+pip-tools==6.6.0
     # via -r requirements-dev.txt
 platformdirs==2.2.0
     # via
