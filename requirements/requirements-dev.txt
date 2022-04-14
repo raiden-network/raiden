@@ -26,7 +26,7 @@ asn1crypto==1.3.0
     # via
     #   -r requirements.txt
     #   coincurve
-astroid==2.8.0
+astroid==2.11.2
     # via pylint
 asttokens==2.0.5
     # via stack-data
@@ -140,6 +140,8 @@ dbapi-opentracing==0.0.5
     # via -r requirements.txt
 decorator==4.4.2
     # via ipython
+dill==0.3.4
+    # via pylint
 dnspython==2.1.0
     # via
     #   -r requirements.txt
@@ -486,7 +488,7 @@ pylibsrtp==0.6.8
     # via
     #   -r requirements.txt
     #   aiortc
-pylint==2.11.1
+pylint==2.13.5
     # via -r requirements-dev.in
 pymacaroons==0.13.0
     # via matrix-synapse
@@ -625,10 +627,11 @@ toml==0.10.2
     #   -r requirements.txt
     #   mypy
     #   pep517
-    #   pylint
     #   pytest
-tomli==1.0.4
-    # via black
+tomli==1.2.3
+    # via
+    #   black
+    #   pylint
 toolz==0.9.0
     # via
     #   -r requirements.txt
