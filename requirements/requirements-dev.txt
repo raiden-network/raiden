@@ -416,7 +416,7 @@ phonenumbers==8.10.13
     # via matrix-synapse
 pickleshare==0.7.5
     # via ipython
-pillow==9.0.0
+pillow==9.0.1
     # via matrix-synapse
 pip-tools==6.4.0
     # via -r requirements-dev.in
@@ -676,11 +676,9 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
-    #   astroid
     #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
@@ -732,11 +730,11 @@ yarl==1.6.3
     #   aiohttp
 zipp==3.5.0
     # via importlib-metadata
-zope.event==4.4
+zope-event==4.4
     # via
     #   -r requirements.txt
     #   gevent
-zope.interface==5.1.0
+zope-interface==5.1.0
     # via
     #   -r requirements.txt
     #   gevent
