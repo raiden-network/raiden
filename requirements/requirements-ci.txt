@@ -96,7 +96,7 @@ bump2version==1.0.1
     # via -r requirements-dev.txt
 cachetools==4.2.4
     # via -r requirements-dev.txt
-canonicaljson==1.5.0
+canonicaljson==1.6.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
@@ -268,7 +268,6 @@ flask-restful==0.3.9
 frozendict==1.2
     # via
     #   -r requirements-dev.txt
-    #   canonicaljson
     #   matrix-synapse
 gevent==21.8.0
     # via
@@ -362,7 +361,7 @@ lru-dict==1.1.6
     # via
     #   -r requirements-dev.txt
     #   web3
-macholib==1.15.2
+macholib==1.16
     # via -r requirements-ci.in
 markupsafe==2.0.1
     # via
