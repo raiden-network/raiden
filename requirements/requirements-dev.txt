@@ -202,7 +202,7 @@ execnet==1.6.0
     # via pytest-xdist
 executing==0.8.3
     # via stack-data
-faker==9.9.0
+faker==13.3.5
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
@@ -538,7 +538,7 @@ raiden-contracts==0.40.3
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
-readme-renderer==34.0
+readme-renderer==35.0
     # via -r requirements-dev.in
 regex==2021.11.10
     # via black
@@ -610,8 +610,6 @@ stack-data==0.2.0
     # via ipython
 structlog==21.2.0
     # via -r requirements.txt
-text-unidecode==1.3
-    # via faker
 threadloop==1.0.2
     # via
     #   -r requirements.txt
