@@ -70,9 +70,7 @@ bitarray==1.2.1
 black==22.3.0
     # via -r requirements-dev.in
 bleach==3.3.0
-    # via
-    #   matrix-synapse
-    #   readme-renderer
+    # via matrix-synapse
 bump2version==1.0.1
     # via -r requirements-dev.in
 cachetools==4.2.4
@@ -144,8 +142,6 @@ dnspython==2.1.0
     # via
     #   -r requirements.txt
     #   aioice
-docutils==0.16
-    # via readme-renderer
 eciespy==0.3.11
     # via -r requirements.txt
 eth-abi==2.1.0
@@ -478,7 +474,6 @@ pygments==2.7.4
     # via
     #   ipython
     #   pdbpp
-    #   readme-renderer
 pylibsrtp==0.6.8
     # via
     #   -r requirements.txt
@@ -535,8 +530,6 @@ raiden-contracts==0.40.3
     # via -r requirements.txt
 raiden-webui==1.2.1
     # via -r requirements.txt
-readme-renderer==34.0
-    # via -r requirements-dev.in
 requests==2.26.0
     # via
     #   -r requirements.txt
@@ -673,8 +666,11 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
+    #   astroid
+    #   black
     #   matrix-synapse
     #   mypy
+    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
