@@ -519,7 +519,7 @@ pytest-random==0.2
     # via -r requirements-dev.in
 pytest-select==0.1.2
     # via -r requirements-dev.in
-pytest-xdist==2.4.0
+pytest-xdist==2.5.0
     # via -r requirements-dev.in
 python-dateutil==2.8.1
     # via faker

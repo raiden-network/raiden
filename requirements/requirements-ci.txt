@@ -609,7 +609,7 @@ pytest-random==0.2
     # via -r requirements-dev.txt
 pytest-select==0.1.2
     # via -r requirements-dev.txt
-pytest-xdist==2.4.0
+pytest-xdist==2.5.0
     # via -r requirements-dev.txt
 python-dateutil==2.8.1
     # via
