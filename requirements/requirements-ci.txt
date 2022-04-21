@@ -91,7 +91,6 @@ bleach==3.3.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
-    #   readme-renderer
 bump2version==1.0.1
     # via -r requirements-dev.txt
 cachetools==4.2.4
@@ -167,10 +166,6 @@ dnspython==2.1.0
     # via
     #   -r requirements-dev.txt
     #   aioice
-docutils==0.16
-    # via
-    #   -r requirements-dev.txt
-    #   readme-renderer
 eciespy==0.3.11
     # via -r requirements-dev.txt
 eth-abi==2.1.0
@@ -558,7 +553,6 @@ pygments==2.7.4
     #   -r requirements-dev.txt
     #   ipython
     #   pdbpp
-    #   readme-renderer
 pyinstaller==5.0
     # via -r requirements-ci.in
 pyinstaller-hooks-contrib==2020.7
@@ -631,8 +625,6 @@ raiden-api-client==1.1.1
 raiden-contracts==0.40.3
     # via -r requirements-dev.txt
 raiden-webui==1.2.1
-    # via -r requirements-dev.txt
-readme-renderer==34.0
     # via -r requirements-dev.txt
 requests==2.26.0
     # via
@@ -791,8 +783,11 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
+    #   astroid
+    #   black
     #   matrix-synapse
     #   mypy
+    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
