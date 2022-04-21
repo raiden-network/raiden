@@ -128,7 +128,7 @@ class ConsoleTools:
     def create_token(
         self,
         registry_address_hex: AddressHex,
-        initial_alloc: int = 10 ** 6,
+        initial_alloc: int = 10**6,
         name: str = "raidentester",
         symbol: str = "RDT",
         decimals: int = 2,

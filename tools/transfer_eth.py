@@ -9,7 +9,7 @@ from raiden.network.rpc.client import EthTransfer, JSONRPCClient
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.utils.formatting import to_canonical_address, to_checksum_address
 
-WEI_TO_ETH = 10 ** 18
+WEI_TO_ETH = 10**18
 
 
 @click.command()

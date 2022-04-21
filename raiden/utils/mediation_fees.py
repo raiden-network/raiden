@@ -15,8 +15,8 @@ def ppm_fee_per_channel(per_hop_fee: ProportionalFeeAmount) -> ProportionalFeeAm
     #converting-per-hop-proportional-fees-in-per-channel-proportional-fees
     for how to get to this formula.
     """
-    per_hop_ratio = Fraction(per_hop_fee, 10 ** 6)
-    return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 10 ** 6))
+    per_hop_ratio = Fraction(per_hop_fee, 10**6)
+    return ProportionalFeeAmount(round(per_hop_ratio / (per_hop_ratio + 2) * 10**6))
 
 
 def prepare_mediation_fee_config(

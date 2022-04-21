@@ -26,7 +26,7 @@ from raiden.utils.typing import (
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from raiden_contracts.utils.pending_transfers import get_pending_transfers_tree
 
-pyevm_main.GENESIS_GAS_LIMIT = 6 * 10 ** 6
+pyevm_main.GENESIS_GAS_LIMIT = 6 * 10**6
 CHAIN_ID = ChainID(1)
 TEST_SETTLE_TIMEOUT_MIN = 65
 
@@ -43,7 +43,7 @@ class ContractTester:
                     {
                         "from": self.tester.get_accounts()[0],
                         "to": account,
-                        "value": 10 ** 21,
+                        "value": 10**21,
                         "gas": 21000,
                     }
                 )

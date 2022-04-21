@@ -19,7 +19,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     our_address = factories.make_address()
     recipient = factories.make_address()
     canonical_identifier = factories.make_canonical_identifier()
-    message_identifier = random.randint(0, 2 ** 16)
+    message_identifier = random.randint(0, 2**16)
     secret = factories.random_secret()
 
     chain_state = state.ChainState(
@@ -47,7 +47,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     second_message = SendSecretReveal(
         recipient=recipient,
         recipient_metadata=None,
-        message_identifier=random.randint(0, 2 ** 16),
+        message_identifier=random.randint(0, 2**16),
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
@@ -69,7 +69,7 @@ def test_withdraw_request_message_cleanup(chain_id, token_network_state):
     recipient1 = factories.make_address()
     recipient2 = factories.make_address()
     channel_identifier = 1
-    message_identifier = random.randint(0, 2 ** 16)
+    message_identifier = random.randint(0, 2**16)
 
     chain_state = state.ChainState(
         pseudo_random_generator=pseudo_random_generator,
@@ -151,20 +151,20 @@ def test_delivered_processed_message_cleanup():
     first_message = SendSecretReveal(
         recipient=recipient,
         recipient_metadata=None,
-        message_identifier=random.randint(0, 2 ** 16),
+        message_identifier=random.randint(0, 2**16),
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
     second_message = SendSecretReveal(
         recipient=recipient,
         recipient_metadata=None,
-        message_identifier=random.randint(0, 2 ** 16),
+        message_identifier=random.randint(0, 2**16),
         secret=secret,
         canonical_identifier=canonical_identifier,
     )
     message_queue = [first_message, second_message]
 
-    fake_message_identifier = random.randint(0, 2 ** 16)
+    fake_message_identifier = random.randint(0, 2**16)
     node.inplace_delete_message(
         message_queue, state_change.ReceiveDelivered(recipient, fake_message_identifier)
     )
@@ -191,7 +191,7 @@ def test_channel_closed_must_clear_ordered_messages(
     chain_state, token_network_state, netting_channel_state
 ):
     recipient = netting_channel_state.partner_state.address
-    message_identifier = random.randint(0, 2 ** 16)
+    message_identifier = random.randint(0, 2**16)
     amount = 10
 
     queue_identifier = QueueIdentifier(

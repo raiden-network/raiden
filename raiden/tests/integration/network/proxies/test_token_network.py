@@ -351,7 +351,7 @@ def test_token_network_proxy(
 
     signature_number = int.from_bytes(signature, "big")
     bit_to_change = random.randint(0, SIGNATURE_SIZE_IN_BITS - 1)
-    signature_number_bit_flipped = signature_number ^ (2 ** bit_to_change)
+    signature_number_bit_flipped = signature_number ^ (2**bit_to_change)
 
     invalid_signatures = [
         EMPTY_SIGNATURE,

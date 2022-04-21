@@ -444,7 +444,7 @@ def _colorize_cache_key(value: Any, min_luminance: float) -> Tuple[str, float]:
     return value, min_luminance
 
 
-@cached(LRUCache(maxsize=2 ** 24))
+@cached(LRUCache(maxsize=2**24))
 def rgb_color_picker(obj: Any, min_luminance: float = None, max_luminance: float = None) -> Color:
     """Modified version of colour.RGB_color_picker"""
     color_value = (
@@ -494,7 +494,7 @@ def get_time_display(prev_record: Optional[Record], record: Record) -> Tuple[str
     return time_absolute, time_color, time_display
 
 
-@cached(LRUCache(maxsize=2 ** 24), key=_colorize_cache_key)  # type: ignore
+@cached(LRUCache(maxsize=2**24), key=_colorize_cache_key)  # type: ignore
 def colorize_value(value: Any, min_luminance: float) -> Union[str, list, tuple, dict]:
     if isinstance(value, (list, tuple)):
         return type(value)(colorize_value(inner, min_luminance) for inner in value)

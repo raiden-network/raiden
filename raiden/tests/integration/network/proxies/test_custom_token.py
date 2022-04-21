@@ -24,7 +24,7 @@ def test_custom_token(service_registry_address, private_keys, web3, contract_man
 
     c2_client = JSONRPCClient(web3, private_keys[1])
 
-    mint_amount = 1000 * 10 ** 18
+    mint_amount = 1000 * 10**18
     tx_hash = c1_token_proxy.mint_for(mint_amount, c2_client.address)
     # check that we return a correctly formatted transaction_hash for a successful tx
     assert is_tx_hash_bytes(tx_hash)

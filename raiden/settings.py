@@ -26,7 +26,7 @@ from raiden.utils.typing import (
 from raiden_contracts.contract_manager import ContractDevEnvironment, contracts_precompiled_path
 
 CACHE_TTL = 60
-GAS_LIMIT = 10 * 10 ** 6
+GAS_LIMIT = 10 * 10**6
 GAS_LIMIT_HEX = to_hex(GAS_LIMIT)
 GAS_PRICE = denoms.shannon * 20  # pylint: disable=no-member
 
@@ -70,9 +70,9 @@ DEFAULT_TIMEOUT_BEFORE_BLOCK_PRUNED = 42
 DEFAULT_SHUTDOWN_TIMEOUT = 2
 
 DEFAULT_PATHFINDING_MAX_PATHS = 3
-DEFAULT_PATHFINDING_MAX_FEE = TokenAmount(5 * 10 ** 16)  # about .01$
+DEFAULT_PATHFINDING_MAX_FEE = TokenAmount(5 * 10**16)  # about .01$
 # PFS has 200 000 blocks (~40days) to cash in
-DEFAULT_PATHFINDING_IOU_TIMEOUT = BlockTimeout(2 * 10 ** 5)
+DEFAULT_PATHFINDING_IOU_TIMEOUT = BlockTimeout(2 * 10**5)
 
 DEFAULT_MEDIATION_FLAT_FEE = FeeAmount(0)
 DEFAULT_MEDIATION_PROPORTIONAL_FEE = ProportionalFeeAmount(4000)  # 0.4% in parts per million
@@ -88,17 +88,17 @@ ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = BlockTimeout(3)
 
 RAIDEN_CONTRACT_VERSION = raiden_contracts.constants.CONTRACTS_VERSION
 
-MIN_REI_THRESHOLD = TokenAmount(55 * 10 ** 17)  # about 1.1$
+MIN_REI_THRESHOLD = TokenAmount(55 * 10**17)  # about 1.1$
 
-MONITORING_REWARD = TokenAmount(80 * 10 ** 18)  # about 1$
+MONITORING_REWARD = TokenAmount(80 * 10**18)  # about 1$
 
-MIN_MONITORING_AMOUNT_DAI = TokenAmount(1 * 10 ** 18)  # naive approach about 1$
-MIN_MONITORING_AMOUNT_WETH = TokenAmount(900 * 10 ** 12)  # naive approach about 1$
+MIN_MONITORING_AMOUNT_DAI = TokenAmount(1 * 10**18)  # naive approach about 1$
+MIN_MONITORING_AMOUNT_WETH = TokenAmount(900 * 10**12)  # naive approach about 1$
 
 MIN_REVEAL_TIMEOUT = BlockTimeout(20)
 
-DEFAULT_DAI_FLAT_FEE = 10 ** 12
-DEFAULT_WETH_FLAT_FEE = 10 ** 10
+DEFAULT_DAI_FLAT_FEE = 10**12
+DEFAULT_WETH_FLAT_FEE = 10**10
 
 
 @dataclass
