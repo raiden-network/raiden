@@ -85,7 +85,7 @@ bitarray==1.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-black==21.11b1
+black==22.3.0
     # via -r requirements-dev.txt
 bleach==3.3.0
     # via
@@ -96,7 +96,7 @@ bump2version==1.0.1
     # via -r requirements-dev.txt
 cachetools==4.2.4
     # via -r requirements-dev.txt
-canonicaljson==1.5.0
+canonicaljson==1.6.0
     # via
     #   -r requirements-dev.txt
     #   matrix-synapse
@@ -268,7 +268,6 @@ flask-restful==0.3.9
 frozendict==1.2
     # via
     #   -r requirements-dev.txt
-    #   canonicaljson
     #   matrix-synapse
 gevent==21.8.0
     # via
@@ -610,7 +609,7 @@ pytest-random==0.2
     # via -r requirements-dev.txt
 pytest-select==0.1.2
     # via -r requirements-dev.txt
-pytest-xdist==2.4.0
+pytest-xdist==2.5.0
     # via -r requirements-dev.txt
 python-dateutil==2.8.1
     # via
@@ -635,10 +634,6 @@ raiden-webui==1.2.1
     # via -r requirements-dev.txt
 readme-renderer==34.0
     # via -r requirements-dev.txt
-regex==2021.11.10
-    # via
-    #   -r requirements-dev.txt
-    #   black
 requests==2.26.0
     # via
     #   -r requirements-dev.txt
@@ -729,7 +724,7 @@ toml==0.10.2
     #   pep517
     #   pylint
     #   pytest
-tomli==1.0.4
+tomli==2.0.1
     # via
     #   -r requirements-dev.txt
     #   black
@@ -796,7 +791,6 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
-    #   black
     #   matrix-synapse
     #   mypy
     #   signedjson
