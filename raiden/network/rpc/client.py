@@ -794,7 +794,8 @@ def monkey_patch_web3(web3: Web3, gas_price_strategy: Callable) -> None:
         # Infura sometimes erroneously returns `null` for existing (but very recent) blocks.
         # Work around this by retrying those requests.
         # See docstring for details.
-        web3.eth.get_block = make_patched_web3_get_block(web3.eth.get_block)
+        # Ignore the mypy check due to https://github.com/python/mypy/issues/2427
+        web3.eth.get_block = make_patched_web3_get_block(web3.eth.get_block)  # type: ignore
 
 
 @dataclass
