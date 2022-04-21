@@ -407,7 +407,7 @@ multidict==5.1.0
     #   -r requirements-dev.txt
     #   aiohttp
     #   yarl
-mypy==0.910
+mypy==0.942
     # via -r requirements-dev.txt
 mypy-extensions==0.4.3
     # via
@@ -720,7 +720,6 @@ thrift==0.15.0
 toml==0.10.2
     # via
     #   -r requirements-dev.txt
-    #   mypy
     #   pep517
     #   pylint
     #   pytest
@@ -728,6 +727,7 @@ tomli==2.0.1
     # via
     #   -r requirements-dev.txt
     #   black
+    #   mypy
 toolz==0.9.0
     # via
     #   -r requirements-dev.txt
