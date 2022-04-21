@@ -56,8 +56,8 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import ContractManager
 
-RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = TokenAmount(int(0.075 * 10 ** 18))
-RED_EYES_PER_TOKEN_NETWORK_LIMIT = TokenAmount(int(250 * 10 ** 18))
+RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = TokenAmount(int(0.075 * 10**18))
+RED_EYES_PER_TOKEN_NETWORK_LIMIT = TokenAmount(int(250 * 10**18))
 
 
 @dataclass
@@ -341,7 +341,7 @@ def deploy_smart_contract_bundle_concurrently(
             deploy_token,
             deploy_client=deploy_client,
             contract_manager=contract_manager,
-            initial_amount=TokenAmount(1000 * 10 ** 18),
+            initial_amount=TokenAmount(1000 * 10**18),
             decimals=0,
             token_name="TKN",
             token_symbol="TKN",

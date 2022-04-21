@@ -379,13 +379,10 @@ def test_listings():
         )
         == []
     )
-    assert (
-        views.get_token_network_addresses(
-            chain_state=test_state.chain_state,
-            token_network_registry_address=test_state.token_network_registry_address,
-        )
-        == [test_state.token_network_address]
-    )
+    assert views.get_token_network_addresses(
+        chain_state=test_state.chain_state,
+        token_network_registry_address=test_state.token_network_registry_address,
+    ) == [test_state.token_network_address]
     assert (
         views.get_token_identifiers(
             chain_state=test_state.chain_state,
@@ -393,13 +390,10 @@ def test_listings():
         )
         == []
     )
-    assert (
-        views.get_token_identifiers(
-            chain_state=test_state.chain_state,
-            token_network_registry_address=test_state.token_network_registry_address,
-        )
-        == [test_state.token_address]
-    )
+    assert views.get_token_identifiers(
+        chain_state=test_state.chain_state,
+        token_network_registry_address=test_state.token_network_registry_address,
+    ) == [test_state.token_address]
     assert views.get_token_network_registry_address(chain_state=test_state.chain_state) == [
         test_state.token_network_registry_address
     ]
@@ -414,14 +408,11 @@ def test_get_networks(chain_state, token_network_address):
     chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry_empty.address
     ] = token_network_registry_empty
-    assert (
-        get_networks(
-            chain_state=chain_state,
-            token_network_registry_address=token_network_registry_empty.address,
-            token_address=token_address,
-        )
-        == (token_network_registry_empty, None)
-    )
+    assert get_networks(
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry_empty.address,
+        token_address=token_address,
+    ) == (token_network_registry_empty, None)
 
     chain_state = orig_chain_state
     token_network = TokenNetworkState(
@@ -431,22 +422,16 @@ def test_get_networks(chain_state, token_network_address):
     token_network_registry = TokenNetworkRegistryState(
         address=factories.make_address(), token_network_list=[token_network]
     )
-    assert (
-        get_networks(
-            chain_state=chain_state,
-            token_network_registry_address=token_network_registry.address,
-            token_address=token_address,
-        )
-        == (None, None)
-    )
+    assert get_networks(
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry.address,
+        token_address=token_address,
+    ) == (None, None)
     chain_state.identifiers_to_tokennetworkregistries[
         token_network_registry.address
     ] = token_network_registry
-    assert (
-        get_networks(
-            chain_state=chain_state,
-            token_network_registry_address=token_network_registry.address,
-            token_address=token_address,
-        )
-        == (token_network_registry, token_network)
-    )
+    assert get_networks(
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry.address,
+        token_address=token_address,
+    ) == (token_network_registry, token_network)

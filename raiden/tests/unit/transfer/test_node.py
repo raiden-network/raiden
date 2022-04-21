@@ -264,14 +264,11 @@ def test_handle_new_token_network(chain_state, token_network_address):
     ]
     assert token_network_registry.address == token_network_registry_address
     assert not transition_result.events
-    assert (
-        get_networks(
-            chain_state=chain_state,
-            token_network_registry_address=token_network_registry_address,
-            token_address=token_address,
-        )
-        == (token_network_registry, token_network)
-    )
+    assert get_networks(
+        chain_state=chain_state,
+        token_network_registry_address=token_network_registry_address,
+        token_address=token_address,
+    ) == (token_network_registry, token_network)
 
 
 def test_is_transaction_expired():

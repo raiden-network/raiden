@@ -17,4 +17,4 @@ def create_default_identifier() -> PaymentID:
 
 def to_rdn(rei: int) -> float:
     """Convert REI value to RDN."""
-    return rei / 10 ** 18
+    return rei / 10**18

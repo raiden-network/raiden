@@ -84,6 +84,6 @@ class BlockBatchSizeAdjuster:
             self._block_batch_size_config.min,
             min(
                 self._block_batch_size_config.max,
-                BlockNumber(int(self._base ** self._scale_current)),
+                BlockNumber(int(self._base**self._scale_current)),
             ),
         )
