@@ -77,7 +77,7 @@ bump2version==1.0.1
     # via -r requirements-dev.in
 cachetools==4.2.4
     # via -r requirements.txt
-canonicaljson==1.5.0
+canonicaljson==1.6.0
     # via
     #   -r requirements.txt
     #   matrix-synapse
@@ -235,10 +235,7 @@ flask-opentracing==1.1.0
 flask-restful==0.3.9
     # via -r requirements.txt
 frozendict==1.2
-    # via
-    #   -r requirements.txt
-    #   canonicaljson
-    #   matrix-synapse
+    # via matrix-synapse
 gevent==21.8.0
     # via
     #   -r requirements.txt
