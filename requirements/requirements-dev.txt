@@ -202,7 +202,7 @@ execnet==1.6.0
     # via pytest-xdist
 executing==0.8.3
     # via stack-data
-faker==9.9.0
+faker==13.3.5
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
@@ -522,7 +522,7 @@ pytest-random==0.2
     # via -r requirements-dev.in
 pytest-select==0.1.2
     # via -r requirements-dev.in
-pytest-xdist==2.4.0
+pytest-xdist==2.5.0
     # via -r requirements-dev.in
 python-dateutil==2.8.1
     # via faker
@@ -610,8 +610,6 @@ stack-data==0.2.0
     # via ipython
 structlog==21.2.0
     # via -r requirements.txt
-text-unidecode==1.3
-    # via faker
 threadloop==1.0.2
     # via
     #   -r requirements.txt
