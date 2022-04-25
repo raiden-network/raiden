@@ -5,6 +5,9 @@ on:
       - 'requirements/requirements.txt'
       - 'requirements/requirements.in'
 
+permissions:
+  contents: read
+
 jobs:
   license-check:
     strategy:
