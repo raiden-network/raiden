@@ -38,8 +38,8 @@ Need help?
 
 If you run into problems or discover bugs, you can:
 
--  Ask for help in the `Raiden gitter
-   chat <https://gitter.im/raiden-network/raiden>`__
+-  Ask for help in the `Raiden Discord
+   Server <https://discord.com/invite/nSQDQBq5FC>`__
 -  Create a `GitHub
    issue <https://github.com/raiden-network/raiden/issues/new/choose>`__
    for either a bug report or feature request

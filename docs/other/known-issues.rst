@@ -50,4 +50,4 @@ two options:
   :ref:`start over <running_raiden>`.
   This should be true for all usage on testnet and in cases where your channel balances
   are very low on mainnet. Don't hesitate to
-  `ask for help <https://gitter.im/raiden-network/raiden>`__!
+  `ask for help <https://discord.com/invite/nSQDQBq5FC>`__!
