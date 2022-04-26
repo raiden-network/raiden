@@ -8,7 +8,7 @@
 
 #### Quicklinks
 
-[![Python 3.9](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/raiden-network/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Python 3.9](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Discord](https://img.shields.io/discord/948623129796825109.svg)](https://discord.com/invite/nSQDQBq5FC)
 
 - [Getting Started](#getting-started)
 - [Repositories](#repositories)
@@ -98,7 +98,7 @@ Distributed under the [MIT License](./LICENSE).
 
 ## Contact
 
-Dev Chat: [Gitter](https://gitter.im/raiden-network/raiden)
+Dev Chat: [Discord](https://discord.com/invite/nSQDQBq5FC)
 
 Twitter: [@raiden_network](https://twitter.com/raiden_network)
 
