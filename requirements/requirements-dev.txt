@@ -653,7 +653,7 @@ types-click==7.1.1
     # via types-flask
 types-filelock==3.2.1
     # via -r requirements-dev.in
-types-flask==1.1.4
+types-flask==1.1.6
     # via -r requirements-dev.in
 types-jinja2==2.11.1
     # via types-flask
