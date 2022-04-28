@@ -329,7 +329,7 @@ ipfshttpclient==0.8.0a2
     #   web3
 ipython==8.2.0
     # via -r requirements-dev.txt
-isort==5.9.3
+isort==5.10.1
     # via
     #   -r requirements-dev.txt
     #   pylint
