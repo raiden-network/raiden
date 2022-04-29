@@ -34,7 +34,7 @@ raiden-webui
 requests
 structlog
 web3
-typing_extensions
+typing_extensions<4.0.0
 objgraph
 ulid-py
 jaeger-client
