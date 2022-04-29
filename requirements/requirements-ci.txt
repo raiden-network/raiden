@@ -199,7 +199,7 @@ eth-rlp==0.2.1
     # via
     #   -r requirements-dev.txt
     #   eth-account
-eth-typing==2.2.1
+eth-typing==2.3.0
     # via
     #   -r requirements-dev.txt
     #   eth-abi
