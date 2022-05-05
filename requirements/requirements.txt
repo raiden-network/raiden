@@ -161,7 +161,7 @@ lru-dict==1.1.6
     # via web3
 markupsafe==2.0.1
     # via jinja2
-marshmallow==3.14.0
+marshmallow==3.15.0
     # via
     #   -r requirements.in
     #   marshmallow-dataclass
@@ -200,7 +200,9 @@ opentracing==2.3.0
     #   jaeger-client
     #   requests-opentracing
 packaging==21.3
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   marshmallow
 parsimonious==0.8.1
     # via eth-abi
 protobuf==3.15.0
