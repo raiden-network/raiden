@@ -190,6 +190,7 @@ def test_settle_is_automatically_called(
     )
 
 
+@pytest.mark.flaky
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_coop_settle_is_automatically_called(

@@ -763,6 +763,7 @@ def test_mediated_transfer_with_fees(
     assert_balances(case["expected_transferred_amounts"])
 
 
+@pytest.mark.flaky
 @raise_on_failure
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
 @pytest.mark.parametrize("number_of_nodes", [2])

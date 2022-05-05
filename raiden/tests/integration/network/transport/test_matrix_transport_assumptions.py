@@ -77,6 +77,7 @@ def test_assumption_matrix_userid(local_matrix_servers):
     user.get_display_name()
 
 
+@pytest.mark.flaky
 @raise_on_failure
 @pytest.mark.parametrize("number_of_nodes", [2])
 def test_assumption_broadcast_queue_delays_shutdown(raiden_chain):
