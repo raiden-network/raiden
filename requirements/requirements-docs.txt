@@ -49,7 +49,7 @@ six==1.16.0
     #   sphinxcontrib-httpdomain
 snowballstemmer==1.2.1
     # via sphinx
-sphinx==4.3.1
+sphinx==4.5.0
     # via
     #   -r requirements-docs.in
     #   releases
@@ -83,6 +83,3 @@ urllib3==1.26.5
     # via requests
 wheel==0.33.4
     # via astunparse
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
