@@ -320,7 +320,7 @@ markupsafe==2.0.1
     # via
     #   -r requirements.txt
     #   jinja2
-marshmallow==3.14.0
+marshmallow==3.15.0
     # via
     #   -r requirements.txt
     #   marshmallow-dataclass
@@ -388,6 +388,7 @@ packaging==21.3
     # via
     #   -r requirements.txt
     #   bleach
+    #   marshmallow
     #   pytest
 parsimonious==0.8.1
     # via
