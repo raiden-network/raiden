@@ -355,7 +355,7 @@ multidict==5.1.0
     #   -r requirements.txt
     #   aiohttp
     #   yarl
-mypy==0.910
+mypy==0.950
     # via -r requirements-dev.in
 mypy-extensions==0.4.3
     # via
@@ -609,12 +609,13 @@ thrift==0.15.0
 toml==0.10.2
     # via
     #   -r requirements.txt
-    #   mypy
     #   pep517
     #   pylint
     #   pytest
 tomli==2.0.1
-    # via black
+    # via
+    #   black
+    #   mypy
 toolz==0.9.0
     # via
     #   -r requirements.txt
@@ -666,11 +667,8 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
-    #   astroid
-    #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
