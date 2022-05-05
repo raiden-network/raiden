@@ -248,7 +248,7 @@ flake8-tuple==0.4.1
     # via -r requirements-dev.txt
 flaky==3.7.0
     # via -r requirements-dev.txt
-flask==2.0.2
+flask==2.1.2
     # via
     #   -r requirements-dev.txt
     #   flask-cors
@@ -782,11 +782,8 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
-    #   astroid
-    #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
