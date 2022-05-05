@@ -88,7 +88,7 @@ def shutdown_handler(_signo: Signals, _stackframe: FrameType) -> None:
 
 
 if __name__ == "__main__":
-    signal(SIGTERM, shutdown_handler)
-    signal(SIGINT, shutdown_handler)
+    signal(SIGTERM, shutdown_handler)  # type: ignore
+    signal(SIGINT, shutdown_handler)  # type: ignore
 
     main()

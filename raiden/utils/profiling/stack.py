@@ -144,6 +144,7 @@ def get_trace_info(frame):
     # This changes /foo/site-packages/baz/bar.py into baz/bar.py
     try:
         base_filename = sys.modules[module_name.split(".", 1)[0]].__file__
+        assert base_filename, "Could not build basename from module name"
         filename = abs_path.split(base_filename.rsplit("/", 2)[0], 1)[-1].lstrip("/")
     except:  # noqa
         filename = abs_path
