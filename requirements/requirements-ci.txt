@@ -744,8 +744,6 @@ twisted[tls]==21.2.0
     #   -r requirements-dev.txt
     #   matrix-synapse
     #   treq
-typed-ast==1.5.3
-    # via -r requirements-dev.txt
 typeguard==2.11.1
     # via
     #   -r requirements-dev.txt
@@ -784,8 +782,11 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements-dev.txt
     #   aiohttp
+    #   astroid
+    #   black
     #   matrix-synapse
     #   mypy
+    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via

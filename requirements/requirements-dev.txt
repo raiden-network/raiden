@@ -570,7 +570,6 @@ simplejson==3.17.2
     #   canonicaljson
 six==1.16.0
     # via
-    #   -r requirements-dev.in
     #   -r requirements.txt
     #   asttokens
     #   attrdict
@@ -636,8 +635,6 @@ twisted[tls]==21.2.0
     # via
     #   matrix-synapse
     #   treq
-typed-ast==1.5.3
-    # via -r requirements-dev.in
 typeguard==2.11.1
     # via
     #   -r requirements.txt
@@ -668,8 +665,11 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
+    #   astroid
+    #   black
     #   matrix-synapse
     #   mypy
+    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
