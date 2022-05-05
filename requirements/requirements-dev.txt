@@ -202,7 +202,7 @@ faker==13.3.5
     # via -r requirements-dev.in
 fancycompleter==0.8
     # via pdbpp
-filelock==3.3.1
+filelock==3.6.0
     # via -r requirements.txt
 flake8==4.0.1
     # via
@@ -666,11 +666,8 @@ typing-extensions==3.10.0.2
     # via
     #   -r requirements.txt
     #   aiohttp
-    #   astroid
-    #   black
     #   matrix-synapse
     #   mypy
-    #   pylint
     #   signedjson
 typing-inspect==0.4.0
     # via
