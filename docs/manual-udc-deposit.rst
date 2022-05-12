@@ -6,8 +6,7 @@ Manually depositing tokens to pay the services
 ==============================================
 
 To pay the services, you have to lock some of your Raiden tokens in the ``UserDeposit`` contract.
-Normally the Raiden Wizard or some other auxilliary scripts would do the contract interaction for you.
-In this section, we will briefly explain how it can be done manually so you are able to use Raiden without them.
+In this section, we will briefly explain how it can be done manually so you are able to use Raiden.
 
 All services that are registered in the service registry of a given network will use one shared instance of ``UserDeposit``.
 You can obtain the address of the contract from
