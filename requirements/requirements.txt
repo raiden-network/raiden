@@ -267,7 +267,7 @@ six==1.16.0
     #   protobuf
     #   pyrsistent
     #   thrift
-structlog==21.2.0
+structlog==21.5.0
     # via -r requirements.in
 threadloop==1.0.2
     # via jaeger-client
