@@ -32,7 +32,7 @@ bitarray==1.2.1
     # via eth-account
 cachetools==4.2.4
     # via -r requirements.in
-canonicaljson==1.6.0
+canonicaljson==1.6.1
     # via -r requirements.in
 certifi==2019.3.9
     # via requests
