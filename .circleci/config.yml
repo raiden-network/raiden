@@ -228,7 +228,8 @@ commands:
           command: |
             . ${VENV_PATH}/bin/activate
             pip config set global.progress_bar off
-            pip install -U pip wheel pip-tools setuptools
+            # Pin pip to this version due to https://github.com/jazzband/pip-tools/issues/1617
+            pip install -U pip==22.0.4 wheel pip-tools setuptools
             pushd requirements
             pip-sync requirements-ci.txt _raiden-dev.txt
             popd
