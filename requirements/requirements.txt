@@ -236,7 +236,7 @@ raiden-contracts==0.40.3
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
-requests==2.26.0
+requests==2.27.1
     # via
     #   -r requirements.in
     #   ipfshttpclient
