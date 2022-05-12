@@ -58,4 +58,4 @@ bump2version
 matrix-synapse
 
 # Mac build failure
-importlib-metadata<4.3
+importlib-metadata<4.12
