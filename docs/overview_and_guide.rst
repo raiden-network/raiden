@@ -8,31 +8,11 @@ Installation
 
 To install Raiden you can either:
 
-    * :ref:`Use the Raiden Wizard (Quick Start) <wizard_overview>`
     * :ref:`Download a self-contained application bundle from the GitHub release page  or, on macOS, use homebrew <installation_github>`
     * :ref:`Use pip<installation_pip>`
     * :ref:`Run a raiden docker image<installation_docker>`
 
 Below we will give details on how to use the self-contained application bundles on different platforms, as well as the other installation methods.
-
-Installation via Raiden Wizard
-******************************
-
-If you are new to Raiden or just want to use it without caring too much for the technical details, we recommend the Raiden Wizard to get started.
-It will help you to install Raiden and to acquire all necessary tokens for running it on the Ethereum mainnet.
-
-.. toctree::
-  :maxdepth: 1
-
-  installation/quick-start/README
-
-If you want to try out Raiden with test tokens on a testnet before running it on mainnet,
-you can use the Görli Wizard for installing Raiden and receiving tokens:
-
-.. toctree::
-  :maxdepth: 1
-
-  installation/quick-start-goerli/quick-start-on-goerli-testnet
 
 .. _installation_github:
 
