@@ -554,9 +554,9 @@ pygments==2.7.4
     #   -r requirements-dev.txt
     #   ipython
     #   pdbpp
-pyinstaller==5.0
+pyinstaller==5.1
     # via -r requirements-ci.in
-pyinstaller-hooks-contrib==2020.7
+pyinstaller-hooks-contrib==2022.5
     # via pyinstaller
 pylibsrtp==0.6.8
     # via
