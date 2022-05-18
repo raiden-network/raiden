@@ -554,9 +554,9 @@ pygments==2.7.4
     #   -r requirements-dev.txt
     #   ipython
     #   pdbpp
-pyinstaller==5.0
+pyinstaller==5.1
     # via -r requirements-ci.in
-pyinstaller-hooks-contrib==2020.7
+pyinstaller-hooks-contrib==2022.5
     # via pyinstaller
 pylibsrtp==0.6.8
     # via
@@ -641,7 +641,7 @@ requests==2.27.1
     #   web3
 requests-opentracing==0.3.0
     # via -r requirements-dev.txt
-responses==0.16.0
+responses==0.20.0
     # via -r requirements-dev.txt
 rlp==2.0.1
     # via
@@ -689,7 +689,6 @@ six==1.16.0
     #   pyopenssl
     #   pyrsistent
     #   python-dateutil
-    #   responses
     #   thrift
 sortedcontainers==2.1.0
     # via
