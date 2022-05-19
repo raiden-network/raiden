@@ -662,7 +662,7 @@ types-urllib3==1.26.14
     # via types-requests
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==3.10.0.2
+typing-extensions==4.2.0
     # via
     #   -r requirements.txt
     #   aiohttp
