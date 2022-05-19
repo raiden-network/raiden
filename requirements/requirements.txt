@@ -283,7 +283,7 @@ tornado==6.1
     #   threadloop
 typeguard==2.11.1
     # via marshmallow-dataclass
-typing-extensions==3.10.0.2
+typing-extensions==4.2.0
     # via
     #   -r requirements.in
     #   aiohttp
