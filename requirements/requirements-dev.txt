@@ -262,7 +262,7 @@ hyperlink==21.0.0
     # via
     #   treq
     #   twisted
-hypothesis==6.24.2
+hypothesis==6.46.7
     # via -r requirements-dev.in
 idna==2.8
     # via
@@ -662,7 +662,7 @@ types-urllib3==1.26.14
     # via types-requests
 types-werkzeug==1.0.1
     # via types-flask
-typing-extensions==3.10.0.2
+typing-extensions==4.2.0
     # via
     #   -r requirements.txt
     #   aiohttp
