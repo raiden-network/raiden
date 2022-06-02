@@ -286,7 +286,7 @@ ipfshttpclient==0.8.0a2
     # via
     #   -r requirements.txt
     #   web3
-ipython==8.3.0
+ipython==8.4.0
     # via -r requirements-dev.in
 isort==5.10.1
     # via
@@ -652,7 +652,7 @@ types-markupsafe==1.1.1
     # via types-jinja2
 types-pkg-resources==0.1.3
     # via -r requirements-dev.in
-types-pyyaml==6.0.0
+types-pyyaml==6.0.8
     # via -r requirements-dev.in
 types-requests==2.27.27
     # via -r requirements-dev.in
