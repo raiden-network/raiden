@@ -322,7 +322,7 @@ ipfshttpclient==0.8.0a2
     # via
     #   -r requirements-dev.txt
     #   web3
-ipython==8.3.0
+ipython==8.4.0
     # via -r requirements-dev.txt
 isort==5.10.1
     # via
