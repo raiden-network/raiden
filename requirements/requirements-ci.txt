@@ -753,7 +753,7 @@ types-click==7.1.1
     # via
     #   -r requirements-dev.txt
     #   types-flask
-types-filelock==3.2.5
+types-filelock==3.2.7
     # via -r requirements-dev.txt
 types-flask==1.1.6
     # via -r requirements-dev.txt
