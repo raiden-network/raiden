@@ -642,7 +642,7 @@ types-cachetools==5.0.1
     # via -r requirements-dev.in
 types-click==7.1.1
     # via types-flask
-types-filelock==3.2.5
+types-filelock==3.2.7
     # via -r requirements-dev.in
 types-flask==1.1.6
     # via -r requirements-dev.in
