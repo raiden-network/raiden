@@ -232,7 +232,7 @@ fancycompleter==0.8
     # via
     #   -r requirements-dev.txt
     #   pdbpp
-filelock==3.6.0
+filelock==3.7.1
     # via -r requirements-dev.txt
 flake8==4.0.1
     # via
