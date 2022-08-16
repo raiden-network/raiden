@@ -114,7 +114,7 @@ eth-utils==1.10.0
     #   raiden-contracts
     #   rlp
     #   web3
-filelock==3.6.0
+filelock==3.8.0
     # via -r requirements.in
 flask==2.1.2
     # via
