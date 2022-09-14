@@ -8,7 +8,7 @@
 
 #### Quicklinks
 
-[![Python 3.9](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Discord](https://img.shields.io/discord/948623129796825109.svg)](https://discord.com/invite/nSQDQBq5FC)
+[![Python 3.9](https://img.shields.io/pypi/pyversions/raiden.svg)](https://raiden-network.readthedocs.io/en/stable/)  [![Chat on Discord](https://img.shields.io/discord/948623129796825109.svg)](https://discord.com/invite/nSQDQBq5FC) [![kandi X-Ray](https://kandi.openweaver.com/badges/xray.svg)](https://kandi.openweaver.com/python/raiden-network/raiden) [![kandi Featured](https://kandi.openweaver.com/badges/featured.svg)](https://kandi.openweaver.com/collections/blockchain/python-blockchain)
 
 - [Getting Started](#getting-started)
 - [Repositories](#repositories)
