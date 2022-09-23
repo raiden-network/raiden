@@ -424,7 +424,7 @@ prometheus-client==0.8.0
     # via matrix-synapse
 prompt-toolkit==3.0.5
     # via ipython
-protobuf==3.15.0
+protobuf==3.18.3
     # via
     #   -r requirements.txt
     #   web3
@@ -582,7 +582,6 @@ six==1.16.0
     #   jsonschema
     #   multiaddr
     #   parsimonious
-    #   protobuf
     #   pymacaroons
     #   pynacl
     #   pyopenssl

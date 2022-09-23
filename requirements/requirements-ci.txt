@@ -490,7 +490,7 @@ prompt-toolkit==3.0.5
     # via
     #   -r requirements-dev.txt
     #   ipython
-protobuf==3.15.0
+protobuf==3.18.3
     # via
     #   -r requirements-dev.txt
     #   web3
@@ -683,7 +683,6 @@ six==1.16.0
     #   jsonschema
     #   multiaddr
     #   parsimonious
-    #   protobuf
     #   pymacaroons
     #   pynacl
     #   pyopenssl

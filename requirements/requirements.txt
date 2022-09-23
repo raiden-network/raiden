@@ -205,7 +205,7 @@ packaging==21.3
     #   marshmallow
 parsimonious==0.8.1
     # via eth-abi
-protobuf==3.15.0
+protobuf==3.18.3
     # via web3
 psutil==5.8.0
     # via
@@ -264,7 +264,6 @@ six==1.16.0
     #   jsonschema
     #   multiaddr
     #   parsimonious
-    #   protobuf
     #   pyrsistent
     #   thrift
 structlog==21.5.0
