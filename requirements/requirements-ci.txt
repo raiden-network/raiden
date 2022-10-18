@@ -409,7 +409,6 @@ mypy-extensions==0.4.3
     #   -r requirements-dev.txt
     #   black
     #   mypy
-    #   raiden-contracts
     #   typing-inspect
 nest-asyncio==1.5.4
     # via -r requirements-dev.txt
@@ -623,7 +622,7 @@ pyyaml==5.4
     #   matrix-synapse
 raiden-api-client==1.1.1
     # via -r requirements-dev.txt
-raiden-contracts==0.40.3
+raiden-contracts==0.50.2
     # via -r requirements-dev.txt
 raiden-webui==1.2.1
     # via -r requirements-dev.txt
@@ -648,7 +647,6 @@ rlp==2.0.1
     #   -r requirements-dev.txt
     #   eth-account
     #   eth-rlp
-    #   raiden-contracts
 s3cmd==2.2.0
     # via -r requirements-ci.in
 semantic-version==2.8.5
