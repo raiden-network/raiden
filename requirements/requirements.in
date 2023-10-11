@@ -20,7 +20,7 @@ marshmallow-dataclass[union]
 marshmallow-polyfield
 marshmallow
 marshmallow_enum
-matrix-client==0.3.2
+matrix-client==0.4.0
 mirakuru==2.1.2
 packaging
 psutil

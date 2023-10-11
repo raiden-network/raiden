@@ -173,7 +173,7 @@ marshmallow-enum==1.5.1
     # via -r requirements.in
 marshmallow-polyfield==5.10
     # via -r requirements.in
-matrix-client==0.3.2
+matrix-client==0.4.0
     # via -r requirements.in
 mirakuru==2.1.2
     # via -r requirements.in
@@ -292,7 +292,9 @@ typing-inspect==0.4.0
 ulid-py==1.1.0
     # via -r requirements.in
 urllib3==1.26.5
-    # via requests
+    # via
+    #   matrix-client
+    #   requests
 varint==1.0.2
     # via multiaddr
 web3==5.28.0

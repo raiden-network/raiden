@@ -108,6 +108,10 @@ class GMatrixHttpApi(MatrixHttpApi):
         else:
             self.retry_delay = retry_delay
 
+    @property
+    def base_url(self) -> str:
+        return self._base_url
+
     def _send(self, method: str, path: str, *args: Any, **kwargs: Any) -> Dict:
         # we use an infinite loop + time + sleep instead of gevent.Timeout
         # to be able to re-raise the last exception instead of declaring one beforehand
