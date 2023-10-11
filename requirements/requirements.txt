@@ -184,9 +184,7 @@ multidict==5.1.0
     #   aiohttp
     #   yarl
 mypy-extensions==0.4.3
-    # via
-    #   raiden-contracts
-    #   typing-inspect
+    # via typing-inspect
 netaddr==0.7.19
     # via multiaddr
 netifaces==0.11.0
@@ -232,7 +230,7 @@ pysha3==1.0.2
     # via -r requirements.in
 pytz==2019.1
     # via flask-restful
-raiden-contracts==0.40.3
+raiden-contracts==0.50.2
     # via -r requirements.in
 raiden-webui==1.2.1
     # via -r requirements.in
@@ -250,7 +248,6 @@ rlp==2.0.1
     # via
     #   eth-account
     #   eth-rlp
-    #   raiden-contracts
 semantic-version==2.8.5
     # via
     #   py-solc-x
