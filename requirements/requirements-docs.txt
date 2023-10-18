@@ -79,7 +79,7 @@ sphinxcontrib-qthelp==1.0.3
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
-urllib3==1.26.5
+urllib3==1.26.18
     # via requests
 wheel==0.33.4
     # via astunparse
