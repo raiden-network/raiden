@@ -358,10 +358,11 @@ lru-dict==1.1.6
     #   web3
 macholib==1.16
     # via -r requirements-ci.in
-markupsafe==2.0.1
+markupsafe==2.1.3
     # via
     #   -r requirements-dev.txt
     #   jinja2
+    #   werkzeug
 marshmallow==3.15.0
     # via
     #   -r requirements-dev.txt
@@ -436,6 +437,7 @@ packaging==21.3
     #   -r requirements-dev.txt
     #   bleach
     #   marshmallow
+    #   pyinstaller
     #   pytest
 parsimonious==0.8.1
     # via
@@ -554,7 +556,7 @@ pygments==2.7.4
     #   -r requirements-dev.txt
     #   ipython
     #   pdbpp
-pyinstaller==5.1
+pyinstaller==6.1.0
     # via -r requirements-ci.in
 pyinstaller-hooks-contrib==2022.5
     # via pyinstaller
@@ -715,11 +717,6 @@ toml==0.10.2
     #   pep517
     #   pylint
     #   pytest
-tomli==2.0.1
-    # via
-    #   -r requirements-dev.txt
-    #   black
-    #   mypy
 toolz==0.9.0
     # via
     #   -r requirements-dev.txt
@@ -824,7 +821,7 @@ websockets==9.1
     # via
     #   -r requirements-dev.txt
     #   web3
-werkzeug==2.0.1
+werkzeug==3.0.1
     # via
     #   -r requirements-dev.txt
     #   flask
