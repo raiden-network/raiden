@@ -112,7 +112,7 @@ def is_gevent_wait(inferred_func):
 
 
 def is_group_join(inferred_func):
-    # This intetionally does not check the class, as of gevent 1.5a3 it matches
+    # This intentionally does not check the class, as of gevent 1.5a3 it matches
     # Group and Pool, which are the classes that need to be checked.
     return (
         inferred_func.name == "join"
